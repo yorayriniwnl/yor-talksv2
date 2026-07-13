@@ -1,0 +1,506 @@
+You are the Lead Software Architect, Principal Frontend Engineer, Senior Product Designer, Senior UX Designer, Motion Designer, Accessibility Specialist, Performance Engineer, and Design System Architect for Yor Talks.
+
+Your objective is to transform Yor Talks into a world-class, production-ready Super Social Platform.
+
+DO NOT rewrite the project from scratch.
+
+Preserve the existing architecture, routing, authentication, APIs, state management, folder structure, and business logic.
+
+Build on top of the existing application.
+
+Nothing should feel like an add-on.
+
+Every feature must feel native.
+
+The final product should rival Apple, Discord, Instagram, Threads, Notion, Spotify, X, Reddit, Medium, YouTube, Linear, Airbnb and Vercel in polish and user experience.
+
+====================================================
+MISSION
+====================================================
+
+Yor Talks is an all-in-one platform combining:
+
+• Private Messaging
+• Social Media
+• Communities
+• Blogs
+• Videos
+• Knowledge Sharing
+• Creator Platform
+• Events
+• Marketplace
+• AI Assistant
+
+Everything should exist inside one unified ecosystem.
+
+====================================================
+FEATURES TO IMPLEMENT
+====================================================
+
+####################################################
+1. STORIES
+####################################################
+
+Implement a complete Stories ecosystem.
+
+Support:
+
+• Image Stories
+• Video Stories
+• Text Stories
+• Voice Stories
+• Story Camera UI
+• Story Filters UI
+• Story Viewer
+• Story Progress Bars
+• Story Archive
+• Story Highlights
+• Story Analytics
+• Story Replies
+• Story Reactions
+• Story Sharing
+• Story Privacy
+• Seen Status
+• Animated Story Transitions
+• Swipe Navigation
+
+####################################################
+2. LIVE STREAMING
+####################################################
+
+Complete Live platform.
+
+Include:
+
+• Live Video
+• Audio Rooms
+• Live Chat
+• Live Reactions
+• Viewer Count
+• Invite Guests
+• Speaker Queue
+• Live Discovery
+• Scheduled Streams
+• Stream Replay
+• Live Notifications
+
+####################################################
+3. COMMUNITIES
+####################################################
+
+Complete Communities platform.
+
+Support:
+
+• Public Communities
+• Private Communities
+• Invite Only Communities
+• Community Home
+• Community Feed
+• Community Chat
+• Community Events
+• Community Announcements
+• Polls
+• Roles
+• Moderators
+• Media Gallery
+• Community Search
+• Trending Communities
+• Recommended Communities
+• Join Requests
+• Community Settings
+• Community Analytics
+• Bookmarks
+
+####################################################
+4. EVENTS
+####################################################
+
+Professional Events system.
+
+Support:
+
+• Event Creation
+• RSVP
+• Calendar
+• Timeline
+• Schedule
+• Speakers
+• Gallery
+• Event Feed
+• Event Chat
+• Reminders
+• Ticket Placeholder
+• Maps Placeholder
+• Event Search
+• Event Categories
+
+####################################################
+5. MARKETPLACE
+####################################################
+
+Marketplace with premium UX.
+
+Support:
+
+• Product Listings
+• Categories
+• Seller Profiles
+• Saved Listings
+• Chat Seller
+• Filters
+• Search
+• Recently Viewed
+• Recommendations
+• Reviews
+• Listing Management
+• Product Gallery
+
+####################################################
+6. KNOWLEDGE HUB
+####################################################
+
+Support:
+
+• Rich Articles
+• Notes
+• Documentation
+• Bookmarks
+• Reading Lists
+• Collections
+• Rich Text Editor
+• Drafts
+• Reading Progress
+• Related Articles
+• Trending Articles
+
+####################################################
+7. AI ASSISTANT
+####################################################
+
+Modern AI Workspace.
+
+Support:
+
+• AI Chat
+• Writing Assistant
+• Blog Summaries
+• Community Summaries
+• Smart Search
+• Translation
+• Caption Generator
+• Prompt History
+• AI Suggestions
+• Recent Conversations
+
+####################################################
+8. COMMAND PALETTE
+####################################################
+
+Professional Command Palette.
+
+Shortcut:
+
+CTRL + K
+
+Search:
+
+• Users
+• Posts
+• Communities
+• Messages
+• Videos
+• Blogs
+• Marketplace
+• Events
+• Settings
+• Notifications
+• Navigation
+• Recent Items
+
+####################################################
+9. UNIVERSAL SEARCH
+####################################################
+
+One search for everything.
+
+Results:
+
+• Users
+• Posts
+• Videos
+• Articles
+• Communities
+• Marketplace
+• Events
+• Messages
+
+Support:
+
+• Filters
+• Trending Searches
+• Recent Searches
+• Search Suggestions
+
+####################################################
+10. CREATOR STUDIO
+####################################################
+
+Creator Dashboard.
+
+Support:
+
+• Analytics
+• Followers
+• Views
+• Reach
+• Engagement
+• Growth
+• Drafts
+• Scheduled Posts
+• Top Content
+• Audience Insights
+
+####################################################
+11. NOTIFICATION CENTER
+####################################################
+
+Professional Notification Center.
+
+Sections:
+
+• Messages
+• Communities
+• Mentions
+• Followers
+• Likes
+• Comments
+• Marketplace
+• Events
+• System
+
+Support:
+
+• Grouping
+• Filters
+• Mark Read
+• Notification Settings
+
+####################################################
+12. PRIVACY CENTER
+####################################################
+
+Complete privacy dashboard.
+
+Support:
+
+• Profile Visibility
+• Message Permissions
+• Blocked Users
+• Muted Users
+• Hidden Communities
+• Connected Devices
+• Active Sessions
+• Security Settings
+• Two Factor Authentication UI
+• Data Export
+• Delete Account
+• Privacy Reports
+
+####################################################
+13. ACHIEVEMENTS
+####################################################
+
+Gamification.
+
+Support:
+
+• Levels
+• XP
+• Badges
+• Streaks
+• Milestones
+• Leaderboards
+• Creator Badges
+• Community Badges
+
+####################################################
+14. PERSONAL DASHBOARD
+####################################################
+
+Modern personalized dashboard.
+
+Include:
+
+• Recent Messages
+• Saved Posts
+• Watch Later
+• Reading List
+• Upcoming Events
+• Marketplace Activity
+• AI Workspace
+• Notifications
+• Communities
+• Drafts
+• Analytics
+• Quick Actions
+
+====================================================
+DESIGN SYSTEM
+====================================================
+
+Create an enterprise-grade design system.
+
+Include:
+
+• Light Theme
+• Dark Theme
+• OLED Theme
+• Accent Colors
+• Design Tokens
+• Typography Scale
+• Spacing Scale
+• Elevation System
+• Shadows
+• Glassmorphism
+• Premium Gradients
+• Icons
+• Buttons
+• Inputs
+• Cards
+• Dialogs
+• Drawers
+• Sheets
+• Dropdowns
+• Tooltips
+• Badges
+• Chips
+• Tabs
+• Navigation Components
+• Skeletons
+• Empty States
+• Error States
+• Loading States
+• Charts
+• Progress Components
+
+Everything must follow one visual language.
+
+====================================================
+USER EXPERIENCE
+====================================================
+
+Implement premium UX.
+
+• Shared Element Transitions
+• Spring Animations
+• Smooth Page Transitions
+• Hero Animations
+• Animated Navigation
+• Floating Navigation
+• Command Palette
+• Hover Physics
+• Button Press Animations
+• Card Lift Effects
+• Swipe Gestures
+• Infinite Scrolling
+• Pull To Refresh
+• Drag And Drop
+• Progressive Image Loading
+• Lazy Loading
+• Skeleton Loading
+• Shimmer Effects
+• Optimistic Updates
+• Rich Empty States
+• Rich Error States
+• Keyboard Shortcuts
+• Responsive Gestures
+• Accessibility
+• Reduced Motion Support
+
+Every interaction should feel smooth, responsive, and intentional.
+
+====================================================
+RESPONSIVENESS
+====================================================
+
+Perfect support for:
+
+• Mobile
+• Tablet
+• Laptop
+• Desktop
+• Ultra-wide Displays
+
+====================================================
+PERFORMANCE
+====================================================
+
+Target Lighthouse score above 95.
+
+Implement:
+
+• Route Lazy Loading
+• Code Splitting
+• Memoization
+• Virtualized Lists
+• Image Optimization
+• Prefetching
+• Performance Monitoring Hooks
+
+====================================================
+CODE QUALITY
+====================================================
+
+Follow enterprise standards.
+
+• React 19
+• TypeScript
+• Tailwind CSS
+• Framer Motion
+• Zustand
+• TanStack Query
+• React Hook Form
+• Zod
+
+Requirements:
+
+• SOLID Principles
+• DRY
+• Clean Architecture
+• Reusable Components
+• Modular Features
+• Strict Typing
+• Consistent Naming
+• No Code Duplication
+• Maintainable Structure
+• Self-documenting Code
+
+====================================================
+FINAL VALIDATION
+====================================================
+
+Before stopping, automatically verify:
+
+✓ Every feature is fully implemented.
+✓ Every page is connected through navigation.
+✓ Every route works.
+✓ Every component is reusable.
+✓ Every loading state is polished.
+✓ Every empty state is polished.
+✓ Every animation is smooth.
+✓ Every page is responsive.
+✓ Every feature works with existing authentication and state.
+✓ There are no placeholder pages.
+✓ There are no TODOs.
+✓ There are no dead routes.
+✓ There are no duplicated components.
+✓ There are no TypeScript errors.
+✓ There are no ESLint errors.
+✓ There are no runtime errors.
+✓ The application builds successfully.
+✓ The UI is visually consistent across the entire application.
+
+If any requirement is not satisfied, continue iterating until the application is production-ready.
+
+Do not stop after generating code. Continuously review, refine, optimize, and polish the implementation until Yor Talks feels like a premium, enterprise-grade super app suitable for real-world users.
