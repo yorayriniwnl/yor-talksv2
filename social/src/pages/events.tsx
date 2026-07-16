@@ -8,7 +8,10 @@ import { format } from 'date-fns';
 
 function EventDetail({ eventId }: { eventId: string }) {
   const [, setLocation] = useLocation();
-  const { events, users, currentUser, toggleEventRsvp } = useAppStore();
+  const events = useAppStore((s) => s.events);
+  const users = useAppStore((s) => s.users);
+  const currentUser = useAppStore((s) => s.currentUser);
+  const toggleEventRsvp = useAppStore((s) => s.toggleEventRsvp);
   const event = events.find(e => e.id === eventId);
 
   if (!event) {
@@ -83,7 +86,8 @@ function EventDetail({ eventId }: { eventId: string }) {
 export default function EventsPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { events, users } = useAppStore();
+  const events = useAppStore((s) => s.events);
+  const users = useAppStore((s) => s.users);
 
   if (params.id) {
     return <EventDetail eventId={params.id} />;

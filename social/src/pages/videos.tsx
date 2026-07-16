@@ -12,7 +12,7 @@ const MOCK_VIDEOS = [
 ];
 
 export default function Videos() {
-  const { users } = useAppStore();
+  const users = useAppStore((s) => s.users);
   const [activeIdx, setActiveIdx] = useState(0);
 
   // In a real app we'd use intersection observer to snap and play videos.

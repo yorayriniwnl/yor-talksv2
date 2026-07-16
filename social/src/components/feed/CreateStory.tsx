@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ const GRADIENTS = [
 ];
 
 export function CreateStory({ children }: { children: React.ReactNode }) {
-  const { addStory } = useAppStore();
+  const addStory = useAppStore((s) => s.addStory);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'image' | 'text' | 'voice'>('image');
   const [text, setText] = useState('');

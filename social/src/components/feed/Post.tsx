@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore, Post as PostType } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export function CreatePost() {
-  const { currentUser, addPost } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const addPost = useAppStore((s) => s.addPost);
   const [content, setContent] = useState('');
   
   if (!currentUser) return null;
@@ -53,18 +54,22 @@ export function CreatePost() {
 }
 
 export function PostCard({ post }: { post: PostType }) {
-  const { users, likePost, votePoll } = useAppStore();
-  const [_, setLocation] = useLocation();
+  const users = useAppStore((s) => s.users);
+  const likePost = useAppStore((s) => s.likePost);
+  const votePoll = useAppStore((s) => s.votePoll);
+  const [, setLocation] = useLocation();
   const author = users[post.authorId];
   
   if (!author) return null;
+
+  const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
 
   return (
     <motion.article 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="p-4 border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer group"
-      onClick={() => setLocation(`/post/${post.id}`)}
+      onClick={handleOpen}
     >
       <div className="flex gap-4">
         <Link href={`/profile/${author.id}`} onClick={(e) => e.stopPropagation()}>
@@ -191,3 +196,5 @@ export function PostCard({ post }: { post: PostType }) {
     </motion.article>
   );
 }
+
+export const PostCardMemo = React.memo(PostCard);

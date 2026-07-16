@@ -6,7 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const ICONS: Record<string, any> = { Sparkles, TrendingUp, Users, Flame, BookOpen };
 
 export default function Achievements() {
-  const { achievements, currentUser, users } = useAppStore();
+  const achievements = useAppStore((s) => s.achievements);
+  const currentUser = useAppStore((s) => s.currentUser);
+  const users = useAppStore((s) => s.users);
   const totalXp = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
   const level = Math.floor(totalXp / 150) + 1;
   const levelProgress = (totalXp % 150) / 150 * 100;

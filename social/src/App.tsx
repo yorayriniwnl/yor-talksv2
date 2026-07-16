@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { Redirect, Route, Switch, Router as WouterRouter } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
@@ -9,26 +10,46 @@ import { useAppStore } from '@/lib/store';
 // Shell & Layout
 import AppShell from '@/components/layout/AppShell';
 
-// Pages
-import Auth from '@/pages/auth';
-import Home from '@/pages/home';
-import Explore from '@/pages/explore';
-import Profile from '@/pages/profile';
-import PostDetail from '@/pages/post-detail';
-import Messages from '@/pages/messages';
-import Communities from '@/pages/communities';
-import Articles from '@/pages/articles';
-import Videos from '@/pages/videos';
-import Settings from '@/pages/settings';
-import Notifications from '@/pages/notifications';
-import Live from '@/pages/live';
-import EventsPage from '@/pages/events';
-import Marketplace from '@/pages/marketplace';
-import AIAssistant from '@/pages/ai-assistant';
-import Achievements from '@/pages/achievements';
-import Dashboard from '@/pages/dashboard';
+// Helpers (lazy + resilient)
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import RouteSkeleton from '@/components/ui/RouteSkeleton';
+import AppProfiler from '@/components/perf/AppProfiler';
+import RouteTelemetry from '@/components/perf/RouteTelemetry';
 
-const queryClient = new QueryClient();
+// Pages (route-level code-splitting)
+const Auth = lazyWithRetry(() => import('@/pages/auth'));
+const Home = lazyWithRetry(() => import('@/pages/home'));
+const Explore = lazyWithRetry(() => import('@/pages/explore'));
+const Profile = lazyWithRetry(() => import('@/pages/profile'));
+const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
+const Messages = lazyWithRetry(() => import('@/pages/messages'));
+const Communities = lazyWithRetry(() => import('@/pages/communities'));
+const Articles = lazyWithRetry(() => import('@/pages/articles'));
+const Videos = lazyWithRetry(() => import('@/pages/videos'));
+const Settings = lazyWithRetry(() => import('@/pages/settings'));
+const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
+const Live = lazyWithRetry(() => import('@/pages/live'));
+const EventsPage = lazyWithRetry(() => import('@/pages/events'));
+const Marketplace = lazyWithRetry(() => import('@/pages/marketplace'));
+const AIAssistant = lazyWithRetry(() => import('@/pages/ai-assistant'));
+const Achievements = lazyWithRetry(() => import('@/pages/achievements'));
+const Dashboard = lazyWithRetry(() => import('@/pages/dashboard'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      cacheTime: 1000 * 60 * 10, // 10 minutes
+      retry: 1,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    }
+  }
+});
 
 function ProtectedRoutes() {
   return (
@@ -57,7 +78,7 @@ function ProtectedRoutes() {
 }
 
 function Router() {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
 
   return (
     <Switch>
@@ -70,12 +91,29 @@ function Router() {
 }
 
 function App() {
+  React.useEffect(() => {
+    try {
+      // initialize telemetry batcher
+      // lazy import to avoid breaking environments without DOM during tests
+      import('@/lib/telemetry').then((m) => m.initTelemetry()).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
+            <AppProfiler>
+              <RouteTelemetry />
+              <ErrorBoundary>
+                <Suspense fallback={<RouteSkeleton />}> 
+                  <Router />
+                </Suspense>
+              </ErrorBoundary>
+            </AppProfiler>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

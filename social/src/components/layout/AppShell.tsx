@@ -35,7 +35,12 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const [location, setLocation] = useLocation();
-  const { currentUser, logout, users, posts, communities, notifications } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const logout = useAppStore((s) => s.logout);
+  const users = useAppStore((s) => s.users);
+  const posts = useAppStore((s) => s.posts);
+  const communities = useAppStore((s) => s.communities);
+  const notifications = useAppStore((s) => s.notifications);
   const [cmdOpen, setCmdOpen] = useState(false);
   const { setTheme, theme } = useTheme();
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -71,6 +76,15 @@ export default function AppShell({ children }: AppShellProps) {
 
   if (!currentUser) return null;
 
+  // Prefetch mapping for important routes — keeps chunks ready on hover/focus
+  const prefetchMap: Record<string, () => void> = {
+    '/': () => import('@/pages/home'),
+    '/profile': () => import('@/pages/profile'),
+    '/messages': () => import('@/pages/messages'),
+    '/notifications': () => import('@/pages/notifications'),
+    '/explore': () => import('@/pages/explore'),
+  };
+
   return (
     <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
       {/* Desktop Sidebar */}
@@ -88,7 +102,11 @@ export default function AppShell({ children }: AppShellProps) {
               const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
               return (
                 <Link key={item.href} href={item.href}>
-                  <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}`}>
+                  <div
+                    onMouseEnter={() => prefetchMap[item.href]?.()}
+                    onFocus={() => prefetchMap[item.href]?.()}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}`}
+                  >
                     <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary' : 'group-hover:scale-110 transition-transform'}`} strokeWidth={isActive ? 2.5 : 2} />
                     <span className="text-[15px] flex-1">{item.label}</span>
                     {item.label === 'Notifications' && unreadCount > 0 && (

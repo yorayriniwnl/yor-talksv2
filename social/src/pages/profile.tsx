@@ -1,23 +1,26 @@
 import { useParams, Link } from 'wouter';
+import { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapPin, Link as LinkIcon, Calendar, ArrowLeft, MessageCircle } from 'lucide-react';
-import { PostCard } from '@/components/feed/Post';
+import { PostCardMemo as PostCard } from '@/components/feed/Post';
 import { format } from 'date-fns';
 
 export default function Profile() {
   const { id } = useParams();
-  const { currentUser, users, posts } = useAppStore();
-  
+  const currentUser = useAppStore((s) => s.currentUser);
+  const users = useAppStore((s) => s.users);
+  const posts = useAppStore((s) => s.posts);
+
   const profileId = id || currentUser?.id;
   const profile = profileId ? users[profileId] : null;
   const isOwnProfile = currentUser?.id === profileId;
 
   if (!profile) return <div className="p-8 text-center">User not found</div>;
 
-  const userPosts = posts.filter(p => p.authorId === profile.id);
+  const userPosts = useMemo(() => posts.filter((p) => p.authorId === profile?.id), [posts, profile?.id]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">

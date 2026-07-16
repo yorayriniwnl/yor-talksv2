@@ -17,7 +17,10 @@ const FILTERS: { id: 'all' | Notification['type']; label: string }[] = [
 ];
 
 export default function Notifications() {
-  const { users, notifications, markNotificationRead, markAllNotificationsRead } = useAppStore();
+  const users = useAppStore((s) => s.users);
+  const notifications = useAppStore((s) => s.notifications);
+  const markNotificationRead = useAppStore((s) => s.markNotificationRead);
+  const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
   const [filter, setFilter] = useState<'all' | Notification['type']>('all');
 
   const getIcon = (type: string) => {

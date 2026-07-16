@@ -10,16 +10,23 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const { currentUser, users, posts, events, products, communities, notifications, aiMessages } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const users = useAppStore((s) => s.users);
+  const posts = useAppStore((s) => s.posts);
+  const events = useAppStore((s) => s.events);
+  const products = useAppStore((s) => s.products);
+  const communities = useAppStore((s) => s.communities);
+  const notifications = useAppStore((s) => s.notifications);
+  const aiMessages = useAppStore((s) => s.aiMessages);
 
-  const savedPosts = posts.filter(p => p.savedByMe);
+  const savedPosts = posts.filter((p) => p.savedByMe);
   const upcomingEvents = [...events]
-    .filter(e => e.rsvpStatus)
+    .filter((e) => e.rsvpStatus)
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
     .slice(0, 3);
-  const savedProducts = products.filter(p => p.savedByMe);
-  const myCommunities = communities.filter(c => c.isMember);
-  const unread = notifications.filter(n => !n.read).slice(0, 4);
+  const savedProducts = products.filter((p) => p.savedByMe);
+  const myCommunities = communities.filter((c) => c.isMember);
+  const unread = notifications.filter((n) => !n.read).slice(0, 4);
 
   const quickActions = [
     { icon: PenSquare, label: 'New Post', href: '/' },

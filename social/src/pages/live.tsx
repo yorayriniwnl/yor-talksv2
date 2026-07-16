@@ -10,7 +10,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 
 function StreamRoom({ streamId }: { streamId: string }) {
   const [, setLocation] = useLocation();
-  const { liveStreams, users } = useAppStore();
+  const liveStreams = useAppStore((s) => s.liveStreams);
+  const users = useAppStore((s) => s.users);
   const [muted, setMuted] = useState(false);
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([
@@ -120,7 +121,8 @@ function StreamRoom({ streamId }: { streamId: string }) {
 export default function Live() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { liveStreams, users } = useAppStore();
+  const liveStreams = useAppStore((s) => s.liveStreams);
+  const users = useAppStore((s) => s.users);
 
   if (params.id) {
     return <StreamRoom streamId={params.id} />;

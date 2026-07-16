@@ -33,6 +33,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    ...(process.env.ANALYZE === 'true'
+      ? [
+          await import('rollup-plugin-visualizer').then((m) =>
+            m.visualizer({ filename: 'dist/visualizer.html' }),
+          ),
+        ]
+      : []),
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined
       ? [
