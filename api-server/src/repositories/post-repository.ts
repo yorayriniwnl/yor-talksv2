@@ -32,6 +32,6 @@ export class PostRepository extends BaseRepository<PostRecord> {
   }
 
   delete(id: string): boolean {
-    return this.delete(id);
+    return super.delete(id);
   }
 }

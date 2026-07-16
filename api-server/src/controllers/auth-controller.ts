@@ -23,6 +23,22 @@ export class AuthController {
     }
   };
 
+  refresh = async (req: Request, res: Response) => {
+    try {
+      const refreshToken = req.body.refreshToken as string | undefined;
+      if (!refreshToken) {
+        return res.status(400).json(createResponse("Refresh token required", null, {}, ["Missing refresh token"]));
+      }
+      const tokens = await this.authService.refreshAccessToken(refreshToken);
+      if (!tokens) {
+        return res.status(401).json(createResponse("Invalid refresh token", null, {}, ["Unauthorized"]));
+      }
+      return res.status(200).json(createResponse("Token refreshed", tokens, { authenticated: true }));
+    } catch (error) {
+      return res.status(500).json(createResponse("Token refresh failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
   logout = (_req: Request, res: Response) => {
     return res.status(200).json(createResponse("Logged out", null));
   };

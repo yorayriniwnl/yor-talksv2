@@ -18,3 +18,7 @@ export const logger = pino({
         },
       }),
 });
+
+export const logHealth = (service: string, status: string) => {
+  logger.info({ service, status }, "health check");
+};
