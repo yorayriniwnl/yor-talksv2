@@ -1,15 +1,17 @@
 import { useParams, Link } from 'wouter';
 import { useAppStore } from '@/lib/store';
-import { PostCard } from '@/components/feed/Post';
+import { PostCardMemo as PostCard } from '@/components/feed/Post';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function PostDetail() {
   const { id } = useParams();
-  const { posts, users, currentUser } = useAppStore();
-  
-  const post = posts.find(p => p.id === id);
+  const posts = useAppStore((s) => s.posts);
+  const users = useAppStore((s) => s.users);
+  const currentUser = useAppStore((s) => s.currentUser);
+
+  const post = posts.find((p) => p.id === id);
   
   if (!post) return <div className="p-8 text-center">Post not found</div>;
 

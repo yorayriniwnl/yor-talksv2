@@ -9,7 +9,10 @@ const STORY_DURATION = 5000;
 const REACTIONS = ['❤️', '🔥', '😂', '👏', '😮'];
 
 export function StoryViewer({ storyIds, initialIndex, onClose }: { storyIds: string[]; initialIndex: number; onClose: () => void }) {
-  const { stories, users, viewStory, reactToStory } = useAppStore();
+  const stories = useAppStore((s) => s.stories);
+  const users = useAppStore((s) => s.users);
+  const viewStory = useAppStore((s) => s.viewStory);
+  const reactToStory = useAppStore((s) => s.reactToStory);
   const [index, setIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [reply, setReply] = useState('');

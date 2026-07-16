@@ -10,7 +10,9 @@ import { formatDistanceToNow } from 'date-fns';
 
 function ProductDetail({ productId }: { productId: string }) {
   const [, setLocation] = useLocation();
-  const { products, users, toggleSaveProduct } = useAppStore();
+  const products = useAppStore((s) => s.products);
+  const users = useAppStore((s) => s.users);
+  const toggleSaveProduct = useAppStore((s) => s.toggleSaveProduct);
   const product = products.find(p => p.id === productId);
 
   if (!product) {
@@ -70,7 +72,7 @@ function ProductDetail({ productId }: { productId: string }) {
 export default function Marketplace() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { products } = useAppStore();
+  const products = useAppStore((s) => s.products);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 

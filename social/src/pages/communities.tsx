@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Users, Hash, MapPin, Calendar, MoreVertical, Bell } from 'lucide-react';
 
 export default function Communities() {
-  const { communities, toggleCommunityMembership } = useAppStore();
+  const communities = useAppStore((s) => s.communities);
+  const toggleCommunityMembership = useAppStore((s) => s.toggleCommunityMembership);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">

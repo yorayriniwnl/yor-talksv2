@@ -12,7 +12,11 @@ import {
 import { useAppStore } from '@/lib/store';
 
 function PrivacyCenter({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const { privacy, updatePrivacy, users, toggleBlockUser, toggleMuteUser } = useAppStore();
+  const privacy = useAppStore((s) => s.privacy);
+  const updatePrivacy = useAppStore((s) => s.updatePrivacy);
+  const users = useAppStore((s) => s.users);
+  const toggleBlockUser = useAppStore((s) => s.toggleBlockUser);
+  const toggleMuteUser = useAppStore((s) => s.toggleMuteUser);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,7 +120,7 @@ function PrivacyCenter({ open, onOpenChange }: { open: boolean; onOpenChange: (v
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
-  const { logout } = useAppStore();
+  const logout = useAppStore((s) => s.logout);
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
   const sections = [

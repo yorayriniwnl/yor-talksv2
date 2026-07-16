@@ -1,0 +1,3 @@
+{"ts":"2026-07-16T14:49:21.170Z","url":"/api/events","payload":{"type":"test:event","payload":{"msg":"hello 1"}}}
+{"ts":"2026-07-16T14:49:21.187Z","url":"/api/events","payload":{"type":"test:event","payload":{"msg":"hello 2"}}}
+{"ts":"2026-07-16T14:49:21.200Z","url":"/api/events","payload":{"type":"react:profiler","payload":{"duration":12.34}}}

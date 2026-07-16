@@ -1,19 +1,24 @@
+import { useMemo, useState } from 'react';
 import { useAppStore } from '@/lib/store';
-import { CreatePost, PostCard } from '@/components/feed/Post';
+import { CreatePost, PostCardMemo as PostCard } from '@/components/feed/Post';
 import { StoryViewer } from '@/components/feed/StoryViewer';
 import { CreateStory } from '@/components/feed/CreateStory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useProgressiveList } from '@/hooks/useProgressiveList';
+import { VirtualList } from '@/components/virtual/VirtualList';
 
 export default function Home() {
-  const { posts, stories, users, currentUser } = useAppStore();
+  const posts = useAppStore((s) => s.posts);
+  const stories = useAppStore((s) => s.stories);
+  const users = useAppStore((s) => s.users);
+  const currentUser = useAppStore((s) => s.currentUser);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const activeStories = stories.filter(s => !s.isHighlight);
-  const storyIds = activeStories.map(s => s.id);
+  const activeStories = useMemo(() => stories.filter((s) => !s.isHighlight), [stories]);
+  const storyIds = useMemo(() => activeStories.map((s) => s.id), [activeStories]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
@@ -96,12 +101,29 @@ export default function Home() {
           <CreatePost />
 
           <TabsContent value="for-you" className="m-0 focus-visible:outline-none">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              You've caught up for now.
-            </div>
+            {posts.length > 24 ? (
+              <VirtualList
+                items={posts}
+                itemHeight={260}
+                height={800}
+                renderItem={(post) => <PostCard key={post.id} post={post} />}
+              />
+            ) : (
+              (() => {
+                const { visibleItems, hasMore, sentinelRef } = useProgressiveList(posts, 8);
+                return (
+                  <>
+                    {visibleItems.map((post) => (
+                      <PostCard key={post.id} post={post} />
+                    ))}
+                    <div ref={sentinelRef as any} />
+                    {!hasMore && (
+                      <div className="p-8 text-center text-muted-foreground text-sm">You've caught up for now.</div>
+                    )}
+                  </>
+                );
+              })()
+            )}
           </TabsContent>
           <TabsContent value="following" className="m-0 focus-visible:outline-none">
             {posts.filter(p => p.authorId !== currentUser?.id).map((post) => (

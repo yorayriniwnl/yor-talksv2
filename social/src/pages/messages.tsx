@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { useParams, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,22 +11,63 @@ import { motion } from 'framer-motion';
 
 export default function Messages() {
   const { id } = useParams();
-  const [_, setLocation] = useLocation();
-  const { users, currentUser } = useAppStore();
+  const [, setLocation] = useLocation();
+  const users = useAppStore((s) => s.users);
+  const currentUser = useAppStore((s) => s.currentUser);
   const [message, setMessage] = useState('');
 
-  // Mock conversations
-  const conversations = Object.values(users)
-    .filter(u => u.id !== currentUser?.id)
-    .map((user, i) => ({
-      id: `conv_${i}`,
-      user,
-      lastMessage: i % 2 === 0 ? 'Sounds good, talk later!' : 'Did you see that new design?',
-      time: new Date(Date.now() - 1000 * 60 * 60 * i).toISOString(),
-      unread: i === 0
-    }));
+  // Mock conversations — memoized to avoid recomputation on every render
+  const conversations = useMemo(() =>
+    Object.values(users)
+      .filter((u) => u.id !== currentUser?.id)
+      .map((user, i) => ({
+        id: `conv_${i}`,
+        user,
+        lastMessage: i % 2 === 0 ? 'Sounds good, talk later!' : 'Did you see that new design?',
+        time: new Date(Date.now() - 1000 * 60 * 60 * i).toISOString(),
+        unread: i === 0
+      }))
+  , [users, currentUser]);
 
-  const activeConv = id ? conversations.find(c => c.id === id) : null;
+  const activeConv = useMemo(() => (id ? conversations.find((c) => c.id === id) : null), [id, conversations]);
+
+  const handleSelect = useCallback((convId: string) => {
+    setLocation(`/messages/${convId}`);
+  }, [setLocation]);
+
+  type Conv = typeof conversations[number];
+
+  const ConversationItem = React.memo(function ConversationItem({ conv, active, onSelect }: { conv: Conv; active: boolean; onSelect: (id: string) => void }) {
+    return (
+      <div
+        onClick={() => onSelect(conv.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(conv.id); }}
+        className={cn(
+          "p-4 flex gap-3 cursor-pointer transition-colors border-l-2",
+          active ? "bg-muted/50 border-primary" : "border-transparent hover:bg-muted/20"
+        )}
+      >
+        <Avatar className="w-12 h-12">
+          <AvatarImage src={conv.user.avatarUrl} />
+          <AvatarFallback>{conv.user.displayName.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className={cn("font-medium truncate", conv.unread && "font-bold")}>{conv.user.displayName}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(conv.time), 'MMM d')}</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className={cn("text-sm truncate", conv.unread ? "text-foreground font-medium" : "text-muted-foreground")}>
+              {conv.lastMessage}
+            </p>
+            {conv.unread && <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />}
+          </div>
+        </div>
+      </div>
+    );
+  });
 
   return (
     <div className="flex h-screen bg-background pt-0 md:pt-0 pb-20 md:pb-0">
@@ -46,31 +87,7 @@ export default function Messages() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.map((conv) => (
-            <div 
-              key={conv.id}
-              onClick={() => setLocation(`/messages/${conv.id}`)}
-              className={cn(
-                "p-4 flex gap-3 cursor-pointer transition-colors border-l-2",
-                activeConv?.id === conv.id ? "bg-muted/50 border-primary" : "border-transparent hover:bg-muted/20"
-              )}
-            >
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={conv.user.avatarUrl} />
-                <AvatarFallback>{conv.user.displayName.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={cn("font-medium truncate", conv.unread && "font-bold")}>{conv.user.displayName}</span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(conv.time), 'MMM d')}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className={cn("text-sm truncate", conv.unread ? "text-foreground font-medium" : "text-muted-foreground")}>
-                    {conv.lastMessage}
-                  </p>
-                  {conv.unread && <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />}
-                </div>
-              </div>
-            </div>
+            <ConversationItem key={conv.id} conv={conv} active={activeConv?.id === conv.id} onSelect={handleSelect} />
           ))}
         </div>
       </div>

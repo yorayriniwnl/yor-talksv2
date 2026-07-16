@@ -6,7 +6,7 @@ import { useAppStore } from '@/lib/store';
 
 export default function Explore() {
   const [query, setQuery] = useState('');
-  const { users } = useAppStore();
+  const users = useAppStore((s) => s.users);
 
   const trendingTags = [
     { tag: 'DesignSystems', posts: '12.4K', trend: '+15%' },

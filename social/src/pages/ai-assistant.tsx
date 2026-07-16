@@ -13,7 +13,8 @@ const SUGGESTIONS = [
 ];
 
 export default function AIAssistant() {
-  const { aiMessages, sendAIMessage } = useAppStore();
+  const aiMessages = useAppStore((s) => s.aiMessages);
+  const sendAIMessage = useAppStore((s) => s.sendAIMessage);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
