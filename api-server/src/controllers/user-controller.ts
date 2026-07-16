@@ -6,7 +6,8 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   getProfile = (req: Request, res: Response) => {
-    const user = this.userService.getProfile(req.params.userId);
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const user = this.userService.getProfile(userId);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
@@ -36,7 +37,8 @@ export class UserController {
   };
 
   followUser = (req: Request, res: Response) => {
-    const result = this.userService.followUser(req.user?.id ?? "", req.params.userId);
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const result = this.userService.followUser(req.user?.id ?? "", targetId);
     if (!result) {
       return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
     }
@@ -44,7 +46,8 @@ export class UserController {
   };
 
   unfollowUser = (req: Request, res: Response) => {
-    const result = this.userService.unfollowUser(req.user?.id ?? "", req.params.userId);
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const result = this.userService.unfollowUser(req.user?.id ?? "", targetId);
     if (!result) {
       return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
     }
@@ -52,12 +55,14 @@ export class UserController {
   };
 
   followers = (req: Request, res: Response) => {
-    const followers = this.userService.getFollowers(req.params.userId);
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const followers = this.userService.getFollowers(userId);
     return res.status(200).json(createResponse("Followers loaded", followers));
   };
 
   following = (req: Request, res: Response) => {
-    const following = this.userService.getFollowing(req.params.userId);
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const following = this.userService.getFollowing(userId);
     return res.status(200).json(createResponse("Following loaded", following));
   };
 

@@ -14,5 +14,9 @@ const messageController = new MessageController(messageService);
 router.post("/messages", authenticate, validateBody(messageSchema), messageController.sendMessage);
 router.get("/conversations/:conversationId/messages", authenticate, validateParams(z.object({ conversationId: z.string().min(1) })), messageController.listConversation);
 router.post("/messages/:messageId/seen", authenticate, validateParams(z.object({ messageId: z.string().min(1) })), messageController.markSeen);
+router.put("/messages/:messageId", authenticate, validateParams(z.object({ messageId: z.string().min(1) })), validateBody(z.object({ content: z.string().min(1) })), messageController.editMessage);
+router.delete("/messages/:messageId", authenticate, validateParams(z.object({ messageId: z.string().min(1) })), messageController.deleteMessage);
+router.post("/messages/:messageId/reactions", authenticate, validateParams(z.object({ messageId: z.string().min(1) })), validateBody(z.object({ reaction: z.string().min(1) })), messageController.addReaction);
+router.post("/messages/:messageId/pin", authenticate, validateParams(z.object({ messageId: z.string().min(1) })), messageController.pinMessage);
 
 export default router;

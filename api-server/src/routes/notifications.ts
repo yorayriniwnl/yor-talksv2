@@ -12,7 +12,8 @@ router.get("/notifications", authenticate, (req, res) => {
 });
 
 router.post("/notifications/:notificationId/read", authenticate, (req, res) => {
-  const notification = notificationService.markRead(req.params.notificationId);
+  const notificationId = typeof req.params.notificationId === "string" ? req.params.notificationId : "";
+  const notification = notificationService.markRead(notificationId);
   if (!notification) {
     return res.status(404).json({ success: false, message: "Notification not found", data: null, errors: ["Notification not found"], meta: {} });
   }

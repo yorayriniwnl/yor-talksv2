@@ -42,14 +42,27 @@ export class AuthService {
         theme: "light",
         notificationsEnabled: true,
         privateAccount: false,
+        allowMentions: true,
+      },
+      emailVerified: false,
+      passwordResetRequired: false,
+      lastLoginAt: null,
+      devices: [],
+      blockedUsers: [],
+      mutedUsers: [],
+      privacy: {
+        profileVisibility: "public",
+        messageRequests: true,
+        allowDmFromStrangers: true,
       },
     };
 
     this.userRepository.create(user);
-    await this.redisRepository.set(`session:${user.id}`, this.issueRefreshToken(user), 7 * 24 * 60 * 60);
+    const refreshToken = this.issueRefreshToken(user);
+    await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
     return {
       user,
-      tokens: this.issueTokens(user),
+      tokens: this.issueTokens(user, refreshToken),
     };
   }
 
@@ -64,10 +77,12 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    await this.redisRepository.set(`session:${user.id}`, this.issueRefreshToken(user), 7 * 24 * 60 * 60);
+    const refreshToken = this.issueRefreshToken(user);
+    await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
+    const updatedUser = this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString() });
     return {
-      user,
-      tokens: this.issueTokens(user),
+      user: updatedUser ?? user,
+      tokens: this.issueTokens(updatedUser ?? user, refreshToken),
     };
   }
 
@@ -75,16 +90,48 @@ export class AuthService {
     await this.redisRepository.del(`session:${userId}`);
   }
 
-  async resetPassword(_email: string): Promise<void> {
-    return undefined;
+  async refreshAccessToken(refreshToken: string): Promise<AuthTokens | undefined> {
+    try {
+      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string };
+      const userId = payload.sub;
+      if (!userId) {
+        return undefined;
+      }
+      const user = this.userRepository.findById(userId);
+      if (!user) {
+        return undefined;
+      }
+      const storedToken = await this.redisRepository.get(`session:${user.id}`);
+      if (!storedToken || storedToken !== refreshToken) {
+        return undefined;
+      }
+      return this.issueTokens(user, refreshToken);
+    } catch {
+      return undefined;
+    }
   }
 
-  private issueTokens(user: UserRecord): AuthTokens {
+  async resetPassword(email: string): Promise<void> {
+    const user = this.userRepository.findByEmail(email);
+    if (!user) {
+      return;
+    }
+    this.userRepository.update(user.id, { passwordResetRequired: true });
+  }
+
+  async verifyEmail(userId: string): Promise<UserRecord | undefined> {
+    return this.userRepository.update(userId, { emailVerified: true });
+  }
+
+  async updatePrivacy(userId: string, privacy: UserRecord["privacy"]): Promise<UserRecord | undefined> {
+    return this.userRepository.update(userId, { privacy });
+  }
+
+  private issueTokens(user: UserRecord, refreshToken: string): AuthTokens {
     const accessToken = jwt.sign({ sub: user.id, role: user.role, permissions: user.permissions }, env.JWT_SECRET, {
       expiresIn: "15m",
     });
-    const refreshToken = this.issueRefreshToken(user);
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() };
   }
 
   private issueRefreshToken(user: UserRecord): string {
