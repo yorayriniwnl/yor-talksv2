@@ -24,12 +24,12 @@ export default function Home() {
     <div className="flex flex-col md:flex-row min-h-screen">
       {/* Main Feed */}
       <div className="flex-1 max-w-2xl border-r border-border/50 min-h-screen">
-        <div className="sticky top-0 z-20 glass px-4 py-3 flex items-center justify-between md:hidden">
-          <span className="font-display font-bold text-xl tracking-tight">Home</span>
+        <div className="sticky top-0 z-20 glass px-5 py-4 flex items-center justify-between md:hidden">
+          <span className="font-display font-bold text-2xl tracking-tight">Home</span>
         </div>
 
         <Tabs defaultValue="for-you" className="w-full">
-          <div className="sticky top-0 md:top-0 z-20 glass border-b border-border/50 px-4 pt-2">
+          <div className="sticky top-0 md:top-0 z-20 glass border-b border-border/40 px-6 pt-3">
             <TabsList className="w-full bg-transparent h-12 p-0 rounded-none grid grid-cols-2">
               <TabsTrigger 
                 value="for-you" 
@@ -46,7 +46,7 @@ export default function Home() {
             </TabsList>
           </div>
 
-          <ScrollArea className="w-full whitespace-nowrap border-b border-border/50 bg-background/50">
+          <ScrollArea className="w-full whitespace-nowrap border-b border-border/40 bg-muted/20">
             <div className="flex w-max space-x-4 p-4">
               {currentUser && (
                 <CreateStory>
@@ -134,10 +134,10 @@ export default function Home() {
       </div>
 
       {/* Right Sidebar (Trending/Suggestions) */}
-      <div className="hidden lg:block w-[350px] p-4 space-y-6">
-        <div className="bg-muted/30 rounded-2xl p-4 border border-border/50">
-          <h3 className="font-display font-medium text-lg mb-4">Trending on Yor Talks</h3>
-          <div className="space-y-4">
+      <div className="hidden lg:block w-[380px] p-6 space-y-8">
+        <div className="bg-card rounded-3xl p-6 border border-border/40 shadow-sm">
+          <h3 className="font-display font-semibold text-xl mb-5">Trending on Yor Talks</h3>
+          <div className="space-y-5">
             {[
               { tag: 'DesignSystems', posts: '12.4K' },
               { tag: 'Frontend', posts: '8.2K' },
@@ -158,9 +158,9 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-muted/30 rounded-2xl p-4 border border-border/50">
-          <h3 className="font-display font-medium text-lg mb-4">Who to follow</h3>
-          <div className="space-y-4">
+        <div className="bg-card rounded-3xl p-6 border border-border/40 shadow-sm">
+          <h3 className="font-display font-semibold text-xl mb-5">Who to follow</h3>
+          <div className="space-y-5">
             {Object.values(users).filter(u => u.id !== currentUser?.id).slice(0, 3).map((user) => (
               <div key={user.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">

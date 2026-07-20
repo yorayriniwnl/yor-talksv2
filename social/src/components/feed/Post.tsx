@@ -17,19 +17,19 @@ export function CreatePost() {
   if (!currentUser) return null;
 
   return (
-    <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur-sm">
+    <div className="p-6 border-b border-border/40 bg-background/50 backdrop-blur-xl relative z-10">
       <div className="flex gap-4">
         <Avatar className="w-10 h-10">
           <AvatarImage src={currentUser.avatarUrl} />
           <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <textarea
-            placeholder="What's moving?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full bg-transparent resize-none outline-none text-lg placeholder:text-muted-foreground min-h-[60px]"
-          />
+            <textarea
+              placeholder="What's moving?"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full bg-transparent resize-none outline-none text-xl placeholder:text-muted-foreground/60 min-h-[60px] font-sans"
+            />
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
             <div className="flex items-center gap-1 text-primary">
               <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-primary hover:text-primary hover:bg-primary/10"><ImageIcon className="w-5 h-5" /></Button>
@@ -37,7 +37,7 @@ export function CreatePost() {
               <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-primary hover:text-primary hover:bg-primary/10"><Smile className="w-5 h-5" /></Button>
             </div>
             <Button 
-              className="rounded-full px-6 font-medium" 
+              className="rounded-full px-8 font-medium shadow-md shadow-primary/20 transition-transform hover:scale-105" 
               disabled={!content.trim()}
               onClick={() => {
                 addPost(content);
@@ -68,7 +68,7 @@ export function PostCard({ post }: { post: PostType }) {
     <motion.article 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer group"
+      className="p-5 border-b border-border/40 hover:bg-muted/10 transition-colors cursor-pointer group"
       onClick={handleOpen}
     >
       <div className="flex gap-4">

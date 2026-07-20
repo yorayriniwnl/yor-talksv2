@@ -66,102 +66,102 @@
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.08);
+  --elevate-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03);
+  --elevate-2: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
 
-  /* A refined, slightly cool light mode */
-  --background: 220 20% 98%; 
-  --foreground: 220 50% 10%;
-  --border: 220 20% 90%;
+  /* A refined, crisp light mode */
+  --background: 0 0% 99%; 
+  --foreground: 240 10% 10%;
+  --border: 240 6% 90%;
   --card: 0 0% 100%;
-  --card-foreground: 220 50% 10%;
-  --card-border: 220 20% 92%;
+  --card-foreground: 240 10% 10%;
+  --card-border: 240 6% 92%;
   
-  --sidebar: 220 20% 96%;
-  --sidebar-foreground: 220 50% 10%;
-  --sidebar-border: 220 20% 90%;
-  --sidebar-primary: 250 80% 60%;
+  --sidebar: 0 0% 99%;
+  --sidebar-foreground: 240 10% 10%;
+  --sidebar-border: 240 6% 90%;
+  --sidebar-primary: 250 84% 54%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 20% 92%;
-  --sidebar-accent-foreground: 220 50% 10%;
-  --sidebar-ring: 250 80% 60%;
+  --sidebar-accent: 240 6% 96%;
+  --sidebar-accent-foreground: 240 10% 10%;
+  --sidebar-ring: 250 84% 54%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 220 50% 10%;
-  --popover-border: 220 20% 90%;
+  --popover-foreground: 240 10% 10%;
+  --popover-border: 240 6% 90%;
 
-  --primary: 255 85% 55%; /* Vibrant Purple/Indigo */
+  --primary: 250 84% 54%; /* Vibrant Indigo */
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 220 20% 90%;
-  --secondary-foreground: 220 50% 10%;
+  --secondary: 240 6% 96%;
+  --secondary-foreground: 240 10% 15%;
   
-  --muted: 220 20% 94%;
-  --muted-foreground: 220 20% 40%;
+  --muted: 240 6% 96%;
+  --muted-foreground: 240 5% 45%;
   
-  --accent: 220 30% 92%;
-  --accent-foreground: 255 85% 55%;
+  --accent: 240 6% 96%;
+  --accent-foreground: 250 84% 54%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 220 20% 90%;
-  --ring: 255 85% 55%;
+  --input: 240 6% 90%;
+  --ring: 250 84% 54%;
   
-  --app-font-sans: 'Geist', 'Inter', sans-serif;
-  --app-font-display: 'Clash Display', 'Geist', sans-serif;
-  --app-font-serif: 'Instrument Serif', Georgia, serif;
-  --app-font-mono: 'Spline Sans Mono', Menlo, monospace;
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-display: 'Outfit', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
   
-  --radius: 0.75rem;
+  --radius: 0.85rem;
 }
 
 .dark {
   --button-outline: rgba(255, 255, 255, 0.1);
   --badge-outline: rgba(255, 255, 255, 0.05);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
+  --elevate-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevate-2: 0 4px 12px rgba(0, 0, 0, 0.5);
 
-  /* Deep, kinetic dark mode */
-  --background: 240 10% 4%;
-  --foreground: 220 20% 95%;
-  --border: 240 10% 12%;
+  /* Deep, sleek midnight dark mode */
+  --background: 240 8% 6%;
+  --foreground: 0 0% 98%;
+  --border: 240 6% 16%;
   
-  --card: 240 10% 6%;
-  --card-foreground: 220 20% 95%;
-  --card-border: 240 10% 12%;
+  --card: 240 8% 8%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 240 6% 16%;
   
-  --sidebar: 240 10% 6%;
-  --sidebar-foreground: 220 20% 95%;
-  --sidebar-border: 240 10% 12%;
-  --sidebar-primary: 255 85% 65%;
+  --sidebar: 240 8% 6%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 240 6% 16%;
+  --sidebar-primary: 250 84% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 10% 12%;
-  --sidebar-accent-foreground: 220 20% 95%;
-  --sidebar-ring: 255 85% 65%;
+  --sidebar-accent: 240 6% 14%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-ring: 250 84% 65%;
 
-  --popover: 240 10% 6%;
-  --popover-foreground: 220 20% 95%;
-  --popover-border: 240 10% 12%;
+  --popover: 240 8% 8%;
+  --popover-foreground: 0 0% 98%;
+  --popover-border: 240 6% 16%;
 
-  --primary: 255 85% 65%;
+  --primary: 250 84% 65%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 240 10% 15%;
-  --secondary-foreground: 220 20% 95%;
+  --secondary: 240 6% 14%;
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 240 10% 12%;
-  --muted-foreground: 240 10% 60%;
+  --muted: 240 6% 14%;
+  --muted-foreground: 240 5% 65%;
   
-  --accent: 240 10% 15%;
-  --accent-foreground: 255 85% 65%;
+  --accent: 240 6% 14%;
+  --accent-foreground: 250 84% 65%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 240 10% 15%;
-  --ring: 255 85% 65%;
+  --input: 240 6% 16%;
+  --ring: 250 84% 65%;
 }
 
 @layer base {

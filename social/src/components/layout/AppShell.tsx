@@ -88,7 +88,7 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border/50 bg-sidebar/50 backdrop-blur-xl h-full p-4 justify-between min-h-0">
+      <aside className="hidden md:flex flex-col w-[280px] border-r border-border/40 bg-sidebar/70 backdrop-blur-2xl h-full p-5 justify-between min-h-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 relative">
         <div className="flex flex-col min-h-0 gap-4">
           <Link href="/" className="flex items-center gap-2 px-2 py-1 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-lg shadow-primary/30 shadow-lg">
@@ -105,12 +105,12 @@ export default function AppShell({ children }: AppShellProps) {
                   <div
                     onMouseEnter={() => prefetchMap[item.href]?.()}
                     onFocus={() => prefetchMap[item.href]?.()}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group ${isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-300 group relative ${isActive ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20' : 'hover:bg-muted/80 text-muted-foreground hover:text-foreground hover:translate-x-1'}`}
                   >
-                    <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary' : 'group-hover:scale-110 transition-transform'}`} strokeWidth={isActive ? 2.5 : 2} />
+                    <item.icon className={`w-[22px] h-[22px] shrink-0 ${isActive ? 'text-primary-foreground' : 'group-hover:scale-110 transition-transform'}`} strokeWidth={isActive ? 2.5 : 2} />
                     <span className="text-[15px] flex-1">{item.label}</span>
                     {item.label === 'Notifications' && unreadCount > 0 && (
-                      <span className="text-[11px] font-semibold bg-primary text-primary-foreground rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
+                      <span className={`text-[11px] font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center ${isActive ? 'bg-background text-primary' : 'bg-primary text-primary-foreground'}`}>
                         {unreadCount}
                       </span>
                     )}
@@ -120,8 +120,8 @@ export default function AppShell({ children }: AppShellProps) {
             })}
           </nav>
 
-          <Link href="/" className="shrink-0">
-            <Button className="w-full rounded-full shadow-lg shadow-primary/20 gap-2 h-11 font-medium">
+          <Link href="/" className="shrink-0 mt-2">
+            <Button className="w-full rounded-2xl shadow-lg shadow-primary/25 gap-2 h-12 font-medium transition-transform hover:scale-[1.02]">
               <Plus className="w-5 h-5" />
               Create Post
             </Button>
@@ -130,10 +130,10 @@ export default function AppShell({ children }: AppShellProps) {
 
         <div>
           <button 
-            className="flex items-center gap-3 w-full px-2 py-3 rounded-xl hover:bg-muted transition-colors text-left text-muted-foreground hover:text-foreground mb-4 text-sm"
+            className="flex items-center gap-3 w-full px-3 py-3 rounded-2xl hover:bg-muted/80 transition-all duration-300 text-left text-muted-foreground hover:text-foreground mb-4 text-sm border border-transparent hover:border-border/50"
             onClick={() => setCmdOpen(true)}
           >
-            <Command className="w-4 h-4" />
+            <Command className="w-[18px] h-[18px]" />
             <span className="flex-1">Search</span>
             <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
               <span className="text-xs">⌘</span>K
@@ -142,8 +142,8 @@ export default function AppShell({ children }: AppShellProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted cursor-pointer transition-colors w-full">
-                <Avatar className="w-10 h-10 ring-2 ring-transparent hover:ring-primary/20 transition-all">
+              <div className="flex items-center gap-3 p-3 rounded-2xl hover:bg-muted/80 cursor-pointer transition-all duration-300 w-full border border-transparent hover:border-border/50">
+                <Avatar className="w-10 h-10 ring-2 ring-transparent hover:ring-primary/30 transition-all shadow-sm">
                   <AvatarImage src={currentUser.avatarUrl} />
                   <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -210,8 +210,8 @@ export default function AppShell({ children }: AppShellProps) {
             const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}>
-                <div className={`p-3 rounded-full flex flex-col items-center justify-center ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                  <item.icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+                <div className={`p-3 rounded-full flex flex-col items-center justify-center transition-all ${isActive ? 'text-primary scale-110' : 'text-muted-foreground hover:text-foreground'}`}>
+                  <item.icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.5 : 2} />
                 </div>
               </Link>
             );
