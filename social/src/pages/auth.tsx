@@ -1,130 +1,85 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function Auth() {
-  const login = useAppStore((s) => s.login);
+  const login = useAppStore((state) => state.login);
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      login(email);
-    }
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (email) login(email);
   };
 
+  const title = mode === 'login' ? 'Welcome back.' : mode === 'signup' ? 'Make your corner.' : 'Reset your password.';
+  const subtitle = mode === 'login'
+    ? 'Pick up the conversations that matter to you.'
+    : mode === 'signup'
+      ? 'A calmer place to share ideas and find your people.'
+      : 'We will send a secure reset link to your inbox.';
+
   return (
-    <div className="min-h-screen w-full flex bg-background">
-      {/* Left side - Visual/Brand */}
-      <div className="hidden lg:flex w-1/2 bg-zinc-950 p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50 mix-blend-overlay"></div>
-        
-        {/* Abstract decorative shapes */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-primary/30 rounded-full blur-3xl filter"></div>
-        <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl filter"></div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-2xl shadow-primary/30 shadow-lg">
-              Y
-            </div>
-            <span className="font-display font-bold text-2xl text-white tracking-tight">Yor Talks</span>
-          </div>
-        </div>
-
-        <div className="relative z-10 max-w-md">
-          <h1 className="text-5xl font-display font-medium text-white leading-[1.1] tracking-tight mb-6">
-            Where your world moves faster.
-          </h1>
-          <p className="text-zinc-400 text-lg">
-            Join the most vibrant community of creators, thinkers, and makers. Share moments, spark discussions, and find your people.
-          </p>
-        </div>
-      </div>
-
-      {/* Right side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="lg:hidden flex items-center gap-3 justify-center mb-12">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-2xl shadow-primary/30 shadow-lg">
-              Y
-            </div>
-            <span className="font-display font-bold text-2xl tracking-tight">Yor Talks</span>
+    <main className="app-canvas min-h-screen p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1440px] overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-[0_24px_80px_-45px_hsl(20_25%_15%/0.55)] lg:min-h-[calc(100vh-4rem)] xl:grid-cols-[1.1fr_0.9fr]">
+        <section className="relative hidden overflow-hidden bg-[hsl(20_22%_12%)] p-10 text-white xl:flex xl:flex-col xl:justify-between">
+          <div className="absolute -right-28 -top-20 h-96 w-96 rounded-full bg-primary/35 blur-3xl" />
+          <div className="absolute -bottom-40 -left-20 h-[30rem] w-[30rem] rounded-full bg-amber-400/15 blur-3xl" />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="brand-mark grid h-10 w-10 place-items-center rounded-[14px] text-xl font-bold">Y</div>
+            <span className="font-display text-xl font-bold tracking-tight">Yor Talks</span>
           </div>
 
-          <div className="space-y-2 text-center lg:text-left">
-            <h2 className="text-3xl font-display font-medium tracking-tight">
-              {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create an account' : 'Reset password'}
-            </h2>
-            <p className="text-muted-foreground">
-              {mode === 'login' ? 'Enter your details to sign in to your account' : mode === 'signup' ? 'Enter your details to get started' : 'We will send you a reset link'}
-            </p>
+          <div className="relative z-10 max-w-[38rem] py-12">
+            <p className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-orange-200"><Sparkles className="h-4 w-4" /> A more human social space</p>
+            <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight 2xl:text-6xl">Come for the ideas.<br />Stay for the people.</h1>
+            <p className="mt-6 max-w-lg text-lg leading-relaxed text-orange-50/70">Yor Talks gives your conversations a home: no clutter, no performance, just room for what you want to say.</p>
+            <div className="mt-10 grid max-w-md gap-3 sm:grid-cols-2">
+              {['Build your circles', 'Share without the noise', 'Keep your privacy'].map((item) => <div key={item} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white/85 backdrop-blur"><span className="grid h-5 w-5 place-items-center rounded-full bg-orange-300 text-[hsl(20_22%_12%)]"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>{item}</div>)}
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="name@example.com" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required 
-                className="h-12 bg-muted/50 border-transparent focus-visible:ring-primary/50 transition-all rounded-xl"
-              />
+          <blockquote className="relative z-10 max-w-lg border-l-2 border-primary pl-5 text-sm leading-relaxed text-white/65">“The best social spaces feel less like a stage and more like a great room.”<footer className="mt-3 font-semibold text-white/90">The Yor Talks manifesto</footer></blockquote>
+        </section>
+
+        <section className="flex items-center justify-center px-5 py-10 sm:p-12">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-[390px]">
+            <div className="mb-10 flex items-center gap-3 xl:hidden">
+              <div className="brand-mark grid h-10 w-10 place-items-center rounded-[14px] text-xl font-bold text-white">Y</div>
+              <div><span className="block font-display text-xl font-bold tracking-tight">Yor Talks</span><span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Your corner of the web</span></div>
             </div>
-            
-            {mode !== 'forgot' && (
+            <div className="mb-8">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-primary">{mode === 'login' ? 'Nice to have you here' : 'A thoughtful beginning'}</p>
+              <h2 className="font-display text-3xl font-bold tracking-tight">{title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  {mode === 'login' && (
-                    <button type="button" onClick={() => setMode('forgot')} className="text-sm font-medium text-primary hover:underline">
-                      Forgot password?
-                    </button>
-                  )}
-                </div>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required 
-                  className="h-12 bg-muted/50 border-transparent focus-visible:ring-primary/50 transition-all rounded-xl"
-                />
+                <Label htmlFor="email" className="font-semibold">Email address</Label>
+                <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-12 rounded-xl border-border bg-muted/40 px-4 focus-visible:ring-primary/50" />
               </div>
-            )}
+              {mode !== 'forgot' && <div className="space-y-2">
+                <div className="flex items-center justify-between"><Label htmlFor="password" className="font-semibold">Password</Label>{mode === 'login' && <button type="button" onClick={() => setMode('forgot')} className="text-sm font-semibold text-primary hover:underline">Forgot password?</button>}</div>
+                <Input id="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required className="h-12 rounded-xl border-border bg-muted/40 px-4 focus-visible:ring-primary/50" />
+              </div>}
+              <Button type="submit" className="mt-2 h-12 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/20">
+                {mode === 'login' ? 'Enter Yor Talks' : mode === 'signup' ? 'Create my account' : 'Send reset link'} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </form>
 
-            <Button type="submit" className="w-full h-12 rounded-xl font-medium shadow-primary/20 shadow-lg text-md mt-6">
-              {mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Sign up' : 'Send reset link'}
-            </Button>
-          </form>
-
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            {mode === 'login' ? (
-              <p>
-                Don't have an account?{' '}
-                <button onClick={() => setMode('signup')} className="font-medium text-primary hover:underline">
-                  Sign up
-                </button>
-              </p>
-            ) : (
-              <p>
-                Already have an account?{' '}
-                <button onClick={() => setMode('login')} className="font-medium text-primary hover:underline">
-                  Sign in
-                </button>
-              </p>
-            )}
-          </div>
-        </div>
+            <div className="mt-7 text-center text-sm text-muted-foreground">
+              {mode === 'login' ? <>New here? <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Create an account</button></> : <>Already have an account? <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Sign in</button></>}
+            </div>
+            <p className="mt-8 text-center text-xs leading-relaxed text-muted-foreground">By continuing, you agree to our community guidelines and respect the spaces you join.</p>
+          </motion.div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

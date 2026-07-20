@@ -69,51 +69,51 @@
   --elevate-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03);
   --elevate-2: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
 
-  /* A refined, crisp light mode */
-  --background: 0 0% 99%; 
-  --foreground: 240 10% 10%;
-  --border: 240 6% 90%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 10%;
-  --card-border: 240 6% 92%;
+  /* Yor Talks is deliberately warm and editorial, rather than another blue dashboard. */
+  --background: 30 33% 98%;
+  --foreground: 20 18% 13%;
+  --border: 24 18% 86%;
+  --card: 32 38% 100%;
+  --card-foreground: 20 18% 13%;
+  --card-border: 24 20% 88%;
   
-  --sidebar: 0 0% 99%;
-  --sidebar-foreground: 240 10% 10%;
-  --sidebar-border: 240 6% 90%;
-  --sidebar-primary: 250 84% 54%;
+  --sidebar: 30 33% 98%;
+  --sidebar-foreground: 20 18% 13%;
+  --sidebar-border: 24 18% 86%;
+  --sidebar-primary: 14 65% 51%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 6% 96%;
-  --sidebar-accent-foreground: 240 10% 10%;
-  --sidebar-ring: 250 84% 54%;
+  --sidebar-accent: 27 50% 94%;
+  --sidebar-accent-foreground: 20 18% 13%;
+  --sidebar-ring: 14 65% 51%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 10%;
-  --popover-border: 240 6% 90%;
+  --popover: 32 38% 100%;
+  --popover-foreground: 20 18% 13%;
+  --popover-border: 24 18% 86%;
 
-  --primary: 250 84% 54%; /* Vibrant Indigo */
+  --primary: 14 65% 51%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 240 6% 96%;
-  --secondary-foreground: 240 10% 15%;
+  --secondary: 27 50% 94%;
+  --secondary-foreground: 20 18% 16%;
   
-  --muted: 240 6% 96%;
-  --muted-foreground: 240 5% 45%;
+  --muted: 28 26% 94%;
+  --muted-foreground: 22 9% 42%;
   
-  --accent: 240 6% 96%;
-  --accent-foreground: 250 84% 54%;
+  --accent: 27 50% 94%;
+  --accent-foreground: 14 65% 42%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 240 6% 90%;
-  --ring: 250 84% 54%;
+  --input: 24 18% 82%;
+  --ring: 14 65% 51%;
   
   --app-font-sans: 'Inter', sans-serif;
   --app-font-display: 'Outfit', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
   
-  --radius: 0.85rem;
+  --radius: 1rem;
 }
 
 .dark {
@@ -123,45 +123,45 @@
   --elevate-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --elevate-2: 0 4px 12px rgba(0, 0, 0, 0.5);
 
-  /* Deep, sleek midnight dark mode */
-  --background: 240 8% 6%;
-  --foreground: 0 0% 98%;
-  --border: 240 6% 16%;
+  /* Dark mode retains the ink-and-clay identity without sacrificing contrast. */
+  --background: 20 18% 8%;
+  --foreground: 30 33% 96%;
+  --border: 20 12% 19%;
   
-  --card: 240 8% 8%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 240 6% 16%;
+  --card: 20 16% 11%;
+  --card-foreground: 30 33% 96%;
+  --card-border: 20 12% 19%;
   
-  --sidebar: 240 8% 6%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 240 6% 16%;
-  --sidebar-primary: 250 84% 65%;
+  --sidebar: 20 18% 8%;
+  --sidebar-foreground: 30 33% 96%;
+  --sidebar-border: 20 12% 19%;
+  --sidebar-primary: 14 75% 62%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 6% 14%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 250 84% 65%;
+  --sidebar-accent: 20 13% 17%;
+  --sidebar-accent-foreground: 30 33% 96%;
+  --sidebar-ring: 14 75% 62%;
 
-  --popover: 240 8% 8%;
-  --popover-foreground: 0 0% 98%;
-  --popover-border: 240 6% 16%;
+  --popover: 20 16% 11%;
+  --popover-foreground: 30 33% 96%;
+  --popover-border: 20 12% 19%;
 
-  --primary: 250 84% 65%;
+  --primary: 14 75% 62%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 240 6% 14%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 20 13% 17%;
+  --secondary-foreground: 30 33% 96%;
   
-  --muted: 240 6% 14%;
-  --muted-foreground: 240 5% 65%;
+  --muted: 20 13% 17%;
+  --muted-foreground: 25 12% 68%;
   
-  --accent: 240 6% 14%;
-  --accent-foreground: 250 84% 65%;
+  --accent: 20 13% 17%;
+  --accent-foreground: 14 75% 72%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 240 6% 16%;
-  --ring: 250 84% 65%;
+  --input: 20 12% 24%;
+  --ring: 14 75% 62%;
 }
 
 @layer base {
@@ -170,6 +170,8 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    min-width: 320px;
+    background-image: radial-gradient(circle at 10% -10%, hsl(var(--primary) / 0.08), transparent 28rem);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
@@ -178,7 +180,7 @@
 
 @layer utilities {
   .glass {
-    @apply bg-background/70 backdrop-blur-xl border-b border-border/50;
+    @apply bg-background/85 backdrop-blur-xl border-b border-border/60;
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -186,5 +188,39 @@
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .app-canvas {
+    background:
+      radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.09), transparent 26rem),
+      radial-gradient(circle at 15% 100%, hsl(42 88% 64% / 0.08), transparent 28rem),
+      hsl(var(--background));
+  }
+
+  .surface {
+    @apply bg-card border border-card-border;
+    box-shadow: 0 16px 45px -32px hsl(20 22% 18% / 0.4);
+  }
+
+  .brand-mark {
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(340 69% 50%));
+    box-shadow: 0 12px 28px -12px hsl(var(--primary) / 0.8);
+  }
+
+  .nav-active {
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.03));
+  }
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

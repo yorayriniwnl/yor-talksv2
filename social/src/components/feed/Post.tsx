@@ -1,50 +1,49 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
+import { BarChart2, Bookmark, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Share, Smile } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Repeat2, Bookmark, MoreHorizontal, Share, Image as ImageIcon, Smile, BarChart2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export function CreatePost() {
-  const currentUser = useAppStore((s) => s.currentUser);
-  const addPost = useAppStore((s) => s.addPost);
+  const currentUser = useAppStore((state) => state.currentUser);
+  const addPost = useAppStore((state) => state.addPost);
   const [content, setContent] = useState('');
-  
+
   if (!currentUser) return null;
 
   return (
-    <div className="p-6 border-b border-border/40 bg-background/50 backdrop-blur-xl relative z-10">
+    <div className="border-b border-border/70 bg-card/40 px-5 py-5 sm:px-7">
       <div className="flex gap-4">
-        <Avatar className="w-10 h-10">
+        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10">
           <AvatarImage src={currentUser.avatarUrl} />
           <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-            <textarea
-              placeholder="What's moving?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-transparent resize-none outline-none text-xl placeholder:text-muted-foreground/60 min-h-[60px] font-sans"
-            />
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-            <div className="flex items-center gap-1 text-primary">
-              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-primary hover:text-primary hover:bg-primary/10"><ImageIcon className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-primary hover:text-primary hover:bg-primary/10"><BarChart2 className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-primary hover:text-primary hover:bg-primary/10"><Smile className="w-5 h-5" /></Button>
+        <div className="min-w-0 flex-1">
+          <textarea
+            id="post-composer"
+            aria-label="Write a post"
+            placeholder="What is on your mind?"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            className="min-h-[72px] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground/70"
+          />
+          <div className="mt-2 flex items-center justify-between border-t border-border/70 pt-3">
+            <div className="flex items-center gap-0.5 text-primary">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 hover:text-primary" aria-label="Add an image"><ImageIcon className="h-[18px] w-[18px]" /></Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 hover:text-primary" aria-label="Create a poll"><BarChart2 className="h-[18px] w-[18px]" /></Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 hover:text-primary" aria-label="Add an emoji"><Smile className="h-[18px] w-[18px]" /></Button>
             </div>
-            <Button 
-              className="rounded-full px-8 font-medium shadow-md shadow-primary/20 transition-transform hover:scale-105" 
+            <Button
+              className="h-9 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-transform hover:scale-[1.02]"
               disabled={!content.trim()}
-              onClick={() => {
-                addPost(content);
-                setContent('');
-              }}
+              onClick={() => { addPost(content); setContent(''); }}
             >
-              Post
+              <SendHorizonal className="h-4 w-4" /> Post
             </Button>
           </div>
         </div>
@@ -54,142 +53,83 @@ export function CreatePost() {
 }
 
 export function PostCard({ post }: { post: PostType }) {
-  const users = useAppStore((s) => s.users);
-  const likePost = useAppStore((s) => s.likePost);
-  const votePoll = useAppStore((s) => s.votePoll);
+  const users = useAppStore((state) => state.users);
+  const likePost = useAppStore((state) => state.likePost);
+  const votePoll = useAppStore((state) => state.votePoll);
   const [, setLocation] = useLocation();
   const author = users[post.authorId];
-  
-  if (!author) return null;
-
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
 
+  if (!author) return null;
+
   return (
-    <motion.article 
+    <motion.article
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-5 border-b border-border/40 hover:bg-muted/10 transition-colors cursor-pointer group"
+      className="group cursor-pointer border-b border-border/70 px-5 py-5 transition-colors hover:bg-muted/35 sm:px-7"
       onClick={handleOpen}
     >
-      <div className="flex gap-4">
-        <Link href={`/profile/${author.id}`} onClick={(e) => e.stopPropagation()}>
-          <Avatar className="w-10 h-10 ring-2 ring-transparent hover:ring-primary/20 transition-all">
+      <div className="flex gap-3.5">
+        <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View ${author.displayName}'s profile`}>
+          <Avatar className="h-10 w-10 ring-2 ring-transparent transition-all hover:ring-primary/25">
             <AvatarImage src={author.avatarUrl} />
             <AvatarFallback>{author.displayName.charAt(0)}</AvatarFallback>
           </Avatar>
         </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Link href={`/profile/${author.id}`} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline truncate">
-                {author.displayName}
-              </Link>
-              {author.verified && (
-                <svg className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-              )}
-              <span className="text-muted-foreground text-sm truncate">@{author.username}</span>
-              <span className="text-muted-foreground text-sm shrink-0">·</span>
-              <span className="text-muted-foreground text-sm shrink-0 hover:underline">
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: false })}
-              </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+              <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} className="truncate font-semibold hover:underline">{author.displayName}</Link>
+              {author.verified && <svg className="h-4 w-4 shrink-0 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-label="Verified"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>}
+              <span className="truncate text-sm text-muted-foreground">@{author.username}</span>
+              <span className="shrink-0 text-sm text-muted-foreground">&middot;</span>
+              <span className="shrink-0 text-sm text-muted-foreground hover:underline">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: false })}</span>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={(event) => event.stopPropagation()} aria-label="More post options"><MoreHorizontal className="h-4 w-4" /></Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Copy link</DropdownMenuItem>
-                <DropdownMenuItem>Not interested</DropdownMenuItem>
-              </DropdownMenuContent>
+              <DropdownMenuContent align="end"><DropdownMenuItem>Copy link</DropdownMenuItem><DropdownMenuItem>Not interested</DropdownMenuItem></DropdownMenuContent>
             </DropdownMenu>
           </div>
 
-          <p className="mt-1 text-[15px] leading-relaxed whitespace-pre-wrap">{post.content}</p>
+          <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/95">{post.content}</p>
 
           {post.media && post.media.length > 0 && (
-            <div className={cn("mt-3 grid gap-2 overflow-hidden rounded-2xl", post.media.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
-              {post.media.map((url, i) => (
-                <img key={i} src={url} alt="" className="w-full h-auto object-cover max-h-[400px] hover:opacity-90 transition-opacity" loading="lazy" />
-              ))}
+            <div className={cn('mt-3 grid overflow-hidden rounded-2xl border border-border/60 bg-muted/20', post.media.length > 1 ? 'grid-cols-2 gap-2' : 'grid-cols-1')}>
+              {post.media.map((url, index) => <img key={index} src={url} alt={`${author.displayName}'s post`} className="max-h-[400px] w-full object-cover transition-opacity hover:opacity-90" loading="lazy" />)}
             </div>
           )}
 
           {post.poll && (
-            <div className="mt-3 border border-border/50 rounded-2xl p-4 bg-muted/10" onClick={(e) => e.stopPropagation()}>
-              <h4 className="font-medium mb-3">{post.poll.question}</h4>
+            <div className="mt-3 rounded-2xl border border-border/60 bg-muted/20 p-4" onClick={(event) => event.stopPropagation()}>
+              <h4 className="mb-3 font-semibold">{post.poll.question}</h4>
               <div className="space-y-2">
-                {post.poll.options.map(opt => {
-                  const percentage = post.poll!.totalVotes > 0 ? Math.round((opt.votes / post.poll!.totalVotes) * 100) : 0;
-                  const isVoted = post.poll!.votedOptionId === opt.id;
-                  
+                {post.poll.options.map((option) => {
+                  const percentage = post.poll!.totalVotes > 0 ? Math.round((option.votes / post.poll!.totalVotes) * 100) : 0;
+                  const isVoted = post.poll!.votedOptionId === option.id;
                   return (
-                    <div 
-                      key={opt.id} 
-                      className={cn(
-                        "relative h-10 rounded-lg overflow-hidden flex items-center px-3 cursor-pointer border transition-colors",
-                        post.poll!.votedOptionId ? "border-transparent" : "border-border hover:bg-muted/50",
-                        isVoted && "font-medium"
-                      )}
-                      onClick={() => !post.poll!.votedOptionId && votePoll(post.id, opt.id)}
+                    <button
+                      type="button" key={option.id}
+                      className={cn('relative flex h-10 w-full items-center overflow-hidden rounded-xl border px-3 text-left transition-colors', post.poll!.votedOptionId ? 'border-transparent' : 'border-border hover:bg-muted/60', isVoted && 'font-semibold')}
+                      onClick={() => !post.poll!.votedOptionId && votePoll(post.id, option.id)}
                     >
-                      {post.poll!.votedOptionId && (
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          className={cn("absolute left-0 top-0 bottom-0 opacity-20", isVoted ? "bg-primary" : "bg-muted-foreground")}
-                        />
-                      )}
-                      <div className="relative z-10 flex justify-between w-full text-sm">
-                        <span>{opt.text}</span>
-                        {post.poll!.votedOptionId && <span>{percentage}%</span>}
-                      </div>
-                    </div>
+                      {post.poll!.votedOptionId && <motion.span initial={{ width: 0 }} animate={{ width: `${percentage}%` }} className={cn('absolute inset-y-0 left-0 opacity-20', isVoted ? 'bg-primary' : 'bg-muted-foreground')} />}
+                      <span className="relative z-10 flex w-full justify-between text-sm"><span>{option.text}</span>{post.poll!.votedOptionId && <span>{percentage}%</span>}</span>
+                    </button>
                   );
                 })}
               </div>
-              <div className="text-xs text-muted-foreground mt-2">{post.poll.totalVotes} votes</div>
+              <div className="mt-2 text-xs text-muted-foreground">{post.poll.totalVotes} votes</div>
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-3 text-muted-foreground max-w-md">
-            <button className="flex items-center gap-1.5 hover:text-primary transition-colors group/btn p-1.5 -ml-1.5" onClick={(e) => e.stopPropagation()}>
-              <div className="p-1.5 rounded-full group-hover/btn:bg-primary/10 transition-colors">
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <span className="text-xs">{post.comments > 0 && post.comments}</span>
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-green-500 transition-colors group/btn p-1.5" onClick={(e) => e.stopPropagation()}>
-              <div className="p-1.5 rounded-full group-hover/btn:bg-green-500/10 transition-colors">
-                <Repeat2 className="w-4 h-4" />
-              </div>
-              <span className="text-xs">{post.shares > 0 && post.shares}</span>
-            </button>
-            <button 
-              className={cn("flex items-center gap-1.5 transition-colors group/btn p-1.5", post.likedByMe ? "text-red-500" : "hover:text-red-500")}
-              onClick={(e) => { e.stopPropagation(); likePost(post.id); }}
-            >
-              <div className={cn("p-1.5 rounded-full transition-colors", post.likedByMe ? "bg-red-500/10" : "group-hover/btn:bg-red-500/10")}>
-                <Heart className={cn("w-4 h-4", post.likedByMe && "fill-current")} />
-              </div>
-              <span className="text-xs">{post.likes > 0 && post.likes}</span>
-            </button>
-            <button 
-              className={cn("flex items-center gap-1.5 transition-colors group/btn p-1.5", post.savedByMe ? "text-primary" : "hover:text-primary")} 
-              onClick={(e) => { e.stopPropagation(); }}
-            >
-              <div className="p-1.5 rounded-full group-hover/btn:bg-primary/10 transition-colors">
-                <Bookmark className={cn("w-4 h-4", post.savedByMe && "fill-current")} />
-              </div>
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-primary transition-colors group/btn p-1.5" onClick={(e) => e.stopPropagation()}>
-              <div className="p-1.5 rounded-full group-hover/btn:bg-primary/10 transition-colors">
-                <Share className="w-4 h-4" />
-              </div>
-            </button>
+          <div className="mt-3 flex max-w-md items-center justify-between text-muted-foreground">
+            <button aria-label="Comment on post" className="group/btn -ml-1.5 flex items-center gap-1.5 rounded-lg p-1.5 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(event) => event.stopPropagation()}><span className="rounded-lg p-1.5 transition-colors group-hover/btn:bg-primary/10"><MessageCircle className="h-4 w-4" /></span><span className="text-xs">{post.comments > 0 && post.comments}</span></button>
+            <button aria-label="Repost" className="group/btn flex items-center gap-1.5 rounded-lg p-1.5 transition-colors hover:text-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(event) => event.stopPropagation()}><span className="rounded-lg p-1.5 transition-colors group-hover/btn:bg-green-500/10"><Repeat2 className="h-4 w-4" /></span><span className="text-xs">{post.shares > 0 && post.shares}</span></button>
+            <button aria-label={post.likedByMe ? 'Unlike post' : 'Like post'} className={cn('group/btn flex items-center gap-1.5 rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', post.likedByMe ? 'text-red-500' : 'hover:text-red-500')} onClick={(event) => { event.stopPropagation(); likePost(post.id); }}><span className={cn('rounded-lg p-1.5 transition-colors', post.likedByMe ? 'bg-red-500/10' : 'group-hover/btn:bg-red-500/10')}><Heart className={cn('h-4 w-4', post.likedByMe && 'fill-current')} /></span><span className="text-xs">{post.likes > 0 && post.likes}</span></button>
+            <button aria-label="Save post" className={cn('group/btn flex items-center gap-1.5 rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', post.savedByMe ? 'text-primary' : 'hover:text-primary')} onClick={(event) => event.stopPropagation()}><span className="rounded-lg p-1.5 transition-colors group-hover/btn:bg-primary/10"><Bookmark className={cn('h-4 w-4', post.savedByMe && 'fill-current')} /></span></button>
+            <button aria-label="Share post" className="group/btn flex items-center gap-1.5 rounded-lg p-1.5 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(event) => event.stopPropagation()}><span className="rounded-lg p-1.5 transition-colors group-hover/btn:bg-primary/10"><Share className="h-4 w-4" /></span></button>
           </div>
         </div>
       </div>

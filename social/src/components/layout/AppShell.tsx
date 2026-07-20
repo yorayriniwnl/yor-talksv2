@@ -1,37 +1,62 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAppStore } from '@/lib/store';
-import { 
-  Home, 
-  Search, 
-  Bell, 
-  Mail, 
-  Users, 
-  BookOpen, 
-  Video, 
-  User as UserIcon, 
-  Settings,
-  LogOut,
-  Menu,
-  Plus,
+import {
+  Bell,
+  BookOpen,
+  Bot,
+  CalendarDays,
   Command,
+  Compass,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Menu,
+  Moon,
+  MoreHorizontal,
+  Plus,
   Radio,
-  Calendar,
+  Search,
+  Settings,
   ShoppingBag,
   Sparkles,
+  Sun,
   Trophy,
-  LayoutDashboard
+  User as UserIcon,
+  Users,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Command as CommandPrimitive, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandDialog } from '@/components/ui/command';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { useTheme } from 'next-themes';
 
 interface AppShellProps {
   children: ReactNode;
 }
+
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  href: string;
+  badge?: number;
+};
 
 export default function AppShell({ children }: AppShellProps) {
   const [location, setLocation] = useLocation();
@@ -42,41 +67,44 @@ export default function AppShell({ children }: AppShellProps) {
   const communities = useAppStore((s) => s.communities);
   const notifications = useAppStore((s) => s.notifications);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const { setTheme, theme } = useTheme();
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const { setTheme, resolvedTheme } = useTheme();
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Keyboard shortcut for Command palette
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
         setCmdOpen((open) => !open);
       }
     };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const navItems = [
+  const primaryNav: NavItem[] = [
     { icon: Home, label: 'Home', href: '/' },
-    { icon: Search, label: 'Explore', href: '/explore', hideDesktop: true },
-    { icon: Bell, label: 'Notifications', href: '/notifications' },
+    { icon: Compass, label: 'Discover', href: '/explore' },
     { icon: Mail, label: 'Messages', href: '/messages' },
-    { icon: Users, label: 'Communities', href: '/communities' },
-    { icon: Radio, label: 'Live', href: '/live' },
-    { icon: Calendar, label: 'Events', href: '/events' },
+  ];
+  const connectNav: NavItem[] = [
+    { icon: Bell, label: 'Updates', href: '/notifications', badge: unreadCount },
+    { icon: Users, label: 'Circles', href: '/communities' },
+    { icon: Radio, label: 'Live rooms', href: '/live' },
+    { icon: CalendarDays, label: 'Events', href: '/events' },
+  ];
+  const moreNav: NavItem[] = [
+    { icon: BookOpen, label: 'Articles', href: '/articles' },
+    { icon: Video, label: 'Watch', href: '/videos' },
     { icon: ShoppingBag, label: 'Marketplace', href: '/marketplace' },
-    { icon: BookOpen, label: 'Knowledge', href: '/articles' },
-    { icon: Video, label: 'Videos', href: '/videos' },
-    { icon: Sparkles, label: 'AI Assistant', href: '/ai' },
+    { icon: Bot, label: 'Ask Yor', href: '/ai' },
     { icon: Trophy, label: 'Achievements', href: '/achievements' },
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-    { icon: UserIcon, label: 'Profile', href: '/profile' },
   ];
+  const allNav = [...primaryNav, ...connectNav, ...moreNav, { icon: UserIcon, label: 'Profile', href: '/profile' }];
 
   if (!currentUser) return null;
 
-  // Prefetch mapping for important routes — keeps chunks ready on hover/focus
+  const isActive = (href: string) => location === href || (href !== '/' && location.startsWith(href));
   const prefetchMap: Record<string, () => void> = {
     '/': () => import('@/pages/home'),
     '/profile': () => import('@/pages/profile'),
@@ -85,181 +113,168 @@ export default function AppShell({ children }: AppShellProps) {
     '/explore': () => import('@/pages/explore'),
   };
 
+  const openComposer = () => {
+    setLocation('/');
+    window.setTimeout(() => document.getElementById('post-composer')?.focus(), 100);
+  };
+
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    return (
+      <Link
+        href={item.href}
+        onMouseEnter={() => prefetchMap[item.href]?.()}
+        onFocus={() => prefetchMap[item.href]?.()}
+        aria-current={active ? 'page' : undefined}
+        className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          active
+            ? 'nav-active font-semibold text-primary'
+            : 'text-muted-foreground hover:bg-muted/75 hover:text-foreground'
+        }`}
+      >
+        <item.icon className={`h-[19px] w-[19px] shrink-0 ${active ? 'stroke-[2.4]' : 'group-hover:scale-105'} transition-transform`} />
+        <span className="flex-1">{item.label}</span>
+        {!!item.badge && (
+          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+            {item.badge > 9 ? '9+' : item.badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   return (
-    <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[280px] border-r border-border/40 bg-sidebar/70 backdrop-blur-2xl h-full p-5 justify-between min-h-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 relative">
-        <div className="flex flex-col min-h-0 gap-4">
-          <Link href="/" className="flex items-center gap-2 px-2 py-1 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-lg shadow-primary/30 shadow-lg">
-              Y
-            </div>
-            <span className="font-display font-bold text-xl tracking-tight">Yor Talks</span>
-          </Link>
+    <div className="app-canvas flex h-[100dvh] w-full overflow-hidden">
+      <aside className="hidden h-full w-[264px] shrink-0 flex-col border-r border-border/70 bg-sidebar/82 p-4 backdrop-blur-xl lg:flex">
+        <Link href="/" className="mb-6 flex items-center gap-3 px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
+          <div className="brand-mark grid h-9 w-9 place-items-center rounded-[13px] text-lg font-bold text-white">Y</div>
+          <div>
+            <span className="block font-display text-lg font-bold leading-none tracking-tight">Yor Talks</span>
+            <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.19em] text-primary">Your corner of the web</span>
+          </div>
+        </Link>
 
-          <nav className="space-y-1 overflow-y-auto hide-scrollbar min-h-0 pr-1">
-            {navItems.filter(i => !i.hideDesktop).map((item) => {
-              const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-              return (
-                <Link key={item.href} href={item.href}>
-                  <div
-                    onMouseEnter={() => prefetchMap[item.href]?.()}
-                    onFocus={() => prefetchMap[item.href]?.()}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-300 group relative ${isActive ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20' : 'hover:bg-muted/80 text-muted-foreground hover:text-foreground hover:translate-x-1'}`}
-                  >
-                    <item.icon className={`w-[22px] h-[22px] shrink-0 ${isActive ? 'text-primary-foreground' : 'group-hover:scale-110 transition-transform'}`} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[15px] flex-1">{item.label}</span>
-                    {item.label === 'Notifications' && unreadCount > 0 && (
-                      <span className={`text-[11px] font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center ${isActive ? 'bg-background text-primary' : 'bg-primary text-primary-foreground'}`}>
-                        {unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
+        <button
+          type="button"
+          onClick={() => setCmdOpen(true)}
+          className="mb-5 flex h-11 items-center gap-2 rounded-xl border border-border/80 bg-card/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Open search"
+        >
+          <Search className="h-4 w-4" />
+          <span className="flex-1 text-left">Search Yor Talks</span>
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
+        </button>
 
-          <Link href="/" className="shrink-0 mt-2">
-            <Button className="w-full rounded-2xl shadow-lg shadow-primary/25 gap-2 h-12 font-medium transition-transform hover:scale-[1.02]">
-              <Plus className="w-5 h-5" />
-              Create Post
-            </Button>
-          </Link>
-        </div>
-
-        <div>
-          <button 
-            className="flex items-center gap-3 w-full px-3 py-3 rounded-2xl hover:bg-muted/80 transition-all duration-300 text-left text-muted-foreground hover:text-foreground mb-4 text-sm border border-transparent hover:border-border/50"
-            onClick={() => setCmdOpen(true)}
-          >
-            <Command className="w-[18px] h-[18px]" />
-            <span className="flex-1">Search</span>
-            <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </button>
-
+        <nav className="hide-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-label="Primary navigation">
+          <div className="space-y-1">{primaryNav.map((item) => <NavLink key={item.href} item={item} />)}</div>
+          <div>
+            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Connect</p>
+            <div className="space-y-1">{connectNav.map((item) => <NavLink key={item.href} item={item} />)}</div>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-3 p-3 rounded-2xl hover:bg-muted/80 cursor-pointer transition-all duration-300 w-full border border-transparent hover:border-border/50">
-                <Avatar className="w-10 h-10 ring-2 ring-transparent hover:ring-primary/30 transition-all shadow-sm">
-                  <AvatarImage src={currentUser.avatarUrl} />
-                  <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{currentUser.displayName}</p>
-                  <p className="text-xs text-muted-foreground truncate">@{currentUser.username}</p>
-                </div>
-              </div>
+              <button className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/75 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <MoreHorizontal className="h-[19px] w-[19px]" />
+                <span className="flex-1 text-left">More from Yor</span>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-xl">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuContent align="start" side="right" className="w-52 rounded-xl p-1.5">
+              <DropdownMenuLabel className="px-2.5 text-xs text-muted-foreground">Explore every space</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setLocation('/profile')}>
-                <UserIcon className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                {theme === 'dark' ? <span className="flex items-center"><Command className="mr-2 h-4 w-4" />Light Mode</span> : <span className="flex items-center"><Command className="mr-2 h-4 w-4" />Dark Mode</span>}
+              {moreNav.map((item) => (
+                <DropdownMenuItem key={item.href} onClick={() => setLocation(item.href)} className="min-h-9 rounded-lg">
+                  <item.icon className="mr-2 h-4 w-4" />{item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </nav>
+
+        <div className="mt-4 space-y-3">
+          <Button onClick={openComposer} className="h-11 w-full rounded-xl font-semibold shadow-lg shadow-primary/20">
+            <Plus className="h-4 w-4" /> Share a thought
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="surface flex w-full items-center gap-2.5 rounded-xl p-2.5 text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="h-8 w-8"><AvatarImage src={currentUser.avatarUrl} /><AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback></Avatar>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{currentUser.displayName}</span><span className="block truncate text-xs text-muted-foreground">@{currentUser.username}</span></span>
+                <Menu className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" className="w-56 rounded-xl p-1.5">
+              <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLocation('/profile')}><UserIcon className="mr-2 h-4 w-4" />Your profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/settings')}><Settings className="mr-2 h-4 w-4" />Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+                {resolvedTheme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}Switch to {resolvedTheme === 'dark' ? 'light' : 'dark'} mode
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10">
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-background">
-        {/* Mobile Top Bar */}
-        <header className="md:hidden flex items-center justify-between p-4 glass z-20">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-display font-bold shadow-lg">
-              Y
-            </div>
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="glass z-20 flex h-16 items-center justify-between px-4 lg:hidden">
+          <Link href="/" className="flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <div className="brand-mark grid h-8 w-8 place-items-center rounded-xl text-sm font-bold text-white">Y</div>
+            <span className="font-display text-base font-bold">Yor Talks</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setCmdOpen(true)}>
-              <Search className="w-5 h-5" />
-            </Button>
-            <Avatar className="w-8 h-8 cursor-pointer" onClick={() => setLocation('/profile')}>
-              <AvatarImage src={currentUser.avatarUrl} />
-              <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
-            </Avatar>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setCmdOpen(true)} aria-label="Search"><Search className="h-5 w-5" /></Button>
+            <Link href="/notifications" aria-label="Notifications" className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Bell className="h-5 w-5" />
+              {!!unreadCount && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />}
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full" aria-label="Open all spaces"><Menu className="h-5 w-5" /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Every space</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[...connectNav.filter((item) => item.href !== '/notifications'), ...moreNav].map((item) => <DropdownMenuItem key={item.href} onClick={() => setLocation(item.href)} className="min-h-9 rounded-lg"><item.icon className="mr-2 h-4 w-4" />{item.label}</DropdownMenuItem>)}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation('/settings')} className="min-h-9 rounded-lg"><Settings className="mr-2 h-4 w-4" />Settings</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar pb-20 md:pb-0 relative z-10">
-          {children}
-        </div>
+        <div className="hide-scrollbar relative z-10 flex-1 overflow-x-hidden overflow-y-auto pb-20 lg:pb-0">{children}</div>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-border/50 pb-safe z-30">
-        <div className="flex items-center justify-around p-2">
-          {navItems.filter(i => ['Home', 'Explore', 'Notifications', 'Messages', 'Profile'].includes(i.label)).map((item) => {
-            const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+      <nav className="glass fixed inset-x-0 bottom-0 z-30 border-t border-border/60 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden" aria-label="Mobile navigation">
+        <div className="mx-auto flex max-w-md items-center justify-between">
+          {[primaryNav[0], primaryNav[1], primaryNav[2], { icon: UserIcon, label: 'Profile', href: '/profile' }].map((item, index) => {
+            const active = isActive(item.href);
             return (
-              <Link key={item.href} href={item.href}>
-                <div className={`p-3 rounded-full flex flex-col items-center justify-center transition-all ${isActive ? 'text-primary scale-110' : 'text-muted-foreground hover:text-foreground'}`}>
-                  <item.icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.5 : 2} />
-                </div>
+              <Link key={item.href} href={item.href} aria-label={item.label} aria-current={active ? 'page' : undefined} className={`grid h-11 w-12 place-items-center rounded-xl transition-colors ${active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'} ${index === 2 ? 'order-4' : index === 3 ? 'order-5' : ''}`}>
+                <item.icon className={`h-5 w-5 ${active ? 'stroke-[2.5]' : ''}`} />
               </Link>
             );
           })}
+          <Button onClick={openComposer} size="icon" className="order-3 -mt-6 h-12 w-12 rounded-2xl border-4 border-background shadow-lg shadow-primary/30" aria-label="Share a thought"><Plus className="h-5 w-5" /></Button>
         </div>
       </nav>
 
-      {/* CmdK Dialog */}
       <CommandDialog open={cmdOpen} onOpenChange={setCmdOpen}>
-        <CommandInput placeholder="Search users, posts, communities, or jump to a page..." />
+        <CommandInput placeholder="Search people, conversations, or a space..." />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Navigation">
-            {navItems.map((item) => (
-              <CommandItem key={item.href} onSelect={() => { setLocation(item.href); setCmdOpen(false); }}>
-                <item.icon className="mr-2 h-4 w-4" />
-                <span>{item.label}</span>
-              </CommandItem>
-            ))}
-            <CommandItem onSelect={() => { setLocation('/settings'); setCmdOpen(false); }}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </CommandItem>
+          <CommandEmpty>No results yet. Try a name or space.</CommandEmpty>
+          <CommandGroup heading="Go to">
+            {allNav.map((item) => <CommandItem key={item.href} onSelect={() => { setLocation(item.href); setCmdOpen(false); }}><item.icon className="mr-2 h-4 w-4" />{item.label}</CommandItem>)}
+            <CommandItem onSelect={() => { setLocation('/settings'); setCmdOpen(false); }}><Settings className="mr-2 h-4 w-4" />Settings</CommandItem>
           </CommandGroup>
           <CommandGroup heading="People">
-            {Object.values(users).slice(0, 5).map((user) => (
-              <CommandItem key={user.id} onSelect={() => { setLocation(`/profile/${user.id}`); setCmdOpen(false); }}>
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>{user.displayName}</span>
-                <span className="ml-2 text-xs text-muted-foreground">@{user.username}</span>
-              </CommandItem>
-            ))}
+            {Object.values(users).slice(0, 5).map((user) => <CommandItem key={user.id} onSelect={() => { setLocation(`/profile/${user.id}`); setCmdOpen(false); }}><UserIcon className="mr-2 h-4 w-4" /><span>{user.displayName}</span><span className="ml-2 text-xs text-muted-foreground">@{user.username}</span></CommandItem>)}
           </CommandGroup>
-          <CommandGroup heading="Communities">
-            {communities.slice(0, 5).map((c) => (
-              <CommandItem key={c.id} onSelect={() => { setLocation(`/communities/${c.id}`); setCmdOpen(false); }}>
-                <Users className="mr-2 h-4 w-4" />
-                <span>{c.name}</span>
-              </CommandItem>
-            ))}
+          <CommandGroup heading="Circles">
+            {communities.slice(0, 5).map((community) => <CommandItem key={community.id} onSelect={() => { setLocation(`/communities/${community.id}`); setCmdOpen(false); }}><Users className="mr-2 h-4 w-4" />{community.name}</CommandItem>)}
           </CommandGroup>
-          <CommandGroup heading="Recent Posts">
-            {posts.slice(0, 4).map((p) => (
-              <CommandItem key={p.id} onSelect={() => { setLocation(`/post/${p.id}`); setCmdOpen(false); }}>
-                <Mail className="mr-2 h-4 w-4" />
-                <span className="truncate">{p.content}</span>
-              </CommandItem>
-            ))}
+          <CommandGroup heading="Recent posts">
+            {posts.slice(0, 4).map((post) => <CommandItem key={post.id} onSelect={() => { setLocation(`/post/${post.id}`); setCmdOpen(false); }}><Sparkles className="mr-2 h-4 w-4" /><span className="truncate">{post.content}</span></CommandItem>)}
           </CommandGroup>
         </CommandList>
       </CommandDialog>
