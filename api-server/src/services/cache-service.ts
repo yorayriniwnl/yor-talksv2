@@ -1,16 +1,19 @@
-export class CacheService {
-  private readonly store = new Map<string, unknown>();
+import { RedisRepository } from "../repositories/redis-repository.js";
 
-  get<T>(key: string): T | undefined {
-    return this.store.get(key) as T | undefined;
+export class CacheService {
+  constructor(private readonly redisRepository: RedisRepository) {}
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const value = await this.redisRepository.get(key);
+    return value ? (JSON.parse(value) as T) : undefined;
   }
 
-  set<T>(key: string, value: T): T {
-    this.store.set(key, value);
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<T> {
+    await this.redisRepository.set(key, JSON.stringify(value), ttlSeconds);
     return value;
   }
 
-  delete(key: string): void {
-    this.store.delete(key);
+  async delete(key: string): Promise<void> {
+    await this.redisRepository.del(key);
   }
 }

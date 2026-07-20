@@ -13,4 +13,17 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
-export * from "./schema";
+export {
+  usersTable,
+  postsTable,
+  conversationsTable,
+  messagesTable,
+  notificationsTable,
+  communitiesTable,
+  insertUserSchema,
+  insertPostSchema,
+  insertConversationSchema,
+  insertMessageSchema,
+  insertNotificationSchema,
+  insertCommunitySchema
+} from "./schema";

@@ -1,37 +1,37 @@
-import { BaseRepository } from "./base-repository.js";
+import { eq, desc } from "drizzle-orm";
+import { postsTable } from "@workspace/db/schema";
+import { db } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
 
-export class PostRepository extends BaseRepository<PostRecord> {
-  create(post: PostRecord): PostRecord {
-    return this.set(post.id, post);
+export class PostRepository {
+  async create(post: PostRecord): Promise<PostRecord> {
+    const [created] = await db.insert(postsTable).values(post).returning();
+    return created as PostRecord;
   }
 
-  findById(id: string): PostRecord | undefined {
-    return this.get(id);
+  async findById(id: string): Promise<PostRecord | undefined> {
+    const [post] = await db.select().from(postsTable).where(eq(postsTable.id, id));
+    return post as PostRecord | undefined;
   }
 
-  listByUser(userId: string): PostRecord[] {
-    return this.getAll().filter((post) => post.authorId === userId);
+  async listByUser(userId: string): Promise<PostRecord[]> {
+    return (await db.select().from(postsTable).where(eq(postsTable.authorId, userId)).orderBy(desc(postsTable.createdAt))) as PostRecord[];
   }
 
-  list(): PostRecord[] {
-    return this.getAll().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  async list(): Promise<PostRecord[]> {
+    return (await db.select().from(postsTable).orderBy(desc(postsTable.createdAt))) as PostRecord[];
   }
 
-  update(id: string, updates: Partial<PostRecord>): PostRecord | undefined {
-    const existing = this.get(id);
-    if (!existing) {
-      return undefined;
-    }
-    const next: PostRecord = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return this.set(id, next);
+  async update(id: string, updates: Partial<PostRecord>): Promise<PostRecord | undefined> {
+    const [updated] = await db.update(postsTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(postsTable.id, id))
+      .returning();
+    return updated as PostRecord | undefined;
   }
 
-  delete(id: string): boolean {
-    return super.delete(id);
+  async delete(id: string): Promise<boolean> {
+    const [deleted] = await db.delete(postsTable).where(eq(postsTable.id, id)).returning({ id: postsTable.id });
+    return !!deleted;
   }
 }

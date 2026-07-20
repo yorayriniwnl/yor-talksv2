@@ -7,11 +7,13 @@ export class SearchService {
     private readonly postRepository: PostRepository,
   ) {}
 
-  search(query: string) {
+  async search(query: string) {
     const normalized = query.toLowerCase();
+    const users = await this.userRepository.list(normalized);
+    const posts = await this.postRepository.list();
     return {
-      users: this.userRepository.list(normalized),
-      posts: this.postRepository.list().filter((post) => post.content.toLowerCase().includes(normalized)),
+      users,
+      posts: posts.filter((post: any) => post.content.toLowerCase().includes(normalized)),
     };
   }
 }

@@ -18,7 +18,10 @@ export class AuthService {
     password: string;
     fullName: string;
   }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
-    const existing = this.userRepository.findByEmail(input.email) ?? this.userRepository.findByUsername(input.username);
+    const existingEmail = await this.userRepository.findByEmail(input.email);
+    const existingUsername = await this.userRepository.findByUsername(input.username);
+    const existing = existingEmail ?? existingUsername;
+    
     if (existing) {
       throw new Error("User already exists");
     }
@@ -57,7 +60,7 @@ export class AuthService {
       },
     };
 
-    this.userRepository.create(user);
+    await this.userRepository.create(user);
     const refreshToken = this.issueRefreshToken(user);
     await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
     return {
@@ -67,7 +70,8 @@ export class AuthService {
   }
 
   async login(input: { identifier: string; password: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
-    const user = this.userRepository.findByEmail(input.identifier) ?? this.userRepository.findByUsername(input.identifier);
+    const byEmail = await this.userRepository.findByEmail(input.identifier);
+    const user = byEmail ?? await this.userRepository.findByUsername(input.identifier);
     if (!user) {
       throw new Error("Invalid credentials");
     }
@@ -79,7 +83,7 @@ export class AuthService {
 
     const refreshToken = this.issueRefreshToken(user);
     await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
-    const updatedUser = this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString() });
+    const updatedUser = await this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString() });
     return {
       user: updatedUser ?? user,
       tokens: this.issueTokens(updatedUser ?? user, refreshToken),
@@ -97,7 +101,7 @@ export class AuthService {
       if (!userId) {
         return undefined;
       }
-      const user = this.userRepository.findById(userId);
+      const user = await this.userRepository.findById(userId);
       if (!user) {
         return undefined;
       }
@@ -112,11 +116,11 @@ export class AuthService {
   }
 
   async resetPassword(email: string): Promise<void> {
-    const user = this.userRepository.findByEmail(email);
+    const user = await this.userRepository.findByEmail(email);
     if (!user) {
       return;
     }
-    this.userRepository.update(user.id, { passwordResetRequired: true });
+    await this.userRepository.update(user.id, { passwordResetRequired: true });
   }
 
   async verifyEmail(userId: string): Promise<UserRecord | undefined> {

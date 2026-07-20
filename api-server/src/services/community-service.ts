@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { communitiesTable } from "@workspace/db/schema";
+import { db } from "@workspace/db";
 import type { CommunityRecord } from "../types/index.js";
 
 export class CommunityService {
-  private readonly communities = new Map<string, CommunityRecord>();
-
-  createCommunity(input: { name: string; slug: string; description: string; ownerId: string }): CommunityRecord {
+  async createCommunity(input: { name: string; slug: string; description: string; ownerId: string }): Promise<CommunityRecord> {
     const community: CommunityRecord = {
       id: randomUUID(),
       name: input.name,
@@ -22,15 +23,17 @@ export class CommunityService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    this.communities.set(community.id, community);
-    return community;
+    
+    const [created] = await db.insert(communitiesTable).values(community).returning();
+    return created as CommunityRecord;
   }
 
-  listCommunities(): CommunityRecord[] {
-    return Array.from(this.communities.values());
+  async listCommunities(): Promise<CommunityRecord[]> {
+    return (await db.select().from(communitiesTable)) as CommunityRecord[];
   }
 
-  getCommunity(id: string): CommunityRecord | undefined {
-    return this.communities.get(id);
+  async getCommunity(id: string): Promise<CommunityRecord | undefined> {
+    const [community] = await db.select().from(communitiesTable).where(eq(communitiesTable.id, id));
+    return community as CommunityRecord | undefined;
   }
 }

@@ -3,6 +3,12 @@ export interface AIRecommendation {
   score: number;
 }
 
+/**
+ * TODO: This service currently uses hardcoded string heuristics and mock data.
+ * For a production application, this should be integrated with a real AI
+ * provider API (e.g. OpenAI, Anthropic, or Google Gemini) to perform
+ * real toxicity analysis, semantic tagging, and AI-based recommendations.
+ */
 export class AIService {
   async moderate(content: string): Promise<{ spam: boolean; toxicity: boolean; nsfw: boolean }> {
     const lowered = content.toLowerCase();

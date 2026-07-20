@@ -5,69 +5,69 @@ import { createResponse } from "../utils/response.js";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  getProfile = (req: Request, res: Response) => {
+  getProfile = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const user = this.userService.getProfile(userId);
+    const user = await this.userService.getProfile(userId);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("Profile loaded", user));
   };
 
-  updateProfile = (req: Request, res: Response) => {
-    const user = this.userService.updateProfile(req.user?.id ?? "", req.body);
+  updateProfile = async (req: Request, res: Response) => {
+    const user = await this.userService.updateProfile(req.user?.id ?? "", req.body);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("Profile updated", user));
   };
 
-  uploadAvatar = (req: Request, res: Response) => {
+  uploadAvatar = async (req: Request, res: Response) => {
     const avatarUrl = req.body.avatarUrl ?? "https://res.cloudinary.com/demo/image/upload/default-avatar.png";
-    const user = this.userService.uploadAvatar(req.user?.id ?? "", avatarUrl);
+    const user = await this.userService.uploadAvatar(req.user?.id ?? "", avatarUrl);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("Avatar uploaded", user));
   };
 
-  searchUsers = (req: Request, res: Response) => {
-    const users = this.userService.searchUsers(req.query.q as string | undefined ?? "");
+  searchUsers = async (req: Request, res: Response) => {
+    const users = await this.userService.searchUsers(req.query.q as string | undefined ?? "");
     return res.status(200).json(createResponse("Users loaded", users));
   };
 
-  followUser = (req: Request, res: Response) => {
+  followUser = async (req: Request, res: Response) => {
     const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const result = this.userService.followUser(req.user?.id ?? "", targetId);
+    const result = await this.userService.followUser(req.user?.id ?? "", targetId);
     if (!result) {
       return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
     }
     return res.status(200).json(createResponse("User followed", result));
   };
 
-  unfollowUser = (req: Request, res: Response) => {
+  unfollowUser = async (req: Request, res: Response) => {
     const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const result = this.userService.unfollowUser(req.user?.id ?? "", targetId);
+    const result = await this.userService.unfollowUser(req.user?.id ?? "", targetId);
     if (!result) {
       return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
     }
     return res.status(200).json(createResponse("User unfollowed", result));
   };
 
-  followers = (req: Request, res: Response) => {
+  followers = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const followers = this.userService.getFollowers(userId);
+    const followers = await this.userService.getFollowers(userId);
     return res.status(200).json(createResponse("Followers loaded", followers));
   };
 
-  following = (req: Request, res: Response) => {
+  following = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const following = this.userService.getFollowing(userId);
+    const following = await this.userService.getFollowing(userId);
     return res.status(200).json(createResponse("Following loaded", following));
   };
 
-  settings = (req: Request, res: Response) => {
-    const user = this.userService.updateSettings(req.user?.id ?? "", req.body);
+  settings = async (req: Request, res: Response) => {
+    const user = await this.userService.updateSettings(req.user?.id ?? "", req.body);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }

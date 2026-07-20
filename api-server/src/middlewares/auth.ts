@@ -21,7 +21,10 @@ declare global {
   }
 }
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+import { RedisRepository } from "../repositories/redis-repository.js";
+const redisRepository = new RedisRepository();
+
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     return res.status(401).json(createResponse("Authentication required", null, {}, ["Missing bearer token"]));
@@ -30,6 +33,15 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
   const token = header.split(" ")[1];
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    
+    // Check if user session was revoked (e.g. logoutAllDevices)
+    // Here we check if the user even has an active refresh token. 
+    // If we wanted true stateless revocation, we would use a token blacklist.
+    const activeSession = await redisRepository.get(`session:${decoded.sub}`);
+    if (!activeSession) {
+      return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
+    }
+
     req.user = {
       id: decoded.sub,
       role: decoded.role,

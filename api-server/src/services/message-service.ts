@@ -8,8 +8,8 @@ export class MessageService {
     private readonly messageRepository: MessageRepository,
   ) {}
 
-  createConversation(participantA: string, participantB: string): ConversationRecord {
-    const existing = this.conversationRepository.findBetween(participantA, participantB);
+  async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
+    const existing = await this.conversationRepository.findBetween(participantA, participantB);
     if (existing) {
       return existing;
     }
@@ -26,8 +26,8 @@ export class MessageService {
     return this.conversationRepository.create(conversation);
   }
 
-  sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): MessageRecord {
-    const conversation = this.createConversation(senderId, recipientId);
+  async sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
+    const conversation = await this.createConversation(senderId, recipientId);
     const message: MessageRecord = {
       id: randomUUID(),
       conversationId: conversation.id,
@@ -44,45 +44,45 @@ export class MessageService {
       pinned: false,
       ...options,
     };
-    this.messageRepository.create(message);
+    await this.messageRepository.create(message);
     return message;
   }
 
-  listConversation(conversationId: string): MessageRecord[] {
-    return this.messageRepository.listConversation(conversationId).filter((message) => !message.deletedAt);
+  async listConversation(conversationId: string): Promise<MessageRecord[]> {
+    const messages = await this.messageRepository.listConversation(conversationId);
+    return messages.filter((message: MessageRecord) => !message.deletedAt);
   }
 
-  markSeen(messageId: string): MessageRecord | undefined {
-    const all = this.messageRepository.listConversation("");
-    const message = all.find((entry) => entry.id === messageId);
+  async markSeen(messageId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
     if (!message) {
       return undefined;
     }
     message.seenAt = new Date().toISOString();
-    return message;
+    return this.messageRepository.update(messageId, { seenAt: message.seenAt });
   }
 
-  editMessage(messageId: string, content: string): MessageRecord | undefined {
-    const message = this.findMessage(messageId);
+  async editMessage(messageId: string, content: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
     if (!message) {
       return undefined;
     }
     message.content = content;
     message.editedAt = new Date().toISOString();
-    return message;
+    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt });
   }
 
-  deleteMessage(messageId: string): MessageRecord | undefined {
-    const message = this.findMessage(messageId);
+  async deleteMessage(messageId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
     if (!message) {
       return undefined;
     }
     message.deletedAt = new Date().toISOString();
-    return message;
+    return this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
   }
 
-  addReaction(messageId: string, userId: string, reaction: string): MessageRecord | undefined {
-    const message = this.findMessage(messageId);
+  async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
     if (!message) {
       return undefined;
     }
@@ -93,19 +93,15 @@ export class MessageService {
       reactions[reaction] = current;
       message.reactions = reactions;
     }
-    return message;
+    return this.messageRepository.update(messageId, { reactions: message.reactions });
   }
 
-  pinMessage(messageId: string): MessageRecord | undefined {
-    const message = this.findMessage(messageId);
+  async pinMessage(messageId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
     if (!message) {
       return undefined;
     }
     message.pinned = true;
-    return message;
-  }
-
-  private findMessage(messageId: string): MessageRecord | undefined {
-    return this.messageRepository.listConversation("").find((entry) => entry.id === messageId);
+    return this.messageRepository.update(messageId, { pinned: message.pinned });
   }
 }

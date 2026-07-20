@@ -1,19 +1,26 @@
-type Job = { id: string; type: string; payload: unknown; createdAt: string };
+import { Queue, Job } from "bullmq";
+import { env } from "../config/env.js";
 
 export class QueueService {
-  private readonly jobs: Job[] = [];
+  private readonly queue: Queue;
 
-  enqueue(type: string, payload: unknown): Job {
-    const job = { id: `${Date.now()}-${this.jobs.length}`, type, payload, createdAt: new Date().toISOString() };
-    this.jobs.push(job);
-    return job;
+  constructor() {
+    this.queue = new Queue("defaultQueue", {
+      connection: {
+        url: env.REDIS_URL,
+      },
+    });
   }
 
-  dequeue(): Job | undefined {
-    return this.jobs.shift();
+  async enqueue(type: string, payload: unknown): Promise<Job> {
+    return this.queue.add(type, payload);
   }
 
-  size(): number {
-    return this.jobs.length;
+  async size(): Promise<number> {
+    return this.queue.count();
+  }
+
+  getQueue(): Queue {
+    return this.queue;
   }
 }

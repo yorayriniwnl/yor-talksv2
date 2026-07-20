@@ -5,7 +5,7 @@ import type { NotificationRecord } from "../types/index.js";
 export class NotificationService {
   constructor(private readonly notificationRepository: NotificationRepository) {}
 
-  createNotification(input: Omit<NotificationRecord, "id" | "createdAt" | "readAt">): NotificationRecord {
+  async createNotification(input: Omit<NotificationRecord, "id" | "createdAt" | "readAt">): Promise<NotificationRecord> {
     const notification: NotificationRecord = {
       id: randomUUID(),
       createdAt: new Date().toISOString(),
@@ -15,11 +15,11 @@ export class NotificationService {
     return this.notificationRepository.create(notification);
   }
 
-  listForUser(userId: string): NotificationRecord[] {
+  async listForUser(userId: string): Promise<NotificationRecord[]> {
     return this.notificationRepository.listForUser(userId);
   }
 
-  markRead(id: string): NotificationRecord | undefined {
+  async markRead(id: string): Promise<NotificationRecord | undefined> {
     return this.notificationRepository.markRead(id);
   }
 }

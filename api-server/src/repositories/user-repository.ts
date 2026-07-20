@@ -1,47 +1,47 @@
-import { BaseRepository } from "./base-repository.js";
+import { eq, or, ilike } from "drizzle-orm";
+import { usersTable } from "@workspace/db/schema";
+import { db } from "@workspace/db";
 import type { UserRecord } from "../types/index.js";
 
-export class UserRepository extends BaseRepository<UserRecord> {
-  constructor() {
-    super();
+export class UserRepository {
+  async create(user: UserRecord): Promise<UserRecord> {
+    const [created] = await db.insert(usersTable).values(user).returning();
+    return created as UserRecord;
   }
 
-  create(user: UserRecord): UserRecord {
-    return this.set(user.id, user);
+  async findByEmail(email: string): Promise<UserRecord | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    return user as UserRecord | undefined;
   }
 
-  findByEmail(email: string): UserRecord | undefined {
-    return this.getAll().find((user) => user.email === email);
+  async findByUsername(username: string): Promise<UserRecord | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+    return user as UserRecord | undefined;
   }
 
-  findByUsername(username: string): UserRecord | undefined {
-    return this.getAll().find((user) => user.username === username);
+  async findById(id: string): Promise<UserRecord | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+    return user as UserRecord | undefined;
   }
 
-  findById(id: string): UserRecord | undefined {
-    return this.get(id);
+  async update(id: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
+    const [updated] = await db.update(usersTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(usersTable.id, id))
+      .returning();
+    return updated as UserRecord | undefined;
   }
 
-  update(id: string, updates: Partial<UserRecord>): UserRecord | undefined {
-    const existing = this.get(id);
-    if (!existing) {
-      return undefined;
+  async list(search = ""): Promise<UserRecord[]> {
+    if (!search) {
+      return (await db.select().from(usersTable)) as UserRecord[];
     }
-    const next: UserRecord = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return this.set(id, next);
-  }
-
-  list(search = ""): UserRecord[] {
-    const query = search.toLowerCase();
-    return this.getAll().filter((user) => {
-      if (!query) {
-        return true;
-      }
-      return user.username.toLowerCase().includes(query) || user.fullName.toLowerCase().includes(query);
-    });
+    const query = `%${search}%`;
+    return (await db.select().from(usersTable).where(
+      or(
+        ilike(usersTable.username, query),
+        ilike(usersTable.fullName, query)
+      )
+    )) as UserRecord[];
   }
 }

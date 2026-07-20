@@ -11,7 +11,7 @@ export class PostService {
     private readonly notificationRepository: NotificationRepository,
   ) {}
 
-  createPost(authorId: string, content: string, images: string[]): PostRecord {
+  async createPost(authorId: string, content: string, images: string[]): Promise<PostRecord> {
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -33,26 +33,26 @@ export class PostService {
     return this.postRepository.create(post);
   }
 
-  deletePost(postId: string): boolean {
+  async deletePost(postId: string): Promise<boolean> {
     return this.postRepository.delete(postId);
   }
 
-  editPost(postId: string, content: string): PostRecord | undefined {
+  async editPost(postId: string, content: string): Promise<PostRecord | undefined> {
     return this.postRepository.update(postId, { content, updatedAt: new Date().toISOString() });
   }
 
-  likePost(postId: string, userId: string): PostRecord | undefined {
-    const post = this.postRepository.findById(postId);
+  async likePost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
     if (!post.likedBy.includes(userId)) {
       post.likedBy.push(userId);
       post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-      this.postRepository.update(postId, { likedBy: post.likedBy, score: post.score });
-      const author = this.userRepository.findById(post.authorId);
+      await this.postRepository.update(postId, { likedBy: post.likedBy, score: post.score });
+      const author = await this.userRepository.findById(post.authorId);
       if (author) {
-        this.notificationRepository.create({
+        await this.notificationRepository.create({
           id: randomUUID(),
           recipientId: author.id,
           type: "like",
@@ -67,18 +67,18 @@ export class PostService {
     return post;
   }
 
-  unlikePost(postId: string, userId: string): PostRecord | undefined {
-    const post = this.postRepository.findById(postId);
+  async unlikePost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
-    post.likedBy = post.likedBy.filter((entry) => entry !== userId);
+    post.likedBy = post.likedBy.filter((entry: string) => entry !== userId);
     post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
     return this.postRepository.update(postId, { likedBy: post.likedBy, score: post.score });
   }
 
-  commentOnPost(postId: string, authorId: string, content: string): { post: PostRecord; comment: CommentRecord } | undefined {
-    const post = this.postRepository.findById(postId);
+  async commentOnPost(postId: string, authorId: string, content: string): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
@@ -92,16 +92,16 @@ export class PostService {
     };
     post.comments.push(comment);
     post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-    this.postRepository.update(postId, { comments: post.comments, score: post.score });
+    await this.postRepository.update(postId, { comments: post.comments, score: post.score });
     return { post, comment };
   }
 
-  replyToComment(postId: string, commentId: string, authorId: string, content: string): { post: PostRecord; reply: ReplyRecord } | undefined {
-    const post = this.postRepository.findById(postId);
+  async replyToComment(postId: string, commentId: string, authorId: string, content: string): Promise<{ post: PostRecord; reply: ReplyRecord } | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
-    const comment = post.comments.find((entry) => entry.id === commentId);
+    const comment = post.comments.find((entry: CommentRecord) => entry.id === commentId);
     if (!comment) {
       return undefined;
     }
@@ -114,24 +114,24 @@ export class PostService {
     };
     comment.replies.push(reply);
     post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-    this.postRepository.update(postId, { comments: post.comments, score: post.score });
+    await this.postRepository.update(postId, { comments: post.comments, score: post.score });
     return { post, reply };
   }
 
-  bookmarkPost(postId: string, userId: string): PostRecord | undefined {
-    const post = this.postRepository.findById(postId);
+  async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
     if (!post.bookmarkedBy.includes(userId)) {
       post.bookmarkedBy.push(userId);
-      this.postRepository.update(postId, { bookmarkedBy: post.bookmarkedBy });
+      await this.postRepository.update(postId, { bookmarkedBy: post.bookmarkedBy });
     }
     return post;
   }
 
-  sharePost(postId: string): PostRecord | undefined {
-    const post = this.postRepository.findById(postId);
+  async sharePost(postId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
@@ -140,8 +140,8 @@ export class PostService {
     return this.postRepository.update(postId, { shareCount: post.shareCount, score: post.score });
   }
 
-  addReaction(postId: string, userId: string, reaction: string): PostRecord | undefined {
-    const post = this.postRepository.findById(postId);
+  async addReaction(postId: string, userId: string, reaction: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
     if (!post) {
       return undefined;
     }
@@ -151,21 +151,22 @@ export class PostService {
       current.push(userId);
       reactions[reaction] = current;
       post.reactions = reactions;
-      this.postRepository.update(postId, { reactions: post.reactions });
+      await this.postRepository.update(postId, { reactions: post.reactions });
     }
     return post;
   }
 
-  getFeed(): PostRecord[] {
-    return this.sortPosts(this.postRepository.list());
+  async getFeed(): Promise<PostRecord[]> {
+    return this.sortPosts(await this.postRepository.list());
   }
 
-  getTrendingFeed(): PostRecord[] {
-    return this.sortPosts(this.postRepository.list()).slice(0, 10);
+  async getTrendingFeed(): Promise<PostRecord[]> {
+    const posts = await this.postRepository.list();
+    return this.sortPosts(posts).slice(0, 10);
   }
 
-  getUserFeed(userId: string): PostRecord[] {
-    return this.sortPosts(this.postRepository.listByUser(userId));
+  async getUserFeed(userId: string): Promise<PostRecord[]> {
+    return this.sortPosts(await this.postRepository.listByUser(userId));
   }
 
   private extractMentions(content: string): string[] {

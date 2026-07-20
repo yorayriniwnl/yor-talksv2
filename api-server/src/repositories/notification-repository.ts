@@ -1,21 +1,28 @@
-import { BaseRepository } from "./base-repository.js";
+import { eq } from "drizzle-orm";
+import { notificationsTable } from "@workspace/db/schema";
+import { db } from "@workspace/db";
 import type { NotificationRecord } from "../types/index.js";
 
-export class NotificationRepository extends BaseRepository<NotificationRecord> {
-  create(notification: NotificationRecord): NotificationRecord {
-    return this.set(notification.id, notification);
+export class NotificationRepository {
+  async create(notification: NotificationRecord): Promise<NotificationRecord> {
+    const [created] = await db.insert(notificationsTable).values(notification).returning();
+    return created as NotificationRecord;
   }
 
-  listForUser(userId: string): NotificationRecord[] {
-    return this.getAll().filter((entry) => entry.recipientId === userId);
+  async listForUser(userId: string): Promise<NotificationRecord[]> {
+    return (await db.select().from(notificationsTable).where(eq(notificationsTable.recipientId, userId))) as NotificationRecord[];
   }
 
-  markRead(id: string): NotificationRecord | undefined {
-    const existing = this.get(id);
-    if (!existing) {
-      return undefined;
-    }
-    const next = { ...existing, readAt: new Date().toISOString() };
-    return this.set(id, next);
+  async findById(id: string): Promise<NotificationRecord | undefined> {
+    const [notification] = await db.select().from(notificationsTable).where(eq(notificationsTable.id, id));
+    return notification as NotificationRecord | undefined;
+  }
+
+  async markRead(id: string): Promise<NotificationRecord | undefined> {
+    const [updated] = await db.update(notificationsTable)
+      .set({ readAt: new Date() })
+      .where(eq(notificationsTable.id, id))
+      .returning();
+    return updated as NotificationRecord | undefined;
   }
 }
