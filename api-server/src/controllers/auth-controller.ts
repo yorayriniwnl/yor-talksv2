@@ -39,7 +39,13 @@ export class AuthController {
     }
   };
 
-  logout = (_req: Request, res: Response) => {
+  logout = async (req: Request, res: Response) => {
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    if (refreshToken) {
+      await this.authService.logoutByToken(refreshToken);
+    }
+    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken");
     return res.status(200).json(createResponse("Logged out", null));
   };
 

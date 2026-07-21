@@ -33,11 +33,15 @@ export class PostService {
     return this.postRepository.create(post);
   }
 
-  async deletePost(postId: string): Promise<boolean> {
+  async deletePost(postId: string, userId: string): Promise<boolean> {
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return false;
     return this.postRepository.delete(postId);
   }
 
-  async editPost(postId: string, content: string): Promise<PostRecord | undefined> {
+  async editPost(postId: string, userId: string, content: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return undefined;
     return this.postRepository.update(postId, { content, updatedAt: new Date().toISOString() });
   }
 

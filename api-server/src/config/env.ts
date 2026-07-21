@@ -5,11 +5,26 @@ const envSchema = z.object({
   PORT: z.string().default("4000"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
-  CLOUDINARY_CLOUD_NAME: z.string().min(1, "CLOUDINARY_CLOUD_NAME is required"),
-  CLOUDINARY_API_KEY: z.string().min(1, "CLOUDINARY_API_KEY is required"),
-  CLOUDINARY_API_SECRET: z.string().min(1, "CLOUDINARY_API_SECRET is required"),
+  // Uploads are optional in local development; production still validates all three values below.
+  CLOUDINARY_CLOUD_NAME: z.string().default(""),
+  CLOUDINARY_API_KEY: z.string().default(""),
+  CLOUDINARY_API_SECRET: z.string().default(""),
   REDIS_URL: z.string().default("redis://127.0.0.1:6379"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+const cloudinaryFields = [
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+] as const;
+
+if (parsedEnv.NODE_ENV === "production") {
+  const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);
+  if (missingCloudinaryConfig.length) {
+    throw new Error(`${missingCloudinaryConfig.join(", ")} must be configured in production`);
+  }
+}
+
+export const env = parsedEnv;

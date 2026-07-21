@@ -263,10 +263,13 @@ interface AppState {
   aiMessages: AIMessage[];
   privacy: PrivacySettings;
   // Actions
-  login: (email: string) => void;
-  logout: () => void;
+  login: (identifier: string, password?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loadInitialData: () => Promise<void>;
   likePost: (postId: string) => void;
-  addPost: (content: string, media?: string[]) => void;
+  addPost: (content: string, media?: string[], poll?: Post['poll']) => void;
+  toggleSavePost: (postId: string) => void;
+  sharePost: (postId: string) => void;
   votePoll: (postId: string, optionId: string) => void;
   toggleCommunityMembership: (communityId: string) => void;
   viewStory: (storyId: string) => void;
@@ -304,8 +307,29 @@ export const useAppStore = create<AppState>()(
         twoFactorEnabled: false,
       },
 
-      login: (email) => set({ currentUser: MOCK_USERS['u1'] }), // Mock login as u1
-      logout: () => set({ currentUser: null }),
+      login: async (identifier, password) => {
+        // Reverted to Mock Login since backend is unavailable
+        const users = Object.values(get().users);
+        const user = users.find(u => u.username === identifier) || users[0];
+        set({ currentUser: user });
+      },
+      logout: async () => {
+        set({ currentUser: null });
+      },
+
+      loadInitialData: async () => {
+        try {
+          const res = await fetch('/api/feed');
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && Array.isArray(json.data)) {
+              set({ posts: json.data });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load initial data', e);
+        }
+      },
 
       likePost: (postId) => set((state) => ({
         posts: state.posts.map(p => 
@@ -315,7 +339,7 @@ export const useAppStore = create<AppState>()(
         )
       })),
 
-      addPost: (content, media) => set((state) => {
+      addPost: (content, media, poll) => set((state) => {
         if (!state.currentUser) return state;
         const newPost: Post = {
           id: `p_${Date.now()}`,
@@ -325,10 +349,19 @@ export const useAppStore = create<AppState>()(
           likes: 0,
           comments: 0,
           shares: 0,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          poll,
         };
         return { posts: [newPost, ...state.posts] };
       }),
+
+      toggleSavePost: (postId) => set((state) => ({
+        posts: state.posts.map((post) => post.id === postId ? { ...post, savedByMe: !post.savedByMe } : post)
+      })),
+
+      sharePost: (postId) => set((state) => ({
+        posts: state.posts.map((post) => post.id === postId ? { ...post, shares: post.shares + 1 } : post)
+      })),
 
       votePoll: (postId, optionId) => set((state) => ({
         posts: state.posts.map(p => {

@@ -26,7 +26,7 @@ export class UserRepository {
 
   async update(id: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
     const [updated] = await db.update(usersTable)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date().toISOString() })
       .where(eq(usersTable.id, id))
       .returning();
     return updated as UserRecord | undefined;

@@ -20,7 +20,7 @@ export class NotificationRepository {
 
   async markRead(id: string): Promise<NotificationRecord | undefined> {
     const [updated] = await db.update(notificationsTable)
-      .set({ readAt: new Date() })
+      .set({ readAt: new Date().toISOString() })
       .where(eq(notificationsTable.id, id))
       .returning();
     return updated as NotificationRecord | undefined;

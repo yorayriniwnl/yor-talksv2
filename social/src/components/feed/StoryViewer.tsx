@@ -27,16 +27,16 @@ export function StoryViewer({ storyIds, initialIndex, onClose }: { storyIds: str
   useEffect(() => {
     if (!story) return;
     const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          goNext();
-          return 0;
-        }
-        return p + 100 / (STORY_DURATION / 100);
-      });
+      setProgress((p) => p + 100 / (STORY_DURATION / 100));
     }, 100);
     return () => clearInterval(interval);
   }, [story?.id]);
+
+  useEffect(() => {
+    if (progress >= 100) {
+      goNext();
+    }
+  }, [progress]);
 
   const goNext = () => {
     if (index < storyIds.length - 1) setIndex(i => i + 1);

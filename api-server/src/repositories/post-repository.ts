@@ -24,7 +24,7 @@ export class PostRepository {
 
   async update(id: string, updates: Partial<PostRecord>): Promise<PostRecord | undefined> {
     const [updated] = await db.update(postsTable)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date().toISOString() })
       .where(eq(postsTable.id, id))
       .returning();
     return updated as PostRecord | undefined;

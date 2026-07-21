@@ -11,10 +11,21 @@ export default function Auth() {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (email) login(email);
+    setErrorMsg('');
+    setLoading(true);
+    if (email && password) {
+      try {
+        await login(email, password);
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Login failed');
+      }
+    }
+    setLoading(false);
   };
 
   const title = mode === 'login' ? 'Welcome back.' : mode === 'signup' ? 'Make your corner.' : 'Reset your password.';
@@ -48,7 +59,7 @@ export default function Auth() {
         </section>
 
         <section className="flex items-center justify-center px-5 py-10 sm:p-12">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-[390px]">
+          <div className="w-full max-w-[390px]">
             <div className="mb-10 flex items-center gap-3 xl:hidden">
               <div className="brand-mark grid h-10 w-10 place-items-center rounded-[14px] text-xl font-bold text-white">Y</div>
               <div><span className="block font-display text-xl font-bold tracking-tight">Yor Talks</span><span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Your corner of the web</span></div>
@@ -60,6 +71,11 @@ export default function Auth() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {errorMsg && (
+                <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive font-medium">
+                  {errorMsg}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-semibold">Email address</Label>
                 <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-12 rounded-xl border-border bg-muted/40 px-4 focus-visible:ring-primary/50" />
@@ -68,8 +84,8 @@ export default function Auth() {
                 <div className="flex items-center justify-between"><Label htmlFor="password" className="font-semibold">Password</Label>{mode === 'login' && <button type="button" onClick={() => setMode('forgot')} className="text-sm font-semibold text-primary hover:underline">Forgot password?</button>}</div>
                 <Input id="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required className="h-12 rounded-xl border-border bg-muted/40 px-4 focus-visible:ring-primary/50" />
               </div>}
-              <Button type="submit" className="mt-2 h-12 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/20">
-                {mode === 'login' ? 'Enter Yor Talks' : mode === 'signup' ? 'Create my account' : 'Send reset link'} <ArrowRight className="h-4 w-4" />
+              <Button type="submit" disabled={loading} className="mt-2 h-12 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/20">
+                {loading ? 'Processing...' : (mode === 'login' ? 'Enter Yor Talks' : mode === 'signup' ? 'Create my account' : 'Send reset link')} {!loading && <ArrowRight className="h-4 w-4" />}
               </Button>
             </form>
 
@@ -77,7 +93,7 @@ export default function Auth() {
               {mode === 'login' ? <>New here? <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Create an account</button></> : <>Already have an account? <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Sign in</button></>}
             </div>
             <p className="mt-8 text-center text-xs leading-relaxed text-muted-foreground">By continuing, you agree to our community guidelines and respect the spaces you join.</p>
-          </motion.div>
+          </div>
         </section>
       </div>
     </main>

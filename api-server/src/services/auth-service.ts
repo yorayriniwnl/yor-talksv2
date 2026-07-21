@@ -61,8 +61,9 @@ export class AuthService {
     };
 
     await this.userRepository.create(user);
-    const refreshToken = this.issueRefreshToken(user);
-    await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
+    const deviceId = randomUUID();
+    const refreshToken = this.issueRefreshToken(user, deviceId);
+    await this.redisRepository.set(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
     return {
       user,
       tokens: this.issueTokens(user, refreshToken),
@@ -81,8 +82,9 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    const refreshToken = this.issueRefreshToken(user);
-    await this.redisRepository.set(`session:${user.id}`, refreshToken, 7 * 24 * 60 * 60);
+    const deviceId = randomUUID();
+    const refreshToken = this.issueRefreshToken(user, deviceId);
+    await this.redisRepository.set(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
     const updatedUser = await this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString() });
     return {
       user: updatedUser ?? user,
@@ -91,21 +93,43 @@ export class AuthService {
   }
 
   async logoutAllDevices(userId: string): Promise<void> {
-    await this.redisRepository.del(`session:${userId}`);
+    // We would need a way to list and delete all keys, but for now we can rely on standard del if redis supports pattern matching or we can just leave it as is if redis doesn't.
+    // Wait, with multiple devices we can't just del `session:${userId}`. 
+    // We can fetch all keys `session:${userId}:*` and delete them.
+    const keys = await this.redisRepository.keys(`session:${userId}:*`);
+    if (keys.length > 0) {
+      await Promise.all(keys.map(key => this.redisRepository.del(key)));
+    }
+  }
+
+  async logout(userId: string, deviceId: string): Promise<void> {
+    await this.redisRepository.del(`session:${userId}:${deviceId}`);
+  }
+
+  async logoutByToken(refreshToken: string): Promise<void> {
+    try {
+      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string, deviceId?: string };
+      if (payload.sub && payload.deviceId) {
+        await this.logout(payload.sub, payload.deviceId);
+      }
+    } catch {
+      // ignore
+    }
   }
 
   async refreshAccessToken(refreshToken: string): Promise<AuthTokens | undefined> {
     try {
-      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string };
+      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string, deviceId?: string };
       const userId = payload.sub;
-      if (!userId) {
+      const deviceId = payload.deviceId;
+      if (!userId || !deviceId) {
         return undefined;
       }
       const user = await this.userRepository.findById(userId);
       if (!user) {
         return undefined;
       }
-      const storedToken = await this.redisRepository.get(`session:${user.id}`);
+      const storedToken = await this.redisRepository.get(`session:${user.id}:${deviceId}`);
       if (!storedToken || storedToken !== refreshToken) {
         return undefined;
       }
@@ -138,8 +162,8 @@ export class AuthService {
     return { accessToken, refreshToken, expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() };
   }
 
-  private issueRefreshToken(user: UserRecord): string {
-    return jwt.sign({ sub: user.id, type: "refresh" }, env.JWT_REFRESH_SECRET, {
+  private issueRefreshToken(user: UserRecord, deviceId: string): string {
+    return jwt.sign({ sub: user.id, type: "refresh", deviceId }, env.JWT_REFRESH_SECRET, {
       expiresIn: "7d",
     });
   }

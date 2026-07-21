@@ -22,6 +22,9 @@ export class UserService {
   }
 
   async followUser(userId: string, targetId: string): Promise<{ follower: UserRecord; target: UserRecord } | undefined> {
+    if (userId === targetId) {
+      throw new Error("Cannot follow yourself");
+    }
     const follower = await this.userRepository.findById(userId);
     const target = await this.userRepository.findById(targetId);
     if (!follower || !target) {

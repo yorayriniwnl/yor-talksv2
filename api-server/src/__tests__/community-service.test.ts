@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CommunityService } from "../services/community-service.js";
 
-test("community service creates communities with default roles", () => {
+test("community service creates communities with default roles", async () => {
   const communityService = new CommunityService();
-  const community = communityService.createCommunity({
+  const community = await communityService.createCommunity({
     name: "Design",
     slug: "design",
     description: "Design discussions",

@@ -1,36 +1,180 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
 servers:
   - url: /api
-    description: Base API path
 tags:
-  - name: health
-    description: Health operations
+  - name: auth
+  - name: posts
+  - name: communities
 paths:
-  /healthz:
-    get:
-      operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      description: Returns server health status
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identifier: { type: string }
+                password: { type: string }
+              required: [identifier, password]
       responses:
         "200":
-          description: Healthy
+          description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: "#/components/schemas/User"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+                fullName: { type: string }
+              required: [username, email, password, fullName]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: "#/components/schemas/User"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "200":
+          description: Success
+
+  /posts:
+    get:
+      operationId: getPosts
+      tags: [posts]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Post"
+    post:
+      operationId: createPost
+      tags: [posts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                images: { type: array, items: { type: string } }
+              required: [content]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: "#/components/schemas/Post"
+
+  /posts/{id}/like:
+    post:
+      operationId: likePost
+      tags: [posts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+
+  /communities:
+    get:
+      operationId: getCommunities
+      tags: [communities]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Community"
+
 components:
   schemas:
-    HealthStatus:
+    User:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        id: { type: string }
+        username: { type: string }
+        fullName: { type: string }
+        avatarUrl: { type: string }
+        bio: { type: string }
+        followers: { type: array, items: { type: string } }
+        following: { type: array, items: { type: string } }
+    Post:
+      type: object
+      properties:
+        id: { type: string }
+        authorId: { type: string }
+        content: { type: string }
+        images: { type: array, items: { type: string } }
+        createdAt: { type: string }
+        likedBy: { type: array, items: { type: string } }
+        comments: { type: array, items: { type: string } }
+        shareCount: { type: integer }
+    Community:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        memberIds: { type: array, items: { type: string } }

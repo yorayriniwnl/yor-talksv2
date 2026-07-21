@@ -14,7 +14,7 @@ export class PostController {
 
   deletePost = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
-    const deleted = await this.postService.deletePost(postId);
+    const deleted = await this.postService.deletePost(postId, req.user?.id ?? "");
     if (!deleted) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }
@@ -24,7 +24,7 @@ export class PostController {
   editPost = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const post = await this.postService.editPost(postId, content);
+    const post = await this.postService.editPost(postId, req.user?.id ?? "", content);
     if (!post) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }

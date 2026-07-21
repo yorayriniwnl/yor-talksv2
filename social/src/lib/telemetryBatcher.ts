@@ -142,8 +142,12 @@ function init() {
   });
 
   // attempt flush on idle
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(() => void flush(), { timeout: 2000 });
+  const requestIdleCallback = (window as Window & {
+    requestIdleCallback?: (callback: () => void, options: { timeout: number }) => number;
+  }).requestIdleCallback;
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => void flush(), { timeout: 2000 });
   } else {
     // fallback short timeout
     window.setTimeout(() => void flush(), 2000);

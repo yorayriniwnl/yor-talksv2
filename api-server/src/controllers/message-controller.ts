@@ -14,13 +14,13 @@ export class MessageController {
 
   listConversation = async (req: Request, res: Response) => {
     const conversationId = typeof req.params.conversationId === "string" ? req.params.conversationId : "";
-    const messages = await this.messageService.listConversation(conversationId);
+    const messages = await this.messageService.listConversation(conversationId, req.user?.id ?? "");
     return res.status(200).json(createResponse("Conversation loaded", messages));
   };
 
   markSeen = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
-    const message = await this.messageService.markSeen(messageId);
+    const message = await this.messageService.markSeen(messageId, req.user?.id ?? "");
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
@@ -29,7 +29,7 @@ export class MessageController {
 
   editMessage = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
-    const message = await this.messageService.editMessage(messageId, req.body.content);
+    const message = await this.messageService.editMessage(messageId, req.user?.id ?? "", req.body.content);
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
@@ -38,7 +38,7 @@ export class MessageController {
 
   deleteMessage = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
-    const message = await this.messageService.deleteMessage(messageId);
+    const message = await this.messageService.deleteMessage(messageId, req.user?.id ?? "");
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }

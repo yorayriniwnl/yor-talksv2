@@ -7,13 +7,13 @@ type ProfilerProps = {
 };
 
 export function AppProfiler({ children }: ProfilerProps) {
-  const onRender = (
-    id: string,
-    phase: 'mount' | 'update',
-    actualDuration: number,
-    baseDuration: number,
-    startTime: number,
-    commitTime: number,
+  const onRender: React.ProfilerOnRenderCallback = (
+    id,
+    phase,
+    actualDuration,
+    baseDuration,
+    startTime,
+    commitTime,
   ) => {
     try {
       const payload = { id, phase, actualDuration, baseDuration, startTime, commitTime };

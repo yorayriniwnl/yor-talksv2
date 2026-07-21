@@ -48,23 +48,27 @@ export class MessageService {
     return message;
   }
 
-  async listConversation(conversationId: string): Promise<MessageRecord[]> {
+  async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
+    const conversation = await this.conversationRepository.findById(conversationId);
+    if (!conversation || !conversation.participantIds.includes(userId)) {
+      return [];
+    }
     const messages = await this.messageRepository.listConversation(conversationId);
     return messages.filter((message: MessageRecord) => !message.deletedAt);
   }
 
-  async markSeen(messageId: string): Promise<MessageRecord | undefined> {
+  async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message) {
+    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
       return undefined;
     }
     message.seenAt = new Date().toISOString();
     return this.messageRepository.update(messageId, { seenAt: message.seenAt });
   }
 
-  async editMessage(messageId: string, content: string): Promise<MessageRecord | undefined> {
+  async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message) {
+    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
       return undefined;
     }
     message.content = content;
@@ -72,9 +76,9 @@ export class MessageService {
     return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt });
   }
 
-  async deleteMessage(messageId: string): Promise<MessageRecord | undefined> {
+  async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message) {
+    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
       return undefined;
     }
     message.deletedAt = new Date().toISOString();

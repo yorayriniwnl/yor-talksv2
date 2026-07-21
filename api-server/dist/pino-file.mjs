@@ -4118,7 +4118,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "/workspaces/yor-talksv2/api-server/dist";
+        const outputDir = "C:\\Users\\ayush\\OneDrive\\Documents\\Projects\\yor-talksv2-main\\api-server\\dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");

@@ -42,4 +42,9 @@ export class ConversationRepository {
     );
     return conversation as ConversationRecord | undefined;
   }
+
+  async findById(conversationId: string): Promise<ConversationRecord | undefined> {
+    const [conversation] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+    return conversation as ConversationRecord | undefined;
+  }
 }

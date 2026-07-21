@@ -40,7 +40,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 2, // 2 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
       retry: 1,
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       refetchOnWindowFocus: false,
@@ -79,13 +79,20 @@ function ProtectedRoutes() {
 
 function Router() {
   const currentUser = useAppStore((s) => s.currentUser);
+  const loadInitialData = useAppStore((s) => s.loadInitialData);
+
+  React.useEffect(() => {
+    if (currentUser) {
+      loadInitialData().catch(console.error);
+    }
+  }, [currentUser, loadInitialData]);
 
   return (
     <Switch>
       {!currentUser && <Route path="/auth" component={Auth} />}
       {!currentUser && <Route component={Auth} />}
       {currentUser && <Route path="/auth" component={() => <Redirect to="/" />} />}
-      {currentUser && <ProtectedRoutes />}
+      {currentUser && <Route><ProtectedRoutes /></Route>}
     </Switch>
   );
 }

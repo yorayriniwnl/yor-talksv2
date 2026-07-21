@@ -35,6 +35,10 @@ export class RedisRepository {
     await this.client.del(key);
   }
 
+  async keys(pattern: string): Promise<string[]> {
+    return this.client.keys(pattern);
+  }
+
   async addToSet(key: string, value: string): Promise<void> {
     await this.client.sadd(key, value);
   }
