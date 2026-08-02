@@ -1,0 +1,37 @@
+import { Router } from "express";
+import { UserController } from "../controllers/user-controller.js";
+import { authenticate } from "../middlewares/auth.js";
+import { imageUpload } from "../middlewares/upload.js";
+import { validateBody, validateParams, validateQuery } from "../middlewares/validation.js";
+import { NotificationRepository } from "../repositories/notification-repository.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
+import { AuthService } from "../services/auth-service.js";
+import { QueueService } from "../services/queue-service.js";
+import { UserService } from "../services/user-service.js";
+import { privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
+import { userIdParamSchema } from "../validators/params.js";
+
+const router = Router();
+const userRepository = new UserRepository();
+const userService = new UserService(userRepository, new NotificationRepository(), new QueueService());
+const authService = new AuthService(userRepository, new RedisRepository());
+const userController = new UserController(userService, authService);
+
+router.get("/users/search", authenticate, validateQuery(searchUsersSchema), userController.searchUsers);
+router.get("/users/me", authenticate, userController.getCurrentUser);
+router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);
+router.put("/users/me", authenticate, validateBody(updateProfileSchema), userController.updateProfile);
+router.post("/users/me/avatar", authenticate, imageUpload.single("avatar"), userController.uploadAvatar);
+router.post("/users/:userId/follow", authenticate, validateParams(userIdParamSchema), userController.followUser);
+router.post("/users/:userId/unfollow", authenticate, validateParams(userIdParamSchema), userController.unfollowUser);
+router.get("/users/:userId/followers", authenticate, validateParams(userIdParamSchema), userController.followers);
+router.get("/users/:userId/following", authenticate, validateParams(userIdParamSchema), userController.following);
+router.put("/users/me/settings", authenticate, validateBody(settingsSchema), userController.settings);
+router.put("/users/me/privacy", authenticate, validateBody(privacySchema), userController.updatePrivacy);
+router.post("/users/:userId/block", authenticate, validateParams(userIdParamSchema), userController.blockUser);
+router.post("/users/:userId/unblock", authenticate, validateParams(userIdParamSchema), userController.unblockUser);
+router.post("/users/:userId/mute", authenticate, validateParams(userIdParamSchema), userController.muteUser);
+router.post("/users/:userId/unmute", authenticate, validateParams(userIdParamSchema), userController.unmuteUser);
+
+export default router;

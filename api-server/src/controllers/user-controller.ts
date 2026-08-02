@@ -1,0 +1,152 @@
+import { type Request, type Response } from "express";
+import { AuthService } from "../services/auth-service.js";
+import { StorageService } from "../services/storage-service.js";
+import { UserService } from "../services/user-service.js";
+import { createResponse } from "../utils/response.js";
+import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
+
+export class UserController {
+  private readonly storageService = new StorageService();
+
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
+  ) {}
+
+  getProfile = async (req: Request, res: Response) => {
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const user = await this.userService.getProfile(userId);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Profile loaded", toPublicUser(user)));
+  };
+
+  getCurrentUser = async (req: Request, res: Response) => {
+    const user = await this.userService.getProfile(req.user?.id ?? "");
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Profile loaded", toOwnUser(user)));
+  };
+
+  updateProfile = async (req: Request, res: Response) => {
+    const user = await this.userService.updateProfile(req.user?.id ?? "", req.body);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Profile updated", toOwnUser(user)));
+  };
+
+  uploadAvatar = async (req: Request, res: Response) => {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json(createResponse("No image file provided", null, {}, ["Expected a multipart file field named 'avatar'"]));
+    }
+    try {
+      const avatarUrl = await this.storageService.uploadAvatar(file.buffer, file.originalname);
+      const user = await this.userService.uploadAvatar(req.user?.id ?? "", avatarUrl);
+      if (!user) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("Avatar uploaded", toOwnUser(user)));
+    } catch (error) {
+      return res.status(502).json(createResponse("Avatar upload failed", null, {}, [error instanceof Error ? error.message : "Upload provider error"]));
+    }
+  };
+
+  searchUsers = async (req: Request, res: Response) => {
+    const users = await this.userService.searchUsers(req.query.q as string | undefined ?? "");
+    return res.status(200).json(createResponse("Users loaded", toPublicUsers(users)));
+  };
+
+  followUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const result = await this.userService.followUser(req.user?.id ?? "", targetId);
+    if (!result) {
+      return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
+    }
+    return res.status(200).json(createResponse("User followed", { follower: toOwnUser(result.follower), target: toPublicUser(result.target) }));
+  };
+
+  unfollowUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const result = await this.userService.unfollowUser(req.user?.id ?? "", targetId);
+    if (!result) {
+      return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
+    }
+    return res.status(200).json(createResponse("User unfollowed", { follower: toOwnUser(result.follower), target: toPublicUser(result.target) }));
+  };
+
+  followers = async (req: Request, res: Response) => {
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const followers = await this.userService.getFollowers(userId);
+    return res.status(200).json(createResponse("Followers loaded", toPublicUsers(followers)));
+  };
+
+  following = async (req: Request, res: Response) => {
+    const userId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const following = await this.userService.getFollowing(userId);
+    return res.status(200).json(createResponse("Following loaded", toPublicUsers(following)));
+  };
+
+  settings = async (req: Request, res: Response) => {
+    const user = await this.userService.updateSettings(req.user?.id ?? "", req.body);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Settings updated", user.settings));
+  };
+
+  updatePrivacy = async (req: Request, res: Response) => {
+    const user = await this.authService.updatePrivacy(req.user?.id ?? "", req.body);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Privacy settings updated", user.privacy));
+  };
+
+  blockUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const user = await this.userService.blockUser(req.user?.id ?? "", targetId);
+      if (!user) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("User blocked", { blockedUsers: user.blockedUsers }));
+    } catch (error) {
+      return res.status(400).json(createResponse("Cannot block user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
+  unblockUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const user = await this.userService.unblockUser(req.user?.id ?? "", targetId);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("User unblocked", { blockedUsers: user.blockedUsers }));
+  };
+
+  muteUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const user = await this.userService.muteUser(req.user?.id ?? "", targetId);
+      if (!user) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("User muted", { mutedUsers: user.mutedUsers }));
+    } catch (error) {
+      return res.status(400).json(createResponse("Cannot mute user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
+  unmuteUser = async (req: Request, res: Response) => {
+    const targetId = typeof req.params.userId === "string" ? req.params.userId : "";
+    const user = await this.userService.unmuteUser(req.user?.id ?? "", targetId);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("User unmuted", { mutedUsers: user.mutedUsers }));
+  };
+}

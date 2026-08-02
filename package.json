@@ -1,0 +1,21 @@
+{
+	"private": true,
+	"workspaces": [
+		"api-server",
+		"lib/*",
+		"lib/integrations/*",
+		"scripts",
+		"social"
+	],
+	"dependencies": {
+		"@esbuild/win32-x64": "^0.27.3",
+		"@rollup/rollup-win32-x64-msvc": "^4.62.2",
+		"esbuild": "0.28.1",
+		"lightningcss-win32-x64-msvc": "1.32.0"
+	},
+	"scripts": {
+		"dev": "node ./dev.mjs",
+		"dev:api": "npm run --prefix api-server dev",
+		"dev:web": "npm run --prefix social dev"
+	}
+}
