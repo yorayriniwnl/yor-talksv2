@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { PostController } from "../controllers/post-controller.js";
 import { authenticate } from "../middlewares/auth.js";
-import { imageUpload } from "../middlewares/upload.js";
+import { upload } from "../middlewares/upload.js";
 import { validateBody, validateParams } from "../middlewares/validation.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import { PostRepository } from "../repositories/post-repository.js";
@@ -15,7 +15,7 @@ const router = Router();
 const postService = new PostService(new PostRepository(), new UserRepository(), new NotificationRepository(), new QueueService());
 const postController = new PostController(postService);
 
-router.post("/posts/upload-image", authenticate, imageUpload.single("image"), postController.uploadImage);
+router.post("/posts/upload-image", authenticate, upload.single("image"), postController.uploadImage);
 router.post("/posts", authenticate, validateBody(createPostSchema), postController.createPost);
 router.get("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.getPost);
 router.delete("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.deletePost);

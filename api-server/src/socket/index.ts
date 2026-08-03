@@ -73,6 +73,39 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       }
     });
 
+    // WebRTC Live Stream Signaling
+    socket.on("stream:join", ({ streamId }) => {
+      if (typeof streamId === "string") {
+        socket.join(`stream:${streamId}`);
+        socket.to(`stream:${streamId}`).emit("stream:peer-joined", { userId, socketId: socket.id });
+      }
+    });
+
+    socket.on("stream:leave", ({ streamId }) => {
+      if (typeof streamId === "string") {
+        socket.leave(`stream:${streamId}`);
+        socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
+      }
+    });
+
+    socket.on("webrtc:offer", ({ targetSocketId, offer, streamId }) => {
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
+      }
+    });
+
+    socket.on("webrtc:answer", ({ targetSocketId, answer, streamId }) => {
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
+      }
+    });
+
+    socket.on("webrtc:ice-candidate", ({ targetSocketId, candidate, streamId }) => {
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
+      }
+    });
+
     socket.on("disconnect", () => {
       onlineUsers.delete(userId);
       logger.info({ userId }, "socket disconnected");

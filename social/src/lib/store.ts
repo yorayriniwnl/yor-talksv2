@@ -733,6 +733,19 @@ export const useAppStore = create<AppState>()(
           verified: true
         };
 
+        const mockAditi: User = {
+          id: 'user-aditi',
+          username: 'aditi_cofounder',
+          displayName: 'Aditi',
+          avatarUrl: '/images/aditi.png',
+          coverUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2564&auto=format&fit=crop',
+          bio: 'Co-Founder @ Yor Zenith & Yor Talks 🚀 Building ambient systems & product surfaces.',
+          followers: 1250,
+          following: 180,
+          followingIds: ['user-roy', 'user-anya'],
+          verified: true
+        };
+
         const tokens = getStoredTokens();
         
         // Populate mock users in store
@@ -742,6 +755,7 @@ export const useAppStore = create<AppState>()(
             ...state.users, 
             [mockUser.id]: mockUser, 
             [mockAnya.id]: mockAnya,
+            [mockAditi.id]: mockAditi,
             [mockMarcus.id]: mockMarcus,
             [mockElena.id]: mockElena,
             [mockSophia.id]: mockSophia,

@@ -7,6 +7,7 @@ import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { SecurityService } from "./security-service.js";
+import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
 
 export class TooManyAttemptsError extends Error {}
@@ -16,9 +17,8 @@ export class AuthService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly redisRepository: RedisRepository = new RedisRepository(),
-    // In-memory and single-instance for now — fine for a single dev/small
-    // deployment, would need a shared store (Redis) behind multiple instances.
     private readonly securityService: SecurityService = new SecurityService(),
+    private readonly emailService: EmailService = new EmailService(),
   ) {}
 
   async register(input: {
@@ -181,7 +181,8 @@ export class AuthService {
     const hashed = await this.redisRepository.hashToken(token);
     await this.redisRepository.set(`password-reset:${hashed}`, user.id, 60 * 60);
     await this.userRepository.update(user.id, { passwordResetRequired: true });
-    logger.info({ userId: user.id }, "Password reset requested (no email transport configured — token returned to caller instead)");
+    await this.emailService.sendPasswordResetEmail(user.email, token);
+    logger.info({ userId: user.id }, "Password reset requested and email dispatched");
     return token;
   }
 
@@ -210,7 +211,8 @@ export class AuthService {
     const token = randomBytes(32).toString("hex");
     const hashed = await this.redisRepository.hashToken(token);
     await this.redisRepository.set(`email-verify:${hashed}`, userId, 24 * 60 * 60);
-    logger.info({ userId }, "Email verification requested (no email transport configured — token returned to caller instead)");
+    await this.emailService.sendVerificationEmail(user.email, token);
+    logger.info({ userId }, "Email verification requested and email dispatched");
     return token;
   }
 
