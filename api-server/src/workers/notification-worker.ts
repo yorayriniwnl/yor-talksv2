@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { Worker, type Job } from "bullmq";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";

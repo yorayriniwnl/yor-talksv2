@@ -7,10 +7,12 @@ export class InvalidFileTypeError extends Error {
   }
 }
 
-// Use memory storage so file buffer is directly accessible in request object
-const storage = multer.memoryStorage();
+const multerFactory = multer as unknown as typeof multer;
 
-export const upload = multer({
+// Use memory storage so file buffer is directly accessible in request object
+const storage = multerFactory.memoryStorage();
+
+export const upload = multerFactory({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
