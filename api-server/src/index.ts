@@ -11,7 +11,10 @@ const port = Number(env.PORT);
 
 const httpServer = createServer(app);
 const io = attachSocketServer(httpServer);
-const notificationWorker = await startNotificationWorker();
+const notificationWorker = await startNotificationWorker().catch((err) => {
+  logger.warn({ err }, "Notification worker failed to start");
+  return null;
+});
 
 httpServer.on("error", (err: Error) => {
   logger.error({ err }, "Error listening on port");
