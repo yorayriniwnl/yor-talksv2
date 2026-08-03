@@ -31,10 +31,13 @@ const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, un
   },
 });
 
+const createHelmetMiddleware = helmet as unknown as (options?: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void;
+const createRateLimitMiddleware = rateLimit as unknown as (options?: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void;
+
 app.disable("x-powered-by");
 app.use(requestContext);
 app.use(requestLogger);
-app.use(helmet());
+app.use(createHelmetMiddleware());
 app.use(compression());
 app.use(
   cors({
@@ -50,7 +53,7 @@ app.use(
   }),
 );
 app.use(
-  rateLimit({
+  createRateLimitMiddleware({
     windowMs: 15 * 60 * 1000,
     max: 300,
     standardHeaders: true,

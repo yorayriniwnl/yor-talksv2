@@ -19,6 +19,7 @@ const envSchema = z.object({
   // Vite dev server's own origin — in dev, /api is same-origin via Vite's proxy
   // anyway (see social/vite.config.ts), so this default is rarely exercised.
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
+  CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
 });
 
 const parsedEnv = envSchema.parse(process.env);
