@@ -13,11 +13,11 @@ export class AIService {
     if (this.apiKey) {
       try {
         const prompt = `Analyze this social post content for safety moderation. Respond with JSON ONLY in this format: {"spam": boolean, "toxicity": boolean, "nsfw": boolean}. Content: "${content}"`;
-        const res: any = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
+        const res = await (fetch as any)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
+        }) as { ok: boolean; json: () => Promise<any> };
         if (res.ok) {
           const json = await res.json();
           const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -43,11 +43,11 @@ export class AIService {
     if (this.apiKey && content.length > 0) {
       try {
         const prompt = `Analyze this user content and return 2 topical recommendation signals with reasons and relevance scores between 0 and 1. Respond with JSON ONLY in format: [{"reason": string, "score": number}]. Content: "${content}"`;
-        const res: any = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
+        const res = await (fetch as any)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
+        }) as { ok: boolean; json: () => Promise<any> };
         if (res.ok) {
           const json = await res.json();
           const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -75,11 +75,11 @@ export class AIService {
     if (this.apiKey && content.length > 10) {
       try {
         const prompt = `Extract 3 relevant topic hashtags (without # prefix) for this text. Return JSON ONLY array of strings: ["tag1", "tag2"]. Content: "${content}"`;
-        const res: any = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
+        const res = await (fetch as any)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
+        }) as { ok: boolean; json: () => Promise<any> };
         if (res.ok) {
           const json = await res.json();
           const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
