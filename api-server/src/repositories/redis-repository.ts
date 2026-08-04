@@ -8,47 +8,72 @@ export class RedisRepository {
 
   constructor() {
     this.client = new Redis(env.REDIS_URL, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
       retryStrategy(times) {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
+        if (times > 3) return null;
+        return Math.min(times * 50, 500);
       },
     });
 
     this.client.on("error", (error) => {
-      logger.error({ error }, "Redis connection error");
+      logger.warn({ error: error?.message || error }, "Redis connection warning");
     });
   }
 
   async get(key: string): Promise<string | null> {
-    return this.client.get(key);
+    try {
+      return await this.client.get(key);
+    } catch {
+      return null;
+    }
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    if (ttlSeconds) {
-      await this.client.set(key, value, "EX", ttlSeconds);
-    } else {
-      await this.client.set(key, value);
+    try {
+      if (ttlSeconds) {
+        await this.client.set(key, value, "EX", ttlSeconds);
+      } else {
+        await this.client.set(key, value);
+      }
+    } catch {
+      // Safe fallback if Redis is unavailable
     }
   }
 
   async del(key: string): Promise<void> {
-    await this.client.del(key);
+    try {
+      await this.client.del(key);
+    } catch {}
   }
 
   async keys(pattern: string): Promise<string[]> {
-    return this.client.keys(pattern);
+    try {
+      return await this.client.keys(pattern);
+    } catch {
+      return [];
+    }
   }
 
   async addToSet(key: string, value: string): Promise<void> {
-    await this.client.sadd(key, value);
+    try {
+      await this.client.sadd(key, value);
+    } catch {}
   }
 
   async removeFromSet(key: string, value: string): Promise<void> {
-    await this.client.srem(key, value);
+    try {
+      await this.client.srem(key, value);
+    } catch {}
   }
 
   async getSet(key: string): Promise<string[]> {
-    return this.client.smembers(key);
+    try {
+      return await this.client.smembers(key);
+    } catch {
+      return [];
+    }
   }
 
   async hashToken(token: string): Promise<string> {
@@ -57,6 +82,8 @@ export class RedisRepository {
 
   /** Closes the underlying connection. Callers (tests, graceful shutdown) must invoke this or the process/event loop stays alive. */
   async disconnect(): Promise<void> {
-    await this.client.quit();
+    try {
+      await this.client.quit();
+    } catch {}
   }
 }
