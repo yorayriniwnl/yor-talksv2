@@ -59,3 +59,8 @@ exercise real repositories, not mocks.
 - Password reset and email verification are not yet functional end-to-end.
 
 See the project history for the full audit this README summarizes.
+
+## Deployment
+
+Configured for Vercel Serverless Function API + Vite SPA Frontend.
+
