@@ -1,10 +1,15 @@
 {
+  "version": 2,
   "buildCommand": "pnpm run build",
   "outputDirectory": "social/dist/public",
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.ts"
     },
     {
       "source": "/(.*)",

@@ -65,6 +65,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api", router);
+app.use(router);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: "Route not found", data: null, errors: ["Not found"] });
