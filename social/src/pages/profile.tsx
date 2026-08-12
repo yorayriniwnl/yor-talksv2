@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { BadgeShowcaseModal } from '@/components/steam/BadgeShowcaseModal';
 import { ProfileTiltCard } from '@/components/ui/ProfileTiltCard';
 import { HoloAvatarCard } from '@/components/ui/HoloAvatarCard';
@@ -63,31 +64,7 @@ function formatCount(n: number): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  ANIMATED COUNTER — Numbers tick up on mount
-// ═══════════════════════════════════════════════════════════════════════════
-function AnimatedCounter({ value, duration = 800 }: { value: number; duration?: number }) {
-  const [display, setDisplay] = useState(0);
-  const ref = useRef<number>(0);
 
-  useEffect(() => {
-    const start = performance.now();
-    const from = 0;
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(from + (value - from) * eased));
-      if (progress < 1) ref.current = requestAnimationFrame(tick);
-    };
-    ref.current = requestAnimationFrame(tick);
-    return () => { if (ref.current) cancelAnimationFrame(ref.current); };
-  }, [value, duration]);
-
-  return <>{formatCount(display)}</>;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
 //  ADD SHOWCASE DIALOG
 // ═══════════════════════════════════════════════════════════════════════════
 function AddShowcaseDialog({ userId }: { userId: string }) {
@@ -161,8 +138,8 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
 // ═══════════════════════════════════════════════════════════════════════════
 function ShowcaseCard({ showcase, canRemove, onRemove }: { showcase: Showcase; canRemove: boolean; onRemove: () => void }) {
   return (
-    <motion.div layout initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92 }} transition={springGentle} className="showcase-card group">
-      <div className="showcase-card-inner">
+    <motion.div layout initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92 }} transition={springGentle} className="showcase-card group hover-lift">
+      <div className="showcase-card-inner card-shine">
         {canRemove && (
           <button onClick={onRemove} className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all backdrop-blur-sm">
             <Trash2 className="w-3.5 h-3.5" />
@@ -250,7 +227,7 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
 // ═══════════════════════════════════════════════════════════════════════════
 function MediaGridItem({ src, likes, comments }: { src: string; likes: number; comments: number }) {
   return (
-    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer">
+    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift">
       <img src={src} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100">
         <span className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
@@ -272,7 +249,7 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
   const hasMultiple = post.media && post.media.length > 1;
 
   return (
-    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer" onClick={onClick}>
+    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift" onClick={onClick}>
       {firstMedia ? (
         <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
@@ -409,7 +386,7 @@ export default function Profile() {
          CINEMATIC COVER — 3D Parallax Tilt with gradient dissolve
          ══════════════════════════════════════════════════════════════════ */}
       <ProfileTiltCard className="profile-hero noise-overlay">
-        <div className="profile-hero-cover">
+        <div className="profile-hero-cover hover-lift">
           {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="w-full h-full aurora-bg" />}
         </div>
       </ProfileTiltCard>
@@ -421,7 +398,7 @@ export default function Profile() {
 
         {/* ── Avatar + Actions ──────────────────────────────────────── */}
         <div className="flex justify-between items-end -mt-14 relative z-10 mb-4">
-          <div className={cn("profile-avatar-ring shadow-xl", `steam-frame-${selectedFrame}`)}>
+          <div className={cn("profile-avatar-ring shadow-xl glow-neon-primary", `steam-frame-${selectedFrame}`)}>
             <Avatar className="w-[88px] h-[88px] avatar-inner">
               <AvatarImage src={profile.avatarUrl} />
               <AvatarFallback className="text-2xl font-display">{profile.displayName.charAt(0)}</AvatarFallback>
@@ -532,16 +509,16 @@ export default function Profile() {
 
           {/* ── Instagram Stats Row ────────────────────────────────── */}
           <div className="profile-stats mb-4">
-            <div className="profile-stat">
-              <span className="profile-stat-value"><AnimatedCounter value={userPosts.length} /></span>
+            <div className="profile-stat hover-lift">
+              <AnimatedCounter value={userPosts.length} className="profile-stat-value" />
               <span className="profile-stat-label">Posts</span>
             </div>
-            <div className="profile-stat">
-              <span className="profile-stat-value"><AnimatedCounter value={profile.followers || 0} /></span>
+            <div className="profile-stat hover-lift">
+              <AnimatedCounter value={profile.followers || 0} className="profile-stat-value" />
               <span className="profile-stat-label">Followers</span>
             </div>
-            <div className="profile-stat">
-              <span className="profile-stat-value"><AnimatedCounter value={profile.following || 0} /></span>
+            <div className="profile-stat hover-lift">
+              <AnimatedCounter value={profile.following || 0} className="profile-stat-value" />
               <span className="profile-stat-label">Following</span>
             </div>
           </div>
@@ -595,7 +572,7 @@ export default function Profile() {
           <div className="my-8">
             <div className="showcase-section-title">
               <Zap className="w-4 h-4 text-primary" />
-              <h3>Featured Showcase</h3>
+              <h3 className="font-display tracking-tight">Featured Showcase</h3>
             </div>
             <div className="showcase-grid">
               <AnimatePresence mode="popLayout">
@@ -642,7 +619,7 @@ export default function Profile() {
               { key: 'liked' as const, icon: Heart, label: 'Liked' },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={cn("profile-tab rounded-none border-b-2 transition-all",
+                className={cn("profile-tab rounded-none border-b-2 transition-all press-scale",
                   activeTab === tab.key ? "is-active border-foreground bg-transparent" : "border-transparent"
                 )}>
                 <tab.icon className="!w-4 !h-4" /> <span className="hidden sm:inline">{tab.label}</span>
@@ -655,7 +632,7 @@ export default function Profile() {
             {activeTab === 'grid' && (
               <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                 {userPosts.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-[2px] mt-[2px]">
+                  <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {userPosts.map(post => (
                       <PostGridItem key={post.id} post={post} onClick={() => setLocation(`/post/${post.id}`)} />
                     ))}
@@ -665,7 +642,7 @@ export default function Profile() {
                     <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
                       <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
                     </div>
-                    <h3 className="font-display font-bold text-xl mb-1">Share Photos</h3>
+                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">Share Photos</h3>
                     <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">When you share photos, they will appear on your profile.</p>
                   </div>
                 )}
@@ -679,7 +656,7 @@ export default function Profile() {
                   <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
                     <Play className="w-8 h-8 text-muted-foreground/30 ml-1" />
                   </div>
-                  <h3 className="font-display font-bold text-xl mb-1">Share Reels</h3>
+                  <h3 className="font-display font-bold tracking-tight text-xl mb-1">Share Reels</h3>
                   <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">Create short, entertaining videos for the community.</p>
                 </div>
               </motion.div>
@@ -689,7 +666,7 @@ export default function Profile() {
             {activeTab === 'liked' && (
               <motion.div key="liked" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                 {likedPosts.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-[2px] mt-[2px]">
+                  <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {likedPosts.map(post => (
                       <PostGridItem key={post.id} post={post} onClick={() => setLocation(`/post/${post.id}`)} />
                     ))}
@@ -713,7 +690,7 @@ export default function Profile() {
            ══════════════════════════════════════════════════════════════ */}
         {isOwnProfile && suggestedUsers.length > 0 && (
           <div className="my-10">
-            <div className="showcase-section-title"><Star className="w-4 h-4 text-accent" /><h3>Suggested for You</h3></div>
+            <div className="showcase-section-title"><Star className="w-4 h-4 text-accent" /><h3 className="font-display tracking-tight">Suggested for You</h3></div>
             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-3">
               {suggestedUsers.map(user => {
                 const sf = !!currentUser?.followingIds?.includes(user.id);
@@ -735,11 +712,11 @@ export default function Profile() {
         {/* ══════════════════════════════════════════════════════════════
            STEAM COMMENT WALL
            ══════════════════════════════════════════════════════════════ */}
-        <div className="pt-8 mt-4 border-t border-border/50">
+        <div className="pt-8 mt-4 border-t border-border/50 glass-heavy rounded-2xl p-6">
           <div className="comment-wall-header">
             <div className="flex items-center gap-2.5">
               <MessageCircle className="w-4 h-4 text-primary" />
-              <h3>Comment Wall</h3>
+              <h3 className="font-display tracking-tight">Comment Wall</h3>
               <span className="comment-wall-count">{userComments.length}</span>
             </div>
           </div>

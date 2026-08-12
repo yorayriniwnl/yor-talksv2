@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import StoriesRow from '@/components/feed/StoriesRow';
 import { CreatePost, PostCardMemo as PostCard } from '@/components/feed/Post';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
@@ -58,14 +59,14 @@ export default function Home() {
               animate="visible"
               className="space-y-4"
             >
-              {posts.map((post) => (
-                <motion.div
+              {posts.map((post, i) => (
+                <ScrollReveal
                   key={post.id}
-                  variants={staggerItem}
+                  delay={Math.min(i * 0.05, 0.3)}
                   className="surface-1 rounded-none sm:rounded-2xl border-y sm:border border-border/40 overflow-hidden shadow-sm hover:border-border/60 transition-colors"
                 >
                   <PostCard post={post} />
-                </motion.div>
+                </ScrollReveal>
               ))}
             </motion.div>
           </main>

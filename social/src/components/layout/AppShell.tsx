@@ -1,9 +1,8 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
-  UserRound, Settings, Sparkles, X, ImageIcon, Send, ShoppingBag
+  UserRound, Settings, ImageIcon, Send, ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -11,15 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CommandPalette } from '@/components/ui/CommandPalette';
-import { ConfettiBlast } from '@/components/ui/ConfettiBlast';
-import { FloatingReactionStream, triggerFloatingReaction } from '@/components/ui/FloatingReactionStream';
 import { ThemeMorpher } from '@/components/ui/ThemeMorpher';
-import { sounds } from '@/lib/sound';
-import { Skull } from 'lucide-react';
-import { useInsanityStore } from '@/lib/insanityStore';
-import { VirtualPet } from '@/components/ui/VirtualPet';
-import { CyberpunkOverlay } from '@/components/ui/CyberpunkOverlay';
-import { TerminalInsanity } from '@/components/ui/TerminalInsanity';
+import { CursorGlow } from '@/components/ui/CursorGlow';
 
 interface AppShellProps {
   children: ReactNode;
@@ -31,9 +23,6 @@ export function AppShell({ children }: AppShellProps) {
   const addPost = useAppStore((state) => state.addPost);
   const notifications = useAppStore((state) => state.notifications);
   const unreadNotifs = notifications.filter(n => !n.read).length;
-
-  const isInsaneMode = useInsanityStore((state) => state.isInsaneMode);
-  const toggleInsanity = useInsanityStore((state) => state.toggleInsanity);
 
   const [isComposing, setIsComposing] = useState(false);
   const [postContent, setPostContent] = useState('');
@@ -63,41 +52,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans relative overflow-hidden">
       <CommandPalette />
-      <ConfettiBlast />
-      <FloatingReactionStream />
-      <VirtualPet />
-      <CyberpunkOverlay />
-      <TerminalInsanity />
-
-      {/* Insanity Mode Toggle */}
-      <button
-        onClick={() => {
-          sounds.playPop();
-          toggleInsanity();
-        }}
-        className={cn(
-          "fixed bottom-20 right-6 z-50 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-2xl hover:scale-110 active:scale-90 transition-transform hidden sm:flex",
-          isInsaneMode ? "bg-red-600 animate-pulse glow-neon-primary" : "bg-purple-600 glow-neon-accent"
-        )}
-        title="Toggle Insanity Mode"
-      >
-        <Skull className="w-6 h-6 fill-current" />
-      </button>
-
-      {/* Quick Reaction Floating Heart Button */}
-      <button
-        onClick={() => {
-          sounds.playPop();
-          triggerFloatingReaction();
-        }}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-2xl hover:scale-110 active:scale-90 transition-transform glow-neon-primary hidden sm:flex"
-        title="Send Floating Heart Reaction"
-      >
-        <Heart className="w-6 h-6 fill-white" />
-      </button>
+      <CursorGlow />
       
       {/* ── DESKTOP INSTAGRAM SIDEBAR (Left Column) ────────────────────── */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 border-r border-border/40 bg-background px-4 py-6 z-40 shrink-0">
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 border-r border-border/40 glass-heavy backdrop-blur-xl px-4 py-6 z-40 shrink-0">
         
         {/* Brand Logo & Live Theme Morpher */}
         <div className="flex items-center justify-between mb-8 px-1">
@@ -127,12 +85,12 @@ export function AppShell({ children }: AppShellProps) {
                   else if (item.path) setLocation(item.path);
                 }}
                 className={cn(
-                  "flex items-center gap-4 w-full px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                  isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
+                  "flex items-center gap-4 w-full px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50 hover-lift",
+                  isActive && "text-foreground bg-primary/10 font-bold border border-primary/20 border-l-2 border-l-primary"
                 )}
               >
                 <div className="relative">
-                  <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20")} />
+                  <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
                   {item.badge && (
                     <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
                       {item.badge}
@@ -147,7 +105,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* User Mini Profile Snippet */}
         {currentUser && (
-          <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 p-3 rounded-2xl surface-1 hover:bg-muted/60 transition-colors border border-border/40 cursor-pointer">
+          <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 p-3 rounded-2xl glass-heavy hover-lift hover:bg-muted/60 transition-colors border border-border/40 cursor-pointer">
             <Avatar className="w-10 h-10 border border-border/50 shrink-0">
               <AvatarImage src={currentUser.avatarUrl} />
               <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
@@ -169,20 +127,24 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-heavy border-t border-border/40 px-3 py-2 flex items-center justify-around">
-        <button onClick={() => setLocation('/')} className={cn("p-2 text-muted-foreground", location === '/' && "text-primary")}>
+        <button onClick={() => setLocation('/')} className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}>
           <Home className="w-6 h-6" />
+          {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setLocation('/explore')} className={cn("p-2 text-muted-foreground", location === '/explore' && "text-primary")}>
+        <button onClick={() => setLocation('/explore')} className={cn("p-2 text-muted-foreground relative", location === '/explore' && "text-primary")}>
           <Compass className="w-6 h-6" />
+          {location === '/explore' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setIsComposing(true)} className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-4 shadow-lg">
+        <button onClick={() => setIsComposing(true)} className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-5 shadow-2xl relative">
           <PlusSquare className="w-6 h-6" />
         </button>
         <button onClick={() => setLocation('/messages')} className={cn("p-2 text-muted-foreground relative", location === '/messages' && "text-primary")}>
           <MessageCircle className="w-6 h-6" />
+          {location === '/messages' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground", location.startsWith('/profile') && "text-primary")}>
+        <button onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
+          {location.startsWith('/profile') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
       </nav>
 

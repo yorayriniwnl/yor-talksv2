@@ -51,8 +51,8 @@ function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: bool
       variants={staggerItem}
       onClick={onClick}
       className={cn(
-        "relative group cursor-pointer overflow-hidden rounded-xl bg-muted border border-border/40",
-        isLarge ? "col-span-2 row-span-2" : "col-span-1 row-span-1"
+        "relative group cursor-pointer overflow-hidden rounded-xl bg-muted border border-border/40 hover-lift",
+        isLarge ? "col-span-2 row-span-2 card-shine" : "col-span-1 row-span-1"
       )}
     >
       {firstMedia ? (
@@ -132,8 +132,8 @@ export default function Explore() {
         
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center text-center">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <h1 className="font-display font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-3">
-              Explore the <span className="text-shimmer">Multiverse</span>
+            <h1 className="font-display font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-3 text-shimmer">
+              Explore the <span>Multiverse</span>
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base max-w-lg mx-auto mb-8 font-serif">
               Search people, topics, and communities. Discover what's happening across Yor Talks right now.
@@ -151,7 +151,7 @@ export default function Explore() {
               isFocused ? "opacity-60" : "opacity-20"
             )} />
             <div className={cn(
-              "relative flex items-center bg-card/60 backdrop-blur-xl border-2 rounded-2xl p-2 transition-all duration-300",
+              "relative flex items-center glass-heavy bg-card/60 backdrop-blur-xl border-2 rounded-2xl p-2 transition-all duration-300",
               isFocused ? "border-primary/50 shadow-2xl glow-neon-primary" : "border-border/50 shadow-lg"
             )}>
               <Search className={cn("w-6 h-6 ml-3 transition-colors", isFocused ? "text-primary" : "text-muted-foreground")} />
@@ -194,9 +194,9 @@ export default function Explore() {
                   {results.users.length > 0 && (
                     <section>
                       <h3 className="font-display font-bold text-xl mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> People</h3>
-                      <div className="grid gap-3">
+                      <div className="grid gap-3 stagger-in">
                         {results.users.map(u => (
-                          <div key={u.id} onClick={() => setLocation(`/profile/${u.id}`)} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/40 hover:border-primary/40 hover:bg-muted/50 cursor-pointer transition-all">
+                          <div key={u.id} onClick={() => setLocation(`/profile/${u.id}`)} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/40 hover:border-primary/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
                             <Avatar className="w-12 h-12 ring-2 ring-primary/20"><AvatarImage src={u.avatarUrl || ''} /><AvatarFallback>{(u.fullName || u.username).charAt(0)}</AvatarFallback></Avatar>
                             <div className="flex-1"><h4 className="font-bold text-base">{u.fullName || u.username}</h4><p className="text-sm text-muted-foreground font-mono">@{u.username}</p></div>
                             <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
@@ -208,11 +208,11 @@ export default function Explore() {
                   {results.posts.length > 0 && (
                     <section>
                       <h3 className="font-display font-bold text-xl mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent" /> Posts</h3>
-                      <div className="grid gap-3">
+                      <div className="grid gap-3 stagger-in">
                         {results.posts.map(p => {
                           const author = users[p.authorId];
                           return (
-                            <div key={p.id} onClick={() => setLocation(`/post/${p.id}`)} className="flex flex-col gap-2 p-4 rounded-2xl bg-card border border-border/40 hover:border-accent/40 hover:bg-muted/50 cursor-pointer transition-all">
+                            <div key={p.id} onClick={() => setLocation(`/post/${p.id}`)} className="flex flex-col gap-2 p-4 rounded-2xl bg-card border border-border/40 hover:border-accent/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
                               <span className="text-sm font-bold text-foreground/80">{author?.displayName || 'Someone'}</span>
                               <p className="text-sm text-muted-foreground line-clamp-2">{p.content}</p>
                             </div>
@@ -230,7 +230,7 @@ export default function Explore() {
               
               {/* TOPICS / HASHTAGS ROW */}
               <section>
-                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 pt-1 snap-x">
+                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 pt-1 snap-x stagger-in">
                   {topics.map((t, i) => (
                     <motion.button
                       key={t.name}
@@ -238,7 +238,7 @@ export default function Explore() {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setQuery(t.name)}
                       className={cn(
-                        "snap-start shrink-0 px-5 py-3 rounded-2xl flex flex-col items-start gap-1 cursor-pointer transition-all border",
+                        "snap-start shrink-0 px-5 py-3 rounded-2xl flex flex-col items-start gap-1 cursor-pointer transition-all border hover-lift press-scale",
                         i === 0 ? "bg-primary/10 border-primary/30 text-primary" : "bg-card border-border/50 text-foreground hover:bg-muted"
                       )}
                     >
@@ -263,7 +263,7 @@ export default function Explore() {
                 </div>
                 
                 {visualPosts.length > 0 ? (
-                  <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 md:gap-2 auto-rows-[minmax(120px,1fr)] md:auto-rows-[minmax(160px,1fr)] lg:auto-rows-[minmax(200px,1fr)]">
+                  <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4 auto-rows-[minmax(120px,1fr)] md:auto-rows-[minmax(160px,1fr)] lg:auto-rows-[minmax(200px,1fr)] stagger-in">
                     {visualPosts.map((post, i) => {
                       // Make every 7th item (roughly) span 2x2 for that Instagram Explore layout feel
                       const isLarge = i === 0 || i === 7 || i === 14;
@@ -285,11 +285,11 @@ export default function Explore() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-display font-bold text-xl flex items-center gap-2"><Users className="w-5 h-5 text-accent" /> Discover People</h3>
                   </div>
-                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x">
+                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x stagger-in">
                     {people.map(person => {
                       const isFollowed = currentUser?.followingIds?.includes(person.id);
                       return (
-                        <motion.div key={person.id} whileHover={{ y: -4 }} className="surface-1 p-5 rounded-[24px] min-w-[200px] shrink-0 snap-start flex flex-col items-center text-center border border-border/50 hover:border-accent/30 transition-all shadow-sm">
+                        <motion.div key={person.id} whileHover={{ y: -4 }} className="surface-1 p-5 rounded-[24px] min-w-[200px] shrink-0 snap-start flex flex-col items-center text-center border border-border/50 hover:border-accent/30 transition-all shadow-sm hover-lift">
                           <Link href={`/profile/${person.id}`}>
                             <Avatar className="w-20 h-20 mb-3 cursor-pointer ring-2 ring-transparent hover:ring-accent/50 transition-all">
                               <AvatarImage src={person.avatarUrl} /><AvatarFallback className="font-display text-2xl">{person.displayName.charAt(0)}</AvatarFallback>
@@ -319,10 +319,10 @@ export default function Explore() {
                   <div className="flex items-center justify-between mb-6 px-1">
                     <h3 className="font-display font-bold text-xl flex items-center gap-2">Trending Communities</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-in">
                     {rooms.map(room => (
                       <Link key={room.id} href={`/communities/${room.id}`}>
-                        <motion.div whileHover={{ scale: 1.02 }} className="group relative h-48 rounded-[24px] overflow-hidden cursor-pointer border border-border/20 shadow-md">
+                        <motion.div whileHover={{ scale: 1.02 }} className="group relative h-48 rounded-[24px] overflow-hidden cursor-pointer border border-border/20 shadow-md hover-lift card-shine">
                           <img src={room.coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                           <div className="absolute inset-0 p-6 flex flex-col justify-end">

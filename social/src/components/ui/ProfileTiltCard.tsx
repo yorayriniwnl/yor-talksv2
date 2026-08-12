@@ -1,5 +1,5 @@
 import { useState, useRef, ReactNode } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 
 interface ProfileTiltCardProps {
   children: ReactNode;
@@ -8,6 +8,7 @@ interface ProfileTiltCardProps {
 
 export function ProfileTiltCard({ children, className = '' }: ProfileTiltCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -19,7 +20,7 @@ export function ProfileTiltCard({ children, className = '' }: ProfileTiltCardPro
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ['-10deg', '10deg']);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
+    if (!ref.current || reduceMotion) return;
     const rect = ref.current.getBoundingClientRect();
 
     const width = rect.width;
@@ -43,9 +44,9 @@ export function ProfileTiltCard({ children, className = '' }: ProfileTiltCardPro
   return (
     <motion.div
       ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
+      onMouseMove={reduceMotion ? undefined : handleMouseMove}
+      onMouseLeave={reduceMotion ? undefined : handleMouseLeave}
+      style={reduceMotion ? undefined : {
         rotateY,
         rotateX,
         transformStyle: 'preserve-3d',

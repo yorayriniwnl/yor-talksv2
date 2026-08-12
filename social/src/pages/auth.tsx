@@ -41,34 +41,38 @@ export default function Auth() {
   };
 
   return (
-    <main className="min-h-screen bg-background flex font-sans">
+    <main className="min-h-screen bg-background flex font-sans relative overflow-hidden">
+      {/* Background ambient glowing spheres */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/20 blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/20 blur-[120px] pointer-events-none animate-pulse" />
+
       {/* Left Panel (Desktop Only) */}
-      <section className="hidden lg:flex flex-1 relative overflow-hidden bg-background border-r border-border/40 flex-col justify-center px-12 xl:px-24">
-        <div className="absolute inset-0 aurora-bg opacity-30 mix-blend-screen pointer-events-none" />
+      <section className="hidden lg:flex flex-1 relative overflow-hidden bg-card/30 backdrop-blur-xl border-r border-border/40 flex-col justify-center px-12 xl:px-24">
+        <div className="absolute inset-0 aurora-bg opacity-20 mix-blend-screen pointer-events-none" />
         <div className="absolute inset-0 noise-overlay pointer-events-none" />
         
         <div className="relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-accent grid place-items-center text-white text-3xl font-extrabold mb-8 shadow-xl glow-neon-primary font-display">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-accent grid place-items-center text-white text-3xl font-extrabold mb-8 shadow-2xl glow-neon-primary font-display">
             Y
           </div>
-          <h1 className="font-display text-5xl font-extrabold tracking-tight text-foreground leading-tight">
+          <h1 className="font-display text-5xl xl:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
             Step into the <br /><span className="text-shimmer">Multiverse</span>.
           </h1>
-          <p className="text-lg text-muted-foreground mt-4 font-serif leading-relaxed max-w-md">
-            A calmer, deeply expressive social space where your identity, achievements, and circles shine.
+          <p className="text-lg text-muted-foreground mt-6 font-serif leading-relaxed max-w-md">
+            A calmer, deeply expressive social space where your identity, achievements, and circles shine with resonance.
           </p>
 
-          <div className="mt-10 space-y-4 font-mono text-xs">
-            <div className="flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 max-w-sm">
+          <div className="mt-10 space-y-3.5 font-mono text-xs">
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-primary/40 transition-colors">
               <Sparkles className="w-5 h-5 text-primary shrink-0" />
               <span className="font-medium text-foreground">Real interactions, no algorithms</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 max-w-sm">
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-accent/40 transition-colors">
               <Users className="w-5 h-5 text-accent shrink-0" />
               <span className="font-medium text-foreground">Gamified profiles & Steam-style walls</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 max-w-sm">
-              <Shield className="w-5 h-5 text-emerald-500 shrink-0" />
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-emerald-500/40 transition-colors">
+              <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
               <span className="font-medium text-foreground">Complete privacy & circle control</span>
             </div>
           </div>
@@ -76,7 +80,7 @@ export default function Auth() {
       </section>
 
       {/* Right Panel - Auth Form */}
-      <section className="flex-1 flex flex-col justify-center items-center p-6 lg:p-12 relative overflow-y-auto">
+      <section className="flex-1 flex flex-col justify-center items-center p-6 lg:p-12 relative overflow-y-auto z-10">
         {/* Mobile Logo */}
         <div className="lg:hidden absolute top-8 left-1/2 -translate-x-1/2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white text-xl font-bold shadow-md glow-neon-primary font-display">
@@ -84,7 +88,33 @@ export default function Auth() {
           </div>
         </div>
 
-        <div className="w-full max-w-sm mx-auto mt-12 lg:mt-0">
+        <div className="w-full max-w-md mx-auto mt-12 lg:mt-0 glass-heavy p-8 rounded-3xl border border-border/50 shadow-2xl">
+          {/* Mode Switcher Tabs */}
+          <div className="flex p-1 bg-muted/60 rounded-2xl mb-8">
+            <button
+              type="button"
+              onClick={() => switchMode('login')}
+              className={`flex-1 py-2 text-xs font-bold font-display rounded-xl transition-all ${
+                mode === 'login'
+                  ? 'bg-background text-foreground shadow-md'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('register')}
+              className={`flex-1 py-2 text-xs font-bold font-display rounded-xl transition-all ${
+                mode === 'register'
+                  ? 'bg-background text-foreground shadow-md'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -94,12 +124,12 @@ export default function Auth() {
               exit="hidden"
               className="w-full"
             >
-              <div className="mb-8 text-center lg:text-left">
-                <h2 className="font-display text-3xl font-extrabold tracking-tight">
+              <div className="mb-6 text-center lg:text-left">
+                <h2 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1.5 font-serif">
-                  {mode === 'login' ? 'Enter your details to enter the void.' : 'Join the next generation of social interaction.'}
+                <p className="text-xs lg:text-sm text-muted-foreground mt-1.5 font-serif">
+                  {mode === 'login' ? 'Enter your details to enter the universe.' : 'Join the next generation of social interaction.'}
                 </p>
               </div>
 
@@ -211,8 +241,8 @@ export default function Auth() {
                 <motion.div whileTap={tapScale} className="pt-2">
                   <Button
                     type="submit"
-                    disabled={loading || !password || !email || (mode === 'register' && (!username || !fullName))}
-                    className="w-full h-11 rounded-xl font-bold text-sm bg-primary text-primary-foreground glow-neon-primary border-0 transition-all"
+                    disabled={loading}
+                    className="w-full h-11 rounded-xl font-bold text-sm bg-primary text-primary-foreground glow-neon-primary border-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -223,33 +253,19 @@ export default function Auth() {
                     )}
                   </Button>
                 </motion.div>
-              </form>
 
-              <div className="mt-8 text-center text-xs font-mono text-muted-foreground">
-                {mode === 'login' ? (
-                  <>
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode('register')}
-                      className="text-primary font-bold hover:underline outline-none"
-                    >
-                      Create one
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already registered?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode('login')}
-                      className="text-primary font-bold hover:underline outline-none"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </div>
+                {/* Instant Demo Login Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    login('yorayriniwnl', 'password').catch(() => {});
+                  }}
+                  className="w-full h-10 rounded-xl font-bold text-xs border-primary/30 text-primary hover:bg-primary/10 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /> Enter Demo Account Immediately
+                </Button>
+              </form>
             </motion.div>
           </AnimatePresence>
         </div>

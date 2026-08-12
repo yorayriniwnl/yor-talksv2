@@ -17,7 +17,7 @@ import { fadeInUp, tapScale, springBouncy } from '@/lib/motion';
 import { MiniProfileCard } from '@/components/ui/MiniProfileCard';
 import { AudioWaveformPlayer } from '@/components/feed/AudioWaveformPlayer';
 import { sounds } from '@/lib/sound';
-import { ZeroGravityWrapper } from '@/components/ui/ZeroGravityWrapper';
+import { TiltCard } from '@/components/ui/TiltCard';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -262,7 +262,7 @@ export function PostCard({ post }: { post: PostType }) {
     const len = post.media.length;
     
     return (
-      <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+      <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
         {/* Instagram Double Tap Heart Pop Effect */}
         <AnimatePresence>
           {showDoubleTapHeart && (
@@ -301,19 +301,19 @@ export function PostCard({ post }: { post: PostType }) {
   };
 
   return (
-    <ZeroGravityWrapper className="w-full block">
+    <TiltCard className="w-full block">
       <motion.article 
         variants={fadeInUp}
         initial="initial"
         animate="animate"
-        className="group cursor-pointer border-b border-border/30 px-5 py-5 transition-all hover:bg-muted/30 sm:px-6" 
+        className="group cursor-pointer border-b border-border/20 px-5 py-5 transition-all hover:bg-muted/20 card-shine sm:px-6"
         onClick={handleOpen}
       >
       <div className="flex gap-3.5">
         <MiniProfileCard user={author}>
           <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View ${author.displayName}'s profile`}>
             <div className="relative">
-              <Avatar className="h-11 w-11 ring-2 ring-transparent transition-all hover:ring-primary/30 shadow-sm">
+              <Avatar className="h-11 w-11 ring-2 ring-primary/10 transition-all duration-300 hover:ring-primary/30 shadow-sm">
                 <AvatarImage src={author.avatarUrl} />
                 <AvatarFallback className="font-display font-bold">{author.displayName.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -504,7 +504,7 @@ export function PostCard({ post }: { post: PostType }) {
         </div>
       </div>
     </motion.article>
-    </ZeroGravityWrapper>
+    </TiltCard>
   );
 }
 

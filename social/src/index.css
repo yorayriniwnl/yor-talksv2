@@ -1583,121 +1583,186 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   INSANITY MODE OVERRIDES
+   PREMIUM MICRO-INTERACTIONS
    ═══════════════════════════════════════════════════════════════════════════ */
-body.insane-cyberpunk {
-  filter: contrast(1.2) saturate(1.5) hue-rotate(15deg);
-  animation: glitch 5s infinite;
+@layer utilities {
+
+  /* ── Hover Lift — Cards rise with shadow on hover ──────────────────────── */
+  .hover-lift {
+    transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 280ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--elevate-2);
+  }
+  .hover-lift:active {
+    transform: translateY(-1px);
+  }
+
+  /* ── Focus Glow — Inputs get soft primary glow ring ────────────────────── */
+  .focus-glow:focus-within {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12), 0 0 20px -4px hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.4);
+  }
+
+  /* ── Button Press — Tactile press feedback ──────────────────────────────── */
+  .press-scale {
+    transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .press-scale:hover {
+    transform: scale(1.02);
+  }
+  .press-scale:active {
+    transform: scale(0.97);
+  }
+
+  /* ── Ambient Gradient Blob — Drifting background decoration ─────────────── */
+  .ambient-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    pointer-events: none;
+    animation: float-gentle 8s ease-in-out infinite;
+  }
+  .dark .ambient-blob {
+    opacity: 0.08;
+  }
+
+  /* ── Card Shine — Subtle shine on hover ─────────────────────────────────── */
+  .card-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-shine::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      hsl(var(--primary) / 0.03) 45%,
+      hsl(var(--primary) / 0.06) 50%,
+      hsl(var(--primary) / 0.03) 55%,
+      transparent 60%
+    );
+    transform: translateX(-100%);
+    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .card-shine:hover::before {
+    transform: translateX(100%);
+  }
+
+  /* ── Stagger Fade In — For lists of items ───────────────────────────────── */
+  @keyframes stagger-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .stagger-in > * {
+    animation: stagger-fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .stagger-in > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-in > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger-in > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger-in > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger-in > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger-in > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger-in > *:nth-child(7) { animation-delay: 360ms; }
+  .stagger-in > *:nth-child(8) { animation-delay: 420ms; }
+  .stagger-in > *:nth-child(9) { animation-delay: 480ms; }
+  .stagger-in > *:nth-child(10) { animation-delay: 540ms; }
+
+  /* ── Custom Premium Scrollbar ──────────────────────────────────────────── */
+  .premium-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .premium-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .premium-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.2);
+    border-radius: 999px;
+  }
+  .premium-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.35);
+  }
 }
-body.insane-cyberpunk * {
-  border-color: #0ff !important;
-  box-shadow: 0 0 10px rgba(0,255,255,0.2) !important;
-  color: #0ff !important;
-  background-color: rgba(0,0,0,0.8) !important;
-  border-radius: 0 !important; /* brutalist */
-}
-@keyframes glitch {
-  0% { transform: translate(0) }
-  20% { transform: translate(-2px, 2px) }
-  21% { transform: translate(-2px, -2px) }
-  22% { transform: translate(2px, 2px) }
-  23% { transform: translate(0) }
-  100% { transform: translate(0) }
-}
-@keyframes scanlines {
-  from { background-position: 0 0; }
-  to { background-position: 0 -100%; }
-}
-@keyframes barrelRoll {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   GLOBAL INSANITY FX
+   FLOATING PARTICLES — Ambient depth effect
    ═══════════════════════════════════════════════════════════════════════════ */
-.insane-mode-active {
-  animation: insane-shake 0.1s infinite alternate, insane-colors 1s linear infinite, insane-warp 4s cubic-bezier(0.1, 0.7, 1.0, 0.1) infinite alternate;
-  overflow-x: hidden;
-  perspective: 1000px;
+
+@keyframes particle-float {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.4; }
+  25% { transform: translateY(-30vh) translateX(10px) scale(1.2); opacity: 0.7; }
+  50% { transform: translateY(-60vh) translateX(-10px) scale(0.8); opacity: 0.5; }
+  75% { transform: translateY(-80vh) translateX(15px) scale(1.1); opacity: 0.3; }
+  100% { transform: translateY(-100vh) translateX(0) scale(1); opacity: 0; }
 }
 
-.insane-mode-active * {
-  animation: insane-element-jitter 0.5s infinite;
-}
-
-@keyframes insane-element-jitter {
-  0% { transform: translate(0,0) scale(1) skewX(0); }
-  25% { transform: translate(2px, -2px) scale(1.05) skewX(5deg); }
-  50% { transform: translate(-2px, 2px) scale(0.95) skewX(-5deg); }
-  75% { transform: translate(3px, 3px) scale(1.1) skewX(2deg); }
-  100% { transform: translate(0,0) scale(1) skewX(0); }
-}
-
-@keyframes insane-shake {
-  0% { transform: translate(5px, 5px) rotate(0deg) scale(1); }
-  10% { transform: translate(-5px, -10px) rotate(-3deg) scale(1.1); }
-  20% { transform: translate(-15px, 0px) rotate(3deg) scale(0.9); }
-  30% { transform: translate(15px, 10px) rotate(0deg) scale(1.05); }
-  40% { transform: translate(5px, -5px) rotate(3deg) scale(0.95); }
-  50% { transform: translate(-5px, 10px) rotate(-3deg) scale(1.1); }
-  60% { transform: translate(-15px, 5px) rotate(0deg) scale(1); }
-  70% { transform: translate(15px, 5px) rotate(-3deg) scale(0.9); }
-  80% { transform: translate(-5px, -5px) rotate(3deg) scale(1.05); }
-  90% { transform: translate(5px, 10px) rotate(0deg) scale(0.95); }
-  100% { transform: translate(5px, -10px) rotate(-3deg) scale(1.1); }
-}
-
-@keyframes insane-warp {
-  0% { transform: rotate3d(1, 1, 1, 0deg) scale(1); }
-  25% { transform: rotate3d(1, -1, 0, 90deg) scale(1.2); }
-  50% { transform: rotate3d(0, 1, 1, 180deg) scale(-0.8, -0.8); }
-  75% { transform: rotate3d(-1, -1, 1, 270deg) scale(1.5); }
-  100% { transform: rotate3d(1, 0, 1, 360deg) scale(-0.5, 0.5); }
-}
-
-@keyframes insane-colors {
-  0% { filter: hue-rotate(0deg) contrast(2) saturate(3) invert(0); }
-  25% { filter: hue-rotate(90deg) contrast(3) saturate(5) invert(1); }
-  50% { filter: hue-rotate(180deg) contrast(5) saturate(4) invert(0); }
-  75% { filter: hue-rotate(270deg) contrast(4) saturate(5) invert(1); }
-  100% { filter: hue-rotate(360deg) contrast(2) saturate(3) invert(0); }
-}
-
-body.insane-mode-active::before {
-  content: "";
+.particles-container {
   position: fixed;
-  inset: -100%;
-  z-index: 99999;
+  inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(45deg, rgba(255,0,0,0.4) 0px, rgba(255,0,0,0.4) 10px, rgba(0,255,255,0.4) 10px, rgba(0,255,255,0.4) 20px, rgba(0,255,0,0.4) 20px, rgba(0,255,0,0.4) 30px);
-  animation: insane-scanlines 0.5s linear infinite;
-  mix-blend-mode: color-dodge;
-  opacity: 0.5;
+  z-index: 0;
+  overflow: hidden;
 }
 
-body.insane-mode-active::after {
-  content: "CRITICAL SYSTEM FAILURE CRITICAL SYSTEM FAILURE";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 15vw;
-  font-weight: 900;
-  color: red;
-  z-index: 999999;
-  pointer-events: none;
-  mix-blend-mode: difference;
-  text-align: center;
-  line-height: 1;
-  animation: insane-text-flash 0.1s infinite;
+.particle {
+  position: absolute;
+  bottom: -10px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: hsl(var(--primary) / 0.3);
+  animation: particle-float linear infinite;
 }
 
-@keyframes insane-text-flash {
-  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(5deg); }
+.particle:nth-child(1) { left: 10%; animation-duration: 18s; animation-delay: 0s; width: 3px; height: 3px; }
+.particle:nth-child(2) { left: 25%; animation-duration: 22s; animation-delay: 2s; width: 5px; height: 5px; background: hsl(var(--accent) / 0.25); }
+.particle:nth-child(3) { left: 40%; animation-duration: 16s; animation-delay: 4s; width: 3px; height: 3px; }
+.particle:nth-child(4) { left: 55%; animation-duration: 24s; animation-delay: 1s; width: 4px; height: 4px; background: hsl(280 70% 55% / 0.2); }
+.particle:nth-child(5) { left: 70%; animation-duration: 20s; animation-delay: 3s; width: 6px; height: 6px; }
+.particle:nth-child(6) { left: 85%; animation-duration: 17s; animation-delay: 5s; width: 3px; height: 3px; background: hsl(var(--accent) / 0.2); }
+.particle:nth-child(7) { left: 15%; animation-duration: 26s; animation-delay: 7s; width: 4px; height: 4px; }
+.particle:nth-child(8) { left: 50%; animation-duration: 19s; animation-delay: 6s; width: 5px; height: 5px; background: hsl(280 70% 55% / 0.15); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENHANCED SKELETON — Aurora shimmer loading
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.skeleton-aurora {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--primary) / 0.08) 25%,
+    hsl(280 70% 55% / 0.06) 50%,
+    hsl(var(--accent) / 0.08) 75%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 400% 100%;
+  animation: aurora-drift 3s ease-in-out infinite;
+  border-radius: var(--radius-md);
 }
 
-@keyframes insane-scanlines {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(100px); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE TRANSITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.page-enter {
+  animation: page-fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

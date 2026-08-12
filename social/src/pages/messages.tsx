@@ -229,9 +229,9 @@ export default function Messages() {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(conv.id); }}
         className={cn(
-          "mx-2 px-3 py-3 flex gap-3 cursor-pointer transition-all duration-200 relative rounded-xl group",
+          "mx-2 px-3 py-3 flex gap-3 cursor-pointer transition-all duration-200 relative rounded-xl group hover-lift card-shine",
           active
-            ? "bg-primary/10 shadow-sm"
+            ? "bg-primary/5 border-l-2 border-l-primary shadow-sm"
             : "hover:bg-muted/40"
         )}
       >
@@ -247,7 +247,7 @@ export default function Messages() {
             <AvatarFallback className="font-display font-semibold text-sm">{user.displayName.charAt(0)}</AvatarFallback>
           </Avatar>
           {/* Online status dot */}
-          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-[0_0_6px_rgba(16,185,129,0.5)] animate-pulse" />
           {/* Unread indicator with glow */}
           {unread && (
             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-background glow-neon-primary" />
@@ -333,7 +333,7 @@ export default function Messages() {
                 <p className="text-xs mt-1 text-muted-foreground/60">Start a conversation to get going</p>
               </div>
             )}
-            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="pb-4 space-y-0.5">
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="pb-4 space-y-0.5 stagger-in">
               {conversationList.map((entry) => (
                 <ConversationItem key={entry.conv.id} entry={entry} active={activeConv?.conv.id === entry.conv.id} onSelect={handleSelect} />
               ))}
@@ -358,7 +358,7 @@ export default function Messages() {
                       <AvatarImage src={activeConv.user.avatarUrl} />
                       <AvatarFallback className="font-display font-semibold">{activeConv.user.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background" />
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
                   </div>
                   <div className="flex flex-col">
                     <h3 className="font-display font-semibold text-sm leading-tight">{activeConv.user.displayName}</h3>
@@ -386,7 +386,7 @@ export default function Messages() {
                   </div>
                 )}
                 
-                <div className="flex flex-col mt-auto justify-end">
+                <div className="flex flex-col mt-auto justify-end stagger-in">
                   {activeMessages.map((msg, i) => {
                     const isMine = msg.senderId === currentUser?.id;
                     const prevMsg = i > 0 ? activeMessages[i - 1] : null;
@@ -424,8 +424,8 @@ export default function Messages() {
                             className={cn(
                               "px-4 py-2.5 text-[15px] leading-relaxed",
                               isMine
-                                ? "bg-primary text-primary-foreground rounded-[20px] rounded-br-md shadow-md shadow-primary/20"
-                                : "surface-1 text-foreground rounded-[20px] rounded-bl-md shadow-sm"
+                                ? "bg-gradient-to-r from-primary to-purple-600 text-white rounded-[20px] rounded-br-md shadow-md shadow-primary/20"
+                                : "glass-heavy text-foreground rounded-[20px] rounded-bl-md shadow-sm"
                             )}
                           >
                             {msg.content}
@@ -445,7 +445,7 @@ export default function Messages() {
               {/* Input Area — glass-heavy with glow */}
               <div className="p-3 lg:p-4 border-t border-border/30">
                 <div className={cn(
-                  "glass-heavy rounded-2xl p-1.5 flex items-end gap-2 transition-all duration-300",
+                  "glass-heavy rounded-2xl p-1.5 flex items-end gap-2 transition-all duration-300 focus-glow",
                   "focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-[0_0_20px_rgba(var(--primary),0.08)]"
                 )}>
                   <textarea

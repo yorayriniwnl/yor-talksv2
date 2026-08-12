@@ -48,12 +48,12 @@ export default function StoriesRow() {
     <>
       <StoryBuilderModal isOpen={builderOpen} onOpenChange={setBuilderOpen} />
 
-      <div className="flex gap-4 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4">
+      <div className="flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
         {/* Add Story Button */}
         {currentUser && (
           <button
             onClick={() => setBuilderOpen(true)}
-            className="flex flex-col items-center gap-2 shrink-0 w-[72px] group"
+            className="flex flex-col items-center gap-2 shrink-0 w-[72px] group hover-lift"
           >
             <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-primary/50 flex items-center justify-center surface-1 group-hover:border-primary transition-all group-hover:scale-105 shadow-sm">
               <Avatar className="w-14 h-14 opacity-70 group-hover:opacity-100 transition-opacity">
@@ -80,12 +80,12 @@ export default function StoriesRow() {
             <button
               key={authorId}
               onClick={() => setActiveAuthorId(authorId)}
-              className="flex flex-col items-center gap-2 shrink-0 w-[72px]"
+              className="flex flex-col items-center gap-2 shrink-0 w-[72px] snap-start transition-transform duration-200 hover:scale-105"
             >
               <div
                 className={cn(
                   "p-[3px] rounded-full transition-transform hover:scale-105",
-                  hasUnseen ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500" : "bg-border"
+                  hasUnseen ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 shadow-md shadow-pink-500/20" : "bg-border opacity-60"
                 )}
               >
                 <Avatar className="w-16 h-16 border-2 border-background">
