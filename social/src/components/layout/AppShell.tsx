@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ThemeMorpher } from '@/components/ui/ThemeMorpher';
 import { CursorGlow } from '@/components/ui/CursorGlow';
+import { FloatingParticles } from '@/components/ui/FloatingParticles';
 
 interface AppShellProps {
   children: ReactNode;
@@ -50,12 +51,17 @@ export function AppShell({ children }: AppShellProps) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans relative overflow-hidden">
+    <div className="app-shell relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
       <CommandPalette />
+      <div className="app-atmosphere" aria-hidden="true">
+        <span className="app-atmosphere__field app-atmosphere__field--primary" />
+        <span className="app-atmosphere__field app-atmosphere__field--accent" />
+        <FloatingParticles />
+      </div>
       <CursorGlow />
       
       {/* ── DESKTOP INSTAGRAM SIDEBAR (Left Column) ────────────────────── */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 h-screen sticky top-0 border-r border-border/40 glass-heavy backdrop-blur-xl px-4 py-6 z-40 shrink-0">
+      <aside className="app-shell__rail hidden h-screen w-64 shrink-0 flex-col border-r border-border/40 px-4 py-6 backdrop-blur-xl md:sticky md:top-0 md:flex lg:w-72">
         
         {/* Brand Logo & Live Theme Morpher */}
         <div className="flex items-center justify-between mb-8 px-1">
@@ -119,14 +125,14 @@ export function AppShell({ children }: AppShellProps) {
       </aside>
 
       {/* ── MAIN CONTENT AREA ────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 min-h-screen">
+      <div className="app-shell__content min-h-screen min-w-0 flex-1">
         <main className="w-full h-full">
           {children}
         </main>
       </div>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-heavy border-t border-border/40 px-3 py-2 flex items-center justify-around">
+      <nav className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 md:hidden">
         <button onClick={() => setLocation('/')} className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}>
           <Home className="w-6 h-6" />
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}

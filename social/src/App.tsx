@@ -13,7 +13,6 @@ import { AppShell } from '@/components/layout/AppShell';
 
 // Helpers (lazy + resilient)
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { FloatingParticles } from '@/components/ui/FloatingParticles';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RouteSkeleton from '@/components/ui/RouteSkeleton';
 import AppProfiler from '@/components/perf/AppProfiler';
@@ -60,7 +59,6 @@ function ProtectedRoutes() {
 
   return (
     <AppShell>
-      <FloatingParticles />
       <ErrorBoundary>
         <Suspense fallback={<RouteSkeleton />}>
           <AnimatePresence initial={false} mode="wait">
