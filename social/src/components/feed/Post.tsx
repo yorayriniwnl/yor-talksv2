@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { fadeInUp, tapScale, springBouncy } from '@/lib/motion';
 import { MiniProfileCard } from '@/components/ui/MiniProfileCard';
 import { AudioWaveformPlayer } from '@/components/feed/AudioWaveformPlayer';
+import { CinematicMediaLightbox } from '@/components/feed/CinematicMediaLightbox';
 import { sounds } from '@/lib/sound';
 import { TiltCard } from '@/components/ui/TiltCard';
 
@@ -245,16 +246,13 @@ export function PostCard({ post }: { post: PostType }) {
     return 'text-sm';
   };
 
-  const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
 
-  const handleMediaDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    sounds.playPop();
-    if (!post.likedByMe) {
-      likePost(post.id);
-    }
-    setShowDoubleTapHeart(true);
-    setTimeout(() => setShowDoubleTapHeart(false), 800);
+  const openMediaViewer = (event: React.MouseEvent, index: number) => {
+    event.stopPropagation();
+    setActiveMediaIndex(index);
+    setMediaViewerOpen(true);
   };
 
   const renderMedia = () => {
@@ -263,26 +261,13 @@ export function PostCard({ post }: { post: PostType }) {
     
     return (
       <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-        {/* Instagram Double Tap Heart Pop Effect */}
-        <AnimatePresence>
-          {showDoubleTapHeart && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: [0, 1.3, 1], opacity: [0, 1, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-              className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-            >
-              <Heart className="w-24 h-24 text-rose-500 fill-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {post.media.map((url, index) => (
-          <div 
+          <button
+            type="button"
             key={index} 
-            onDoubleClick={handleMediaDoubleClick}
-            className={cn("relative overflow-hidden bg-muted group/media select-none", len === 3 && index === 0 && 'col-span-2')}
+            onClick={(event) => openMediaViewer(event, index)}
+            className={cn("relative overflow-hidden bg-muted group/media select-none text-left focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", len === 3 && index === 0 && 'col-span-2')}
+            aria-label={`Open image ${index + 1} of ${len}`}
           >
             <img 
               src={url} 
@@ -294,7 +279,10 @@ export function PostCard({ post }: { post: PostType }) {
               )} 
               loading="lazy" 
             />
-          </div>
+            <span className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-7 text-[0.7rem] font-medium text-white opacity-0 transition-all duration-300 group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100">
+              View in gallery
+            </span>
+          </button>
         ))}
       </div>
     );
@@ -302,6 +290,17 @@ export function PostCard({ post }: { post: PostType }) {
 
   return (
     <TiltCard className="w-full block">
+      {post.media && post.media.length > 0 && (
+        <CinematicMediaLightbox
+          media={post.media}
+          activeIndex={activeMediaIndex}
+          onActiveIndexChange={setActiveMediaIndex}
+          open={mediaViewerOpen}
+          onOpenChange={setMediaViewerOpen}
+          authorName={author.displayName}
+          caption={post.content}
+        />
+      )}
       <motion.article 
         variants={fadeInUp}
         initial="initial"
