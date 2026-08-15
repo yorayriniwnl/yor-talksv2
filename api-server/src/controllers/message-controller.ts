@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { emitToUser } from "../lib/realtime.js";
-import { MessageBlockedError, MessageService } from "../services/message-service.js";
+import { InvalidReplyTargetError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -9,13 +9,17 @@ export class MessageController {
   sendMessage = async (req: Request, res: Response) => {
     const recipientId = typeof req.body.recipientId === "string" ? req.body.recipientId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
+    const replyToId = typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
     try {
-      const message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, req.body);
+      const message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, replyToId ? { replyToId } : undefined);
       emitToUser(recipientId, "message:receive", message);
       return res.status(201).json(createResponse("Message sent", message));
     } catch (error) {
       if (error instanceof MessageBlockedError) {
         return res.status(403).json(createResponse("Message blocked", null, {}, [error.message]));
+      }
+      if (error instanceof InvalidReplyTargetError) {
+        return res.status(400).json(createResponse("Invalid reply target", null, {}, [error.message]));
       }
       return res.status(500).json(createResponse("Failed to send message", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }

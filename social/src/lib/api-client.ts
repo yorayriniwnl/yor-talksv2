@@ -202,7 +202,7 @@ export const api = {
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
 
   // ---- Messages ----
-  sendMessage: (recipientId: string, content: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content }) }),
+  sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
   getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
 
@@ -376,6 +376,7 @@ export interface BackendMessage {
   seenAt: string | null;
   editedAt: string | null;
   deletedAt: string | null;
+  replyToId?: string | null;
 }
 
 export interface BackendNotification {

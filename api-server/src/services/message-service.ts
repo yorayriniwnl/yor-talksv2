@@ -4,6 +4,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 
 export class MessageBlockedError extends Error {}
+export class InvalidReplyTargetError extends Error {}
 
 export class MessageService {
   constructor(
@@ -38,6 +39,13 @@ export class MessageService {
       }
     }
     const conversation = await this.createConversation(senderId, recipientId);
+    const replyToId = options?.replyToId ?? null;
+    if (replyToId) {
+      const replyTarget = await this.messageRepository.findById(replyToId);
+      if (!replyTarget || replyTarget.conversationId !== conversation.id) {
+        throw new InvalidReplyTargetError("Reply target must belong to this conversation");
+      }
+    }
     const message: MessageRecord = {
       id: randomUUID(),
       conversationId: conversation.id,
@@ -46,7 +54,7 @@ export class MessageService {
       content,
       createdAt: new Date().toISOString(),
       seenAt: null,
-      replyToId: options?.replyToId ?? null,
+      replyToId,
       forwardedFromId: options?.forwardedFromId ?? null,
       reactions: options?.reactions ?? {},
       editedAt: null,

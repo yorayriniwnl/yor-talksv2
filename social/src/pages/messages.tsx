@@ -1,22 +1,71 @@
 import * as React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAppStore, type Message as DirectMessage } from '@/lib/store';
 import { api, type BackendUser } from '@/lib/api-client';
 import { useParams, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Plus, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft, Sparkles } from 'lucide-react';
+import { Search, Plus, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft, Sparkles, Reply, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getSocket } from '@/lib/socket-client';
 import { format, formatDistanceToNow, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
-import { fadeInUp, staggerContainer, staggerItem, springSnappy } from '@/lib/motion';
+import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+
+const MAX_MESSAGE_LENGTH = 4_000;
+const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
+
+type ReplyTarget = {
+  messageId: string;
+  senderName: string;
+  excerpt: string;
+};
+
+type ParsedReply = {
+  senderName: string;
+  excerpt: string;
+  body: string;
+};
+
+function parseReply(content: string): ParsedReply | null {
+  const match = content.match(REPLY_PREFIX);
+  if (!match) return null;
+
+  return { senderName: match[1], excerpt: match[2], body: match[3] };
+}
+
+type ReplyPreview = Pick<ParsedReply, 'senderName' | 'excerpt'>;
+
+function MessageContent({ content, isMine, reply: structuredReply }: { content: string; isMine: boolean; reply?: ReplyPreview | null }) {
+  const legacyReply = parseReply(content);
+  const reply = structuredReply ?? legacyReply;
+  const body = legacyReply?.body ?? content;
+
+  if (!reply) return <span className="whitespace-pre-wrap">{body}</span>;
+
+  return (
+    <>
+      <div className={cn(
+        'mb-2 flex gap-2 rounded-xl border px-2.5 py-2 text-xs',
+        isMine ? 'border-white/15 bg-black/10 text-white/80' : 'border-border/40 bg-background/35 text-muted-foreground'
+      )}>
+        <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="font-semibold">Replying to {reply.senderName}</p>
+          <p className="mt-0.5 truncate opacity-80">{reply.excerpt}</p>
+        </div>
+      </div>
+      <span className="whitespace-pre-wrap">{body}</span>
+    </>
+  );
+}
 
 /* ─── Typing indicator dots ────────────────────────────────────────────── */
-function TypingIndicator() {
+function TypingIndicator({ name }: { name: string }) {
   return (
-    <div className="flex items-center gap-1.5 px-4 py-3 mr-auto">
+    <div className="mr-auto flex items-center gap-2 px-4 py-3" role="status" aria-live="polite">
       <div className="surface-1 rounded-[20px] rounded-bl-md px-4 py-3 flex items-center gap-1">
         {[0, 1, 2].map((i) => (
           <motion.span
@@ -32,6 +81,7 @@ function TypingIndicator() {
           />
         ))}
       </div>
+      <span className="text-xs text-muted-foreground">{name} is typing</span>
     </div>
   );
 }
@@ -132,10 +182,110 @@ export default function Messages() {
   const [sending, setSending] = useState(false);
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingStopTimeoutRef = useRef<number | null>(null);
+  const typingConversationIdRef = useRef<string | null>(null);
+  const peerTypingTimeoutsRef = useRef<Record<string, number>>({});
+
+  const stopTyping = useCallback(() => {
+    if (typingStopTimeoutRef.current !== null) {
+      window.clearTimeout(typingStopTimeoutRef.current);
+      typingStopTimeoutRef.current = null;
+    }
+
+    const conversationId = typingConversationIdRef.current;
+    if (conversationId) {
+      getSocket()?.emit('typing:end', { conversationId });
+      typingConversationIdRef.current = null;
+    }
+  }, []);
+
+  const signalTyping = useCallback((conversationId: string | undefined) => {
+    if (!conversationId) return;
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    const previousConversationId = typingConversationIdRef.current;
+    if (previousConversationId && previousConversationId !== conversationId) {
+      socket.emit('typing:end', { conversationId: previousConversationId });
+    }
+
+    if (previousConversationId !== conversationId) {
+      socket.emit('typing:start', { conversationId });
+      typingConversationIdRef.current = conversationId;
+    }
+
+    if (typingStopTimeoutRef.current !== null) {
+      window.clearTimeout(typingStopTimeoutRef.current);
+    }
+    typingStopTimeoutRef.current = window.setTimeout(stopTyping, 1200);
+  }, [stopTyping]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !currentUser?.id) return;
+
+    const clearPeerTyping = (conversationId: string) => {
+      const timeout = peerTypingTimeoutsRef.current[conversationId];
+      if (timeout) window.clearTimeout(timeout);
+      delete peerTypingTimeoutsRef.current[conversationId];
+      setTypingConversationIds((current) => {
+        if (!current[conversationId]) return current;
+        const { [conversationId]: _, ...remaining } = current;
+        return remaining;
+      });
+    };
+
+    const handleTypingStart = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser.id || typeof payload.conversationId !== 'string') return;
+
+      const conversationId = payload.conversationId;
+      const existingTimeout = peerTypingTimeoutsRef.current[conversationId];
+      if (existingTimeout) window.clearTimeout(existingTimeout);
+
+      setTypingConversationIds((current) => current[conversationId] ? current : { ...current, [conversationId]: true });
+      peerTypingTimeoutsRef.current[conversationId] = window.setTimeout(() => clearPeerTyping(conversationId), 2200);
+    };
+
+    const handleTypingEnd = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser.id || typeof payload.conversationId !== 'string') return;
+      clearPeerTyping(payload.conversationId);
+    };
+
+    socket.on('typing:start', handleTypingStart);
+    socket.on('typing:end', handleTypingEnd);
+
+    return () => {
+      socket.off('typing:start', handleTypingStart);
+      socket.off('typing:end', handleTypingEnd);
+      Object.values(peerTypingTimeoutsRef.current).forEach((timeout) => window.clearTimeout(timeout));
+      peerTypingTimeoutsRef.current = {};
+      setTypingConversationIds({});
+    };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    stopTyping();
+    setReplyTarget(null);
+  }, [id, stopTyping]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') stopTyping();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopTyping();
+    };
+  }, [stopTyping]);
 
   useEffect(() => {
     for (const conv of conversations) {
@@ -177,6 +327,10 @@ export default function Messages() {
 
   const activeConv = useMemo(() => conversationList.find((c) => c.conv.id === id), [conversationList, id]);
   const activeMessages = id ? (messagesByConversation[id] ?? []) : [];
+  const isPeerTyping = Boolean(id && typingConversationIds[id]);
+
+  const messageLimit = MAX_MESSAGE_LENGTH;
+  const isMessageTooLong = message.trim().length > MAX_MESSAGE_LENGTH;
 
   const handleSelect = useCallback((convId: string) => {
     setLocation(`/messages/${convId}`);
@@ -184,12 +338,18 @@ export default function Messages() {
 
   const handleSend = async () => {
     if (!message.trim() || !activeConv || sending) return;
+
+    const outgoingMessage = message.trim();
+    if (outgoingMessage.length > MAX_MESSAGE_LENGTH) return;
+
+    stopTyping();
     setSending(true);
     setPulseSend(true);
     setTimeout(() => setPulseSend(false), 300);
     try {
-      await sendDirectMessage(activeConv.user.id, message.trim());
+      await sendDirectMessage(activeConv.user.id, outgoingMessage, replyTarget?.messageId);
       setMessage('');
+      setReplyTarget(null);
       if (inputRef.current) {
         inputRef.current.style.height = 'auto'; // reset height
       }
@@ -200,14 +360,21 @@ export default function Messages() {
   };
 
   const adjustTextareaHeight = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+    const nextMessage = e.target.value;
+    setMessage(nextMessage);
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+
+    if (nextMessage.trim() && activeConv) {
+      signalTyping(id);
+    } else {
+      stopTyping();
+    }
   };
 
   type ConvEntry = typeof conversationList[number];
 
-  const ConversationItem = React.memo(function ConversationItem({ entry, active, onSelect }: { entry: ConvEntry; active: boolean; onSelect: (id: string) => void }) {
+  const ConversationItem = React.memo(function ConversationItem({ entry, active, isTyping, onSelect }: { entry: ConvEntry; active: boolean; isTyping: boolean; onSelect: (id: string) => void }) {
     const { conv, user } = entry;
     const unread = conv.lastMessage && conv.lastMessage.senderId !== currentUser?.id && !conv.lastMessage.read;
     const lastMsgTime = conv.lastMessage ? new Date(conv.lastMessage.createdAt) : null;
@@ -240,15 +407,12 @@ export default function Messages() {
           <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-gradient-to-b from-primary via-primary/80 to-primary/40" />
         )}
 
-        {/* Avatar with online status dot */}
+        {/* Avatar and unread state */}
         <div className="relative shrink-0">
           <Avatar className="w-[44px] h-[44px] ring-2 ring-transparent group-hover:ring-primary/10 transition-all">
             <AvatarImage src={user.avatarUrl} />
             <AvatarFallback className="font-display font-semibold text-sm">{user.displayName.charAt(0)}</AvatarFallback>
           </Avatar>
-          {/* Online status dot */}
-          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-[0_0_6px_rgba(16,185,129,0.5)] animate-pulse" />
-          {/* Unread indicator with glow */}
           {unread && (
             <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-background glow-neon-primary" />
           )}
@@ -272,21 +436,21 @@ export default function Messages() {
             )}
           </div>
           <div className="flex items-center mt-0.5">
-            <p className={cn(
-              "text-xs truncate max-w-[90%]",
-              unread ? "text-foreground font-medium" : "text-muted-foreground"
-            )}>
-              {conv.lastMessage?.content ?? 'New conversation'}
-            </p>
+            {isTyping ? (
+              <p className="max-w-[90%] truncate text-xs font-medium text-primary" aria-live="polite">Typing…</p>
+            ) : (
+              <p className={cn(
+                "text-xs truncate max-w-[90%]",
+                unread ? "text-foreground font-medium" : "text-muted-foreground"
+              )}>
+                {conv.lastMessage?.content ?? 'New conversation'}
+              </p>
+            )}
           </div>
         </div>
       </motion.div>
     );
   });
-
-  // Group messages to determine gaps and timestamps
-  let currentGroupSender: string | null = null;
-  let currentGroupDate: Date | null = null;
 
   return (
     <div className="h-[100dvh] lg:h-[calc(100dvh-6rem)] w-full max-w-6xl mx-auto lg:p-4">
@@ -335,7 +499,7 @@ export default function Messages() {
             )}
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="pb-4 space-y-0.5 stagger-in">
               {conversationList.map((entry) => (
-                <ConversationItem key={entry.conv.id} entry={entry} active={activeConv?.conv.id === entry.conv.id} onSelect={handleSelect} />
+                <ConversationItem key={entry.conv.id} entry={entry} active={activeConv?.conv.id === entry.conv.id} isTyping={Boolean(typingConversationIds[entry.conv.id])} onSelect={handleSelect} />
               ))}
             </motion.div>
           </div>
@@ -358,11 +522,12 @@ export default function Messages() {
                       <AvatarImage src={activeConv.user.avatarUrl} />
                       <AvatarFallback className="font-display font-semibold">{activeConv.user.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
                   </div>
                   <div className="flex flex-col">
                     <h3 className="font-display font-semibold text-sm leading-tight">{activeConv.user.displayName}</h3>
-                    <span className="text-xs text-muted-foreground font-mono leading-tight">@{activeConv.user.username}</span>
+                    <span className={cn('text-xs font-mono leading-tight', isPeerTyping ? 'text-primary' : 'text-muted-foreground')}>
+                      {isPeerTyping ? 'Typing…' : `@${activeConv.user.username}`}
+                    </span>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50">
@@ -415,7 +580,7 @@ export default function Messages() {
                           initial="hidden"
                           animate="visible"
                           className={cn(
-                            "flex flex-col max-w-[75%]",
+                            "group/message flex flex-col max-w-[75%]",
                             isMine ? "ml-auto items-end" : "mr-auto items-start",
                             gapClass
                           )}
@@ -428,15 +593,28 @@ export default function Messages() {
                                 : "glass-heavy text-foreground rounded-[20px] rounded-bl-md shadow-sm"
                             )}
                           >
-                            {msg.content}
+                            <MessageContent content={msg.content} isMine={isMine} />
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const replyBody = (parseReply(msg.content)?.body ?? msg.content).replace(/\s+/g, ' ').trim().slice(0, 120);
+                              const senderName = (isMine ? currentUser?.displayName ?? 'You' : activeConv.user.displayName).replace(/[\]\n]/g, ' ').trim();
+                              setReplyTarget({ messageId: msg.id, senderName, excerpt: replyBody || 'Message' });
+                              inputRef.current?.focus();
+                            }}
+                            className="mt-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.68rem] font-medium text-muted-foreground opacity-100 transition-opacity hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:opacity-0 md:group-hover/message:opacity-100"
+                            aria-label={`Reply to ${isMine ? 'your message' : activeConv.user.displayName}`}
+                          >
+                            <Reply className="h-3 w-3" /> Reply
+                          </button>
                         </motion.div>
                       </React.Fragment>
                     );
                   })}
 
                   {/* Typing indicator — shows subtly */}
-                  {sending && <TypingIndicator />}
+                  {isPeerTyping && <TypingIndicator name={activeConv.user.displayName} />}
 
                   <div ref={scrollRef} className="h-1" />
                 </div>
@@ -444,6 +622,27 @@ export default function Messages() {
 
               {/* Input Area — glass-heavy with glow */}
               <div className="p-3 lg:p-4 border-t border-border/30">
+                {replyTarget && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2"
+                  >
+                    <Reply className="h-4 w-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground">Replying to {replyTarget.senderName}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{replyTarget.excerpt}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTarget(null)}
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label="Cancel reply"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </motion.div>
+                )}
                 <div className={cn(
                   "glass-heavy rounded-2xl p-1.5 flex items-end gap-2 transition-all duration-300 focus-glow",
                   "focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-[0_0_20px_rgba(var(--primary),0.08)]"
@@ -454,10 +653,13 @@ export default function Messages() {
                     onChange={adjustTextareaHeight}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                     placeholder="Write something..."
+                    maxLength={messageLimit}
+                    aria-label={replyTarget ? `Reply to ${replyTarget.senderName}` : 'Write a message'}
                     className="flex-1 bg-transparent resize-none outline-none py-2.5 px-3 min-h-[44px] text-[15px] thin-scrollbar placeholder:text-muted-foreground/50"
                     rows={1}
                   />
                   <div className="flex shrink-0 pb-0.5 pr-0.5">
+                    {sending && <span className="self-center pr-2 text-[0.68rem] font-medium text-muted-foreground" role="status">Sending…</span>}
                     <Button
                       size="icon"
                       className={cn(
@@ -467,7 +669,7 @@ export default function Messages() {
                           : "bg-muted text-muted-foreground hover:bg-muted/80",
                         pulseSend && "animate-pulse shadow-[0_0_15px_rgba(var(--primary),0.6)] scale-95"
                       )}
-                      disabled={!message.trim() || sending}
+                      disabled={!message.trim() || sending || isMessageTooLong}
                       onClick={handleSend}
                     >
                       <SendHorizontal className={cn("w-4 h-4 transition-transform", message.trim() && "ml-0.5 scale-110")} />

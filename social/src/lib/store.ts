@@ -92,6 +92,7 @@ export type Message = {
   content: string;
   createdAt: string;
   read: boolean;
+  replyToId?: string | null;
 };
 
 export type Conversation = {
@@ -306,6 +307,7 @@ function mapMessage(m: BackendMessage): Message {
     content: m.content,
     createdAt: m.createdAt,
     read: m.seenAt !== null,
+    replyToId: m.replyToId ?? null,
   };
 }
 
@@ -479,7 +481,7 @@ interface AppState {
   // Messages — real, with live delivery over the socket connection
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
-  sendDirectMessage: (recipientId: string, content: string) => Promise<void>;
+  sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
 
   // Follow — real
   loadUserProfile: (userId: string) => Promise<void>;
@@ -1014,8 +1016,8 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendDirectMessage: async (recipientId, content) => {
-        const sent = await api.sendMessage(recipientId, content);
+      sendDirectMessage: async (recipientId, content, replyToId) => {
+        const sent = await api.sendMessage(recipientId, content, replyToId);
         const mapped = mapMessage(sent);
         set((state) => {
           const existing = state.messagesByConversation[mapped.conversationId] ?? [];

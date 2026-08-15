@@ -14,12 +14,14 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   const recipient = await createTestUser(userRepository);
   const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
   const sent = await messageService.sendMessage(sender.id, recipient.id, "hello");
+  const reply = await messageService.sendMessage(recipient.id, sender.id, "replying", { replyToId: sent.id });
   const edited = await messageService.editMessage(sent.id, sender.id, "hello there");
   const reacted = await messageService.addReaction(sent.id, recipient.id, "thumbs-up");
   const pinned = await messageService.pinMessage(sent.id, sender.id);
   const deleted = await messageService.deleteMessage(sent.id, sender.id);
 
   assert.ok(edited);
+  assert.equal(reply.replyToId, sent.id);
   assert.equal(edited?.content, "hello there");
   assert.equal(reacted?.reactions?.["thumbs-up"]?.length, 1);
   assert.equal(pinned?.pinned, true);

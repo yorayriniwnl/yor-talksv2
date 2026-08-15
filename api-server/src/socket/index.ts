@@ -17,7 +17,9 @@ export const attachSocketServer = (httpServer: HttpServer) => {
   });
   setIo(io);
 
-  const messageService = new MessageService(new ConversationRepository(), new MessageRepository(), new UserRepository());
+  const conversationRepository = new ConversationRepository();
+  const userRepository = new UserRepository();
+  const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const onlineUsers = new Map<string, string>();
 
   io.use((socket, next) => {
@@ -41,12 +43,32 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     logger.info({ userId }, "socket connected");
     socket.emit("presence:update", { online: true, userId });
 
-    socket.on("typing:start", ({ conversationId }) => {
-      socket.to(conversationId).emit("typing:start", { userId, conversationId });
+    const relayTyping = async (event: "typing:start" | "typing:end", conversationId: unknown) => {
+      if (typeof conversationId !== "string") return;
+
+      try {
+        const conversation = await conversationRepository.findById(conversationId);
+        if (!conversation || !conversation.participantIds?.includes(userId)) return;
+
+        const recipientId = conversation.participantIds.find((participantId) => participantId !== userId);
+        if (!recipientId) return;
+
+        // Presence signals follow the same block boundary as direct messages.
+        const recipient = await userRepository.findById(recipientId);
+        if (recipient?.blockedUsers?.includes(userId)) return;
+
+        io.to(recipientId).emit(event, { userId, conversationId });
+      } catch (err) {
+        logger.warn({ err, userId, conversationId }, "Failed to relay typing signal");
+      }
+    };
+
+    socket.on("typing:start", (payload: { conversationId?: unknown } = {}) => {
+      void relayTyping("typing:start", payload.conversationId);
     });
 
-    socket.on("typing:end", ({ conversationId }) => {
-      socket.to(conversationId).emit("typing:end", { userId, conversationId });
+    socket.on("typing:end", (payload: { conversationId?: unknown } = {}) => {
+      void relayTyping("typing:end", payload.conversationId);
     });
 
     // Previously this just relayed the raw payload in-memory with no
