@@ -43,6 +43,9 @@ const Tournaments = lazyWithRetry(() => import('@/pages/tournaments'));
 const Studio = lazyWithRetry(() => import('@/pages/studio'));
 const Lounge = lazyWithRetry(() => import('@/pages/lounge'));
 const Bazaar = lazyWithRetry(() => import('@/pages/bazaar'));
+const Arcade = lazyWithRetry(() => import('@/pages/arcade'));
+const SuperPass = lazyWithRetry(() => import('@/pages/pass'));
+const Clans = lazyWithRetry(() => import('@/pages/clans'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,6 +94,9 @@ function ProtectedRoutes() {
               <Route path="/lounge" component={Lounge} />
               <Route path="/games" component={Bazaar} />
               <Route path="/bazaar" component={Bazaar} />
+              <Route path="/arcade" component={Arcade} />
+              <Route path="/pass" component={SuperPass} />
+              <Route path="/clans" component={Clans} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

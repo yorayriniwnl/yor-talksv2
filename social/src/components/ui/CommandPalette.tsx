@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2 } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -45,6 +45,9 @@ export function CommandPalette() {
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
     { icon: Trophy, label: 'Bharat Esports Tournaments', path: '/tournaments' },
+    { icon: Crown, label: 'Bharat Super Pass (Season 1)', path: '/pass' },
+    { icon: Shield, label: 'Clan Wars & Squad Command', path: '/clans' },
+    { icon: Sparkles, label: 'Cyber Arcade & Mini-Games', path: '/arcade' },
     { icon: Video, label: 'Creator Studio Pro', path: '/studio' },
     { icon: Headphones, label: 'Spatial Audio Lounge', path: '/lounge' },
     { icon: Gamepad2, label: 'Indie Bharat Game Hub', path: '/bazaar' },
