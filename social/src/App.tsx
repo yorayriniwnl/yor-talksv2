@@ -64,6 +64,9 @@ const TacticsWhiteboard = lazyWithRetry(() => import('@/pages/tactics'));
 const AIArtStudio = lazyWithRetry(() => import('@/pages/ai-art'));
 const MerchStudio = lazyWithRetry(() => import('@/pages/merch-studio'));
 const PredictionsArena = lazyWithRetry(() => import('@/pages/predictions'));
+const Spectrum = lazyWithRetry(() => import('@/pages/spectrum'));
+const OverlayStudio = lazyWithRetry(() => import('@/pages/overlay-studio'));
+const ContractsStudio = lazyWithRetry(() => import('@/pages/contracts'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +143,11 @@ function ProtectedRoutes() {
               <Route path="/ai-art" component={AIArtStudio} />
               <Route path="/merch" component={MerchStudio} />
               <Route path="/predictions" component={PredictionsArena} />
+              <Route path="/spectrum" component={Spectrum} />
+              <Route path="/visualizer" component={Spectrum} />
+              <Route path="/overlays" component={OverlayStudio} />
+              <Route path="/overlay-studio" component={OverlayStudio} />
+              <Route path="/contracts" component={ContractsStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

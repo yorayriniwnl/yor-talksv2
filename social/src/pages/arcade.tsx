@@ -10,11 +10,12 @@ import { CyberTyper } from '@/components/games/CyberTyper';
 import { CyberChess } from '@/components/games/CyberChess';
 import { CyberSnake } from '@/components/games/CyberSnake';
 import { CyberDrone } from '@/components/games/CyberDrone';
+import { CyberAsteroids } from '@/components/games/CyberAsteroids';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -121,6 +122,18 @@ export default function Arcade() {
           >
             🛸 Flappy Drone
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'asteroids' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('asteroids');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'asteroids' && "bg-pink-600 text-white shadow-md")}
+          >
+            ☄️ Orbit Asteroids
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -132,6 +145,7 @@ export default function Arcade() {
           {activeGame === 'chess' && <CyberChess />}
           {activeGame === 'snake' && <CyberSnake />}
           {activeGame === 'drone' && <CyberDrone />}
+          {activeGame === 'asteroids' && <CyberAsteroids />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

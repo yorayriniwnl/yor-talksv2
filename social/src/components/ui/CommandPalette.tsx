@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -50,6 +50,9 @@ export function CommandPalette() {
     { icon: Shield, label: 'Clan Wars & Squad Command', path: '/clans' },
     { icon: Swords, label: 'Esports Scrims & Map Veto', path: '/scrims' },
     { icon: Crosshair, label: 'Clan Scrim Tactics & Playbook', path: '/tactics' },
+    { icon: Activity, label: '3D Audio Spectrum & FFT Studio', path: '/spectrum' },
+    { icon: Monitor, label: 'Streamer OBS Overlay & HUD Studio', path: '/overlays' },
+    { icon: FileText, label: 'Esports Pro Contract & Signing Maker', path: '/contracts' },
     { icon: Wand2, label: 'Bharat AI Art & Thumbnail Studio', path: '/art' },
     { icon: Shirt, label: 'Creator Merchandise & Jersey Studio', path: '/merch' },
     { icon: Disc, label: 'Desi DJ Turntable & Scratch Studio', path: '/dj' },
