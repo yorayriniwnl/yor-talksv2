@@ -46,6 +46,9 @@ const Bazaar = lazyWithRetry(() => import('@/pages/bazaar'));
 const Arcade = lazyWithRetry(() => import('@/pages/arcade'));
 const SuperPass = lazyWithRetry(() => import('@/pages/pass'));
 const Clans = lazyWithRetry(() => import('@/pages/clans'));
+const Radar = lazyWithRetry(() => import('@/pages/radar'));
+const MemeStudio = lazyWithRetry(() => import('@/pages/meme-studio'));
+const CodeDuel = lazyWithRetry(() => import('@/pages/code-duel'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +100,10 @@ function ProtectedRoutes() {
               <Route path="/arcade" component={Arcade} />
               <Route path="/pass" component={SuperPass} />
               <Route path="/clans" component={Clans} />
+              <Route path="/radar" component={Radar} />
+              <Route path="/meme-studio" component={MemeStudio} />
+              <Route path="/duel" component={CodeDuel} />
+              <Route path="/code-duel" component={CodeDuel} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

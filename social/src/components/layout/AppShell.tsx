@@ -16,6 +16,7 @@ import { FloatingParticles } from '@/components/ui/FloatingParticles';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
+import { GlobalAudioPlayer } from '@/components/player/GlobalAudioPlayer';
 
 interface AppShellProps {
   children: ReactNode;
@@ -271,6 +272,8 @@ export function AppShell({ children }: AppShellProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <GlobalAudioPlayer />
     </div>
   );
 }
