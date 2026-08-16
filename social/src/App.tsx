@@ -67,6 +67,9 @@ const PredictionsArena = lazyWithRetry(() => import('@/pages/predictions'));
 const Spectrum = lazyWithRetry(() => import('@/pages/spectrum'));
 const OverlayStudio = lazyWithRetry(() => import('@/pages/overlay-studio'));
 const ContractsStudio = lazyWithRetry(() => import('@/pages/contracts'));
+const ClanTreasury = lazyWithRetry(() => import('@/pages/treasury'));
+const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
+const GameLaunchpad = lazyWithRetry(() => import('@/pages/game-launchpad'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -148,6 +151,9 @@ function ProtectedRoutes() {
               <Route path="/overlays" component={OverlayStudio} />
               <Route path="/overlay-studio" component={OverlayStudio} />
               <Route path="/contracts" component={ContractsStudio} />
+              <Route path="/treasury" component={ClanTreasury} />
+              <Route path="/podcasts" component={PodcastStudio} />
+              <Route path="/launchpad" component={GameLaunchpad} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
