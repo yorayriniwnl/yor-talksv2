@@ -46,6 +46,10 @@ class SoundSystem {
     }
   }
 
+  public playLike() {
+    this.playPop();
+  }
+
   // Arcade level chime for Steam Award / XP unlock
   public playChime() {
     if (!this.enabled) return;

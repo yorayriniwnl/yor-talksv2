@@ -1,27 +1,81 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import StoriesRow from '@/components/feed/StoriesRow';
 import { CreatePost, PostCardMemo as PostCard } from '@/components/feed/Post';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Link } from 'wouter';
-import { Sparkles, TrendingUp, Compass, Shield } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
+import { 
+  Sparkles, TrendingUp, Compass, Shield, Gamepad2, Play, Pause, 
+  Volume2, CheckCircle2, Gift, Calendar, ArrowLeftRight, Flame, Radio, Award, Star
+} from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/motion';
+import { sounds } from '@/lib/sound';
+import { triggerConfetti } from '@/components/ui/ConfettiBlast';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
+
+const DAILY_QUESTS = [
+  { id: 'q1', text: 'Engage with 3 Creator Posts', progress: 3, total: 3, done: true, xp: 150 },
+  { id: 'q2', text: 'Share a 24h Story Update', progress: 1, total: 1, done: true, xp: 200 },
+  { id: 'q3', text: 'Initiate or Complete a Steam Trade', progress: 1, total: 1, done: true, xp: 250 },
+];
+
+const TRENDING_SOUNDTRACKS = [
+  { id: 't1', title: 'Night City Synthwave', artist: 'Cyberpulse', duration: '2:45', plays: '1.4M' },
+  { id: 't2', title: 'Multiverse Resonance (Lo-Fi)', artist: 'Aura Collective', duration: '3:12', plays: '890K' },
+  { id: 't3', title: 'Hyperdrive Overload', artist: 'Glitch Mobius', duration: '1:58', plays: '2.1M' },
+];
+
+const STEAM_LIVE_FRIENDS = [
+  {
+    id: 'f1',
+    name: 'Valkyrie_Zero',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    game: 'Cyberpunk 2077: Phantom Liberty',
+    activity: 'Night City — In Combat',
+    status: 'in-game',
+    level: 92
+  },
+  {
+    id: 'f2',
+    name: 'Kai_Takahashi',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    game: 'Counter-Strike 2',
+    activity: 'Competitive Match — Mirage (14-11)',
+    status: 'in-game',
+    level: 78
+  },
+  {
+    id: 'f3',
+    name: 'Elena_Rostova',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+    game: 'Live Stream Broadcast',
+    activity: '🔴 Streaming UI Shaders Live',
+    status: 'streaming',
+    level: 84
+  }
+];
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const posts = useAppStore((state) => state.posts);
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
   const followUser = useAppStore((state) => state.followUser);
   const unfollowUser = useAppStore((state) => state.unfollowUser);
 
+  const [questsClaimed, setQuestsClaimed] = useState(false);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+
   // Suggested users list
   const suggestedUsers = useMemo(() => {
     return Object.values(users)
       .filter((u) => u.id !== currentUser?.id && !currentUser?.followingIds?.includes(u.id))
-      .slice(0, 5);
+      .slice(0, 4);
   }, [users, currentUser]);
 
   const handleToggleFollow = (userId: string) => {
@@ -31,24 +85,38 @@ export default function Home() {
       unfollowUser(userId);
     } else {
       followUser(userId);
+      sounds.playPop();
     }
+  };
+
+  const handleClaimDailyQuests = () => {
+    if (questsClaimed) return;
+    sounds.playChime();
+    triggerConfetti();
+    setQuestsClaimed(true);
+    toast.success('Claimed +600 Steam XP & 100 Steam Points! Leveled up to Level 6!');
+  };
+
+  const togglePlayTrack = (trackId: string) => {
+    sounds.playPop();
+    setPlayingTrackId(prev => prev === trackId ? null : trackId);
   };
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
-      <div className="max-w-[1020px] mx-auto px-0 sm:px-4 pt-4 sm:pt-6">
+      <div className="max-w-[1100px] mx-auto px-0 sm:px-4 pt-4 sm:pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Main Feed Column (Instagram Style) */}
           <main className="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4">
             
             {/* Stories Row Container */}
-            <div className="surface-1 rounded-none sm:rounded-2xl p-4 border-y sm:border border-border/40 overflow-hidden">
+            <div className="surface-1 rounded-none sm:rounded-3xl p-4 border-y sm:border border-border/40 overflow-hidden shadow-sm">
               <StoriesRow />
             </div>
 
             {/* Create Post Inline Box */}
-            <div className="surface-1 rounded-none sm:rounded-2xl border-y sm:border border-border/40">
+            <div className="surface-1 rounded-none sm:rounded-3xl border-y sm:border border-border/40 shadow-sm">
               <CreatePost />
             </div>
 
@@ -62,8 +130,8 @@ export default function Home() {
               {posts.map((post, i) => (
                 <ScrollReveal
                   key={post.id}
-                  delay={Math.min(i * 0.05, 0.3)}
-                  className="surface-1 rounded-none sm:rounded-2xl border-y sm:border border-border/40 overflow-hidden shadow-sm hover:border-border/60 transition-colors"
+                  delay={Math.min(i * 0.04, 0.25)}
+                  className="surface-1 rounded-none sm:rounded-3xl border-y sm:border border-border/40 overflow-hidden shadow-sm hover:border-border/60 transition-colors"
                 >
                   <PostCard post={post} />
                 </ScrollReveal>
@@ -71,34 +139,166 @@ export default function Home() {
             </motion.div>
           </main>
 
-          {/* Right Sidebar (Desktop Instagram Style) */}
-          <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 space-y-6 sticky top-6 h-fit">
+          {/* Right Sidebar (Desktop Steam & Instagram Fusion Suite) */}
+          <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 space-y-5 sticky top-6 h-fit">
             
-            {/* Current User Card */}
+            {/* Current User Steam Card */}
             {currentUser && (
-              <div className="flex items-center justify-between p-3 rounded-2xl surface-1 border border-border/40">
+              <div className="p-4 rounded-3xl surface-1 border border-border/40 shadow-sm flex items-center justify-between">
                 <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 min-w-0 group">
-                  <div className="relative">
-                    <Avatar className="w-12 h-12 ring-2 ring-primary/30 group-hover:ring-primary transition-all">
+                  <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-cyan-400 via-primary to-rose-500">
+                    <Avatar className="w-12 h-12 border-2 border-background">
                       <AvatarImage src={currentUser.avatarUrl} />
                       <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-display font-bold text-sm truncate group-hover:underline">{currentUser.displayName}</h4>
+                    <h4 className="font-display font-bold text-sm truncate group-hover:underline text-foreground">{currentUser.displayName}</h4>
                     <p className="text-xs text-muted-foreground font-mono truncate">@{currentUser.username}</p>
                   </div>
                 </Link>
-                <div className="level-badge text-[0.65rem] shrink-0">
-                  <Shield className="w-3 h-3" /> Lv. 5
+                <div className="level-badge text-xs shrink-0 shadow-sm">
+                  <Shield className="w-3.5 h-3.5" /> Lv. 88
                 </div>
               </div>
             )}
 
-            {/* Suggested for You */}
-            <div className="surface-1 rounded-2xl p-5 border border-border/40">
+            {/* Steam Live Friends Rich Presence Widget */}
+            <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-sm text-foreground/80 flex items-center gap-1.5">
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 flex items-center gap-2">
+                  <Gamepad2 className="w-4 h-4 text-cyan-400" /> Steam Friends Online ({STEAM_LIVE_FRIENDS.length})
+                </h3>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+
+              <div className="space-y-3.5">
+                {STEAM_LIVE_FRIENDS.map((friend) => (
+                  <div key={friend.id} className="flex items-start justify-between gap-2.5 p-2 rounded-2xl hover:bg-muted/40 transition-colors">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="relative shrink-0 mt-0.5">
+                        <Avatar className="w-8 h-8 border border-border/40">
+                          <AvatarImage src={friend.avatar} />
+                          <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className={cn(
+                          "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+                          friend.status === 'streaming' ? "bg-rose-500 animate-pulse" : "bg-emerald-400"
+                        )} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-foreground truncate">{friend.name}</span>
+                          <span className="text-[0.6rem] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded">Lv.{friend.level}</span>
+                        </div>
+                        <p className="text-[0.68rem] text-emerald-400 font-mono truncate font-medium">{friend.activity}</p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex gap-1">
+                      <SteamTradeModal
+                        partnerName={friend.name}
+                        partnerAvatar={friend.avatar}
+                        trigger={
+                          <Button size="icon" variant="ghost" className="w-7 h-7 rounded-lg text-muted-foreground hover:text-emerald-400">
+                            <ArrowLeftRight className="w-3.5 h-3.5" />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily Quests & Steam XP Rewards Widget */}
+            <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-400" /> Daily Quests
+                </h3>
+                <span className="text-xs font-mono font-bold text-amber-400">3/3 Complete</span>
+              </div>
+
+              <div className="space-y-2.5 mb-4">
+                {DAILY_QUESTS.map((quest) => (
+                  <div key={quest.id} className="flex items-center justify-between text-xs font-sans">
+                    <span className="flex items-center gap-2 text-foreground/90 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {quest.text}
+                    </span>
+                    <span className="font-mono text-[0.65rem] text-amber-400 font-bold shrink-0">+{quest.xp} XP</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={handleClaimDailyQuests}
+                disabled={questsClaimed}
+                className={cn(
+                  "w-full rounded-2xl font-bold text-xs h-10 shadow-md",
+                  questsClaimed ? "bg-muted text-muted-foreground" : "glow-neon-primary bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                )}
+              >
+                {questsClaimed ? '✅ +600 XP Reward Claimed' : '🎁 Claim All Daily Rewards (+600 XP)'}
+              </Button>
+            </div>
+
+            {/* Trending Audio / Soundtrack Visualizer */}
+            <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-primary" /> Trending Audio Tracks
+                </h3>
+                <span className="text-[0.65rem] font-mono text-muted-foreground">Top Reels Sound</span>
+              </div>
+
+              <div className="space-y-3">
+                {TRENDING_SOUNDTRACKS.map((track) => {
+                  const isPlaying = playingTrackId === track.id;
+
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => togglePlayTrack(track.id)}
+                      className={cn(
+                        "p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group",
+                        isPlaying ? "border-primary bg-primary/10" : "border-border/40 bg-muted/20 hover:border-border"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-primary" />}
+                        </div>
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-xs truncate text-foreground leading-tight">{track.title}</h5>
+                          <p className="text-[0.65rem] text-muted-foreground font-mono truncate">{track.artist} · {track.plays} reels</p>
+                        </div>
+                      </div>
+
+                      {isPlaying && (
+                        <div className="flex items-center gap-0.5 shrink-0 pr-1">
+                          {[12, 20, 8, 16, 24].map((h, i) => (
+                            <motion.span
+                              key={i}
+                              animate={{ height: [4, h, 4] }}
+                              transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
+                              className="w-1 bg-primary rounded-full"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Suggested Creators & Circles */}
+            <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-primary" /> Suggested for you
                 </h3>
                 <Link href="/explore" className="text-xs font-mono font-bold text-primary hover:underline">
@@ -110,12 +310,12 @@ export default function Home() {
                 {suggestedUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between gap-3">
                     <Link href={`/profile/${user.id}`} className="flex items-center gap-3 min-w-0 group flex-1">
-                      <Avatar className="w-10 h-10 border border-border/40 shrink-0">
+                      <Avatar className="w-9 h-9 border border-border/40 shrink-0">
                         <AvatarImage src={user.avatarUrl} />
                         <AvatarFallback className="font-display font-bold text-xs">{user.displayName.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <h5 className="font-bold text-xs truncate group-hover:underline">{user.displayName}</h5>
+                        <h5 className="font-bold text-xs truncate group-hover:underline text-foreground">{user.displayName}</h5>
                         <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{user.username}</p>
                       </div>
                     </Link>
@@ -138,9 +338,10 @@ export default function Home() {
                 <Link href="/explore" className="hover:underline">Explore</Link> •
                 <Link href="/articles" className="hover:underline">Articles</Link> •
                 <Link href="/communities" className="hover:underline">Circles</Link> •
-                <Link href="/settings" className="hover:underline">Settings</Link>
+                <Link href="/marketplace" className="hover:underline">Marketplace</Link> •
+                <Link href="/points-shop" className="hover:underline">Points Shop</Link>
               </div>
-              <p>© 2026 Yor Talks Inc. • Built for humans</p>
+              <p>© 2026 Yor Talks Multiverse • Instagram + Steam Hybrid</p>
             </div>
 
           </aside>

@@ -2,9 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, type Video } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Share2, X, Music } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { 
+  Heart, MessageCircle, Share2, X, Music, Volume2, VolumeX, 
+  Send, Bookmark, Sparkles, Copy, Check, QrCode 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
+import { triggerConfetti } from '@/components/ui/ConfettiBlast';
+import { toast } from 'sonner';
 
 interface ReelsSwiperProps {
   videos: Video[];
@@ -12,12 +19,41 @@ interface ReelsSwiperProps {
   onClose: () => void;
 }
 
+interface ReelComment {
+  id: string;
+  user: string;
+  avatar: string;
+  text: string;
+  time: string;
+  likes: number;
+}
+
+const INITIAL_REEL_COMMENTS: ReelComment[] = [
+  { id: '1', user: 'Valkyrie_Zero', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', text: 'The motion graphics lighting is incredible! 🤯🔥', time: '1h ago', likes: 42 },
+  { id: '2', user: 'Kai_Takahashi', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', text: 'Need the tutorial for that camera shader! ✨', time: '3h ago', likes: 18 },
+  { id: '3', user: 'Elena_Rostova', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', text: 'Looping this 10 times in a row 🔥', time: '5h ago', likes: 89 },
+];
+
 export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwiperProps) {
   const users = useAppStore((s) => s.users);
+  const currentUser = useAppStore((s) => s.currentUser);
   const likeVideo = useAppStore((s) => s.likeVideo);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [playingIndex, setPlayingIndex] = useState(initialIndex);
+  const [isMuted, setIsMuted] = useState(false);
+  const [likedVideos, setLikedVideos] = useState<Record<string, boolean>>({});
+  const [savedVideos, setSavedVideos] = useState<Record<string, boolean>>({});
+  
+  // Double-tap heart burst effect
+  const [heartBurst, setHeartBurst] = useState<{ visible: boolean; x: number; y: number }>({ visible: false, x: 0, y: 0 });
+  const lastTapRef = useRef<number>(0);
+
+  // Comments drawer & share modal
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<ReelComment[]>(INITIAL_REEL_COMMENTS);
+  const [newComment, setNewComment] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Keyboard navigation for reels
   useEffect(() => {
@@ -31,20 +67,19 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         setPlayingIndex((prev) => Math.max(0, prev - 1));
         sounds.playSwoosh();
       } else if (e.key === 'Escape') {
-        onClose();
+        if (showComments) setShowComments(false);
+        else if (showShareModal) setShowShareModal(false);
+        else onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [videos, onClose]);
+  }, [videos, onClose, showComments, showShareModal]);
 
   useEffect(() => {
     if (containerRef.current) {
-      // Scroll to the initial index immediately
       const el = containerRef.current.children[initialIndex] as HTMLElement;
-      if (el) {
-        el.scrollIntoView();
-      }
+      if (el) el.scrollIntoView();
     }
   }, [initialIndex]);
 
@@ -58,7 +93,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
           }
         });
       },
-      { threshold: 0.6 } // Video plays when at least 60% is visible
+      { threshold: 0.6 }
     );
 
     const children = containerRef.current?.children;
@@ -69,6 +104,51 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     return () => observer.disconnect();
   }, [videos]);
 
+  const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
+    const now = Date.now();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (now - lastTapRef.current < 350) {
+      // Double tap recognized!
+      sounds.playLike();
+      setLikedVideos((prev) => ({ ...prev, [videoId]: true }));
+      likeVideo(videoId);
+
+      setHeartBurst({ visible: true, x, y });
+      setTimeout(() => setHeartBurst({ visible: false, x: 0, y: 0 }), 1000);
+    }
+    lastTapRef.current = now;
+  };
+
+  const handleSendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    sounds.playPop();
+    setComments((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        user: currentUser?.displayName || 'You',
+        avatar: currentUser?.avatarUrl || 'https://picsum.photos/seed/you/200/200',
+        text: newComment.trim(),
+        time: 'Just now',
+        likes: 0,
+      },
+    ]);
+    setNewComment('');
+  };
+
+  const handleCopyShareLink = () => {
+    sounds.playPop();
+    triggerConfetti();
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Reel link copied to clipboard!');
+    setShowShareModal(false);
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -76,114 +156,255 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed inset-0 z-50 bg-black flex justify-center"
+        className="fixed inset-0 z-50 bg-black flex justify-center font-sans text-white"
       >
-        <button 
-          onClick={onClose} 
-          className="absolute top-6 left-4 z-50 p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        {/* Top Floating Close & Audio Mute Button */}
+        <div className="absolute top-6 left-4 right-4 z-50 flex items-center justify-between pointer-events-auto">
+          <button 
+            onClick={onClose} 
+            className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+          >
+            {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+        </div>
 
         <div 
           ref={containerRef}
-          className="w-full h-[100dvh] max-w-[480px] overflow-y-scroll snap-y snap-mandatory hide-scrollbar relative bg-zinc-900"
+          className="w-full h-[100dvh] max-w-[480px] overflow-y-scroll snap-y snap-mandatory hide-scrollbar relative bg-zinc-950"
         >
           {videos.map((video, idx) => {
             const author = users[video.authorId];
             const isPlaying = playingIndex === idx;
+            const isLiked = likedVideos[video.id];
+            const isSaved = savedVideos[video.id];
 
             return (
               <div 
                 key={video.id} 
                 data-index={idx}
-                className="w-full h-[100dvh] snap-center snap-always relative flex items-center justify-center bg-black"
+                onClick={(e) => handleDoubleTap(e, video.id)}
+                className="w-full h-[100dvh] snap-center snap-always relative flex items-center justify-center bg-black select-none overflow-hidden"
               >
-                {/* 
-                  Since we don't have real hosted videos in the mock data, 
-                  we'll use a video element if it's a real mp4 url, 
-                  or fallback to the thumbnail acting as a "video" frame 
-                */}
-                {video.videoUrl.endsWith('.mp4') ? (
-                  <video
-                    src={video.videoUrl}
-                    className="w-full h-full object-cover"
-                    loop
-                    playsInline
-                    muted={false}
-                    ref={(el) => {
-                      if (el) {
-                        if (isPlaying) {
-                          el.play().catch(() => {});
-                        } else {
-                          el.pause();
-                          el.currentTime = 0;
-                        }
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="relative w-full h-full">
-                    <img src={video.thumbnailUrl} className="w-full h-full object-cover opacity-80" alt={video.title} />
-                    {!isPlaying && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        {/* Fake pause state */}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Video / Visual Asset */}
+                <div className="relative w-full h-full">
+                  <img src={video.thumbnailUrl} className="w-full h-full object-cover opacity-90" alt={video.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40" />
+                </div>
 
-                {/* Right Side Actions */}
-                <div className="absolute right-4 bottom-32 flex flex-col items-center gap-6 z-10">
+                {/* Double Tap Heart Burst Animation */}
+                <AnimatePresence>
+                  {heartBurst.visible && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 1, rotate: -20 }}
+                      animate={{ scale: 1.8, opacity: 0.9, rotate: 0 }}
+                      exit={{ scale: 2.2, opacity: 0 }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                      style={{ left: heartBurst.x - 40, top: heartBurst.y - 40 }}
+                      className="absolute z-40 text-rose-500 pointer-events-none drop-shadow-2xl"
+                    >
+                      <Heart className="w-24 h-24 fill-rose-500 text-rose-500" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Right Side Action Bar (Insta / TikTok Style) */}
+                <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 z-20">
+                  {/* Like Button */}
                   <div className="flex flex-col items-center gap-1 group">
                     <button 
-                      onClick={() => likeVideo(video.id)}
-                      className="p-3 bg-black/40 rounded-full text-white backdrop-blur-md group-hover:bg-primary/20 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sounds.playLike();
+                        setLikedVideos(prev => ({ ...prev, [video.id]: !isLiked }));
+                        likeVideo(video.id);
+                      }}
+                      className={cn(
+                        "p-3.5 rounded-full backdrop-blur-md transition-all active:scale-75 shadow-lg border border-white/10",
+                        isLiked ? "bg-rose-600 text-white" : "bg-black/50 text-white hover:bg-black/70"
+                      )}
                     >
-                      <Heart className="w-7 h-7" />
+                      <Heart className={cn("w-7 h-7", isLiked && "fill-white")} />
                     </button>
-                    <span className="text-white text-xs font-medium drop-shadow-md">{video.likes.toLocaleString()}</span>
+                    <span className="text-white text-xs font-mono font-bold drop-shadow-md">
+                      {(video.likes + (isLiked ? 1 : 0)).toLocaleString()}
+                    </span>
                   </div>
                   
+                  {/* Comments Button */}
                   <div className="flex flex-col items-center gap-1 group">
-                    <button className="p-3 bg-black/40 rounded-full text-white backdrop-blur-md group-hover:bg-white/20 transition-colors">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sounds.playPop();
+                        setShowComments(true);
+                      }}
+                      className="p-3.5 bg-black/50 rounded-full text-white backdrop-blur-md hover:bg-black/70 transition-colors shadow-lg border border-white/10"
+                    >
                       <MessageCircle className="w-7 h-7" />
                     </button>
-                    <span className="text-white text-xs font-medium drop-shadow-md">0</span>
+                    <span className="text-white text-xs font-mono font-bold drop-shadow-md">{comments.length}</span>
                   </div>
 
+                  {/* Bookmark Save Button */}
                   <div className="flex flex-col items-center gap-1 group">
-                    <button className="p-3 bg-black/40 rounded-full text-white backdrop-blur-md group-hover:bg-white/20 transition-colors">
-                      <Share2 className="w-7 h-7" />
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sounds.playPop();
+                        setSavedVideos(prev => ({ ...prev, [video.id]: !isSaved }));
+                        toast.success(isSaved ? 'Removed from bookmarks' : 'Saved to Bookmarks Collection');
+                      }}
+                      className={cn(
+                        "p-3.5 rounded-full backdrop-blur-md transition-all shadow-lg border border-white/10",
+                        isSaved ? "bg-primary text-primary-foreground" : "bg-black/50 text-white hover:bg-black/70"
+                      )}
+                    >
+                      <Bookmark className={cn("w-6 h-6", isSaved && "fill-current")} />
                     </button>
-                    <span className="text-white text-xs font-medium drop-shadow-md">Share</span>
+                  </div>
+
+                  {/* Share Button */}
+                  <div className="flex flex-col items-center gap-1 group">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sounds.playPop();
+                        setShowShareModal(true);
+                      }}
+                      className="p-3.5 bg-black/50 rounded-full text-white backdrop-blur-md hover:bg-black/70 transition-colors shadow-lg border border-white/10"
+                    >
+                      <Share2 className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  {/* Spinning Audio Vinyl Disc */}
+                  <div className="p-1 rounded-full bg-zinc-900 border border-white/20 animate-[spin_4s_linear_infinite] shadow-xl">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={author?.avatarUrl} />
+                      <AvatarFallback>M</AvatarFallback>
+                    </Avatar>
                   </div>
                 </div>
 
-                {/* Bottom Info Overlay */}
-                <div className="absolute bottom-0 left-0 right-16 p-4 pt-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Avatar className="w-10 h-10 border border-white/20">
+                {/* Bottom Creator Info & Sound Banner */}
+                <div className="absolute bottom-0 left-0 right-16 p-5 pt-12 z-20">
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <Avatar className="w-10 h-10 border-2 border-white/30 shadow-md">
                       <AvatarImage src={author?.avatarUrl} />
-                      <AvatarFallback>{author?.displayName?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{author?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
-                    <span className="text-white font-semibold text-sm drop-shadow-md">{author?.displayName}</span>
-                    <button className="px-3 py-1 bg-transparent border border-white text-white rounded-full text-xs font-semibold hover:bg-white hover:text-black transition-colors backdrop-blur-sm">
+                    <span className="text-white font-bold text-sm drop-shadow-md">{author?.displayName || 'Creator'}</span>
+                    <button className="px-3 py-1 bg-white text-black rounded-full text-xs font-bold hover:bg-zinc-200 transition-colors shadow-sm">
                       Follow
                     </button>
                   </div>
-                  <p className="text-white text-sm line-clamp-2 drop-shadow-md font-medium mb-3">
+
+                  <p className="text-white text-sm line-clamp-2 drop-shadow-md font-medium mb-3 leading-relaxed">
                     {video.title}
                   </p>
-                  <div className="flex items-center gap-2 text-white/80 text-xs">
-                    <Music className="w-4 h-4 animate-[spin_4s_linear_infinite]" />
-                    <span className="truncate">Original Audio - {author?.displayName}</span>
+
+                  <div className="flex items-center gap-2 text-white/90 text-xs font-mono bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full w-fit border border-white/10">
+                    <Music className="w-3.5 h-3.5 animate-pulse text-primary" />
+                    <span className="truncate max-w-[200px]">Original Audio — {author?.displayName || 'Soundtrack'}</span>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* Interactive Slide-Up Comments Drawer */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="absolute inset-x-0 bottom-0 max-w-[480px] mx-auto h-[60vh] bg-zinc-950 border-t border-border/40 rounded-t-3xl p-5 flex flex-col justify-between z-50 shadow-2xl"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                <h4 className="font-display font-bold text-sm text-white">Comments ({comments.length})</h4>
+                <button onClick={() => setShowComments(false)} className="p-1 text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 hide-scrollbar">
+                {comments.map((c) => (
+                  <div key={c.id} className="flex items-start gap-3 text-xs">
+                    <Avatar className="w-8 h-8 shrink-0 border border-white/10">
+                      <AvatarImage src={c.avatar} />
+                      <AvatarFallback>{c.user.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{c.user}</span>
+                        <span className="text-[0.62rem] text-zinc-400 font-mono">{c.time}</span>
+                      </div>
+                      <p className="text-zinc-200 mt-0.5 leading-relaxed">{c.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <form onSubmit={handleSendComment} className="pt-3 border-t border-border/40 flex items-center gap-2">
+                <Input
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment…"
+                  className="rounded-xl bg-zinc-900 border-border/60 text-xs h-10 text-white placeholder:text-zinc-500"
+                />
+                <Button type="submit" size="sm" className="rounded-xl h-10 px-4 bg-primary text-primary-foreground font-bold shrink-0">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Share Modal */}
+        <AnimatePresence>
+          {showShareModal && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            >
+              <div className="w-full max-w-sm bg-zinc-950 border border-border/50 rounded-3xl p-6 shadow-2xl font-sans text-center">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center mx-auto mb-3">
+                  <Share2 className="w-6 h-6" />
+                </div>
+                <h3 className="font-display font-bold text-lg text-white mb-1">Share Reel</h3>
+                <p className="text-xs text-zinc-400 mb-6">Share this video with friends or social feeds</p>
+
+                <div className="space-y-2.5">
+                  <Button
+                    onClick={handleCopyShareLink}
+                    className="w-full rounded-2xl font-bold text-xs h-11 bg-primary text-primary-foreground glow-neon-primary"
+                  >
+                    <Copy className="w-4 h-4 mr-1.5" /> Copy Link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowShareModal(false)}
+                    className="w-full rounded-2xl font-bold text-xs h-11 border-border/60 text-white hover:bg-zinc-900"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </AnimatePresence>
   );
