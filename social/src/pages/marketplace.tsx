@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Heart, ShoppingBag, Plus, Tag } from 'lucide-react';
+import { Search, Heart, ShoppingBag, Plus, Tag, ArrowLeftRight, Sparkles, Shield, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeModal';
+import { sounds } from '@/lib/sound';
 
 const PRODUCT_CATEGORIES = ['Furniture', 'Electronics', 'Clothing', 'Books', 'Other'];
 const PRODUCT_CONDITIONS = ['new', 'like-new', 'used'] as const;
@@ -49,19 +51,21 @@ function CreateListingDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-xl font-bold text-xs px-4 glow-neon-primary bg-primary"><Plus className="w-4 h-4 mr-1.5" /> Sell Item</Button>
+        <Button className="rounded-2xl font-bold text-xs px-4 glow-neon-primary bg-primary shadow-md">
+          <Plus className="w-4 h-4 mr-1.5" /> Sell Item
+        </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-2xl font-sans">
-        <DialogHeader><DialogTitle className="font-display font-bold text-xl">Create a listing</DialogTitle></DialogHeader>
+      <DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60">
+        <DialogHeader><DialogTitle className="font-display font-bold text-xl">Create a Marketplace Listing</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
           <div className="space-y-1.5">
             <Label htmlFor="product-title" className="text-xs font-mono uppercase text-muted-foreground">Title</Label>
-            <Input id="product-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="Vintage armchair" className="rounded-xl" />
+            <Input id="product-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="Ergonomic mechanical keyboard" className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="product-description" className="text-xs font-mono uppercase text-muted-foreground">Description</Label>
-            <Textarea id="product-description" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Condition, pickup details, etc." className="rounded-xl resize-none" />
+            <Textarea id="product-description" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Condition, specs, pickup details…" className="rounded-xl resize-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -82,7 +86,7 @@ function CreateListingDialog() {
             </select>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price} className="rounded-xl font-bold text-xs px-6">
+            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price} className="rounded-xl font-bold text-xs px-6 bg-primary">
               {loading ? 'Listing…' : 'Post Listing'}
             </Button>
           </DialogFooter>
@@ -98,6 +102,8 @@ export default function Marketplace() {
   const loadProducts = useAppStore((s) => s.loadProducts);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const toggleSaveProduct = useAppStore((s) => s.toggleSaveProduct);
+
+  const [mode, setMode] = useState<'store' | 'inventory'>('store');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
@@ -120,96 +126,188 @@ export default function Marketplace() {
       {/* Sticky Glass Header */}
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold font-display text-foreground">Community Marketplace</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Buy and sell within your network</p>
+          <h1 className="text-xl font-bold font-display text-foreground">Marketplace & Steam Inventory</h1>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">Buy, sell & peer-to-peer Steam trade</p>
         </div>
-        <CreateListingDialog />
+
+        <div className="flex items-center gap-2">
+          <SteamTradeModal />
+          <CreateListingDialog />
+        </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
-        {/* Search & Category Pills */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              value={query} 
-              onChange={(e) => setQuery(e.target.value)} 
-              placeholder="Search listings..." 
-              className="pl-10 rounded-xl surface-1 border-border/40 h-11 text-sm" 
-            />
-          </div>
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 items-center">
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-xs font-bold shrink-0 transition-all",
-                  category === c ? "bg-primary text-primary-foreground glow-neon-primary" : "surface-1 text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+        {/* Main Section Mode Tabs */}
+        <div className="flex gap-2 mb-6 p-1.5 rounded-2xl surface-1 border border-border/40 w-fit">
+          <button
+            onClick={() => setMode('store')}
+            className={cn(
+              "px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5",
+              mode === 'store' ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" /> Goods Marketplace
+          </button>
+          <button
+            onClick={() => setMode('inventory')}
+            className={cn(
+              "px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5",
+              mode === 'inventory' ? "bg-emerald-600 text-white shadow-md" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" /> Steam Inventory ({USER_INVENTORY.length})
+          </button>
         </div>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
-            <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-            <h3 className="font-display font-bold text-lg mb-1">No listings found</h3>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Try adjusting your search query or category filter.</p>
-          </div>
-        )}
+        {mode === 'inventory' ? (
+          /* Steam Inventory View */
+          <div className="space-y-6">
+            <div className="surface-1 p-6 rounded-3xl border border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+                  🎒 Your Steam Inventory
+                  <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    6 Verified Skins
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground font-mono mt-1">CS2 & Dota 2 High-Tier Collectibles with Float Metrics</p>
+              </div>
 
-        <motion.div 
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        >
-          {filtered.map((product) => {
-            const seller = users[product.sellerId];
-            const isSaved = product.savedByMe;
-            
-            return (
-              <motion.div
-                variants={staggerItem}
-                key={product.id}
-                className="surface-1 rounded-2xl overflow-hidden group cursor-pointer border border-border/40 hover:border-primary/40 transition-all duration-300 flex flex-col"
-              >
-                <div className="aspect-square relative bg-muted overflow-hidden">
-                  <img src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }} 
-                    className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors z-10"
-                  >
-                    <Heart className={cn("w-4 h-4", isSaved && "fill-current text-rose-500")} />
-                  </button>
-                  <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white font-display font-bold text-sm px-2.5 py-1 rounded-lg">
-                    ${product.price.toLocaleString()}
+              <SteamTradeModal
+                trigger={
+                  <Button className="rounded-2xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary px-6 h-11">
+                    <ArrowLeftRight className="w-4 h-4 mr-1.5" /> Launch Steam Trade Window
+                  </Button>
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {USER_INVENTORY.map((item) => (
+                <div
+                  key={item.id}
+                  className="surface-1 rounded-3xl overflow-hidden border border-border/40 hover:border-emerald-500/50 transition-all duration-300 flex flex-col shadow-sm group p-4"
+                >
+                  <div className="aspect-video relative rounded-2xl bg-black/60 overflow-hidden mb-4">
+                    <img src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.name} />
+                    {item.floatVal && (
+                      <span className="absolute bottom-2 left-2 text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-black/70 text-zinc-300 border border-white/10">
+                        Float: {item.floatVal}
+                      </span>
+                    )}
                   </div>
-                </div>
-                <div className="p-4 flex flex-col flex-1 justify-between">
-                  <h3 className="font-display font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors mb-2">{product.title}</h3>
-                  
-                  <div className="flex items-center justify-between pt-3 border-t border-border/30">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={seller?.avatarUrl} />
-                        <AvatarFallback>{(seller?.displayName ?? '?').charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground font-mono truncate max-w-[100px]">{seller?.displayName ?? 'Unknown'}</span>
+
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className={cn("text-[0.62rem] font-mono font-bold uppercase block mb-1", item.rarityColor)}>
+                        {item.rarity} · {item.game}
+                      </span>
+                      <h4 className="font-display font-bold text-sm text-foreground line-clamp-1 leading-tight">{item.name}</h4>
                     </div>
-                    <span className="text-[0.62rem] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full font-mono">
-                      {product.condition.replace('-', ' ')}
-                    </span>
+
+                    <div className="flex items-center justify-between pt-4 mt-3 border-t border-border/30">
+                      <span className="font-mono font-bold text-emerald-400 text-base">${item.price.toFixed(2)}</span>
+                      <SteamTradeModal
+                        trigger={
+                          <Button size="sm" variant="outline" className="rounded-xl font-bold text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">
+                            Trade Skin
+                          </Button>
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Goods Marketplace View */
+          <>
+            {/* Search & Category Pills */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input 
+                  value={query} 
+                  onChange={(e) => setQuery(e.target.value)} 
+                  placeholder="Search products & goods…" 
+                  className="pl-10 rounded-2xl surface-1 border-border/40 h-11 text-sm" 
+                />
+              </div>
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 items-center">
+                {categories.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-xs font-bold shrink-0 transition-all",
+                      category === c ? "bg-primary text-primary-foreground glow-neon-primary" : "surface-1 text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filtered.length === 0 && (
+              <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
+                <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                <h3 className="font-display font-bold text-lg mb-1">No listings found</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">Try adjusting your search query or category filter.</p>
+              </div>
+            )}
+
+            <motion.div 
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {filtered.map((product) => {
+                const seller = users[product.sellerId];
+                const isSaved = product.savedByMe;
+                
+                return (
+                  <motion.div
+                    variants={staggerItem}
+                    key={product.id}
+                    className="surface-1 rounded-3xl overflow-hidden group cursor-pointer border border-border/40 hover:border-primary/40 transition-all duration-300 flex flex-col shadow-sm"
+                  >
+                    <div className="aspect-square relative bg-muted overflow-hidden">
+                      <img src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }} 
+                        className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors z-10"
+                      >
+                        <Heart className={cn("w-4 h-4", isSaved && "fill-current text-rose-500")} />
+                      </button>
+                      <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white font-display font-bold text-sm px-2.5 py-1 rounded-lg">
+                        ${product.price.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="p-4 flex flex-col flex-1 justify-between">
+                      <h3 className="font-display font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors mb-2">{product.title}</h3>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-border/30">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-5 h-5">
+                            <AvatarImage src={seller?.avatarUrl} />
+                            <AvatarFallback>{(seller?.displayName ?? '?').charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground font-mono truncate max-w-[100px]">{seller?.displayName ?? 'Unknown'}</span>
+                        </div>
+                        <span className="text-[0.62rem] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full font-mono">
+                          {product.condition.replace('-', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import { getSocket } from '@/lib/socket-client';
 import { format, formatDistanceToNow, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -530,9 +531,15 @@ export default function Messages() {
                     </span>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50">
-                  <MoreVertical className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <SteamTradeModal
+                    partnerName={activeConv.user.displayName}
+                    partnerAvatar={activeConv.user.avatarUrl}
+                  />
+                  <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
 
               {/* Chat Messages */}
