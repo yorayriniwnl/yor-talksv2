@@ -58,6 +58,9 @@ const Scrims = lazyWithRetry(() => import('@/pages/scrims'));
 const Metaverse = lazyWithRetry(() => import('@/pages/metaverse'));
 const Soundboard = lazyWithRetry(() => import('@/pages/soundboard'));
 const MediaKit = lazyWithRetry(() => import('@/pages/media-kit'));
+const Turntable = lazyWithRetry(() => import('@/pages/turntable'));
+const ParticleSandbox = lazyWithRetry(() => import('@/pages/particle-sandbox'));
+const TacticsWhiteboard = lazyWithRetry(() => import('@/pages/tactics'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -126,6 +129,10 @@ function ProtectedRoutes() {
               <Route path="/soundboard" component={Soundboard} />
               <Route path="/media-kit" component={MediaKit} />
               <Route path="/mediakit" component={MediaKit} />
+              <Route path="/dj" component={Turntable} />
+              <Route path="/turntable" component={Turntable} />
+              <Route path="/particles" component={ParticleSandbox} />
+              <Route path="/tactics" component={TacticsWhiteboard} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

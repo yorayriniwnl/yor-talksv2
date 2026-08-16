@@ -8,11 +8,12 @@ import { NeonHackerGame } from '@/components/games/NeonHackerGame';
 import { CyberStarfighter } from '@/components/games/CyberStarfighter';
 import { CyberTyper } from '@/components/games/CyberTyper';
 import { CyberChess } from '@/components/games/CyberChess';
+import { CyberSnake } from '@/components/games/CyberSnake';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -95,6 +96,18 @@ export default function Arcade() {
           >
             👑 Bharat Chess
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'snake' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('snake');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-4 h-10", activeGame === 'snake' && "bg-teal-500 text-black shadow-md")}
+          >
+            🐍 Cyber Snake
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -104,6 +117,7 @@ export default function Arcade() {
           {activeGame === 'starfighter' && <CyberStarfighter />}
           {activeGame === 'typer' && <CyberTyper />}
           {activeGame === 'chess' && <CyberChess />}
+          {activeGame === 'snake' && <CyberSnake />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
