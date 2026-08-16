@@ -70,6 +70,9 @@ const ContractsStudio = lazyWithRetry(() => import('@/pages/contracts'));
 const ClanTreasury = lazyWithRetry(() => import('@/pages/treasury'));
 const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
 const GameLaunchpad = lazyWithRetry(() => import('@/pages/game-launchpad'));
+const FanClubSubscriptions = lazyWithRetry(() => import('@/pages/fan-club'));
+const ClipStudio = lazyWithRetry(() => import('@/pages/clip-studio'));
+const PowerRankings = lazyWithRetry(() => import('@/pages/power-rankings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -154,6 +157,9 @@ function ProtectedRoutes() {
               <Route path="/treasury" component={ClanTreasury} />
               <Route path="/podcasts" component={PodcastStudio} />
               <Route path="/launchpad" component={GameLaunchpad} />
+              <Route path="/fanclub" component={FanClubSubscriptions} />
+              <Route path="/clips" component={ClipStudio} />
+              <Route path="/rankings" component={PowerRankings} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

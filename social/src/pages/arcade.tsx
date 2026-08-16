@@ -12,11 +12,12 @@ import { CyberSnake } from '@/components/games/CyberSnake';
 import { CyberDrone } from '@/components/games/CyberDrone';
 import { CyberAsteroids } from '@/components/games/CyberAsteroids';
 import { CyberTank } from '@/components/games/CyberTank';
+import { CyberBrickBreaker } from '@/components/games/CyberBrickBreaker';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -47,9 +48,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('cricket');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'cricket' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'cricket' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md")}
           >
-            🏏 Cyber Cricket
+            🏏 Cricket
           </Button>
 
           <Button
@@ -59,9 +60,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('hacker');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'hacker' && "bg-emerald-600 text-black shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'hacker' && "bg-emerald-600 text-black shadow-md")}
           >
-            💻 Matrix Decryption
+            💻 Matrix
           </Button>
 
           <Button
@@ -71,9 +72,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('starfighter');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'starfighter' && "bg-cyan-600 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'starfighter' && "bg-cyan-600 text-white shadow-md")}
           >
-            🚀 Starfighter
+            🚀 Space
           </Button>
 
           <Button
@@ -83,9 +84,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('typer');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'typer' && "bg-purple-600 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'typer' && "bg-purple-600 text-white shadow-md")}
           >
-            ⌨️ Cyber Typer
+            ⌨️ Typer
           </Button>
 
           <Button
@@ -95,9 +96,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('chess');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'chess' && "bg-amber-500 text-black shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'chess' && "bg-amber-500 text-black shadow-md")}
           >
-            👑 Bharat Chess
+            👑 Chess
           </Button>
 
           <Button
@@ -107,9 +108,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('snake');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'snake' && "bg-teal-500 text-black shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'snake' && "bg-teal-500 text-black shadow-md")}
           >
-            🐍 Cyber Snake
+            🐍 Snake
           </Button>
 
           <Button
@@ -119,9 +120,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('drone');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'drone' && "bg-blue-600 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'drone' && "bg-blue-600 text-white shadow-md")}
           >
-            🛸 Flappy Drone
+            🛸 Drone
           </Button>
 
           <Button
@@ -131,9 +132,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('asteroids');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'asteroids' && "bg-pink-600 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'asteroids' && "bg-pink-600 text-white shadow-md")}
           >
-            ☄️ Orbit Asteroids
+            ☄️ Orbit
           </Button>
 
           <Button
@@ -143,9 +144,21 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('tank');
             }}
-            className={cn("rounded-xl font-bold text-xs px-3.5 h-10", activeGame === 'tank' && "bg-emerald-600 text-black shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'tank' && "bg-emerald-600 text-black shadow-md")}
           >
-            🛡️ Cyber Tank
+            🛡️ Tank
+          </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'breaker' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('breaker');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-3 h-10", activeGame === 'breaker' && "bg-rose-500 text-white shadow-md")}
+          >
+            🧱 Breakout
           </Button>
         </div>
 
@@ -160,6 +173,7 @@ export default function Arcade() {
           {activeGame === 'drone' && <CyberDrone />}
           {activeGame === 'asteroids' && <CyberAsteroids />}
           {activeGame === 'tank' && <CyberTank />}
+          {activeGame === 'breaker' && <CyberBrickBreaker />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
