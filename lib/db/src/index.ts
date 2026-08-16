@@ -9,7 +9,11 @@ if (!process.env.DATABASE_URL && process.env.NODE_ENV === "production") {
   console.warn("[Database Warning] DATABASE_URL is not set in environment variables.");
 }
 
-export const pool = new Pool({ connectionString });
+export const pool = new Pool({
+  connectionString,
+  connectionTimeoutMillis: Number(process.env.DB_CONNECT_TIMEOUT_MS) || 3000,
+  idleTimeoutMillis: 10000,
+});
 export const db = drizzle(pool, { schema });
 
 export {

@@ -11,10 +11,19 @@ export function connectSocket(): Socket | null {
 
   socket = io({
     auth: { token: tokens.accessToken },
-    // Vite's dev proxy needs an explicit entry for the socket.io path too
-    // (see vite.config.ts) — same-origin, no separate host/port needed.
     path: '/socket.io',
+    reconnection: true,
+    reconnectionAttempts: 3,
+    reconnectionDelay: 5000,
+    timeout: 3000,
+    autoConnect: true,
+    transports: ['websocket', 'polling'],
   });
+
+  socket.on('connect_error', () => {
+    // Suppress noisy console logs when running on serverless hosts without persistent WebSocket listener
+  });
+
   return socket;
 }
 
