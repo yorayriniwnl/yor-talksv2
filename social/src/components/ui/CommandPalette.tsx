@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3 } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -47,11 +47,13 @@ export function CommandPalette() {
     { icon: Trophy, label: 'Bharat Esports Tournaments', path: '/tournaments' },
     { icon: Crown, label: 'Bharat Super Pass (Season 1)', path: '/pass' },
     { icon: Shield, label: 'Clan Wars & Squad Command', path: '/clans' },
+    { icon: Swords, label: 'Esports Scrims & Map Veto', path: '/scrims' },
     { icon: Sparkles, label: 'Cyber Arcade & Mini-Games', path: '/arcade' },
     { icon: MapPin, label: 'Bharat City Tech Radar', path: '/radar' },
     { icon: Smile, label: 'Desi Meme & Sticker Studio', path: '/meme-studio' },
     { icon: Code2, label: '1v1 Code Duel & Shader Arena', path: '/duel' },
     { icon: Music, label: '3D Synthwave Matrix Studio', path: '/synth' },
+    { icon: Languages, label: 'Indic AI Voice & Speech Studio', path: '/voice-ai' },
     { icon: Briefcase, label: 'Bharat Grants & Bounties (₹17.5L)', path: '/bounties' },
     { icon: BarChart3, label: 'Creator Telemetry & UPI Payouts', path: '/analytics' },
     { icon: Video, label: 'Creator Studio Pro', path: '/studio' },

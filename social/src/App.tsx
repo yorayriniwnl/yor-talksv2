@@ -52,6 +52,9 @@ const CodeDuel = lazyWithRetry(() => import('@/pages/code-duel'));
 const SynthRoom = lazyWithRetry(() => import('@/pages/synth-room'));
 const Bounties = lazyWithRetry(() => import('@/pages/bounties'));
 const CreatorAnalytics = lazyWithRetry(() => import('@/pages/creator-analytics'));
+const HologramStudio = lazyWithRetry(() => import('@/pages/hologram'));
+const VoiceAI = lazyWithRetry(() => import('@/pages/voice-ai'));
+const Scrims = lazyWithRetry(() => import('@/pages/scrims'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +116,9 @@ function ProtectedRoutes() {
               <Route path="/grants" component={Bounties} />
               <Route path="/analytics" component={CreatorAnalytics} />
               <Route path="/creator-analytics" component={CreatorAnalytics} />
+              <Route path="/hologram" component={HologramStudio} />
+              <Route path="/voice-ai" component={VoiceAI} />
+              <Route path="/scrims" component={Scrims} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
