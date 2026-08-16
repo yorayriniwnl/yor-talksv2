@@ -21,6 +21,7 @@ import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { BadgeShowcaseModal } from '@/components/steam/BadgeShowcaseModal';
 import { ProfileTiltCard } from '@/components/ui/ProfileTiltCard';
 import { HoloAvatarCard } from '@/components/ui/HoloAvatarCard';
+import { ParallaxCover } from '@/components/ui/ParallaxCover';
 import { ProfileMusicPlayer } from '@/components/profile/ProfileMusicPlayer';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { staggerContainer, staggerItem, tapScale, springGentle, springBouncy, layoutIds } from '@/lib/motion';
@@ -386,9 +387,9 @@ export default function Profile() {
          CINEMATIC COVER — 3D Parallax Tilt with gradient dissolve
          ══════════════════════════════════════════════════════════════════ */}
       <ProfileTiltCard className="profile-hero noise-overlay">
-        <div className="profile-hero-cover hover-lift">
+        <ParallaxCover className="profile-hero-cover hover-lift">
           {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="w-full h-full aurora-bg" />}
-        </div>
+        </ParallaxCover>
       </ProfileTiltCard>
 
       {/* ══════════════════════════════════════════════════════════════════
@@ -398,7 +399,7 @@ export default function Profile() {
 
         {/* ── Avatar + Actions ──────────────────────────────────────── */}
         <div className="flex justify-between items-end -mt-14 relative z-10 mb-4">
-          <div className={cn("profile-avatar-ring shadow-xl glow-neon-primary", `steam-frame-${selectedFrame}`)}>
+          <div className={cn("profile-avatar-ring shadow-xl glow-neon-primary animated-border", `steam-frame-${selectedFrame}`)}>
             <Avatar className="w-[88px] h-[88px] avatar-inner">
               <AvatarImage src={profile.avatarUrl} />
               <AvatarFallback className="text-2xl font-display">{profile.displayName.charAt(0)}</AvatarFallback>

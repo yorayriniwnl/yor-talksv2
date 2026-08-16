@@ -15,9 +15,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RouteSkeleton from '@/components/ui/RouteSkeleton';
-import AppProfiler from '@/components/perf/AppProfiler';
+import { AppProfiler } from '@/components/perf/AppProfiler';
 import RouteTelemetry from '@/components/perf/RouteTelemetry';
 import { initTelemetry } from '@/lib/telemetry';
+import { PageTransition } from '@/components/ui/PageTransition';
 
 // Pages (route-level code-splitting)
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
@@ -61,36 +62,28 @@ function ProtectedRoutes() {
     <AppShell>
       <ErrorBoundary>
         <Suspense fallback={<RouteSkeleton />}>
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={location}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <Switch location={location}>
-                <Route path="/" component={Home} />
-                <Route path="/explore" component={Explore} />
-                <Route path="/post/:id" component={PostDetail} />
-                <Route path="/profile/:id?" component={Profile} />
-                <Route path="/messages/:id?" component={Messages} />
-                <Route path="/communities/:id?" component={Communities} />
-                <Route path="/articles/:id?" component={Articles} />
-                <Route path="/videos/:id?" component={Videos} />
-                <Route path="/notifications" component={Notifications} />
-                <Route path="/live/:id?" component={Live} />
-                <Route path="/events/:id?" component={EventsPage} />
-                <Route path="/marketplace/:id?" component={Marketplace} />
-                <Route path="/ai" component={AIAssistant} />
-                <Route path="/achievements" component={Achievements} />
-                <Route path="/points-shop" component={PointsShop} />
-                <Route path="/dashboard" component={Dashboard} />
-                <Route path="/settings" component={Settings} />
-                <Route component={NotFound} />
-              </Switch>
-            </motion.div>
-          </AnimatePresence>
+          <PageTransition>
+            <Switch location={location}>
+              <Route path="/" component={Home} />
+              <Route path="/explore" component={Explore} />
+              <Route path="/post/:id" component={PostDetail} />
+              <Route path="/profile/:id?" component={Profile} />
+              <Route path="/messages/:id?" component={Messages} />
+              <Route path="/communities/:id?" component={Communities} />
+              <Route path="/articles/:id?" component={Articles} />
+              <Route path="/videos/:id?" component={Videos} />
+              <Route path="/notifications" component={Notifications} />
+              <Route path="/live/:id?" component={Live} />
+              <Route path="/events/:id?" component={EventsPage} />
+              <Route path="/marketplace/:id?" component={Marketplace} />
+              <Route path="/ai" component={AIAssistant} />
+              <Route path="/achievements" component={Achievements} />
+              <Route path="/points-shop" component={PointsShop} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/settings" component={Settings} />
+              <Route component={NotFound} />
+            </Switch>
+          </PageTransition>
         </Suspense>
       </ErrorBoundary>
     </AppShell>

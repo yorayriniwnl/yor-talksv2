@@ -9,6 +9,7 @@ import { useAppStore, type Community, type User, type Post } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import StoriesRow from '@/components/feed/StoriesRow';
 import { springGentle, tapScale, staggerContainer, staggerItem } from '@/lib/motion';
+import { TextReveal } from '@/components/ui/TextReveal';
 
 type SearchResults = { users: BackendUser[]; posts: BackendPost[] };
 
@@ -133,7 +134,7 @@ export default function Explore() {
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center text-center">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <h1 className="font-display font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-3 text-shimmer">
-              Explore the <span>Multiverse</span>
+              <TextReveal text="Explore the Multiverse" />
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base max-w-lg mx-auto mb-8 font-serif">
               Search people, topics, and communities. Discover what's happening across Yor Talks right now.

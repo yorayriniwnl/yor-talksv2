@@ -19,6 +19,8 @@ import { AudioWaveformPlayer } from '@/components/feed/AudioWaveformPlayer';
 import { CinematicMediaLightbox } from '@/components/feed/CinematicMediaLightbox';
 import { sounds } from '@/lib/sound';
 import { TiltCard } from '@/components/ui/TiltCard';
+import { RippleEffect } from '@/components/ui/RippleEffect';
+import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -228,6 +230,7 @@ export function PostCard({ post }: { post: PostType }) {
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
   const [, setLocation] = useLocation();
+  const { particles, burst: heartBurst } = useHeartBurst();
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
 
@@ -260,7 +263,7 @@ export function PostCard({ post }: { post: PostType }) {
     const len = post.media.length;
     
     return (
-      <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+      <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300 image-hover-zoom", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
         {post.media.map((url, index) => (
           <button
             type="button"
@@ -412,8 +415,9 @@ export function PostCard({ post }: { post: PostType }) {
                     {...tapScale}
                     aria-label={post.likedByMe ? 'Remove wave' : 'Wave'}
                     className="group relative flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); }}
+                    onClick={(event) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); heartBurst(event); }}
                   >
+                    <RippleEffect className="rounded-full">
                     <div className="relative p-1.5 -ml-1.5 rounded-full group-hover:bg-primary/10 transition-colors">
                       <Heart className={cn('h-[18px] w-[18px] transition-colors', post.likedByMe ? 'fill-primary text-primary' : 'group-hover:text-foreground')} />
                       <AnimatePresence>
@@ -428,6 +432,7 @@ export function PostCard({ post }: { post: PostType }) {
                         )}
                       </AnimatePresence>
                     </div>
+                    </RippleEffect>
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.likes > 0 && post.likes}</span>
                   </motion.button>
                 </TooltipTrigger>
@@ -461,9 +466,11 @@ export function PostCard({ post }: { post: PostType }) {
                         className="group flex items-center gap-1.5 focus-visible:outline-none"
                         onClick={(event) => event.stopPropagation()}
                       >
+                        <RippleEffect className="rounded-full">
                         <div className="p-1.5 rounded-full group-hover:bg-surface-2 transition-colors">
                           <Repeat2 className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
                         </div>
+                        </RippleEffect>
                         <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.shares > 0 && post.shares}</span>
                       </motion.button>
                     </DropdownMenuTrigger>
@@ -503,6 +510,7 @@ export function PostCard({ post }: { post: PostType }) {
         </div>
       </div>
     </motion.article>
+    <HeartBurstLayer particles={particles} />
     </TiltCard>
   );
 }

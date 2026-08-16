@@ -13,6 +13,9 @@ import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ThemeMorpher } from '@/components/ui/ThemeMorpher';
 import { CursorGlow } from '@/components/ui/CursorGlow';
 import { FloatingParticles } from '@/components/ui/FloatingParticles';
+import { ScrollProgress } from '@/components/ui/ScrollProgress';
+import { MagneticButton } from '@/components/ui/MagneticButton';
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 
 interface AppShellProps {
   children: ReactNode;
@@ -25,6 +28,7 @@ export function AppShell({ children }: AppShellProps) {
   const notifications = useAppStore((state) => state.notifications);
   const unreadNotifs = notifications.filter(n => !n.read).length;
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -52,6 +56,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-shell relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
+      <ScrollProgress />
       <CommandPalette />
       <div className="app-atmosphere" aria-hidden="true">
         <span className="app-atmosphere__field app-atmosphere__field--primary" />
@@ -59,22 +64,51 @@ export function AppShell({ children }: AppShellProps) {
         <FloatingParticles />
       </div>
       <CursorGlow />
+      <NoiseOverlay />
       
       {/* ── DESKTOP INSTAGRAM SIDEBAR (Left Column) ────────────────────── */}
-      <aside className="app-shell__rail hidden h-screen w-64 shrink-0 flex-col border-r border-border/40 px-4 py-6 backdrop-blur-xl md:sticky md:top-0 md:flex lg:w-72">
+      <aside className={cn(
+        "app-shell__rail hidden h-screen shrink-0 flex-col border-r border-border/40 py-6 backdrop-blur-xl md:sticky md:top-0 md:flex relative",
+        sidebarCollapsed ? "w-[72px] px-2" : "w-64 lg:w-72 px-4",
+        "transition-all duration-300 ease-out"
+      )}>
         
         {/* Brand Logo & Live Theme Morpher */}
-        <div className="flex items-center justify-between mb-8 px-1">
+        <div className={cn("flex items-center mb-8", sidebarCollapsed ? "justify-center px-0" : "justify-between px-1")}>
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
               Y
             </div>
-            <div className="flex flex-col">
-              <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor Talks</span>
-              <span className="text-[0.62rem] font-mono text-muted-foreground tracking-widest uppercase mt-0.5">Multiverse</span>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col">
+                <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor Talks</span>
+                <span className="text-[0.62rem] font-mono text-muted-foreground tracking-widest uppercase mt-0.5">Multiverse</span>
+              </div>
+            )}
           </Link>
-          <ThemeMorpher />
+          {!sidebarCollapsed && <ThemeMorpher />}
+          {!sidebarCollapsed && (
+            <button
+              onClick={() => setSidebarCollapsed(true)}
+              className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              title="Collapse sidebar"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          {sidebarCollapsed && (
+            <button
+              onClick={() => setSidebarCollapsed(false)}
+              className="absolute top-4 -right-3 p-1 rounded-full bg-background border border-border/40 shadow-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors z-50"
+              title="Expand sidebar"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="rotate-180">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Navigation List */}
@@ -91,19 +125,38 @@ export function AppShell({ children }: AppShellProps) {
                   else if (item.path) setLocation(item.path);
                 }}
                 className={cn(
-                  "flex items-center gap-4 w-full px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50 hover-lift",
+                  "flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50 hover-lift",
+                  sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
                   isActive && "text-foreground bg-primary/10 font-bold border border-primary/20 border-l-2 border-l-primary"
                 )}
               >
-                <div className="relative">
-                  <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
-                  {item.badge && (
-                    <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                <span>{item.label}</span>
+                {item.label === 'Create' ? (
+                  <MagneticButton>
+                    <div className={cn("flex items-center w-full", sidebarCollapsed ? "justify-center gap-0" : "gap-4")}>
+                      <div className="relative">
+                        <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
+                        {item.badge && (
+                          <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                      {!sidebarCollapsed && <span>{item.label}</span>}
+                    </div>
+                  </MagneticButton>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
+                      {item.badge && (
+                        <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    {!sidebarCollapsed && <span>{item.label}</span>}
+                  </>
+                )}
               </button>
             );
           })}
@@ -111,15 +164,17 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* User Mini Profile Snippet */}
         {currentUser && (
-          <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 p-3 rounded-2xl glass-heavy hover-lift hover:bg-muted/60 transition-colors border border-border/40 cursor-pointer">
+          <Link href={`/profile/${currentUser.id}`} className={cn("flex items-center rounded-2xl glass-heavy hover-lift hover:bg-muted/60 transition-colors border border-border/40 cursor-pointer", sidebarCollapsed ? "justify-center p-2" : "gap-3 p-3")}>
             <Avatar className="w-10 h-10 border border-border/50 shrink-0">
               <AvatarImage src={currentUser.avatarUrl} />
               <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <h4 className="font-bold text-xs truncate leading-tight">{currentUser.displayName}</h4>
-              <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-xs truncate leading-tight">{currentUser.displayName}</h4>
+                <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
+              </div>
+            )}
           </Link>
         )}
       </aside>
@@ -141,9 +196,11 @@ export function AppShell({ children }: AppShellProps) {
           <Compass className="w-6 h-6" />
           {location === '/explore' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setIsComposing(true)} className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-5 shadow-2xl relative">
-          <PlusSquare className="w-6 h-6" />
-        </button>
+        <MagneticButton intensity={0.4}>
+          <button onClick={() => setIsComposing(true)} className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-5 shadow-2xl relative">
+            <PlusSquare className="w-6 h-6" />
+          </button>
+        </MagneticButton>
         <button onClick={() => setLocation('/messages')} className={cn("p-2 text-muted-foreground relative", location === '/messages' && "text-primary")}>
           <MessageCircle className="w-6 h-6" />
           {location === '/messages' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
