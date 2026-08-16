@@ -17,44 +17,44 @@ export interface GameItem {
   badge: string;
 }
 
-const STEAM_GAMES: GameItem[] = [
+const ESPORTS_GAMES: GameItem[] = [
   {
     id: 'game-1',
-    title: 'Cyberpunk 2077: Phantom Liberty',
+    title: 'BGMI (Battlegrounds Mobile India)',
     bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
-    hoursPlayed: 342,
-    recentHours: 24.5,
-    achievementsUnlocked: 44,
-    totalAchievements: 45,
-    lastPlayed: 'Yesterday',
-    badge: 'Legendary Mercenary'
+    hoursPlayed: 640,
+    recentHours: 32.5,
+    achievementsUnlocked: 48,
+    totalAchievements: 50,
+    lastPlayed: 'Today',
+    badge: 'Conqueror Tier (Rank #42 India)'
   },
   {
     id: 'game-2',
-    title: 'Elden Ring: Shadow of the Erdtree',
+    title: 'Valorant (South Asia Masters)',
     bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop',
-    hoursPlayed: 512,
-    recentHours: 18.2,
-    achievementsUnlocked: 42,
-    totalAchievements: 42,
-    lastPlayed: '3 days ago',
-    badge: 'Elden Lord'
+    hoursPlayed: 820,
+    recentHours: 24.0,
+    achievementsUnlocked: 38,
+    totalAchievements: 40,
+    lastPlayed: 'Yesterday',
+    badge: 'Radiant Tier'
   },
   {
     id: 'game-3',
-    title: 'Counter-Strike 2',
+    title: 'Cyberpunk 2077: Phantom Liberty',
     bannerUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop',
-    hoursPlayed: 1240,
-    recentHours: 32.0,
-    achievementsUnlocked: 1,
-    totalAchievements: 1,
-    lastPlayed: 'Today',
-    badge: 'Global Elite'
+    hoursPlayed: 342,
+    recentHours: 14.5,
+    achievementsUnlocked: 44,
+    totalAchievements: 45,
+    lastPlayed: '2 days ago',
+    badge: 'Night City Legend'
   }
 ];
 
 export function SteamGameShowcase() {
-  const [selectedGame, setSelectedGame] = useState<GameItem>(STEAM_GAMES[0]);
+  const [selectedGame, setSelectedGame] = useState<GameItem>(ESPORTS_GAMES[0]);
 
   return (
     <div className="surface-1 rounded-3xl p-6 border border-border/40 font-sans shadow-sm">
@@ -66,17 +66,17 @@ export function SteamGameShowcase() {
           </div>
           <div>
             <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2">
-              Steam Gaming Showcase
+              Gaming & Esports Showcase
               <span className="text-[0.62rem] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                Level 88
+                Level 88 Conqueror
               </span>
             </h3>
-            <p className="text-xs text-muted-foreground font-mono">Recent Activity & Achievement Progress</p>
+            <p className="text-xs text-muted-foreground font-mono">Recent Activity & Tournament Rank Progress</p>
           </div>
         </div>
 
         <div className="text-right font-mono text-xs text-muted-foreground hidden sm:block">
-          <span className="text-foreground font-bold">74.7 hrs</span> last 2 weeks
+          <span className="text-foreground font-bold">71.0 hrs</span> last 2 weeks
         </div>
       </div>
 
@@ -94,13 +94,15 @@ export function SteamGameShowcase() {
             <div className="flex items-center gap-4 text-xs font-mono text-white/80 mt-1">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-primary" /> {selectedGame.hoursPlayed} hrs on record</span>
               <span>&middot;</span>
-              <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5 text-amber-400" /> {selectedGame.achievementsUnlocked}/{selectedGame.totalAchievements} achievements</span>
+              <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5 text-amber-400" /> {selectedGame.achievementsUnlocked}/{selectedGame.totalAchievements} milestones</span>
             </div>
           </div>
 
           <Button
             size="sm"
-            onClick={() => sounds.playChime()}
+            onClick={() => {
+              sounds.playChime();
+            }}
             className="rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary px-4 h-9 hidden sm:flex"
           >
             <Play className="w-3.5 h-3.5 mr-1 fill-black" /> Launch Game
@@ -110,7 +112,7 @@ export function SteamGameShowcase() {
 
       {/* Game Selector Tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {STEAM_GAMES.map((game) => {
+        {ESPORTS_GAMES.map((game) => {
           const isSelected = selectedGame.id === game.id;
           const percentage = Math.round((game.achievementsUnlocked / game.totalAchievements) * 100);
 
@@ -133,12 +135,12 @@ export function SteamGameShowcase() {
                   <img src={game.bannerUrl} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h5 className="font-bold text-xs truncate leading-tight">{game.title}</h5>
+                  <h5 className="font-bold text-xs truncate leading-tight text-foreground">{game.title}</h5>
                   <p className="text-[0.65rem] text-muted-foreground font-mono">{game.hoursPlayed} hrs</p>
                 </div>
               </div>
 
-              {/* Achievement Bar */}
+              {/* Progress Bar */}
               <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden mt-1">
                 <div className="bg-gradient-to-r from-amber-400 to-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
               </div>

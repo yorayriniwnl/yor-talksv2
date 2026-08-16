@@ -50,7 +50,7 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifs > 0 ? unreadNotifs : null },
     { icon: PlusSquare, label: 'Create', action: () => setIsComposing(true) },
     { icon: UserRound, label: 'Profile', path: currentUser ? `/profile/${currentUser.id}` : '/' },
-    { icon: ShoppingBag, label: 'Points Shop', path: '/points-shop' },
+    { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
@@ -82,7 +82,7 @@ export function AppShell({ children }: AppShellProps) {
             {!sidebarCollapsed && (
               <div className="flex flex-col">
                 <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor Talks</span>
-                <span className="text-[0.62rem] font-mono text-muted-foreground tracking-widest uppercase mt-0.5">Multiverse</span>
+                <span className="text-[0.62rem] font-mono text-primary tracking-wider uppercase mt-0.5 font-bold">Bharat Edition 🇮🇳</span>
               </div>
             )}
           </Link>

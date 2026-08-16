@@ -37,10 +37,11 @@ const INITIAL_LIVE_COMMENTS: LiveComment[] = [
 ];
 
 const LIVE_GIFTS = [
-  { id: 'gift-gems', name: 'Steam Gems', icon: '💎', cost: 100, color: 'from-cyan-400 to-blue-500' },
-  { id: 'gift-goat', name: 'Golden Goat', icon: '🐐', cost: 500, color: 'from-amber-300 to-orange-500' },
-  { id: 'gift-supernova', name: 'Supernova Burst', icon: '💥', cost: 1000, color: 'from-rose-500 to-purple-600' },
-  { id: 'gift-crown', name: 'Royal Crown', icon: '👑', cost: 2500, color: 'from-yellow-400 to-amber-600' },
+  { id: 'gift-diya', name: 'Diya Light', icon: '✨', cost: 100, color: 'from-amber-300 to-yellow-500' },
+  { id: 'gift-chai', name: 'Chai Break', icon: '☕', cost: 250, color: 'from-amber-600 to-orange-700' },
+  { id: 'gift-trishul', name: 'Trishul Power', icon: '🔱', cost: 500, color: 'from-amber-400 to-red-500' },
+  { id: 'gift-kohinoor', name: 'Koh-i-Noor Gem', icon: '💎', cost: 1000, color: 'from-cyan-400 to-blue-600' },
+  { id: 'gift-rocket', name: 'ISRO Supernova', icon: '🚀', cost: 2500, color: 'from-rose-500 to-purple-600' },
 ];
 
 function GoLiveDialog() {

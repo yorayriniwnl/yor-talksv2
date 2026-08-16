@@ -44,7 +44,7 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
-    { icon: ShoppingBag, label: 'Steam Points Shop', path: '/points-shop' },
+    { icon: ShoppingBag, label: 'Yor Points Vault', path: '/points-shop' },
     { icon: MessageCircle, label: 'Direct Messages', path: '/messages' },
     { icon: Settings, label: 'Settings & Controls', path: '/settings' },
   ];

@@ -35,49 +35,49 @@ const FORUM_THREADS: Record<string, ForumThread[]> = {
   default: [
     {
       id: 'thread-1',
-      title: '📌 [Official Announcement] Next Major Platform Update & Steam Inventory Integration',
-      author: 'Cyberpunk Admin',
+      title: '📌 [Official Announcement] Yor Talks 2026: Empowering India’s Next Generation of Creators & Gamers',
+      author: 'Ayush Roy',
       authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
       isPinned: true,
       isDev: true,
-      repliesCount: 84,
-      likes: 312,
+      repliesCount: 142,
+      likes: 580,
       timestamp: '2 hours ago',
       tag: 'Announcements',
-      awards: [{ icon: '💎', count: 18, name: 'Take My Points' }, { icon: '🐐', count: 9, name: 'Golden Goat' }]
+      awards: [{ icon: '💎', count: 48, name: 'Koh-i-Noor' }, { icon: '✨', count: 32, name: 'Diya Light' }, { icon: '🚀', count: 24, name: 'ISRO Supernova' }]
     },
     {
       id: 'thread-2',
-      title: 'Best GPU Shader Optimization Guide for 144Hz Smooth FPS',
-      author: 'Alex_Chen',
-      authorAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop',
-      repliesCount: 42,
-      likes: 189,
-      timestamp: '5 hours ago',
-      tag: 'Guides',
-      awards: [{ icon: '🤯', count: 12, name: 'Mind Blown' }]
+      title: 'Bengaluru AI & WebGL Developers: Building Spatial UI on Low-Bandwidth Networks',
+      author: 'Aditi Singh',
+      authorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+      repliesCount: 64,
+      likes: 240,
+      timestamp: '4 hours ago',
+      tag: 'Tech & AI',
+      awards: [{ icon: '🤯', count: 18, name: 'Mind Blown' }]
     },
     {
       id: 'thread-3',
-      title: 'Looking for 2 more players for the Weekly Tournament Squad! (Level 50+)',
-      author: 'Kai_Takahashi',
+      title: 'BGMI & Valorant South Asia: Looking for 2 Players for the Mumbai Pro Qualifier (Conqueror/Immortal)',
+      author: 'Rohan Verma',
       authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-      repliesCount: 16,
-      likes: 54,
+      repliesCount: 38,
+      likes: 112,
       timestamp: '1 day ago',
-      tag: 'LFG / Clans',
-      awards: [{ icon: '🔥', count: 6, name: 'Hype' }]
+      tag: 'Esports Squad',
+      awards: [{ icon: '🔥', count: 14, name: 'Hype' }]
     },
     {
       id: 'thread-4',
-      title: 'Showcase your customized Steam Profile and Avatar Frames here!',
-      author: 'Elena_Rostova',
-      authorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
-      repliesCount: 97,
-      likes: 420,
+      title: 'Showcase your customized Yor Avatar Frames, Hologram Badges, and Wallpapers here!',
+      author: 'Anya Sharma',
+      authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
+      repliesCount: 120,
+      likes: 490,
       timestamp: '2 days ago',
-      tag: 'General',
-      awards: [{ icon: '👑', count: 24, name: 'Royal' }, { icon: '💎', count: 31, name: 'Gems' }]
+      tag: 'Community',
+      awards: [{ icon: '👑', count: 34, name: 'Royal' }, { icon: '💎', count: 42, name: 'Gems' }]
     }
   ]
 };

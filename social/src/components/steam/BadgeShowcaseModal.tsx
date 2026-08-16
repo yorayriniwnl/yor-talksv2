@@ -12,11 +12,11 @@ interface BadgeShowcaseModalProps {
 }
 
 const SOCIAL_BADGES = [
-  { id: 'b1', title: 'Multiverse Pioneer', description: 'Joined during the initial launch phase', xp: 500, icon: Sparkles, color: 'from-purple-500 to-indigo-600', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b2', title: '100 Social Waves', description: 'Liked and reacted to 100 community posts', xp: 350, icon: Heart, color: 'from-rose-500 to-pink-600', unlocked: true, date: 'Unlocked Aug 2026' },
+  { id: 'b1', title: 'Yor Pioneer (भारत)', description: 'Early founding member of India’s next-gen social network', xp: 500, icon: Sparkles, color: 'from-purple-500 to-indigo-600', unlocked: true, date: 'Unlocked Aug 2026' },
+  { id: 'b2', title: '100 Social Waves', description: 'Liked and reacted to 100 community posts across India', xp: 350, icon: Heart, color: 'from-rose-500 to-pink-600', unlocked: true, date: 'Unlocked Aug 2026' },
   { id: 'b3', title: 'Master Storyteller', description: 'Published 10 high-resolution stories', xp: 450, icon: Flame, color: 'from-amber-400 to-orange-500', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b4', title: 'Top Supporter', description: 'Awarded 5 Steam Profile Awards to creators', xp: 600, icon: Trophy, color: 'from-emerald-400 to-teal-600', unlocked: false, date: 'Locked (3/5 Progress)' },
-  { id: 'b5', title: 'Community Architect', description: 'Joined 5 specialized topic circles', xp: 800, icon: Shield, color: 'from-cyan-400 to-blue-600', unlocked: false, date: 'Locked (2/5 Progress)' },
+  { id: 'b4', title: 'Top Supporter', description: 'Awarded 5 Creator Awards (Koh-i-Noor 💎 & Diya ✨)', xp: 600, icon: Trophy, color: 'from-emerald-400 to-teal-600', unlocked: false, date: 'Locked (3/5 Progress)' },
+  { id: 'b5', title: 'Community Architect', description: 'Joined 5 specialized tech & gaming circles in India', xp: 800, icon: Shield, color: 'from-cyan-400 to-blue-600', unlocked: false, date: 'Locked (2/5 Progress)' },
 ];
 
 export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalProps) {
@@ -24,16 +24,16 @@ export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalP
   const achievements = useAppStore((s) => s.achievements);
 
   const totalXP = 1850;
-  const currentLevel = Math.floor(Math.sqrt(totalXP / 50)) + 1; // Lv. 6
-  const nextLevelXP = Math.pow(currentLevel, 2) * 50; // 1800 -> 2450
+  const currentLevel = Math.floor(Math.sqrt(totalXP / 50)) + 1;
+  const nextLevelXP = Math.pow(currentLevel, 2) * 50;
   const progressPercent = Math.min(100, Math.round((totalXP / nextLevelXP) * 100));
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px] rounded-3xl font-sans">
+      <DialogContent className="sm:max-w-[540px] rounded-3xl font-sans glass-heavy border border-border/60">
         <DialogHeader>
           <DialogTitle className="font-display font-bold text-xl flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" /> Steam Profile Level & Badges
+            <Shield className="w-5 h-5 text-primary" /> Yor Guild Level & Badges
           </DialogTitle>
         </DialogHeader>
 
@@ -43,7 +43,7 @@ export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalP
             <div className="flex items-center justify-between mb-3 relative z-10">
               <div className="flex items-center gap-3">
                 <div className="level-badge text-sm px-3 py-1 shadow-md">
-                  <Star className="w-4 h-4 fill-amber-400" /> Level {currentLevel}
+                  <Star className="w-4 h-4 fill-amber-400" /> Level {currentLevel} Voyager
                 </div>
                 <div>
                   <h4 className="font-bold text-sm leading-tight">{currentUser?.displayName}</h4>
@@ -63,7 +63,7 @@ export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalP
           {/* Social Badges Grid */}
           <div>
             <h4 className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wider mb-3">
-              Unlocked Social Badges ({SOCIAL_BADGES.filter(b => b.unlocked).length}/{SOCIAL_BADGES.length})
+              Unlocked Guild Badges ({SOCIAL_BADGES.filter(b => b.unlocked).length}/{SOCIAL_BADGES.length})
             </h4>
 
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">

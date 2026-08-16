@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeftRight, Sparkles, Shield, Check, Plus, Trash2, DollarSign } from 'lucide-react';
+import { X, ArrowLeftRight, Sparkles, Shield, Check, Plus, Trash2, DollarSign, Lock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,9 +13,10 @@ export interface SteamItem {
   id: string;
   name: string;
   game: string;
-  rarity: 'Arcana' | 'Immortal' | 'Legendary' | 'Classified' | 'Mil-Spec';
+  rarity: 'Mythic' | 'Arcana' | 'Immortal' | 'Legendary' | 'Classified';
   rarityColor: string;
   price: number;
+  inrPrice: number;
   imageUrl: string;
   floatVal?: string;
 }
@@ -23,104 +24,80 @@ export interface SteamItem {
 export const USER_INVENTORY: SteamItem[] = [
   {
     id: 'item-1',
-    name: 'AWP | Dragon Lore (Factory New)',
-    game: 'Counter-Strike 2',
-    rarity: 'Arcana',
-    rarityColor: 'from-amber-400 to-red-500 border-amber-400 text-amber-300',
-    price: 3450.00,
+    name: 'M416 | Glacier (Max Level 7 Kill Message)',
+    game: 'BGMI / PUBG Mobile',
+    rarity: 'Mythic',
+    rarityColor: 'from-cyan-300 via-blue-500 to-indigo-600 border-cyan-400 text-cyan-300',
+    price: 450.00,
+    inrPrice: 37500,
     imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0142'
+    floatVal: 'Lv.7 Max'
   },
   {
     id: 'item-2',
-    name: 'Karambit | Fade (Doppler Phase 2)',
-    game: 'Counter-Strike 2',
-    rarity: 'Immortal',
-    rarityColor: 'from-fuchsia-500 to-rose-500 border-fuchsia-500 text-fuchsia-300',
-    price: 1890.00,
-    imageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0089'
-  },
-  {
-    id: 'item-3',
-    name: 'Manifold Paradox (Phantom Assassin Arcana)',
-    game: 'Dota 2',
+    name: 'Kuronami no Yaiba (Vandal & Melee)',
+    game: 'Valorant South Asia',
     rarity: 'Arcana',
-    rarityColor: 'from-cyan-400 to-blue-600 border-cyan-400 text-cyan-300',
-    price: 45.00,
+    rarityColor: 'from-fuchsia-500 to-purple-600 border-fuchsia-500 text-fuchsia-300',
+    price: 120.00,
+    inrPrice: 9999,
     imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=400&auto=format&fit=crop',
   },
   {
+    id: 'item-3',
+    name: 'AWP | Dragon Lore (Factory New)',
+    game: 'CS2 India Masters',
+    rarity: 'Mythic',
+    rarityColor: 'from-amber-400 to-red-500 border-amber-400 text-amber-300',
+    price: 3450.00,
+    inrPrice: 285000,
+    imageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=400&auto=format&fit=crop',
+    floatVal: '0.0142'
+  },
+  {
     id: 'item-4',
-    name: 'AK-47 | Vulcan (Minimal Wear)',
-    game: 'Counter-Strike 2',
-    rarity: 'Classified',
-    rarityColor: 'from-rose-500 to-red-600 border-rose-500 text-rose-300',
-    price: 240.00,
+    name: 'Karambit | Fade (Doppler Phase 2)',
+    game: 'CS2 India Masters',
+    rarity: 'Immortal',
+    rarityColor: 'from-pink-500 to-rose-500 border-pink-500 text-pink-300',
+    price: 1890.00,
+    inrPrice: 156000,
     imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0812'
-  },
-  {
-    id: 'item-5',
-    name: 'M4A4 | Howl (Field-Tested)',
-    game: 'Counter-Strike 2',
-    rarity: 'Arcana',
-    rarityColor: 'from-red-600 to-amber-500 border-red-500 text-red-400',
-    price: 4100.00,
-    imageUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.1650'
-  },
-  {
-    id: 'item-6',
-    name: 'Glock-18 | Water Elemental',
-    game: 'Counter-Strike 2',
-    rarity: 'Mil-Spec',
-    rarityColor: 'from-blue-400 to-indigo-600 border-blue-400 text-blue-300',
-    price: 18.50,
-    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0410'
+    floatVal: '0.0089'
   }
 ];
 
 export const PARTNER_INVENTORY: SteamItem[] = [
   {
     id: 'p-item-1',
-    name: 'Butterfly Knife | Gamma Doppler (Emerald)',
-    game: 'Counter-Strike 2',
-    rarity: 'Arcana',
-    rarityColor: 'from-emerald-400 to-teal-600 border-emerald-400 text-emerald-300',
-    price: 4950.00,
+    name: 'Fool M416 (Level 6)',
+    game: 'BGMI / PUBG Mobile',
+    rarity: 'Mythic',
+    rarityColor: 'from-purple-400 to-pink-600 border-purple-400 text-purple-300',
+    price: 380.00,
+    inrPrice: 31500,
     imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0031'
   },
   {
     id: 'p-item-2',
-    name: 'Sport Gloves | Vice (Field-Tested)',
-    game: 'Counter-Strike 2',
-    rarity: 'Immortal',
-    rarityColor: 'from-pink-500 to-purple-600 border-pink-500 text-pink-300',
-    price: 1450.00,
+    name: 'Prime Vandal 2.0 (Gold Variant)',
+    game: 'Valorant South Asia',
+    rarity: 'Legendary',
+    rarityColor: 'from-amber-300 to-yellow-500 border-amber-400 text-amber-300',
+    price: 75.00,
+    inrPrice: 6200,
     imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.1980'
   },
   {
     id: 'p-item-3',
-    name: 'Demon Eater (Shadow Fiend Arcana)',
-    game: 'Dota 2',
-    rarity: 'Arcana',
-    rarityColor: 'from-orange-500 to-red-600 border-orange-500 text-orange-300',
-    price: 48.00,
+    name: 'Butterfly Knife | Gamma Doppler',
+    game: 'CS2 India Masters',
+    rarity: 'Mythic',
+    rarityColor: 'from-emerald-400 to-teal-600 border-emerald-400 text-emerald-300',
+    price: 4200.00,
+    inrPrice: 348000,
     imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&auto=format&fit=crop',
-  },
-  {
-    id: 'p-item-4',
-    name: 'USP-S | Kill Confirmed (Factory New)',
-    game: 'Counter-Strike 2',
-    rarity: 'Classified',
-    rarityColor: 'from-red-500 to-rose-700 border-red-500 text-red-300',
-    price: 195.00,
-    imageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=400&auto=format&fit=crop',
-    floatVal: '0.0210'
+    floatVal: '0.0031'
   }
 ];
 
@@ -154,8 +131,8 @@ export function SteamTradeModal({
     );
   };
 
-  const yourTotal = yourOffer.reduce((sum, i) => sum + i.price, 0);
-  const theirTotal = theirOffer.reduce((sum, i) => sum + i.price, 0);
+  const yourTotalINR = yourOffer.reduce((sum, i) => sum + i.inrPrice, 0);
+  const theirTotalINR = theirOffer.reduce((sum, i) => sum + i.inrPrice, 0);
 
   const handleSendOffer = () => {
     if (yourOffer.length === 0 && theirOffer.length === 0) {
@@ -164,7 +141,7 @@ export function SteamTradeModal({
     }
     sounds.playChime();
     triggerConfetti();
-    toast.success(`Steam Trade Offer submitted to ${partnerName}! Steam Guard 2FA verification sent.`);
+    toast.success(`YOR Vault Trade Offer sent to ${partnerName}! Escrow 2FA verification generated.`);
     setOpen(false);
     setYourOffer([]);
     setTheirOffer([]);
@@ -175,7 +152,7 @@ export function SteamTradeModal({
       <DialogTrigger asChild>
         {trigger || (
           <Button size="sm" className="rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white glow-neon-primary">
-            <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5" /> Steam Trade
+            <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5" /> P2P Gear Trade
           </Button>
         )}
       </DialogTrigger>
@@ -189,20 +166,20 @@ export function SteamTradeModal({
             </div>
             <div>
               <DialogTitle className="font-display font-bold text-lg text-white flex items-center gap-2">
-                Steam Trade Offer
+                YOR Gear Vault & Trade
                 <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Steam Guard Active
+                  <Lock className="w-2.5 h-2.5 inline mr-1" /> Verified Escrow
                 </span>
               </DialogTitle>
-              <p className="text-xs text-zinc-400 font-mono">Trading with {partnerName}</p>
+              <p className="text-xs text-zinc-400 font-mono">Peer-to-Peer Trading with {partnerName}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-xs">
             <div className="text-right">
-              <div className="text-[0.65rem] text-zinc-400 uppercase">Trade Value Balance</div>
-              <div className={cn("font-bold", yourTotal > theirTotal ? "text-amber-400" : "text-emerald-400")}>
-                ${yourTotal.toFixed(2)} ⇄ ${theirTotal.toFixed(2)}
+              <div className="text-[0.65rem] text-zinc-400 uppercase">Valuation Balance</div>
+              <div className={cn("font-bold", yourTotalINR > theirTotalINR ? "text-amber-400" : "text-emerald-400")}>
+                ₹{yourTotalINR.toLocaleString()} ⇄ ₹{theirTotalINR.toLocaleString()}
               </div>
             </div>
           </div>
@@ -215,11 +192,11 @@ export function SteamTradeModal({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider">Your Offer ({yourOffer.length})</span>
-                <span className="text-xs font-mono text-emerald-400 font-bold">${yourTotal.toFixed(2)}</span>
+                <span className="text-xs font-mono text-emerald-400 font-bold">₹{yourTotalINR.toLocaleString()}</span>
               </div>
               <div className="flex flex-wrap gap-2 min-h-[90px] p-2 rounded-2xl bg-black/40 border border-border/30">
                 {yourOffer.length === 0 ? (
-                  <p className="text-xs text-zinc-500 font-mono m-auto">Click your inventory items below to add</p>
+                  <p className="text-xs text-zinc-500 font-mono m-auto">Click items from your vault below to add</p>
                 ) : (
                   yourOffer.map(item => (
                     <motion.div
@@ -244,7 +221,7 @@ export function SteamTradeModal({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider">{partnerName}'s Offer ({theirOffer.length})</span>
-                <span className="text-xs font-mono text-cyan-400 font-bold">${theirTotal.toFixed(2)}</span>
+                <span className="text-xs font-mono text-cyan-400 font-bold">₹{theirTotalINR.toLocaleString()}</span>
               </div>
               <div className="flex flex-wrap gap-2 min-h-[90px] p-2 rounded-2xl bg-black/40 border border-border/30">
                 {theirOffer.length === 0 ? (
@@ -279,7 +256,7 @@ export function SteamTradeModal({
                 onClick={() => setActiveTab('your')}
                 className={cn("rounded-xl font-bold text-xs px-4", activeTab === 'your' && "bg-emerald-600 text-white")}
               >
-                🎒 Your Inventory ({USER_INVENTORY.length})
+                🎒 Your Vault ({USER_INVENTORY.length})
               </Button>
               <Button
                 size="sm"
@@ -287,7 +264,7 @@ export function SteamTradeModal({
                 onClick={() => setActiveTab('their')}
                 className={cn("rounded-xl font-bold text-xs px-4", activeTab === 'their' && "bg-cyan-600 text-white")}
               >
-                📦 {partnerName}'s Items ({PARTNER_INVENTORY.length})
+                📦 {partnerName}'s Vault ({PARTNER_INVENTORY.length})
               </Button>
             </div>
           </div>
@@ -317,19 +294,19 @@ export function SteamTradeModal({
                     )}
                     {item.floatVal && (
                       <span className="absolute bottom-1 left-1 text-[0.58rem] font-mono px-1.5 py-0.5 rounded bg-black/70 text-zinc-300">
-                        Float: {item.floatVal}
+                        {item.floatVal}
                       </span>
                     )}
                   </div>
 
                   <div>
                     <span className={cn("text-[0.6rem] font-mono font-bold uppercase block truncate", item.rarityColor)}>
-                      {item.rarity}
+                      {item.rarity} · {item.game}
                     </span>
                     <h5 className="font-bold text-xs text-white line-clamp-1 leading-tight">{item.name}</h5>
                     <div className="flex items-center justify-between mt-1 text-xs font-mono">
-                      <span className="text-[0.65rem] text-zinc-400">{item.game}</span>
-                      <span className="font-bold text-emerald-400">${item.price.toFixed(2)}</span>
+                      <span className="font-bold text-emerald-400">₹{item.inrPrice.toLocaleString()}</span>
+                      <span className="text-[0.65rem] text-zinc-400">${item.price.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -342,7 +319,7 @@ export function SteamTradeModal({
         <div className="p-4 border-t border-border/40 bg-zinc-950 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
             <Shield className="w-4 h-4 text-emerald-400" />
-            <span>Escrow Protected · 0% Fee</span>
+            <span>Escrow Protected · 0% Platform Fee · YOR Vault</span>
           </div>
 
           <div className="flex gap-2">
@@ -353,7 +330,7 @@ export function SteamTradeModal({
               onClick={handleSendOffer}
               className="rounded-xl font-bold text-xs px-6 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary"
             >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Make Trade Offer
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Make Vault Trade Offer
             </Button>
           </div>
         </div>
