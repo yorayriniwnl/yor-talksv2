@@ -55,6 +55,9 @@ const CreatorAnalytics = lazyWithRetry(() => import('@/pages/creator-analytics')
 const HologramStudio = lazyWithRetry(() => import('@/pages/hologram'));
 const VoiceAI = lazyWithRetry(() => import('@/pages/voice-ai'));
 const Scrims = lazyWithRetry(() => import('@/pages/scrims'));
+const Metaverse = lazyWithRetry(() => import('@/pages/metaverse'));
+const Soundboard = lazyWithRetry(() => import('@/pages/soundboard'));
+const MediaKit = lazyWithRetry(() => import('@/pages/media-kit'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +122,10 @@ function ProtectedRoutes() {
               <Route path="/hologram" component={HologramStudio} />
               <Route path="/voice-ai" component={VoiceAI} />
               <Route path="/scrims" component={Scrims} />
+              <Route path="/metaverse" component={Metaverse} />
+              <Route path="/soundboard" component={Soundboard} />
+              <Route path="/media-kit" component={MediaKit} />
+              <Route path="/mediakit" component={MediaKit} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

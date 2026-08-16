@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -48,6 +48,9 @@ export function CommandPalette() {
     { icon: Crown, label: 'Bharat Super Pass (Season 1)', path: '/pass' },
     { icon: Shield, label: 'Clan Wars & Squad Command', path: '/clans' },
     { icon: Swords, label: 'Esports Scrims & Map Veto', path: '/scrims' },
+    { icon: Boxes, label: '3D Cyber Café Spatial Metaverse', path: '/metaverse' },
+    { icon: Volume2, label: 'Desi Streamer SFX Soundboard', path: '/soundboard' },
+    { icon: FileText, label: 'Creator Media Kit & Rate Card', path: '/media-kit' },
     { icon: Sparkles, label: 'Cyber Arcade & Mini-Games', path: '/arcade' },
     { icon: MapPin, label: 'Bharat City Tech Radar', path: '/radar' },
     { icon: Smile, label: 'Desi Meme & Sticker Studio', path: '/meme-studio' },
