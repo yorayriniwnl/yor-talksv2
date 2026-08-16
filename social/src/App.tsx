@@ -61,6 +61,9 @@ const MediaKit = lazyWithRetry(() => import('@/pages/media-kit'));
 const Turntable = lazyWithRetry(() => import('@/pages/turntable'));
 const ParticleSandbox = lazyWithRetry(() => import('@/pages/particle-sandbox'));
 const TacticsWhiteboard = lazyWithRetry(() => import('@/pages/tactics'));
+const AIArtStudio = lazyWithRetry(() => import('@/pages/ai-art'));
+const MerchStudio = lazyWithRetry(() => import('@/pages/merch-studio'));
+const PredictionsArena = lazyWithRetry(() => import('@/pages/predictions'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,6 +136,10 @@ function ProtectedRoutes() {
               <Route path="/turntable" component={Turntable} />
               <Route path="/particles" component={ParticleSandbox} />
               <Route path="/tactics" component={TacticsWhiteboard} />
+              <Route path="/art" component={AIArtStudio} />
+              <Route path="/ai-art" component={AIArtStudio} />
+              <Route path="/merch" component={MerchStudio} />
+              <Route path="/predictions" component={PredictionsArena} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
