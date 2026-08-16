@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CyberCricketGame } from '@/components/games/CyberCricketGame';
 import { NeonHackerGame } from '@/components/games/NeonHackerGame';
+import { CyberStarfighter } from '@/components/games/CyberStarfighter';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -32,7 +33,7 @@ export default function Arcade() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
         {/* Game Switcher Tabs */}
-        <div className="flex gap-3 p-1.5 rounded-2xl surface-1 border border-border/40 w-fit mx-auto">
+        <div className="flex gap-2 p-1.5 rounded-2xl surface-1 border border-border/40 w-fit mx-auto flex-wrap justify-center">
           <Button
             size="sm"
             variant={activeGame === 'cricket' ? 'default' : 'ghost'}
@@ -40,9 +41,9 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('cricket');
             }}
-            className={cn("rounded-xl font-bold text-xs px-6 h-10", activeGame === 'cricket' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-5 h-10", activeGame === 'cricket' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md")}
           >
-            🏏 Cyber Street Cricket (2-Over Blitz)
+            🏏 Cyber Cricket
           </Button>
 
           <Button
@@ -52,15 +53,29 @@ export default function Arcade() {
               sounds.playPop();
               setActiveGame('hacker');
             }}
-            className={cn("rounded-xl font-bold text-xs px-6 h-10", activeGame === 'hacker' && "bg-emerald-600 text-black shadow-md")}
+            className={cn("rounded-xl font-bold text-xs px-5 h-10", activeGame === 'hacker' && "bg-emerald-600 text-black shadow-md")}
           >
-            💻 Cyber Matrix Terminal Intrusion
+            💻 Matrix Decryption
+          </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'starfighter' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('starfighter');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-5 h-10", activeGame === 'starfighter' && "bg-cyan-600 text-white shadow-md")}
+          >
+            🚀 ISRO Starfighter
           </Button>
         </div>
 
         {/* Active Mini-Game View */}
         <div>
-          {activeGame === 'cricket' ? <CyberCricketGame /> : <NeonHackerGame />}
+          {activeGame === 'cricket' && <CyberCricketGame />}
+          {activeGame === 'hacker' && <NeonHackerGame />}
+          {activeGame === 'starfighter' && <CyberStarfighter />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

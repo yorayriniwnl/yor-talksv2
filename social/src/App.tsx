@@ -49,6 +49,9 @@ const Clans = lazyWithRetry(() => import('@/pages/clans'));
 const Radar = lazyWithRetry(() => import('@/pages/radar'));
 const MemeStudio = lazyWithRetry(() => import('@/pages/meme-studio'));
 const CodeDuel = lazyWithRetry(() => import('@/pages/code-duel'));
+const SynthRoom = lazyWithRetry(() => import('@/pages/synth-room'));
+const Bounties = lazyWithRetry(() => import('@/pages/bounties'));
+const CreatorAnalytics = lazyWithRetry(() => import('@/pages/creator-analytics'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,6 +107,12 @@ function ProtectedRoutes() {
               <Route path="/meme-studio" component={MemeStudio} />
               <Route path="/duel" component={CodeDuel} />
               <Route path="/code-duel" component={CodeDuel} />
+              <Route path="/synth" component={SynthRoom} />
+              <Route path="/synth-room" component={SynthRoom} />
+              <Route path="/bounties" component={Bounties} />
+              <Route path="/grants" component={Bounties} />
+              <Route path="/analytics" component={CreatorAnalytics} />
+              <Route path="/creator-analytics" component={CreatorAnalytics} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
