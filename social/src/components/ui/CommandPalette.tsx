@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -44,6 +44,10 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Trophy, label: 'Bharat Esports Tournaments', path: '/tournaments' },
+    { icon: Video, label: 'Creator Studio Pro', path: '/studio' },
+    { icon: Headphones, label: 'Spatial Audio Lounge', path: '/lounge' },
+    { icon: Gamepad2, label: 'Indie Bharat Game Hub', path: '/bazaar' },
     { icon: ShoppingBag, label: 'Yor Points Vault', path: '/points-shop' },
     { icon: MessageCircle, label: 'Direct Messages', path: '/messages' },
     { icon: Settings, label: 'Settings & Controls', path: '/settings' },

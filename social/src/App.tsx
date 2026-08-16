@@ -39,6 +39,10 @@ const AIAssistant = lazyWithRetry(() => import('@/pages/ai-assistant'));
 const Achievements = lazyWithRetry(() => import('@/pages/achievements'));
 const PointsShop = lazyWithRetry(() => import('@/pages/points-shop'));
 const Dashboard = lazyWithRetry(() => import('@/pages/dashboard'));
+const Tournaments = lazyWithRetry(() => import('@/pages/tournaments'));
+const Studio = lazyWithRetry(() => import('@/pages/studio'));
+const Lounge = lazyWithRetry(() => import('@/pages/lounge'));
+const Bazaar = lazyWithRetry(() => import('@/pages/bazaar'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +84,13 @@ function ProtectedRoutes() {
               <Route path="/achievements" component={Achievements} />
               <Route path="/points-shop" component={PointsShop} />
               <Route path="/dashboard" component={Dashboard} />
+              <Route path="/tournaments/:id?" component={Tournaments} />
+              <Route path="/tournaments" component={Tournaments} />
+              <Route path="/studio" component={Studio} />
+              <Route path="/lounge/:id?" component={Lounge} />
+              <Route path="/lounge" component={Lounge} />
+              <Route path="/games" component={Bazaar} />
+              <Route path="/bazaar" component={Bazaar} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
