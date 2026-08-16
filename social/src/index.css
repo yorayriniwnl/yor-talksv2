@@ -1901,3 +1901,131 @@
     display: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ROUND 3 — Next-Level Interactions
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Ripple expand animation ─────────────────────────────────────────────── */
+@keyframes ripple-expand {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-ripple-expand {
+  animation: ripple-expand 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Animated gradient border ───────────────────────────────────────────── */
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes gradient-rotate {
+  to { --gradient-angle: 360deg; }
+}
+
+.animated-border {
+  position: relative;
+  border-radius: var(--radius-lg);
+}
+
+.animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    hsl(var(--primary)),
+    hsl(280 70% 55%),
+    hsl(var(--accent)),
+    hsl(var(--primary))
+  );
+  z-index: -1;
+  animation: gradient-rotate 3s linear infinite;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.animated-border:hover::before {
+  opacity: 1;
+}
+
+.animated-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: hsl(var(--background));
+  z-index: -1;
+}
+
+/* ── Image reveal wipe ───────────────────────────────────────────────────── */
+@keyframes image-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+.image-reveal {
+  animation: image-reveal 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Glow pulse on hover ─────────────────────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--primary) / 0.2); }
+  50% { box-shadow: 0 0 20px hsl(var(--primary) / 0.35), 0 0 40px hsl(var(--primary) / 0.1); }
+}
+
+.hover-glow-pulse:hover {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ── Elastic bounce for interactive elements ───────────────────────────── */
+@keyframes elastic-in {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.animate-elastic-in {
+  animation: elastic-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Image zoom on hover ─────────────────────────────────────────────────── */
+.image-hover-zoom {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.image-hover-zoom img,
+.image-hover-zoom video {
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.image-hover-zoom:hover img,
+.image-hover-zoom:hover video {
+  transform: scale(1.05);
+}
+
+/* ── Typewriter cursor blink ─────────────────────────────────────────────── */
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: hsl(var(--primary));
+  font-weight: 300;
+  margin-left: 1px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
