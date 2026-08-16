@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "seed": "node --import tsx ./src/scripts/seed-database.ts",
     "test": "node --import tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {
