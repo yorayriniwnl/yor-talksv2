@@ -97,6 +97,9 @@ const RickshawDrift = lazyWithRetry(() => import('@/pages/rickshaw-drift'));
 const AntiCheatWatchtower = lazyWithRetry(() => import('@/pages/anticheat-hub'));
 const AIHighlightsStudio = lazyWithRetry(() => import('@/pages/ai-highlights'));
 const CricketLab = lazyWithRetry(() => import('@/pages/cricket-lab'));
+const CasterDeck = lazyWithRetry(() => import('@/pages/caster-deck'));
+const PitchDeckStudio = lazyWithRetry(() => import('@/pages/pitch-deck'));
+const DhabaRush = lazyWithRetry(() => import('@/pages/dhaba-rush'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -208,6 +211,9 @@ function ProtectedRoutes() {
               <Route path="/anticheat" component={AntiCheatWatchtower} />
               <Route path="/highlights" component={AIHighlightsStudio} />
               <Route path="/cricket-lab" component={CricketLab} />
+              <Route path="/caster-deck" component={CasterDeck} />
+              <Route path="/pitch-deck" component={PitchDeckStudio} />
+              <Route path="/dhaba-rush" component={DhabaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
