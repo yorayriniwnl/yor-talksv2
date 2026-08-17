@@ -121,6 +121,9 @@ const ScrimsScheduler = lazyWithRetry(() => import('@/pages/scrims-scheduler'));
 const RigBenchmark = lazyWithRetry(() => import('@/pages/rig-benchmark'));
 const PrizePoolEscrow = lazyWithRetry(() => import('@/pages/prizepool-escrow'));
 const FanChantsStudio = lazyWithRetry(() => import('@/pages/fan-chants'));
+const LightingController = lazyWithRetry(() => import('@/pages/lighting-controller'));
+const GiveawayWheel = lazyWithRetry(() => import('@/pages/giveaway-wheel'));
+const PavBhajiRush = lazyWithRetry(() => import('@/pages/pavbhaji-rush'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -256,6 +259,9 @@ function ProtectedRoutes() {
               <Route path="/rig-benchmark" component={RigBenchmark} />
               <Route path="/prizepool-escrow" component={PrizePoolEscrow} />
               <Route path="/fan-chants" component={FanChantsStudio} />
+              <Route path="/lighting-controller" component={LightingController} />
+              <Route path="/giveaway-wheel" component={GiveawayWheel} />
+              <Route path="/pavbhaji-rush" component={PavBhajiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

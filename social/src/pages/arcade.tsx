@@ -29,11 +29,12 @@ import { CyberDandiya } from '@/components/games/CyberDandiya';
 import { CyberDosa } from '@/components/games/CyberDosa';
 import { CyberGulabJamun } from '@/components/games/CyberGulabJamun';
 import { CyberSamosa } from '@/components/games/CyberSamosa';
+import { CyberJalebi } from '@/components/games/CyberJalebi';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -368,6 +369,18 @@ export default function Arcade() {
           >
             🥟 Samosa
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'jalebi' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('jalebi');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'jalebi' && "bg-gradient-to-r from-amber-500 to-yellow-500 text-black shadow-md")}
+          >
+            🌀 Jalebi
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -398,6 +411,7 @@ export default function Arcade() {
           {activeGame === 'dosa' && <CyberDosa />}
           {activeGame === 'jamun' && <CyberGulabJamun />}
           {activeGame === 'samosa' && <CyberSamosa />}
+          {activeGame === 'jalebi' && <CyberJalebi />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
