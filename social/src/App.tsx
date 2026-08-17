@@ -205,6 +205,9 @@ const DesiThaliRush = lazyWithRetry(() => import('@/pages/desi-thali'));
 const RotationMatrix = lazyWithRetry(() => import('@/pages/rotation-matrix'));
 const EmoteFountainStudio = lazyWithRetry(() => import('@/pages/emote-fountain'));
 const ParkKathiRollRush = lazyWithRetry(() => import('@/pages/park-kathi-roll'));
+const AntiFlashMatrix = lazyWithRetry(() => import('@/pages/anti-flash-matrix'));
+const EmoteTornadoStudio = lazyWithRetry(() => import('@/pages/emote-tornado'));
+const ChettinadChickenRush = lazyWithRetry(() => import('@/pages/chettinad-chicken'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -424,6 +427,9 @@ function ProtectedRoutes() {
               <Route path="/rotation-matrix" component={RotationMatrix} />
               <Route path="/emote-fountain" component={EmoteFountainStudio} />
               <Route path="/park-kathi-roll" component={ParkKathiRollRush} />
+              <Route path="/anti-flash-matrix" component={AntiFlashMatrix} />
+              <Route path="/emote-tornado" component={EmoteTornadoStudio} />
+              <Route path="/chettinad-chicken" component={ChettinadChickenRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -57,11 +57,12 @@ import { CyberMatkaKulfi } from '@/components/games/CyberMatkaKulfi';
 import { CyberDodhaBarfi } from '@/components/games/CyberDodhaBarfi';
 import { CyberAkhrotHalwa } from '@/components/games/CyberAkhrotHalwa';
 import { CyberDryFruitBarfi } from '@/components/games/CyberDryFruitBarfi';
+import { CyberSohanHalwa } from '@/components/games/CyberSohanHalwa';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -732,6 +733,18 @@ export default function Arcade() {
           >
             👑 Dry Fruit Barfi
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'sohan-halwa' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('sohan-halwa');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'soan' && "bg-gradient-to-r from-amber-700 via-amber-800 to-yellow-600 text-white shadow-md")}
+          >
+            👑 Sohan Halwa
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -790,6 +803,7 @@ export default function Arcade() {
           {activeGame === 'dodha-barfi' && <CyberDodhaBarfi />}
           {activeGame === 'akhrot-halwa' && <CyberAkhrotHalwa />}
           {activeGame === 'dryfruit-barfi' && <CyberDryFruitBarfi />}
+          {activeGame === 'sohan-halwa' && <CyberSohanHalwa />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
