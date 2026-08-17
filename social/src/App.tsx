@@ -286,6 +286,9 @@ const KerDakRush = lazyWithRetry(() => import('@/pages/ker-dak'));
 const RightPeakMatrix = lazyWithRetry(() => import('@/pages/right-peak-matrix'));
 const EmoteQuantumRibbonStudio = lazyWithRetry(() => import('@/pages/emote-quantum-ribbon'));
 const PapadMangodiRush = lazyWithRetry(() => import('@/pages/papad-mangodi'));
+const WeaponCatchMatrix = lazyWithRetry(() => import('@/pages/weapon-catch-matrix'));
+const EmoteConstellationChartStudio = lazyWithRetry(() => import('@/pages/emote-constellation-chart'));
+const GovindGattaRush = lazyWithRetry(() => import('@/pages/govind-gatta'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -586,6 +589,9 @@ function ProtectedRoutes() {
               <Route path="/right-peak-matrix" component={RightPeakMatrix} />
               <Route path="/emote-quantum-ribbon" component={EmoteQuantumRibbonStudio} />
               <Route path="/papad-mangodi" component={PapadMangodiRush} />
+              <Route path="/weapon-catch-matrix" component={WeaponCatchMatrix} />
+              <Route path="/emote-constellation-chart" component={EmoteConstellationChartStudio} />
+              <Route path="/govind-gatta" component={GovindGattaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
