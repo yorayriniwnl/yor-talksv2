@@ -73,6 +73,9 @@ const GameLaunchpad = lazyWithRetry(() => import('@/pages/game-launchpad'));
 const FanClubSubscriptions = lazyWithRetry(() => import('@/pages/fan-club'));
 const ClipStudio = lazyWithRetry(() => import('@/pages/clip-studio'));
 const PowerRankings = lazyWithRetry(() => import('@/pages/power-rankings'));
+const InvoiceStudio = lazyWithRetry(() => import('@/pages/invoice-studio'));
+const ScoutingRadar = lazyWithRetry(() => import('@/pages/scouting-radar'));
+const TrophyRoom = lazyWithRetry(() => import('@/pages/trophy-room'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -160,6 +163,9 @@ function ProtectedRoutes() {
               <Route path="/fanclub" component={FanClubSubscriptions} />
               <Route path="/clips" component={ClipStudio} />
               <Route path="/rankings" component={PowerRankings} />
+              <Route path="/invoices" component={InvoiceStudio} />
+              <Route path="/scouting" component={ScoutingRadar} />
+              <Route path="/trophies" component={TrophyRoom} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
