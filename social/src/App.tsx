@@ -148,6 +148,9 @@ const LittiChokhaRush = lazyWithRetry(() => import('@/pages/litti-chokha'));
 const KillzoneAnalyzer = lazyWithRetry(() => import('@/pages/killzone-analyzer'));
 const HypeTrainHUD = lazyWithRetry(() => import('@/pages/hypetrain-hud'));
 const DalBaatiRush = lazyWithRetry(() => import('@/pages/dal-baati'));
+const DroneScout = lazyWithRetry(() => import('@/pages/drone-scout'));
+const SubGoalStudio = lazyWithRetry(() => import('@/pages/sub-goal'));
+const HyderabadiHaleemRush = lazyWithRetry(() => import('@/pages/hyderabadi-haleem'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -310,6 +313,9 @@ function ProtectedRoutes() {
               <Route path="/killzone-analyzer" component={KillzoneAnalyzer} />
               <Route path="/hypetrain-hud" component={HypeTrainHUD} />
               <Route path="/dal-baati" component={DalBaatiRush} />
+              <Route path="/drone-scout" component={DroneScout} />
+              <Route path="/sub-goal" component={SubGoalStudio} />
+              <Route path="/hyderabadi-haleem" component={HyderabadiHaleemRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
