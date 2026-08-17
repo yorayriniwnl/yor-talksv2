@@ -130,6 +130,9 @@ const CholeBhatureRush = lazyWithRetry(() => import('@/pages/chole-bhature'));
 const GreenRoom = lazyWithRetry(() => import('@/pages/green-room'));
 const VetoStudio = lazyWithRetry(() => import('@/pages/veto-studio'));
 const KulfiFaloodaRush = lazyWithRetry(() => import('@/pages/kulfi-falooda'));
+const MerchVault = lazyWithRetry(() => import('@/pages/merch-vault'));
+const TeleprompterStudio = lazyWithRetry(() => import('@/pages/teleprompter'));
+const IdliVadaRush = lazyWithRetry(() => import('@/pages/idli-vada'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -274,6 +277,9 @@ function ProtectedRoutes() {
               <Route path="/green-room" component={GreenRoom} />
               <Route path="/veto-studio" component={VetoStudio} />
               <Route path="/kulfi-falooda" component={KulfiFaloodaRush} />
+              <Route path="/merch-vault" component={MerchVault} />
+              <Route path="/teleprompter" component={TeleprompterStudio} />
+              <Route path="/idli-vada" component={IdliVadaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
