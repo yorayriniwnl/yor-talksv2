@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud, Sun, Milk, CloudRain, Coins, Radar, PartyPopper, Percent, EyeOff, Wind, Gauge, CloudLightning, Mountain, Layers, Wifi, Gem, Terminal, Orbit } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud, Sun, Milk, CloudRain, Coins, Radar, PartyPopper, Percent, EyeOff, Wind, Gauge, CloudLightning, Mountain, Layers, Wifi, Gem, Terminal, Orbit, MoveHorizontal } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -42,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: MoveHorizontal, label: 'Esports Tactical Micro-Strafe & Jiggle-Peek Lab', path: '/micro-strafe-matrix' },
+    { icon: Swords, label: 'Streamer Live Chat Emote Sword Clash Studio', path: '/emote-sword-clash' },
+    { icon: Utensils, label: 'Desi Amritsari Chole Kulche Heritage Express', path: '/amritsari-chole' },
     { icon: Headphones, label: 'Esports Tactical Sound Masking & Decoy Lab', path: '/sound-masking-matrix' },
     { icon: Orbit, label: 'Streamer Live Chat Emote Black Hole Warp Studio', path: '/emote-blackhole-warp' },
     { icon: Utensils, label: 'Desi Goan Prawn Balchão Coastal Express', path: '/goan-prawn-balchao' },
