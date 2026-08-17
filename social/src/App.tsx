@@ -151,6 +151,9 @@ const DalBaatiRush = lazyWithRetry(() => import('@/pages/dal-baati'));
 const DroneScout = lazyWithRetry(() => import('@/pages/drone-scout'));
 const SubGoalStudio = lazyWithRetry(() => import('@/pages/sub-goal'));
 const HyderabadiHaleemRush = lazyWithRetry(() => import('@/pages/hyderabadi-haleem'));
+const LineupLab = lazyWithRetry(() => import('@/pages/lineup-lab'));
+const EmoteWallStudio = lazyWithRetry(() => import('@/pages/emote-wall'));
+const KathiRollRush = lazyWithRetry(() => import('@/pages/kathi-roll'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -316,6 +319,9 @@ function ProtectedRoutes() {
               <Route path="/drone-scout" component={DroneScout} />
               <Route path="/sub-goal" component={SubGoalStudio} />
               <Route path="/hyderabadi-haleem" component={HyderabadiHaleemRush} />
+              <Route path="/lineup-lab" component={LineupLab} />
+              <Route path="/emote-wall" component={EmoteWallStudio} />
+              <Route path="/kathi-roll" component={KathiRollRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
