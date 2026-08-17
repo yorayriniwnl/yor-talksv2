@@ -160,6 +160,9 @@ const AmritsariKulchaRush = lazyWithRetry(() => import('@/pages/amritsari-kulcha
 const CasterDirectorDeck = lazyWithRetry(() => import('@/pages/caster-director'));
 const TTSCustomizerStudio = lazyWithRetry(() => import('@/pages/tts-customizer'));
 const MisalPavRush = lazyWithRetry(() => import('@/pages/misal-pav'));
+const ReplayStudio = lazyWithRetry(() => import('@/pages/replay-studio'));
+const SubathonWheelHUD = lazyWithRetry(() => import('@/pages/subathon-wheel'));
+const DahiBhallaRush = lazyWithRetry(() => import('@/pages/dahi-bhalla'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -334,6 +337,9 @@ function ProtectedRoutes() {
               <Route path="/caster-director" component={CasterDirectorDeck} />
               <Route path="/tts-customizer" component={TTSCustomizerStudio} />
               <Route path="/misal-pav" component={MisalPavRush} />
+              <Route path="/replay-studio" component={ReplayStudio} />
+              <Route path="/subathon-wheel" component={SubathonWheelHUD} />
+              <Route path="/dahi-bhalla" component={DahiBhallaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
