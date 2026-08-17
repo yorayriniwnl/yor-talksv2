@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -42,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Calculator, label: 'Bharat Streamer Tax & TDS Compliance Hub', path: '/tax-hub' },
+    { icon: Eye, label: 'Gamer Ergonomics & Posture Vision AI', path: '/posture-ai' },
+    { icon: Utensils, label: 'Desi Street Panipuri & Golgappa Rush', path: '/panipuri-rush' },
     { icon: Radio, label: 'Bharat Esports Caster & Broadcast Deck', path: '/caster-deck' },
     { icon: Presentation, label: 'Creator Brand Pitch Deck & 4K PDF', path: '/pitch-deck' },
     { icon: Utensils, label: 'Desi Highway Dhaba Rush Simulator', path: '/dhaba-rush' },

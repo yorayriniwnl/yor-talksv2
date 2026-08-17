@@ -100,6 +100,9 @@ const CricketLab = lazyWithRetry(() => import('@/pages/cricket-lab'));
 const CasterDeck = lazyWithRetry(() => import('@/pages/caster-deck'));
 const PitchDeckStudio = lazyWithRetry(() => import('@/pages/pitch-deck'));
 const DhabaRush = lazyWithRetry(() => import('@/pages/dhaba-rush'));
+const TaxComplianceHub = lazyWithRetry(() => import('@/pages/tax-hub'));
+const PostureAIHub = lazyWithRetry(() => import('@/pages/posture-ai'));
+const PanipuriRush = lazyWithRetry(() => import('@/pages/panipuri-rush'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -214,6 +217,9 @@ function ProtectedRoutes() {
               <Route path="/caster-deck" component={CasterDeck} />
               <Route path="/pitch-deck" component={PitchDeckStudio} />
               <Route path="/dhaba-rush" component={DhabaRush} />
+              <Route path="/tax-hub" component={TaxComplianceHub} />
+              <Route path="/posture-ai" component={PostureAIHub} />
+              <Route path="/panipuri-rush" component={PanipuriRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

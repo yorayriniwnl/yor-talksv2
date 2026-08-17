@@ -22,11 +22,12 @@ import { CyberPinball } from '@/components/games/CyberPinball';
 import { CyberHoli } from '@/components/games/CyberHoli';
 import { CyberKite } from '@/components/games/CyberKite';
 import { CyberKabaddi } from '@/components/games/CyberKabaddi';
+import { CyberDiya } from '@/components/games/CyberDiya';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -277,6 +278,18 @@ export default function Arcade() {
           >
             🤼 Kabaddi
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'diya' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('diya');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'diya' && "bg-amber-500 text-black shadow-md")}
+          >
+            🪔 Diya
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -300,6 +313,7 @@ export default function Arcade() {
           {activeGame === 'holi' && <CyberHoli />}
           {activeGame === 'kite' && <CyberKite />}
           {activeGame === 'kabaddi' && <CyberKabaddi />}
+          {activeGame === 'diya' && <CyberDiya />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
