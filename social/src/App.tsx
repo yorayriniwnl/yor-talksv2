@@ -229,6 +229,9 @@ const KashmiriRoganJoshRush = lazyWithRetry(() => import('@/pages/kashmiri-rogan
 const BounceMatrix = lazyWithRetry(() => import('@/pages/bounce-matrix'));
 const EmoteSparklersStudio = lazyWithRetry(() => import('@/pages/emote-sparklers'));
 const ThalasseryBiryaniRush = lazyWithRetry(() => import('@/pages/thalassery-biryani'));
+const PeekersAdvantageMatrix = lazyWithRetry(() => import('@/pages/peekers-advantage-matrix'));
+const EmoteHologramCubeStudio = lazyWithRetry(() => import('@/pages/emote-hologram-cube'));
+const KoriRottiRush = lazyWithRetry(() => import('@/pages/kori-rotti'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -472,6 +475,9 @@ function ProtectedRoutes() {
               <Route path="/bounce-matrix" component={BounceMatrix} />
               <Route path="/emote-sparklers" component={EmoteSparklersStudio} />
               <Route path="/thalassery-biryani" component={ThalasseryBiryaniRush} />
+              <Route path="/peekers-advantage-matrix" component={PeekersAdvantageMatrix} />
+              <Route path="/emote-hologram-cube" component={EmoteHologramCubeStudio} />
+              <Route path="/kori-rotti" component={KoriRottiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
