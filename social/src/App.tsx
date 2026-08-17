@@ -172,6 +172,9 @@ const BaidaRotiRush = lazyWithRetry(() => import('@/pages/baida-roti'));
 const DefusalTimerHUD = lazyWithRetry(() => import('@/pages/defusal-timer'));
 const PollOverlayStudio = lazyWithRetry(() => import('@/pages/poll-overlay'));
 const BunMaskaRush = lazyWithRetry(() => import('@/pages/bun-maska'));
+const SmokeSimulator = lazyWithRetry(() => import('@/pages/smoke-simulator'));
+const GoalMeterStudio = lazyWithRetry(() => import('@/pages/goal-meter'));
+const KeemaPavRush = lazyWithRetry(() => import('@/pages/keema-pav'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -358,6 +361,9 @@ function ProtectedRoutes() {
               <Route path="/defusal-timer" component={DefusalTimerHUD} />
               <Route path="/poll-overlay" component={PollOverlayStudio} />
               <Route path="/bun-maska" component={BunMaskaRush} />
+              <Route path="/smoke-simulator" component={SmokeSimulator} />
+              <Route path="/goal-meter" component={GoalMeterStudio} />
+              <Route path="/keema-pav" component={KeemaPavRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

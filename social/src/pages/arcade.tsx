@@ -46,11 +46,12 @@ import { CyberImarti } from '@/components/games/CyberImarti';
 import { CyberMalpua } from '@/components/games/CyberMalpua';
 import { CyberPayasam } from '@/components/games/CyberPayasam';
 import { CyberShrikhand } from '@/components/games/CyberShrikhand';
+import { CyberGhevarMalai } from '@/components/games/CyberGhevarMalai';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -589,6 +590,18 @@ export default function Arcade() {
           >
             👑 Kesar Shrikhand
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'malai-ghewar' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('malai-ghewar');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'malai-ghewar' && "bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500 text-black shadow-md")}
+          >
+            👑 Malai Ghevar
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -636,6 +649,7 @@ export default function Arcade() {
           {activeGame === 'malpua' && <CyberMalpua />}
           {activeGame === 'payasam' && <CyberPayasam />}
           {activeGame === 'shrikhand' && <CyberShrikhand />}
+          {activeGame === 'malai-ghewar' && <CyberGhevarMalai />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
