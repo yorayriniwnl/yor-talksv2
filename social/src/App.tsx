@@ -199,6 +199,9 @@ const NalliNihariRush = lazyWithRetry(() => import('@/pages/nalli-nihari'));
 const PlantRetakeMatrix = lazyWithRetry(() => import('@/pages/plant-retake-matrix'));
 const ConfettiCannonStudio = lazyWithRetry(() => import('@/pages/confetti-cannon'));
 const MangaloreFishFryRush = lazyWithRetry(() => import('@/pages/mangalore-fish-fry'));
+const AccuracyMatrix = lazyWithRetry(() => import('@/pages/accuracy-matrix'));
+const LaserShowStudio = lazyWithRetry(() => import('@/pages/laser-show'));
+const DesiThaliRush = lazyWithRetry(() => import('@/pages/desi-thali'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -412,6 +415,9 @@ function ProtectedRoutes() {
               <Route path="/plant-retake-matrix" component={PlantRetakeMatrix} />
               <Route path="/confetti-cannon" component={ConfettiCannonStudio} />
               <Route path="/mangalore-fish-fry" component={MangaloreFishFryRush} />
+              <Route path="/accuracy-matrix" component={AccuracyMatrix} />
+              <Route path="/laser-show" component={LaserShowStudio} />
+              <Route path="/desi-thali" component={DesiThaliRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
