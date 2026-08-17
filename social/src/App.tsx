@@ -259,6 +259,9 @@ const RajasthaniKerSangriRush = lazyWithRetry(() => import('@/pages/rajasthani-k
 const VerticalFOVMatrix = lazyWithRetry(() => import('@/pages/vertical-fov-matrix'));
 const EmoteMatrixGridStudio = lazyWithRetry(() => import('@/pages/emote-matrix-grid'));
 const ChettinadSukkaRush = lazyWithRetry(() => import('@/pages/chettinad-sukka'));
+const UtilityStackingMatrix = lazyWithRetry(() => import('@/pages/utility-stacking-matrix'));
+const EmoteRainbowBeamStudio = lazyWithRetry(() => import('@/pages/emote-rainbow-beam'));
+const MalabarKozhiRoastRush = lazyWithRetry(() => import('@/pages/malabar-kozhi-roast'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -532,6 +535,9 @@ function ProtectedRoutes() {
               <Route path="/vertical-fov-matrix" component={VerticalFOVMatrix} />
               <Route path="/emote-matrix-grid" component={EmoteMatrixGridStudio} />
               <Route path="/chettinad-sukka" component={ChettinadSukkaRush} />
+              <Route path="/utility-stacking-matrix" component={UtilityStackingMatrix} />
+              <Route path="/emote-rainbow-beam" component={EmoteRainbowBeamStudio} />
+              <Route path="/malabar-kozhi-roast" component={MalabarKozhiRoastRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
