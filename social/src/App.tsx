@@ -181,6 +181,9 @@ const AppamStewRush = lazyWithRetry(() => import('@/pages/appam-stew'));
 const CrosshairVault = lazyWithRetry(() => import('@/pages/crosshair-vault'));
 const EmoteWaterfallStudio = lazyWithRetry(() => import('@/pages/emote-waterfall'));
 const ParottaSalnaRush = lazyWithRetry(() => import('@/pages/parotta-salna'));
+const ArmorMatrix = lazyWithRetry(() => import('@/pages/armor-matrix'));
+const StreakMeterStudio = lazyWithRetry(() => import('@/pages/streak-meter'));
+const PatialaLassiRush = lazyWithRetry(() => import('@/pages/patiala-lassi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -376,6 +379,9 @@ function ProtectedRoutes() {
               <Route path="/crosshair-vault" component={CrosshairVault} />
               <Route path="/emote-waterfall" component={EmoteWaterfallStudio} />
               <Route path="/parotta-salna" component={ParottaSalnaRush} />
+              <Route path="/armor-matrix" component={ArmorMatrix} />
+              <Route path="/streak-meter" component={StreakMeterStudio} />
+              <Route path="/patiala-lassi" component={PatialaLassiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
