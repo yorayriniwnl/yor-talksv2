@@ -166,6 +166,9 @@ const DahiBhallaRush = lazyWithRetry(() => import('@/pages/dahi-bhalla'));
 const StatCardGenerator = lazyWithRetry(() => import('@/pages/stat-card'));
 const ChatPinsStudio = lazyWithRetry(() => import('@/pages/chat-pins'));
 const MomosRush = lazyWithRetry(() => import('@/pages/momos-rush'));
+const RecoilPatternMatrix = lazyWithRetry(() => import('@/pages/recoil-matrix'));
+const ScoreTallyStudio = lazyWithRetry(() => import('@/pages/score-tally'));
+const BaidaRotiRush = lazyWithRetry(() => import('@/pages/baida-roti'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -346,6 +349,9 @@ function ProtectedRoutes() {
               <Route path="/stat-card" component={StatCardGenerator} />
               <Route path="/chat-pins" component={ChatPinsStudio} />
               <Route path="/momos-rush" component={MomosRush} />
+              <Route path="/recoil-matrix" component={RecoilPatternMatrix} />
+              <Route path="/score-tally" component={ScoreTallyStudio} />
+              <Route path="/baida-roti" component={BaidaRotiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
