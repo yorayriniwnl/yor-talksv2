@@ -238,6 +238,9 @@ const GatteKiSabziRush = lazyWithRetry(() => import('@/pages/gatte-ki-sabzi'));
 const SkyboxLineupMatrix = lazyWithRetry(() => import('@/pages/skybox-lineup-matrix'));
 const EmoteGlitchMatrixStudio = lazyWithRetry(() => import('@/pages/emote-glitch-matrix'));
 const DindigulBiryaniRush = lazyWithRetry(() => import('@/pages/dindigul-biryani'));
+const OffAngleMatrix = lazyWithRetry(() => import('@/pages/off-angle-matrix'));
+const EmoteDholakBeatStudio = lazyWithRetry(() => import('@/pages/emote-dholak-beat'));
+const OdishaDalmaRush = lazyWithRetry(() => import('@/pages/odisha-dalma'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -490,6 +493,9 @@ function ProtectedRoutes() {
               <Route path="/skybox-lineup-matrix" component={SkyboxLineupMatrix} />
               <Route path="/emote-glitch-matrix" component={EmoteGlitchMatrixStudio} />
               <Route path="/dindigul-biryani" component={DindigulBiryaniRush} />
+              <Route path="/off-angle-matrix" component={OffAngleMatrix} />
+              <Route path="/emote-dholak-beat" component={EmoteDholakBeatStudio} />
+              <Route path="/odisha-dalma" component={OdishaDalmaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
