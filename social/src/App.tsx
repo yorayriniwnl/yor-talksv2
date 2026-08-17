@@ -187,6 +187,9 @@ const PatialaLassiRush = lazyWithRetry(() => import('@/pages/patiala-lassi'));
 const FootstepMatrix = lazyWithRetry(() => import('@/pages/footstep-matrix'));
 const EmoteRainStudio = lazyWithRetry(() => import('@/pages/emote-rain'));
 const AslamButterChickenRush = lazyWithRetry(() => import('@/pages/aslam-butter-chicken'));
+const EconomyPlanner = lazyWithRetry(() => import('@/pages/economy-planner'));
+const DonoTrainStudio = lazyWithRetry(() => import('@/pages/dono-train'));
+const DoubleKaMeethaRush = lazyWithRetry(() => import('@/pages/double-ka-meetha'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -388,6 +391,9 @@ function ProtectedRoutes() {
               <Route path="/footstep-matrix" component={FootstepMatrix} />
               <Route path="/emote-rain" component={EmoteRainStudio} />
               <Route path="/aslam-butter-chicken" component={AslamButterChickenRush} />
+              <Route path="/economy-planner" component={EconomyPlanner} />
+              <Route path="/dono-train" component={DonoTrainStudio} />
+              <Route path="/double-ka-meetha" component={DoubleKaMeethaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
