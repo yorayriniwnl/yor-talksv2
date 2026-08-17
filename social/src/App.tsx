@@ -88,6 +88,9 @@ const GamerHealthHub = lazyWithRetry(() => import('@/pages/gamer-health'));
 const ScoreboardStudio = lazyWithRetry(() => import('@/pages/scoreboard-studio'));
 const BrandDealsHub = lazyWithRetry(() => import('@/pages/brand-deals'));
 const ChaiSimulator = lazyWithRetry(() => import('@/pages/chai-sim'));
+const CustomRoomLobby = lazyWithRetry(() => import('@/pages/custom-room'));
+const GearCustomizer = lazyWithRetry(() => import('@/pages/gear-customizer'));
+const MultistreamStudio = lazyWithRetry(() => import('@/pages/multistream'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -190,6 +193,9 @@ function ProtectedRoutes() {
               <Route path="/scoreboard" component={ScoreboardStudio} />
               <Route path="/deals" component={BrandDealsHub} />
               <Route path="/chai" component={ChaiSimulator} />
+              <Route path="/rooms" component={CustomRoomLobby} />
+              <Route path="/gear" component={GearCustomizer} />
+              <Route path="/multistream" component={MultistreamStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
