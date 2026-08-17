@@ -136,6 +136,9 @@ const IdliVadaRush = lazyWithRetry(() => import('@/pages/idli-vada'));
 const CoachLab = lazyWithRetry(() => import('@/pages/coach-lab'));
 const LUTGraderStudio = lazyWithRetry(() => import('@/pages/lut-grader'));
 const RajmaChawalRush = lazyWithRetry(() => import('@/pages/rajma-chawal'));
+const PyroDeck = lazyWithRetry(() => import('@/pages/pyro-deck'));
+const VODChapters = lazyWithRetry(() => import('@/pages/vod-chapters'));
+const BedmiPuriRush = lazyWithRetry(() => import('@/pages/bedmi-puri'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -286,6 +289,9 @@ function ProtectedRoutes() {
               <Route path="/coach-lab" component={CoachLab} />
               <Route path="/lut-grader" component={LUTGraderStudio} />
               <Route path="/rajma-chawal" component={RajmaChawalRush} />
+              <Route path="/pyro-deck" component={PyroDeck} />
+              <Route path="/vod-chapters" component={VODChapters} />
+              <Route path="/bedmi-puri" component={BedmiPuriRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
