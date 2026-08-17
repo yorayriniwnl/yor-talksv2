@@ -295,6 +295,9 @@ const BajraKhichdiRush = lazyWithRetry(() => import('@/pages/bajra-khichdi'));
 const AudioOcclusionMatrix = lazyWithRetry(() => import('@/pages/audio-occlusion-matrix'));
 const EmoteTesseractCubeStudio = lazyWithRetry(() => import('@/pages/emote-tesseract-cube'));
 const MogarKachoriRush = lazyWithRetry(() => import('@/pages/mogar-kachori'));
+const FirstBulletInaccuracyMatrix = lazyWithRetry(() => import('@/pages/first-bullet-inaccuracy'));
+const EmoteMobiusLoopStudio = lazyWithRetry(() => import('@/pages/emote-mobius-loop'));
+const ChanaJaisalmeriRush = lazyWithRetry(() => import('@/pages/chana-jaisalmeri'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -604,6 +607,9 @@ function ProtectedRoutes() {
               <Route path="/audio-occlusion-matrix" component={AudioOcclusionMatrix} />
               <Route path="/emote-tesseract-cube" component={EmoteTesseractCubeStudio} />
               <Route path="/mogar-kachori" component={MogarKachoriRush} />
+              <Route path="/first-bullet-inaccuracy" component={FirstBulletInaccuracyMatrix} />
+              <Route path="/emote-mobius-loop" component={EmoteMobiusLoopStudio} />
+              <Route path="/chana-jaisalmeri" component={ChanaJaisalmeriRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
