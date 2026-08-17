@@ -76,6 +76,9 @@ const PowerRankings = lazyWithRetry(() => import('@/pages/power-rankings'));
 const InvoiceStudio = lazyWithRetry(() => import('@/pages/invoice-studio'));
 const ScoutingRadar = lazyWithRetry(() => import('@/pages/scouting-radar'));
 const TrophyRoom = lazyWithRetry(() => import('@/pages/trophy-room'));
+const CricketAuctionArena = lazyWithRetry(() => import('@/pages/cricket-auction'));
+const VoiceFXStudio = lazyWithRetry(() => import('@/pages/voice-fx'));
+const EsportsAcademy = lazyWithRetry(() => import('@/pages/academy'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -166,6 +169,9 @@ function ProtectedRoutes() {
               <Route path="/invoices" component={InvoiceStudio} />
               <Route path="/scouting" component={ScoutingRadar} />
               <Route path="/trophies" component={TrophyRoom} />
+              <Route path="/auction" component={CricketAuctionArena} />
+              <Route path="/voice-fx" component={VoiceFXStudio} />
+              <Route path="/academy" component={EsportsAcademy} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -14,11 +14,12 @@ import { CyberAsteroids } from '@/components/games/CyberAsteroids';
 import { CyberTank } from '@/components/games/CyberTank';
 import { CyberBrickBreaker } from '@/components/games/CyberBrickBreaker';
 import { Cyber2048 } from '@/components/games/Cyber2048';
+import { CyberChaiTap } from '@/components/games/CyberChaiTap';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -173,6 +174,18 @@ export default function Arcade() {
           >
             🔱 2048
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'chai' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('chai');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'chai' && "bg-orange-500 text-white shadow-md")}
+          >
+            ☕ Chai Rush
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -188,6 +201,7 @@ export default function Arcade() {
           {activeGame === 'tank' && <CyberTank />}
           {activeGame === 'breaker' && <CyberBrickBreaker />}
           {activeGame === '2048' && <Cyber2048 />}
+          {activeGame === 'chai' && <CyberChaiTap />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

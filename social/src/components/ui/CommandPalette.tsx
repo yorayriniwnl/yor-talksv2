@@ -1,29 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
 
 export function CommandPalette() {
   const [, setLocation] = useLocation();
-  const users = useAppStore((s) => s.users);
-  const currentUser = useAppStore((s) => s.currentUser);
-
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const userList = Object.values(useAppStore((s) => s.users));
 
-  // Keyboard shortcut listener for Cmd + K / Ctrl + K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsOpen((prev) => !prev);
-      } else if (e.key === 'Escape') {
+      }
+      if (e.key === 'Escape') {
         setIsOpen(false);
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -35,8 +34,7 @@ export function CommandPalette() {
     setQuery('');
   };
 
-  const userList = Object.values(users);
-  const filteredUsers = query.trim()
+  const filteredUsers = query
     ? userList.filter((u) => u.displayName.toLowerCase().includes(query.toLowerCase()) || u.username.toLowerCase().includes(query.toLowerCase()))
     : userList.slice(0, 4);
 
@@ -44,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Gavel, label: 'Bharat Premier Cricket Mega Auction', path: '/auction' },
+    { icon: GraduationCap, label: 'Bharat Esports Academy & Masterclasses', path: '/academy' },
+    { icon: Radio, label: 'Streamer Voice FX & Audio Modulator', path: '/voice-fx' },
     { icon: Trophy, label: 'Bharat Esports Tournaments', path: '/tournaments' },
     { icon: Trophy, label: 'Virtual Trophy Room & Hall of Fame', path: '/trophies' },
     { icon: Crosshair, label: 'Esports Talent & Scouting Radar', path: '/scouting' },
