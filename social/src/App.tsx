@@ -91,6 +91,9 @@ const ChaiSimulator = lazyWithRetry(() => import('@/pages/chai-sim'));
 const CustomRoomLobby = lazyWithRetry(() => import('@/pages/custom-room'));
 const GearCustomizer = lazyWithRetry(() => import('@/pages/gear-customizer'));
 const MultistreamStudio = lazyWithRetry(() => import('@/pages/multistream'));
+const TransferPortal = lazyWithRetry(() => import('@/pages/transfer-portal'));
+const AcousticsLab = lazyWithRetry(() => import('@/pages/acoustics-lab'));
+const RickshawDrift = lazyWithRetry(() => import('@/pages/rickshaw-drift'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -196,6 +199,9 @@ function ProtectedRoutes() {
               <Route path="/rooms" component={CustomRoomLobby} />
               <Route path="/gear" component={GearCustomizer} />
               <Route path="/multistream" component={MultistreamStudio} />
+              <Route path="/transfers" component={TransferPortal} />
+              <Route path="/acoustics" component={AcousticsLab} />
+              <Route path="/drift" component={RickshawDrift} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
