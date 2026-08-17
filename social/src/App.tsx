@@ -133,6 +133,9 @@ const KulfiFaloodaRush = lazyWithRetry(() => import('@/pages/kulfi-falooda'));
 const MerchVault = lazyWithRetry(() => import('@/pages/merch-vault'));
 const TeleprompterStudio = lazyWithRetry(() => import('@/pages/teleprompter'));
 const IdliVadaRush = lazyWithRetry(() => import('@/pages/idli-vada'));
+const CoachLab = lazyWithRetry(() => import('@/pages/coach-lab'));
+const LUTGraderStudio = lazyWithRetry(() => import('@/pages/lut-grader'));
+const RajmaChawalRush = lazyWithRetry(() => import('@/pages/rajma-chawal'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -280,6 +283,9 @@ function ProtectedRoutes() {
               <Route path="/merch-vault" component={MerchVault} />
               <Route path="/teleprompter" component={TeleprompterStudio} />
               <Route path="/idli-vada" component={IdliVadaRush} />
+              <Route path="/coach-lab" component={CoachLab} />
+              <Route path="/lut-grader" component={LUTGraderStudio} />
+              <Route path="/rajma-chawal" component={RajmaChawalRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
