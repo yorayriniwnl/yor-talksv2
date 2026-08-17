@@ -35,11 +35,12 @@ import { CyberKajuKatli } from '@/components/games/CyberKajuKatli';
 import { CyberMysorePak } from '@/components/games/CyberMysorePak';
 import { CyberMotichoor } from '@/components/games/CyberMotichoor';
 import { CyberRasmalai } from '@/components/games/CyberRasmalai';
+import { CyberGhewar } from '@/components/games/CyberGhewar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -446,6 +447,18 @@ export default function Arcade() {
           >
             🥛 Rasmalai
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'ghewar' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('ghewar');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'ghewar' && "bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500 text-black shadow-md")}
+          >
+            👑 Ghewar
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -482,6 +495,7 @@ export default function Arcade() {
           {activeGame === 'mysore' && <CyberMysorePak />}
           {activeGame === 'motichoor' && <CyberMotichoor />}
           {activeGame === 'rasmalai' && <CyberRasmalai />}
+          {activeGame === 'ghewar' && <CyberGhewar />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

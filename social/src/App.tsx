@@ -139,6 +139,9 @@ const RajmaChawalRush = lazyWithRetry(() => import('@/pages/rajma-chawal'));
 const PyroDeck = lazyWithRetry(() => import('@/pages/pyro-deck'));
 const VODChapters = lazyWithRetry(() => import('@/pages/vod-chapters'));
 const BedmiPuriRush = lazyWithRetry(() => import('@/pages/bedmi-puri'));
+const BootcampAllocator = lazyWithRetry(() => import('@/pages/bootcamp-allocator'));
+const LivePollsHUD = lazyWithRetry(() => import('@/pages/live-polls'));
+const PohaJalebiRush = lazyWithRetry(() => import('@/pages/poha-jalebi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -292,6 +295,9 @@ function ProtectedRoutes() {
               <Route path="/pyro-deck" component={PyroDeck} />
               <Route path="/vod-chapters" component={VODChapters} />
               <Route path="/bedmi-puri" component={BedmiPuriRush} />
+              <Route path="/bootcamp-allocator" component={BootcampAllocator} />
+              <Route path="/live-polls" component={LivePollsHUD} />
+              <Route path="/poha-jalebi" component={PohaJalebiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
