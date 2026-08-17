@@ -268,6 +268,9 @@ const GatteKaPulaoRush = lazyWithRetry(() => import('@/pages/gatte-ka-pulao'));
 const FlashBaitMatrix = lazyWithRetry(() => import('@/pages/flash-bait-matrix'));
 const EmotePulsarRingsStudio = lazyWithRetry(() => import('@/pages/emote-pulsar-rings'));
 const TalaHuaGoshtRush = lazyWithRetry(() => import('@/pages/tala-hua-gosht'));
+const QuickSwitchMatrix = lazyWithRetry(() => import('@/pages/quick-switch-matrix'));
+const EmoteLaserTunnelStudio = lazyWithRetry(() => import('@/pages/emote-laser-tunnel'));
+const SindhiSaiBhajiRush = lazyWithRetry(() => import('@/pages/sindhi-sai-bhaji'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -550,6 +553,9 @@ function ProtectedRoutes() {
               <Route path="/flash-bait-matrix" component={FlashBaitMatrix} />
               <Route path="/emote-pulsar-rings" component={EmotePulsarRingsStudio} />
               <Route path="/tala-hua-gosht" component={TalaHuaGoshtRush} />
+              <Route path="/quick-switch-matrix" component={QuickSwitchMatrix} />
+              <Route path="/emote-laser-tunnel" component={EmoteLaserTunnelStudio} />
+              <Route path="/sindhi-sai-bhaji" component={SindhiSaiBhajiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
