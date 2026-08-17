@@ -85,6 +85,9 @@ const CreatorStore = lazyWithRetry(() => import('@/pages/creator-store'));
 const SuperchatStudio = lazyWithRetry(() => import('@/pages/superchat-studio'));
 const SquadCommsRoom = lazyWithRetry(() => import('@/pages/squad-comms'));
 const GamerHealthHub = lazyWithRetry(() => import('@/pages/gamer-health'));
+const ScoreboardStudio = lazyWithRetry(() => import('@/pages/scoreboard-studio'));
+const BrandDealsHub = lazyWithRetry(() => import('@/pages/brand-deals'));
+const ChaiSimulator = lazyWithRetry(() => import('@/pages/chai-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -184,6 +187,9 @@ function ProtectedRoutes() {
               <Route path="/superchat" component={SuperchatStudio} />
               <Route path="/comms" component={SquadCommsRoom} />
               <Route path="/health" component={GamerHealthHub} />
+              <Route path="/scoreboard" component={ScoreboardStudio} />
+              <Route path="/deals" component={BrandDealsHub} />
+              <Route path="/chai" component={ChaiSimulator} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
