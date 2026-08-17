@@ -112,6 +112,9 @@ const LassiBar = lazyWithRetry(() => import('@/pages/lassi-bar'));
 const ContractSigner = lazyWithRetry(() => import('@/pages/contract-signer'));
 const FoamPlanner = lazyWithRetry(() => import('@/pages/foam-planner'));
 const VadaPavRush = lazyWithRetry(() => import('@/pages/vadapav-rush'));
+const DraftCombine = lazyWithRetry(() => import('@/pages/draft-combine'));
+const ChatOverlayStudio = lazyWithRetry(() => import('@/pages/chat-overlay'));
+const BiryaniDumSimulator = lazyWithRetry(() => import('@/pages/biryani-dum'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -238,6 +241,9 @@ function ProtectedRoutes() {
               <Route path="/contract-signer" component={ContractSigner} />
               <Route path="/foam-planner" component={FoamPlanner} />
               <Route path="/vadapav-rush" component={VadaPavRush} />
+              <Route path="/draft-combine" component={DraftCombine} />
+              <Route path="/chat-overlay" component={ChatOverlayStudio} />
+              <Route path="/biryani-dum" component={BiryaniDumSimulator} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

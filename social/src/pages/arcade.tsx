@@ -26,11 +26,12 @@ import { CyberDiya } from '@/components/games/CyberDiya';
 import { CyberGilliDanda } from '@/components/games/CyberGilliDanda';
 import { CyberSaanpSeedhi } from '@/components/games/CyberSaanpSeedhi';
 import { CyberDandiya } from '@/components/games/CyberDandiya';
+import { CyberDosa } from '@/components/games/CyberDosa';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -329,6 +330,18 @@ export default function Arcade() {
           >
             🥢 Dandiya
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'dosa' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('dosa');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'dosa' && "bg-amber-500 text-black shadow-md")}
+          >
+            🥞 Dosa Master
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -356,6 +369,7 @@ export default function Arcade() {
           {activeGame === 'gilli' && <CyberGilliDanda />}
           {activeGame === 'saanp' && <CyberSaanpSeedhi />}
           {activeGame === 'dandiya' && <CyberDandiya />}
+          {activeGame === 'dosa' && <CyberDosa />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
