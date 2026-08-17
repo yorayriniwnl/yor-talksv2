@@ -190,6 +190,9 @@ const AslamButterChickenRush = lazyWithRetry(() => import('@/pages/aslam-butter-
 const EconomyPlanner = lazyWithRetry(() => import('@/pages/economy-planner'));
 const DonoTrainStudio = lazyWithRetry(() => import('@/pages/dono-train'));
 const DoubleKaMeethaRush = lazyWithRetry(() => import('@/pages/double-ka-meetha'));
+const AbilityMatrix = lazyWithRetry(() => import('@/pages/ability-matrix'));
+const DecibelMeterStudio = lazyWithRetry(() => import('@/pages/decibel-meter'));
+const GaloutiKebabRush = lazyWithRetry(() => import('@/pages/galouti-kebab'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -394,6 +397,9 @@ function ProtectedRoutes() {
               <Route path="/economy-planner" component={EconomyPlanner} />
               <Route path="/dono-train" component={DonoTrainStudio} />
               <Route path="/double-ka-meetha" component={DoubleKaMeethaRush} />
+              <Route path="/ability-matrix" component={AbilityMatrix} />
+              <Route path="/decibel-meter" component={DecibelMeterStudio} />
+              <Route path="/galouti-kebab" component={GaloutiKebabRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
