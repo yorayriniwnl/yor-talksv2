@@ -115,6 +115,9 @@ const VadaPavRush = lazyWithRetry(() => import('@/pages/vadapav-rush'));
 const DraftCombine = lazyWithRetry(() => import('@/pages/draft-combine'));
 const ChatOverlayStudio = lazyWithRetry(() => import('@/pages/chat-overlay'));
 const BiryaniDumSimulator = lazyWithRetry(() => import('@/pages/biryani-dum'));
+const SFXVault = lazyWithRetry(() => import('@/pages/sfx-vault'));
+const ThumbnailStudio = lazyWithRetry(() => import('@/pages/thumbnail-studio'));
+const ScrimsScheduler = lazyWithRetry(() => import('@/pages/scrims-scheduler'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -244,6 +247,9 @@ function ProtectedRoutes() {
               <Route path="/draft-combine" component={DraftCombine} />
               <Route path="/chat-overlay" component={ChatOverlayStudio} />
               <Route path="/biryani-dum" component={BiryaniDumSimulator} />
+              <Route path="/sfx-vault" component={SFXVault} />
+              <Route path="/thumbnail-studio" component={ThumbnailStudio} />
+              <Route path="/scrims-scheduler" component={ScrimsScheduler} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
