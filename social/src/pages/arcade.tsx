@@ -25,11 +25,12 @@ import { CyberKabaddi } from '@/components/games/CyberKabaddi';
 import { CyberDiya } from '@/components/games/CyberDiya';
 import { CyberGilliDanda } from '@/components/games/CyberGilliDanda';
 import { CyberSaanpSeedhi } from '@/components/games/CyberSaanpSeedhi';
+import { CyberDandiya } from '@/components/games/CyberDandiya';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -316,6 +317,18 @@ export default function Arcade() {
           >
             🎲 Saanp Seedhi
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'dandiya' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('dandiya');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'dandiya' && "bg-gradient-to-r from-pink-500 to-amber-500 text-white shadow-md")}
+          >
+            🥢 Dandiya
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -342,6 +355,7 @@ export default function Arcade() {
           {activeGame === 'diya' && <CyberDiya />}
           {activeGame === 'gilli' && <CyberGilliDanda />}
           {activeGame === 'saanp' && <CyberSaanpSeedhi />}
+          {activeGame === 'dandiya' && <CyberDandiya />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

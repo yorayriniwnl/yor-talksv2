@@ -109,6 +109,9 @@ const TablaSynth = lazyWithRetry(() => import('@/pages/tabla-synth'));
 const JerseyCustomizer = lazyWithRetry(() => import('@/pages/jersey-customizer'));
 const NDAVault = lazyWithRetry(() => import('@/pages/nda-vault'));
 const LassiBar = lazyWithRetry(() => import('@/pages/lassi-bar'));
+const ContractSigner = lazyWithRetry(() => import('@/pages/contract-signer'));
+const FoamPlanner = lazyWithRetry(() => import('@/pages/foam-planner'));
+const VadaPavRush = lazyWithRetry(() => import('@/pages/vadapav-rush'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -232,6 +235,9 @@ function ProtectedRoutes() {
               <Route path="/jersey-customizer" component={JerseyCustomizer} />
               <Route path="/nda-vault" component={NDAVault} />
               <Route path="/lassi-bar" component={LassiBar} />
+              <Route path="/contract-signer" component={ContractSigner} />
+              <Route path="/foam-planner" component={FoamPlanner} />
+              <Route path="/vadapav-rush" component={VadaPavRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
