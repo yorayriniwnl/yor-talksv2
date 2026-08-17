@@ -145,6 +145,9 @@ const PohaJalebiRush = lazyWithRetry(() => import('@/pages/poha-jalebi'));
 const ScrimsLeaderboard = lazyWithRetry(() => import('@/pages/scrims-leaderboard'));
 const SubathonTimer = lazyWithRetry(() => import('@/pages/subathon-timer'));
 const LittiChokhaRush = lazyWithRetry(() => import('@/pages/litti-chokha'));
+const KillzoneAnalyzer = lazyWithRetry(() => import('@/pages/killzone-analyzer'));
+const HypeTrainHUD = lazyWithRetry(() => import('@/pages/hypetrain-hud'));
+const DalBaatiRush = lazyWithRetry(() => import('@/pages/dal-baati'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -304,6 +307,9 @@ function ProtectedRoutes() {
               <Route path="/scrims-leaderboard" component={ScrimsLeaderboard} />
               <Route path="/subathon-timer" component={SubathonTimer} />
               <Route path="/litti-chokha" component={LittiChokhaRush} />
+              <Route path="/killzone-analyzer" component={KillzoneAnalyzer} />
+              <Route path="/hypetrain-hud" component={HypeTrainHUD} />
+              <Route path="/dal-baati" component={DalBaatiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
