@@ -313,6 +313,9 @@ const BikaneriGhevarRush = lazyWithRetry(() => import('@/pages/bikaneri-ghevar')
 const PopFlashMatrix = lazyWithRetry(() => import('@/pages/pop-flash-matrix'));
 const EmoteLorenzAttractorStudio = lazyWithRetry(() => import('@/pages/emote-lorenz-attractor'));
 const KerSangriHandiRush = lazyWithRetry(() => import('@/pages/ker-sangri-handi'));
+const WeaponDropMatrix = lazyWithRetry(() => import('@/pages/weapon-drop-matrix'));
+const EmoteCalabiYauStudio = lazyWithRetry(() => import('@/pages/emote-calabi-yau'));
+const DalDhokliRush = lazyWithRetry(() => import('@/pages/dal-dhokli'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -640,6 +643,9 @@ function ProtectedRoutes() {
               <Route path="/pop-flash-matrix" component={PopFlashMatrix} />
               <Route path="/emote-lorenz-attractor" component={EmoteLorenzAttractorStudio} />
               <Route path="/ker-sangri-handi" component={KerSangriHandiRush} />
+              <Route path="/weapon-drop-matrix" component={WeaponDropMatrix} />
+              <Route path="/emote-calabi-yau" component={EmoteCalabiYauStudio} />
+              <Route path="/dal-dhokli" component={DalDhokliRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
