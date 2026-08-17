@@ -169,6 +169,9 @@ const MomosRush = lazyWithRetry(() => import('@/pages/momos-rush'));
 const RecoilPatternMatrix = lazyWithRetry(() => import('@/pages/recoil-matrix'));
 const ScoreTallyStudio = lazyWithRetry(() => import('@/pages/score-tally'));
 const BaidaRotiRush = lazyWithRetry(() => import('@/pages/baida-roti'));
+const DefusalTimerHUD = lazyWithRetry(() => import('@/pages/defusal-timer'));
+const PollOverlayStudio = lazyWithRetry(() => import('@/pages/poll-overlay'));
+const BunMaskaRush = lazyWithRetry(() => import('@/pages/bun-maska'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -352,6 +355,9 @@ function ProtectedRoutes() {
               <Route path="/recoil-matrix" component={RecoilPatternMatrix} />
               <Route path="/score-tally" component={ScoreTallyStudio} />
               <Route path="/baida-roti" component={BaidaRotiRush} />
+              <Route path="/defusal-timer" component={DefusalTimerHUD} />
+              <Route path="/poll-overlay" component={PollOverlayStudio} />
+              <Route path="/bun-maska" component={BunMaskaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

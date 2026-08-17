@@ -45,11 +45,12 @@ import { CyberBalushahi } from '@/components/games/CyberBalushahi';
 import { CyberImarti } from '@/components/games/CyberImarti';
 import { CyberMalpua } from '@/components/games/CyberMalpua';
 import { CyberPayasam } from '@/components/games/CyberPayasam';
+import { CyberShrikhand } from '@/components/games/CyberShrikhand';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -576,6 +577,18 @@ export default function Arcade() {
           >
             👑 Kheer Payasam
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'shrikhand' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('shrikhand');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'shrikhand' && "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-600 text-black shadow-md")}
+          >
+            👑 Kesar Shrikhand
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -622,6 +635,7 @@ export default function Arcade() {
           {activeGame === 'imarti' && <CyberImarti />}
           {activeGame === 'malpua' && <CyberMalpua />}
           {activeGame === 'payasam' && <CyberPayasam />}
+          {activeGame === 'shrikhand' && <CyberShrikhand />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
