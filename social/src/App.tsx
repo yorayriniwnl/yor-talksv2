@@ -277,6 +277,9 @@ const KoriKundapuriRush = lazyWithRetry(() => import('@/pages/kori-kundapuri'));
 const LadderSlideMatrix = lazyWithRetry(() => import('@/pages/ladder-slide-matrix'));
 const EmotePlasmaVortexStudio = lazyWithRetry(() => import('@/pages/emote-plasma-vortex'));
 const ChingriMalaiCurryRush = lazyWithRetry(() => import('@/pages/chingri-malai-curry'));
+const BounceAngleMatrix = lazyWithRetry(() => import('@/pages/bounce-angle-matrix'));
+const EmoteLaserHelixStudio = lazyWithRetry(() => import('@/pages/emote-laser-helix'));
+const PitorKiSabziRush = lazyWithRetry(() => import('@/pages/pitor-ki-sabzi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -568,6 +571,9 @@ function ProtectedRoutes() {
               <Route path="/ladder-slide-matrix" component={LadderSlideMatrix} />
               <Route path="/emote-plasma-vortex" component={EmotePlasmaVortexStudio} />
               <Route path="/chingri-malai-curry" component={ChingriMalaiCurryRush} />
+              <Route path="/bounce-angle-matrix" component={BounceAngleMatrix} />
+              <Route path="/emote-laser-helix" component={EmoteLaserHelixStudio} />
+              <Route path="/pitor-ki-sabzi" component={PitorKiSabziRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
