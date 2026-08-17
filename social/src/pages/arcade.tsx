@@ -50,11 +50,12 @@ import { CyberGhevarMalai } from '@/components/games/CyberGhevarMalai';
 import { CyberGondLaddu } from '@/components/games/CyberGondLaddu';
 import { CyberBesanLadoo } from '@/components/games/CyberBesanLadoo';
 import { CyberChikki } from '@/components/games/CyberChikki';
+import { CyberPhirni } from '@/components/games/CyberPhirni';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -641,6 +642,18 @@ export default function Arcade() {
           >
             👑 Lonavala Chikki
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'phirni' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('phirni');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'phirni' && "bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500 text-black shadow-md")}
+          >
+            👑 Mango Phirni
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -692,6 +705,7 @@ export default function Arcade() {
           {activeGame === 'gond-laddu' && <CyberGondLaddu />}
           {activeGame === 'besan-ladoo' && <CyberBesanLadoo />}
           {activeGame === 'chikki' && <CyberChikki />}
+          {activeGame === 'phirni' && <CyberPhirni />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
