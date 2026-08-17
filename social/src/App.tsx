@@ -118,6 +118,9 @@ const BiryaniDumSimulator = lazyWithRetry(() => import('@/pages/biryani-dum'));
 const SFXVault = lazyWithRetry(() => import('@/pages/sfx-vault'));
 const ThumbnailStudio = lazyWithRetry(() => import('@/pages/thumbnail-studio'));
 const ScrimsScheduler = lazyWithRetry(() => import('@/pages/scrims-scheduler'));
+const RigBenchmark = lazyWithRetry(() => import('@/pages/rig-benchmark'));
+const PrizePoolEscrow = lazyWithRetry(() => import('@/pages/prizepool-escrow'));
+const FanChantsStudio = lazyWithRetry(() => import('@/pages/fan-chants'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -250,6 +253,9 @@ function ProtectedRoutes() {
               <Route path="/sfx-vault" component={SFXVault} />
               <Route path="/thumbnail-studio" component={ThumbnailStudio} />
               <Route path="/scrims-scheduler" component={ScrimsScheduler} />
+              <Route path="/rig-benchmark" component={RigBenchmark} />
+              <Route path="/prizepool-escrow" component={PrizePoolEscrow} />
+              <Route path="/fan-chants" component={FanChantsStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
