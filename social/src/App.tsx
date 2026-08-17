@@ -202,6 +202,9 @@ const MangaloreFishFryRush = lazyWithRetry(() => import('@/pages/mangalore-fish-
 const AccuracyMatrix = lazyWithRetry(() => import('@/pages/accuracy-matrix'));
 const LaserShowStudio = lazyWithRetry(() => import('@/pages/laser-show'));
 const DesiThaliRush = lazyWithRetry(() => import('@/pages/desi-thali'));
+const RotationMatrix = lazyWithRetry(() => import('@/pages/rotation-matrix'));
+const EmoteFountainStudio = lazyWithRetry(() => import('@/pages/emote-fountain'));
+const ParkKathiRollRush = lazyWithRetry(() => import('@/pages/park-kathi-roll'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -418,6 +421,9 @@ function ProtectedRoutes() {
               <Route path="/accuracy-matrix" component={AccuracyMatrix} />
               <Route path="/laser-show" component={LaserShowStudio} />
               <Route path="/desi-thali" component={DesiThaliRush} />
+              <Route path="/rotation-matrix" component={RotationMatrix} />
+              <Route path="/emote-fountain" component={EmoteFountainStudio} />
+              <Route path="/park-kathi-roll" component={ParkKathiRollRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
