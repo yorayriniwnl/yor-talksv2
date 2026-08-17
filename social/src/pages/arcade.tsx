@@ -61,11 +61,12 @@ import { CyberSohanHalwa } from '@/components/games/CyberSohanHalwa';
 import { CyberRajbhog } from '@/components/games/CyberRajbhog';
 import { CyberChumChum } from '@/components/games/CyberChumChum';
 import { CyberLangcha } from '@/components/games/CyberLangcha';
+import { CyberSitabhog } from '@/components/games/CyberSitabhog';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -784,6 +785,18 @@ export default function Arcade() {
           >
             👑 Shaktigarh Langcha
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'sitabhog' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('sitabhog');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'sitabhog' && "bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 text-black shadow-md")}
+          >
+            👑 Bardhaman Sitabhog
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -846,6 +859,7 @@ export default function Arcade() {
           {activeGame === 'rajbhog' && <CyberRajbhog />}
           {activeGame === 'chum-chum' && <CyberChumChum />}
           {activeGame === 'langcha' && <CyberLangcha />}
+          {activeGame === 'sitabhog' && <CyberSitabhog />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

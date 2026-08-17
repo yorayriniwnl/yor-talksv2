@@ -217,6 +217,9 @@ const RajasthaniLaalMaasRush = lazyWithRetry(() => import('@/pages/rajasthani-la
 const CrouchJumpMatrix = lazyWithRetry(() => import('@/pages/crouch-jump-matrix'));
 const EmoteAuroraStudio = lazyWithRetry(() => import('@/pages/emote-aurora'));
 const MirchiKaSalanRush = lazyWithRetry(() => import('@/pages/mirchi-ka-salan'));
+const BhopVelocityMatrix = lazyWithRetry(() => import('@/pages/bhop-velocity-matrix'));
+const EmoteSupernovaStudio = lazyWithRetry(() => import('@/pages/emote-supernova'));
+const MalabarPrawnsRush = lazyWithRetry(() => import('@/pages/malabar-prawns'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -448,6 +451,9 @@ function ProtectedRoutes() {
               <Route path="/crouch-jump-matrix" component={CrouchJumpMatrix} />
               <Route path="/emote-aurora" component={EmoteAuroraStudio} />
               <Route path="/mirchi-ka-salan" component={MirchiKaSalanRush} />
+              <Route path="/bhop-velocity-matrix" component={BhopVelocityMatrix} />
+              <Route path="/emote-supernova" component={EmoteSupernovaStudio} />
+              <Route path="/malabar-prawns" component={MalabarPrawnsRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
