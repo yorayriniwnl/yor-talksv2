@@ -253,6 +253,9 @@ const KoshaMangshoRush = lazyWithRetry(() => import('@/pages/kosha-mangsho'));
 const ShadowAdvantageMatrix = lazyWithRetry(() => import('@/pages/shadow-advantage-matrix'));
 const EmoteParticleTornadoStudio = lazyWithRetry(() => import('@/pages/emote-particle-tornado'));
 const KashmiriGushtabaRush = lazyWithRetry(() => import('@/pages/kashmiri-gushtaba'));
+const PopPeekMatrix = lazyWithRetry(() => import('@/pages/pop-peek-matrix'));
+const EmoteAuroraWaveStudio = lazyWithRetry(() => import('@/pages/emote-aurora-wave'));
+const RajasthaniKerSangriRush = lazyWithRetry(() => import('@/pages/rajasthani-ker-sangri'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -520,6 +523,9 @@ function ProtectedRoutes() {
               <Route path="/shadow-advantage-matrix" component={ShadowAdvantageMatrix} />
               <Route path="/emote-particle-tornado" component={EmoteParticleTornadoStudio} />
               <Route path="/kashmiri-gushtaba" component={KashmiriGushtabaRush} />
+              <Route path="/pop-peek-matrix" component={PopPeekMatrix} />
+              <Route path="/emote-aurora-wave" component={EmoteAuroraWaveStudio} />
+              <Route path="/rajasthani-ker-sangri" component={RajasthaniKerSangriRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
