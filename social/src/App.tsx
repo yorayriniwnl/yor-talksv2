@@ -256,6 +256,9 @@ const KashmiriGushtabaRush = lazyWithRetry(() => import('@/pages/kashmiri-gushta
 const PopPeekMatrix = lazyWithRetry(() => import('@/pages/pop-peek-matrix'));
 const EmoteAuroraWaveStudio = lazyWithRetry(() => import('@/pages/emote-aurora-wave'));
 const RajasthaniKerSangriRush = lazyWithRetry(() => import('@/pages/rajasthani-ker-sangri'));
+const VerticalFOVMatrix = lazyWithRetry(() => import('@/pages/vertical-fov-matrix'));
+const EmoteMatrixGridStudio = lazyWithRetry(() => import('@/pages/emote-matrix-grid'));
+const ChettinadSukkaRush = lazyWithRetry(() => import('@/pages/chettinad-sukka'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -526,6 +529,9 @@ function ProtectedRoutes() {
               <Route path="/pop-peek-matrix" component={PopPeekMatrix} />
               <Route path="/emote-aurora-wave" component={EmoteAuroraWaveStudio} />
               <Route path="/rajasthani-ker-sangri" component={RajasthaniKerSangriRush} />
+              <Route path="/vertical-fov-matrix" component={VerticalFOVMatrix} />
+              <Route path="/emote-matrix-grid" component={EmoteMatrixGridStudio} />
+              <Route path="/chettinad-sukka" component={ChettinadSukkaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
