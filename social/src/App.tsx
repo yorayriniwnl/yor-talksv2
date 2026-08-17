@@ -304,6 +304,9 @@ const GatteKiKadhiRush = lazyWithRetry(() => import('@/pages/gatte-ki-kadhi'));
 const ArmorPunchMatrix = lazyWithRetry(() => import('@/pages/armor-punch-matrix'));
 const EmoteHypersphereVortexStudio = lazyWithRetry(() => import('@/pages/emote-hypersphere-vortex'));
 const SangriKadhiRush = lazyWithRetry(() => import('@/pages/sangri-kadhi'));
+const BulletTracerMatrix = lazyWithRetry(() => import('@/pages/bullet-tracer-matrix'));
+const EmoteTorusKnotStudio = lazyWithRetry(() => import('@/pages/emote-torusknot-studio'));
+const DahiGujiyaRush = lazyWithRetry(() => import('@/pages/dahi-gujiya'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -622,6 +625,9 @@ function ProtectedRoutes() {
               <Route path="/armor-punch-matrix" component={ArmorPunchMatrix} />
               <Route path="/emote-hypersphere-vortex" component={EmoteHypersphereVortexStudio} />
               <Route path="/sangri-kadhi" component={SangriKadhiRush} />
+              <Route path="/bullet-tracer-matrix" component={BulletTracerMatrix} />
+              <Route path="/emote-torusknot-studio" component={EmoteTorusKnotStudio} />
+              <Route path="/dahi-gujiya" component={DahiGujiyaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
