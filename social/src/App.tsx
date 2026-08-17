@@ -289,6 +289,9 @@ const PapadMangodiRush = lazyWithRetry(() => import('@/pages/papad-mangodi'));
 const WeaponCatchMatrix = lazyWithRetry(() => import('@/pages/weapon-catch-matrix'));
 const EmoteConstellationChartStudio = lazyWithRetry(() => import('@/pages/emote-constellation-chart'));
 const GovindGattaRush = lazyWithRetry(() => import('@/pages/govind-gatta'));
+const BombCarrierMatrix = lazyWithRetry(() => import('@/pages/bomb-carrier-matrix'));
+const EmoteWarpDriveTunnelStudio = lazyWithRetry(() => import('@/pages/emote-warpdrive-tunnel'));
+const BajraKhichdiRush = lazyWithRetry(() => import('@/pages/bajra-khichdi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -592,6 +595,9 @@ function ProtectedRoutes() {
               <Route path="/weapon-catch-matrix" component={WeaponCatchMatrix} />
               <Route path="/emote-constellation-chart" component={EmoteConstellationChartStudio} />
               <Route path="/govind-gatta" component={GovindGattaRush} />
+              <Route path="/bomb-carrier-matrix" component={BombCarrierMatrix} />
+              <Route path="/emote-warpdrive-tunnel" component={EmoteWarpDriveTunnelStudio} />
+              <Route path="/bajra-khichdi" component={BajraKhichdiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

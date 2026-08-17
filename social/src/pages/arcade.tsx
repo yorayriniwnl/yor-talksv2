@@ -85,11 +85,12 @@ import { CyberDilkhushak } from '@/components/games/CyberDilkhushak';
 import { CyberGulabPaak } from '@/components/games/CyberGulabPaak';
 import { CyberMawaKachori } from '@/components/games/CyberMawaKachori';
 import { CyberChurmaLadoo } from '@/components/games/CyberChurmaLadoo';
+import { CyberPaanPeda } from '@/components/games/CyberPaanPeda';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -1096,6 +1097,18 @@ export default function Arcade() {
           >
             👑 Churma Laddu
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'awadhi-paan-peda' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('awadhi-paan-peda');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'awadhi-paan-peda' && "bg-gradient-to-r from-emerald-500 via-teal-500 to-rose-500 text-white shadow-md")}
+          >
+            👑 Paan Peda
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -1182,6 +1195,7 @@ export default function Arcade() {
           {activeGame === 'mewari-gulab-paak' && <CyberGulabPaak />}
           {activeGame === 'jodhpuri-mawa-kachori' && <CyberMawaKachori />}
           {activeGame === 'marwari-churma-ladoo' && <CyberChurmaLadoo />}
+          {activeGame === 'awadhi-paan-peda' && <CyberPaanPeda />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
