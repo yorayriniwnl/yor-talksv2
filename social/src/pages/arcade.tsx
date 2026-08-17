@@ -67,11 +67,12 @@ import { CyberMalaiPaan } from '@/components/games/CyberMalaiPaan';
 import { CyberAnjeerHalwa } from '@/components/games/CyberAnjeerHalwa';
 import { CyberKesarChumChum } from '@/components/games/CyberKesarChumChum';
 import { CyberKajuPistaRoll } from '@/components/games/CyberKajuPistaRoll';
+import { CyberAgraPetha } from '@/components/games/CyberAgraPetha';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -862,6 +863,18 @@ export default function Arcade() {
           >
             👑 Shahi Kaju Pista Roll
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'agra-petha' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('agra-petha');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'agra-petha' && "bg-gradient-to-r from-yellow-300 via-amber-400 to-emerald-500 text-black shadow-md")}
+          >
+            👑 Agra Angoori Petha
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -930,6 +943,7 @@ export default function Arcade() {
           {activeGame === 'anjeer-halwa' && <CyberAnjeerHalwa />}
           {activeGame === 'kesar-chum-chum' && <CyberKesarChumChum />}
           {activeGame === 'kaju-pista-roll' && <CyberKajuPistaRoll />}
+          {activeGame === 'agra-petha' && <CyberAgraPetha />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

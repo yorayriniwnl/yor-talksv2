@@ -235,6 +235,9 @@ const KoriRottiRush = lazyWithRetry(() => import('@/pages/kori-rotti'));
 const SpreadRecoveryMatrix = lazyWithRetry(() => import('@/pages/spread-recovery-matrix'));
 const EmotePrismLaserStudio = lazyWithRetry(() => import('@/pages/emote-prism-laser'));
 const GatteKiSabziRush = lazyWithRetry(() => import('@/pages/gatte-ki-sabzi'));
+const SkyboxLineupMatrix = lazyWithRetry(() => import('@/pages/skybox-lineup-matrix'));
+const EmoteGlitchMatrixStudio = lazyWithRetry(() => import('@/pages/emote-glitch-matrix'));
+const DindigulBiryaniRush = lazyWithRetry(() => import('@/pages/dindigul-biryani'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -484,6 +487,9 @@ function ProtectedRoutes() {
               <Route path="/spread-recovery-matrix" component={SpreadRecoveryMatrix} />
               <Route path="/emote-prism-laser" component={EmotePrismLaserStudio} />
               <Route path="/gatte-ki-sabzi" component={GatteKiSabziRush} />
+              <Route path="/skybox-lineup-matrix" component={SkyboxLineupMatrix} />
+              <Route path="/emote-glitch-matrix" component={EmoteGlitchMatrixStudio} />
+              <Route path="/dindigul-biryani" component={DindigulBiryaniRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
