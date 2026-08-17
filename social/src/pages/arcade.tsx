@@ -92,11 +92,12 @@ import { CyberKesarMalaiPedaMini } from '@/components/games/CyberKesarMalaiPedaM
 import { CyberGulabPaanGilori } from '@/components/games/CyberGulabPaanGilori';
 import { CyberMawaGujiyaRoyal } from '@/components/games/CyberMawaGujiyaRoyal';
 import { CyberKesarSandeshRoyal } from '@/components/games/CyberKesarSandeshRoyal';
+import { CyberKesarChumChumRoyal } from '@/components/games/CyberKesarChumChumRoyal';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda' | 'braj-kesar-malai-peda' | 'awadhi-gulab-paan-gilori' | 'braj-shahi-mawa-gujiya' | 'bengali-kesar-sandesh-royal'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda' | 'braj-kesar-malai-peda' | 'awadhi-gulab-paan-gilori' | 'braj-shahi-mawa-gujiya' | 'bengali-kesar-sandesh-royal' | 'bengali-kesar-chum-chum-royal'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -1187,6 +1188,18 @@ export default function Arcade() {
           >
             👑 Kesar Sandesh
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'bengali-kesar-chum-chum-royal' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('bengali-kesar-chum-chum-royal');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'bengali-kesar-chum-chum-royal' && "bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black shadow-md")}
+          >
+            👑 Chum Chum
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -1280,6 +1293,7 @@ export default function Arcade() {
           {activeGame === 'awadhi-gulab-paan-gilori' && <CyberGulabPaanGilori />}
           {activeGame === 'braj-shahi-mawa-gujiya' && <CyberMawaGujiyaRoyal />}
           {activeGame === 'bengali-kesar-sandesh-royal' && <CyberKesarSandeshRoyal />}
+          {activeGame === 'bengali-kesar-chum-chum-royal' && <CyberKesarChumChumRoyal />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

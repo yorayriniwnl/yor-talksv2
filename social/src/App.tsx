@@ -310,6 +310,9 @@ const DahiGujiyaRush = lazyWithRetry(() => import('@/pages/dahi-gujiya'));
 const JiggleCounterMatrix = lazyWithRetry(() => import('@/pages/jiggle-counter-matrix'));
 const EmotePlasmaRingStudio = lazyWithRetry(() => import('@/pages/emote-plasma-ring'));
 const BikaneriGhevarRush = lazyWithRetry(() => import('@/pages/bikaneri-ghevar'));
+const PopFlashMatrix = lazyWithRetry(() => import('@/pages/pop-flash-matrix'));
+const EmoteLorenzAttractorStudio = lazyWithRetry(() => import('@/pages/emote-lorenz-attractor'));
+const KerSangriHandiRush = lazyWithRetry(() => import('@/pages/ker-sangri-handi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -634,6 +637,9 @@ function ProtectedRoutes() {
               <Route path="/jiggle-counter-matrix" component={JiggleCounterMatrix} />
               <Route path="/emote-plasma-ring" component={EmotePlasmaRingStudio} />
               <Route path="/bikaneri-ghevar" component={BikaneriGhevarRush} />
+              <Route path="/pop-flash-matrix" component={PopFlashMatrix} />
+              <Route path="/emote-lorenz-attractor" component={EmoteLorenzAttractorStudio} />
+              <Route path="/ker-sangri-handi" component={KerSangriHandiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
