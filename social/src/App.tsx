@@ -142,6 +142,9 @@ const BedmiPuriRush = lazyWithRetry(() => import('@/pages/bedmi-puri'));
 const BootcampAllocator = lazyWithRetry(() => import('@/pages/bootcamp-allocator'));
 const LivePollsHUD = lazyWithRetry(() => import('@/pages/live-polls'));
 const PohaJalebiRush = lazyWithRetry(() => import('@/pages/poha-jalebi'));
+const ScrimsLeaderboard = lazyWithRetry(() => import('@/pages/scrims-leaderboard'));
+const SubathonTimer = lazyWithRetry(() => import('@/pages/subathon-timer'));
+const LittiChokhaRush = lazyWithRetry(() => import('@/pages/litti-chokha'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -298,6 +301,9 @@ function ProtectedRoutes() {
               <Route path="/bootcamp-allocator" component={BootcampAllocator} />
               <Route path="/live-polls" component={LivePollsHUD} />
               <Route path="/poha-jalebi" component={PohaJalebiRush} />
+              <Route path="/scrims-leaderboard" component={ScrimsLeaderboard} />
+              <Route path="/subathon-timer" component={SubathonTimer} />
+              <Route path="/litti-chokha" component={LittiChokhaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
