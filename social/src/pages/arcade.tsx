@@ -88,11 +88,12 @@ import { CyberChurmaLadoo } from '@/components/games/CyberChurmaLadoo';
 import { CyberPaanPeda } from '@/components/games/CyberPaanPeda';
 import { CyberLachedarRabdi } from '@/components/games/CyberLachedarRabdi';
 import { CyberGulkandMawaPeda } from '@/components/games/CyberGulkandMawaPeda';
+import { CyberKesarMalaiPedaMini } from '@/components/games/CyberKesarMalaiPedaMini';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda' | 'braj-kesar-malai-peda'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -1135,6 +1136,18 @@ export default function Arcade() {
           >
             👑 Gulkand Peda
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'braj-kesar-malai-peda' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('braj-kesar-malai-peda');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'braj-kesar-malai-peda' && "bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black shadow-md")}
+          >
+            👑 Kesar Peda
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -1224,6 +1237,7 @@ export default function Arcade() {
           {activeGame === 'awadhi-paan-peda' && <CyberPaanPeda />}
           {activeGame === 'mathura-lachedar-rabdi' && <CyberLachedarRabdi />}
           {activeGame === 'bikaneri-gulkand-peda' && <CyberGulkandMawaPeda />}
+          {activeGame === 'braj-kesar-malai-peda' && <CyberKesarMalaiPedaMini />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

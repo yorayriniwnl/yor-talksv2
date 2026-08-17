@@ -298,6 +298,9 @@ const MogarKachoriRush = lazyWithRetry(() => import('@/pages/mogar-kachori'));
 const FirstBulletInaccuracyMatrix = lazyWithRetry(() => import('@/pages/first-bullet-inaccuracy'));
 const EmoteMobiusLoopStudio = lazyWithRetry(() => import('@/pages/emote-mobius-loop'));
 const ChanaJaisalmeriRush = lazyWithRetry(() => import('@/pages/chana-jaisalmeri'));
+const HitboxDisjointMatrix = lazyWithRetry(() => import('@/pages/hitbox-disjoint-matrix'));
+const EmoteGyroscopeRingStudio = lazyWithRetry(() => import('@/pages/emote-gyroscope-ring'));
+const GatteKiKadhiRush = lazyWithRetry(() => import('@/pages/gatte-ki-kadhi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -610,6 +613,9 @@ function ProtectedRoutes() {
               <Route path="/first-bullet-inaccuracy" component={FirstBulletInaccuracyMatrix} />
               <Route path="/emote-mobius-loop" component={EmoteMobiusLoopStudio} />
               <Route path="/chana-jaisalmeri" component={ChanaJaisalmeriRush} />
+              <Route path="/hitbox-disjoint-matrix" component={HitboxDisjointMatrix} />
+              <Route path="/emote-gyroscope-ring" component={EmoteGyroscopeRingStudio} />
+              <Route path="/gatte-ki-kadhi" component={GatteKiKadhiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
