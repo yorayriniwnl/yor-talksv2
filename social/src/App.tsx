@@ -262,6 +262,9 @@ const ChettinadSukkaRush = lazyWithRetry(() => import('@/pages/chettinad-sukka')
 const UtilityStackingMatrix = lazyWithRetry(() => import('@/pages/utility-stacking-matrix'));
 const EmoteRainbowBeamStudio = lazyWithRetry(() => import('@/pages/emote-rainbow-beam'));
 const MalabarKozhiRoastRush = lazyWithRetry(() => import('@/pages/malabar-kozhi-roast'));
+const FastDropMatrix = lazyWithRetry(() => import('@/pages/fast-drop-matrix'));
+const EmoteStarlightShowerStudio = lazyWithRetry(() => import('@/pages/emote-starlight-shower'));
+const GatteKaPulaoRush = lazyWithRetry(() => import('@/pages/gatte-ka-pulao'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -538,6 +541,9 @@ function ProtectedRoutes() {
               <Route path="/utility-stacking-matrix" component={UtilityStackingMatrix} />
               <Route path="/emote-rainbow-beam" component={EmoteRainbowBeamStudio} />
               <Route path="/malabar-kozhi-roast" component={MalabarKozhiRoastRush} />
+              <Route path="/fast-drop-matrix" component={FastDropMatrix} />
+              <Route path="/emote-starlight-shower" component={EmoteStarlightShowerStudio} />
+              <Route path="/gatte-ka-pulao" component={GatteKaPulaoRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
