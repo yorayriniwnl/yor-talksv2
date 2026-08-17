@@ -127,6 +127,9 @@ const PavBhajiRush = lazyWithRetry(() => import('@/pages/pavbhaji-rush'));
 const FairPlayCompliance = lazyWithRetry(() => import('@/pages/fairplay-compliance'));
 const AudioMatrix = lazyWithRetry(() => import('@/pages/audio-matrix'));
 const CholeBhatureRush = lazyWithRetry(() => import('@/pages/chole-bhature'));
+const GreenRoom = lazyWithRetry(() => import('@/pages/green-room'));
+const VetoStudio = lazyWithRetry(() => import('@/pages/veto-studio'));
+const KulfiFaloodaRush = lazyWithRetry(() => import('@/pages/kulfi-falooda'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -268,6 +271,9 @@ function ProtectedRoutes() {
               <Route path="/fairplay-compliance" component={FairPlayCompliance} />
               <Route path="/audio-matrix" component={AudioMatrix} />
               <Route path="/chole-bhature" component={CholeBhatureRush} />
+              <Route path="/green-room" component={GreenRoom} />
+              <Route path="/veto-studio" component={VetoStudio} />
+              <Route path="/kulfi-falooda" component={KulfiFaloodaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

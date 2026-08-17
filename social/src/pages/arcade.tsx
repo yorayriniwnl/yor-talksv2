@@ -31,11 +31,12 @@ import { CyberGulabJamun } from '@/components/games/CyberGulabJamun';
 import { CyberSamosa } from '@/components/games/CyberSamosa';
 import { CyberJalebi } from '@/components/games/CyberJalebi';
 import { CyberRasgulla } from '@/components/games/CyberRasgulla';
+import { CyberKajuKatli } from '@/components/games/CyberKajuKatli';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -394,6 +395,18 @@ export default function Arcade() {
           >
             ⚪ Rasgulla
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'kaju' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('kaju');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'kaju' && "bg-gradient-to-r from-amber-200 via-white to-slate-200 text-black shadow-md")}
+          >
+            💎 Kaju Katli
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -426,6 +439,7 @@ export default function Arcade() {
           {activeGame === 'samosa' && <CyberSamosa />}
           {activeGame === 'jalebi' && <CyberJalebi />}
           {activeGame === 'rasgulla' && <CyberRasgulla />}
+          {activeGame === 'kaju' && <CyberKajuKatli />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

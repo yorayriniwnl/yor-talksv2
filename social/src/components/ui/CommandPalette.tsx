@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -42,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Radio, label: 'Streamer Backstage Green Room', path: '/green-room' },
+    { icon: Crosshair, label: 'Esports Map Veto & Pick/Ban Studio', path: '/veto-studio' },
+    { icon: IceCream, label: 'Desi Kulfi Falooda Matka Express', path: '/kulfi-falooda' },
     { icon: Shield, label: 'Esports Anti-Doping & Fair Play Hub', path: '/fairplay-compliance' },
     { icon: Activity, label: 'Dual-PC Audio Matrix & DSP Routing', path: '/audio-matrix' },
     { icon: Utensils, label: 'Desi Chole Bhature Express', path: '/chole-bhature' },
