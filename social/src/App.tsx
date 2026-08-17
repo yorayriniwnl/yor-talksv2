@@ -82,6 +82,9 @@ const EsportsAcademy = lazyWithRetry(() => import('@/pages/academy'));
 const EsportsCalendar = lazyWithRetry(() => import('@/pages/esports-calendar'));
 const VODReviewStudio = lazyWithRetry(() => import('@/pages/vod-review'));
 const CreatorStore = lazyWithRetry(() => import('@/pages/creator-store'));
+const SuperchatStudio = lazyWithRetry(() => import('@/pages/superchat-studio'));
+const SquadCommsRoom = lazyWithRetry(() => import('@/pages/squad-comms'));
+const GamerHealthHub = lazyWithRetry(() => import('@/pages/gamer-health'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -178,6 +181,9 @@ function ProtectedRoutes() {
               <Route path="/calendar" component={EsportsCalendar} />
               <Route path="/vods" component={VODReviewStudio} />
               <Route path="/store" component={CreatorStore} />
+              <Route path="/superchat" component={SuperchatStudio} />
+              <Route path="/comms" component={SquadCommsRoom} />
+              <Route path="/health" component={GamerHealthHub} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

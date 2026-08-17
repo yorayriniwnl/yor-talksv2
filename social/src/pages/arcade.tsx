@@ -16,11 +16,12 @@ import { CyberBrickBreaker } from '@/components/games/CyberBrickBreaker';
 import { Cyber2048 } from '@/components/games/Cyber2048';
 import { CyberChaiTap } from '@/components/games/CyberChaiTap';
 import { CyberRunner } from '@/components/games/CyberRunner';
+import { CyberMemory } from '@/components/games/CyberMemory';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -199,6 +200,18 @@ export default function Arcade() {
           >
             🏃 Runner
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'memory' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('memory');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'memory' && "bg-purple-600 text-white shadow-md")}
+          >
+            🧠 Memory
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -216,6 +229,7 @@ export default function Arcade() {
           {activeGame === '2048' && <Cyber2048 />}
           {activeGame === 'chai' && <CyberChaiTap />}
           {activeGame === 'runner' && <CyberRunner />}
+          {activeGame === 'memory' && <CyberMemory />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
