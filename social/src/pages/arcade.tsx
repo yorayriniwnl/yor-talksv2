@@ -82,11 +82,12 @@ import { CyberKhurchan } from '@/components/games/CyberKhurchan';
 import { CyberKesarGujiya } from '@/components/games/CyberKesarGujiya';
 import { CyberKashmiriPhirni } from '@/components/games/CyberKashmiriPhirni';
 import { CyberDilkhushak } from '@/components/games/CyberDilkhushak';
+import { CyberGulabPaak } from '@/components/games/CyberGulabPaak';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -1057,6 +1058,18 @@ export default function Arcade() {
           >
             👑 Shahi Dilkhushak
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'mewari-gulab-paak' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('mewari-gulab-paak');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'mewari-gulab-paak' && "bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 text-white shadow-md")}
+          >
+            👑 Gulab Paak
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -1140,6 +1153,7 @@ export default function Arcade() {
           {activeGame === 'braj-kesar-gujiya' && <CyberKesarGujiya />}
           {activeGame === 'kashmiri-shahi-phirni' && <CyberKashmiriPhirni />}
           {activeGame === 'mewari-dilkhushak' && <CyberDilkhushak />}
+          {activeGame === 'mewari-gulab-paak' && <CyberGulabPaak />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

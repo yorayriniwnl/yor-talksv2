@@ -280,6 +280,9 @@ const ChingriMalaiCurryRush = lazyWithRetry(() => import('@/pages/chingri-malai-
 const BounceAngleMatrix = lazyWithRetry(() => import('@/pages/bounce-angle-matrix'));
 const EmoteLaserHelixStudio = lazyWithRetry(() => import('@/pages/emote-laser-helix'));
 const PitorKiSabziRush = lazyWithRetry(() => import('@/pages/pitor-ki-sabzi'));
+const ScopeSwayMatrix = lazyWithRetry(() => import('@/pages/scope-sway-matrix'));
+const EmoteTachyonGridStudio = lazyWithRetry(() => import('@/pages/emote-tachyon-grid'));
+const KerDakRush = lazyWithRetry(() => import('@/pages/ker-dak'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -574,6 +577,9 @@ function ProtectedRoutes() {
               <Route path="/bounce-angle-matrix" component={BounceAngleMatrix} />
               <Route path="/emote-laser-helix" component={EmoteLaserHelixStudio} />
               <Route path="/pitor-ki-sabzi" component={PitorKiSabziRush} />
+              <Route path="/scope-sway-matrix" component={ScopeSwayMatrix} />
+              <Route path="/emote-tachyon-grid" component={EmoteTachyonGridStudio} />
+              <Route path="/ker-dak" component={KerDakRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
