@@ -53,11 +53,12 @@ import { CyberChikki } from '@/components/games/CyberChikki';
 import { CyberPhirni } from '@/components/games/CyberPhirni';
 import { CyberRabdiFalooda } from '@/components/games/CyberRabdiFalooda';
 import { CyberKajuAnjeer } from '@/components/games/CyberKajuAnjeer';
+import { CyberMatkaKulfi } from '@/components/games/CyberMatkaKulfi';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -680,6 +681,18 @@ export default function Arcade() {
           >
             👑 Kaju Anjeer Roll
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'matka-kulfi' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('matka-kulfi');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'matka-kulfi' && "bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-700 text-black shadow-md")}
+          >
+            👑 Matka Kulfi
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -734,6 +747,7 @@ export default function Arcade() {
           {activeGame === 'phirni' && <CyberPhirni />}
           {activeGame === 'falooda' && <CyberRabdiFalooda />}
           {activeGame === 'kaju-anjeer' && <CyberKajuAnjeer />}
+          {activeGame === 'matka-kulfi' && <CyberMatkaKulfi />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
