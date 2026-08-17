@@ -94,6 +94,9 @@ const MultistreamStudio = lazyWithRetry(() => import('@/pages/multistream'));
 const TransferPortal = lazyWithRetry(() => import('@/pages/transfer-portal'));
 const AcousticsLab = lazyWithRetry(() => import('@/pages/acoustics-lab'));
 const RickshawDrift = lazyWithRetry(() => import('@/pages/rickshaw-drift'));
+const AntiCheatWatchtower = lazyWithRetry(() => import('@/pages/anticheat-hub'));
+const AIHighlightsStudio = lazyWithRetry(() => import('@/pages/ai-highlights'));
+const CricketLab = lazyWithRetry(() => import('@/pages/cricket-lab'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -202,6 +205,9 @@ function ProtectedRoutes() {
               <Route path="/transfers" component={TransferPortal} />
               <Route path="/acoustics" component={AcousticsLab} />
               <Route path="/drift" component={RickshawDrift} />
+              <Route path="/anticheat" component={AntiCheatWatchtower} />
+              <Route path="/highlights" component={AIHighlightsStudio} />
+              <Route path="/cricket-lab" component={CricketLab} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
