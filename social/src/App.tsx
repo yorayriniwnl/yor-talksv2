@@ -283,6 +283,9 @@ const PitorKiSabziRush = lazyWithRetry(() => import('@/pages/pitor-ki-sabzi'));
 const ScopeSwayMatrix = lazyWithRetry(() => import('@/pages/scope-sway-matrix'));
 const EmoteTachyonGridStudio = lazyWithRetry(() => import('@/pages/emote-tachyon-grid'));
 const KerDakRush = lazyWithRetry(() => import('@/pages/ker-dak'));
+const RightPeakMatrix = lazyWithRetry(() => import('@/pages/right-peak-matrix'));
+const EmoteQuantumRibbonStudio = lazyWithRetry(() => import('@/pages/emote-quantum-ribbon'));
+const PapadMangodiRush = lazyWithRetry(() => import('@/pages/papad-mangodi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -580,6 +583,9 @@ function ProtectedRoutes() {
               <Route path="/scope-sway-matrix" component={ScopeSwayMatrix} />
               <Route path="/emote-tachyon-grid" component={EmoteTachyonGridStudio} />
               <Route path="/ker-dak" component={KerDakRush} />
+              <Route path="/right-peak-matrix" component={RightPeakMatrix} />
+              <Route path="/emote-quantum-ribbon" component={EmoteQuantumRibbonStudio} />
+              <Route path="/papad-mangodi" component={PapadMangodiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
