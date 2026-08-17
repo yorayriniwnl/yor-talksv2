@@ -241,6 +241,9 @@ const DindigulBiryaniRush = lazyWithRetry(() => import('@/pages/dindigul-biryani
 const OffAngleMatrix = lazyWithRetry(() => import('@/pages/off-angle-matrix'));
 const EmoteDholakBeatStudio = lazyWithRetry(() => import('@/pages/emote-dholak-beat'));
 const OdishaDalmaRush = lazyWithRetry(() => import('@/pages/odisha-dalma'));
+const SoundMaskingMatrix = lazyWithRetry(() => import('@/pages/sound-masking-matrix'));
+const EmoteBlackHoleWarpStudio = lazyWithRetry(() => import('@/pages/emote-blackhole-warp'));
+const GoanPrawnBalchaoRush = lazyWithRetry(() => import('@/pages/goan-prawn-balchao'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -496,6 +499,9 @@ function ProtectedRoutes() {
               <Route path="/off-angle-matrix" component={OffAngleMatrix} />
               <Route path="/emote-dholak-beat" component={EmoteDholakBeatStudio} />
               <Route path="/odisha-dalma" component={OdishaDalmaRush} />
+              <Route path="/sound-masking-matrix" component={SoundMaskingMatrix} />
+              <Route path="/emote-blackhole-warp" component={EmoteBlackHoleWarpStudio} />
+              <Route path="/goan-prawn-balchao" component={GoanPrawnBalchaoRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
