@@ -211,6 +211,9 @@ const ChettinadChickenRush = lazyWithRetry(() => import('@/pages/chettinad-chick
 const WallbangMatrix = lazyWithRetry(() => import('@/pages/wallbang-matrix'));
 const EmoteDragonStudio = lazyWithRetry(() => import('@/pages/emote-dragon'));
 const LucknowiBiryaniRush = lazyWithRetry(() => import('@/pages/lucknowi-biryani'));
+const JigglePeekMatrix = lazyWithRetry(() => import('@/pages/jiggle-peek-matrix'));
+const EmoteCometStudio = lazyWithRetry(() => import('@/pages/emote-comet'));
+const RajasthaniLaalMaasRush = lazyWithRetry(() => import('@/pages/rajasthani-laal-maas'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -436,6 +439,9 @@ function ProtectedRoutes() {
               <Route path="/wallbang-matrix" component={WallbangMatrix} />
               <Route path="/emote-dragon" component={EmoteDragonStudio} />
               <Route path="/lucknowi-biryani" component={LucknowiBiryaniRush} />
+              <Route path="/jiggle-peek-matrix" component={JigglePeekMatrix} />
+              <Route path="/emote-comet" component={EmoteCometStudio} />
+              <Route path="/rajasthani-laal-maas" component={RajasthaniLaalMaasRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
