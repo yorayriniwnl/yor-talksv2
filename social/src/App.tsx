@@ -301,6 +301,9 @@ const ChanaJaisalmeriRush = lazyWithRetry(() => import('@/pages/chana-jaisalmeri
 const HitboxDisjointMatrix = lazyWithRetry(() => import('@/pages/hitbox-disjoint-matrix'));
 const EmoteGyroscopeRingStudio = lazyWithRetry(() => import('@/pages/emote-gyroscope-ring'));
 const GatteKiKadhiRush = lazyWithRetry(() => import('@/pages/gatte-ki-kadhi'));
+const ArmorPunchMatrix = lazyWithRetry(() => import('@/pages/armor-punch-matrix'));
+const EmoteHypersphereVortexStudio = lazyWithRetry(() => import('@/pages/emote-hypersphere-vortex'));
+const SangriKadhiRush = lazyWithRetry(() => import('@/pages/sangri-kadhi'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -616,6 +619,9 @@ function ProtectedRoutes() {
               <Route path="/hitbox-disjoint-matrix" component={HitboxDisjointMatrix} />
               <Route path="/emote-gyroscope-ring" component={EmoteGyroscopeRingStudio} />
               <Route path="/gatte-ki-kadhi" component={GatteKiKadhiRush} />
+              <Route path="/armor-punch-matrix" component={ArmorPunchMatrix} />
+              <Route path="/emote-hypersphere-vortex" component={EmoteHypersphereVortexStudio} />
+              <Route path="/sangri-kadhi" component={SangriKadhiRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud, Sun, Milk, CloudRain, Coins, Radar, PartyPopper, Percent, EyeOff, Wind, Gauge, CloudLightning, Mountain, Layers, Wifi, Gem, Terminal, Orbit, MoveHorizontal, ArrowDown, Star, ArrowDownToLine, CornerDownRight, Dna, Focus, Grid, VolumeX, Box, Infinity } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud, Sun, Milk, CloudRain, Coins, Radar, PartyPopper, Percent, EyeOff, Wind, Gauge, CloudLightning, Mountain, Layers, Wifi, Gem, Terminal, Orbit, MoveHorizontal, ArrowDown, Star, ArrowDownToLine, CornerDownRight, Dna, Focus, Grid, VolumeX, Box, Infinity, Globe } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -42,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Shield, label: 'Esports Tactical Armor-Punch Lab', path: '/armor-punch-matrix' },
+    { icon: Globe, label: 'Streamer Live Chat Emote Hypersphere Studio', path: '/emote-hypersphere-vortex' },
+    { icon: Utensils, label: 'Desi Rajasthani Sangri Kadhi Express', path: '/sangri-kadhi' },
     { icon: ShieldAlert, label: 'Esports Tactical Hitbox Disjoint Lab', path: '/hitbox-disjoint-matrix' },
     { icon: Orbit, label: 'Streamer Live Chat Emote Gyroscope Studio', path: '/emote-gyroscope-ring' },
     { icon: Utensils, label: 'Desi Rajasthani Gatte Ki Kadhi Express', path: '/gatte-ki-kadhi' },
