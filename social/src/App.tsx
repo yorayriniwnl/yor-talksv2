@@ -250,6 +250,9 @@ const AmritsariCholeRush = lazyWithRetry(() => import('@/pages/amritsari-chole')
 const RunGunDecayMatrix = lazyWithRetry(() => import('@/pages/run-gun-decay-matrix'));
 const EmoteQuantumPortalStudio = lazyWithRetry(() => import('@/pages/emote-quantum-portal'));
 const KoshaMangshoRush = lazyWithRetry(() => import('@/pages/kosha-mangsho'));
+const ShadowAdvantageMatrix = lazyWithRetry(() => import('@/pages/shadow-advantage-matrix'));
+const EmoteParticleTornadoStudio = lazyWithRetry(() => import('@/pages/emote-particle-tornado'));
+const KashmiriGushtabaRush = lazyWithRetry(() => import('@/pages/kashmiri-gushtaba'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -514,6 +517,9 @@ function ProtectedRoutes() {
               <Route path="/run-gun-decay-matrix" component={RunGunDecayMatrix} />
               <Route path="/emote-quantum-portal" component={EmoteQuantumPortalStudio} />
               <Route path="/kosha-mangsho" component={KoshaMangshoRush} />
+              <Route path="/shadow-advantage-matrix" component={ShadowAdvantageMatrix} />
+              <Route path="/emote-particle-tornado" component={EmoteParticleTornadoStudio} />
+              <Route path="/kashmiri-gushtaba" component={KashmiriGushtabaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
