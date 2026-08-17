@@ -292,6 +292,9 @@ const GovindGattaRush = lazyWithRetry(() => import('@/pages/govind-gatta'));
 const BombCarrierMatrix = lazyWithRetry(() => import('@/pages/bomb-carrier-matrix'));
 const EmoteWarpDriveTunnelStudio = lazyWithRetry(() => import('@/pages/emote-warpdrive-tunnel'));
 const BajraKhichdiRush = lazyWithRetry(() => import('@/pages/bajra-khichdi'));
+const AudioOcclusionMatrix = lazyWithRetry(() => import('@/pages/audio-occlusion-matrix'));
+const EmoteTesseractCubeStudio = lazyWithRetry(() => import('@/pages/emote-tesseract-cube'));
+const MogarKachoriRush = lazyWithRetry(() => import('@/pages/mogar-kachori'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -598,6 +601,9 @@ function ProtectedRoutes() {
               <Route path="/bomb-carrier-matrix" component={BombCarrierMatrix} />
               <Route path="/emote-warpdrive-tunnel" component={EmoteWarpDriveTunnelStudio} />
               <Route path="/bajra-khichdi" component={BajraKhichdiRush} />
+              <Route path="/audio-occlusion-matrix" component={AudioOcclusionMatrix} />
+              <Route path="/emote-tesseract-cube" component={EmoteTesseractCubeStudio} />
+              <Route path="/mogar-kachori" component={MogarKachoriRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
