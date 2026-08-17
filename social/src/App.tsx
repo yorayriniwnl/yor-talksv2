@@ -175,6 +175,9 @@ const BunMaskaRush = lazyWithRetry(() => import('@/pages/bun-maska'));
 const SmokeSimulator = lazyWithRetry(() => import('@/pages/smoke-simulator'));
 const GoalMeterStudio = lazyWithRetry(() => import('@/pages/goal-meter'));
 const KeemaPavRush = lazyWithRetry(() => import('@/pages/keema-pav'));
+const FlashMatrix = lazyWithRetry(() => import('@/pages/flash-matrix'));
+const TickerBarStudio = lazyWithRetry(() => import('@/pages/ticker-bar'));
+const AppamStewRush = lazyWithRetry(() => import('@/pages/appam-stew'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -364,6 +367,9 @@ function ProtectedRoutes() {
               <Route path="/smoke-simulator" component={SmokeSimulator} />
               <Route path="/goal-meter" component={GoalMeterStudio} />
               <Route path="/keema-pav" component={KeemaPavRush} />
+              <Route path="/flash-matrix" component={FlashMatrix} />
+              <Route path="/ticker-bar" component={TickerBarStudio} />
+              <Route path="/appam-stew" component={AppamStewRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -47,11 +47,12 @@ import { CyberMalpua } from '@/components/games/CyberMalpua';
 import { CyberPayasam } from '@/components/games/CyberPayasam';
 import { CyberShrikhand } from '@/components/games/CyberShrikhand';
 import { CyberGhevarMalai } from '@/components/games/CyberGhevarMalai';
+import { CyberGondLaddu } from '@/components/games/CyberGondLaddu';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -602,6 +603,18 @@ export default function Arcade() {
           >
             👑 Malai Ghevar
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'gond-laddu' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('gond-laddu');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'gond-laddu' && "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-700 text-black shadow-md")}
+          >
+            👑 Shahi Gond Laddu
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -650,6 +663,7 @@ export default function Arcade() {
           {activeGame === 'payasam' && <CyberPayasam />}
           {activeGame === 'shrikhand' && <CyberShrikhand />}
           {activeGame === 'malai-ghewar' && <CyberGhevarMalai />}
+          {activeGame === 'gond-laddu' && <CyberGondLaddu />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

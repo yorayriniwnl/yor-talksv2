@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud } from 'lucide-react';
+import { Search, UserRound, Compass, Home, ShoppingBag, PlusSquare, Settings, Film, MessageCircle, X, Trophy, Video, Headphones, Gamepad2, Crown, Shield, Sparkles, MapPin, Smile, Code2, Music, Briefcase, BarChart3, Swords, Languages, Boxes, Volume2, FileText, Crosshair, Disc, Flame, Wand2, Shirt, TrendingUp, Activity, Monitor, Building2, Rocket, Radio, Scissors, Award, Gavel, GraduationCap, Calendar, Tv, Gift, Heart, Coffee, Key, Keyboard, ArrowRightLeft, Waves, Navigation, ShieldAlert, Presentation, Utensils, Calculator, Eye, Scale, Lock, FileSignature, Grid3X3, ImageIcon, Cpu, Megaphone, Lightbulb, IceCream, Palette, Bookmark, Vote, Clock, Zap, Target, Bomb, Cloud, Sun } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -42,6 +42,9 @@ export function CommandPalette() {
     { icon: Home, label: 'Home Feed', path: '/' },
     { icon: Compass, label: 'Explore Grid', path: '/explore' },
     { icon: Film, label: 'Reels Swiper', path: '/videos' },
+    { icon: Sun, label: 'Esports Tactical Flashbang Duration & Blind Matrix', path: '/flash-matrix' },
+    { icon: Tv, label: 'Streamer OBS Broadcast Ticker Bar Studio', path: '/ticker-bar' },
+    { icon: Utensils, label: 'Desi Appam Stew Kerala Express', path: '/appam-stew' },
     { icon: Cloud, label: 'Esports Tactical Smoke Wall & Lineup Simulator', path: '/smoke-simulator' },
     { icon: Target, label: 'Streamer Subathon Goal Milestone Meter', path: '/goal-meter' },
     { icon: Flame, label: 'Desi Keema Pav Bohri Mohalla Express', path: '/keema-pav' },
