@@ -79,6 +79,9 @@ const TrophyRoom = lazyWithRetry(() => import('@/pages/trophy-room'));
 const CricketAuctionArena = lazyWithRetry(() => import('@/pages/cricket-auction'));
 const VoiceFXStudio = lazyWithRetry(() => import('@/pages/voice-fx'));
 const EsportsAcademy = lazyWithRetry(() => import('@/pages/academy'));
+const EsportsCalendar = lazyWithRetry(() => import('@/pages/esports-calendar'));
+const VODReviewStudio = lazyWithRetry(() => import('@/pages/vod-review'));
+const CreatorStore = lazyWithRetry(() => import('@/pages/creator-store'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -172,6 +175,9 @@ function ProtectedRoutes() {
               <Route path="/auction" component={CricketAuctionArena} />
               <Route path="/voice-fx" component={VoiceFXStudio} />
               <Route path="/academy" component={EsportsAcademy} />
+              <Route path="/calendar" component={EsportsCalendar} />
+              <Route path="/vods" component={VODReviewStudio} />
+              <Route path="/store" component={CreatorStore} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
