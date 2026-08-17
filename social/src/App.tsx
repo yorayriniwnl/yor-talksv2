@@ -124,6 +124,9 @@ const FanChantsStudio = lazyWithRetry(() => import('@/pages/fan-chants'));
 const LightingController = lazyWithRetry(() => import('@/pages/lighting-controller'));
 const GiveawayWheel = lazyWithRetry(() => import('@/pages/giveaway-wheel'));
 const PavBhajiRush = lazyWithRetry(() => import('@/pages/pavbhaji-rush'));
+const FairPlayCompliance = lazyWithRetry(() => import('@/pages/fairplay-compliance'));
+const AudioMatrix = lazyWithRetry(() => import('@/pages/audio-matrix'));
+const CholeBhatureRush = lazyWithRetry(() => import('@/pages/chole-bhature'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -262,6 +265,9 @@ function ProtectedRoutes() {
               <Route path="/lighting-controller" component={LightingController} />
               <Route path="/giveaway-wheel" component={GiveawayWheel} />
               <Route path="/pavbhaji-rush" component={PavBhajiRush} />
+              <Route path="/fairplay-compliance" component={FairPlayCompliance} />
+              <Route path="/audio-matrix" component={AudioMatrix} />
+              <Route path="/chole-bhature" component={CholeBhatureRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
