@@ -220,6 +220,9 @@ const MirchiKaSalanRush = lazyWithRetry(() => import('@/pages/mirchi-ka-salan'))
 const BhopVelocityMatrix = lazyWithRetry(() => import('@/pages/bhop-velocity-matrix'));
 const EmoteSupernovaStudio = lazyWithRetry(() => import('@/pages/emote-supernova'));
 const MalabarPrawnsRush = lazyWithRetry(() => import('@/pages/malabar-prawns'));
+const AngleSnapMatrix = lazyWithRetry(() => import('@/pages/angle-snap-matrix'));
+const EmoteLaserMatrixStudio = lazyWithRetry(() => import('@/pages/emote-laser-matrix'));
+const MangaloreGheeRoastRush = lazyWithRetry(() => import('@/pages/mangalore-ghee-roast'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -454,6 +457,9 @@ function ProtectedRoutes() {
               <Route path="/bhop-velocity-matrix" component={BhopVelocityMatrix} />
               <Route path="/emote-supernova" component={EmoteSupernovaStudio} />
               <Route path="/malabar-prawns" component={MalabarPrawnsRush} />
+              <Route path="/angle-snap-matrix" component={AngleSnapMatrix} />
+              <Route path="/emote-laser-matrix" component={EmoteLaserMatrixStudio} />
+              <Route path="/mangalore-ghee-roast" component={MangaloreGheeRoastRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
