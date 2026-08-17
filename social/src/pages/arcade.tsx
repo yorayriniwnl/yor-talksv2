@@ -40,11 +40,12 @@ import { CyberGujiya } from '@/components/games/CyberGujiya';
 import { CyberSandesh } from '@/components/games/CyberSandesh';
 import { CyberPeda } from '@/components/games/CyberPeda';
 import { CyberSoanPapdi } from '@/components/games/CyberSoanPapdi';
+import { CyberKalakand } from '@/components/games/CyberKalakand';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -511,6 +512,18 @@ export default function Arcade() {
           >
             ✨ Soan Papdi
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'kalakand' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('kalakand');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'kalakand' && "bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-600 text-white shadow-md")}
+          >
+            👑 Alwar Kalakand
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -552,6 +565,7 @@ export default function Arcade() {
           {activeGame === 'sandesh' && <CyberSandesh />}
           {activeGame === 'peda' && <CyberPeda />}
           {activeGame === 'soan' && <CyberSoanPapdi />}
+          {activeGame === 'kalakand' && <CyberKalakand />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

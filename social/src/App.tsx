@@ -154,6 +154,9 @@ const HyderabadiHaleemRush = lazyWithRetry(() => import('@/pages/hyderabadi-hale
 const LineupLab = lazyWithRetry(() => import('@/pages/lineup-lab'));
 const EmoteWallStudio = lazyWithRetry(() => import('@/pages/emote-wall'));
 const KathiRollRush = lazyWithRetry(() => import('@/pages/kathi-roll'));
+const DamageTradeSimulator = lazyWithRetry(() => import('@/pages/damage-trade'));
+const BitrateHealthWatchtower = lazyWithRetry(() => import('@/pages/bitrate-health'));
+const AmritsariKulchaRush = lazyWithRetry(() => import('@/pages/amritsari-kulcha'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -322,6 +325,9 @@ function ProtectedRoutes() {
               <Route path="/lineup-lab" component={LineupLab} />
               <Route path="/emote-wall" component={EmoteWallStudio} />
               <Route path="/kathi-roll" component={KathiRollRush} />
+              <Route path="/damage-trade" component={DamageTradeSimulator} />
+              <Route path="/bitrate-health" component={BitrateHealthWatchtower} />
+              <Route path="/amritsari-kulcha" component={AmritsariKulchaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
