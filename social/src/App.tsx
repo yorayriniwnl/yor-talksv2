@@ -196,6 +196,9 @@ const GaloutiKebabRush = lazyWithRetry(() => import('@/pages/galouti-kebab'));
 const RadarPings = lazyWithRetry(() => import('@/pages/radar-pings'));
 const FireworkRocketStudio = lazyWithRetry(() => import('@/pages/firework-rocket'));
 const NalliNihariRush = lazyWithRetry(() => import('@/pages/nalli-nihari'));
+const PlantRetakeMatrix = lazyWithRetry(() => import('@/pages/plant-retake-matrix'));
+const ConfettiCannonStudio = lazyWithRetry(() => import('@/pages/confetti-cannon'));
+const MangaloreFishFryRush = lazyWithRetry(() => import('@/pages/mangalore-fish-fry'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -406,6 +409,9 @@ function ProtectedRoutes() {
               <Route path="/radar-pings" component={RadarPings} />
               <Route path="/firework-rocket" component={FireworkRocketStudio} />
               <Route path="/nalli-nihari" component={NalliNihariRush} />
+              <Route path="/plant-retake-matrix" component={PlantRetakeMatrix} />
+              <Route path="/confetti-cannon" component={ConfettiCannonStudio} />
+              <Route path="/mangalore-fish-fry" component={MangaloreFishFryRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
