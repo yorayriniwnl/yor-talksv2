@@ -43,11 +43,12 @@ import { CyberSoanPapdi } from '@/components/games/CyberSoanPapdi';
 import { CyberKalakand } from '@/components/games/CyberKalakand';
 import { CyberBalushahi } from '@/components/games/CyberBalushahi';
 import { CyberImarti } from '@/components/games/CyberImarti';
+import { CyberMalpua } from '@/components/games/CyberMalpua';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -550,6 +551,18 @@ export default function Arcade() {
           >
             👑 Imarti
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'malpua' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('malpua');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'malpua' && "bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500 text-black shadow-md")}
+          >
+            👑 Malpua Rabdi
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -594,6 +607,7 @@ export default function Arcade() {
           {activeGame === 'kalakand' && <CyberKalakand />}
           {activeGame === 'balushahi' && <CyberBalushahi />}
           {activeGame === 'imarti' && <CyberImarti />}
+          {activeGame === 'malpua' && <CyberMalpua />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

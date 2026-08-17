@@ -163,6 +163,9 @@ const MisalPavRush = lazyWithRetry(() => import('@/pages/misal-pav'));
 const ReplayStudio = lazyWithRetry(() => import('@/pages/replay-studio'));
 const SubathonWheelHUD = lazyWithRetry(() => import('@/pages/subathon-wheel'));
 const DahiBhallaRush = lazyWithRetry(() => import('@/pages/dahi-bhalla'));
+const StatCardGenerator = lazyWithRetry(() => import('@/pages/stat-card'));
+const ChatPinsStudio = lazyWithRetry(() => import('@/pages/chat-pins'));
+const MomosRush = lazyWithRetry(() => import('@/pages/momos-rush'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -340,6 +343,9 @@ function ProtectedRoutes() {
               <Route path="/replay-studio" component={ReplayStudio} />
               <Route path="/subathon-wheel" component={SubathonWheelHUD} />
               <Route path="/dahi-bhalla" component={DahiBhallaRush} />
+              <Route path="/stat-card" component={StatCardGenerator} />
+              <Route path="/chat-pins" component={ChatPinsStudio} />
+              <Route path="/momos-rush" component={MomosRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
