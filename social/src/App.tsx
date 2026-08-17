@@ -157,6 +157,9 @@ const KathiRollRush = lazyWithRetry(() => import('@/pages/kathi-roll'));
 const DamageTradeSimulator = lazyWithRetry(() => import('@/pages/damage-trade'));
 const BitrateHealthWatchtower = lazyWithRetry(() => import('@/pages/bitrate-health'));
 const AmritsariKulchaRush = lazyWithRetry(() => import('@/pages/amritsari-kulcha'));
+const CasterDirectorDeck = lazyWithRetry(() => import('@/pages/caster-director'));
+const TTSCustomizerStudio = lazyWithRetry(() => import('@/pages/tts-customizer'));
+const MisalPavRush = lazyWithRetry(() => import('@/pages/misal-pav'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -328,6 +331,9 @@ function ProtectedRoutes() {
               <Route path="/damage-trade" component={DamageTradeSimulator} />
               <Route path="/bitrate-health" component={BitrateHealthWatchtower} />
               <Route path="/amritsari-kulcha" component={AmritsariKulchaRush} />
+              <Route path="/caster-director" component={CasterDirectorDeck} />
+              <Route path="/tts-customizer" component={TTSCustomizerStudio} />
+              <Route path="/misal-pav" component={MisalPavRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
