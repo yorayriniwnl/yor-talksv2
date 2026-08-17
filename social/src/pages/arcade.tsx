@@ -24,11 +24,12 @@ import { CyberKite } from '@/components/games/CyberKite';
 import { CyberKabaddi } from '@/components/games/CyberKabaddi';
 import { CyberDiya } from '@/components/games/CyberDiya';
 import { CyberGilliDanda } from '@/components/games/CyberGilliDanda';
+import { CyberSaanpSeedhi } from '@/components/games/CyberSaanpSeedhi';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -303,6 +304,18 @@ export default function Arcade() {
           >
             🏏 Gilli Danda
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'saanp' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('saanp');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'saanp' && "bg-gradient-to-r from-emerald-400 to-indigo-600 text-black shadow-md")}
+          >
+            🎲 Saanp Seedhi
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -328,6 +341,7 @@ export default function Arcade() {
           {activeGame === 'kabaddi' && <CyberKabaddi />}
           {activeGame === 'diya' && <CyberDiya />}
           {activeGame === 'gilli' && <CyberGilliDanda />}
+          {activeGame === 'saanp' && <CyberSaanpSeedhi />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
