@@ -23,11 +23,12 @@ import { CyberHoli } from '@/components/games/CyberHoli';
 import { CyberKite } from '@/components/games/CyberKite';
 import { CyberKabaddi } from '@/components/games/CyberKabaddi';
 import { CyberDiya } from '@/components/games/CyberDiya';
+import { CyberGilliDanda } from '@/components/games/CyberGilliDanda';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -290,6 +291,18 @@ export default function Arcade() {
           >
             🪔 Diya
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'gilli' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('gilli');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'gilli' && "bg-gradient-to-r from-amber-400 to-red-500 text-black shadow-md")}
+          >
+            🏏 Gilli Danda
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -314,6 +327,7 @@ export default function Arcade() {
           {activeGame === 'kite' && <CyberKite />}
           {activeGame === 'kabaddi' && <CyberKabaddi />}
           {activeGame === 'diya' && <CyberDiya />}
+          {activeGame === 'gilli' && <CyberGilliDanda />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}

@@ -103,6 +103,9 @@ const DhabaRush = lazyWithRetry(() => import('@/pages/dhaba-rush'));
 const TaxComplianceHub = lazyWithRetry(() => import('@/pages/tax-hub'));
 const PostureAIHub = lazyWithRetry(() => import('@/pages/posture-ai'));
 const PanipuriRush = lazyWithRetry(() => import('@/pages/panipuri-rush'));
+const ChromaStudio = lazyWithRetry(() => import('@/pages/chroma-studio'));
+const DisputeHub = lazyWithRetry(() => import('@/pages/dispute-hub'));
+const TablaSynth = lazyWithRetry(() => import('@/pages/tabla-synth'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -220,6 +223,9 @@ function ProtectedRoutes() {
               <Route path="/tax-hub" component={TaxComplianceHub} />
               <Route path="/posture-ai" component={PostureAIHub} />
               <Route path="/panipuri-rush" component={PanipuriRush} />
+              <Route path="/chroma-studio" component={ChromaStudio} />
+              <Route path="/dispute-hub" component={DisputeHub} />
+              <Route path="/tabla-synth" component={TablaSynth} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
