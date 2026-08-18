@@ -3,7 +3,8 @@ import { useLocation, Link } from 'wouter';
 import { 
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
-  Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2
+  Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
+  Atom, Gauge, Sparkles, Target, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -64,6 +65,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Rocket, label: 'Valkyrie Protocol', path: '/valkyrie-protocol' },
     { icon: Network, label: 'Node Topology', path: '/node-topology' },
     { icon: Building2, label: 'Esports Tycoon', path: '/esports-tycoon' },
+    { icon: Atom, label: 'Quantum Circuit', path: '/quantum-circuit' },
+    { icon: Gauge, label: 'Cyber Drift 3D', path: '/cyber-drift-3d' },
+    { icon: Sparkles, label: 'Fractal Studio', path: '/fractal-studio' },
+    { icon: Target, label: 'Hawk-Eye 3D', path: '/hawkeye-sim' },
+    { icon: ShieldAlert, label: 'Threat SOC', path: '/threat-soc' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

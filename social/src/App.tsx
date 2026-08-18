@@ -119,6 +119,11 @@ const EurorackSynth = lazyWithRetry(() => import('@/pages/eurorack-synth'));
 const ValkyrieProtocol = lazyWithRetry(() => import('@/pages/valkyrie-protocol'));
 const NodeTopology = lazyWithRetry(() => import('@/pages/node-topology'));
 const EsportsTycoon = lazyWithRetry(() => import('@/pages/esports-tycoon'));
+const QuantumCircuitSimulator = lazyWithRetry(() => import('@/pages/quantum-circuit'));
+const CyberDrift3D = lazyWithRetry(() => import('@/pages/cyber-drift-3d'));
+const FractalStudio = lazyWithRetry(() => import('@/pages/fractal-studio'));
+const HawkEyeSim = lazyWithRetry(() => import('@/pages/hawkeye-sim'));
+const ThreatSoc = lazyWithRetry(() => import('@/pages/threat-soc'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -232,6 +237,11 @@ function ProtectedRoutes() {
               <Route path="/valkyrie-protocol" component={ValkyrieProtocol} />
               <Route path="/node-topology" component={NodeTopology} />
               <Route path="/esports-tycoon" component={EsportsTycoon} />
+              <Route path="/quantum-circuit" component={QuantumCircuitSimulator} />
+              <Route path="/cyber-drift-3d" component={CyberDrift3D} />
+              <Route path="/fractal-studio" component={FractalStudio} />
+              <Route path="/hawkeye-sim" component={HawkEyeSim} />
+              <Route path="/threat-soc" component={ThreatSoc} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
