@@ -4097,6 +4097,78 @@ export const MOCK_LIVESTREAMS: LiveStream[] = [
     startsAt: new Date().toISOString(),
     category: 'Sim Motorsport',
     guestIds: ['user-aravind'],
+  },
+  {
+    id: 'stream-15',
+    hostId: 'user-zephyr-k',
+    title: 'Quantum QKD Optical Ground Station Live Downlink 🛰️🔑',
+    coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 18400,
+    startsAt: new Date().toISOString(),
+    category: 'Quantum Science',
+    guestIds: ['user-indra'],
+  },
+  {
+    id: 'stream-16',
+    hostId: 'user-morrigan',
+    title: 'Dark Neurofunk 175 BPM Live Synthesis & Drum Design 🎛️⚡',
+    coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop',
+    kind: 'audio',
+    status: 'live',
+    viewers: 27500,
+    startsAt: new Date().toISOString(),
+    category: 'Music Production',
+    guestIds: ['user-clara-v'],
+  },
+  {
+    id: 'stream-17',
+    hostId: 'user-daiki',
+    title: 'Ebisu South Drift Practice: Live On-Board Telemetry & G-Force 🏎️💨',
+    coverUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 58900,
+    startsAt: new Date().toISOString(),
+    category: 'Motorsport',
+    guestIds: ['user-diego'],
+  },
+  {
+    id: 'stream-18',
+    hostId: 'user-solomon',
+    title: 'Autonomous Drone Swarm Reforestation: Real-Time Field Telemetry 🌱🛸',
+    coverUrl: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 31400,
+    startsAt: new Date().toISOString(),
+    category: 'Eco-Tech',
+    guestIds: ['user-liam-k'],
+  },
+  {
+    id: 'stream-19',
+    hostId: 'user-thabo',
+    title: 'Amapiano Studio Session: Live Log Drum & Deep Groove FM Jam 🎹🇿🇦',
+    coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop',
+    kind: 'audio',
+    status: 'live',
+    viewers: 42100,
+    startsAt: new Date().toISOString(),
+    category: 'Electronic Music',
+    guestIds: ['user-kofi'],
+  },
+  {
+    id: 'stream-20',
+    hostId: 'user-viktor-s',
+    title: 'Extreme Sub-Zero Liquid Helium Overclocking: Shattering 10,400 MT/s RAM ❄️🏆',
+    coverUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 63800,
+    startsAt: new Date().toISOString(),
+    category: 'Hardware Overclocking',
+    guestIds: ['user-zack'],
   }
 ];
 
@@ -4269,6 +4341,71 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
       read: false,
     },
     updatedAt: new Date(Date.now() - 9600000).toISOString(),
+  },
+  {
+    id: 'conv-zephyr-k',
+    participantIds: ['user-roy', 'user-zephyr-k'],
+    lastMessage: {
+      id: 'msg-zephyr-1',
+      conversationId: 'conv-zephyr-k',
+      senderId: 'user-zephyr-k',
+      content: 'Decoy-state BB84 key exchange locked with 99.4% photon fidelity over the 1,200 km free-space downlink! 🛰️🔑',
+      createdAt: new Date(Date.now() - 1200000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 1200000).toISOString(),
+  },
+  {
+    id: 'conv-morrigan',
+    participantIds: ['user-roy', 'user-morrigan'],
+    lastMessage: {
+      id: 'msg-morrigan-1',
+      conversationId: 'conv-morrigan',
+      senderId: 'user-morrigan',
+      content: 'Exported the 175 BPM Reese multi-band stems and soundboard presets. Ready for the live room! 🎛️⚡',
+      createdAt: new Date(Date.now() - 2400000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 2400000).toISOString(),
+  },
+  {
+    id: 'conv-daiki',
+    participantIds: ['user-roy', 'user-daiki'],
+    lastMessage: {
+      id: 'msg-daiki-1',
+      conversationId: 'conv-daiki',
+      senderId: 'user-daiki',
+      content: 'The 1000hp 2JZ dyno run hit 9,200 RPM with instantaneous Garrett G42 boost. Clip is live in Reels! 🏎️💨',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'conv-solomon',
+    participantIds: ['user-roy', 'user-solomon'],
+    lastMessage: {
+      id: 'msg-solomon-1',
+      conversationId: 'conv-solomon',
+      senderId: 'user-solomon',
+      content: 'Our hexacopter drone swarm achieved 50,000 seed plantings today with zero telemetry loss across the Sahel! 🌱🛸',
+      createdAt: new Date(Date.now() - 4800000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 4800000).toISOString(),
+  },
+  {
+    id: 'conv-viktor-s',
+    participantIds: ['user-roy', 'user-viktor-s'],
+    lastMessage: {
+      id: 'msg-viktor-1',
+      conversationId: 'conv-viktor-s',
+      senderId: 'user-viktor-s',
+      content: 'Hit 10,400 MT/s on liquid helium at -269°C! Sub-30ns latency verified on hwbot world rankings ❄️🏆',
+      createdAt: new Date(Date.now() - 6000000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 6000000).toISOString(),
   }
 ];
 
@@ -4434,6 +4571,56 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
       createdAt: new Date(Date.now() - 9600000).toISOString(),
       read: false,
     }
+  ],
+  'conv-zephyr-k': [
+    {
+      id: 'msg-zephyr-1',
+      conversationId: 'conv-zephyr-k',
+      senderId: 'user-zephyr-k',
+      content: 'Decoy-state BB84 key exchange locked with 99.4% photon fidelity over the 1,200 km free-space downlink! 🛰️🔑',
+      createdAt: new Date(Date.now() - 1200000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-morrigan': [
+    {
+      id: 'msg-morrigan-1',
+      conversationId: 'conv-morrigan',
+      senderId: 'user-morrigan',
+      content: 'Exported the 175 BPM Reese multi-band stems and soundboard presets. Ready for the live room! 🎛️⚡',
+      createdAt: new Date(Date.now() - 2400000).toISOString(),
+      read: false,
+    }
+  ],
+  'conv-daiki': [
+    {
+      id: 'msg-daiki-1',
+      conversationId: 'conv-daiki',
+      senderId: 'user-daiki',
+      content: 'The 1000hp 2JZ dyno run hit 9,200 RPM with instantaneous Garrett G42 boost. Clip is live in Reels! 🏎️💨',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-solomon': [
+    {
+      id: 'msg-solomon-1',
+      conversationId: 'conv-solomon',
+      senderId: 'user-solomon',
+      content: 'Our hexacopter drone swarm achieved 50,000 seed plantings today with zero telemetry loss across the Sahel! 🌱🛸',
+      createdAt: new Date(Date.now() - 4800000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-viktor-s': [
+    {
+      id: 'msg-viktor-1',
+      conversationId: 'conv-viktor-s',
+      senderId: 'user-viktor-s',
+      content: 'Hit 10,400 MT/s on liquid helium at -269°C! Sub-30ns latency verified on hwbot world rankings ❄️🏆',
+      createdAt: new Date(Date.now() - 6000000).toISOString(),
+      read: false,
+    }
   ]
 };
 
@@ -4567,5 +4754,55 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     targetId: 'event-15',
     read: false,
     createdAt: new Date(Date.now() - 9600000).toISOString(),
+  },
+  {
+    id: 'notif-14',
+    type: 'star',
+    title: 'Satellite Downlink Active',
+    message: 'Zephyr Kane established a 1,200 km quantum optical ground lock 🛰️🔑',
+    actorId: 'user-zephyr-k',
+    targetId: 'stream-15',
+    read: false,
+    createdAt: new Date(Date.now() - 1200000).toISOString(),
+  },
+  {
+    id: 'notif-15',
+    type: 'like',
+    title: 'Neurofunk Soundboard Update',
+    message: 'Morrigan Crowley published 12 new 175 BPM Reese audio pads 🎛️⚡',
+    actorId: 'user-morrigan',
+    targetId: 'stream-16',
+    read: false,
+    createdAt: new Date(Date.now() - 2400000).toISOString(),
+  },
+  {
+    id: 'notif-16',
+    type: 'event',
+    title: 'Formula Drift Practice',
+    message: 'Daiki Murata is live on Ebisu South Course with 1000hp 2JZ telemetry 🏎️💨',
+    actorId: 'user-daiki',
+    targetId: 'stream-17',
+    read: true,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'notif-17',
+    type: 'community',
+    title: 'Agro Drone Telemetry',
+    message: 'Solomon Mensah completed 50,000 seed plantings across the Sahel 🌱🛸',
+    actorId: 'user-solomon',
+    targetId: 'comm-38',
+    read: true,
+    createdAt: new Date(Date.now() - 4800000).toISOString(),
+  },
+  {
+    id: 'notif-18',
+    type: 'star',
+    title: 'Cryo Overclocking World Record',
+    message: 'Viktor Sokolov broke the DDR5 frequency record at 10,400 MT/s on liquid helium! ❄️🏆',
+    actorId: 'user-viktor-s',
+    targetId: 'stream-20',
+    read: false,
+    createdAt: new Date(Date.now() - 6000000).toISOString(),
   }
 ];
