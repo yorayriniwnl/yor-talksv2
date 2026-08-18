@@ -129,6 +129,11 @@ const WindTunnel = lazyWithRetry(() => import('@/pages/wind-tunnel'));
 const NeuralBeatmaker = lazyWithRetry(() => import('@/pages/neural-beatmaker'));
 const CyberRogue = lazyWithRetry(() => import('@/pages/cyber-rogue'));
 const AuditStudio = lazyWithRetry(() => import('@/pages/audit-studio'));
+const FluidSim = lazyWithRetry(() => import('@/pages/fluid-sim'));
+const CyberPinball = lazyWithRetry(() => import('@/pages/cyber-pinball'));
+const PolySynth = lazyWithRetry(() => import('@/pages/poly-synth'));
+const CricketTrainer = lazyWithRetry(() => import('@/pages/cricket-trainer'));
+const NeuralTrainer = lazyWithRetry(() => import('@/pages/neural-trainer'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -252,6 +257,11 @@ function ProtectedRoutes() {
               <Route path="/neural-beatmaker" component={NeuralBeatmaker} />
               <Route path="/cyber-rogue" component={CyberRogue} />
               <Route path="/audit-studio" component={AuditStudio} />
+              <Route path="/fluid-sim" component={FluidSim} />
+              <Route path="/cyber-pinball" component={CyberPinball} />
+              <Route path="/poly-synth" component={PolySynth} />
+              <Route path="/cricket-trainer" component={CricketTrainer} />
+              <Route path="/neural-trainer" component={NeuralTrainer} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

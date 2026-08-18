@@ -4,7 +4,8 @@ import {
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
-  Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck
+  Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
+  Droplets, Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -75,6 +76,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Music, label: 'Neural Beatmaker', path: '/neural-beatmaker' },
     { icon: Skull, label: 'Cyber Rogue', path: '/cyber-rogue' },
     { icon: ShieldCheck, label: 'Audit Studio', path: '/audit-studio' },
+    { icon: Droplets, label: 'Fluid Sim', path: '/fluid-sim' },
+    { icon: Zap, label: 'Cyber Pinball', path: '/cyber-pinball' },
+    { icon: Music, label: 'Poly Synth', path: '/poly-synth' },
+    { icon: Target, label: 'Cricket Trainer', path: '/cricket-trainer' },
+    { icon: Brain, label: 'Neural Trainer', path: '/neural-trainer' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
