@@ -24,9 +24,13 @@ interface ClanMember {
 
 const CLAN_ROSTER: ClanMember[] = [
   { id: '1', name: 'Ayush Roy (Yor)', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', role: 'IGL (Leader)', kd: '6.42', winrate: '74%', status: 'online' },
-  { id: '2', name: 'Rohan_Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', role: 'Entry Fragger', kd: '7.15', winrate: '72%', status: 'in-game' },
-  { id: '3', name: 'Anya_Sharma', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', role: 'Sniper', kd: '5.80', winrate: '69%', status: 'online' },
-  { id: '4', name: 'Devansh_Deshmukh', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '4.90', winrate: '71%', status: 'offline' },
+  { id: '2', name: 'Rohan Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', role: 'Entry Fragger', kd: '7.15', winrate: '72%', status: 'in-game' },
+  { id: '3', name: 'Anya', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', role: 'Sniper', kd: '5.80', winrate: '69%', status: 'online' },
+  { id: '4', name: 'Aravind Rao', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop', role: 'Entry Fragger', kd: '6.90', winrate: '76%', status: 'online' },
+  { id: '5', name: 'Devansh Deshmukh', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '4.90', winrate: '71%', status: 'offline' },
+  { id: '6', name: 'Renata Silva', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', role: 'Coach', kd: '5.10', winrate: '68%', status: 'online' },
+  { id: '7', name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '5.40', winrate: '70%', status: 'in-game' },
+  { id: '8', name: 'Sakura Miyamoto', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '4.75', winrate: '65%', status: 'online' },
 ];
 
 export default function Clans() {
@@ -34,8 +38,9 @@ export default function Clans() {
   const [roster, setRoster] = useState<ClanMember[]>(CLAN_ROSTER);
   const [chatMessages, setChatMessages] = useState<{ user: string; text: string; time: string }[]>([
     { user: 'Ayush Roy', text: 'Scrims booked against Team SouL at 9:00 PM on Erangel!', time: '10m ago' },
-    { user: 'Rohan_Verma', text: 'Warm up TDM done. Ready for customs.', time: '5m ago' },
-    { user: 'Anya_Sharma', text: 'Locking AWM & M416 loadouts 🔥', time: 'Just now' },
+    { user: 'Rohan Verma', text: 'Warm up TDM done. Ready for customs.', time: '5m ago' },
+    { user: 'Anya', text: 'Locking AWM & M416 loadouts 🔥', time: 'Just now' },
+    { user: 'Aravind Rao', text: 'Crosshair placement drills completed. Let us dominate!', time: 'Just now' },
   ]);
   const [newMsg, setNewMsg] = useState('');
 
