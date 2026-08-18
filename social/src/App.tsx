@@ -194,6 +194,11 @@ const NtpRocket = lazyWithRetry(() => import('@/pages/ntp-rocket'));
 const AtpSynthase = lazyWithRetry(() => import('@/pages/atp-synthase'));
 const LunarLander = lazyWithRetry(() => import('@/pages/lunar-lander'));
 const CvTeleport = lazyWithRetry(() => import('@/pages/cv-teleport'));
+const CmbSim = lazyWithRetry(() => import('@/pages/cmb-sim'));
+const ZpinchSim = lazyWithRetry(() => import('@/pages/zpinch-sim'));
+const KinesinSim = lazyWithRetry(() => import('@/pages/kinesin-sim'));
+const NeonTanks = lazyWithRetry(() => import('@/pages/neon-tanks'));
+const XebStudio = lazyWithRetry(() => import('@/pages/xeb-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -382,6 +387,11 @@ function ProtectedRoutes() {
               <Route path="/atp-synthase" component={AtpSynthase} />
               <Route path="/lunar-lander" component={LunarLander} />
               <Route path="/cv-teleport" component={CvTeleport} />
+              <Route path="/cmb-sim" component={CmbSim} />
+              <Route path="/zpinch-sim" component={ZpinchSim} />
+              <Route path="/kinesin-sim" component={KinesinSim} />
+              <Route path="/neon-tanks" component={NeonTanks} />
+              <Route path="/xeb-studio" component={XebStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

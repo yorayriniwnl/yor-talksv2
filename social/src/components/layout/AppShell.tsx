@@ -6,7 +6,7 @@ import {
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
   Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search,
-  GitFork, TrendingUp
+  GitFork, TrendingUp, Cpu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -142,6 +142,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Zap, label: 'ATP Synthase', path: '/atp-synthase' },
     { icon: Rocket, label: 'Lunar Lander', path: '/lunar-lander' },
     { icon: Radio, label: 'CV Teleport', path: '/cv-teleport' },
+    { icon: Sun, label: 'CMB Anisotropy', path: '/cmb-sim' },
+    { icon: Zap, label: 'Z-Pinch Fusion', path: '/zpinch-sim' },
+    { icon: Dna, label: 'Kinesin Motor', path: '/kinesin-sim' },
+    { icon: Crosshair, label: 'Neon Tanks', path: '/neon-tanks' },
+    { icon: Cpu, label: 'Quantum Supremacy', path: '/xeb-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
