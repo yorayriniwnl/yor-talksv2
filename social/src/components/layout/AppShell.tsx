@@ -106,6 +106,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Grid, label: 'Cellular Matrix', path: '/cellular-matrix' },
     { icon: Zap, label: 'Neon Breakout', path: '/neon-breakout' },
     { icon: Scissors, label: 'CRISPR Studio', path: '/crispr-studio' },
+    { icon: Orbit, label: 'Wormhole 3D', path: '/wormhole-sim' },
+    { icon: Plane, label: 'Drone PID', path: '/drone-sim' },
+    { icon: Dna, label: 'Neural Synapse', path: '/synapse-sim' },
+    { icon: Sparkles, label: 'Hoverboard 3D', path: '/hoverboard-sim' },
+    { icon: Atom, label: 'Quantum Annealer', path: '/annealer-sim' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

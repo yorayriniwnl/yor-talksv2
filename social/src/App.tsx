@@ -159,6 +159,11 @@ const HyperloopSim = lazyWithRetry(() => import('@/pages/hyperloop-sim'));
 const CellularMatrix = lazyWithRetry(() => import('@/pages/cellular-matrix'));
 const NeonBreakout = lazyWithRetry(() => import('@/pages/neon-breakout'));
 const CrisprStudio = lazyWithRetry(() => import('@/pages/crispr-studio'));
+const WormholeSim = lazyWithRetry(() => import('@/pages/wormhole-sim'));
+const DroneSim = lazyWithRetry(() => import('@/pages/drone-sim'));
+const SynapseSim = lazyWithRetry(() => import('@/pages/synapse-sim'));
+const HoverboardSim = lazyWithRetry(() => import('@/pages/hoverboard-sim'));
+const AnnealerSim = lazyWithRetry(() => import('@/pages/annealer-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -312,6 +317,11 @@ function ProtectedRoutes() {
               <Route path="/cellular-matrix" component={CellularMatrix} />
               <Route path="/neon-breakout" component={NeonBreakout} />
               <Route path="/crispr-studio" component={CrisprStudio} />
+              <Route path="/wormhole-sim" component={WormholeSim} />
+              <Route path="/drone-sim" component={DroneSim} />
+              <Route path="/synapse-sim" component={SynapseSim} />
+              <Route path="/hoverboard-sim" component={HoverboardSim} />
+              <Route path="/annealer-sim" component={AnnealerSim} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
