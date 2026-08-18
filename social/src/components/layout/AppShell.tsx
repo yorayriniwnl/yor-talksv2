@@ -132,6 +132,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Ribosome 70S', path: '/ribosome-sim' },
     { icon: Rocket, label: 'Neon Asteroids', path: '/neon-asteroids' },
     { icon: TrendingUp, label: 'Quantum Walk', path: '/quantum-walk' },
+    { icon: Atom, label: 'Cloud Chamber', path: '/cloud-chamber' },
+    { icon: Radio, label: 'Magnetar QED', path: '/magnetar-sim' },
+    { icon: Scissors, label: 'Prime Editor', path: '/prime-editor' },
+    { icon: Zap, label: 'Cyber Arkanoid', path: '/cyber-arkanoid' },
+    { icon: Waves, label: 'Lindblad GKSL', path: '/lindblad-sim' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

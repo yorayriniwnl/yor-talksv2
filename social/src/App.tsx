@@ -184,6 +184,11 @@ const MpdThruster = lazyWithRetry(() => import('@/pages/mpd-thruster'));
 const RibosomeSim = lazyWithRetry(() => import('@/pages/ribosome-sim'));
 const NeonAsteroids = lazyWithRetry(() => import('@/pages/neon-asteroids'));
 const QuantumWalk = lazyWithRetry(() => import('@/pages/quantum-walk'));
+const CloudChamber = lazyWithRetry(() => import('@/pages/cloud-chamber'));
+const MagnetarSim = lazyWithRetry(() => import('@/pages/magnetar-sim'));
+const PrimeEditor = lazyWithRetry(() => import('@/pages/prime-editor'));
+const CyberArkanoid = lazyWithRetry(() => import('@/pages/cyber-arkanoid'));
+const LindbladSim = lazyWithRetry(() => import('@/pages/lindblad-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -362,6 +367,11 @@ function ProtectedRoutes() {
               <Route path="/ribosome-sim" component={RibosomeSim} />
               <Route path="/neon-asteroids" component={NeonAsteroids} />
               <Route path="/quantum-walk" component={QuantumWalk} />
+              <Route path="/cloud-chamber" component={CloudChamber} />
+              <Route path="/magnetar-sim" component={MagnetarSim} />
+              <Route path="/prime-editor" component={PrimeEditor} />
+              <Route path="/cyber-arkanoid" component={CyberArkanoid} />
+              <Route path="/lindblad-sim" component={LindbladSim} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
