@@ -144,6 +144,11 @@ const DockingSim = lazyWithRetry(() => import('@/pages/docking-sim'));
 const CyberTerminal = lazyWithRetry(() => import('@/pages/cyber-terminal'));
 const SupersonicSim = lazyWithRetry(() => import('@/pages/supersonic-sim'));
 const GranularSynth = lazyWithRetry(() => import('@/pages/granular-synth'));
+const QkdStudio = lazyWithRetry(() => import('@/pages/qkd-studio'));
+const TokamakSim = lazyWithRetry(() => import('@/pages/tokamak-sim'));
+const EegStudio = lazyWithRetry(() => import('@/pages/eeg-studio'));
+const CyberRally = lazyWithRetry(() => import('@/pages/cyber-rally'));
+const ChiptuneTracker = lazyWithRetry(() => import('@/pages/chiptune-tracker'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -282,6 +287,11 @@ function ProtectedRoutes() {
               <Route path="/cyber-terminal" component={CyberTerminal} />
               <Route path="/supersonic-sim" component={SupersonicSim} />
               <Route path="/granular-synth" component={GranularSynth} />
+              <Route path="/qkd-studio" component={QkdStudio} />
+              <Route path="/tokamak-sim" component={TokamakSim} />
+              <Route path="/eeg-studio" component={EegStudio} />
+              <Route path="/cyber-rally" component={CyberRally} />
+              <Route path="/chiptune-tracker" component={ChiptuneTracker} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
