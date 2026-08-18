@@ -199,6 +199,11 @@ const ZpinchSim = lazyWithRetry(() => import('@/pages/zpinch-sim'));
 const KinesinSim = lazyWithRetry(() => import('@/pages/kinesin-sim'));
 const NeonTanks = lazyWithRetry(() => import('@/pages/neon-tanks'));
 const XebStudio = lazyWithRetry(() => import('@/pages/xeb-studio'));
+const MicrolensingSim = lazyWithRetry(() => import('@/pages/microlensing-sim'));
+const AntimatterRocket = lazyWithRetry(() => import('@/pages/antimatter-rocket'));
+const PatchClamp = lazyWithRetry(() => import('@/pages/patch-clamp'));
+const MissileDefense = lazyWithRetry(() => import('@/pages/missile-defense'));
+const GhzTeleport = lazyWithRetry(() => import('@/pages/ghz-teleport'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -392,6 +397,11 @@ function ProtectedRoutes() {
               <Route path="/kinesin-sim" component={KinesinSim} />
               <Route path="/neon-tanks" component={NeonTanks} />
               <Route path="/xeb-studio" component={XebStudio} />
+              <Route path="/microlensing-sim" component={MicrolensingSim} />
+              <Route path="/antimatter-rocket" component={AntimatterRocket} />
+              <Route path="/patch-clamp" component={PatchClamp} />
+              <Route path="/missile-defense" component={MissileDefense} />
+              <Route path="/ghz-teleport" component={GhzTeleport} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

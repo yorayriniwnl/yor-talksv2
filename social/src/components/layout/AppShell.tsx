@@ -147,6 +147,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Kinesin Motor', path: '/kinesin-sim' },
     { icon: Crosshair, label: 'Neon Tanks', path: '/neon-tanks' },
     { icon: Cpu, label: 'Quantum Supremacy', path: '/xeb-studio' },
+    { icon: Globe2, label: 'Microlensing', path: '/microlensing-sim' },
+    { icon: Rocket, label: 'Antimatter Rocket', path: '/antimatter-rocket' },
+    { icon: Activity, label: 'Patch Clamp', path: '/patch-clamp' },
+    { icon: ShieldAlert, label: 'Missile Defense', path: '/missile-defense' },
+    { icon: Atom, label: 'GHZ Multipartite', path: '/ghz-teleport' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
