@@ -3604,6 +3604,71 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
       read: true,
     },
     updatedAt: new Date(Date.now() - 10800000).toISOString(),
+  },
+  {
+    id: 'conv-indra',
+    participantIds: ['user-roy', 'user-indra'],
+    lastMessage: {
+      id: 'msg-indra-1',
+      conversationId: 'conv-indra',
+      senderId: 'user-indra',
+      content: 'Dilution fridge reached 14.8 mK! The 128-transmon lattice quantum coherence graph is live on my profile. ⚛️',
+      createdAt: new Date(Date.now() - 1200000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 1200000).toISOString(),
+  },
+  {
+    id: 'conv-liam-k',
+    participantIds: ['user-roy', 'user-liam-k'],
+    lastMessage: {
+      id: 'msg-liam-1',
+      conversationId: 'conv-liam-k',
+      senderId: 'user-liam-k',
+      content: 'Uploaded the 8K ProRes cliff dive footage over Grindelwald. Zero jitter with Gyroflow! 🛸🏔️',
+      createdAt: new Date(Date.now() - 2400000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 2400000).toISOString(),
+  },
+  {
+    id: 'conv-clara-v',
+    participantIds: ['user-roy', 'user-clara-v'],
+    lastMessage: {
+      id: 'msg-clara-1',
+      conversationId: 'conv-clara-v',
+      senderId: 'user-clara-v',
+      content: 'Sent you the new 138 BPM dark modular techno soundboard presets. That diode distortion punch is huge! 🎛️⚡',
+      createdAt: new Date(Date.now() - 4800000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 4800000).toISOString(),
+  },
+  {
+    id: 'conv-hiroshi',
+    participantIds: ['user-roy', 'user-hiroshi'],
+    lastMessage: {
+      id: 'msg-hiroshi-1',
+      conversationId: 'conv-hiroshi',
+      senderId: 'user-hiroshi',
+      content: 'The 1024-layer suminagashi Damascus Gyuto is honed to a mirror 8000-grit edge. Ready for delivery! 🔪✨',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    id: 'conv-diego',
+    participantIds: ['user-roy', 'user-diego'],
+    lastMessage: {
+      id: 'msg-diego-1',
+      conversationId: 'conv-diego',
+      senderId: 'user-diego',
+      content: 'Telemetry logged a 6:38.4 hotlap at Nürburgring on the 30Nm wheelbase. Telemetry sync is flawless! 🏎️🏁',
+      createdAt: new Date(Date.now() - 9600000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 9600000).toISOString(),
   }
 ];
 
@@ -3656,6 +3721,14 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
     {
       id: 'msg-marcus-1',
       conversationId: 'conv-marcus',
+      senderId: 'user-roy',
+      content: 'Are we testing the WebGPU latent diffusion models on mobile browsers?',
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      read: true,
+    },
+    {
+      id: 'msg-marcus-2',
+      conversationId: 'conv-marcus',
       senderId: 'user-marcus',
       content: 'Let’s sync tomorrow on the on-device WebGPU model inference pipeline.',
       createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -3674,15 +3747,7 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
   ],
   'conv-valkyrie': [
     {
-      id: 'msg-valk-1',
-      conversationId: 'conv-valkyrie',
-      senderId: 'user-roy',
-      content: 'Hey Valkyrie, let us know once the token refresh audit is complete.',
-      createdAt: new Date(Date.now() - 345600000).toISOString(),
-      read: true,
-    },
-    {
-      id: 'msg-valk-2',
+      id: 'msg-valkyrie-1',
       conversationId: 'conv-valkyrie',
       senderId: 'user-valkyrie',
       content: 'Completed the security audit on our websocket connection tokens — all clean and encrypted!',
@@ -3718,6 +3783,56 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
       content: 'The 3D avatar facial blendshapes stream at a rock-solid 60 FPS in WebGPU! Arigato! 🌸✨',
       createdAt: new Date(Date.now() - 10800000).toISOString(),
       read: true,
+    }
+  ],
+  'conv-indra': [
+    {
+      id: 'msg-indra-1',
+      conversationId: 'conv-indra',
+      senderId: 'user-indra',
+      content: 'Dilution fridge reached 14.8 mK! The 128-transmon lattice quantum coherence graph is live on my profile. ⚛️',
+      createdAt: new Date(Date.now() - 1200000).toISOString(),
+      read: false,
+    }
+  ],
+  'conv-liam-k': [
+    {
+      id: 'msg-liam-1',
+      conversationId: 'conv-liam-k',
+      senderId: 'user-liam-k',
+      content: 'Uploaded the 8K ProRes cliff dive footage over Grindelwald. Zero jitter with Gyroflow! 🛸🏔️',
+      createdAt: new Date(Date.now() - 2400000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-clara-v': [
+    {
+      id: 'msg-clara-1',
+      conversationId: 'conv-clara-v',
+      senderId: 'user-clara-v',
+      content: 'Sent you the new 138 BPM dark modular techno soundboard presets. That diode distortion punch is huge! 🎛️⚡',
+      createdAt: new Date(Date.now() - 4800000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-hiroshi': [
+    {
+      id: 'msg-hiroshi-1',
+      conversationId: 'conv-hiroshi',
+      senderId: 'user-hiroshi',
+      content: 'The 1024-layer suminagashi Damascus Gyuto is honed to a mirror 8000-grit edge. Ready for delivery! 🔪✨',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-diego': [
+    {
+      id: 'msg-diego-1',
+      conversationId: 'conv-diego',
+      senderId: 'user-diego',
+      content: 'Telemetry logged a 6:38.4 hotlap at Nürburgring on the 30Nm wheelbase. Telemetry sync is flawless! 🏎️🏁',
+      createdAt: new Date(Date.now() - 9600000).toISOString(),
+      read: false,
     }
   ]
 };
@@ -3812,5 +3927,45 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     targetId: 'vid-7',
     read: false,
     createdAt: new Date(Date.now() - 43200000).toISOString(),
+  },
+  {
+    id: 'notif-10',
+    type: 'star',
+    title: 'Quantum Telemetry Live',
+    message: 'Indra Banerjee went live with "15mK Dilution Refrigerator Telemetry" ⚛️❄️',
+    actorId: 'user-indra',
+    targetId: 'stream-10',
+    read: false,
+    createdAt: new Date(Date.now() - 1200000).toISOString(),
+  },
+  {
+    id: 'notif-11',
+    type: 'like',
+    title: 'New Video Reel',
+    message: 'Liam Kincaid dropped "Proximity Mountain FPV: 160 km/h Diving Eiger North Face" 🛸🏔️',
+    actorId: 'user-liam-k',
+    targetId: 'vid-19',
+    read: false,
+    createdAt: new Date(Date.now() - 2400000).toISOString(),
+  },
+  {
+    id: 'notif-12',
+    type: 'event',
+    title: 'Masterclass Reminder',
+    message: 'Traditional 1024-Layer Damascus Steel Knife Forging with Hiroshi Tanaka starts tomorrow.',
+    actorId: 'user-hiroshi',
+    targetId: 'event-14',
+    read: true,
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    id: 'notif-13',
+    type: 'star',
+    title: 'Sim Racing Record',
+    message: 'Diego Fernandez set a new Nordschleife record on the 30Nm direct-drive wheelbase! 🏎️🏁',
+    actorId: 'user-diego',
+    targetId: 'event-15',
+    read: false,
+    createdAt: new Date(Date.now() - 9600000).toISOString(),
   }
 ];
