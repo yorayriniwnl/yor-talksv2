@@ -114,6 +114,11 @@ const OrbitSandbox = lazyWithRetry(() => import('@/pages/orbit-sandbox'));
 const TacticalSandbox = lazyWithRetry(() => import('@/pages/tactical-sandbox'));
 const SignalLab = lazyWithRetry(() => import('@/pages/signal-lab'));
 const CyberChess = lazyWithRetry(() => import('@/pages/cyber-chess'));
+const NanoLab = lazyWithRetry(() => import('@/pages/nano-lab'));
+const EurorackSynth = lazyWithRetry(() => import('@/pages/eurorack-synth'));
+const ValkyrieProtocol = lazyWithRetry(() => import('@/pages/valkyrie-protocol'));
+const NodeTopology = lazyWithRetry(() => import('@/pages/node-topology'));
+const EsportsTycoon = lazyWithRetry(() => import('@/pages/esports-tycoon'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -222,6 +227,11 @@ function ProtectedRoutes() {
               <Route path="/tactical-sandbox" component={TacticalSandbox} />
               <Route path="/signal-lab" component={SignalLab} />
               <Route path="/cyber-chess" component={CyberChess} />
+              <Route path="/nano-lab" component={NanoLab} />
+              <Route path="/eurorack-synth" component={EurorackSynth} />
+              <Route path="/valkyrie-protocol" component={ValkyrieProtocol} />
+              <Route path="/node-topology" component={NodeTopology} />
+              <Route path="/esports-tycoon" component={EsportsTycoon} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
