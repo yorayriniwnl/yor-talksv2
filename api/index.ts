@@ -35,6 +35,13 @@ async function getExpressApp() {
   }
 }
 
+export const config = {
+  api: {
+    bodyParser: false,
+    externalResolver: true,
+  },
+};
+
 export default async function handler(req: Request, res: Response) {
   try {
     const app = await getExpressApp();
