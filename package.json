@@ -23,7 +23,8 @@
 		"lightningcss-win32-x64-msvc": "1.32.0"
 	},
 	"scripts": {
-		"build": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
+		"build": "node ./build.mjs",
+		"build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
 		"dev": "node ./dev.mjs",
 		"dev:api": "npm run --prefix api-server dev",
 		"dev:web": "npm run --prefix social dev"

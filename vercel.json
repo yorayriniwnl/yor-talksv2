@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "pnpm run build",
+  "buildCommand": "node ./build.mjs",
   "outputDirectory": "social/dist/public",
   "functions": {
     "api/index.ts": {
