@@ -179,6 +179,11 @@ const IonThruster = lazyWithRetry(() => import('@/pages/ion-thruster'));
 const MicrotubuleSim = lazyWithRetry(() => import('@/pages/microtubule-sim'));
 const NeonSnake = lazyWithRetry(() => import('@/pages/neon-snake'));
 const ErrorCorrection = lazyWithRetry(() => import('@/pages/error-correction'));
+const AlcubierreSim = lazyWithRetry(() => import('@/pages/alcubierre-sim'));
+const MpdThruster = lazyWithRetry(() => import('@/pages/mpd-thruster'));
+const RibosomeSim = lazyWithRetry(() => import('@/pages/ribosome-sim'));
+const NeonAsteroids = lazyWithRetry(() => import('@/pages/neon-asteroids'));
+const QuantumWalk = lazyWithRetry(() => import('@/pages/quantum-walk'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -352,6 +357,11 @@ function ProtectedRoutes() {
               <Route path="/microtubule-sim" component={MicrotubuleSim} />
               <Route path="/neon-snake" component={NeonSnake} />
               <Route path="/error-correction" component={ErrorCorrection} />
+              <Route path="/alcubierre-sim" component={AlcubierreSim} />
+              <Route path="/mpd-thruster" component={MpdThruster} />
+              <Route path="/ribosome-sim" component={RibosomeSim} />
+              <Route path="/neon-asteroids" component={NeonAsteroids} />
+              <Route path="/quantum-walk" component={QuantumWalk} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

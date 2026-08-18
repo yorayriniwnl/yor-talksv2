@@ -5,7 +5,8 @@ import {
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
-  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search
+  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search,
+  GitFork, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -126,6 +127,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Brain, label: 'Microtubules', path: '/microtubule-sim' },
     { icon: Zap, label: 'Neon Snake', path: '/neon-snake' },
     { icon: ShieldCheck, label: 'Error Correct', path: '/error-correction' },
+    { icon: Rocket, label: 'Alcubierre Warp', path: '/alcubierre-sim' },
+    { icon: Flame, label: 'MPD Thruster', path: '/mpd-thruster' },
+    { icon: Dna, label: 'Ribosome 70S', path: '/ribosome-sim' },
+    { icon: Rocket, label: 'Neon Asteroids', path: '/neon-asteroids' },
+    { icon: TrendingUp, label: 'Quantum Walk', path: '/quantum-walk' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
