@@ -9,5 +9,5 @@
     "noImplicitAny": false,
     "types": ["node", "express"]
   },
-  "include": ["index.ts"]
+  "include": ["*.ts", "**/*.ts"]
 }

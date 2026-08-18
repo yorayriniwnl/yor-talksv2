@@ -3,7 +3,7 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "social/dist/public",
   "functions": {
-    "api/index.ts": {
+    "api/*.ts": {
       "includeFiles": "api-server/dist/**",
       "maxDuration": 15
     }
