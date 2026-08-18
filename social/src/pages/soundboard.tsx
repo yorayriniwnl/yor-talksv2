@@ -33,6 +33,12 @@ const SOUND_PADS: SoundPad[] = [
   { id: 's10', label: 'Giga Chad Echo 🗿', tag: 'Sigma Mode', freq: 110, type: 'sine', emoji: '🗿' },
   { id: 's11', label: 'Level Sabke Niklenge 📈', tag: 'Rank Up', freq: 600, type: 'square', emoji: '📈' },
   { id: 's12', label: 'ISRO Rocket Launch 🚀', tag: 'Cosmic Bass', freq: 95, type: 'sawtooth', emoji: '🚀' },
+  { id: 's13', label: 'Moye Moye 🎵', tag: 'Sad Chime', freq: 320, type: 'sine', emoji: '🎵' },
+  { id: 's14', label: 'Systumm Hang ⚡', tag: 'Distorted 808', freq: 80, type: 'sawtooth', emoji: '⚡' },
+  { id: 's15', label: 'Dekh Raha Hai Binod? 👁️', tag: 'Sarcasm Bell', freq: 400, type: 'triangle', emoji: '👁️' },
+  { id: 's16', label: 'Bhai Kya Kar Raha Hai? 🤦', tag: 'Facepalm Slap', freq: 250, type: 'square', emoji: '🤦' },
+  { id: 's17', label: 'Aag Laga Di! 🔥', tag: 'Supercharged Hype', freq: 950, type: 'sawtooth', emoji: '🔥' },
+  { id: 's18', label: 'Bhaisahab Ye Kis Line Me? 🚂', tag: 'Confusion Tone', freq: 370, type: 'sine', emoji: '🚂' },
 ];
 
 export default function Soundboard() {
