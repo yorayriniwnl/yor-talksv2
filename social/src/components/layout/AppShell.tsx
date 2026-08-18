@@ -205,13 +205,17 @@ export function AppShell({ children }: AppShellProps) {
           {location === '/explore' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <MagneticButton intensity={0.4}>
-          <button onClick={() => setIsComposing(true)} className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-5 shadow-2xl relative">
+          <button onClick={() => setIsComposing(true)} aria-label="Create post" className="p-2.5 rounded-full bg-primary text-primary-foreground glow-neon-primary -mt-5 shadow-2xl relative">
             <PlusSquare className="w-6 h-6" />
           </button>
         </MagneticButton>
-        <button onClick={() => setLocation('/messages')} className={cn("p-2 text-muted-foreground relative", location === '/messages' && "text-primary")}>
-          <MessageCircle className="w-6 h-6" />
-          {location === '/messages' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
+        <button onClick={() => setLocation('/notifications')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/notifications') && "text-primary")}>
+          <Heart className="w-6 h-6" />
+          {unreadNotifs > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white font-mono text-[0.55rem] font-bold min-w-[16px] h-4 px-1 rounded-full ring-2 ring-background flex items-center justify-center">
+              {unreadNotifs > 99 ? '99+' : unreadNotifs}
+            </span>
+          )}
         </button>
         <button onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />

@@ -127,6 +127,22 @@ export default function Home() {
               animate="visible"
               className="space-y-4"
             >
+              {posts.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center surface-1 rounded-3xl border border-border/40">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Compass className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-display font-bold text-lg mb-2">Your feed is empty</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mb-4 font-serif">
+                    Follow creators and join communities to see posts here.
+                  </p>
+                  <Link href="/explore">
+                    <Button className="rounded-2xl font-bold text-xs glow-neon-primary">
+                      <Compass className="w-4 h-4 mr-2" /> Discover Creators
+                    </Button>
+                  </Link>
+                </div>
+              )}
               {posts.map((post, i) => (
                 <ScrollReveal
                   key={post.id}
@@ -157,9 +173,11 @@ export default function Home() {
                     <p className="text-xs text-muted-foreground font-mono truncate">@{currentUser.username}</p>
                   </div>
                 </Link>
-                <div className="level-badge text-xs shrink-0 shadow-sm">
-                  <Shield className="w-3.5 h-3.5" /> Lv. 88
-                </div>
+                {currentUser.verified && (
+                  <div className="level-badge text-xs shrink-0 shadow-sm">
+                    <Shield className="w-3.5 h-3.5" /> Verified
+                  </div>
+                )}
               </div>
             )}
 

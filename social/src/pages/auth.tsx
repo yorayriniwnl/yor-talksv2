@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign } from 'lucide-react';
+import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion';
+import { toast } from 'sonner';
 
 export default function Auth() {
   const login = useAppStore((state) => state.login);
@@ -17,11 +18,31 @@ export default function Auth() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setErrorMsg('');
+    setFieldErrors({});
+
+    const errors: Record<string, string> = {};
+    if (mode === 'register') {
+      if (fullName.length < 2) errors.fullName = 'Full name must be at least 2 characters';
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) errors.username = 'Username must be 3-20 characters, alphanumeric and underscores only';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Invalid email address';
+      if (password.length < 8) errors.password = 'Password must be at least 8 characters';
+    } else {
+      if (!email) errors.email = 'Email/Username is required';
+      if (!password) errors.password = 'Password is required';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === 'login') {
@@ -38,6 +59,7 @@ export default function Auth() {
   const switchMode = (newMode: 'login' | 'register') => {
     setMode(newMode);
     setErrorMsg('');
+    setFieldErrors({});
   };
 
   return (
@@ -159,6 +181,7 @@ export default function Auth() {
                             required
                           />
                         </div>
+                        {fieldErrors.fullName && <p className="text-xs text-destructive mt-1">{fieldErrors.fullName}</p>}
                       </motion.div>
                       
                       <motion.div variants={staggerItem} className="space-y-1">
@@ -177,6 +200,7 @@ export default function Auth() {
                             required
                           />
                         </div>
+                        {fieldErrors.username && <p className="text-xs text-destructive mt-1">{fieldErrors.username}</p>}
                       </motion.div>
                       
                       <motion.div variants={staggerItem} className="space-y-1">
@@ -195,6 +219,7 @@ export default function Auth() {
                             required
                           />
                         </div>
+                        {fieldErrors.email && <p className="text-xs text-destructive mt-1">{fieldErrors.email}</p>}
                       </motion.div>
                     </>
                   )}
@@ -216,6 +241,7 @@ export default function Auth() {
                           required
                         />
                       </div>
+                      {fieldErrors.email && <p className="text-xs text-destructive mt-1">{fieldErrors.email}</p>}
                     </motion.div>
                   )}
 
@@ -227,14 +253,37 @@ export default function Auth() {
                       </div>
                       <Input
                         id="password"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+                        className="pl-10 pr-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
                         required
                       />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
+                    {fieldErrors.password && <p className="text-xs text-destructive mt-1">{fieldErrors.password}</p>}
+                    {mode === 'login' && (
+                      <div className="text-right">
+                        <button type="button" className="text-xs text-primary hover:underline font-medium" onClick={() => toast.info('Password reset link sent! Check your email.')}>
+                          Forgot password?
+                        </button>
+                      </div>
+                    )}
+                    {mode === 'register' && password.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex gap-1 h-1.5 mb-1">
+                          <div className={`flex-1 rounded-full ${password.length < 8 ? 'bg-destructive' : 'bg-primary/20'}`} />
+                          <div className={`flex-1 rounded-full ${password.length >= 8 ? (password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-muted'}`} />
+                          <div className={`flex-1 rounded-full ${password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? 'bg-emerald-500' : 'bg-muted'}`} />
+                        </div>
+                        <p className="text-[10px] font-mono text-muted-foreground text-right">
+                          {password.length < 8 ? <span className="text-destructive">Weak</span> : password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? <span className="text-emerald-500">Strong</span> : <span className="text-amber-500">Medium</span>}
+                        </p>
+                      </div>
+                    )}
                   </motion.div>
                 </motion.div>
 

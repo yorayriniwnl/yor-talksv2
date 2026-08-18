@@ -695,11 +695,33 @@ export const useAppStore = create<AppState>()(
       },
 
       initialize: async () => {
+        set({ isInitializing: true });
+
+        // Try to restore session from stored tokens first
+        const tokens = getStoredTokens();
+        if (tokens) {
+          try {
+            const meResponse = await api.getCurrentUser();
+            if (meResponse) {
+              const mapped = mapUser(meResponse);
+              set((state) => ({
+                currentUser: mapped,
+                tokens,
+                users: { ...MOCK_USERS, ...state.users, [mapped.id]: mapped },
+              }));
+              setupRealtime(set, get);
+            }
+          } catch {
+            // Token expired or invalid — fall back to mock user for demo
+            setStoredTokens(null);
+          }
+        }
+
+        // If still no user after token check, use mock user for demo mode
         const currentUser = get().currentUser || MOCK_USERS['user-roy'];
         set((state) => ({
           currentUser,
           users: { ...MOCK_USERS, ...state.users },
-          isInitializing: false
         }));
 
         setupRealtime(set, get);
@@ -719,6 +741,8 @@ export const useAppStore = create<AppState>()(
           ]);
         } catch {
           // Graceful fallback to mock data already initialized
+        } finally {
+          set({ isInitializing: false });
         }
       },
 

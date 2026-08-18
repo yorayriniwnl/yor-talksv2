@@ -8,6 +8,11 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
 
+// Beyond Peak Additions
+import { ThreeBackground } from '@/components/ui/ThreeBackground';
+import { AICopilot } from '@/components/copilot/AICopilot';
+import { uiaudio } from '@/lib/audioEngine';
+
 // Shell & Layout
 import { AppShell } from '@/components/layout/AppShell';
 
@@ -73,7 +78,6 @@ const GameLaunchpad = lazyWithRetry(() => import('@/pages/game-launchpad'));
 const FanClubSubscriptions = lazyWithRetry(() => import('@/pages/fan-club'));
 const ClipStudio = lazyWithRetry(() => import('@/pages/clip-studio'));
 const PowerRankings = lazyWithRetry(() => import('@/pages/power-rankings'));
-const InvoiceStudio = lazyWithRetry(() => import('@/pages/invoice-studio'));
 const ScoutingRadar = lazyWithRetry(() => import('@/pages/scouting-radar'));
 const TrophyRoom = lazyWithRetry(() => import('@/pages/trophy-room'));
 const CricketAuctionArena = lazyWithRetry(() => import('@/pages/cricket-auction'));
@@ -86,8 +90,7 @@ const SuperchatStudio = lazyWithRetry(() => import('@/pages/superchat-studio'));
 const SquadCommsRoom = lazyWithRetry(() => import('@/pages/squad-comms'));
 const GamerHealthHub = lazyWithRetry(() => import('@/pages/gamer-health'));
 const ScoreboardStudio = lazyWithRetry(() => import('@/pages/scoreboard-studio'));
-const BrandDealsHub = lazyWithRetry(() => import('@/pages/brand-deals'));
-const ChaiSimulator = lazyWithRetry(() => import('@/pages/chai-sim'));
+
 const CustomRoomLobby = lazyWithRetry(() => import('@/pages/custom-room'));
 const GearCustomizer = lazyWithRetry(() => import('@/pages/gear-customizer'));
 const MultistreamStudio = lazyWithRetry(() => import('@/pages/multistream'));
@@ -97,234 +100,9 @@ const RickshawDrift = lazyWithRetry(() => import('@/pages/rickshaw-drift'));
 const AntiCheatWatchtower = lazyWithRetry(() => import('@/pages/anticheat-hub'));
 const AIHighlightsStudio = lazyWithRetry(() => import('@/pages/ai-highlights'));
 const CricketLab = lazyWithRetry(() => import('@/pages/cricket-lab'));
-const CasterDeck = lazyWithRetry(() => import('@/pages/caster-deck'));
-const PitchDeckStudio = lazyWithRetry(() => import('@/pages/pitch-deck'));
-const DhabaRush = lazyWithRetry(() => import('@/pages/dhaba-rush'));
-const TaxComplianceHub = lazyWithRetry(() => import('@/pages/tax-hub'));
-const PostureAIHub = lazyWithRetry(() => import('@/pages/posture-ai'));
-const PanipuriRush = lazyWithRetry(() => import('@/pages/panipuri-rush'));
 const ChromaStudio = lazyWithRetry(() => import('@/pages/chroma-studio'));
-const DisputeHub = lazyWithRetry(() => import('@/pages/dispute-hub'));
 const TablaSynth = lazyWithRetry(() => import('@/pages/tabla-synth'));
 const JerseyCustomizer = lazyWithRetry(() => import('@/pages/jersey-customizer'));
-const NDAVault = lazyWithRetry(() => import('@/pages/nda-vault'));
-const LassiBar = lazyWithRetry(() => import('@/pages/lassi-bar'));
-const ContractSigner = lazyWithRetry(() => import('@/pages/contract-signer'));
-const FoamPlanner = lazyWithRetry(() => import('@/pages/foam-planner'));
-const VadaPavRush = lazyWithRetry(() => import('@/pages/vadapav-rush'));
-const DraftCombine = lazyWithRetry(() => import('@/pages/draft-combine'));
-const ChatOverlayStudio = lazyWithRetry(() => import('@/pages/chat-overlay'));
-const BiryaniDumSimulator = lazyWithRetry(() => import('@/pages/biryani-dum'));
-const SFXVault = lazyWithRetry(() => import('@/pages/sfx-vault'));
-const ThumbnailStudio = lazyWithRetry(() => import('@/pages/thumbnail-studio'));
-const ScrimsScheduler = lazyWithRetry(() => import('@/pages/scrims-scheduler'));
-const RigBenchmark = lazyWithRetry(() => import('@/pages/rig-benchmark'));
-const PrizePoolEscrow = lazyWithRetry(() => import('@/pages/prizepool-escrow'));
-const FanChantsStudio = lazyWithRetry(() => import('@/pages/fan-chants'));
-const LightingController = lazyWithRetry(() => import('@/pages/lighting-controller'));
-const GiveawayWheel = lazyWithRetry(() => import('@/pages/giveaway-wheel'));
-const PavBhajiRush = lazyWithRetry(() => import('@/pages/pavbhaji-rush'));
-const FairPlayCompliance = lazyWithRetry(() => import('@/pages/fairplay-compliance'));
-const AudioMatrix = lazyWithRetry(() => import('@/pages/audio-matrix'));
-const CholeBhatureRush = lazyWithRetry(() => import('@/pages/chole-bhature'));
-const GreenRoom = lazyWithRetry(() => import('@/pages/green-room'));
-const VetoStudio = lazyWithRetry(() => import('@/pages/veto-studio'));
-const KulfiFaloodaRush = lazyWithRetry(() => import('@/pages/kulfi-falooda'));
-const MerchVault = lazyWithRetry(() => import('@/pages/merch-vault'));
-const TeleprompterStudio = lazyWithRetry(() => import('@/pages/teleprompter'));
-const IdliVadaRush = lazyWithRetry(() => import('@/pages/idli-vada'));
-const CoachLab = lazyWithRetry(() => import('@/pages/coach-lab'));
-const LUTGraderStudio = lazyWithRetry(() => import('@/pages/lut-grader'));
-const RajmaChawalRush = lazyWithRetry(() => import('@/pages/rajma-chawal'));
-const PyroDeck = lazyWithRetry(() => import('@/pages/pyro-deck'));
-const VODChapters = lazyWithRetry(() => import('@/pages/vod-chapters'));
-const BedmiPuriRush = lazyWithRetry(() => import('@/pages/bedmi-puri'));
-const BootcampAllocator = lazyWithRetry(() => import('@/pages/bootcamp-allocator'));
-const LivePollsHUD = lazyWithRetry(() => import('@/pages/live-polls'));
-const PohaJalebiRush = lazyWithRetry(() => import('@/pages/poha-jalebi'));
-const ScrimsLeaderboard = lazyWithRetry(() => import('@/pages/scrims-leaderboard'));
-const SubathonTimer = lazyWithRetry(() => import('@/pages/subathon-timer'));
-const LittiChokhaRush = lazyWithRetry(() => import('@/pages/litti-chokha'));
-const KillzoneAnalyzer = lazyWithRetry(() => import('@/pages/killzone-analyzer'));
-const HypeTrainHUD = lazyWithRetry(() => import('@/pages/hypetrain-hud'));
-const DalBaatiRush = lazyWithRetry(() => import('@/pages/dal-baati'));
-const DroneScout = lazyWithRetry(() => import('@/pages/drone-scout'));
-const SubGoalStudio = lazyWithRetry(() => import('@/pages/sub-goal'));
-const HyderabadiHaleemRush = lazyWithRetry(() => import('@/pages/hyderabadi-haleem'));
-const LineupLab = lazyWithRetry(() => import('@/pages/lineup-lab'));
-const EmoteWallStudio = lazyWithRetry(() => import('@/pages/emote-wall'));
-const KathiRollRush = lazyWithRetry(() => import('@/pages/kathi-roll'));
-const DamageTradeSimulator = lazyWithRetry(() => import('@/pages/damage-trade'));
-const BitrateHealthWatchtower = lazyWithRetry(() => import('@/pages/bitrate-health'));
-const AmritsariKulchaRush = lazyWithRetry(() => import('@/pages/amritsari-kulcha'));
-const CasterDirectorDeck = lazyWithRetry(() => import('@/pages/caster-director'));
-const TTSCustomizerStudio = lazyWithRetry(() => import('@/pages/tts-customizer'));
-const MisalPavRush = lazyWithRetry(() => import('@/pages/misal-pav'));
-const ReplayStudio = lazyWithRetry(() => import('@/pages/replay-studio'));
-const SubathonWheelHUD = lazyWithRetry(() => import('@/pages/subathon-wheel'));
-const DahiBhallaRush = lazyWithRetry(() => import('@/pages/dahi-bhalla'));
-const StatCardGenerator = lazyWithRetry(() => import('@/pages/stat-card'));
-const ChatPinsStudio = lazyWithRetry(() => import('@/pages/chat-pins'));
-const MomosRush = lazyWithRetry(() => import('@/pages/momos-rush'));
-const RecoilPatternMatrix = lazyWithRetry(() => import('@/pages/recoil-matrix'));
-const ScoreTallyStudio = lazyWithRetry(() => import('@/pages/score-tally'));
-const BaidaRotiRush = lazyWithRetry(() => import('@/pages/baida-roti'));
-const DefusalTimerHUD = lazyWithRetry(() => import('@/pages/defusal-timer'));
-const PollOverlayStudio = lazyWithRetry(() => import('@/pages/poll-overlay'));
-const BunMaskaRush = lazyWithRetry(() => import('@/pages/bun-maska'));
-const SmokeSimulator = lazyWithRetry(() => import('@/pages/smoke-simulator'));
-const GoalMeterStudio = lazyWithRetry(() => import('@/pages/goal-meter'));
-const KeemaPavRush = lazyWithRetry(() => import('@/pages/keema-pav'));
-const FlashMatrix = lazyWithRetry(() => import('@/pages/flash-matrix'));
-const TickerBarStudio = lazyWithRetry(() => import('@/pages/ticker-bar'));
-const AppamStewRush = lazyWithRetry(() => import('@/pages/appam-stew'));
-const CrosshairVault = lazyWithRetry(() => import('@/pages/crosshair-vault'));
-const EmoteWaterfallStudio = lazyWithRetry(() => import('@/pages/emote-waterfall'));
-const ParottaSalnaRush = lazyWithRetry(() => import('@/pages/parotta-salna'));
-const ArmorMatrix = lazyWithRetry(() => import('@/pages/armor-matrix'));
-const StreakMeterStudio = lazyWithRetry(() => import('@/pages/streak-meter'));
-const PatialaLassiRush = lazyWithRetry(() => import('@/pages/patiala-lassi'));
-const FootstepMatrix = lazyWithRetry(() => import('@/pages/footstep-matrix'));
-const EmoteRainStudio = lazyWithRetry(() => import('@/pages/emote-rain'));
-const AslamButterChickenRush = lazyWithRetry(() => import('@/pages/aslam-butter-chicken'));
-const EconomyPlanner = lazyWithRetry(() => import('@/pages/economy-planner'));
-const DonoTrainStudio = lazyWithRetry(() => import('@/pages/dono-train'));
-const DoubleKaMeethaRush = lazyWithRetry(() => import('@/pages/double-ka-meetha'));
-const AbilityMatrix = lazyWithRetry(() => import('@/pages/ability-matrix'));
-const DecibelMeterStudio = lazyWithRetry(() => import('@/pages/decibel-meter'));
-const GaloutiKebabRush = lazyWithRetry(() => import('@/pages/galouti-kebab'));
-const RadarPings = lazyWithRetry(() => import('@/pages/radar-pings'));
-const FireworkRocketStudio = lazyWithRetry(() => import('@/pages/firework-rocket'));
-const NalliNihariRush = lazyWithRetry(() => import('@/pages/nalli-nihari'));
-const PlantRetakeMatrix = lazyWithRetry(() => import('@/pages/plant-retake-matrix'));
-const ConfettiCannonStudio = lazyWithRetry(() => import('@/pages/confetti-cannon'));
-const MangaloreFishFryRush = lazyWithRetry(() => import('@/pages/mangalore-fish-fry'));
-const AccuracyMatrix = lazyWithRetry(() => import('@/pages/accuracy-matrix'));
-const LaserShowStudio = lazyWithRetry(() => import('@/pages/laser-show'));
-const DesiThaliRush = lazyWithRetry(() => import('@/pages/desi-thali'));
-const RotationMatrix = lazyWithRetry(() => import('@/pages/rotation-matrix'));
-const EmoteFountainStudio = lazyWithRetry(() => import('@/pages/emote-fountain'));
-const ParkKathiRollRush = lazyWithRetry(() => import('@/pages/park-kathi-roll'));
-const AntiFlashMatrix = lazyWithRetry(() => import('@/pages/anti-flash-matrix'));
-const EmoteTornadoStudio = lazyWithRetry(() => import('@/pages/emote-tornado'));
-const ChettinadChickenRush = lazyWithRetry(() => import('@/pages/chettinad-chicken'));
-const WallbangMatrix = lazyWithRetry(() => import('@/pages/wallbang-matrix'));
-const EmoteDragonStudio = lazyWithRetry(() => import('@/pages/emote-dragon'));
-const LucknowiBiryaniRush = lazyWithRetry(() => import('@/pages/lucknowi-biryani'));
-const JigglePeekMatrix = lazyWithRetry(() => import('@/pages/jiggle-peek-matrix'));
-const EmoteCometStudio = lazyWithRetry(() => import('@/pages/emote-comet'));
-const RajasthaniLaalMaasRush = lazyWithRetry(() => import('@/pages/rajasthani-laal-maas'));
-const CrouchJumpMatrix = lazyWithRetry(() => import('@/pages/crouch-jump-matrix'));
-const EmoteAuroraStudio = lazyWithRetry(() => import('@/pages/emote-aurora'));
-const MirchiKaSalanRush = lazyWithRetry(() => import('@/pages/mirchi-ka-salan'));
-const BhopVelocityMatrix = lazyWithRetry(() => import('@/pages/bhop-velocity-matrix'));
-const EmoteSupernovaStudio = lazyWithRetry(() => import('@/pages/emote-supernova'));
-const MalabarPrawnsRush = lazyWithRetry(() => import('@/pages/malabar-prawns'));
-const AngleSnapMatrix = lazyWithRetry(() => import('@/pages/angle-snap-matrix'));
-const EmoteLaserMatrixStudio = lazyWithRetry(() => import('@/pages/emote-laser-matrix'));
-const MangaloreGheeRoastRush = lazyWithRetry(() => import('@/pages/mangalore-ghee-roast'));
-const CounterStrafeMatrix = lazyWithRetry(() => import('@/pages/counter-strafe-matrix'));
-const EmoteLightningStudio = lazyWithRetry(() => import('@/pages/emote-lightning'));
-const KashmiriRoganJoshRush = lazyWithRetry(() => import('@/pages/kashmiri-rogan-josh'));
-const BounceMatrix = lazyWithRetry(() => import('@/pages/bounce-matrix'));
-const EmoteSparklersStudio = lazyWithRetry(() => import('@/pages/emote-sparklers'));
-const ThalasseryBiryaniRush = lazyWithRetry(() => import('@/pages/thalassery-biryani'));
-const PeekersAdvantageMatrix = lazyWithRetry(() => import('@/pages/peekers-advantage-matrix'));
-const EmoteHologramCubeStudio = lazyWithRetry(() => import('@/pages/emote-hologram-cube'));
-const KoriRottiRush = lazyWithRetry(() => import('@/pages/kori-rotti'));
-const SpreadRecoveryMatrix = lazyWithRetry(() => import('@/pages/spread-recovery-matrix'));
-const EmotePrismLaserStudio = lazyWithRetry(() => import('@/pages/emote-prism-laser'));
-const GatteKiSabziRush = lazyWithRetry(() => import('@/pages/gatte-ki-sabzi'));
-const SkyboxLineupMatrix = lazyWithRetry(() => import('@/pages/skybox-lineup-matrix'));
-const EmoteGlitchMatrixStudio = lazyWithRetry(() => import('@/pages/emote-glitch-matrix'));
-const DindigulBiryaniRush = lazyWithRetry(() => import('@/pages/dindigul-biryani'));
-const OffAngleMatrix = lazyWithRetry(() => import('@/pages/off-angle-matrix'));
-const EmoteDholakBeatStudio = lazyWithRetry(() => import('@/pages/emote-dholak-beat'));
-const OdishaDalmaRush = lazyWithRetry(() => import('@/pages/odisha-dalma'));
-const SoundMaskingMatrix = lazyWithRetry(() => import('@/pages/sound-masking-matrix'));
-const EmoteBlackHoleWarpStudio = lazyWithRetry(() => import('@/pages/emote-blackhole-warp'));
-const GoanPrawnBalchaoRush = lazyWithRetry(() => import('@/pages/goan-prawn-balchao'));
-const MicroStrafeMatrix = lazyWithRetry(() => import('@/pages/micro-strafe-matrix'));
-const EmoteSwordClashStudio = lazyWithRetry(() => import('@/pages/emote-sword-clash'));
-const AmritsariCholeRush = lazyWithRetry(() => import('@/pages/amritsari-chole'));
-const RunGunDecayMatrix = lazyWithRetry(() => import('@/pages/run-gun-decay-matrix'));
-const EmoteQuantumPortalStudio = lazyWithRetry(() => import('@/pages/emote-quantum-portal'));
-const KoshaMangshoRush = lazyWithRetry(() => import('@/pages/kosha-mangsho'));
-const ShadowAdvantageMatrix = lazyWithRetry(() => import('@/pages/shadow-advantage-matrix'));
-const EmoteParticleTornadoStudio = lazyWithRetry(() => import('@/pages/emote-particle-tornado'));
-const KashmiriGushtabaRush = lazyWithRetry(() => import('@/pages/kashmiri-gushtaba'));
-const PopPeekMatrix = lazyWithRetry(() => import('@/pages/pop-peek-matrix'));
-const EmoteAuroraWaveStudio = lazyWithRetry(() => import('@/pages/emote-aurora-wave'));
-const RajasthaniKerSangriRush = lazyWithRetry(() => import('@/pages/rajasthani-ker-sangri'));
-const VerticalFOVMatrix = lazyWithRetry(() => import('@/pages/vertical-fov-matrix'));
-const EmoteMatrixGridStudio = lazyWithRetry(() => import('@/pages/emote-matrix-grid'));
-const ChettinadSukkaRush = lazyWithRetry(() => import('@/pages/chettinad-sukka'));
-const UtilityStackingMatrix = lazyWithRetry(() => import('@/pages/utility-stacking-matrix'));
-const EmoteRainbowBeamStudio = lazyWithRetry(() => import('@/pages/emote-rainbow-beam'));
-const MalabarKozhiRoastRush = lazyWithRetry(() => import('@/pages/malabar-kozhi-roast'));
-const FastDropMatrix = lazyWithRetry(() => import('@/pages/fast-drop-matrix'));
-const EmoteStarlightShowerStudio = lazyWithRetry(() => import('@/pages/emote-starlight-shower'));
-const GatteKaPulaoRush = lazyWithRetry(() => import('@/pages/gatte-ka-pulao'));
-const FlashBaitMatrix = lazyWithRetry(() => import('@/pages/flash-bait-matrix'));
-const EmotePulsarRingsStudio = lazyWithRetry(() => import('@/pages/emote-pulsar-rings'));
-const TalaHuaGoshtRush = lazyWithRetry(() => import('@/pages/tala-hua-gosht'));
-const QuickSwitchMatrix = lazyWithRetry(() => import('@/pages/quick-switch-matrix'));
-const EmoteLaserTunnelStudio = lazyWithRetry(() => import('@/pages/emote-laser-tunnel'));
-const SindhiSaiBhajiRush = lazyWithRetry(() => import('@/pages/sindhi-sai-bhaji'));
-const WallGlideMatrix = lazyWithRetry(() => import('@/pages/wall-glide-matrix'));
-const EmoteSoundwaveSpectrumStudio = lazyWithRetry(() => import('@/pages/emote-soundwave-spectrum'));
-const KoriKundapuriRush = lazyWithRetry(() => import('@/pages/kori-kundapuri'));
-const LadderSlideMatrix = lazyWithRetry(() => import('@/pages/ladder-slide-matrix'));
-const EmotePlasmaVortexStudio = lazyWithRetry(() => import('@/pages/emote-plasma-vortex'));
-const ChingriMalaiCurryRush = lazyWithRetry(() => import('@/pages/chingri-malai-curry'));
-const BounceAngleMatrix = lazyWithRetry(() => import('@/pages/bounce-angle-matrix'));
-const EmoteLaserHelixStudio = lazyWithRetry(() => import('@/pages/emote-laser-helix'));
-const PitorKiSabziRush = lazyWithRetry(() => import('@/pages/pitor-ki-sabzi'));
-const ScopeSwayMatrix = lazyWithRetry(() => import('@/pages/scope-sway-matrix'));
-const EmoteTachyonGridStudio = lazyWithRetry(() => import('@/pages/emote-tachyon-grid'));
-const KerDakRush = lazyWithRetry(() => import('@/pages/ker-dak'));
-const RightPeakMatrix = lazyWithRetry(() => import('@/pages/right-peak-matrix'));
-const EmoteQuantumRibbonStudio = lazyWithRetry(() => import('@/pages/emote-quantum-ribbon'));
-const PapadMangodiRush = lazyWithRetry(() => import('@/pages/papad-mangodi'));
-const WeaponCatchMatrix = lazyWithRetry(() => import('@/pages/weapon-catch-matrix'));
-const EmoteConstellationChartStudio = lazyWithRetry(() => import('@/pages/emote-constellation-chart'));
-const GovindGattaRush = lazyWithRetry(() => import('@/pages/govind-gatta'));
-const BombCarrierMatrix = lazyWithRetry(() => import('@/pages/bomb-carrier-matrix'));
-const EmoteWarpDriveTunnelStudio = lazyWithRetry(() => import('@/pages/emote-warpdrive-tunnel'));
-const BajraKhichdiRush = lazyWithRetry(() => import('@/pages/bajra-khichdi'));
-const AudioOcclusionMatrix = lazyWithRetry(() => import('@/pages/audio-occlusion-matrix'));
-const EmoteTesseractCubeStudio = lazyWithRetry(() => import('@/pages/emote-tesseract-cube'));
-const MogarKachoriRush = lazyWithRetry(() => import('@/pages/mogar-kachori'));
-const FirstBulletInaccuracyMatrix = lazyWithRetry(() => import('@/pages/first-bullet-inaccuracy'));
-const EmoteMobiusLoopStudio = lazyWithRetry(() => import('@/pages/emote-mobius-loop'));
-const ChanaJaisalmeriRush = lazyWithRetry(() => import('@/pages/chana-jaisalmeri'));
-const HitboxDisjointMatrix = lazyWithRetry(() => import('@/pages/hitbox-disjoint-matrix'));
-const EmoteGyroscopeRingStudio = lazyWithRetry(() => import('@/pages/emote-gyroscope-ring'));
-const GatteKiKadhiRush = lazyWithRetry(() => import('@/pages/gatte-ki-kadhi'));
-const ArmorPunchMatrix = lazyWithRetry(() => import('@/pages/armor-punch-matrix'));
-const EmoteHypersphereVortexStudio = lazyWithRetry(() => import('@/pages/emote-hypersphere-vortex'));
-const SangriKadhiRush = lazyWithRetry(() => import('@/pages/sangri-kadhi'));
-const BulletTracerMatrix = lazyWithRetry(() => import('@/pages/bullet-tracer-matrix'));
-const EmoteTorusKnotStudio = lazyWithRetry(() => import('@/pages/emote-torusknot-studio'));
-const DahiGujiyaRush = lazyWithRetry(() => import('@/pages/dahi-gujiya'));
-const JiggleCounterMatrix = lazyWithRetry(() => import('@/pages/jiggle-counter-matrix'));
-const EmotePlasmaRingStudio = lazyWithRetry(() => import('@/pages/emote-plasma-ring'));
-const BikaneriGhevarRush = lazyWithRetry(() => import('@/pages/bikaneri-ghevar'));
-const PopFlashMatrix = lazyWithRetry(() => import('@/pages/pop-flash-matrix'));
-const EmoteLorenzAttractorStudio = lazyWithRetry(() => import('@/pages/emote-lorenz-attractor'));
-const KerSangriHandiRush = lazyWithRetry(() => import('@/pages/ker-sangri-handi'));
-const WeaponDropMatrix = lazyWithRetry(() => import('@/pages/weapon-drop-matrix'));
-const EmoteCalabiYauStudio = lazyWithRetry(() => import('@/pages/emote-calabi-yau'));
-const DalDhokliRush = lazyWithRetry(() => import('@/pages/dal-dhokli'));
-const JumpThrowMatrix = lazyWithRetry(() => import('@/pages/jump-throw-matrix'));
-const EmoteCliffordAttractorStudio = lazyWithRetry(() => import('@/pages/emote-clifford-attractor'));
-const PittodKadhiRush = lazyWithRetry(() => import('@/pages/pittod-kadhi'));
-const BoostPlantMatrix = lazyWithRetry(() => import('@/pages/boost-plant-matrix'));
-const EmoteIkedaMapStudio = lazyWithRetry(() => import('@/pages/emote-ikeda-map'));
-const BajraRaabdiRush = lazyWithRetry(() => import('@/pages/bajra-raabdi'));
-const RunBoostMatrix = lazyWithRetry(() => import('@/pages/run-boost-matrix'));
-const EmoteRosslerAttractorStudio = lazyWithRetry(() => import('@/pages/emote-rossler-attractor'));
-const BikaneriRasgullaRush = lazyWithRetry(() => import('@/pages/bikaneri-rasgulla'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -345,8 +123,8 @@ function ProtectedRoutes() {
   const [location] = useLocation();
 
   return (
-    <AppShell>
-      <ErrorBoundary>
+    <ErrorBoundary>
+      <AppShell>
         <Suspense fallback={<RouteSkeleton />}>
           <PageTransition>
             <Switch location={location}>
@@ -367,24 +145,17 @@ function ProtectedRoutes() {
               <Route path="/points-shop" component={PointsShop} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/tournaments/:id?" component={Tournaments} />
-              <Route path="/tournaments" component={Tournaments} />
               <Route path="/studio" component={Studio} />
               <Route path="/lounge/:id?" component={Lounge} />
-              <Route path="/lounge" component={Lounge} />
-              <Route path="/games" component={Bazaar} />
               <Route path="/bazaar" component={Bazaar} />
               <Route path="/arcade" component={Arcade} />
               <Route path="/pass" component={SuperPass} />
               <Route path="/clans" component={Clans} />
               <Route path="/radar" component={Radar} />
               <Route path="/meme-studio" component={MemeStudio} />
-              <Route path="/duel" component={CodeDuel} />
               <Route path="/code-duel" component={CodeDuel} />
-              <Route path="/synth" component={SynthRoom} />
               <Route path="/synth-room" component={SynthRoom} />
               <Route path="/bounties" component={Bounties} />
-              <Route path="/grants" component={Bounties} />
-              <Route path="/analytics" component={CreatorAnalytics} />
               <Route path="/creator-analytics" component={CreatorAnalytics} />
               <Route path="/hologram" component={HologramStudio} />
               <Route path="/voice-ai" component={VoiceAI} />
@@ -392,18 +163,13 @@ function ProtectedRoutes() {
               <Route path="/metaverse" component={Metaverse} />
               <Route path="/soundboard" component={Soundboard} />
               <Route path="/media-kit" component={MediaKit} />
-              <Route path="/mediakit" component={MediaKit} />
-              <Route path="/dj" component={Turntable} />
               <Route path="/turntable" component={Turntable} />
               <Route path="/particles" component={ParticleSandbox} />
               <Route path="/tactics" component={TacticsWhiteboard} />
-              <Route path="/art" component={AIArtStudio} />
               <Route path="/ai-art" component={AIArtStudio} />
               <Route path="/merch" component={MerchStudio} />
               <Route path="/predictions" component={PredictionsArena} />
               <Route path="/spectrum" component={Spectrum} />
-              <Route path="/visualizer" component={Spectrum} />
-              <Route path="/overlays" component={OverlayStudio} />
               <Route path="/overlay-studio" component={OverlayStudio} />
               <Route path="/contracts" component={ContractsStudio} />
               <Route path="/treasury" component={ClanTreasury} />
@@ -412,7 +178,6 @@ function ProtectedRoutes() {
               <Route path="/fanclub" component={FanClubSubscriptions} />
               <Route path="/clips" component={ClipStudio} />
               <Route path="/rankings" component={PowerRankings} />
-              <Route path="/invoices" component={InvoiceStudio} />
               <Route path="/scouting" component={ScoutingRadar} />
               <Route path="/trophies" component={TrophyRoom} />
               <Route path="/auction" component={CricketAuctionArena} />
@@ -425,7 +190,6 @@ function ProtectedRoutes() {
               <Route path="/comms" component={SquadCommsRoom} />
               <Route path="/health" component={GamerHealthHub} />
               <Route path="/scoreboard" component={ScoreboardStudio} />
-              <Route path="/deals" component={BrandDealsHub} />
               <Route path="/chai" component={ChaiSimulator} />
               <Route path="/rooms" component={CustomRoomLobby} />
               <Route path="/gear" component={GearCustomizer} />
@@ -436,248 +200,26 @@ function ProtectedRoutes() {
               <Route path="/anticheat" component={AntiCheatWatchtower} />
               <Route path="/highlights" component={AIHighlightsStudio} />
               <Route path="/cricket-lab" component={CricketLab} />
-              <Route path="/caster-deck" component={CasterDeck} />
-              <Route path="/pitch-deck" component={PitchDeckStudio} />
-              <Route path="/dhaba-rush" component={DhabaRush} />
-              <Route path="/tax-hub" component={TaxComplianceHub} />
-              <Route path="/posture-ai" component={PostureAIHub} />
-              <Route path="/panipuri-rush" component={PanipuriRush} />
               <Route path="/chroma-studio" component={ChromaStudio} />
-              <Route path="/dispute-hub" component={DisputeHub} />
               <Route path="/tabla-synth" component={TablaSynth} />
               <Route path="/jersey-customizer" component={JerseyCustomizer} />
-              <Route path="/nda-vault" component={NDAVault} />
-              <Route path="/lassi-bar" component={LassiBar} />
-              <Route path="/contract-signer" component={ContractSigner} />
-              <Route path="/foam-planner" component={FoamPlanner} />
-              <Route path="/vadapav-rush" component={VadaPavRush} />
-              <Route path="/draft-combine" component={DraftCombine} />
-              <Route path="/chat-overlay" component={ChatOverlayStudio} />
-              <Route path="/biryani-dum" component={BiryaniDumSimulator} />
-              <Route path="/sfx-vault" component={SFXVault} />
-              <Route path="/thumbnail-studio" component={ThumbnailStudio} />
-              <Route path="/scrims-scheduler" component={ScrimsScheduler} />
-              <Route path="/rig-benchmark" component={RigBenchmark} />
-              <Route path="/prizepool-escrow" component={PrizePoolEscrow} />
-              <Route path="/fan-chants" component={FanChantsStudio} />
-              <Route path="/lighting-controller" component={LightingController} />
-              <Route path="/giveaway-wheel" component={GiveawayWheel} />
-              <Route path="/pavbhaji-rush" component={PavBhajiRush} />
-              <Route path="/fairplay-compliance" component={FairPlayCompliance} />
-              <Route path="/audio-matrix" component={AudioMatrix} />
-              <Route path="/chole-bhature" component={CholeBhatureRush} />
-              <Route path="/green-room" component={GreenRoom} />
-              <Route path="/veto-studio" component={VetoStudio} />
-              <Route path="/kulfi-falooda" component={KulfiFaloodaRush} />
-              <Route path="/merch-vault" component={MerchVault} />
-              <Route path="/teleprompter" component={TeleprompterStudio} />
-              <Route path="/idli-vada" component={IdliVadaRush} />
-              <Route path="/coach-lab" component={CoachLab} />
-              <Route path="/lut-grader" component={LUTGraderStudio} />
-              <Route path="/rajma-chawal" component={RajmaChawalRush} />
-              <Route path="/pyro-deck" component={PyroDeck} />
-              <Route path="/vod-chapters" component={VODChapters} />
-              <Route path="/bedmi-puri" component={BedmiPuriRush} />
-              <Route path="/bootcamp-allocator" component={BootcampAllocator} />
-              <Route path="/live-polls" component={LivePollsHUD} />
-              <Route path="/poha-jalebi" component={PohaJalebiRush} />
-              <Route path="/scrims-leaderboard" component={ScrimsLeaderboard} />
-              <Route path="/subathon-timer" component={SubathonTimer} />
-              <Route path="/litti-chokha" component={LittiChokhaRush} />
-              <Route path="/killzone-analyzer" component={KillzoneAnalyzer} />
-              <Route path="/hypetrain-hud" component={HypeTrainHUD} />
-              <Route path="/dal-baati" component={DalBaatiRush} />
-              <Route path="/drone-scout" component={DroneScout} />
-              <Route path="/sub-goal" component={SubGoalStudio} />
-              <Route path="/hyderabadi-haleem" component={HyderabadiHaleemRush} />
-              <Route path="/lineup-lab" component={LineupLab} />
-              <Route path="/emote-wall" component={EmoteWallStudio} />
-              <Route path="/kathi-roll" component={KathiRollRush} />
-              <Route path="/damage-trade" component={DamageTradeSimulator} />
-              <Route path="/bitrate-health" component={BitrateHealthWatchtower} />
-              <Route path="/amritsari-kulcha" component={AmritsariKulchaRush} />
-              <Route path="/caster-director" component={CasterDirectorDeck} />
-              <Route path="/tts-customizer" component={TTSCustomizerStudio} />
-              <Route path="/misal-pav" component={MisalPavRush} />
-              <Route path="/replay-studio" component={ReplayStudio} />
-              <Route path="/subathon-wheel" component={SubathonWheelHUD} />
-              <Route path="/dahi-bhalla" component={DahiBhallaRush} />
-              <Route path="/stat-card" component={StatCardGenerator} />
-              <Route path="/chat-pins" component={ChatPinsStudio} />
-              <Route path="/momos-rush" component={MomosRush} />
-              <Route path="/recoil-matrix" component={RecoilPatternMatrix} />
-              <Route path="/score-tally" component={ScoreTallyStudio} />
-              <Route path="/baida-roti" component={BaidaRotiRush} />
-              <Route path="/defusal-timer" component={DefusalTimerHUD} />
-              <Route path="/poll-overlay" component={PollOverlayStudio} />
-              <Route path="/bun-maska" component={BunMaskaRush} />
-              <Route path="/smoke-simulator" component={SmokeSimulator} />
-              <Route path="/goal-meter" component={GoalMeterStudio} />
-              <Route path="/keema-pav" component={KeemaPavRush} />
-              <Route path="/flash-matrix" component={FlashMatrix} />
-              <Route path="/ticker-bar" component={TickerBarStudio} />
-              <Route path="/appam-stew" component={AppamStewRush} />
-              <Route path="/crosshair-vault" component={CrosshairVault} />
-              <Route path="/emote-waterfall" component={EmoteWaterfallStudio} />
-              <Route path="/parotta-salna" component={ParottaSalnaRush} />
-              <Route path="/armor-matrix" component={ArmorMatrix} />
-              <Route path="/streak-meter" component={StreakMeterStudio} />
-              <Route path="/patiala-lassi" component={PatialaLassiRush} />
-              <Route path="/footstep-matrix" component={FootstepMatrix} />
-              <Route path="/emote-rain" component={EmoteRainStudio} />
-              <Route path="/aslam-butter-chicken" component={AslamButterChickenRush} />
-              <Route path="/economy-planner" component={EconomyPlanner} />
-              <Route path="/dono-train" component={DonoTrainStudio} />
-              <Route path="/double-ka-meetha" component={DoubleKaMeethaRush} />
-              <Route path="/ability-matrix" component={AbilityMatrix} />
-              <Route path="/decibel-meter" component={DecibelMeterStudio} />
-              <Route path="/galouti-kebab" component={GaloutiKebabRush} />
-              <Route path="/radar-pings" component={RadarPings} />
-              <Route path="/firework-rocket" component={FireworkRocketStudio} />
-              <Route path="/nalli-nihari" component={NalliNihariRush} />
-              <Route path="/plant-retake-matrix" component={PlantRetakeMatrix} />
-              <Route path="/confetti-cannon" component={ConfettiCannonStudio} />
-              <Route path="/mangalore-fish-fry" component={MangaloreFishFryRush} />
-              <Route path="/accuracy-matrix" component={AccuracyMatrix} />
-              <Route path="/laser-show" component={LaserShowStudio} />
-              <Route path="/desi-thali" component={DesiThaliRush} />
-              <Route path="/rotation-matrix" component={RotationMatrix} />
-              <Route path="/emote-fountain" component={EmoteFountainStudio} />
-              <Route path="/park-kathi-roll" component={ParkKathiRollRush} />
-              <Route path="/anti-flash-matrix" component={AntiFlashMatrix} />
-              <Route path="/emote-tornado" component={EmoteTornadoStudio} />
-              <Route path="/chettinad-chicken" component={ChettinadChickenRush} />
-              <Route path="/wallbang-matrix" component={WallbangMatrix} />
-              <Route path="/emote-dragon" component={EmoteDragonStudio} />
-              <Route path="/lucknowi-biryani" component={LucknowiBiryaniRush} />
-              <Route path="/jiggle-peek-matrix" component={JigglePeekMatrix} />
-              <Route path="/emote-comet" component={EmoteCometStudio} />
-              <Route path="/rajasthani-laal-maas" component={RajasthaniLaalMaasRush} />
-              <Route path="/crouch-jump-matrix" component={CrouchJumpMatrix} />
-              <Route path="/emote-aurora" component={EmoteAuroraStudio} />
-              <Route path="/mirchi-ka-salan" component={MirchiKaSalanRush} />
-              <Route path="/bhop-velocity-matrix" component={BhopVelocityMatrix} />
-              <Route path="/emote-supernova" component={EmoteSupernovaStudio} />
-              <Route path="/malabar-prawns" component={MalabarPrawnsRush} />
-              <Route path="/angle-snap-matrix" component={AngleSnapMatrix} />
-              <Route path="/emote-laser-matrix" component={EmoteLaserMatrixStudio} />
-              <Route path="/mangalore-ghee-roast" component={MangaloreGheeRoastRush} />
-              <Route path="/counter-strafe-matrix" component={CounterStrafeMatrix} />
-              <Route path="/emote-lightning" component={EmoteLightningStudio} />
-              <Route path="/kashmiri-rogan-josh" component={KashmiriRoganJoshRush} />
-              <Route path="/bounce-matrix" component={BounceMatrix} />
-              <Route path="/emote-sparklers" component={EmoteSparklersStudio} />
-              <Route path="/thalassery-biryani" component={ThalasseryBiryaniRush} />
-              <Route path="/peekers-advantage-matrix" component={PeekersAdvantageMatrix} />
-              <Route path="/emote-hologram-cube" component={EmoteHologramCubeStudio} />
-              <Route path="/kori-rotti" component={KoriRottiRush} />
-              <Route path="/spread-recovery-matrix" component={SpreadRecoveryMatrix} />
-              <Route path="/emote-prism-laser" component={EmotePrismLaserStudio} />
-              <Route path="/gatte-ki-sabzi" component={GatteKiSabziRush} />
-              <Route path="/skybox-lineup-matrix" component={SkyboxLineupMatrix} />
-              <Route path="/emote-glitch-matrix" component={EmoteGlitchMatrixStudio} />
-              <Route path="/dindigul-biryani" component={DindigulBiryaniRush} />
-              <Route path="/off-angle-matrix" component={OffAngleMatrix} />
-              <Route path="/emote-dholak-beat" component={EmoteDholakBeatStudio} />
-              <Route path="/odisha-dalma" component={OdishaDalmaRush} />
-              <Route path="/sound-masking-matrix" component={SoundMaskingMatrix} />
-              <Route path="/emote-blackhole-warp" component={EmoteBlackHoleWarpStudio} />
-              <Route path="/goan-prawn-balchao" component={GoanPrawnBalchaoRush} />
-              <Route path="/micro-strafe-matrix" component={MicroStrafeMatrix} />
-              <Route path="/emote-sword-clash" component={EmoteSwordClashStudio} />
-              <Route path="/amritsari-chole" component={AmritsariCholeRush} />
-              <Route path="/run-gun-decay-matrix" component={RunGunDecayMatrix} />
-              <Route path="/emote-quantum-portal" component={EmoteQuantumPortalStudio} />
-              <Route path="/kosha-mangsho" component={KoshaMangshoRush} />
-              <Route path="/shadow-advantage-matrix" component={ShadowAdvantageMatrix} />
-              <Route path="/emote-particle-tornado" component={EmoteParticleTornadoStudio} />
-              <Route path="/kashmiri-gushtaba" component={KashmiriGushtabaRush} />
-              <Route path="/pop-peek-matrix" component={PopPeekMatrix} />
-              <Route path="/emote-aurora-wave" component={EmoteAuroraWaveStudio} />
-              <Route path="/rajasthani-ker-sangri" component={RajasthaniKerSangriRush} />
-              <Route path="/vertical-fov-matrix" component={VerticalFOVMatrix} />
-              <Route path="/emote-matrix-grid" component={EmoteMatrixGridStudio} />
-              <Route path="/chettinad-sukka" component={ChettinadSukkaRush} />
-              <Route path="/utility-stacking-matrix" component={UtilityStackingMatrix} />
-              <Route path="/emote-rainbow-beam" component={EmoteRainbowBeamStudio} />
-              <Route path="/malabar-kozhi-roast" component={MalabarKozhiRoastRush} />
-              <Route path="/fast-drop-matrix" component={FastDropMatrix} />
-              <Route path="/emote-starlight-shower" component={EmoteStarlightShowerStudio} />
-              <Route path="/gatte-ka-pulao" component={GatteKaPulaoRush} />
-              <Route path="/flash-bait-matrix" component={FlashBaitMatrix} />
-              <Route path="/emote-pulsar-rings" component={EmotePulsarRingsStudio} />
-              <Route path="/tala-hua-gosht" component={TalaHuaGoshtRush} />
-              <Route path="/quick-switch-matrix" component={QuickSwitchMatrix} />
-              <Route path="/emote-laser-tunnel" component={EmoteLaserTunnelStudio} />
-              <Route path="/sindhi-sai-bhaji" component={SindhiSaiBhajiRush} />
-              <Route path="/wall-glide-matrix" component={WallGlideMatrix} />
-              <Route path="/emote-soundwave-spectrum" component={EmoteSoundwaveSpectrumStudio} />
-              <Route path="/kori-kundapuri" component={KoriKundapuriRush} />
-              <Route path="/ladder-slide-matrix" component={LadderSlideMatrix} />
-              <Route path="/emote-plasma-vortex" component={EmotePlasmaVortexStudio} />
-              <Route path="/chingri-malai-curry" component={ChingriMalaiCurryRush} />
-              <Route path="/bounce-angle-matrix" component={BounceAngleMatrix} />
-              <Route path="/emote-laser-helix" component={EmoteLaserHelixStudio} />
-              <Route path="/pitor-ki-sabzi" component={PitorKiSabziRush} />
-              <Route path="/scope-sway-matrix" component={ScopeSwayMatrix} />
-              <Route path="/emote-tachyon-grid" component={EmoteTachyonGridStudio} />
-              <Route path="/ker-dak" component={KerDakRush} />
-              <Route path="/right-peak-matrix" component={RightPeakMatrix} />
-              <Route path="/emote-quantum-ribbon" component={EmoteQuantumRibbonStudio} />
-              <Route path="/papad-mangodi" component={PapadMangodiRush} />
-              <Route path="/weapon-catch-matrix" component={WeaponCatchMatrix} />
-              <Route path="/emote-constellation-chart" component={EmoteConstellationChartStudio} />
-              <Route path="/govind-gatta" component={GovindGattaRush} />
-              <Route path="/bomb-carrier-matrix" component={BombCarrierMatrix} />
-              <Route path="/emote-warpdrive-tunnel" component={EmoteWarpDriveTunnelStudio} />
-              <Route path="/bajra-khichdi" component={BajraKhichdiRush} />
-              <Route path="/audio-occlusion-matrix" component={AudioOcclusionMatrix} />
-              <Route path="/emote-tesseract-cube" component={EmoteTesseractCubeStudio} />
-              <Route path="/mogar-kachori" component={MogarKachoriRush} />
-              <Route path="/first-bullet-inaccuracy" component={FirstBulletInaccuracyMatrix} />
-              <Route path="/emote-mobius-loop" component={EmoteMobiusLoopStudio} />
-              <Route path="/chana-jaisalmeri" component={ChanaJaisalmeriRush} />
-              <Route path="/hitbox-disjoint-matrix" component={HitboxDisjointMatrix} />
-              <Route path="/emote-gyroscope-ring" component={EmoteGyroscopeRingStudio} />
-              <Route path="/gatte-ki-kadhi" component={GatteKiKadhiRush} />
-              <Route path="/armor-punch-matrix" component={ArmorPunchMatrix} />
-              <Route path="/emote-hypersphere-vortex" component={EmoteHypersphereVortexStudio} />
-              <Route path="/sangri-kadhi" component={SangriKadhiRush} />
-              <Route path="/bullet-tracer-matrix" component={BulletTracerMatrix} />
-              <Route path="/emote-torusknot-studio" component={EmoteTorusKnotStudio} />
-              <Route path="/dahi-gujiya" component={DahiGujiyaRush} />
-              <Route path="/jiggle-counter-matrix" component={JiggleCounterMatrix} />
-              <Route path="/emote-plasma-ring" component={EmotePlasmaRingStudio} />
-              <Route path="/bikaneri-ghevar" component={BikaneriGhevarRush} />
-              <Route path="/pop-flash-matrix" component={PopFlashMatrix} />
-              <Route path="/emote-lorenz-attractor" component={EmoteLorenzAttractorStudio} />
-              <Route path="/ker-sangri-handi" component={KerSangriHandiRush} />
-              <Route path="/weapon-drop-matrix" component={WeaponDropMatrix} />
-              <Route path="/emote-calabi-yau" component={EmoteCalabiYauStudio} />
-              <Route path="/dal-dhokli" component={DalDhokliRush} />
-              <Route path="/jump-throw-matrix" component={JumpThrowMatrix} />
-              <Route path="/emote-clifford-attractor" component={EmoteCliffordAttractorStudio} />
-              <Route path="/pittod-kadhi" component={PittodKadhiRush} />
-              <Route path="/boost-plant-matrix" component={BoostPlantMatrix} />
-              <Route path="/emote-ikeda-map" component={EmoteIkedaMapStudio} />
-              <Route path="/bajra-raabdi" component={BajraRaabdiRush} />
-              <Route path="/run-boost-matrix" component={RunBoostMatrix} />
-              <Route path="/emote-rossler-attractor" component={EmoteRosslerAttractorStudio} />
-              <Route path="/bikaneri-rasgulla" component={BikaneriRasgullaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
           </PageTransition>
         </Suspense>
-      </ErrorBoundary>
-    </AppShell>
+      </AppShell>
+    </ErrorBoundary>
   );
 }
+
+const AuthRedirect = () => <Redirect to="/" />;
 
 function Router() {
   const currentUser = useAppStore((s) => s.currentUser);
   const isInitializing = useAppStore((s) => s.isInitializing);
   const initialize = useAppStore((s) => s.initialize);
+  const [location] = useLocation();
 
   useEffect(() => {
     initialize().catch(console.error);
@@ -693,8 +235,12 @@ function Router() {
   return (
     <Switch>
       {!currentUser && <Route path="/auth" component={Auth} />}
-      {!currentUser && <Route component={Auth} />}
-      {currentUser && <Route path="/auth" component={() => <Redirect to="/" />} />}
+      {!currentUser && (
+        <Route 
+          component={() => <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />} 
+        />
+      )}
+      {currentUser && <Route path="/auth" component={AuthRedirect} />}
       {currentUser && <Route><ProtectedRoutes /></Route>}
     </Switch>
   );
@@ -708,6 +254,24 @@ function App() {
     } catch (e) {
       // ignore
     }
+
+    // Initialize Web Audio Engine globally (must wait for user interaction to resume)
+    uiaudio.init();
+    const enableAudio = () => uiaudio.resume();
+    document.addEventListener('click', enableAudio, { once: true });
+    
+    // Wire up global UI click sounds for buttons
+    const playClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('a')) {
+        uiaudio.click();
+      }
+    };
+    document.addEventListener('click', playClick);
+
+    return () => {
+      document.removeEventListener('click', playClick);
+    };
   }, []);
 
   return (
@@ -715,6 +279,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <MotionConfig reducedMotion="user">
           <TooltipProvider>
+            <ThreeBackground />
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
               <AppProfiler>
                 <RouteTelemetry />
@@ -722,6 +287,7 @@ function App() {
               </AppProfiler>
             </WouterRouter>
             <Toaster />
+            <AICopilot />
           </TooltipProvider>
         </MotionConfig>
       </QueryClientProvider>

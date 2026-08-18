@@ -13,7 +13,7 @@ import {
   ArrowLeft, MessageCircle, Trophy, Trash2, Plus, Sparkles, MoreHorizontal,
   Grid3X3, Heart, Bookmark, Star, Award, Pin, ThumbsUp, Share2, Film,
   Image as ImageIcon, Link as LinkIcon, MapPin, Calendar, Shield, ExternalLink,
-  UserPlus, Zap, Eye, Play, ChevronRight, Copy, Check
+  UserPlus, Zap, Eye, Play, ChevronRight, Copy, Check, UserRound
 } from 'lucide-react';
 
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
@@ -350,11 +350,19 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-full border-[3px] border-primary/30 border-t-primary animate-spin" />
-          <p className="text-sm text-muted-foreground font-medium animate-pulse">Loading profile…</p>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+        <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
+          <UserRound className="w-10 h-10 text-muted-foreground" />
         </div>
+        <h2 className="font-display font-bold text-xl">User not found</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-sm font-serif">
+          This profile doesn't exist or may have been removed.
+        </p>
+        <Link href="/explore">
+          <Button variant="outline" className="rounded-2xl font-bold text-xs">
+            Discover People
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -503,9 +511,11 @@ export default function Profile() {
 
           {/* Meta info */}
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[0.75rem] text-muted-foreground mb-4">
-            <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 shrink-0" /> San Francisco</span>
-            <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5 shrink-0" /> <a href="#" className="text-primary hover:underline font-medium">yortalks.dev</a></span>
-            <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 shrink-0" /> Joined Sep 2023</span>
+            {profile.bio && (
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 shrink-0" /> Earth</span>
+            )}
+            <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5 shrink-0" /> <a href={`https://yor-talks.in/@${profile.username}`} className="text-primary hover:underline font-medium">yor-talks.in/@{profile.username}</a></span>
+            <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 shrink-0" /> Member</span>
           </div>
 
           {/* ── Instagram Stats Row ────────────────────────────────── */}
@@ -617,7 +627,7 @@ export default function Profile() {
             {([
               { key: 'grid' as const, icon: Grid3X3, label: 'Posts' },
               { key: 'reels' as const, icon: Film, label: 'Reels' },
-              { key: 'liked' as const, icon: Heart, label: 'Liked' },
+              ...(isOwnProfile ? [{ key: 'liked' as const, icon: Heart, label: 'Liked' }] : []),
             ]).map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={cn("profile-tab rounded-none border-b-2 transition-all press-scale",
