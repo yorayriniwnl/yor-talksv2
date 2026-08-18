@@ -15,13 +15,23 @@ const SHOP_ITEMS = [
   { id: 'frame-gold', type: 'frame', title: 'Golden Dragon Frame', points: 1000, previewColor: 'from-amber-300 to-orange-500', category: 'Avatar Frame' },
   { id: 'frame-cosmic', type: 'frame', title: 'Deep Cosmic Frame', points: 750, previewColor: 'from-red-500 to-indigo-600', category: 'Avatar Frame' },
   { id: 'frame-fire', type: 'frame', title: 'Supernova Fire Frame', points: 1200, previewColor: 'from-red-500 to-yellow-400', category: 'Avatar Frame' },
+  { id: 'frame-blossom', type: 'frame', title: 'Cherry Blossom Bloom', points: 800, previewColor: 'from-pink-400 to-rose-500', category: 'Avatar Frame' },
+  { id: 'frame-emerald', type: 'frame', title: 'Radiant Emerald Matrix', points: 950, previewColor: 'from-emerald-400 to-teal-600', category: 'Avatar Frame' },
+  { id: 'frame-glitch', type: 'frame', title: 'Quantum Glitch Hologram', points: 1400, previewColor: 'from-fuchsia-500 to-cyan-400', category: 'Avatar Frame' },
+  { id: 'frame-obsidian', type: 'frame', title: 'Obsidian Void Armor', points: 1600, previewColor: 'from-slate-700 to-zinc-900', category: 'Avatar Frame' },
   
   { id: 'bg-cyber', type: 'background', title: 'Cyberpunk Metropolis Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
   { id: 'bg-nebula', type: 'background', title: 'Deep Space Nebula Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
   { id: 'bg-sunset', type: 'background', title: 'Synthwave Sunset Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
+  { id: 'bg-shibuya', type: 'background', title: 'Rainy Shibuya 2099 Wallpaper', points: 1800, coverUrl: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
+  { id: 'bg-aurora', type: 'background', title: 'Nordic Boreal Aurora Wallpaper', points: 1750, coverUrl: 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
+  { id: 'bg-accelerator', type: 'background', title: 'Quantum Collider Core Wallpaper', points: 2200, coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
 
   { id: 'badge-voyager', type: 'badge', title: 'Multiverse Pioneer Badge', points: 2000, category: 'Steam Badge' },
   { id: 'badge-master', type: 'badge', title: 'Code Architect Badge', points: 2500, category: 'Steam Badge' },
+  { id: 'badge-radiant', type: 'badge', title: 'Radiant Duelist Badge', points: 3000, category: 'Steam Badge' },
+  { id: 'badge-synth', type: 'badge', title: 'Modular Sound Synthesist', points: 2800, category: 'Steam Badge' },
+  { id: 'badge-webgpu', type: 'badge', title: 'WebGPU Grandmaster Badge', points: 3500, category: 'Steam Badge' },
 ];
 
 export default function PointsShop() {
