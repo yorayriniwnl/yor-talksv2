@@ -169,6 +169,11 @@ const ScramjetSim = lazyWithRetry(() => import('@/pages/scramjet-sim'));
 const HodgkinHuxley = lazyWithRetry(() => import('@/pages/hodgkin-huxley'));
 const SkiRacer = lazyWithRetry(() => import('@/pages/ski-racer'));
 const ShorStudio = lazyWithRetry(() => import('@/pages/shor-studio'));
+const DysonSwarm = lazyWithRetry(() => import('@/pages/dyson-swarm'));
+const MechSim = lazyWithRetry(() => import('@/pages/mech-sim'));
+const PhageSim = lazyWithRetry(() => import('@/pages/phage-sim'));
+const Pinball3D = lazyWithRetry(() => import('@/pages/pinball-3d'));
+const GroverStudio = lazyWithRetry(() => import('@/pages/grover-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -332,6 +337,11 @@ function ProtectedRoutes() {
               <Route path="/hodgkin-huxley" component={HodgkinHuxley} />
               <Route path="/ski-racer" component={SkiRacer} />
               <Route path="/shor-studio" component={ShorStudio} />
+              <Route path="/dyson-swarm" component={DysonSwarm} />
+              <Route path="/mech-sim" component={MechSim} />
+              <Route path="/phage-sim" component={PhageSim} />
+              <Route path="/pinball-3d" component={Pinball3D} />
+              <Route path="/grover-studio" component={GroverStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

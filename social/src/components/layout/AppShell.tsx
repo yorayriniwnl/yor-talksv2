@@ -5,7 +5,7 @@ import {
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
-  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors
+  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -116,6 +116,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Activity, label: 'Hodgkin-Huxley', path: '/hodgkin-huxley' },
     { icon: Compass, label: 'Cyber Slalom', path: '/ski-racer' },
     { icon: Lock, label: "Shor's Factoring", path: '/shor-studio' },
+    { icon: Sun, label: 'Dyson Swarm', path: '/dyson-swarm' },
+    { icon: Bot, label: 'Cyber Mech', path: '/mech-sim' },
+    { icon: Dna, label: 'Phage T4', path: '/phage-sim' },
+    { icon: Zap, label: 'Pinball 3D', path: '/pinball-3d' },
+    { icon: Search, label: 'Grover Search', path: '/grover-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
