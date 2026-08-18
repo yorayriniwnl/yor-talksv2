@@ -1633,6 +1633,90 @@ export const MOCK_PRODUCTS: Product[] = [
     condition: 'like-new',
     savedByMe: true,
     createdAt: new Date(Date.now() - 800000000).toISOString(),
+  },
+  {
+    id: 'prod-10',
+    sellerId: 'user-valeria',
+    title: 'Generative Voronoi 3D-Printed TPU Sneaker Prototype',
+    description: 'Custom sized parametric lattice footwear printed in 92A flexible TPU. Ultra-breathable, shock absorbing, and 100% recyclable.',
+    price: 280,
+    images: [
+      'https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Footwear',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 900000000).toISOString(),
+  },
+  {
+    id: 'prod-11',
+    sellerId: 'user-dax',
+    title: 'CNC Billet Aluminum 20B 3-Rotor Intake Manifold',
+    description: 'Aircraft grade 6061-T6 machined intake runner set with O-ring sealing and dual fuel rail mounts for high-boost applications.',
+    price: 850,
+    images: [
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Motorsport',
+    condition: 'new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 950000000).toISOString(),
+  },
+  {
+    id: 'prod-12',
+    sellerId: 'user-alessia',
+    title: 'Hand-Finished Titanium Flying Tourbillon Desk Clock',
+    description: 'Grade 5 titanium cage with 45-degree hand anglage bevels, blued steel screws, and 8-day power reserve barrel.',
+    price: 1450,
+    images: [
+      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Horology',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1000000000).toISOString(),
+  },
+  {
+    id: 'prod-13',
+    sellerId: 'user-brennan',
+    title: 'Direct-Drive High-Torque Audiophile Turntable',
+    description: 'Quartz-locked magnetic direct drive motor, carbon fiber tonearm, and Ortofon 2M Black cartridge.',
+    price: 1100,
+    images: [
+      'https://images.unsplash.com/photo-1539185441755-769473a23570?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Audio',
+    condition: 'like-new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 1050000000).toISOString(),
+  },
+  {
+    id: 'prod-14',
+    sellerId: 'user-soren',
+    title: 'Solid White Oak Mortise-and-Tenon Desk Catchall Tray',
+    description: 'Hand-carved Danish modern desk tray finished with organic beeswax and cold-pressed linseed oil.',
+    price: 95,
+    images: [
+      'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Workspace',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1100000000).toISOString(),
+  },
+  {
+    id: 'prod-15',
+    sellerId: 'user-mei',
+    title: 'Authentic 180ml Yixing Purple Clay (Zisha) Teapot',
+    description: 'Master crafted from vintage Huanglongshan clay with single-hole fast water pour and natural heat retention.',
+    price: 210,
+    images: [
+      'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Artisan',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1150000000).toISOString(),
   }
 ];
 
