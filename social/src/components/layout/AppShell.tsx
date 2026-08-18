@@ -96,6 +96,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Brain, label: 'EEG Studio', path: '/eeg-studio' },
     { icon: Car, label: 'Cyber Rally', path: '/cyber-rally' },
     { icon: Music, label: 'Chiptune Tracker', path: '/chiptune-tracker' },
+    { icon: Rocket, label: 'Space Elevator', path: '/space-elevator' },
+    { icon: Car, label: 'Traffic AI', path: '/traffic-ai' },
+    { icon: Volume2, label: 'Speech Synth', path: '/speech-synth' },
+    { icon: Crosshair, label: 'Tank Arena', path: '/tank-arena' },
+    { icon: Sparkles, label: 'Quantum Teleport', path: '/teleportation-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

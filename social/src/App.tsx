@@ -149,6 +149,11 @@ const TokamakSim = lazyWithRetry(() => import('@/pages/tokamak-sim'));
 const EegStudio = lazyWithRetry(() => import('@/pages/eeg-studio'));
 const CyberRally = lazyWithRetry(() => import('@/pages/cyber-rally'));
 const ChiptuneTracker = lazyWithRetry(() => import('@/pages/chiptune-tracker'));
+const SpaceElevator = lazyWithRetry(() => import('@/pages/space-elevator'));
+const TrafficAi = lazyWithRetry(() => import('@/pages/traffic-ai'));
+const SpeechSynth = lazyWithRetry(() => import('@/pages/speech-synth'));
+const TankArena = lazyWithRetry(() => import('@/pages/tank-arena'));
+const TeleportationStudio = lazyWithRetry(() => import('@/pages/teleportation-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -292,6 +297,11 @@ function ProtectedRoutes() {
               <Route path="/eeg-studio" component={EegStudio} />
               <Route path="/cyber-rally" component={CyberRally} />
               <Route path="/chiptune-tracker" component={ChiptuneTracker} />
+              <Route path="/space-elevator" component={SpaceElevator} />
+              <Route path="/traffic-ai" component={TrafficAi} />
+              <Route path="/speech-synth" component={SpeechSynth} />
+              <Route path="/tank-arena" component={TankArena} />
+              <Route path="/teleportation-studio" component={TeleportationStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
