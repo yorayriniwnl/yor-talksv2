@@ -3051,6 +3051,146 @@ export const MOCK_PRODUCTS: Product[] = [
     condition: 'new',
     savedByMe: true,
     createdAt: new Date(Date.now() - 1650000000).toISOString(),
+  },
+  {
+    id: 'prod-26',
+    sellerId: 'user-zephyr-k',
+    title: 'Quantum QKD Single-Photon Free-Space Receiver Telescope',
+    description: 'Achromatic 150mm parabolic optics with APD single-photon counting detector and GPS sync lock.',
+    price: 2400,
+    images: [
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Optics',
+    condition: 'new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 1700000000).toISOString(),
+  },
+  {
+    id: 'prod-27',
+    sellerId: 'user-morrigan',
+    title: 'Eurorack Dual Analog Wavefolder & Diode Distortion Module',
+    description: 'Discrete Germanium diode clipping matrix with voltage-controlled folding symmetry and dry/wet blend.',
+    price: 290,
+    images: [
+      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Audio',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1750000000).toISOString(),
+  },
+  {
+    id: 'prod-28',
+    sellerId: 'user-chen-wei',
+    title: 'PDMS 50-Micron Droplet Microfluidic Generator Kit',
+    description: 'Precision dual-syringe pump interface with fluorinated oil carrier channels for single-cell barcoding.',
+    price: 450,
+    images: [
+      'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Hardware',
+    condition: 'new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 1800000000).toISOString(),
+  },
+  {
+    id: 'prod-29',
+    sellerId: 'user-daiki',
+    title: 'Billet CNC 2JZ-GTE Intake Manifold & Twin Fuel Rails',
+    description: 'Machined 6061-T6 billet aluminum with dual 85mm throttle body flanges and 12-injector port setup.',
+    price: 1150,
+    images: [
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Motorsport',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1850000000).toISOString(),
+  },
+  {
+    id: 'prod-30',
+    sellerId: 'user-kieran',
+    title: '5-Bar Twist Celtic Damascus Hand-Forged Seax Blade',
+    description: '1095 & 15N20 multi-bar pattern welded steel, 5,000-year-old Irish bog oak handle, and sterling silver bolsters.',
+    price: 560,
+    images: [
+      'https://images.unsplash.com/photo-1593618998160-e34014e67546?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Artisan',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 1900000000).toISOString(),
+  },
+  {
+    id: 'prod-31',
+    sellerId: 'user-yasmin-h',
+    title: 'Hand-Embroidered 24k Gold Zardozi Velvet Cushion Cover',
+    description: 'Pure silk velvet with genuine 24k gold wire metallic floral filigree embroidery and real river pearls.',
+    price: 310,
+    images: [
+      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Fashion',
+    condition: 'new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 1950000000).toISOString(),
+  },
+  {
+    id: 'prod-32',
+    sellerId: 'user-viktor-s',
+    title: 'CNC Nickel-Plated Solid Copper Liquid Nitrogen CPU Pot',
+    description: '1.8 kg high-thermal-mass OFHC copper container optimized for -196°C to -269°C extreme overclocking runs.',
+    price: 275,
+    images: [
+      'https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Hardware',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 2000000000).toISOString(),
+  },
+  {
+    id: 'prod-33',
+    sellerId: 'user-thabo',
+    title: 'Amapiano 4-Operator FM Log Drum Hardware Synthesizer',
+    description: 'Dedicated tabletop synthesizer with real Yamaha TX81Z algorithms, sub-bass overdrive, and velocity pads.',
+    price: 420,
+    images: [
+      'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Audio',
+    condition: 'new',
+    savedByMe: true,
+    createdAt: new Date(Date.now() - 2050000000).toISOString(),
+  },
+  {
+    id: 'prod-34',
+    sellerId: 'user-selena-r',
+    title: 'Titanium 6,000m Depth Pressure Hull Hydrophone Sensor',
+    description: 'Calibrated piezoelectric acoustic transducer with ultra-wide 10 Hz - 100 kHz deep ocean bandwidth.',
+    price: 880,
+    images: [
+      'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Hardware',
+    condition: 'like-new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 2100000000).toISOString(),
+  },
+  {
+    id: 'prod-35',
+    sellerId: 'user-anastasia',
+    title: 'Inconel 625 Supercritical Geothermal Heat Exchanger Pipe',
+    description: 'High-corrosion-resistant nickel-chromium alloy tubing rated for 450°C at 300 bar continuous thermal loop.',
+    price: 1650,
+    images: [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop'
+    ],
+    category: 'Hardware',
+    condition: 'new',
+    savedByMe: false,
+    createdAt: new Date(Date.now() - 2150000000).toISOString(),
   }
 ];
 
