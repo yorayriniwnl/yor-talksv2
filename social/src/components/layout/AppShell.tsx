@@ -4,7 +4,7 @@ import {
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
-  Atom, Gauge, Sparkles, Target, ShieldAlert
+  Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -70,6 +70,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Sparkles, label: 'Fractal Studio', path: '/fractal-studio' },
     { icon: Target, label: 'Hawk-Eye 3D', path: '/hawkeye-sim' },
     { icon: ShieldAlert, label: 'Threat SOC', path: '/threat-soc' },
+    { icon: Sun, label: 'Black Hole Sim', path: '/blackhole-sim' },
+    { icon: Wind, label: 'Wind Tunnel', path: '/wind-tunnel' },
+    { icon: Music, label: 'Neural Beatmaker', path: '/neural-beatmaker' },
+    { icon: Skull, label: 'Cyber Rogue', path: '/cyber-rogue' },
+    { icon: ShieldCheck, label: 'Audit Studio', path: '/audit-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

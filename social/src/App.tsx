@@ -124,6 +124,11 @@ const CyberDrift3D = lazyWithRetry(() => import('@/pages/cyber-drift-3d'));
 const FractalStudio = lazyWithRetry(() => import('@/pages/fractal-studio'));
 const HawkEyeSim = lazyWithRetry(() => import('@/pages/hawkeye-sim'));
 const ThreatSoc = lazyWithRetry(() => import('@/pages/threat-soc'));
+const BlackHoleSim = lazyWithRetry(() => import('@/pages/blackhole-sim'));
+const WindTunnel = lazyWithRetry(() => import('@/pages/wind-tunnel'));
+const NeuralBeatmaker = lazyWithRetry(() => import('@/pages/neural-beatmaker'));
+const CyberRogue = lazyWithRetry(() => import('@/pages/cyber-rogue'));
+const AuditStudio = lazyWithRetry(() => import('@/pages/audit-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -242,6 +247,11 @@ function ProtectedRoutes() {
               <Route path="/fractal-studio" component={FractalStudio} />
               <Route path="/hawkeye-sim" component={HawkEyeSim} />
               <Route path="/threat-soc" component={ThreatSoc} />
+              <Route path="/blackhole-sim" component={BlackHoleSim} />
+              <Route path="/wind-tunnel" component={WindTunnel} />
+              <Route path="/neural-beatmaker" component={NeuralBeatmaker} />
+              <Route path="/cyber-rogue" component={CyberRogue} />
+              <Route path="/audit-studio" component={AuditStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
