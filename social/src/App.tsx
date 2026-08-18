@@ -139,6 +139,11 @@ const RoverSim = lazyWithRetry(() => import('@/pages/rover-sim'));
 const GeneCircuit = lazyWithRetry(() => import('@/pages/gene-circuit'));
 const CityCourier = lazyWithRetry(() => import('@/pages/city-courier'));
 const VocoderStudio = lazyWithRetry(() => import('@/pages/vocoder-studio'));
+const ColliderSim = lazyWithRetry(() => import('@/pages/collider-sim'));
+const DockingSim = lazyWithRetry(() => import('@/pages/docking-sim'));
+const CyberTerminal = lazyWithRetry(() => import('@/pages/cyber-terminal'));
+const SupersonicSim = lazyWithRetry(() => import('@/pages/supersonic-sim'));
+const GranularSynth = lazyWithRetry(() => import('@/pages/granular-synth'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -272,6 +277,11 @@ function ProtectedRoutes() {
               <Route path="/gene-circuit" component={GeneCircuit} />
               <Route path="/city-courier" component={CityCourier} />
               <Route path="/vocoder-studio" component={VocoderStudio} />
+              <Route path="/collider-sim" component={ColliderSim} />
+              <Route path="/docking-sim" component={DockingSim} />
+              <Route path="/cyber-terminal" component={CyberTerminal} />
+              <Route path="/supersonic-sim" component={SupersonicSim} />
+              <Route path="/granular-synth" component={GranularSynth} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -5,7 +5,7 @@ import {
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
-  Droplets, Brain, Radio, Car, Mic
+  Droplets, Brain, Radio, Car, Mic, Plane
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -86,6 +86,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Gene Circuit', path: '/gene-circuit' },
     { icon: Car, label: 'City Courier', path: '/city-courier' },
     { icon: Mic, label: 'Vocoder Studio', path: '/vocoder-studio' },
+    { icon: Atom, label: 'LHC Collider', path: '/collider-sim' },
+    { icon: Rocket, label: 'Orbital Docking', path: '/docking-sim' },
+    { icon: Terminal, label: 'Cyber Terminal', path: '/cyber-terminal' },
+    { icon: Plane, label: 'Supersonic Jet', path: '/supersonic-sim' },
+    { icon: Sparkles, label: 'Granular Synth', path: '/granular-synth' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
