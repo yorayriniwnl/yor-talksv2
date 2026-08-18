@@ -2,7 +2,8 @@ import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
-  UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal
+  UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
+  Orbit, Crosshair, Waves, Swords
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -54,6 +55,10 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Activity, label: 'Creator Terminal', path: '/creator-terminal' },
     { icon: BrainCircuit, label: 'Prompt Arena', path: '/prompt-arena' },
     { icon: Terminal, label: 'ASCII Studio', path: '/ascii-studio' },
+    { icon: Orbit, label: 'Orbit Sandbox', path: '/orbit-sandbox' },
+    { icon: Crosshair, label: 'Tactical Scrims', path: '/tactical-sandbox' },
+    { icon: Waves, label: 'Signal Lab', path: '/signal-lab' },
+    { icon: Swords, label: 'Cyber Chess', path: '/cyber-chess' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

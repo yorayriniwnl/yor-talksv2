@@ -110,6 +110,10 @@ const NeonOverdriveGame = lazyWithRetry(() => import('@/pages/neon-overdrive'));
 const CreatorTerminal = lazyWithRetry(() => import('@/pages/creator-terminal'));
 const PromptArena = lazyWithRetry(() => import('@/pages/prompt-arena'));
 const AsciiStudio = lazyWithRetry(() => import('@/pages/ascii-studio'));
+const OrbitSandbox = lazyWithRetry(() => import('@/pages/orbit-sandbox'));
+const TacticalSandbox = lazyWithRetry(() => import('@/pages/tactical-sandbox'));
+const SignalLab = lazyWithRetry(() => import('@/pages/signal-lab'));
+const CyberChess = lazyWithRetry(() => import('@/pages/cyber-chess'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -214,6 +218,10 @@ function ProtectedRoutes() {
               <Route path="/creator-terminal" component={CreatorTerminal} />
               <Route path="/prompt-arena" component={PromptArena} />
               <Route path="/ascii-studio" component={AsciiStudio} />
+              <Route path="/orbit-sandbox" component={OrbitSandbox} />
+              <Route path="/tactical-sandbox" component={TacticalSandbox} />
+              <Route path="/signal-lab" component={SignalLab} />
+              <Route path="/cyber-chess" component={CyberChess} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
