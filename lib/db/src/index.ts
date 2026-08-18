@@ -13,6 +13,7 @@ export const pool = new Pool({
   connectionString,
   connectionTimeoutMillis: Number(process.env.DB_CONNECT_TIMEOUT_MS) || 3000,
   idleTimeoutMillis: 10000,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on("error", (err) => {
