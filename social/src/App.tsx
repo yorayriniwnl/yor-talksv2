@@ -322,6 +322,9 @@ const PittodKadhiRush = lazyWithRetry(() => import('@/pages/pittod-kadhi'));
 const BoostPlantMatrix = lazyWithRetry(() => import('@/pages/boost-plant-matrix'));
 const EmoteIkedaMapStudio = lazyWithRetry(() => import('@/pages/emote-ikeda-map'));
 const BajraRaabdiRush = lazyWithRetry(() => import('@/pages/bajra-raabdi'));
+const RunBoostMatrix = lazyWithRetry(() => import('@/pages/run-boost-matrix'));
+const EmoteRosslerAttractorStudio = lazyWithRetry(() => import('@/pages/emote-rossler-attractor'));
+const BikaneriRasgullaRush = lazyWithRetry(() => import('@/pages/bikaneri-rasgulla'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -658,6 +661,9 @@ function ProtectedRoutes() {
               <Route path="/boost-plant-matrix" component={BoostPlantMatrix} />
               <Route path="/emote-ikeda-map" component={EmoteIkedaMapStudio} />
               <Route path="/bajra-raabdi" component={BajraRaabdiRush} />
+              <Route path="/run-boost-matrix" component={RunBoostMatrix} />
+              <Route path="/emote-rossler-attractor" component={EmoteRosslerAttractorStudio} />
+              <Route path="/bikaneri-rasgulla" component={BikaneriRasgullaRush} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

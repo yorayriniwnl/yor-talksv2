@@ -96,11 +96,12 @@ import { CyberKesarChumChumRoyal } from '@/components/games/CyberKesarChumChumRo
 import { CyberKajuGulkandBarfi } from '@/components/games/CyberKajuGulkandBarfi';
 import { CyberMalaiLaddooRoyal } from '@/components/games/CyberMalaiLaddooRoyal';
 import { CyberMalpuaRabdiRoyal } from '@/components/games/CyberMalpuaRabdiRoyal';
+import { CyberMoongHalwaRoyal } from '@/components/games/CyberMoongHalwaRoyal';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 
 export default function Arcade() {
-  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda' | 'braj-kesar-malai-peda' | 'awadhi-gulab-paan-gilori' | 'braj-shahi-mawa-gujiya' | 'bengali-kesar-sandesh-royal' | 'bengali-kesar-chum-chum-royal' | 'mewari-kaju-gulkand-barfi' | 'mathura-shahi-malai-laddoo' | 'pushkar-shahi-malpua-rabdi'>('cricket');
+  const [activeGame, setActiveGame] = useState<'cricket' | 'hacker' | 'starfighter' | 'typer' | 'chess' | 'snake' | 'drone' | 'asteroids' | 'tank' | 'breaker' | '2048' | 'chai' | 'runner' | 'memory' | 'defense' | 'pinball' | 'holi' | 'kite' | 'kabaddi' | 'diya' | 'gilli' | 'saanp' | 'dandiya' | 'dosa' | 'jamun' | 'samosa' | 'jalebi' | 'rasgulla' | 'kaju' | 'mysore' | 'motichoor' | 'rasmalai' | 'ghewar' | 'gujiya' | 'sandesh' | 'peda' | 'soan' | 'kalakand' | 'balushahi' | 'imarti' | 'malpua' | 'payasam' | 'shrikhand' | 'malai-ghewar' | 'gond-laddu' | 'besan-ladoo' | 'chikki' | 'phirni' | 'falooda' | 'kaju-anjeer' | 'matka-kulfi' | 'dodha-barfi' | 'akhrot-halwa' | 'dryfruit-barfi' | 'sohan-halwa' | 'rajbhog' | 'chum-chum' | 'langcha' | 'sitabhog' | 'lal-peda' | 'malai-paan' | 'anjeer-halwa' | 'kesar-chum-chum' | 'kaju-pista-roll' | 'agra-petha' | 'gulkand-roll' | 'shahi-malpua' | 'kesar-ghevar' | 'angoori-cham-cham' | 'mohan-thal' | 'kesar-peda' | 'kulfi-falooda-delight' | 'pista-mawa-barfi' | 'badam-halwa' | 'malai-gilori' | 'mathura-khurchan' | 'braj-kesar-gujiya' | 'kashmiri-shahi-phirni' | 'mewari-dilkhushak' | 'mewari-gulab-paak' | 'jodhpuri-mawa-kachori' | 'marwari-churma-ladoo' | 'awadhi-paan-peda' | 'mathura-lachedar-rabdi' | 'bikaneri-gulkand-peda' | 'braj-kesar-malai-peda' | 'awadhi-gulab-paan-gilori' | 'braj-shahi-mawa-gujiya' | 'bengali-kesar-sandesh-royal' | 'bengali-kesar-chum-chum-royal' | 'mewari-kaju-gulkand-barfi' | 'mathura-shahi-malai-laddoo' | 'pushkar-shahi-malpua-rabdi' | 'mewari-shahi-moong-halwa'>('cricket');
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -1239,6 +1240,18 @@ export default function Arcade() {
           >
             👑 Malpua Rabdi
           </Button>
+
+          <Button
+            size="sm"
+            variant={activeGame === 'mewari-shahi-moong-halwa' ? 'default' : 'ghost'}
+            onClick={() => {
+              sounds.playPop();
+              setActiveGame('mewari-shahi-moong-halwa');
+            }}
+            className={cn("rounded-xl font-bold text-xs px-2.5 h-10", activeGame === 'mewari-shahi-moong-halwa' && "bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-black shadow-md")}
+          >
+            👑 Moong Dal Halwa
+          </Button>
         </div>
 
         {/* Active Mini-Game View */}
@@ -1336,6 +1349,7 @@ export default function Arcade() {
           {activeGame === 'mewari-kaju-gulkand-barfi' && <CyberKajuGulkandBarfi />}
           {activeGame === 'mathura-shahi-malai-laddoo' && <CyberMalaiLaddooRoyal />}
           {activeGame === 'pushkar-shahi-malpua-rabdi' && <CyberMalpuaRabdiRoyal />}
+          {activeGame === 'mewari-shahi-moong-halwa' && <CyberMoongHalwaRoyal />}
         </div>
 
         {/* Global Mini-Game Hall of Fame Leaderboard */}
