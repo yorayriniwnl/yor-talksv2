@@ -163,20 +163,27 @@ export function AppShell({ children }: AppShellProps) {
           })}
         </nav>
 
-        {/* User Mini Profile Snippet */}
+        {/* User Mini Profile & Account Switcher */}
         {currentUser && (
-          <Link href={`/profile/${currentUser.id}`} className={cn("flex items-center rounded-2xl glass-heavy hover-lift hover:bg-muted/60 transition-colors border border-border/40 cursor-pointer", sidebarCollapsed ? "justify-center p-2" : "gap-3 p-3")}>
-            <Avatar className="w-10 h-10 border border-border/50 shrink-0">
-              <AvatarImage src={currentUser.avatarUrl} />
-              <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
-            </Avatar>
-            {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <h4 className="font-bold text-xs truncate leading-tight">{currentUser.displayName}</h4>
-                <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
-              </div>
-            )}
-          </Link>
+          <div className="space-y-2">
+            <div className={cn("flex items-center rounded-2xl glass-heavy hover-lift border border-border/40 p-2.5", sidebarCollapsed ? "justify-center p-2" : "gap-2.5")}>
+              <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
+                <Avatar className="w-9 h-9 border border-border/50 shrink-0 group-hover:ring-2 ring-primary/40 transition-all">
+                  <AvatarImage src={currentUser.avatarUrl} />
+                  <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                {!sidebarCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{currentUser.displayName}</h4>
+                    <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
+                  </div>
+                )}
+              </Link>
+              {!sidebarCollapsed && (
+                <AccountSwitcherDialog />
+              )}
+            </div>
+          </div>
         )}
       </aside>
 
@@ -275,5 +282,112 @@ export function AppShell({ children }: AppShellProps) {
 
       <GlobalAudioPlayer />
     </div>
+  );
+}
+
+function AccountSwitcherDialog() {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const currentUser = useAppStore((state) => state.currentUser);
+  const users = useAppStore((state) => state.users);
+  const switchAccount = useAppStore((state) => state.switchAccount);
+
+  const userList = Object.values(users);
+  const filteredUsers = userList.filter((u) => 
+    u.displayName.toLowerCase().includes(search.toLowerCase()) || 
+    u.username.toLowerCase().includes(search.toLowerCase()) ||
+    (u.bio && u.bio.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <button
+        onClick={() => setOpen(true)}
+        className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+        title="Switch Account"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </button>
+
+      <DialogContent className="max-w-md rounded-2xl glass-heavy border border-border/50 max-h-[85vh] flex flex-col p-5">
+        <DialogHeader className="pb-3 border-b border-border/30">
+          <DialogTitle className="font-display font-bold text-lg flex items-center justify-between">
+            <span>Switch Account</span>
+            <span className="text-xs font-mono font-normal text-muted-foreground px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              {userList.length} Active Personas
+            </span>
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground font-sans">
+            Instantly switch accounts to create content, test multi-agent interactions, or browse personalized feeds.
+          </p>
+        </DialogHeader>
+
+        <div className="py-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search accounts by name, username, or role..."
+            className="w-full h-10 rounded-xl surface-1 border border-border/50 px-3 text-xs outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground font-sans"
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[380px] custom-scrollbar">
+          {filteredUsers.map((user) => {
+            const isCurrent = currentUser?.id === user.id;
+            return (
+              <button
+                key={user.id}
+                onClick={() => {
+                  switchAccount(user.id);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left border cursor-pointer group",
+                  isCurrent 
+                    ? "bg-primary/15 border-primary/40 ring-1 ring-primary/30" 
+                    : "hover:bg-muted/60 border-transparent hover:border-border/40"
+                )}
+              >
+                <div className="relative shrink-0">
+                  <Avatar className="w-10 h-10 border border-border/50">
+                    <AvatarImage src={user.avatarUrl} />
+                    <AvatarFallback className="font-display font-bold text-xs">{user.displayName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  {isCurrent && (
+                    <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[10px] ring-2 ring-background">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{user.displayName}</h4>
+                    {user.verified && (
+                      <span className="text-[10px] text-sky-400 font-bold" title="Verified">✓</span>
+                    )}
+                  </div>
+                  <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{user.username}</p>
+                  {user.bio && (
+                    <p className="text-[0.68rem] text-muted-foreground/80 line-clamp-1 mt-0.5 font-sans">{user.bio}</p>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="text-[0.65rem] font-mono text-muted-foreground block font-bold">
+                    {(user.followers || 0).toLocaleString()}
+                  </span>
+                  <span className="text-[0.6rem] text-muted-foreground/60 font-sans">followers</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

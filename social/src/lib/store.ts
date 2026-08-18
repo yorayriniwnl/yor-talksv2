@@ -527,6 +527,7 @@ interface AppState {
   updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
   toggleMuteUser: (userId: string) => Promise<void>;
+  switchAccount: (userId: string) => void;
 }
 
 function setupRealtime(
@@ -663,6 +664,16 @@ export const useAppStore = create<AppState>()(
         disconnectSocket();
         setStoredTokens(null);
         set({ currentUser: null, tokens: null });
+      },
+
+      switchAccount: (userId: string) => {
+        const targetUser = get().users[userId] || MOCK_USERS[userId];
+        if (targetUser) {
+          set({ currentUser: targetUser });
+          toast.success(`Switched account to @${targetUser.username}`, {
+            description: `Now posting & browsing as ${targetUser.displayName}`
+          });
+        }
       },
 
       requestPasswordReset: async (email) => {
