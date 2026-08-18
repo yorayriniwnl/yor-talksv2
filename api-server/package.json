@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --import tsx ./src/index.ts",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "start": "node --enable-source-maps ./dist/index.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "node --import tsx ./src/scripts/seed-database.ts",
     "test": "node --import tsx --test src/__tests__/*.test.ts"

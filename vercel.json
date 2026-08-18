@@ -5,7 +5,6 @@
   "outputDirectory": "social/dist/public",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "api-server/dist/**",
       "maxDuration": 15
     }
   },
