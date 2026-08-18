@@ -2019,6 +2019,45 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
       read: true,
     },
     updatedAt: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: 'conv-aravind',
+    participantIds: ['user-roy', 'user-aravind'],
+    lastMessage: {
+      id: 'msg-aravind-1',
+      conversationId: 'conv-aravind',
+      senderId: 'user-aravind',
+      content: 'Yo Ayush! Let us scrim 5v5 on the custom tournament bracket engine tonight 🏆',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 1800000).toISOString(),
+  },
+  {
+    id: 'conv-renata',
+    participantIds: ['user-roy', 'user-renata'],
+    lastMessage: {
+      id: 'msg-renata-1',
+      conversationId: 'conv-renata',
+      senderId: 'user-renata',
+      content: 'Sending over the 24-bit 96kHz lossless audio stems for the platform soundboard! 🎛️⚡',
+      createdAt: new Date(Date.now() - 5400000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 5400000).toISOString(),
+  },
+  {
+    id: 'conv-sakura',
+    participantIds: ['user-roy', 'user-sakura'],
+    lastMessage: {
+      id: 'msg-sakura-1',
+      conversationId: 'conv-sakura',
+      senderId: 'user-sakura',
+      content: 'The 3D avatar facial blendshapes stream at a rock-solid 60 FPS in WebGPU! Arigato! 🌸✨',
+      createdAt: new Date(Date.now() - 10800000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 10800000).toISOString(),
   }
 ];
 
@@ -2104,6 +2143,36 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
       createdAt: new Date(Date.now() - 259200000).toISOString(),
       read: true,
     }
+  ],
+  'conv-aravind': [
+    {
+      id: 'msg-aravind-1',
+      conversationId: 'conv-aravind',
+      senderId: 'user-aravind',
+      content: 'Yo Ayush! Let us scrim 5v5 on the custom tournament bracket engine tonight 🏆',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+      read: false,
+    }
+  ],
+  'conv-renata': [
+    {
+      id: 'msg-renata-1',
+      conversationId: 'conv-renata',
+      senderId: 'user-renata',
+      content: 'Sending over the 24-bit 96kHz lossless audio stems for the platform soundboard! 🎛️⚡',
+      createdAt: new Date(Date.now() - 5400000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-sakura': [
+    {
+      id: 'msg-sakura-1',
+      conversationId: 'conv-sakura',
+      senderId: 'user-sakura',
+      content: 'The 3D avatar facial blendshapes stream at a rock-solid 60 FPS in WebGPU! Arigato! 🌸✨',
+      createdAt: new Date(Date.now() - 10800000).toISOString(),
+      read: true,
+    }
   ]
 };
 
@@ -2177,5 +2246,25 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     targetId: null,
     read: true,
     createdAt: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: 'notif-8',
+    type: 'like',
+    title: 'Tournament Invite',
+    message: 'Aravind Rao invited you to join "Radiant Champions 5v5 Squad".',
+    actorId: 'user-aravind',
+    targetId: 'event-8',
+    read: false,
+    createdAt: new Date(Date.now() - 900000).toISOString(),
+  },
+  {
+    id: 'notif-9',
+    type: 'star',
+    title: 'Creator Milestone',
+    message: 'Your soundboard track hit 100,000 plays! 🎛️🔥',
+    actorId: 'user-renata',
+    targetId: 'vid-7',
+    read: false,
+    createdAt: new Date(Date.now() - 43200000).toISOString(),
   }
 ];
