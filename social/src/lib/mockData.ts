@@ -5014,6 +5014,66 @@ export const MOCK_LIVESTREAMS: LiveStream[] = [
     startsAt: new Date().toISOString(),
     category: 'Hardware Overclocking',
     guestIds: ['user-zack'],
+  },
+  {
+    id: 'stream-21',
+    hostId: 'user-siddhartha-v',
+    title: 'Live 39-String Classical Sarangi & Tape Delay Meditation 🪕🌧️',
+    coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop',
+    kind: 'audio',
+    status: 'live',
+    viewers: 31800,
+    startsAt: new Date().toISOString(),
+    category: 'Acoustic Fusion',
+    guestIds: ['user-elena'],
+  },
+  {
+    id: 'stream-22',
+    hostId: 'user-leona',
+    title: 'JWST Deep Field Exoplanet Atmosphere Telemetry Live Stream 🔭🌌',
+    coverUrl: 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 54200,
+    startsAt: new Date().toISOString(),
+    category: 'Space Science',
+    guestIds: ['user-zara'],
+  },
+  {
+    id: 'stream-23',
+    hostId: 'user-nadia-z',
+    title: 'Humanoid Biped Obstacle Traversal: 1 kHz MPC Solver Telemetry 🤖🦾',
+    coverUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 49100,
+    startsAt: new Date().toISOString(),
+    category: 'Robotics',
+    guestIds: ['user-orion'],
+  },
+  {
+    id: 'stream-24',
+    hostId: 'user-haruto',
+    title: 'Wajima-nuri Urushi Maki-e 24K Gold Powder Dusting Masterclass 🖋️✨',
+    coverUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 22700,
+    startsAt: new Date().toISOString(),
+    category: 'Traditional Art',
+    guestIds: ['user-yasmin-h'],
+  },
+  {
+    id: 'stream-25',
+    hostId: 'user-rowan',
+    title: 'High-Pressure Ultrasonic Aeroponics Vertical Farm Automation 🌿💧',
+    coverUrl: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop',
+    kind: 'video',
+    status: 'live',
+    viewers: 36400,
+    startsAt: new Date().toISOString(),
+    category: 'Agri-Tech',
+    guestIds: ['user-solomon'],
   }
 ];
 
@@ -5251,6 +5311,84 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
       read: false,
     },
     updatedAt: new Date(Date.now() - 6000000).toISOString(),
+  },
+  {
+    id: 'conv-siddhartha-v',
+    participantIds: ['user-roy', 'user-siddhartha-v'],
+    lastMessage: {
+      id: 'msg-siddhartha-1',
+      conversationId: 'conv-siddhartha-v',
+      senderId: 'user-siddhartha-v',
+      content: 'The 39-string Sarangi laser vibrometry impulse responses are mapped! That sympathetic goat-skin parchment warmth is sublime 🪕🌧️',
+      createdAt: new Date(Date.now() - 1500000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 1500000).toISOString(),
+  },
+  {
+    id: 'conv-leona',
+    participantIds: ['user-roy', 'user-leona'],
+    lastMessage: {
+      id: 'msg-leona-1',
+      conversationId: 'conv-leona',
+      senderId: 'user-leona',
+      content: 'JWST MIRI resolved polycyclic aromatic hydrocarbon ring bands at z=2.4! Data pipeline upload complete 🔭🌌',
+      createdAt: new Date(Date.now() - 2100000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 2100000).toISOString(),
+  },
+  {
+    id: 'conv-nadia-z',
+    participantIds: ['user-roy', 'user-nadia-z'],
+    lastMessage: {
+      id: 'msg-nadia-1',
+      conversationId: 'conv-nadia-z',
+      senderId: 'user-nadia-z',
+      content: 'Our 1 kHz quadratic programming solver kept the biped completely stable on a 35° loose scree hill! 🤖🦾',
+      createdAt: new Date(Date.now() - 3200000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 3200000).toISOString(),
+  },
+  {
+    id: 'conv-haruto',
+    participantIds: ['user-roy', 'user-haruto'],
+    lastMessage: {
+      id: 'msg-haruto-1',
+      conversationId: 'conv-haruto',
+      senderId: 'user-haruto',
+      content: 'The 50th layer of natural Urushi lacquer on the ebonite fountain pen has cured in the cedar humidity room 🖋️✨',
+      createdAt: new Date(Date.now() - 4100000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 4100000).toISOString(),
+  },
+  {
+    id: 'conv-rowan',
+    participantIds: ['user-roy', 'user-rowan'],
+    lastMessage: {
+      id: 'msg-rowan-1',
+      conversationId: 'conv-rowan',
+      senderId: 'user-rowan',
+      content: 'Ultrasonic 30-micron aerosol root misting reached 3.4x biomass density in our vertical test tower! 🌿💧',
+      createdAt: new Date(Date.now() - 5300000).toISOString(),
+      read: false,
+    },
+    updatedAt: new Date(Date.now() - 5300000).toISOString(),
+  },
+  {
+    id: 'conv-kazuki',
+    participantIds: ['user-roy', 'user-kazuki'],
+    lastMessage: {
+      id: 'msg-kazuki-1',
+      conversationId: 'conv-kazuki',
+      senderId: 'user-kazuki',
+      content: 'The 100 kg tamahagane tatara bloom broke into razor-pure high-carbon steel ingots for the new katana commission ⚔️🔥',
+      createdAt: new Date(Date.now() - 6500000).toISOString(),
+      read: true,
+    },
+    updatedAt: new Date(Date.now() - 6500000).toISOString(),
   }
 ];
 
@@ -5466,6 +5604,66 @@ export const MOCK_MESSAGES_BY_CONVERSATION: Record<string, Message[]> = {
       createdAt: new Date(Date.now() - 6000000).toISOString(),
       read: false,
     }
+  ],
+  'conv-siddhartha-v': [
+    {
+      id: 'msg-siddhartha-1',
+      conversationId: 'conv-siddhartha-v',
+      senderId: 'user-siddhartha-v',
+      content: 'The 39-string Sarangi laser vibrometry impulse responses are mapped! That sympathetic goat-skin parchment warmth is sublime 🪕🌧️',
+      createdAt: new Date(Date.now() - 1500000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-leona': [
+    {
+      id: 'msg-leona-1',
+      conversationId: 'conv-leona',
+      senderId: 'user-leona',
+      content: 'JWST MIRI resolved polycyclic aromatic hydrocarbon ring bands at z=2.4! Data pipeline upload complete 🔭🌌',
+      createdAt: new Date(Date.now() - 2100000).toISOString(),
+      read: false,
+    }
+  ],
+  'conv-nadia-z': [
+    {
+      id: 'msg-nadia-1',
+      conversationId: 'conv-nadia-z',
+      senderId: 'user-nadia-z',
+      content: 'Our 1 kHz quadratic programming solver kept the biped completely stable on a 35° loose scree hill! 🤖🦾',
+      createdAt: new Date(Date.now() - 3200000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-haruto': [
+    {
+      id: 'msg-haruto-1',
+      conversationId: 'conv-haruto',
+      senderId: 'user-haruto',
+      content: 'The 50th layer of natural Urushi lacquer on the ebonite fountain pen has cured in the cedar humidity room 🖋️✨',
+      createdAt: new Date(Date.now() - 4100000).toISOString(),
+      read: true,
+    }
+  ],
+  'conv-rowan': [
+    {
+      id: 'msg-rowan-1',
+      conversationId: 'conv-rowan',
+      senderId: 'user-rowan',
+      content: 'Ultrasonic 30-micron aerosol root misting reached 3.4x biomass density in our vertical test tower! 🌿💧',
+      createdAt: new Date(Date.now() - 5300000).toISOString(),
+      read: false,
+    }
+  ],
+  'conv-kazuki': [
+    {
+      id: 'msg-kazuki-1',
+      conversationId: 'conv-kazuki',
+      senderId: 'user-kazuki',
+      content: 'The 100 kg tamahagane tatara bloom broke into razor-pure high-carbon steel ingots for the new katana commission ⚔️🔥',
+      createdAt: new Date(Date.now() - 6500000).toISOString(),
+      read: true,
+    }
   ]
 };
 
@@ -5649,5 +5847,65 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     targetId: 'stream-20',
     read: false,
     createdAt: new Date(Date.now() - 6000000).toISOString(),
+  },
+  {
+    id: 'notif-19',
+    type: 'star',
+    title: 'Acoustic Resonance Master',
+    message: 'Siddhartha Varma went live with "39-String Sarangi Tape Loop Meditation" 🪕🌧️',
+    actorId: 'user-siddhartha-v',
+    targetId: 'stream-21',
+    read: false,
+    createdAt: new Date(Date.now() - 1500000).toISOString(),
+  },
+  {
+    id: 'notif-20',
+    type: 'star',
+    title: 'JWST Telemetry Stream',
+    message: 'Leona Vance published new infrared spectroscopic charts of early galaxies 🔭🌌',
+    actorId: 'user-leona',
+    targetId: 'art-22',
+    read: false,
+    createdAt: new Date(Date.now() - 2100000).toISOString(),
+  },
+  {
+    id: 'notif-21',
+    type: 'like',
+    title: 'Humanoid Biped Demo',
+    message: 'Nadia Zamani posted "1 kHz MPC Biped Balance on 35° Scree Hill" 🤖🦾',
+    actorId: 'user-nadia-z',
+    targetId: 'vid-38',
+    read: false,
+    createdAt: new Date(Date.now() - 3200000).toISOString(),
+  },
+  {
+    id: 'notif-22',
+    type: 'event',
+    title: 'Urushi Masterclass Live',
+    message: 'Haruto Takahashi is live streaming "24K Gold Maki-e Fountain Pen Layering" 🖋️✨',
+    actorId: 'user-haruto',
+    targetId: 'stream-24',
+    read: true,
+    createdAt: new Date(Date.now() - 4100000).toISOString(),
+  },
+  {
+    id: 'notif-23',
+    type: 'community',
+    title: 'Aeroponics Milestone',
+    message: 'Rowan Sterling achieved 3.4x biomass root density with 30-micron aerosol misting 🌿💧',
+    actorId: 'user-rowan',
+    targetId: 'comm-45',
+    read: true,
+    createdAt: new Date(Date.now() - 5300000).toISOString(),
+  },
+  {
+    id: 'notif-24',
+    type: 'star',
+    title: 'Katana Smelting Complete',
+    message: 'Kazuki Shimada broke a 100 kg tamahagane tatara bloom for custom katana forging ⚔️🔥',
+    actorId: 'user-kazuki',
+    targetId: 'vid-31',
+    read: false,
+    createdAt: new Date(Date.now() - 6500000).toISOString(),
   }
 ];
