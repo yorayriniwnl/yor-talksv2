@@ -322,9 +322,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.4
         version: 5.2.0(vite@7.3.6(@types/node@25.9.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.0)(yaml@2.9.0))
-      '@workspace/api-client-react':
-        specifier: file:../lib/api-client-react
-        version: link:../lib/api-client-react
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
