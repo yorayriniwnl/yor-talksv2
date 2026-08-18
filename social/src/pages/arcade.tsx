@@ -1364,6 +1364,11 @@ export default function Arcade() {
               { rank: 1, name: 'Ayush Roy', score: '184 Runs', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', reward: '👑 Grandmaster' },
               { rank: 2, name: 'Rohan Verma', score: '162 Runs', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', reward: '🥈 Diamond' },
               { rank: 3, name: 'Anya', score: '148 Runs', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', reward: '🥉 Platinum' },
+              { rank: 4, name: 'Aravind Rao', score: '136 Runs', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop', reward: '💎 Master' },
+              { rank: 5, name: 'Renata Silva', score: '129 Runs', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', reward: '🔥 Gold I' },
+              { rank: 6, name: 'Kenji Sato', score: '118 Runs', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop', reward: '⚔️ Gold II' },
+              { rank: 7, name: 'Sakura Miyamoto', score: '105 Runs', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=200&auto=format&fit=crop', reward: '🌸 Silver I' },
+              { rank: 8, name: 'Mateo Rossi', score: '98 Runs', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', reward: '🛡️ Silver II' },
             ].map((lead) => (
               <div key={lead.rank} className="p-3.5 rounded-2xl bg-muted/30 border border-border/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">
