@@ -28,6 +28,11 @@ const INITIAL_AVATARS: SpatialAvatar[] = [
   { id: '3', name: 'Rohan Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', x: 62, y: 45, role: 'speaker' },
   { id: '4', name: 'Aditi Singh', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', x: 25, y: 70, role: 'listener' },
   { id: '5', name: 'Marcus Vance', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', x: 75, y: 70, role: 'listener' },
+  { id: '6', name: 'Aravind Rao', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop', x: 30, y: 55, role: 'speaker' },
+  { id: '7', name: 'Renata Silva', avatar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop', x: 70, y: 55, role: 'speaker' },
+  { id: '8', name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop', x: 15, y: 80, role: 'listener' },
+  { id: '9', name: 'Sakura Miyamoto', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=200&auto=format&fit=crop', x: 85, y: 80, role: 'listener' },
+  { id: '10', name: 'Mateo Rossi', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', x: 42, y: 75, role: 'listener' },
 ];
 
 export default function Lounge() {
