@@ -5,7 +5,7 @@ import {
   UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
-  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame
+  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -101,6 +101,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Volume2, label: 'Speech Synth', path: '/speech-synth' },
     { icon: Crosshair, label: 'Tank Arena', path: '/tank-arena' },
     { icon: Sparkles, label: 'Quantum Teleport', path: '/teleportation-studio' },
+    { icon: Globe2, label: 'Exoplanet Transit', path: '/exoplanet-sim' },
+    { icon: Zap, label: 'Hyperloop Maglev', path: '/hyperloop-sim' },
+    { icon: Grid, label: 'Cellular Matrix', path: '/cellular-matrix' },
+    { icon: Zap, label: 'Neon Breakout', path: '/neon-breakout' },
+    { icon: Scissors, label: 'CRISPR Studio', path: '/crispr-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

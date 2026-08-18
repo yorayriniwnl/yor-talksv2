@@ -154,6 +154,11 @@ const TrafficAi = lazyWithRetry(() => import('@/pages/traffic-ai'));
 const SpeechSynth = lazyWithRetry(() => import('@/pages/speech-synth'));
 const TankArena = lazyWithRetry(() => import('@/pages/tank-arena'));
 const TeleportationStudio = lazyWithRetry(() => import('@/pages/teleportation-studio'));
+const ExoplanetSim = lazyWithRetry(() => import('@/pages/exoplanet-sim'));
+const HyperloopSim = lazyWithRetry(() => import('@/pages/hyperloop-sim'));
+const CellularMatrix = lazyWithRetry(() => import('@/pages/cellular-matrix'));
+const NeonBreakout = lazyWithRetry(() => import('@/pages/neon-breakout'));
+const CrisprStudio = lazyWithRetry(() => import('@/pages/crispr-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -302,6 +307,11 @@ function ProtectedRoutes() {
               <Route path="/speech-synth" component={SpeechSynth} />
               <Route path="/tank-arena" component={TankArena} />
               <Route path="/teleportation-studio" component={TeleportationStudio} />
+              <Route path="/exoplanet-sim" component={ExoplanetSim} />
+              <Route path="/hyperloop-sim" component={HyperloopSim} />
+              <Route path="/cellular-matrix" component={CellularMatrix} />
+              <Route path="/neon-breakout" component={NeonBreakout} />
+              <Route path="/crispr-studio" component={CrisprStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
