@@ -24,7 +24,7 @@ interface SpatialAvatar {
 
 const INITIAL_AVATARS: SpatialAvatar[] = [
   { id: '1', name: 'Ayush Roy', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', x: 50, y: 35, role: 'host', isSpeaking: true },
-  { id: '2', name: 'Anya Sharma', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', x: 38, y: 45, role: 'speaker' },
+  { id: '2', name: 'Anya', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', x: 38, y: 45, role: 'speaker' },
   { id: '3', name: 'Rohan Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', x: 62, y: 45, role: 'speaker' },
   { id: '4', name: 'Aditi Singh', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', x: 25, y: 70, role: 'listener' },
   { id: '5', name: 'Marcus Vance', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', x: 75, y: 70, role: 'listener' },

@@ -71,7 +71,7 @@ const FORUM_THREADS: Record<string, ForumThread[]> = {
     {
       id: 'thread-4',
       title: 'Showcase your customized Yor Avatar Frames, Hologram Badges, and Wallpapers here!',
-      author: 'Anya Sharma',
+      author: 'Anya',
       authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
       repliesCount: 120,
       likes: 490,

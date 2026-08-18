@@ -1363,7 +1363,7 @@ export default function Arcade() {
             {[
               { rank: 1, name: 'Ayush Roy', score: '184 Runs', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', reward: '👑 Grandmaster' },
               { rank: 2, name: 'Rohan Verma', score: '162 Runs', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', reward: '🥈 Diamond' },
-              { rank: 3, name: 'Anya Sharma', score: '148 Runs', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', reward: '🥉 Platinum' },
+              { rank: 3, name: 'Anya', score: '148 Runs', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', reward: '🥉 Platinum' },
             ].map((lead) => (
               <div key={lead.rank} className="p-3.5 rounded-2xl bg-muted/30 border border-border/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">

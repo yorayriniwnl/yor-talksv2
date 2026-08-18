@@ -38,7 +38,7 @@ async function seedDatabase() {
       username: "anyaa_yaps",
       email: "anya@yortalks.com",
       passwordHash: defaultPasswordHash,
-      fullName: "Anya Sharma",
+      fullName: "Anya",
       bio: "3D World Builder & Unreal Engine 5.4 Enthusiast 🎮✨ Exploring procedural environments, volumetric lighting & shader graphs.",
       avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop",
       role: "creator"
@@ -295,7 +295,7 @@ async function seedDatabase() {
       recipientId: founderId,
       type: "like",
       title: "New Post Reaction",
-      message: "Anya Sharma liked your post 'Designing for the Multiverse'.",
+      message: "Anya liked your post 'Designing for the Multiverse'.",
       channel: "in_app",
       createdAt: new Date().toISOString()
     }
