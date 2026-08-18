@@ -7,10 +7,6 @@
     "api/index.ts": {
       "includeFiles": "api-server/dist/**",
       "maxDuration": 15
-    },
-    "api/[...path].ts": {
-      "includeFiles": "api-server/dist/**",
-      "maxDuration": 15
     }
   },
   "rewrites": [
