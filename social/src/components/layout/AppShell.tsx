@@ -121,6 +121,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Phage T4', path: '/phage-sim' },
     { icon: Zap, label: 'Pinball 3D', path: '/pinball-3d' },
     { icon: Search, label: 'Grover Search', path: '/grover-studio' },
+    { icon: Orbit, label: 'Kerr Black Hole', path: '/kerr-blackhole' },
+    { icon: Zap, label: 'Ion Thruster', path: '/ion-thruster' },
+    { icon: Brain, label: 'Microtubules', path: '/microtubule-sim' },
+    { icon: Zap, label: 'Neon Snake', path: '/neon-snake' },
+    { icon: ShieldCheck, label: 'Error Correct', path: '/error-correction' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
