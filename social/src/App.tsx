@@ -189,6 +189,11 @@ const MagnetarSim = lazyWithRetry(() => import('@/pages/magnetar-sim'));
 const PrimeEditor = lazyWithRetry(() => import('@/pages/prime-editor'));
 const CyberArkanoid = lazyWithRetry(() => import('@/pages/cyber-arkanoid'));
 const LindbladSim = lazyWithRetry(() => import('@/pages/lindblad-sim'));
+const SynchrotronSim = lazyWithRetry(() => import('@/pages/synchrotron-sim'));
+const NtpRocket = lazyWithRetry(() => import('@/pages/ntp-rocket'));
+const AtpSynthase = lazyWithRetry(() => import('@/pages/atp-synthase'));
+const LunarLander = lazyWithRetry(() => import('@/pages/lunar-lander'));
+const CvTeleport = lazyWithRetry(() => import('@/pages/cv-teleport'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -372,6 +377,11 @@ function ProtectedRoutes() {
               <Route path="/prime-editor" component={PrimeEditor} />
               <Route path="/cyber-arkanoid" component={CyberArkanoid} />
               <Route path="/lindblad-sim" component={LindbladSim} />
+              <Route path="/synchrotron-sim" component={SynchrotronSim} />
+              <Route path="/ntp-rocket" component={NtpRocket} />
+              <Route path="/atp-synthase" component={AtpSynthase} />
+              <Route path="/lunar-lander" component={LunarLander} />
+              <Route path="/cv-teleport" component={CvTeleport} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

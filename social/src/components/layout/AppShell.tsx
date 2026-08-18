@@ -137,6 +137,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'Prime Editor', path: '/prime-editor' },
     { icon: Zap, label: 'Cyber Arkanoid', path: '/cyber-arkanoid' },
     { icon: Waves, label: 'Lindblad GKSL', path: '/lindblad-sim' },
+    { icon: Radio, label: 'Synchrotron Jet', path: '/synchrotron-sim' },
+    { icon: Atom, label: 'NTP NERVA Rocket', path: '/ntp-rocket' },
+    { icon: Zap, label: 'ATP Synthase', path: '/atp-synthase' },
+    { icon: Rocket, label: 'Lunar Lander', path: '/lunar-lander' },
+    { icon: Radio, label: 'CV Teleport', path: '/cv-teleport' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
