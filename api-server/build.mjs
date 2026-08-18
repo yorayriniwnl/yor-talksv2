@@ -113,7 +113,9 @@ async function buildAll() {
     banner: {
       js: `import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
+import { createRequire as __createRequire } from 'node:module';
 
+globalThis.require = __createRequire(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
