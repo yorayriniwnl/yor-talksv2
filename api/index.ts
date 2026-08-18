@@ -1,24 +1,40 @@
 import type { Request, Response } from "express";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 let cachedApp: any = null;
 
 async function getExpressApp() {
   if (cachedApp) return cachedApp;
 
+  // Attempt 1: Relative import of pre-bundled production app
   try {
-    // Attempt 1: Load pre-bundled production app from dist
     const distModule = await import("../api-server/dist/app.mjs");
     cachedApp = distModule.default || distModule;
     return cachedApp;
-  } catch (distErr) {
+  } catch (err1) {
+    // Attempt 2: Absolute file URL from process.cwd()
     try {
-      // Attempt 2: Fallback to source app (useful in development/tsx or unbundled deployments)
-      const srcModule = await import("../api-server/src/app.js");
-      cachedApp = srcModule.default || srcModule;
+      const cwdDistPath = path.resolve(process.cwd(), "api-server/dist/app.mjs");
+      const distModule = await import(pathToFileURL(cwdDistPath).href);
+      cachedApp = distModule.default || distModule;
       return cachedApp;
-    } catch (srcErr) {
-      console.error("[Vercel Handler] Failed to load Express app from dist and src:", { distErr, srcErr });
-      throw new Error("Failed to initialize serverless application instance");
+    } catch (err2) {
+      // Attempt 3: Fallback to source app (useful in development/tsx or unbundled deployments)
+      try {
+        const srcModule = await import("../api-server/src/app.js");
+        cachedApp = srcModule.default || srcModule;
+        return cachedApp;
+      } catch (err3) {
+        try {
+          const srcTsModule = await import("../api-server/src/app.ts");
+          cachedApp = srcTsModule.default || srcTsModule;
+          return cachedApp;
+        } catch (err4) {
+          console.error("[Vercel Handler] Failed to load Express app across all strategies:", { err1, err2, err3, err4 });
+          throw new Error("Failed to initialize serverless application instance");
+        }
+      }
     }
   }
 }

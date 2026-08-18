@@ -2,6 +2,12 @@
   "version": 2,
   "buildCommand": "pnpm run build",
   "outputDirectory": "social/dist/public",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "api-server/dist/**",
+      "maxDuration": 15
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

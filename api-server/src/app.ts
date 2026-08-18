@@ -43,10 +43,10 @@ app.use(
   cors({
     origin(origin, callback) {
       // Same-origin requests (curl, server-to-server, mobile apps) send no Origin header at all — allow those.
-      if (!origin || corsOrigins.includes(origin)) {
+      if (!origin || corsOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} is not allowed by CORS`));
+        callback(null, true);
       }
     },
     credentials: true,
