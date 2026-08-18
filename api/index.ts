@@ -24,7 +24,7 @@ async function getExpressApp() {
       // Attempt 3: Fallback to source app (useful in development/tsx or unbundled deployments)
       try {
         // @ts-ignore
-        const srcModule = await import("../api-server/src/app.js");
+        const srcModule = await import("../api-server/src/app");
         cachedApp = srcModule.default || srcModule;
         return cachedApp;
       } catch (err3) {

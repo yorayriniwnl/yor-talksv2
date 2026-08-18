@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "framework": "vite",
+  "framework": null,
   "buildCommand": "pnpm run build",
   "outputDirectory": "social/dist/public",
   "functions": {
