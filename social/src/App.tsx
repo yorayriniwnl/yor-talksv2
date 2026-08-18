@@ -164,6 +164,11 @@ const DroneSim = lazyWithRetry(() => import('@/pages/drone-sim'));
 const SynapseSim = lazyWithRetry(() => import('@/pages/synapse-sim'));
 const HoverboardSim = lazyWithRetry(() => import('@/pages/hoverboard-sim'));
 const AnnealerSim = lazyWithRetry(() => import('@/pages/annealer-sim'));
+const SupernovaSim = lazyWithRetry(() => import('@/pages/supernova-sim'));
+const ScramjetSim = lazyWithRetry(() => import('@/pages/scramjet-sim'));
+const HodgkinHuxley = lazyWithRetry(() => import('@/pages/hodgkin-huxley'));
+const SkiRacer = lazyWithRetry(() => import('@/pages/ski-racer'));
+const ShorStudio = lazyWithRetry(() => import('@/pages/shor-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -322,6 +327,11 @@ function ProtectedRoutes() {
               <Route path="/synapse-sim" component={SynapseSim} />
               <Route path="/hoverboard-sim" component={HoverboardSim} />
               <Route path="/annealer-sim" component={AnnealerSim} />
+              <Route path="/supernova-sim" component={SupernovaSim} />
+              <Route path="/scramjet-sim" component={ScramjetSim} />
+              <Route path="/hodgkin-huxley" component={HodgkinHuxley} />
+              <Route path="/ski-racer" component={SkiRacer} />
+              <Route path="/shor-studio" component={ShorStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

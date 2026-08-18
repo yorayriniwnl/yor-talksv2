@@ -111,6 +111,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Neural Synapse', path: '/synapse-sim' },
     { icon: Sparkles, label: 'Hoverboard 3D', path: '/hoverboard-sim' },
     { icon: Atom, label: 'Quantum Annealer', path: '/annealer-sim' },
+    { icon: Sun, label: 'Supernova 3D', path: '/supernova-sim' },
+    { icon: Flame, label: 'Scramjet Mach 7', path: '/scramjet-sim' },
+    { icon: Activity, label: 'Hodgkin-Huxley', path: '/hodgkin-huxley' },
+    { icon: Compass, label: 'Cyber Slalom', path: '/ski-racer' },
+    { icon: Lock, label: "Shor's Factoring", path: '/shor-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
