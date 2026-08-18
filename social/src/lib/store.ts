@@ -435,6 +435,14 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
   { id: 'ac2', title: 'Rising Voice', description: 'Reach 1,000 followers', icon: 'TrendingUp', unlocked: true, progress: 1420, goal: 1000, xp: 200 },
   { id: 'ac3', title: 'Community Builder', description: 'Join 5 communities', icon: 'Users', unlocked: true, progress: 5, goal: 5, xp: 100 },
   { id: 'ac4', title: 'Spatial Pioneer', description: 'Explore the 3D Multiverse canvas', icon: 'Compass', unlocked: true, progress: 1, goal: 1, xp: 150 },
+  { id: 'ac5', title: 'Tourney Champion', description: 'Win an esports tournament bracket', icon: 'Trophy', unlocked: true, progress: 3, goal: 3, xp: 500 },
+  { id: 'ac6', title: 'Soundboard Maestro', description: 'Trigger 50 streamer sound pads', icon: 'Volume2', unlocked: true, progress: 50, goal: 50, xp: 150 },
+  { id: 'ac7', title: 'Arcade Grandmaster', description: 'Score over 10,000 pts in Arcade games', icon: 'Gamepad2', unlocked: true, progress: 12450, goal: 10000, xp: 300 },
+  { id: 'ac8', title: 'Spatial Lounge Host', description: 'Host a proximity audio lounge room', icon: 'Headphones', unlocked: true, progress: 1, goal: 1, xp: 250 },
+  { id: 'ac9', title: 'Marketplace Trader', description: 'List or purchase a verified hardware item', icon: 'ShoppingBag', unlocked: true, progress: 2, goal: 2, xp: 200 },
+  { id: 'ac10', title: 'Quantum Pioneer', description: 'Read or publish a research paper in Articles', icon: 'Atom', unlocked: true, progress: 5, goal: 5, xp: 350 },
+  { id: 'ac11', title: 'Clan Veteran', description: 'Complete 10 clan war scrim matches', icon: 'Shield', unlocked: true, progress: 10, goal: 10, xp: 400 },
+  { id: 'ac12', title: 'Verified Legend', description: 'Attain the diamond checkmark badge', icon: 'Award', unlocked: true, progress: 1, goal: 1, xp: 1000 },
 ];
 
 const MOCK_AI_MESSAGES: AIMessage[] = [
