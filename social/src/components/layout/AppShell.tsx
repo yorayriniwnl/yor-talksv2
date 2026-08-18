@@ -152,6 +152,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Activity, label: 'Patch Clamp', path: '/patch-clamp' },
     { icon: ShieldAlert, label: 'Missile Defense', path: '/missile-defense' },
     { icon: Atom, label: 'GHZ Multipartite', path: '/ghz-teleport' },
+    { icon: Waves, label: 'Cosmic Inflation', path: '/inflation-sim' },
+    { icon: Flame, label: 'MTF Fusion', path: '/mtf-fusion' },
+    { icon: Sun, label: 'Bacteriorhodopsin', path: '/bacteriorhodopsin-sim' },
+    { icon: Zap, label: 'Light Cycles 3D', path: '/light-cycles' },
+    { icon: Sparkles, label: 'Boson Sampling', path: '/boson-sampling' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

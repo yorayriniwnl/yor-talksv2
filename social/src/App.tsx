@@ -204,6 +204,11 @@ const AntimatterRocket = lazyWithRetry(() => import('@/pages/antimatter-rocket')
 const PatchClamp = lazyWithRetry(() => import('@/pages/patch-clamp'));
 const MissileDefense = lazyWithRetry(() => import('@/pages/missile-defense'));
 const GhzTeleport = lazyWithRetry(() => import('@/pages/ghz-teleport'));
+const InflationSim = lazyWithRetry(() => import('@/pages/inflation-sim'));
+const MtfFusion = lazyWithRetry(() => import('@/pages/mtf-fusion'));
+const BacteriorhodopsinSim = lazyWithRetry(() => import('@/pages/bacteriorhodopsin-sim'));
+const LightCycles = lazyWithRetry(() => import('@/pages/light-cycles'));
+const BosonSampling = lazyWithRetry(() => import('@/pages/boson-sampling'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -402,6 +407,11 @@ function ProtectedRoutes() {
               <Route path="/patch-clamp" component={PatchClamp} />
               <Route path="/missile-defense" component={MissileDefense} />
               <Route path="/ghz-teleport" component={GhzTeleport} />
+              <Route path="/inflation-sim" component={InflationSim} />
+              <Route path="/mtf-fusion" component={MtfFusion} />
+              <Route path="/bacteriorhodopsin-sim" component={BacteriorhodopsinSim} />
+              <Route path="/light-cycles" component={LightCycles} />
+              <Route path="/boson-sampling" component={BosonSampling} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
