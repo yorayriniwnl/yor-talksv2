@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
-  UserRound, Settings, ImageIcon, Send, ShoppingBag
+  UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -49,8 +49,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Film, label: 'Reels', path: '/videos' },
     { icon: MessageCircle, label: 'Messages', path: '/messages' },
     { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifs > 0 ? unreadNotifs : null },
-    { icon: PlusSquare, label: 'Create', action: () => setIsComposing(true) },
-    { icon: UserRound, label: 'Profile', path: currentUser ? `/profile/${currentUser.id}` : '/' },
+    { icon: Music, label: 'Cyber DAW', path: '/cyber-daw' },
+    { icon: Zap, label: 'Neon Overdrive', path: '/neon-overdrive' },
+    { icon: Activity, label: 'Creator Terminal', path: '/creator-terminal' },
+    { icon: BrainCircuit, label: 'Prompt Arena', path: '/prompt-arena' },
+    { icon: Terminal, label: 'ASCII Studio', path: '/ascii-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

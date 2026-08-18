@@ -104,6 +104,13 @@ const ChromaStudio = lazyWithRetry(() => import('@/pages/chroma-studio'));
 const TablaSynth = lazyWithRetry(() => import('@/pages/tabla-synth'));
 const JerseyCustomizer = lazyWithRetry(() => import('@/pages/jersey-customizer'));
 
+// Monumental Studios
+const CyberDAW = lazyWithRetry(() => import('@/pages/cyber-daw'));
+const NeonOverdriveGame = lazyWithRetry(() => import('@/pages/neon-overdrive'));
+const CreatorTerminal = lazyWithRetry(() => import('@/pages/creator-terminal'));
+const PromptArena = lazyWithRetry(() => import('@/pages/prompt-arena'));
+const AsciiStudio = lazyWithRetry(() => import('@/pages/ascii-studio'));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -190,7 +197,6 @@ function ProtectedRoutes() {
               <Route path="/comms" component={SquadCommsRoom} />
               <Route path="/health" component={GamerHealthHub} />
               <Route path="/scoreboard" component={ScoreboardStudio} />
-              <Route path="/chai" component={ChaiSimulator} />
               <Route path="/rooms" component={CustomRoomLobby} />
               <Route path="/gear" component={GearCustomizer} />
               <Route path="/multistream" component={MultistreamStudio} />
@@ -203,6 +209,11 @@ function ProtectedRoutes() {
               <Route path="/chroma-studio" component={ChromaStudio} />
               <Route path="/tabla-synth" component={TablaSynth} />
               <Route path="/jersey-customizer" component={JerseyCustomizer} />
+              <Route path="/cyber-daw" component={CyberDAW} />
+              <Route path="/neon-overdrive" component={NeonOverdriveGame} />
+              <Route path="/creator-terminal" component={CreatorTerminal} />
+              <Route path="/prompt-arena" component={PromptArena} />
+              <Route path="/ascii-studio" component={AsciiStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
