@@ -443,6 +443,12 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
   { id: 'ac10', title: 'Quantum Pioneer', description: 'Read or publish a research paper in Articles', icon: 'Atom', unlocked: true, progress: 5, goal: 5, xp: 350 },
   { id: 'ac11', title: 'Clan Veteran', description: 'Complete 10 clan war scrim matches', icon: 'Shield', unlocked: true, progress: 10, goal: 10, xp: 400 },
   { id: 'ac12', title: 'Verified Legend', description: 'Attain the diamond checkmark badge', icon: 'Award', unlocked: true, progress: 1, goal: 1, xp: 1000 },
+  { id: 'ac13', title: 'Speed Demon', description: 'Record a sub-7 minute Nordschleife lap in Sim Racing', icon: 'Flame', unlocked: true, progress: 1, goal: 1, xp: 450 },
+  { id: 'ac14', title: 'Cryo Master', description: 'Benchmark memory frequency past 10,000 MT/s at -200°C', icon: 'Snowflake', unlocked: true, progress: 1, goal: 1, xp: 600 },
+  { id: 'ac15', title: 'Eco Swarm Admiral', description: 'Plant over 10,000 tree seeds with autonomous drone fleets', icon: 'Sprout', unlocked: true, progress: 50000, goal: 10000, xp: 500 },
+  { id: 'ac16', title: 'Master Bladesmith', description: 'Forge or collect a 512+ layer folded Damascus blade', icon: 'Sword', unlocked: true, progress: 1, goal: 1, xp: 350 },
+  { id: 'ac17', title: 'Optical Cryptographer', description: 'Lock a 1,000+ km satellite quantum key downlink', icon: 'Radio', unlocked: true, progress: 1, goal: 1, xp: 550 },
+  { id: 'ac18', title: 'Multiverse Sovereign', description: 'Unlock level 50 and earn 5,000+ total platform XP', icon: 'Crown', unlocked: true, progress: 5400, goal: 5000, xp: 2000 }
 ];
 
 const MOCK_AI_MESSAGES: AIMessage[] = [
