@@ -86,6 +86,45 @@ const TOURNAMENTS: Tournament[] = [
     status: 'registering',
     organizer: 'Yor CS League',
     description: '128-tick tournament servers with custom anti-cheat, full caster broadcast, and weapon skin drops for viewers.'
+  },
+  {
+    id: 'tourney-4',
+    title: 'FGC Asian Showdown: SF6 & Tekken 8',
+    game: 'Street Fighter 6 / Tekken 8',
+    coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop',
+    prizePoolINR: 500000,
+    teamsCount: 32,
+    startDate: 'Starts Sep 5, 2026',
+    tier: 'Community Cup',
+    status: 'registering',
+    organizer: 'Arcade Guild Tokyo & Bharat',
+    description: 'Double elimination fighting game bracket streamed live in 4K 60FPS on low-latency WebRTC.'
+  },
+  {
+    id: 'tourney-5',
+    title: 'Rocket League 3v3 Supersonic Championship',
+    game: 'Rocket League',
+    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
+    prizePoolINR: 350000,
+    teamsCount: 16,
+    startDate: 'Starts Sep 12, 2026',
+    tier: 'Community Cup',
+    status: 'registering',
+    organizer: 'Supersonic Arena',
+    description: 'High-flying aerial physics tournament with live caster telemetry overlay and instant replay clips.'
+  },
+  {
+    id: 'tourney-6',
+    title: 'WebGPU Speed Shading & 64k Code Duel',
+    game: 'Creative Code & WebGL',
+    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+    prizePoolINR: 200000,
+    teamsCount: 64,
+    startDate: 'Starts Sep 20, 2026',
+    tier: 'Community Cup',
+    status: 'registering',
+    organizer: 'ShaderToy Bharat Community',
+    description: 'Live 25-minute speed shading battle writing real-time ray marchers and GLSL vertex shaders directly in browser.'
   }
 ];
 
