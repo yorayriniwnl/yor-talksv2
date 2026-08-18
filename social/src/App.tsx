@@ -134,6 +134,11 @@ const CyberPinball = lazyWithRetry(() => import('@/pages/cyber-pinball'));
 const PolySynth = lazyWithRetry(() => import('@/pages/poly-synth'));
 const CricketTrainer = lazyWithRetry(() => import('@/pages/cricket-trainer'));
 const NeuralTrainer = lazyWithRetry(() => import('@/pages/neural-trainer'));
+const GravWave = lazyWithRetry(() => import('@/pages/grav-wave'));
+const RoverSim = lazyWithRetry(() => import('@/pages/rover-sim'));
+const GeneCircuit = lazyWithRetry(() => import('@/pages/gene-circuit'));
+const CityCourier = lazyWithRetry(() => import('@/pages/city-courier'));
+const VocoderStudio = lazyWithRetry(() => import('@/pages/vocoder-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -262,6 +267,11 @@ function ProtectedRoutes() {
               <Route path="/poly-synth" component={PolySynth} />
               <Route path="/cricket-trainer" component={CricketTrainer} />
               <Route path="/neural-trainer" component={NeuralTrainer} />
+              <Route path="/grav-wave" component={GravWave} />
+              <Route path="/rover-sim" component={RoverSim} />
+              <Route path="/gene-circuit" component={GeneCircuit} />
+              <Route path="/city-courier" component={CityCourier} />
+              <Route path="/vocoder-studio" component={VocoderStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
