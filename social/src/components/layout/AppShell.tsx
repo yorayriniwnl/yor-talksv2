@@ -207,6 +207,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Ribo-Q Quadruplet', path: '/ribosome-o' },
     { icon: Target, label: 'Robot Maze 3D', path: '/robot-maze' },
     { icon: Atom, label: 'Ising QPT Criticality', path: '/ising-qpt' },
+    { icon: Globe2, label: 'BAO Sound Horizon', path: '/bao-cosmology' },
+    { icon: Rocket, label: 'NEP Megawatt Hall', path: '/nep-rocket' },
+    { icon: Beaker, label: 'TX-TL Cell-Free Bio', path: '/txtl-studio' },
+    { icon: Target, label: 'Tempest Vortex 3D', path: '/tempest-vortex' },
+    { icon: Atom, label: 'Quantum Phase Oracle', path: '/quantum-oracle' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -259,6 +259,11 @@ const PhotonicRocket = lazyWithRetry(() => import('@/pages/photonic-rocket'));
 const RibosomeO = lazyWithRetry(() => import('@/pages/ribosome-o'));
 const RobotMaze = lazyWithRetry(() => import('@/pages/robot-maze'));
 const IsingQpt = lazyWithRetry(() => import('@/pages/ising-qpt'));
+const BaoCosmology = lazyWithRetry(() => import('@/pages/bao-cosmology'));
+const NepRocket = lazyWithRetry(() => import('@/pages/nep-rocket'));
+const TxtlStudio = lazyWithRetry(() => import('@/pages/txtl-studio'));
+const TempestVortex = lazyWithRetry(() => import('@/pages/tempest-vortex'));
+const QuantumOracle = lazyWithRetry(() => import('@/pages/quantum-oracle'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -512,6 +517,11 @@ function ProtectedRoutes() {
               <Route path="/ribosome-o" component={RibosomeO} />
               <Route path="/robot-maze" component={RobotMaze} />
               <Route path="/ising-qpt" component={IsingQpt} />
+              <Route path="/bao-cosmology" component={BaoCosmology} />
+              <Route path="/nep-rocket" component={NepRocket} />
+              <Route path="/txtl-studio" component={TxtlStudio} />
+              <Route path="/tempest-vortex" component={TempestVortex} />
+              <Route path="/quantum-oracle" component={QuantumOracle} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
