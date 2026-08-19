@@ -457,6 +457,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Lock, label: 'CRISPR-Cas12θ Telomere Capper', path: '/cas12theta-capper' },
     { icon: Swords, label: 'TIE Aggressor Fleet Escort', path: '/tie-aggressor-escort' },
     { icon: Network, label: 'Fracton Non-Invertible Symmetries', path: '/fracton-non-invertible' },
+    { icon: Atom, label: 'ST-PEPS Chiral Spin-Liquid QEM', path: '/stpeps-purifier-qem' },
+    { icon: Flame, label: 'Dynamic Helical Mirror Cruiser', path: '/dynamic-mirror-cruiser' },
+    { icon: Disc3, label: 'CRISPR-Cas12ι Chromatin Remodeler', path: '/cas12iota-remodeler' },
+    { icon: Swords, label: 'TIE Avenger Advanced Dogfight', path: '/tie-avenger-dogfight' },
+    { icon: Maximize2, label: 'Fracton Gauged Frank Disclination', path: '/fracton-gauged-disclination' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

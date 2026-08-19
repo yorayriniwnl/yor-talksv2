@@ -509,6 +509,11 @@ const MtfHeavyCarrier = lazyWithRetry(() => import('@/pages/mtf-heavy-carrier'))
 const Cas12thetaCapper = lazyWithRetry(() => import('@/pages/cas12theta-capper'));
 const TieAggressorEscort = lazyWithRetry(() => import('@/pages/tie-aggressor-escort'));
 const FractonNonInvertible = lazyWithRetry(() => import('@/pages/fracton-non-invertible'));
+const StpepsPurifierQem = lazyWithRetry(() => import('@/pages/stpeps-purifier-qem'));
+const DynamicMirrorCruiser = lazyWithRetry(() => import('@/pages/dynamic-mirror-cruiser'));
+const Cas12iotaRemodeler = lazyWithRetry(() => import('@/pages/cas12iota-remodeler'));
+const TieAvengerDogfight = lazyWithRetry(() => import('@/pages/tie-avenger-dogfight'));
+const FractonGaugedDisclination = lazyWithRetry(() => import('@/pages/fracton-gauged-disclination'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1012,6 +1017,11 @@ function ProtectedRoutes() {
               <Route path="/cas12theta-capper" component={Cas12thetaCapper} />
               <Route path="/tie-aggressor-escort" component={TieAggressorEscort} />
               <Route path="/fracton-non-invertible" component={FractonNonInvertible} />
+              <Route path="/stpeps-purifier-qem" component={StpepsPurifierQem} />
+              <Route path="/dynamic-mirror-cruiser" component={DynamicMirrorCruiser} />
+              <Route path="/cas12iota-remodeler" component={Cas12iotaRemodeler} />
+              <Route path="/tie-avenger-dogfight" component={TieAvengerDogfight} />
+              <Route path="/fracton-gauged-disclination" component={FractonGaugedDisclination} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
