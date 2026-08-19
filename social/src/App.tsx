@@ -264,6 +264,11 @@ const NepRocket = lazyWithRetry(() => import('@/pages/nep-rocket'));
 const TxtlStudio = lazyWithRetry(() => import('@/pages/txtl-studio'));
 const TempestVortex = lazyWithRetry(() => import('@/pages/tempest-vortex'));
 const QuantumOracle = lazyWithRetry(() => import('@/pages/quantum-oracle'));
+const Reionization21cm = lazyWithRetry(() => import('@/pages/reionization-21cm'));
+const SolarSail = lazyWithRetry(() => import('@/pages/solar-sail'));
+const GeneDrive = lazyWithRetry(() => import('@/pages/gene-drive'));
+const GravitarSim = lazyWithRetry(() => import('@/pages/gravitar-sim'));
+const CvQkd = lazyWithRetry(() => import('@/pages/cv-qkd'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -522,6 +527,11 @@ function ProtectedRoutes() {
               <Route path="/txtl-studio" component={TxtlStudio} />
               <Route path="/tempest-vortex" component={TempestVortex} />
               <Route path="/quantum-oracle" component={QuantumOracle} />
+              <Route path="/reionization-21cm" component={Reionization21cm} />
+              <Route path="/solar-sail" component={SolarSail} />
+              <Route path="/gene-drive" component={GeneDrive} />
+              <Route path="/gravitar-sim" component={GravitarSim} />
+              <Route path="/cv-qkd" component={CvQkd} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

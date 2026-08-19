@@ -212,6 +212,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Beaker, label: 'TX-TL Cell-Free Bio', path: '/txtl-studio' },
     { icon: Target, label: 'Tempest Vortex 3D', path: '/tempest-vortex' },
     { icon: Atom, label: 'Quantum Phase Oracle', path: '/quantum-oracle' },
+    { icon: Radio, label: '21cm Cosmic Dawn', path: '/reionization-21cm' },
+    { icon: Sun, label: 'Solar Photonic Sail', path: '/solar-sail' },
+    { icon: Dna, label: 'CRISPR Gene Drive', path: '/gene-drive' },
+    { icon: Target, label: 'Gravitar Planet 3D', path: '/gravitar-sim' },
+    { icon: Waves, label: 'CV-QKD Coherent Fiber', path: '/cv-qkd' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
