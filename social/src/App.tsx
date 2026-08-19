@@ -249,6 +249,11 @@ const DfdFusionRocket = lazyWithRetry(() => import('@/pages/dfd-fusion-rocket'))
 const EpigeneticEditor = lazyWithRetry(() => import('@/pages/epigenetic-editor'));
 const LunarDefender = lazyWithRetry(() => import('@/pages/lunar-defender'));
 const HamiltonianSim = lazyWithRetry(() => import('@/pages/hamiltonian-sim'));
+const CasimirStudio = lazyWithRetry(() => import('@/pages/casimir-studio'));
+const HdltThruster = lazyWithRetry(() => import('@/pages/hdlt-thruster'));
+const NcaaStudio = lazyWithRetry(() => import('@/pages/ncaa-studio'));
+const StarCastle = lazyWithRetry(() => import('@/pages/star-castle'));
+const QsvtStudio = lazyWithRetry(() => import('@/pages/qsvt-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -492,6 +497,11 @@ function ProtectedRoutes() {
               <Route path="/epigenetic-editor" component={EpigeneticEditor} />
               <Route path="/lunar-defender" component={LunarDefender} />
               <Route path="/hamiltonian-sim" component={HamiltonianSim} />
+              <Route path="/casimir-studio" component={CasimirStudio} />
+              <Route path="/hdlt-thruster" component={HdltThruster} />
+              <Route path="/ncaa-studio" component={NcaaStudio} />
+              <Route path="/star-castle" component={StarCastle} />
+              <Route path="/qsvt-studio" component={QsvtStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

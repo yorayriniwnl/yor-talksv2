@@ -197,6 +197,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'Epigenetic Editor', path: '/epigenetic-editor' },
     { icon: Crosshair, label: 'Lunar Defender 3D', path: '/lunar-defender' },
     { icon: Atom, label: 'Trotter Hamiltonian', path: '/hamiltonian-sim' },
+    { icon: Waves, label: 'Casimir Dynamic Cavity', path: '/casimir-studio' },
+    { icon: Rocket, label: 'HDLT Helicon Thruster', path: '/hdlt-thruster' },
+    { icon: Dna, label: 'ncAA Genetic Code', path: '/ncaa-studio' },
+    { icon: Target, label: 'Star Castle 3D', path: '/star-castle' },
+    { icon: Atom, label: 'QSVT Grand Unified', path: '/qsvt-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
