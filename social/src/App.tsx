@@ -289,6 +289,11 @@ const FusionMirror = lazyWithRetry(() => import('@/pages/fusion-mirror'));
 const EpigeneticClock = lazyWithRetry(() => import('@/pages/epigenetic-clock'));
 const BerzerkArcade = lazyWithRetry(() => import('@/pages/berzerk-arcade'));
 const CvTeleportStudio = lazyWithRetry(() => import('@/pages/cv-teleport-studio'));
+const BcsSuperconductor = lazyWithRetry(() => import('@/pages/bcs-superconductor'));
+const RotatingPlasma = lazyWithRetry(() => import('@/pages/rotating-plasma'));
+const CrisprEpigenome = lazyWithRetry(() => import('@/pages/crispr-epigenome'));
+const TrenchRun = lazyWithRetry(() => import('@/pages/trench-run'));
+const HelstromSim = lazyWithRetry(() => import('@/pages/helstrom-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -572,6 +577,11 @@ function ProtectedRoutes() {
               <Route path="/epigenetic-clock" component={EpigeneticClock} />
               <Route path="/berzerk-arcade" component={BerzerkArcade} />
               <Route path="/cv-teleport-studio" component={CvTeleportStudio} />
+              <Route path="/bcs-superconductor" component={BcsSuperconductor} />
+              <Route path="/rotating-plasma" component={RotatingPlasma} />
+              <Route path="/crispr-epigenome" component={CrisprEpigenome} />
+              <Route path="/trench-run" component={TrenchRun} />
+              <Route path="/helstrom-sim" component={HelstromSim} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

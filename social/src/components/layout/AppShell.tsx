@@ -237,6 +237,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Clock, label: 'Epigenetic Aging Clock', path: '/epigenetic-clock' },
     { icon: Bot, label: 'Berzerk 3D Maze', path: '/berzerk-arcade' },
     { icon: Waves, label: 'CV Teleportation BK98', path: '/cv-teleport-studio' },
+    { icon: Snowflake, label: 'BCS Superconductor', path: '/bcs-superconductor' },
+    { icon: RotateCw, label: 'Rotating Plasma MCX', path: '/rotating-plasma' },
+    { icon: Dna, label: 'CRISPR Epigenome Edit', path: '/crispr-epigenome' },
+    { icon: Target, label: 'Trench Run 3D Vector', path: '/trench-run' },
+    { icon: Scale, label: 'Helstrom Bound POVM', path: '/helstrom-sim' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
