@@ -317,6 +317,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: RefreshCw, label: 'CRISPR-Cas12l Retron', path: '/cas12l-retron' },
     { icon: Swords, label: 'TIE Silencer Dogfight', path: '/tie-silencer-dogfight' },
     { icon: Network, label: '3D String Condensation', path: '/string-condensation' },
+    { icon: Layers, label: 'Tensor QSE MPO Tomography', path: '/tensor-qse' },
+    { icon: Compass, label: 'Polywell IEC Fusion Starship', path: '/iec-fusion-drive' },
+    { icon: Boxes, label: 'CRISPR-Cas12i Multiplexing', path: '/cas12i-multiplex' },
+    { icon: Shield, label: 'Razor Crest Beskar Pursuit', path: '/razor-crest-pursuit' },
+    { icon: Layers, label: 'Higher-Form Gauge QC', path: '/higher-form-gauge' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

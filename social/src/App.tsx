@@ -369,6 +369,11 @@ const DpfPinchRocket = lazyWithRetry(() => import('@/pages/dpf-pinch-rocket'));
 const Cas12lRetron = lazyWithRetry(() => import('@/pages/cas12l-retron'));
 const TieSilencerDogfight = lazyWithRetry(() => import('@/pages/tie-silencer-dogfight'));
 const StringCondensation = lazyWithRetry(() => import('@/pages/string-condensation'));
+const TensorQse = lazyWithRetry(() => import('@/pages/tensor-qse'));
+const IecFusionDrive = lazyWithRetry(() => import('@/pages/iec-fusion-drive'));
+const Cas12iMultiplex = lazyWithRetry(() => import('@/pages/cas12i-multiplex'));
+const RazorCrestPursuit = lazyWithRetry(() => import('@/pages/razor-crest-pursuit'));
+const HigherFormGauge = lazyWithRetry(() => import('@/pages/higher-form-gauge'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -732,6 +737,11 @@ function ProtectedRoutes() {
               <Route path="/cas12l-retron" component={Cas12lRetron} />
               <Route path="/tie-silencer-dogfight" component={TieSilencerDogfight} />
               <Route path="/string-condensation" component={StringCondensation} />
+              <Route path="/tensor-qse" component={TensorQse} />
+              <Route path="/iec-fusion-drive" component={IecFusionDrive} />
+              <Route path="/cas12i-multiplex" component={Cas12iMultiplex} />
+              <Route path="/razor-crest-pursuit" component={RazorCrestPursuit} />
+              <Route path="/higher-form-gauge" component={HigherFormGauge} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
