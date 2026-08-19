@@ -397,6 +397,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: BoxSelect, label: 'CRISPR-Cas12v CAST Engine', path: '/cas12v-cast' },
     { icon: Swords, label: 'TIE Whisper Stealth Fighter', path: '/tie-whisper-stealth' },
     { icon: Box, label: 'Higher-Form Lineon Toric', path: '/higher-form-lineon-toric' },
+    { icon: Disc, label: 'Tensor Ring QEM Purifier', path: '/tensor-ring-qem' },
+    { icon: Flame, label: 'MagLIF Laser Fusion Dreadnought', path: '/maglif-dreadnought' },
+    { icon: Stamp, label: 'CRISPR-Cas12w Methylome', path: '/cas12w-methylome' },
+    { icon: Swords, label: 'TIE Phantom Cloaked Recon', path: '/tie-phantom-recon' },
+    { icon: Orbit, label: 'Hexatic Dislocation Unbinding', path: '/fracton-hexatic-unbinding' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -449,6 +449,11 @@ const PlasmaGunDestroyer = lazyWithRetry(() => import('@/pages/plasma-gun-destro
 const Cas12vCast = lazyWithRetry(() => import('@/pages/cas12v-cast'));
 const TieWhisperStealth = lazyWithRetry(() => import('@/pages/tie-whisper-stealth'));
 const HigherFormLineonToric = lazyWithRetry(() => import('@/pages/higher-form-lineon-toric'));
+const TensorRingQem = lazyWithRetry(() => import('@/pages/tensor-ring-qem'));
+const MaglifDreadnought = lazyWithRetry(() => import('@/pages/maglif-dreadnought'));
+const Cas12wMethylome = lazyWithRetry(() => import('@/pages/cas12w-methylome'));
+const TiePhantomRecon = lazyWithRetry(() => import('@/pages/tie-phantom-recon'));
+const FractonHexaticUnbinding = lazyWithRetry(() => import('@/pages/fracton-hexatic-unbinding'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -892,6 +897,11 @@ function ProtectedRoutes() {
               <Route path="/cas12v-cast" component={Cas12vCast} />
               <Route path="/tie-whisper-stealth" component={TieWhisperStealth} />
               <Route path="/higher-form-lineon-toric" component={HigherFormLineonToric} />
+              <Route path="/tensor-ring-qem" component={TensorRingQem} />
+              <Route path="/maglif-dreadnought" component={MaglifDreadnought} />
+              <Route path="/cas12w-methylome" component={Cas12wMethylome} />
+              <Route path="/tie-phantom-recon" component={TiePhantomRecon} />
+              <Route path="/fracton-hexatic-unbinding" component={FractonHexaticUnbinding} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
