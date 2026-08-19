@@ -392,6 +392,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Split, label: 'CRISPR-Cas12u Exon Skipper', path: '/cas12u-splice' },
     { icon: Swords, label: 'TIE Dagger Sith Interceptor', path: '/tie-dagger-interceptor' },
     { icon: Layers, label: 'Foliated Fracton Phase', path: '/foliated-fracton-phase' },
+    { icon: FunctionSquare, label: 'isoTNS Purifier QEM', path: '/isotns-purifier-qem' },
+    { icon: Flame, label: 'Plasma Gun Liner Destroyer', path: '/plasma-gun-destroyer' },
+    { icon: BoxSelect, label: 'CRISPR-Cas12v CAST Engine', path: '/cas12v-cast' },
+    { icon: Swords, label: 'TIE Whisper Stealth Fighter', path: '/tie-whisper-stealth' },
+    { icon: Box, label: 'Higher-Form Lineon Toric', path: '/higher-form-lineon-toric' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

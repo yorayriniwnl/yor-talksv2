@@ -444,6 +444,11 @@ const CentrifugalMtfCarrier = lazyWithRetry(() => import('@/pages/centrifugal-mt
 const Cas12uSplice = lazyWithRetry(() => import('@/pages/cas12u-splice'));
 const TieDaggerInterceptor = lazyWithRetry(() => import('@/pages/tie-dagger-interceptor'));
 const FoliatedFractonPhase = lazyWithRetry(() => import('@/pages/foliated-fracton-phase'));
+const IsotnsPurifierQem = lazyWithRetry(() => import('@/pages/isotns-purifier-qem'));
+const PlasmaGunDestroyer = lazyWithRetry(() => import('@/pages/plasma-gun-destroyer'));
+const Cas12vCast = lazyWithRetry(() => import('@/pages/cas12v-cast'));
+const TieWhisperStealth = lazyWithRetry(() => import('@/pages/tie-whisper-stealth'));
+const HigherFormLineonToric = lazyWithRetry(() => import('@/pages/higher-form-lineon-toric'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -882,6 +887,11 @@ function ProtectedRoutes() {
               <Route path="/cas12u-splice" component={Cas12uSplice} />
               <Route path="/tie-dagger-interceptor" component={TieDaggerInterceptor} />
               <Route path="/foliated-fracton-phase" component={FoliatedFractonPhase} />
+              <Route path="/isotns-purifier-qem" component={IsotnsPurifierQem} />
+              <Route path="/plasma-gun-destroyer" component={PlasmaGunDestroyer} />
+              <Route path="/cas12v-cast" component={Cas12vCast} />
+              <Route path="/tie-whisper-stealth" component={TieWhisperStealth} />
+              <Route path="/higher-form-lineon-toric" component={HigherFormLineonToric} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
