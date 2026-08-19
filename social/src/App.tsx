@@ -394,6 +394,11 @@ const DpfTransneptunian = lazyWithRetry(() => import('@/pages/dpf-transneptunian
 const Cas12kTransposon = lazyWithRetry(() => import('@/pages/cas12k-transposon'));
 const TieDefenderCombat = lazyWithRetry(() => import('@/pages/tie-defender-combat'));
 const GaugeColorCode = lazyWithRetry(() => import('@/pages/gauge-color-code'));
+const VirtualCoherenceQem = lazyWithRetry(() => import('@/pages/virtual-coherence-qem'));
+const IcfFissionHybrid = lazyWithRetry(() => import('@/pages/icf-fission-hybrid'));
+const CasphiTherapy = lazyWithRetry(() => import('@/pages/casphi-therapy'));
+const Arc170Dogfight = lazyWithRetry(() => import('@/pages/arc170-dogfight'));
+const FoliatedFractonTensor = lazyWithRetry(() => import('@/pages/foliated-fracton-tensor'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -782,6 +787,11 @@ function ProtectedRoutes() {
               <Route path="/cas12k-transposon" component={Cas12kTransposon} />
               <Route path="/tie-defender-combat" component={TieDefenderCombat} />
               <Route path="/gauge-color-code" component={GaugeColorCode} />
+              <Route path="/virtual-coherence-qem" component={VirtualCoherenceQem} />
+              <Route path="/icf-fission-hybrid" component={IcfFissionHybrid} />
+              <Route path="/casphi-therapy" component={CasphiTherapy} />
+              <Route path="/arc170-dogfight" component={Arc170Dogfight} />
+              <Route path="/foliated-fracton-tensor" component={FoliatedFractonTensor} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

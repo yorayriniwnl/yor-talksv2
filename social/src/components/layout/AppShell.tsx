@@ -342,6 +342,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: PackagePlus, label: 'CRISPR-Cas12k CAST Transposon', path: '/cas12k-transposon' },
     { icon: Swords, label: 'TIE Defender Combat', path: '/tie-defender-combat' },
     { icon: Box, label: '3D Gauge Color Code', path: '/gauge-color-code' },
+    { icon: RefreshCw, label: 'Virtual Coherence QEM', path: '/virtual-coherence-qem' },
+    { icon: Flame, label: 'ICF Fission-Fusion Starship', path: '/icf-fission-hybrid' },
+    { icon: HeartPulse, label: 'CRISPR-CasPhi Therapy', path: '/casphi-therapy' },
+    { icon: Swords, label: 'ARC-170 Clone Dogfight', path: '/arc170-dogfight' },
+    { icon: Network, label: 'Foliated Fracton Tensor MERA', path: '/foliated-fracton-tensor' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
