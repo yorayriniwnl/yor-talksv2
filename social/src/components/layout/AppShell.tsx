@@ -407,6 +407,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitMerge, label: 'CRISPR-Cas12x Base Integrator', path: '/cas12x-integrator' },
     { icon: Bomb, label: 'TIE Punisher Heavy Bomber', path: '/tie-punisher-bomber' },
     { icon: Layers, label: 'Foliated Entanglement RG', path: '/foliated-entanglement-rg' },
+    { icon: LineChart, label: 'cMPS Field Purifier QEM', path: '/cmps-purifier-qem' },
+    { icon: Flame, label: 'Polywell Warp Vanguard', path: '/polywell-warp-vanguard' },
+    { icon: BoxSelect, label: 'CRISPR-Cas12y Transposon', path: '/cas12y-transposon' },
+    { icon: Swords, label: 'TIE Aggressor Heavy Gunship', path: '/tie-aggressor-patrol' },
+    { icon: Orbit, label: 'Fracton Vortex Glass', path: '/fracton-vortex-glass' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -459,6 +459,11 @@ const DpfBoronBattleship = lazyWithRetry(() => import('@/pages/dpf-boron-battles
 const Cas12xIntegrator = lazyWithRetry(() => import('@/pages/cas12x-integrator'));
 const TiePunisherBomber = lazyWithRetry(() => import('@/pages/tie-punisher-bomber'));
 const FoliatedEntanglementRg = lazyWithRetry(() => import('@/pages/foliated-entanglement-rg'));
+const CmpsPurifierQem = lazyWithRetry(() => import('@/pages/cmps-purifier-qem'));
+const PolywellWarpVanguard = lazyWithRetry(() => import('@/pages/polywell-warp-vanguard'));
+const Cas12yTransposon = lazyWithRetry(() => import('@/pages/cas12y-transposon'));
+const TieAggressorPatrol = lazyWithRetry(() => import('@/pages/tie-aggressor-patrol'));
+const FractonVortexGlass = lazyWithRetry(() => import('@/pages/fracton-vortex-glass'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -912,6 +917,11 @@ function ProtectedRoutes() {
               <Route path="/cas12x-integrator" component={Cas12xIntegrator} />
               <Route path="/tie-punisher-bomber" component={TiePunisherBomber} />
               <Route path="/foliated-entanglement-rg" component={FoliatedEntanglementRg} />
+              <Route path="/cmps-purifier-qem" component={CmpsPurifierQem} />
+              <Route path="/polywell-warp-vanguard" component={PolywellWarpVanguard} />
+              <Route path="/cas12y-transposon" component={Cas12yTransposon} />
+              <Route path="/tie-aggressor-patrol" component={TieAggressorPatrol} />
+              <Route path="/fracton-vortex-glass" component={FractonVortexGlass} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
