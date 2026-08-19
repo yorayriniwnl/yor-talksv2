@@ -417,6 +417,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Sun, label: 'CRISPR-Cas12z Demethylase', path: '/cas12z-demethylase' },
     { icon: Radio, label: 'TIE Scout Recon Probe', path: '/tie-scout-probe' },
     { icon: Magnet, label: 'Fracton Meissner Flux Effect', path: '/fracton-meissner-flux' },
+    { icon: Grid, label: 'CTMRG Corner Purifier QEM', path: '/ctmrg-purifier-qem' },
+    { icon: Flame, label: 'Sheared-Flow Z-Pinch Interceptor', path: '/sheared-flow-zpinch' },
+    { icon: GitMerge, label: 'CRISPR-Cas12α Chromosome Integrator', path: '/cas12alpha-integrator' },
+    { icon: Shield, label: 'TIE Shuttle Evacuation Escort', path: '/tie-shuttle-evacuation' },
+    { icon: Waves, label: 'Fracton Dipole Superfluid', path: '/fracton-dipole-superfluid' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

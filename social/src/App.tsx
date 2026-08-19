@@ -469,6 +469,11 @@ const FastIgnitionDreadnought = lazyWithRetry(() => import('@/pages/fast-ignitio
 const Cas12zDemethylase = lazyWithRetry(() => import('@/pages/cas12z-demethylase'));
 const TieScoutProbe = lazyWithRetry(() => import('@/pages/tie-scout-probe'));
 const FractonMeissnerFlux = lazyWithRetry(() => import('@/pages/fracton-meissner-flux'));
+const CtmrgPurifierQem = lazyWithRetry(() => import('@/pages/ctmrg-purifier-qem'));
+const ShearedFlowZpinch = lazyWithRetry(() => import('@/pages/sheared-flow-zpinch'));
+const Cas12alphaIntegrator = lazyWithRetry(() => import('@/pages/cas12alpha-integrator'));
+const TieShuttleEvacuation = lazyWithRetry(() => import('@/pages/tie-shuttle-evacuation'));
+const FractonDipoleSuperfluid = lazyWithRetry(() => import('@/pages/fracton-dipole-superfluid'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -932,6 +937,11 @@ function ProtectedRoutes() {
               <Route path="/cas12z-demethylase" component={Cas12zDemethylase} />
               <Route path="/tie-scout-probe" component={TieScoutProbe} />
               <Route path="/fracton-meissner-flux" component={FractonMeissnerFlux} />
+              <Route path="/ctmrg-purifier-qem" component={CtmrgPurifierQem} />
+              <Route path="/sheared-flow-zpinch" component={ShearedFlowZpinch} />
+              <Route path="/cas12alpha-integrator" component={Cas12alphaIntegrator} />
+              <Route path="/tie-shuttle-evacuation" component={TieShuttleEvacuation} />
+              <Route path="/fracton-dipole-superfluid" component={FractonDipoleSuperfluid} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
