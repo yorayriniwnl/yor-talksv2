@@ -214,6 +214,11 @@ const LithiumMpd = lazyWithRetry(() => import('@/pages/lithium-mpd'));
 const CrisprActivator = lazyWithRetry(() => import('@/pages/crispr-activator'));
 const AsteroidMiner = lazyWithRetry(() => import('@/pages/asteroid-miner'));
 const QpeStudio = lazyWithRetry(() => import('@/pages/qpe-studio'));
+const CosmicString = lazyWithRetry(() => import('@/pages/cosmic-string'));
+const TriAlphaFusion = lazyWithRetry(() => import('@/pages/trialpha-fusion'));
+const MinimalCell = lazyWithRetry(() => import('@/pages/minimal-cell'));
+const CyberPac = lazyWithRetry(() => import('@/pages/cyber-pac'));
+const AqcStudio = lazyWithRetry(() => import('@/pages/aqc-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -422,6 +427,11 @@ function ProtectedRoutes() {
               <Route path="/crispr-activator" component={CrisprActivator} />
               <Route path="/asteroid-miner" component={AsteroidMiner} />
               <Route path="/qpe-studio" component={QpeStudio} />
+              <Route path="/cosmic-string" component={CosmicString} />
+              <Route path="/trialpha-fusion" component={TriAlphaFusion} />
+              <Route path="/minimal-cell" component={MinimalCell} />
+              <Route path="/cyber-pac" component={CyberPac} />
+              <Route path="/aqc-studio" component={AqcStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

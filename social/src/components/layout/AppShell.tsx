@@ -162,6 +162,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'CRISPR Activator', path: '/crispr-activator' },
     { icon: Target, label: 'Asteroid Miner', path: '/asteroid-miner' },
     { icon: Atom, label: 'QPE Algorithm', path: '/qpe-studio' },
+    { icon: Waves, label: 'Cosmic Strings', path: '/cosmic-string' },
+    { icon: Flame, label: 'Tri-Alpha Fusion', path: '/trialpha-fusion' },
+    { icon: Dna, label: 'Minimal Cell', path: '/minimal-cell' },
+    { icon: Zap, label: 'Cyber Pac 3D', path: '/cyber-pac' },
+    { icon: Atom, label: 'Adiabatic AQC', path: '/aqc-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
