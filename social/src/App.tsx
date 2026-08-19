@@ -554,6 +554,11 @@ const CentrifugalMirrorDreadnought = lazyWithRetry(() => import('@/pages/centrif
 const Cas12rhoMotor = lazyWithRetry(() => import('@/pages/cas12rho-motor'));
 const TieBeamInterceptor = lazyWithRetry(() => import('@/pages/tie-beam-interceptor'));
 const FractonDislocationMembranes = lazyWithRetry(() => import('@/pages/fracton-dislocation-membranes'));
+const IttPesdoPurifierQem = lazyWithRetry(() => import('@/pages/itt-pesdo-purifier-qem'));
+const HeliconFrcCollider = lazyWithRetry(() => import('@/pages/helicon-frc-collider'));
+const Cas12sigmaClamp = lazyWithRetry(() => import('@/pages/cas12sigma-clamp'));
+const TieEscortInterceptor = lazyWithRetry(() => import('@/pages/tie-escort-interceptor'));
+const FractonFrankBurgersStrings = lazyWithRetry(() => import('@/pages/fracton-frank-burgers-strings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1102,6 +1107,11 @@ function ProtectedRoutes() {
               <Route path="/cas12rho-motor" component={Cas12rhoMotor} />
               <Route path="/tie-beam-interceptor" component={TieBeamInterceptor} />
               <Route path="/fracton-dislocation-membranes" component={FractonDislocationMembranes} />
+              <Route path="/itt-pesdo-purifier-qem" component={IttPesdoPurifierQem} />
+              <Route path="/helicon-frc-collider" component={HeliconFrcCollider} />
+              <Route path="/cas12sigma-clamp" component={Cas12sigmaClamp} />
+              <Route path="/tie-escort-interceptor" component={TieEscortInterceptor} />
+              <Route path="/fracton-frank-burgers-strings" component={FractonFrankBurgersStrings} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

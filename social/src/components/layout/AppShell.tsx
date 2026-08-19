@@ -502,6 +502,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Minimize2, label: 'CRISPR-Cas12ρ Condensin Motor', path: '/cas12rho-motor' },
     { icon: Sun, label: 'TIE Beam Interceptor', path: '/tie-beam-interceptor' },
     { icon: Layers, label: 'Fracton Dislocation Membranes', path: '/fracton-dislocation-membranes' },
+    { icon: Triangle, label: 'iTT-PESDO Dissipative QEM', path: '/itt-pesdo-purifier-qem' },
+    { icon: Flame, label: 'Helicon-FRC Collider Interceptor', path: '/helicon-frc-collider' },
+    { icon: Paperclip, label: 'CRISPR-Cas12σ Boundary Clamp', path: '/cas12sigma-clamp' },
+    { icon: Shield, label: 'TIE Escort Interceptor', path: '/tie-escort-interceptor' },
+    { icon: GitMerge, label: 'Fracton Frank-Burgers Strings', path: '/fracton-frank-burgers-strings' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
