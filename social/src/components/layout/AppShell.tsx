@@ -462,6 +462,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Disc3, label: 'CRISPR-Cas12ι Chromatin Remodeler', path: '/cas12iota-remodeler' },
     { icon: Swords, label: 'TIE Avenger Advanced Dogfight', path: '/tie-avenger-dogfight' },
     { icon: Maximize2, label: 'Fracton Gauged Frank Disclination', path: '/fracton-gauged-disclination' },
+    { icon: Atom, label: 'TN-PEPS Thermal Gibbs QEM', path: '/tnpeps-purifier-qem' },
+    { icon: Flame, label: 'Rotating Plasma Gun Dreadnought', path: '/rotating-plasma-gun-dreadnought' },
+    { icon: GitBranch, label: 'CRISPR-Cas12κ Enhancer Re-Wirer', path: '/cas12kappa-rewirer' },
+    { icon: Swords, label: 'TIE Hunter Storm Commando', path: '/tie-hunter-assault' },
+    { icon: GitFork, label: 'Fracton Gauged Dislocation Flow', path: '/fracton-gauged-dislocation' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -514,6 +514,11 @@ const DynamicMirrorCruiser = lazyWithRetry(() => import('@/pages/dynamic-mirror-
 const Cas12iotaRemodeler = lazyWithRetry(() => import('@/pages/cas12iota-remodeler'));
 const TieAvengerDogfight = lazyWithRetry(() => import('@/pages/tie-avenger-dogfight'));
 const FractonGaugedDisclination = lazyWithRetry(() => import('@/pages/fracton-gauged-disclination'));
+const TnpepsPurifierQem = lazyWithRetry(() => import('@/pages/tnpeps-purifier-qem'));
+const RotatingPlasmaGunDreadnought = lazyWithRetry(() => import('@/pages/rotating-plasma-gun-dreadnought'));
+const Cas12kappaRewirer = lazyWithRetry(() => import('@/pages/cas12kappa-rewirer'));
+const TieHunterAssault = lazyWithRetry(() => import('@/pages/tie-hunter-assault'));
+const FractonGaugedDislocation = lazyWithRetry(() => import('@/pages/fracton-gauged-dislocation'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1022,6 +1027,11 @@ function ProtectedRoutes() {
               <Route path="/cas12iota-remodeler" component={Cas12iotaRemodeler} />
               <Route path="/tie-avenger-dogfight" component={TieAvengerDogfight} />
               <Route path="/fracton-gauged-disclination" component={FractonGaugedDisclination} />
+              <Route path="/tnpeps-purifier-qem" component={TnpepsPurifierQem} />
+              <Route path="/rotating-plasma-gun-dreadnought" component={RotatingPlasmaGunDreadnought} />
+              <Route path="/cas12kappa-rewirer" component={Cas12kappaRewirer} />
+              <Route path="/tie-hunter-assault" component={TieHunterAssault} />
+              <Route path="/fracton-gauged-dislocation" component={FractonGaugedDislocation} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
