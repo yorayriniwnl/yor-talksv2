@@ -352,6 +352,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Feather, label: 'CRISPR-Cas12m Multiplex', path: '/cas12m-multiplex' },
     { icon: Swords, label: 'Z-95 Headhunter Patrol', path: '/z95-headhunter' },
     { icon: Layers, label: 'Anyon Condensation Topology', path: '/anyon-condensation' },
+    { icon: Filter, label: 'MPO Shadow SVD Purification', path: '/mpo-shadow-purification' },
+    { icon: Flame, label: 'HD-MIF Staged Fusion Cruiser', path: '/hdmif-fusion-cruiser' },
+    { icon: HeartPulse, label: 'CRISPR-Cas12n HITI Nickase', path: '/cas12n-hiti' },
+    { icon: Swords, label: 'T-47 Snowspeeder Defense', path: '/snowspeeder-defense' },
+    { icon: Box, label: 'Gauged Subsystem Fracton', path: '/gauged-subsystem-fracton' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

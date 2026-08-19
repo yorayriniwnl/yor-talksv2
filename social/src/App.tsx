@@ -404,6 +404,11 @@ const MtfZpinchTransport = lazyWithRetry(() => import('@/pages/mtf-zpinch-transp
 const Cas12mMultiplex = lazyWithRetry(() => import('@/pages/cas12m-multiplex'));
 const Z95Headhunter = lazyWithRetry(() => import('@/pages/z95-headhunter'));
 const AnyonCondensation = lazyWithRetry(() => import('@/pages/anyon-condensation'));
+const MpoShadowPurification = lazyWithRetry(() => import('@/pages/mpo-shadow-purification'));
+const HdmifFusionCruiser = lazyWithRetry(() => import('@/pages/hdmif-fusion-cruiser'));
+const Cas12nHiti = lazyWithRetry(() => import('@/pages/cas12n-hiti'));
+const SnowspeederDefense = lazyWithRetry(() => import('@/pages/snowspeeder-defense'));
+const GaugedSubsystemFracton = lazyWithRetry(() => import('@/pages/gauged-subsystem-fracton'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -802,6 +807,11 @@ function ProtectedRoutes() {
               <Route path="/cas12m-multiplex" component={Cas12mMultiplex} />
               <Route path="/z95-headhunter" component={Z95Headhunter} />
               <Route path="/anyon-condensation" component={AnyonCondensation} />
+              <Route path="/mpo-shadow-purification" component={MpoShadowPurification} />
+              <Route path="/hdmif-fusion-cruiser" component={HdmifFusionCruiser} />
+              <Route path="/cas12n-hiti" component={Cas12nHiti} />
+              <Route path="/snowspeeder-defense" component={SnowspeederDefense} />
+              <Route path="/gauged-subsystem-fracton" component={GaugedSubsystemFracton} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
