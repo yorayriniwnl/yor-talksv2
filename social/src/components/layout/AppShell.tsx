@@ -337,6 +337,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitFork, label: 'CRISPR-Cas12h Splicing', path: '/cas12h-splicing' },
     { icon: Swords, label: 'Delta-7 Jedi Dogfight', path: '/delta7-starfighter' },
     { icon: Repeat, label: 'Floquet Fracton Order', path: '/floquet-fracton' },
+    { icon: Filter, label: 'Shadow Low-Rank Purification', path: '/operator-shadow-purification' },
+    { icon: Rocket, label: 'DPF Boron Fast Scout', path: '/dpf-transneptunian' },
+    { icon: PackagePlus, label: 'CRISPR-Cas12k CAST Transposon', path: '/cas12k-transposon' },
+    { icon: Swords, label: 'TIE Defender Combat', path: '/tie-defender-combat' },
+    { icon: Box, label: '3D Gauge Color Code', path: '/gauge-color-code' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

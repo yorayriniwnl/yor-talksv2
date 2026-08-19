@@ -389,6 +389,11 @@ const MicfFusionRocket = lazyWithRetry(() => import('@/pages/micf-fusion-rocket'
 const Cas12hSplicing = lazyWithRetry(() => import('@/pages/cas12h-splicing'));
 const Delta7Starfighter = lazyWithRetry(() => import('@/pages/delta7-starfighter'));
 const FloquetFracton = lazyWithRetry(() => import('@/pages/floquet-fracton'));
+const OperatorShadowPurification = lazyWithRetry(() => import('@/pages/operator-shadow-purification'));
+const DpfTransneptunian = lazyWithRetry(() => import('@/pages/dpf-transneptunian'));
+const Cas12kTransposon = lazyWithRetry(() => import('@/pages/cas12k-transposon'));
+const TieDefenderCombat = lazyWithRetry(() => import('@/pages/tie-defender-combat'));
+const GaugeColorCode = lazyWithRetry(() => import('@/pages/gauge-color-code'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -772,6 +777,11 @@ function ProtectedRoutes() {
               <Route path="/cas12h-splicing" component={Cas12hSplicing} />
               <Route path="/delta7-starfighter" component={Delta7Starfighter} />
               <Route path="/floquet-fracton" component={FloquetFracton} />
+              <Route path="/operator-shadow-purification" component={OperatorShadowPurification} />
+              <Route path="/dpf-transneptunian" component={DpfTransneptunian} />
+              <Route path="/cas12k-transposon" component={Cas12kTransposon} />
+              <Route path="/tie-defender-combat" component={TieDefenderCombat} />
+              <Route path="/gauge-color-code" component={GaugeColorCode} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
