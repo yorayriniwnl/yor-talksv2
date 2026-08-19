@@ -494,6 +494,11 @@ const StagedArmatureCorvette = lazyWithRetry(() => import('@/pages/staged-armatu
 const Cas12epsilonCompactor = lazyWithRetry(() => import('@/pages/cas12epsilon-compactor'));
 const TieInterdictorSkirmish = lazyWithRetry(() => import('@/pages/tie-interdictor-skirmish'));
 const FractonChiralAnomaly = lazyWithRetry(() => import('@/pages/fracton-chiral-anomaly'));
+const FpepsGrassmannQem = lazyWithRetry(() => import('@/pages/fpeps-grassmann-qem'));
+const HeliconSpheromakMerger = lazyWithRetry(() => import('@/pages/helicon-spheromak-merger'));
+const Cas12zetaCircularizer = lazyWithRetry(() => import('@/pages/cas12zeta-circularizer'));
+const TieScoutSkirmish = lazyWithRetry(() => import('@/pages/tie-scout-skirmish'));
+const FractonGravitationalAnomaly = lazyWithRetry(() => import('@/pages/fracton-gravitational-anomaly'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -982,6 +987,11 @@ function ProtectedRoutes() {
               <Route path="/cas12epsilon-compactor" component={Cas12epsilonCompactor} />
               <Route path="/tie-interdictor-skirmish" component={TieInterdictorSkirmish} />
               <Route path="/fracton-chiral-anomaly" component={FractonChiralAnomaly} />
+              <Route path="/fpeps-grassmann-qem" component={FpepsGrassmannQem} />
+              <Route path="/helicon-spheromak-merger" component={HeliconSpheromakMerger} />
+              <Route path="/cas12zeta-circularizer" component={Cas12zetaCircularizer} />
+              <Route path="/tie-scout-skirmish" component={TieScoutSkirmish} />
+              <Route path="/fracton-gravitational-anomaly" component={FractonGravitationalAnomaly} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
