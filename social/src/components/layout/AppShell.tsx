@@ -217,6 +217,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'CRISPR Gene Drive', path: '/gene-drive' },
     { icon: Target, label: 'Gravitar Planet 3D', path: '/gravitar-sim' },
     { icon: Waves, label: 'CV-QKD Coherent Fiber', path: '/cv-qkd' },
+    { icon: Atom, label: 'QCD Quark Plasma', path: '/qcd-plasma' },
+    { icon: Rocket, label: 'Antimatter Beam-Core', path: '/antimatter-core' },
+    { icon: Dna, label: 'Sc2.0 Synthetic Yeast', path: '/sc2-studio' },
+    { icon: Target, label: 'Gorf Fleet 3D', path: '/gorf-fleet' },
+    { icon: EyeOff, label: 'Quantum Eraser Wave', path: '/quantum-eraser' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

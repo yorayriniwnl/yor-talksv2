@@ -269,6 +269,11 @@ const SolarSail = lazyWithRetry(() => import('@/pages/solar-sail'));
 const GeneDrive = lazyWithRetry(() => import('@/pages/gene-drive'));
 const GravitarSim = lazyWithRetry(() => import('@/pages/gravitar-sim'));
 const CvQkd = lazyWithRetry(() => import('@/pages/cv-qkd'));
+const QcdPlasma = lazyWithRetry(() => import('@/pages/qcd-plasma'));
+const AntimatterCore = lazyWithRetry(() => import('@/pages/antimatter-core'));
+const Sc2Studio = lazyWithRetry(() => import('@/pages/sc2-studio'));
+const GorfFleet = lazyWithRetry(() => import('@/pages/gorf-fleet'));
+const QuantumEraser = lazyWithRetry(() => import('@/pages/quantum-eraser'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -532,6 +537,11 @@ function ProtectedRoutes() {
               <Route path="/gene-drive" component={GeneDrive} />
               <Route path="/gravitar-sim" component={GravitarSim} />
               <Route path="/cv-qkd" component={CvQkd} />
+              <Route path="/qcd-plasma" component={QcdPlasma} />
+              <Route path="/antimatter-core" component={AntimatterCore} />
+              <Route path="/sc2-studio" component={Sc2Studio} />
+              <Route path="/gorf-fleet" component={GorfFleet} />
+              <Route path="/quantum-eraser" component={QuantumEraser} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
