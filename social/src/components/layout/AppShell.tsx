@@ -347,6 +347,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: HeartPulse, label: 'CRISPR-CasPhi Therapy', path: '/casphi-therapy' },
     { icon: Swords, label: 'ARC-170 Clone Dogfight', path: '/arc170-dogfight' },
     { icon: Network, label: 'Foliated Fracton Tensor MERA', path: '/foliated-fracton-tensor' },
+    { icon: FunctionSquare, label: 'Krylov Subspace QEM', path: '/krylov-qem' },
+    { icon: Magnet, label: 'MTF Z-Pinch Heavy Transport', path: '/mtf-zpinch-transport' },
+    { icon: Feather, label: 'CRISPR-Cas12m Multiplex', path: '/cas12m-multiplex' },
+    { icon: Swords, label: 'Z-95 Headhunter Patrol', path: '/z95-headhunter' },
+    { icon: Layers, label: 'Anyon Condensation Topology', path: '/anyon-condensation' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

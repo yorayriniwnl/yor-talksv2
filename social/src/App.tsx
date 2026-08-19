@@ -399,6 +399,11 @@ const IcfFissionHybrid = lazyWithRetry(() => import('@/pages/icf-fission-hybrid'
 const CasphiTherapy = lazyWithRetry(() => import('@/pages/casphi-therapy'));
 const Arc170Dogfight = lazyWithRetry(() => import('@/pages/arc170-dogfight'));
 const FoliatedFractonTensor = lazyWithRetry(() => import('@/pages/foliated-fracton-tensor'));
+const KrylovQem = lazyWithRetry(() => import('@/pages/krylov-qem'));
+const MtfZpinchTransport = lazyWithRetry(() => import('@/pages/mtf-zpinch-transport'));
+const Cas12mMultiplex = lazyWithRetry(() => import('@/pages/cas12m-multiplex'));
+const Z95Headhunter = lazyWithRetry(() => import('@/pages/z95-headhunter'));
+const AnyonCondensation = lazyWithRetry(() => import('@/pages/anyon-condensation'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -792,6 +797,11 @@ function ProtectedRoutes() {
               <Route path="/casphi-therapy" component={CasphiTherapy} />
               <Route path="/arc170-dogfight" component={Arc170Dogfight} />
               <Route path="/foliated-fracton-tensor" component={FoliatedFractonTensor} />
+              <Route path="/krylov-qem" component={KrylovQem} />
+              <Route path="/mtf-zpinch-transport" component={MtfZpinchTransport} />
+              <Route path="/cas12m-multiplex" component={Cas12mMultiplex} />
+              <Route path="/z95-headhunter" component={Z95Headhunter} />
+              <Route path="/anyon-condensation" component={AnyonCondensation} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
