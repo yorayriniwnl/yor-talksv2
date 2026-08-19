@@ -354,6 +354,11 @@ const SkyhookTether = lazyWithRetry(() => import('@/pages/skyhook-tether'));
 const Cas14Diagnostics = lazyWithRetry(() => import('@/pages/cas14-diagnostics'));
 const BwingAssault = lazyWithRetry(() => import('@/pages/bwing-assault'));
 const FloquetMajorana = lazyWithRetry(() => import('@/pages/floquet-majorana'));
+const DualFrameQse = lazyWithRetry(() => import('@/pages/dual-frame-qse'));
+const AirbreathingMhd = lazyWithRetry(() => import('@/pages/airbreathing-mhd'));
+const Cas12mBaseEditor = lazyWithRetry(() => import('@/pages/cas12m-base-editor'));
+const VaderTrenchDuel = lazyWithRetry(() => import('@/pages/vader-trench-duel'));
+const FractonStudio = lazyWithRetry(() => import('@/pages/fracton-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -702,6 +707,11 @@ function ProtectedRoutes() {
               <Route path="/cas14-diagnostics" component={Cas14Diagnostics} />
               <Route path="/bwing-assault" component={BwingAssault} />
               <Route path="/floquet-majorana" component={FloquetMajorana} />
+              <Route path="/dual-frame-qse" component={DualFrameQse} />
+              <Route path="/airbreathing-mhd" component={AirbreathingMhd} />
+              <Route path="/cas12m-base-editor" component={Cas12mBaseEditor} />
+              <Route path="/vader-trench-duel" component={VaderTrenchDuel} />
+              <Route path="/fracton-studio" component={FractonStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

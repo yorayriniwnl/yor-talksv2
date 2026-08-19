@@ -302,6 +302,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Search, label: 'Cas14 DETECTR-v2 Diagnostics', path: '/cas14-diagnostics' },
     { icon: Cross, label: 'B-Wing Star Destroyer Run', path: '/bwing-assault' },
     { icon: Repeat, label: 'Floquet Majorana Memory', path: '/floquet-majorana' },
+    { icon: GitCompare, label: 'Dual-Frame QSE Solver', path: '/dual-frame-qse' },
+    { icon: Plane, label: 'Air-Breathing Laser-MHD', path: '/airbreathing-mhd' },
+    { icon: Edit3, label: 'CRISPR-Cas12m Base Editor', path: '/cas12m-base-editor' },
+    { icon: Skull, label: 'Vader TIE Advanced Duel', path: '/vader-trench-duel' },
+    { icon: Cube, label: '3D X-Cube Fracton Memory', path: '/fracton-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
