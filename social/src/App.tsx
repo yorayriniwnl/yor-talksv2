@@ -504,6 +504,11 @@ const LiquidMetalLinerDreadnought = lazyWithRetry(() => import('@/pages/liquid-m
 const Cas12etaInsulator = lazyWithRetry(() => import('@/pages/cas12eta-insulator'));
 const TiePhantomInfiltration = lazyWithRetry(() => import('@/pages/tie-phantom-infiltration'));
 const FractonAxialGravitational = lazyWithRetry(() => import('@/pages/fracton-axial-gravitational'));
+const UfpepsPurifierQem = lazyWithRetry(() => import('@/pages/ufpeps-purifier-qem'));
+const MtfHeavyCarrier = lazyWithRetry(() => import('@/pages/mtf-heavy-carrier'));
+const Cas12thetaCapper = lazyWithRetry(() => import('@/pages/cas12theta-capper'));
+const TieAggressorEscort = lazyWithRetry(() => import('@/pages/tie-aggressor-escort'));
+const FractonNonInvertible = lazyWithRetry(() => import('@/pages/fracton-non-invertible'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1002,6 +1007,11 @@ function ProtectedRoutes() {
               <Route path="/cas12eta-insulator" component={Cas12etaInsulator} />
               <Route path="/tie-phantom-infiltration" component={TiePhantomInfiltration} />
               <Route path="/fracton-axial-gravitational" component={FractonAxialGravitational} />
+              <Route path="/ufpeps-purifier-qem" component={UfpepsPurifierQem} />
+              <Route path="/mtf-heavy-carrier" component={MtfHeavyCarrier} />
+              <Route path="/cas12theta-capper" component={Cas12thetaCapper} />
+              <Route path="/tie-aggressor-escort" component={TieAggressorEscort} />
+              <Route path="/fracton-non-invertible" component={FractonNonInvertible} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

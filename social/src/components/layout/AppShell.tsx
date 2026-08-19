@@ -452,6 +452,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Shield, label: 'CRISPR-Cas12η Epigenetic Insulator', path: '/cas12eta-insulator' },
     { icon: EyeOff, label: 'TIE Phantom Cloaked Infiltration', path: '/tie-phantom-infiltration' },
     { icon: Compass, label: 'Fracton Mixed Axial-Grav Anomaly', path: '/fracton-axial-gravitational' },
+    { icon: Atom, label: 'UfPEPS Topo Superconductor QEM', path: '/ufpeps-purifier-qem' },
+    { icon: Flame, label: 'Acoustic MTF Fusion Carrier', path: '/mtf-heavy-carrier' },
+    { icon: Lock, label: 'CRISPR-Cas12θ Telomere Capper', path: '/cas12theta-capper' },
+    { icon: Swords, label: 'TIE Aggressor Fleet Escort', path: '/tie-aggressor-escort' },
+    { icon: Network, label: 'Fracton Non-Invertible Symmetries', path: '/fracton-non-invertible' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
