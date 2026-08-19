@@ -319,6 +319,11 @@ const FissionFragment = lazyWithRetry(() => import('@/pages/fission-fragment'));
 const PhageTail = lazyWithRetry(() => import('@/pages/phage-tail'));
 const LightTank3D = lazyWithRetry(() => import('@/pages/light-tank-3d'));
 const OtocScrambler = lazyWithRetry(() => import('@/pages/otoc-scrambler'));
+const CdrStudio = lazyWithRetry(() => import('@/pages/cdr-studio'));
+const AcmfRocket = lazyWithRetry(() => import('@/pages/acmf-rocket'));
+const ScrambleStudio = lazyWithRetry(() => import('@/pages/scramble-studio'));
+const HothSpeeder = lazyWithRetry(() => import('@/pages/hoth-speeder'));
+const WStateStudio = lazyWithRetry(() => import('@/pages/w-state-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -632,6 +637,11 @@ function ProtectedRoutes() {
               <Route path="/phage-tail" component={PhageTail} />
               <Route path="/light-tank-3d" component={LightTank3D} />
               <Route path="/otoc-scrambler" component={OtocScrambler} />
+              <Route path="/cdr-studio" component={CdrStudio} />
+              <Route path="/acmf-rocket" component={AcmfRocket} />
+              <Route path="/scramble-studio" component={ScrambleStudio} />
+              <Route path="/hoth-speeder" component={HothSpeeder} />
+              <Route path="/w-state-studio" component={WStateStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -267,6 +267,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Synthetic Phage Tropism', path: '/phage-tail' },
     { icon: Target, label: 'Tron Light Tank 3D', path: '/light-tank-3d' },
     { icon: Flame, label: 'OTOC Quantum Scrambler', path: '/otoc-scrambler' },
+    { icon: Brain, label: 'CDR Quantum ML Mitigation', path: '/cdr-studio' },
+    { icon: Rocket, label: 'ACMF Antimatter Fusion', path: '/acmf-rocket' },
+    { icon: Shuffle, label: 'Sc2.0 SCRaMbLE Studio', path: '/scramble-studio' },
+    { icon: Cable, label: 'Hoth Speeder Harpoon 3D', path: '/hoth-speeder' },
+    { icon: GitFork, label: 'Tripartite W-State', path: '/w-state-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
