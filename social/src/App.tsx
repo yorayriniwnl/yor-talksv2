@@ -539,6 +539,11 @@ const DynamicSpheromakMerger = lazyWithRetry(() => import('@/pages/dynamic-spher
 const Cas12xiBoundary = lazyWithRetry(() => import('@/pages/cas12xi-boundary'));
 const TieBoosterInterceptor = lazyWithRetry(() => import('@/pages/tie-booster-interceptor'));
 const FractonVortexStringCondensates = lazyWithRetry(() => import('@/pages/fracton-vortex-string-condensates'));
+const IpepdoPurifierQem = lazyWithRetry(() => import('@/pages/ipepdo-purifier-qem'));
+const MirrorCuspBattlecruiser = lazyWithRetry(() => import('@/pages/mirror-cusp-battlecruiser'));
+const Cas12omicronRegulator = lazyWithRetry(() => import('@/pages/cas12omicron-regulator'));
+const TieWarheadInterceptor = lazyWithRetry(() => import('@/pages/tie-warhead-interceptor'));
+const FractonDislocationGlass = lazyWithRetry(() => import('@/pages/fracton-dislocation-glass'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1072,6 +1077,11 @@ function ProtectedRoutes() {
               <Route path="/cas12xi-boundary" component={Cas12xiBoundary} />
               <Route path="/tie-booster-interceptor" component={TieBoosterInterceptor} />
               <Route path="/fracton-vortex-string-condensates" component={FractonVortexStringCondensates} />
+              <Route path="/ipepdo-purifier-qem" component={IpepdoPurifierQem} />
+              <Route path="/mirror-cusp-battlecruiser" component={MirrorCuspBattlecruiser} />
+              <Route path="/cas12omicron-regulator" component={Cas12omicronRegulator} />
+              <Route path="/tie-warhead-interceptor" component={TieWarheadInterceptor} />
+              <Route path="/fracton-dislocation-glass" component={FractonDislocationGlass} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
