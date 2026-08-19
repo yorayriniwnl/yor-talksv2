@@ -479,6 +479,11 @@ const SpheromakPlasmaLiner = lazyWithRetry(() => import('@/pages/spheromak-plasm
 const Cas12betaSynthesizer = lazyWithRetry(() => import('@/pages/cas12beta-synthesizer'));
 const TieBoardingCraft = lazyWithRetry(() => import('@/pages/tie-boarding-craft'));
 const FractonDisclinationBraid = lazyWithRetry(() => import('@/pages/fracton-disclination-braid'));
+const MpdoGradientQem = lazyWithRetry(() => import('@/pages/mpdo-gradient-qem'));
+const CbtFusionDreadnought = lazyWithRetry(() => import('@/pages/cbt-fusion-dreadnought'));
+const Cas12gammaCuring = lazyWithRetry(() => import('@/pages/cas12gamma-curing'));
+const TieTorpedoInterceptor = lazyWithRetry(() => import('@/pages/tie-torpedo-interceptor'));
+const FractonVortexRings = lazyWithRetry(() => import('@/pages/fracton-vortex-rings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -952,6 +957,11 @@ function ProtectedRoutes() {
               <Route path="/cas12beta-synthesizer" component={Cas12betaSynthesizer} />
               <Route path="/tie-boarding-craft" component={TieBoardingCraft} />
               <Route path="/fracton-disclination-braid" component={FractonDisclinationBraid} />
+              <Route path="/mpdo-gradient-qem" component={MpdoGradientQem} />
+              <Route path="/cbt-fusion-dreadnought" component={CbtFusionDreadnought} />
+              <Route path="/cas12gamma-curing" component={Cas12gammaCuring} />
+              <Route path="/tie-torpedo-interceptor" component={TieTorpedoInterceptor} />
+              <Route path="/fracton-vortex-rings" component={FractonVortexRings} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

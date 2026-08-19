@@ -427,6 +427,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Heart, label: 'CRISPR-Cas12β Telomere Synthesizer', path: '/cas12beta-synthesizer' },
     { icon: Anchor, label: 'TIE Boarding Craft Assault', path: '/tie-boarding-craft' },
     { icon: Orbit, label: 'Fracton Disclination Braiding', path: '/fracton-disclination-braid' },
+    { icon: Thermometer, label: 'MPDO Gradient Purifier QEM', path: '/mpdo-gradient-qem' },
+    { icon: Flame, label: 'CBT Fusion Dreadnought', path: '/cbt-fusion-dreadnought' },
+    { icon: ShieldAlert, label: 'CRISPR-Cas12γ Plasmid Curing', path: '/cas12gamma-curing' },
+    { icon: Disc, label: 'TIE Torpedo Interceptor Dogfight', path: '/tie-torpedo-interceptor' },
+    { icon: Disc, label: 'Fracton Anisotropic Vortex Rings', path: '/fracton-vortex-rings' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
