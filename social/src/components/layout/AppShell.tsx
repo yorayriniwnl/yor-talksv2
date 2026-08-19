@@ -327,6 +327,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Feather, label: 'CRISPR-Cas12f Single AAV', path: '/cas12f-studio' },
     { icon: Swords, label: 'Gauntlet Fighter Combat', path: '/gauntlet-fighter-combat' },
     { icon: Box, label: 'Non-Abelian Fracton Code', path: '/non-abelian-fracton' },
+    { icon: Eye, label: 'Matchgate Shadow Tomography', path: '/matchgate-shadow-qem' },
+    { icon: Magnet, label: 'Antimatter DFD Cruiser', path: '/antimatter-dfd' },
+    { icon: Search, label: 'CRISPR-Cas12g Viral Sensor', path: '/cas12g-sensor' },
+    { icon: Swords, label: 'N-1 Starfighter Dogfight', path: '/n1-starfighter-dogfight' },
+    { icon: PieChart, label: 'Topological Entanglement Entropy', path: '/tee-calculator' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

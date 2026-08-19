@@ -379,6 +379,11 @@ const LaserPinchProbe = lazyWithRetry(() => import('@/pages/laser-pinch-probe'))
 const Cas12fStudio = lazyWithRetry(() => import('@/pages/cas12f-studio'));
 const GauntletFighterCombat = lazyWithRetry(() => import('@/pages/gauntlet-fighter-combat'));
 const NonAbelianFracton = lazyWithRetry(() => import('@/pages/non-abelian-fracton'));
+const MatchgateShadowQem = lazyWithRetry(() => import('@/pages/matchgate-shadow-qem'));
+const AntimatterDfd = lazyWithRetry(() => import('@/pages/antimatter-dfd'));
+const Cas12gSensor = lazyWithRetry(() => import('@/pages/cas12g-sensor'));
+const N1StarfighterDogfight = lazyWithRetry(() => import('@/pages/n1-starfighter-dogfight'));
+const TeeCalculator = lazyWithRetry(() => import('@/pages/tee-calculator'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -752,6 +757,11 @@ function ProtectedRoutes() {
               <Route path="/cas12f-studio" component={Cas12fStudio} />
               <Route path="/gauntlet-fighter-combat" component={GauntletFighterCombat} />
               <Route path="/non-abelian-fracton" component={NonAbelianFracton} />
+              <Route path="/matchgate-shadow-qem" component={MatchgateShadowQem} />
+              <Route path="/antimatter-dfd" component={AntimatterDfd} />
+              <Route path="/cas12g-sensor" component={Cas12gSensor} />
+              <Route path="/n1-starfighter-dogfight" component={N1StarfighterDogfight} />
+              <Route path="/tee-calculator" component={TeeCalculator} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
