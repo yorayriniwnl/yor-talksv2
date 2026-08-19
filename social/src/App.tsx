@@ -334,6 +334,11 @@ const MedusaRocket = lazyWithRetry(() => import('@/pages/medusa-rocket'));
 const CrisproffStudio = lazyWithRetry(() => import('@/pages/crisproff-studio'));
 const TieFighterArcade = lazyWithRetry(() => import('@/pages/tie-fighter-arcade'));
 const LatticeSurgery = lazyWithRetry(() => import('@/pages/lattice-surgery'));
+const DualStateQem = lazyWithRetry(() => import('@/pages/dual-state-qem'));
+const LaserAntimatter = lazyWithRetry(() => import('@/pages/laser-antimatter'));
+const Cas12aCascade = lazyWithRetry(() => import('@/pages/cas12a-cascade'));
+const SurfaceTurretAssault = lazyWithRetry(() => import('@/pages/surface-turret-assault'));
+const MagicStateFactory = lazyWithRetry(() => import('@/pages/magic-state-factory'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -662,6 +667,11 @@ function ProtectedRoutes() {
               <Route path="/crisproff-studio" component={CrisproffStudio} />
               <Route path="/tie-fighter-arcade" component={TieFighterArcade} />
               <Route path="/lattice-surgery" component={LatticeSurgery} />
+              <Route path="/dual-state-qem" component={DualStateQem} />
+              <Route path="/laser-antimatter" component={LaserAntimatter} />
+              <Route path="/cas12a-cascade" component={Cas12aCascade} />
+              <Route path="/surface-turret-assault" component={SurfaceTurretAssault} />
+              <Route path="/magic-state-factory" component={MagicStateFactory} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

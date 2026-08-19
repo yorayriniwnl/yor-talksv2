@@ -282,6 +282,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Lock, label: 'CRISPRoff Epigenome', path: '/crisproff-studio' },
     { icon: Target, label: 'Star Wars 1983 TIE Arcade', path: '/tie-fighter-arcade' },
     { icon: Grid, label: 'Surface Code Lattice Surgery', path: '/lattice-surgery' },
+    { icon: GitCompare, label: 'Dual-State QEM', path: '/dual-state-qem' },
+    { icon: Rocket, label: 'VISTA Laser-Antimatter', path: '/laser-antimatter' },
+    { icon: Layers, label: 'Cas12a Multi-Gene Cascade', path: '/cas12a-cascade' },
+    { icon: TowerControl, label: 'Death Star Turret Assault', path: '/surface-turret-assault' },
+    { icon: Factory, label: 'Magic State Factory', path: '/magic-state-factory' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
