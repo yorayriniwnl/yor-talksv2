@@ -227,6 +227,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'FtsZ Z-Ring Division', path: '/zring-studio' },
     { icon: Target, label: 'Sinistar 3D Dreadnought', path: '/sinistar-arcade' },
     { icon: Grid3X3, label: 'Quantum Contextuality', path: '/contextuality-sim' },
+    { icon: Atom, label: 'Quantum Optomechanics', path: '/optomechanics-sim' },
+    { icon: Globe2, label: 'M2P2 Plasma Sail', path: '/m2p2-sail' },
+    { icon: Binary, label: 'CRISPR Logic Gates', path: '/crispr-logic' },
+    { icon: Target, label: 'Vanguard 3D Defender', path: '/vanguard-sim' },
+    { icon: Network, label: 'Quantum Graph Walk', path: '/graph-walk' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

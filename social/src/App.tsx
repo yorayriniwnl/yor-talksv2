@@ -279,6 +279,11 @@ const FrcThruster = lazyWithRetry(() => import('@/pages/frc-thruster'));
 const ZringStudio = lazyWithRetry(() => import('@/pages/zring-studio'));
 const SinistarArcade = lazyWithRetry(() => import('@/pages/sinistar-arcade'));
 const ContextualitySim = lazyWithRetry(() => import('@/pages/contextuality-sim'));
+const OptomechanicsSim = lazyWithRetry(() => import('@/pages/optomechanics-sim'));
+const M2p2Sail = lazyWithRetry(() => import('@/pages/m2p2-sail'));
+const CrisprLogic = lazyWithRetry(() => import('@/pages/crispr-logic'));
+const VanguardSim = lazyWithRetry(() => import('@/pages/vanguard-sim'));
+const GraphWalk = lazyWithRetry(() => import('@/pages/graph-walk'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -552,6 +557,11 @@ function ProtectedRoutes() {
               <Route path="/zring-studio" component={ZringStudio} />
               <Route path="/sinistar-arcade" component={SinistarArcade} />
               <Route path="/contextuality-sim" component={ContextualitySim} />
+              <Route path="/optomechanics-sim" component={OptomechanicsSim} />
+              <Route path="/m2p2-sail" component={M2p2Sail} />
+              <Route path="/crispr-logic" component={CrisprLogic} />
+              <Route path="/vanguard-sim" component={VanguardSim} />
+              <Route path="/graph-walk" component={GraphWalk} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
