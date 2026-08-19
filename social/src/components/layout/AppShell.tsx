@@ -167,6 +167,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Minimal Cell', path: '/minimal-cell' },
     { icon: Zap, label: 'Cyber Pac 3D', path: '/cyber-pac' },
     { icon: Atom, label: 'Adiabatic AQC', path: '/aqc-studio' },
+    { icon: Atom, label: 'Dark Matter TPC', path: '/xenon-detector' },
+    { icon: Flame, label: 'MIF MagLIF Fusion', path: '/mif-fusion' },
+    { icon: Scissors, label: 'Zinc Finger ZFN', path: '/zfn-studio' },
+    { icon: Zap, label: 'Cyber Pong 3D', path: '/cyber-pong' },
+    { icon: Atom, label: 'VQE Chemistry', path: '/vqe-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

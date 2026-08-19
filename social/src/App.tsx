@@ -219,6 +219,11 @@ const TriAlphaFusion = lazyWithRetry(() => import('@/pages/trialpha-fusion'));
 const MinimalCell = lazyWithRetry(() => import('@/pages/minimal-cell'));
 const CyberPac = lazyWithRetry(() => import('@/pages/cyber-pac'));
 const AqcStudio = lazyWithRetry(() => import('@/pages/aqc-studio'));
+const XenonDetector = lazyWithRetry(() => import('@/pages/xenon-detector'));
+const MifFusion = lazyWithRetry(() => import('@/pages/mif-fusion'));
+const ZfnStudio = lazyWithRetry(() => import('@/pages/zfn-studio'));
+const CyberPong = lazyWithRetry(() => import('@/pages/cyber-pong'));
+const VqeStudio = lazyWithRetry(() => import('@/pages/vqe-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -432,6 +437,11 @@ function ProtectedRoutes() {
               <Route path="/minimal-cell" component={MinimalCell} />
               <Route path="/cyber-pac" component={CyberPac} />
               <Route path="/aqc-studio" component={AqcStudio} />
+              <Route path="/xenon-detector" component={XenonDetector} />
+              <Route path="/mif-fusion" component={MifFusion} />
+              <Route path="/zfn-studio" component={ZfnStudio} />
+              <Route path="/cyber-pong" component={CyberPong} />
+              <Route path="/vqe-studio" component={VqeStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
