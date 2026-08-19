@@ -367,6 +367,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitFork, label: 'CRISPR-Cas12p Polygenic Cascade', path: '/cas12p-cascade' },
     { icon: Swords, label: 'TIE Striker Scarif Skirmish', path: '/tie-striker-skirmish' },
     { icon: Box, label: 'Higher-Rank Toric Tensor Phase', path: '/higher-rank-toric' },
+    { icon: FunctionSquare, label: 'Polar Unfolding QEM', path: '/polar-unfolding-qem' },
+    { icon: Flame, label: 'FRC Spheromak RMF Drive', path: '/frc-spheromak-drive' },
+    { icon: Radio, label: 'CRISPR-Cas12q Diagnostic', path: '/cas12q-diagnostic' },
+    { icon: Swords, label: 'U-Wing Troop Extraction', path: '/uwing-extraction' },
+    { icon: Orbit, label: 'Fractonic Spin Liquid U(1)', path: '/fracton-spin-liquid' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

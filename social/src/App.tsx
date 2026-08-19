@@ -419,6 +419,11 @@ const CmmCorvette = lazyWithRetry(() => import('@/pages/cmm-corvette'));
 const Cas12pCascade = lazyWithRetry(() => import('@/pages/cas12p-cascade'));
 const TieStrikerSkirmish = lazyWithRetry(() => import('@/pages/tie-striker-skirmish'));
 const HigherRankToric = lazyWithRetry(() => import('@/pages/higher-rank-toric'));
+const PolarUnfoldingQem = lazyWithRetry(() => import('@/pages/polar-unfolding-qem'));
+const FrcSpheromakDrive = lazyWithRetry(() => import('@/pages/frc-spheromak-drive'));
+const Cas12qDiagnostic = lazyWithRetry(() => import('@/pages/cas12q-diagnostic'));
+const UwingExtraction = lazyWithRetry(() => import('@/pages/uwing-extraction'));
+const FractonSpinLiquid = lazyWithRetry(() => import('@/pages/fracton-spin-liquid'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -832,6 +837,11 @@ function ProtectedRoutes() {
               <Route path="/cas12p-cascade" component={Cas12pCascade} />
               <Route path="/tie-striker-skirmish" component={TieStrikerSkirmish} />
               <Route path="/higher-rank-toric" component={HigherRankToric} />
+              <Route path="/polar-unfolding-qem" component={PolarUnfoldingQem} />
+              <Route path="/frc-spheromak-drive" component={FrcSpheromakDrive} />
+              <Route path="/cas12q-diagnostic" component={Cas12qDiagnostic} />
+              <Route path="/uwing-extraction" component={UwingExtraction} />
+              <Route path="/fracton-spin-liquid" component={FractonSpinLiquid} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
