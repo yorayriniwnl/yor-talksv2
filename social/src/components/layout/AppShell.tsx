@@ -402,6 +402,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Stamp, label: 'CRISPR-Cas12w Methylome', path: '/cas12w-methylome' },
     { icon: Swords, label: 'TIE Phantom Cloaked Recon', path: '/tie-phantom-recon' },
     { icon: Orbit, label: 'Hexatic Dislocation Unbinding', path: '/fracton-hexatic-unbinding' },
+    { icon: GitFork, label: 'TTN Tree Purifier QEM', path: '/ttn-purifier-qem' },
+    { icon: Flame, label: 'DPF Boron Star Battleship', path: '/dpf-boron-battleship' },
+    { icon: GitMerge, label: 'CRISPR-Cas12x Base Integrator', path: '/cas12x-integrator' },
+    { icon: Bomb, label: 'TIE Punisher Heavy Bomber', path: '/tie-punisher-bomber' },
+    { icon: Layers, label: 'Foliated Entanglement RG', path: '/foliated-entanglement-rg' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

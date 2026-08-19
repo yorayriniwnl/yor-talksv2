@@ -454,6 +454,11 @@ const MaglifDreadnought = lazyWithRetry(() => import('@/pages/maglif-dreadnought
 const Cas12wMethylome = lazyWithRetry(() => import('@/pages/cas12w-methylome'));
 const TiePhantomRecon = lazyWithRetry(() => import('@/pages/tie-phantom-recon'));
 const FractonHexaticUnbinding = lazyWithRetry(() => import('@/pages/fracton-hexatic-unbinding'));
+const TtnPurifierQem = lazyWithRetry(() => import('@/pages/ttn-purifier-qem'));
+const DpfBoronBattleship = lazyWithRetry(() => import('@/pages/dpf-boron-battleship'));
+const Cas12xIntegrator = lazyWithRetry(() => import('@/pages/cas12x-integrator'));
+const TiePunisherBomber = lazyWithRetry(() => import('@/pages/tie-punisher-bomber'));
+const FoliatedEntanglementRg = lazyWithRetry(() => import('@/pages/foliated-entanglement-rg'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -902,6 +907,11 @@ function ProtectedRoutes() {
               <Route path="/cas12w-methylome" component={Cas12wMethylome} />
               <Route path="/tie-phantom-recon" component={TiePhantomRecon} />
               <Route path="/fracton-hexatic-unbinding" component={FractonHexaticUnbinding} />
+              <Route path="/ttn-purifier-qem" component={TtnPurifierQem} />
+              <Route path="/dpf-boron-battleship" component={DpfBoronBattleship} />
+              <Route path="/cas12x-integrator" component={Cas12xIntegrator} />
+              <Route path="/tie-punisher-bomber" component={TiePunisherBomber} />
+              <Route path="/foliated-entanglement-rg" component={FoliatedEntanglementRg} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
