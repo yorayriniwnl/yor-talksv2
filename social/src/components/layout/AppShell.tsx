@@ -437,6 +437,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Shuffle, label: 'CRISPR-Cas12δ Codon Scrambler', path: '/cas12delta-scrambler' },
     { icon: Swords, label: 'TIE Clawcraft Chiss Skirmish', path: '/tie-clawcraft-skirmish' },
     { icon: Maximize2, label: 'Fracton Moiré Flat Bands', path: '/fracton-moire-flatband' },
+    { icon: Grid, label: 'iPEPS Boundary Purifier QEM', path: '/ipeps-boundary-qem' },
+    { icon: Flame, label: 'Staged Armature Fusion Corvette', path: '/staged-armature-corvette' },
+    { icon: Minimize2, label: 'CRISPR-Cas12ε Chromosome Compactor', path: '/cas12epsilon-compactor' },
+    { icon: Globe, label: 'TIE Interdictor Gravity Cruiser', path: '/tie-interdictor-skirmish' },
+    { icon: ShieldAlert, label: 'Fracton Chiral Anomaly Axion', path: '/fracton-chiral-anomaly' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

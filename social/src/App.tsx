@@ -489,6 +489,11 @@ const DynamicScrewPinch = lazyWithRetry(() => import('@/pages/dynamic-screw-pinc
 const Cas12deltaScrambler = lazyWithRetry(() => import('@/pages/cas12delta-scrambler'));
 const TieClawcraftSkirmish = lazyWithRetry(() => import('@/pages/tie-clawcraft-skirmish'));
 const FractonMoireFlatband = lazyWithRetry(() => import('@/pages/fracton-moire-flatband'));
+const IpepsBoundaryQem = lazyWithRetry(() => import('@/pages/ipeps-boundary-qem'));
+const StagedArmatureCorvette = lazyWithRetry(() => import('@/pages/staged-armature-corvette'));
+const Cas12epsilonCompactor = lazyWithRetry(() => import('@/pages/cas12epsilon-compactor'));
+const TieInterdictorSkirmish = lazyWithRetry(() => import('@/pages/tie-interdictor-skirmish'));
+const FractonChiralAnomaly = lazyWithRetry(() => import('@/pages/fracton-chiral-anomaly'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -972,6 +977,11 @@ function ProtectedRoutes() {
               <Route path="/cas12delta-scrambler" component={Cas12deltaScrambler} />
               <Route path="/tie-clawcraft-skirmish" component={TieClawcraftSkirmish} />
               <Route path="/fracton-moire-flatband" component={FractonMoireFlatband} />
+              <Route path="/ipeps-boundary-qem" component={IpepsBoundaryQem} />
+              <Route path="/staged-armature-corvette" component={StagedArmatureCorvette} />
+              <Route path="/cas12epsilon-compactor" component={Cas12epsilonCompactor} />
+              <Route path="/tie-interdictor-skirmish" component={TieInterdictorSkirmish} />
+              <Route path="/fracton-chiral-anomaly" component={FractonChiralAnomaly} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
