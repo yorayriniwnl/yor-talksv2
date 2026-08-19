@@ -322,6 +322,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Boxes, label: 'CRISPR-Cas12i Multiplexing', path: '/cas12i-multiplex' },
     { icon: Shield, label: 'Razor Crest Beskar Pursuit', path: '/razor-crest-pursuit' },
     { icon: Layers, label: 'Higher-Form Gauge QC', path: '/higher-form-gauge' },
+    { icon: FunctionSquare, label: 'Matrix Pencil QEM', path: '/matrix-pencil-qem' },
+    { icon: Flame, label: 'Laser-Pinch Fusion Starship', path: '/laser-pinch-probe' },
+    { icon: Feather, label: 'CRISPR-Cas12f Single AAV', path: '/cas12f-studio' },
+    { icon: Swords, label: 'Gauntlet Fighter Combat', path: '/gauntlet-fighter-combat' },
+    { icon: Box, label: 'Non-Abelian Fracton Code', path: '/non-abelian-fracton' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

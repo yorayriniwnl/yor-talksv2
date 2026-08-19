@@ -374,6 +374,11 @@ const IecFusionDrive = lazyWithRetry(() => import('@/pages/iec-fusion-drive'));
 const Cas12iMultiplex = lazyWithRetry(() => import('@/pages/cas12i-multiplex'));
 const RazorCrestPursuit = lazyWithRetry(() => import('@/pages/razor-crest-pursuit'));
 const HigherFormGauge = lazyWithRetry(() => import('@/pages/higher-form-gauge'));
+const MatrixPencilQem = lazyWithRetry(() => import('@/pages/matrix-pencil-qem'));
+const LaserPinchProbe = lazyWithRetry(() => import('@/pages/laser-pinch-probe'));
+const Cas12fStudio = lazyWithRetry(() => import('@/pages/cas12f-studio'));
+const GauntletFighterCombat = lazyWithRetry(() => import('@/pages/gauntlet-fighter-combat'));
+const NonAbelianFracton = lazyWithRetry(() => import('@/pages/non-abelian-fracton'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -742,6 +747,11 @@ function ProtectedRoutes() {
               <Route path="/cas12i-multiplex" component={Cas12iMultiplex} />
               <Route path="/razor-crest-pursuit" component={RazorCrestPursuit} />
               <Route path="/higher-form-gauge" component={HigherFormGauge} />
+              <Route path="/matrix-pencil-qem" component={MatrixPencilQem} />
+              <Route path="/laser-pinch-probe" component={LaserPinchProbe} />
+              <Route path="/cas12f-studio" component={Cas12fStudio} />
+              <Route path="/gauntlet-fighter-combat" component={GauntletFighterCombat} />
+              <Route path="/non-abelian-fracton" component={NonAbelianFracton} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
