@@ -222,6 +222,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Sc2.0 Synthetic Yeast', path: '/sc2-studio' },
     { icon: Target, label: 'Gorf Fleet 3D', path: '/gorf-fleet' },
     { icon: EyeOff, label: 'Quantum Eraser Wave', path: '/quantum-eraser' },
+    { icon: Atom, label: 'Sterile Neutrino SBL', path: '/sterile-neutrino' },
+    { icon: Rocket, label: 'FRC Plasmoid Collider', path: '/frc-thruster' },
+    { icon: Dna, label: 'FtsZ Z-Ring Division', path: '/zring-studio' },
+    { icon: Target, label: 'Sinistar 3D Dreadnought', path: '/sinistar-arcade' },
+    { icon: Grid3X3, label: 'Quantum Contextuality', path: '/contextuality-sim' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -274,6 +274,11 @@ const AntimatterCore = lazyWithRetry(() => import('@/pages/antimatter-core'));
 const Sc2Studio = lazyWithRetry(() => import('@/pages/sc2-studio'));
 const GorfFleet = lazyWithRetry(() => import('@/pages/gorf-fleet'));
 const QuantumEraser = lazyWithRetry(() => import('@/pages/quantum-eraser'));
+const SterileNeutrino = lazyWithRetry(() => import('@/pages/sterile-neutrino'));
+const FrcThruster = lazyWithRetry(() => import('@/pages/frc-thruster'));
+const ZringStudio = lazyWithRetry(() => import('@/pages/zring-studio'));
+const SinistarArcade = lazyWithRetry(() => import('@/pages/sinistar-arcade'));
+const ContextualitySim = lazyWithRetry(() => import('@/pages/contextuality-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -542,6 +547,11 @@ function ProtectedRoutes() {
               <Route path="/sc2-studio" component={Sc2Studio} />
               <Route path="/gorf-fleet" component={GorfFleet} />
               <Route path="/quantum-eraser" component={QuantumEraser} />
+              <Route path="/sterile-neutrino" component={SterileNeutrino} />
+              <Route path="/frc-thruster" component={FrcThruster} />
+              <Route path="/zring-studio" component={ZringStudio} />
+              <Route path="/sinistar-arcade" component={SinistarArcade} />
+              <Route path="/contextuality-sim" component={ContextualitySim} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
