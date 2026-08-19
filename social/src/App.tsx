@@ -314,6 +314,11 @@ const GasCoreEngine = lazyWithRetry(() => import('@/pages/gas-core-engine'));
 const ClickChemistry = lazyWithRetry(() => import('@/pages/click-chemistry'));
 const DeathStarCore = lazyWithRetry(() => import('@/pages/death-star-core'));
 const KcbsPentagram = lazyWithRetry(() => import('@/pages/kcbs-pentagram'));
+const PecStudio = lazyWithRetry(() => import('@/pages/pec-studio'));
+const FissionFragment = lazyWithRetry(() => import('@/pages/fission-fragment'));
+const PhageTail = lazyWithRetry(() => import('@/pages/phage-tail'));
+const LightTank3D = lazyWithRetry(() => import('@/pages/light-tank-3d'));
+const OtocScrambler = lazyWithRetry(() => import('@/pages/otoc-scrambler'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -622,6 +627,11 @@ function ProtectedRoutes() {
               <Route path="/click-chemistry" component={ClickChemistry} />
               <Route path="/death-star-core" component={DeathStarCore} />
               <Route path="/kcbs-pentagram" component={KcbsPentagram} />
+              <Route path="/pec-studio" component={PecStudio} />
+              <Route path="/fission-fragment" component={FissionFragment} />
+              <Route path="/phage-tail" component={PhageTail} />
+              <Route path="/light-tank-3d" component={LightTank3D} />
+              <Route path="/otoc-scrambler" component={OtocScrambler} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

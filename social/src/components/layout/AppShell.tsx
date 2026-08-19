@@ -262,6 +262,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Link, label: 'Bio-Orthogonal Click', path: '/click-chemistry' },
     { icon: Target, label: 'Death Star II Core Run', path: '/death-star-core' },
     { icon: Pentagram, label: 'KCBS Pentagram Qutrit', path: '/kcbs-pentagram' },
+    { icon: Sigma, label: 'PEC Quasi-Inverses', path: '/pec-studio' },
+    { icon: Rocket, label: 'Fission Fragment FFRE', path: '/fission-fragment' },
+    { icon: Dna, label: 'Synthetic Phage Tropism', path: '/phage-tail' },
+    { icon: Target, label: 'Tron Light Tank 3D', path: '/light-tank-3d' },
+    { icon: Flame, label: 'OTOC Quantum Scrambler', path: '/otoc-scrambler' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
