@@ -359,6 +359,11 @@ const AirbreathingMhd = lazyWithRetry(() => import('@/pages/airbreathing-mhd'));
 const Cas12mBaseEditor = lazyWithRetry(() => import('@/pages/cas12m-base-editor'));
 const VaderTrenchDuel = lazyWithRetry(() => import('@/pages/vader-trench-duel'));
 const FractonStudio = lazyWithRetry(() => import('@/pages/fracton-studio'));
+const VolterraQem = lazyWithRetry(() => import('@/pages/volterra-qem'));
+const AntimatterRamExplorer = lazyWithRetry(() => import('@/pages/antimatter-ram-explorer'));
+const Cas12cLogic = lazyWithRetry(() => import('@/pages/cas12c-logic'));
+const TieInterceptorSlalom = lazyWithRetry(() => import('@/pages/tie-interceptor-slalom'));
+const HaahCode = lazyWithRetry(() => import('@/pages/haah-code'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -712,6 +717,11 @@ function ProtectedRoutes() {
               <Route path="/cas12m-base-editor" component={Cas12mBaseEditor} />
               <Route path="/vader-trench-duel" component={VaderTrenchDuel} />
               <Route path="/fracton-studio" component={FractonStudio} />
+              <Route path="/volterra-qem" component={VolterraQem} />
+              <Route path="/antimatter-ram-explorer" component={AntimatterRamExplorer} />
+              <Route path="/cas12c-logic" component={Cas12cLogic} />
+              <Route path="/tie-interceptor-slalom" component={TieInterceptorSlalom} />
+              <Route path="/haah-code" component={HaahCode} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -307,6 +307,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Edit3, label: 'CRISPR-Cas12m Base Editor', path: '/cas12m-base-editor' },
     { icon: Skull, label: 'Vader TIE Advanced Duel', path: '/vader-trench-duel' },
     { icon: Cube, label: '3D X-Cube Fracton Memory', path: '/fracton-studio' },
+    { icon: FunctionSquare, label: 'Volterra Memory QEM', path: '/volterra-qem' },
+    { icon: Magnet, label: 'ACMF Antimatter Ram-Explorer', path: '/antimatter-ram-explorer' },
+    { icon: Cpu, label: 'CRISPR-Cas12c Dual Logic', path: '/cas12c-logic' },
+    { icon: Gauge, label: 'TIE Interceptor Slalom', path: '/tie-interceptor-slalom' },
+    { icon: Box, label: 'Haah\'s Cubic Code Memory', path: '/haah-code' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
