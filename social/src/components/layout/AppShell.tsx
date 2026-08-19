@@ -332,6 +332,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Search, label: 'CRISPR-Cas12g Viral Sensor', path: '/cas12g-sensor' },
     { icon: Swords, label: 'N-1 Starfighter Dogfight', path: '/n1-starfighter-dogfight' },
     { icon: PieChart, label: 'Topological Entanglement Entropy', path: '/tee-calculator' },
+    { icon: FunctionSquare, label: 'Perturbative Clifford QEM', path: '/perturbative-qem' },
+    { icon: Flame, label: 'MICF Fusion Starship', path: '/micf-fusion-rocket' },
+    { icon: GitFork, label: 'CRISPR-Cas12h Splicing', path: '/cas12h-splicing' },
+    { icon: Swords, label: 'Delta-7 Jedi Dogfight', path: '/delta7-starfighter' },
+    { icon: Repeat, label: 'Floquet Fracton Order', path: '/floquet-fracton' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

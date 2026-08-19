@@ -384,6 +384,11 @@ const AntimatterDfd = lazyWithRetry(() => import('@/pages/antimatter-dfd'));
 const Cas12gSensor = lazyWithRetry(() => import('@/pages/cas12g-sensor'));
 const N1StarfighterDogfight = lazyWithRetry(() => import('@/pages/n1-starfighter-dogfight'));
 const TeeCalculator = lazyWithRetry(() => import('@/pages/tee-calculator'));
+const PerturbativeQem = lazyWithRetry(() => import('@/pages/perturbative-qem'));
+const MicfFusionRocket = lazyWithRetry(() => import('@/pages/micf-fusion-rocket'));
+const Cas12hSplicing = lazyWithRetry(() => import('@/pages/cas12h-splicing'));
+const Delta7Starfighter = lazyWithRetry(() => import('@/pages/delta7-starfighter'));
+const FloquetFracton = lazyWithRetry(() => import('@/pages/floquet-fracton'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -762,6 +767,11 @@ function ProtectedRoutes() {
               <Route path="/cas12g-sensor" component={Cas12gSensor} />
               <Route path="/n1-starfighter-dogfight" component={N1StarfighterDogfight} />
               <Route path="/tee-calculator" component={TeeCalculator} />
+              <Route path="/perturbative-qem" component={PerturbativeQem} />
+              <Route path="/micf-fusion-rocket" component={MicfFusionRocket} />
+              <Route path="/cas12h-splicing" component={Cas12hSplicing} />
+              <Route path="/delta7-starfighter" component={Delta7Starfighter} />
+              <Route path="/floquet-fracton" component={FloquetFracton} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
