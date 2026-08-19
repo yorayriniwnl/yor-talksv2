@@ -239,6 +239,11 @@ const OrionDrive = lazyWithRetry(() => import('@/pages/orion-drive'));
 const PrimeEditorV2 = lazyWithRetry(() => import('@/pages/prime-editor-v2'));
 const BoulderDash = lazyWithRetry(() => import('@/pages/boulder-dash'));
 const RandomizedBenchmarking = lazyWithRetry(() => import('@/pages/randomized-benchmarking'));
+const FrbStudio = lazyWithRetry(() => import('@/pages/frb-studio'));
+const RdreEngine = lazyWithRetry(() => import('@/pages/rdre-engine'));
+const RetronStudio = lazyWithRetry(() => import('@/pages/retron-studio'));
+const FlappyDrone = lazyWithRetry(() => import('@/pages/flappy-drone'));
+const QptStudio = lazyWithRetry(() => import('@/pages/qpt-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -472,6 +477,11 @@ function ProtectedRoutes() {
               <Route path="/prime-editor-v2" component={PrimeEditorV2} />
               <Route path="/boulder-dash" component={BoulderDash} />
               <Route path="/randomized-benchmarking" component={RandomizedBenchmarking} />
+              <Route path="/frb-studio" component={FrbStudio} />
+              <Route path="/rdre-engine" component={RdreEngine} />
+              <Route path="/retron-studio" component={RetronStudio} />
+              <Route path="/flappy-drone" component={FlappyDrone} />
+              <Route path="/qpt-studio" component={QptStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

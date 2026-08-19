@@ -187,6 +187,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'PEmax Prime Editor', path: '/prime-editor-v2' },
     { icon: Gem, label: 'Boulder Dash 3D', path: '/boulder-dash' },
     { icon: Atom, label: 'Clifford RB QCVV', path: '/randomized-benchmarking' },
+    { icon: Radio, label: 'Fast Radio Burst', path: '/frb-studio' },
+    { icon: Flame, label: 'RDRE Rocket Wave', path: '/rdre-engine' },
+    { icon: Dna, label: 'Retron msDNA Editor', path: '/retron-studio' },
+    { icon: Plane, label: 'Flappy Drone 3D', path: '/flappy-drone' },
+    { icon: Atom, label: 'QPT Chi Matrix', path: '/qpt-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
