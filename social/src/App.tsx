@@ -299,6 +299,11 @@ const CuspThruster = lazyWithRetry(() => import('@/pages/cusp-thruster'));
 const OrthorepStudio = lazyWithRetry(() => import('@/pages/orthorep-studio'));
 const QixArcade = lazyWithRetry(() => import('@/pages/qix-arcade'));
 const QuantumSteering = lazyWithRetry(() => import('@/pages/quantum-steering'));
+const QuantumZeno = lazyWithRetry(() => import('@/pages/quantum-zeno'));
+const StartramSim = lazyWithRetry(() => import('@/pages/startram-sim'));
+const RnaiStudio = lazyWithRetry(() => import('@/pages/rnai-studio'));
+const CommandArcade = lazyWithRetry(() => import('@/pages/command-arcade'));
+const HardyParadox = lazyWithRetry(() => import('@/pages/hardy-paradox'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -592,6 +597,11 @@ function ProtectedRoutes() {
               <Route path="/orthorep-studio" component={OrthorepStudio} />
               <Route path="/qix-arcade" component={QixArcade} />
               <Route path="/quantum-steering" component={QuantumSteering} />
+              <Route path="/quantum-zeno" component={QuantumZeno} />
+              <Route path="/startram-sim" component={StartramSim} />
+              <Route path="/rnai-studio" component={RnaiStudio} />
+              <Route path="/command-arcade" component={CommandArcade} />
+              <Route path="/hardy-paradox" component={HardyParadox} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

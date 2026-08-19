@@ -247,6 +247,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: FlaskConical, label: 'OrthoRep In Vivo Evol', path: '/orthorep-studio' },
     { icon: Box, label: 'Qix 3D Geometry', path: '/qix-arcade' },
     { icon: Compass, label: 'EPR Quantum Steering', path: '/quantum-steering' },
+    { icon: Eye, label: 'Quantum Zeno Effect', path: '/quantum-zeno' },
+    { icon: Navigation, label: 'StarTram Maglev Launch', path: '/startram-sim' },
+    { icon: Scissors, label: 'RNAi Dicer Ago2 RISC', path: '/rnai-studio' },
+    { icon: ShieldAlert, label: 'Missile Command 3D', path: '/command-arcade' },
+    { icon: Atom, label: 'Hardy Paradox Proof', path: '/hardy-paradox' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
