@@ -209,6 +209,11 @@ const MtfFusion = lazyWithRetry(() => import('@/pages/mtf-fusion'));
 const BacteriorhodopsinSim = lazyWithRetry(() => import('@/pages/bacteriorhodopsin-sim'));
 const LightCycles = lazyWithRetry(() => import('@/pages/light-cycles'));
 const BosonSampling = lazyWithRetry(() => import('@/pages/boson-sampling'));
+const EhtBlackHole = lazyWithRetry(() => import('@/pages/eht-blackhole'));
+const LithiumMpd = lazyWithRetry(() => import('@/pages/lithium-mpd'));
+const CrisprActivator = lazyWithRetry(() => import('@/pages/crispr-activator'));
+const AsteroidMiner = lazyWithRetry(() => import('@/pages/asteroid-miner'));
+const QpeStudio = lazyWithRetry(() => import('@/pages/qpe-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -412,6 +417,11 @@ function ProtectedRoutes() {
               <Route path="/bacteriorhodopsin-sim" component={BacteriorhodopsinSim} />
               <Route path="/light-cycles" component={LightCycles} />
               <Route path="/boson-sampling" component={BosonSampling} />
+              <Route path="/eht-blackhole" component={EhtBlackHole} />
+              <Route path="/lithium-mpd" component={LithiumMpd} />
+              <Route path="/crispr-activator" component={CrisprActivator} />
+              <Route path="/asteroid-miner" component={AsteroidMiner} />
+              <Route path="/qpe-studio" component={QpeStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

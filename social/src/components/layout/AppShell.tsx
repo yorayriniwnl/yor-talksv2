@@ -6,7 +6,7 @@ import {
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
   Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search,
-  GitFork, TrendingUp, Cpu
+  GitFork, TrendingUp, Cpu, Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -157,6 +157,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Sun, label: 'Bacteriorhodopsin', path: '/bacteriorhodopsin-sim' },
     { icon: Zap, label: 'Light Cycles 3D', path: '/light-cycles' },
     { icon: Sparkles, label: 'Boson Sampling', path: '/boson-sampling' },
+    { icon: Camera, label: 'EHT Black Hole', path: '/eht-blackhole' },
+    { icon: Flame, label: 'Lithium MPD', path: '/lithium-mpd' },
+    { icon: Dna, label: 'CRISPR Activator', path: '/crispr-activator' },
+    { icon: Target, label: 'Asteroid Miner', path: '/asteroid-miner' },
+    { icon: Atom, label: 'QPE Algorithm', path: '/qpe-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
