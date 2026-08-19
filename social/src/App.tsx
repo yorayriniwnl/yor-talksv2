@@ -474,6 +474,11 @@ const ShearedFlowZpinch = lazyWithRetry(() => import('@/pages/sheared-flow-zpinc
 const Cas12alphaIntegrator = lazyWithRetry(() => import('@/pages/cas12alpha-integrator'));
 const TieShuttleEvacuation = lazyWithRetry(() => import('@/pages/tie-shuttle-evacuation'));
 const FractonDipoleSuperfluid = lazyWithRetry(() => import('@/pages/fracton-dipole-superfluid'));
+const VumpsPurifierQem = lazyWithRetry(() => import('@/pages/vumps-purifier-qem'));
+const SpheromakPlasmaLiner = lazyWithRetry(() => import('@/pages/spheromak-plasma-liner'));
+const Cas12betaSynthesizer = lazyWithRetry(() => import('@/pages/cas12beta-synthesizer'));
+const TieBoardingCraft = lazyWithRetry(() => import('@/pages/tie-boarding-craft'));
+const FractonDisclinationBraid = lazyWithRetry(() => import('@/pages/fracton-disclination-braid'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -942,6 +947,11 @@ function ProtectedRoutes() {
               <Route path="/cas12alpha-integrator" component={Cas12alphaIntegrator} />
               <Route path="/tie-shuttle-evacuation" component={TieShuttleEvacuation} />
               <Route path="/fracton-dipole-superfluid" component={FractonDipoleSuperfluid} />
+              <Route path="/vumps-purifier-qem" component={VumpsPurifierQem} />
+              <Route path="/spheromak-plasma-liner" component={SpheromakPlasmaLiner} />
+              <Route path="/cas12beta-synthesizer" component={Cas12betaSynthesizer} />
+              <Route path="/tie-boarding-craft" component={TieBoardingCraft} />
+              <Route path="/fracton-disclination-braid" component={FractonDisclinationBraid} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

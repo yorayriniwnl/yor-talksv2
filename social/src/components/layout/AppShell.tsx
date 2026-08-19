@@ -422,6 +422,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitMerge, label: 'CRISPR-Cas12α Chromosome Integrator', path: '/cas12alpha-integrator' },
     { icon: Shield, label: 'TIE Shuttle Evacuation Escort', path: '/tie-shuttle-evacuation' },
     { icon: Waves, label: 'Fracton Dipole Superfluid', path: '/fracton-dipole-superfluid' },
+    { icon: LineChart, label: 'VUMPS Tangent Purifier QEM', path: '/vumps-purifier-qem' },
+    { icon: Flame, label: 'Spheromak Plasma-Liner Flagship', path: '/spheromak-plasma-liner' },
+    { icon: Heart, label: 'CRISPR-Cas12β Telomere Synthesizer', path: '/cas12beta-synthesizer' },
+    { icon: Anchor, label: 'TIE Boarding Craft Assault', path: '/tie-boarding-craft' },
+    { icon: Orbit, label: 'Fracton Disclination Braiding', path: '/fracton-disclination-braid' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
