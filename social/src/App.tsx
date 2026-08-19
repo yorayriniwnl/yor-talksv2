@@ -339,6 +339,11 @@ const LaserAntimatter = lazyWithRetry(() => import('@/pages/laser-antimatter'));
 const Cas12aCascade = lazyWithRetry(() => import('@/pages/cas12a-cascade'));
 const SurfaceTurretAssault = lazyWithRetry(() => import('@/pages/surface-turret-assault'));
 const MagicStateFactory = lazyWithRetry(() => import('@/pages/magic-state-factory'));
+const SubspaceExpansion = lazyWithRetry(() => import('@/pages/subspace-expansion'));
+const PuffFusionRocket = lazyWithRetry(() => import('@/pages/puff-fusion-rocket'));
+const Cas13dVirus = lazyWithRetry(() => import('@/pages/cas13d-virus'));
+const FalconAsteroids = lazyWithRetry(() => import('@/pages/falcon-asteroids'));
+const ColorCodeStudio = lazyWithRetry(() => import('@/pages/color-code-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -672,6 +677,11 @@ function ProtectedRoutes() {
               <Route path="/cas12a-cascade" component={Cas12aCascade} />
               <Route path="/surface-turret-assault" component={SurfaceTurretAssault} />
               <Route path="/magic-state-factory" component={MagicStateFactory} />
+              <Route path="/subspace-expansion" component={SubspaceExpansion} />
+              <Route path="/puff-fusion-rocket" component={PuffFusionRocket} />
+              <Route path="/cas13d-virus" component={Cas13dVirus} />
+              <Route path="/falcon-asteroids" component={FalconAsteroids} />
+              <Route path="/color-code-studio" component={ColorCodeStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

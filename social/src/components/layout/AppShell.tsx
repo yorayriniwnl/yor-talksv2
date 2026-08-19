@@ -287,6 +287,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Layers, label: 'Cas12a Multi-Gene Cascade', path: '/cas12a-cascade' },
     { icon: TowerControl, label: 'Death Star Turret Assault', path: '/surface-turret-assault' },
     { icon: Factory, label: 'Magic State Factory', path: '/magic-state-factory' },
+    { icon: Calculator, label: 'Quantum Subspace Expansion', path: '/subspace-expansion' },
+    { icon: Magnet, label: 'PuFF Z-Pinch Rocket', path: '/puff-fusion-rocket' },
+    { icon: Bug, label: 'CRISPR-Cas13d PAC-MAN', path: '/cas13d-virus' },
+    { icon: Disc, label: 'Falcon Asteroid Slalom 3D', path: '/falcon-asteroids' },
+    { icon: Hexagon, label: '2D Color Code Quantum', path: '/color-code-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
