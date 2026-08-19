@@ -242,6 +242,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'CRISPR Epigenome Edit', path: '/crispr-epigenome' },
     { icon: Target, label: 'Trench Run 3D Vector', path: '/trench-run' },
     { icon: Scale, label: 'Helstrom Bound POVM', path: '/helstrom-sim' },
+    { icon: Atom, label: 'Quantum Hall 2DEG', path: '/quantum-hall' },
+    { icon: Rocket, label: 'Magnetic Cusp HEMP', path: '/cusp-thruster' },
+    { icon: FlaskConical, label: 'OrthoRep In Vivo Evol', path: '/orthorep-studio' },
+    { icon: Box, label: 'Qix 3D Geometry', path: '/qix-arcade' },
+    { icon: Compass, label: 'EPR Quantum Steering', path: '/quantum-steering' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

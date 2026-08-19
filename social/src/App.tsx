@@ -294,6 +294,11 @@ const RotatingPlasma = lazyWithRetry(() => import('@/pages/rotating-plasma'));
 const CrisprEpigenome = lazyWithRetry(() => import('@/pages/crispr-epigenome'));
 const TrenchRun = lazyWithRetry(() => import('@/pages/trench-run'));
 const HelstromSim = lazyWithRetry(() => import('@/pages/helstrom-sim'));
+const QuantumHall = lazyWithRetry(() => import('@/pages/quantum-hall'));
+const CuspThruster = lazyWithRetry(() => import('@/pages/cusp-thruster'));
+const OrthorepStudio = lazyWithRetry(() => import('@/pages/orthorep-studio'));
+const QixArcade = lazyWithRetry(() => import('@/pages/qix-arcade'));
+const QuantumSteering = lazyWithRetry(() => import('@/pages/quantum-steering'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -582,6 +587,11 @@ function ProtectedRoutes() {
               <Route path="/crispr-epigenome" component={CrisprEpigenome} />
               <Route path="/trench-run" component={TrenchRun} />
               <Route path="/helstrom-sim" component={HelstromSim} />
+              <Route path="/quantum-hall" component={QuantumHall} />
+              <Route path="/cusp-thruster" component={CuspThruster} />
+              <Route path="/orthorep-studio" component={OrthorepStudio} />
+              <Route path="/qix-arcade" component={QixArcade} />
+              <Route path="/quantum-steering" component={QuantumSteering} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
