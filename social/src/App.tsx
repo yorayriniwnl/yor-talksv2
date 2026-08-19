@@ -519,6 +519,11 @@ const RotatingPlasmaGunDreadnought = lazyWithRetry(() => import('@/pages/rotatin
 const Cas12kappaRewirer = lazyWithRetry(() => import('@/pages/cas12kappa-rewirer'));
 const TieHunterAssault = lazyWithRetry(() => import('@/pages/tie-hunter-assault'));
 const FractonGaugedDislocation = lazyWithRetry(() => import('@/pages/fracton-gauged-dislocation'));
+const IsomeraPurifierQem = lazyWithRetry(() => import('@/pages/isomera-purifier-qem'));
+const MagneticCuspDestroyer = lazyWithRetry(() => import('@/pages/magnetic-cusp-destroyer'));
+const Cas12lambdaInsulator = lazyWithRetry(() => import('@/pages/cas12lambda-insulator'));
+const TieOppressorBomber = lazyWithRetry(() => import('@/pages/tie-oppressor-bomber'));
+const FractonDislocationLoops = lazyWithRetry(() => import('@/pages/fracton-dislocation-loops'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1032,6 +1037,11 @@ function ProtectedRoutes() {
               <Route path="/cas12kappa-rewirer" component={Cas12kappaRewirer} />
               <Route path="/tie-hunter-assault" component={TieHunterAssault} />
               <Route path="/fracton-gauged-dislocation" component={FractonGaugedDislocation} />
+              <Route path="/isomera-purifier-qem" component={IsomeraPurifierQem} />
+              <Route path="/magnetic-cusp-destroyer" component={MagneticCuspDestroyer} />
+              <Route path="/cas12lambda-insulator" component={Cas12lambdaInsulator} />
+              <Route path="/tie-oppressor-bomber" component={TieOppressorBomber} />
+              <Route path="/fracton-dislocation-loops" component={FractonDislocationLoops} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -467,6 +467,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitBranch, label: 'CRISPR-Cas12κ Enhancer Re-Wirer', path: '/cas12kappa-rewirer' },
     { icon: Swords, label: 'TIE Hunter Storm Commando', path: '/tie-hunter-assault' },
     { icon: GitFork, label: 'Fracton Gauged Dislocation Flow', path: '/fracton-gauged-dislocation' },
+    { icon: Atom, label: 'isoMERA Scale-Invariant QEM', path: '/isomera-purifier-qem' },
+    { icon: Flame, label: 'Magnetic Cusp Star-Destroyer', path: '/magnetic-cusp-destroyer' },
+    { icon: Split, label: 'CRISPR-Cas12λ TAD Insulator', path: '/cas12lambda-insulator' },
+    { icon: Bomb, label: 'TIE Oppressor Heavy Bomber', path: '/tie-oppressor-bomber' },
+    { icon: Disc, label: 'Fracton Dislocation Loop Braid', path: '/fracton-dislocation-loops' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
