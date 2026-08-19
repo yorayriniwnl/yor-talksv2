@@ -387,6 +387,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: PlusCircle, label: 'CRISPR-Cas12t Prime Editor', path: '/cas12t-prime-editor' },
     { icon: Swords, label: 'TIE Echelon Hyperspace Raid', path: '/tie-echelon-raid' },
     { icon: Grid, label: 'Fracton Disclination Clumping', path: '/fracton-disclination-clumping' },
+    { icon: FunctionSquare, label: 'PEPS 2D Shadow QEM', path: '/peps-shadow-qem' },
+    { icon: Flame, label: 'Centrifugal MTF Heavy Carrier', path: '/centrifugal-mtf-carrier' },
+    { icon: Split, label: 'CRISPR-Cas12u Exon Skipper', path: '/cas12u-splice' },
+    { icon: Swords, label: 'TIE Dagger Sith Interceptor', path: '/tie-dagger-interceptor' },
+    { icon: Layers, label: 'Foliated Fracton Phase', path: '/foliated-fracton-phase' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

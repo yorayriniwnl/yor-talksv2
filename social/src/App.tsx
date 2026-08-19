@@ -439,6 +439,11 @@ const StagedZpinchScout = lazyWithRetry(() => import('@/pages/staged-zpinch-scou
 const Cas12tPrimeEditor = lazyWithRetry(() => import('@/pages/cas12t-prime-editor'));
 const TieEchelonRaid = lazyWithRetry(() => import('@/pages/tie-echelon-raid'));
 const FractonDisclinationClumping = lazyWithRetry(() => import('@/pages/fracton-disclination-clumping'));
+const PepsShadowQem = lazyWithRetry(() => import('@/pages/peps-shadow-qem'));
+const CentrifugalMtfCarrier = lazyWithRetry(() => import('@/pages/centrifugal-mtf-carrier'));
+const Cas12uSplice = lazyWithRetry(() => import('@/pages/cas12u-splice'));
+const TieDaggerInterceptor = lazyWithRetry(() => import('@/pages/tie-dagger-interceptor'));
+const FoliatedFractonPhase = lazyWithRetry(() => import('@/pages/foliated-fracton-phase'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -872,6 +877,11 @@ function ProtectedRoutes() {
               <Route path="/cas12t-prime-editor" component={Cas12tPrimeEditor} />
               <Route path="/tie-echelon-raid" component={TieEchelonRaid} />
               <Route path="/fracton-disclination-clumping" component={FractonDisclinationClumping} />
+              <Route path="/peps-shadow-qem" component={PepsShadowQem} />
+              <Route path="/centrifugal-mtf-carrier" component={CentrifugalMtfCarrier} />
+              <Route path="/cas12u-splice" component={Cas12uSplice} />
+              <Route path="/tie-dagger-interceptor" component={TieDaggerInterceptor} />
+              <Route path="/foliated-fracton-phase" component={FoliatedFractonPhase} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
