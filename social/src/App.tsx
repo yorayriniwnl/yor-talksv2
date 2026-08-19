@@ -349,6 +349,11 @@ const IcfRamjet = lazyWithRetry(() => import('@/pages/icf-ramjet'));
 const CasminiStudio = lazyWithRetry(() => import('@/pages/casmini-studio'));
 const ExecutorAssault = lazyWithRetry(() => import('@/pages/executor-assault'));
 const RaussendorfLattice = lazyWithRetry(() => import('@/pages/raussendorf-lattice'));
+const FermionicShadows = lazyWithRetry(() => import('@/pages/fermionic-shadows'));
+const SkyhookTether = lazyWithRetry(() => import('@/pages/skyhook-tether'));
+const Cas14Diagnostics = lazyWithRetry(() => import('@/pages/cas14-diagnostics'));
+const BwingAssault = lazyWithRetry(() => import('@/pages/bwing-assault'));
+const FloquetMajorana = lazyWithRetry(() => import('@/pages/floquet-majorana'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -692,6 +697,11 @@ function ProtectedRoutes() {
               <Route path="/casmini-studio" component={CasminiStudio} />
               <Route path="/executor-assault" component={ExecutorAssault} />
               <Route path="/raussendorf-lattice" component={RaussendorfLattice} />
+              <Route path="/fermionic-shadows" component={FermionicShadows} />
+              <Route path="/skyhook-tether" component={SkyhookTether} />
+              <Route path="/cas14-diagnostics" component={Cas14Diagnostics} />
+              <Route path="/bwing-assault" component={BwingAssault} />
+              <Route path="/floquet-majorana" component={FloquetMajorana} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

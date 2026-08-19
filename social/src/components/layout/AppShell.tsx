@@ -297,6 +297,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Package, label: 'CRISPR-CasMINI Therapy', path: '/casmini-studio' },
     { icon: Target, label: 'Executor Bridge Assault', path: '/executor-assault' },
     { icon: Box, label: '3D Raussendorf Lattice', path: '/raussendorf-lattice' },
+    { icon: Eye, label: 'Fermionic Shadows QEM', path: '/fermionic-shadows' },
+    { icon: Anchor, label: 'Orbital Skyhook Tether', path: '/skyhook-tether' },
+    { icon: Search, label: 'Cas14 DETECTR-v2 Diagnostics', path: '/cas14-diagnostics' },
+    { icon: Cross, label: 'B-Wing Star Destroyer Run', path: '/bwing-assault' },
+    { icon: Repeat, label: 'Floquet Majorana Memory', path: '/floquet-majorana' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
