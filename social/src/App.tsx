@@ -499,6 +499,11 @@ const HeliconSpheromakMerger = lazyWithRetry(() => import('@/pages/helicon-spher
 const Cas12zetaCircularizer = lazyWithRetry(() => import('@/pages/cas12zeta-circularizer'));
 const TieScoutSkirmish = lazyWithRetry(() => import('@/pages/tie-scout-skirmish'));
 const FractonGravitationalAnomaly = lazyWithRetry(() => import('@/pages/fracton-gravitational-anomaly'));
+const GfpepsPurifierQem = lazyWithRetry(() => import('@/pages/gfpeps-purifier-qem'));
+const LiquidMetalLinerDreadnought = lazyWithRetry(() => import('@/pages/liquid-metal-liner-dreadnought'));
+const Cas12etaInsulator = lazyWithRetry(() => import('@/pages/cas12eta-insulator'));
+const TiePhantomInfiltration = lazyWithRetry(() => import('@/pages/tie-phantom-infiltration'));
+const FractonAxialGravitational = lazyWithRetry(() => import('@/pages/fracton-axial-gravitational'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -992,6 +997,11 @@ function ProtectedRoutes() {
               <Route path="/cas12zeta-circularizer" component={Cas12zetaCircularizer} />
               <Route path="/tie-scout-skirmish" component={TieScoutSkirmish} />
               <Route path="/fracton-gravitational-anomaly" component={FractonGravitationalAnomaly} />
+              <Route path="/gfpeps-purifier-qem" component={GfpepsPurifierQem} />
+              <Route path="/liquid-metal-liner-dreadnought" component={LiquidMetalLinerDreadnought} />
+              <Route path="/cas12eta-insulator" component={Cas12etaInsulator} />
+              <Route path="/tie-phantom-infiltration" component={TiePhantomInfiltration} />
+              <Route path="/fracton-axial-gravitational" component={FractonAxialGravitational} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

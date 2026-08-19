@@ -447,6 +447,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Repeat, label: 'CRISPR-Cas12ζ Chromosome Circularizer', path: '/cas12zeta-circularizer' },
     { icon: Radar, label: 'TIE Scout Deep Hyperspace Recon', path: '/tie-scout-skirmish' },
     { icon: Thermometer, label: 'Fracton Gravitational Anomaly', path: '/fracton-gravitational-anomaly' },
+    { icon: Atom, label: 'GfPEPS High-Tc Purifier QEM', path: '/gfpeps-purifier-qem' },
+    { icon: Flame, label: 'Liquid-Metal Liner Dreadnought', path: '/liquid-metal-liner-dreadnought' },
+    { icon: Shield, label: 'CRISPR-Cas12η Epigenetic Insulator', path: '/cas12eta-insulator' },
+    { icon: EyeOff, label: 'TIE Phantom Cloaked Infiltration', path: '/tie-phantom-infiltration' },
+    { icon: Compass, label: 'Fracton Mixed Axial-Grav Anomaly', path: '/fracton-axial-gravitational' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
