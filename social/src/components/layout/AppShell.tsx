@@ -277,6 +277,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: ToggleLeft, label: 'Synthetic Riboswitch', path: '/riboswitch-studio' },
     { icon: Trees, label: 'Endor Speeder Slalom 3D', path: '/endor-speeder' },
     { icon: Network, label: 'Continuous-Variable MBQC', path: '/cv-mbqc-studio' },
+    { icon: CheckCircle2, label: 'Symmetry Verification', path: '/symmetry-verification' },
+    { icon: Umbrella, label: 'Project Medusa Rocket', path: '/medusa-rocket' },
+    { icon: Lock, label: 'CRISPRoff Epigenome', path: '/crisproff-studio' },
+    { icon: Target, label: 'Star Wars 1983 TIE Arcade', path: '/tie-fighter-arcade' },
+    { icon: Grid, label: 'Surface Code Lattice Surgery', path: '/lattice-surgery' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

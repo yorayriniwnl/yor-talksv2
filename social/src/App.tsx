@@ -329,6 +329,11 @@ const PulsedPlasmoid = lazyWithRetry(() => import('@/pages/pulsed-plasmoid'));
 const RiboswitchStudio = lazyWithRetry(() => import('@/pages/riboswitch-studio'));
 const EndorSpeeder = lazyWithRetry(() => import('@/pages/endor-speeder'));
 const CvMbqcStudio = lazyWithRetry(() => import('@/pages/cv-mbqc-studio'));
+const SymmetryVerification = lazyWithRetry(() => import('@/pages/symmetry-verification'));
+const MedusaRocket = lazyWithRetry(() => import('@/pages/medusa-rocket'));
+const CrisproffStudio = lazyWithRetry(() => import('@/pages/crisproff-studio'));
+const TieFighterArcade = lazyWithRetry(() => import('@/pages/tie-fighter-arcade'));
+const LatticeSurgery = lazyWithRetry(() => import('@/pages/lattice-surgery'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -652,6 +657,11 @@ function ProtectedRoutes() {
               <Route path="/riboswitch-studio" component={RiboswitchStudio} />
               <Route path="/endor-speeder" component={EndorSpeeder} />
               <Route path="/cv-mbqc-studio" component={CvMbqcStudio} />
+              <Route path="/symmetry-verification" component={SymmetryVerification} />
+              <Route path="/medusa-rocket" component={MedusaRocket} />
+              <Route path="/crisproff-studio" component={CrisproffStudio} />
+              <Route path="/tie-fighter-arcade" component={TieFighterArcade} />
+              <Route path="/lattice-surgery" component={LatticeSurgery} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
