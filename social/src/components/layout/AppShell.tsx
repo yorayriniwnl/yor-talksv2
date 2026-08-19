@@ -292,6 +292,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Bug, label: 'CRISPR-Cas13d PAC-MAN', path: '/cas13d-virus' },
     { icon: Disc, label: 'Falcon Asteroid Slalom 3D', path: '/falcon-asteroids' },
     { icon: Hexagon, label: '2D Color Code Quantum', path: '/color-code-studio' },
+    { icon: Filter, label: 'Virtual Subspace Inversion', path: '/virtual-subspace' },
+    { icon: Compass, label: 'Bussard ICF Ramjet', path: '/icf-ramjet' },
+    { icon: Package, label: 'CRISPR-CasMINI Therapy', path: '/casmini-studio' },
+    { icon: Target, label: 'Executor Bridge Assault', path: '/executor-assault' },
+    { icon: Box, label: '3D Raussendorf Lattice', path: '/raussendorf-lattice' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

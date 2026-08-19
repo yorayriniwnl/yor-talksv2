@@ -344,6 +344,11 @@ const PuffFusionRocket = lazyWithRetry(() => import('@/pages/puff-fusion-rocket'
 const Cas13dVirus = lazyWithRetry(() => import('@/pages/cas13d-virus'));
 const FalconAsteroids = lazyWithRetry(() => import('@/pages/falcon-asteroids'));
 const ColorCodeStudio = lazyWithRetry(() => import('@/pages/color-code-studio'));
+const VirtualSubspace = lazyWithRetry(() => import('@/pages/virtual-subspace'));
+const IcfRamjet = lazyWithRetry(() => import('@/pages/icf-ramjet'));
+const CasminiStudio = lazyWithRetry(() => import('@/pages/casmini-studio'));
+const ExecutorAssault = lazyWithRetry(() => import('@/pages/executor-assault'));
+const RaussendorfLattice = lazyWithRetry(() => import('@/pages/raussendorf-lattice'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -682,6 +687,11 @@ function ProtectedRoutes() {
               <Route path="/cas13d-virus" component={Cas13dVirus} />
               <Route path="/falcon-asteroids" component={FalconAsteroids} />
               <Route path="/color-code-studio" component={ColorCodeStudio} />
+              <Route path="/virtual-subspace" component={VirtualSubspace} />
+              <Route path="/icf-ramjet" component={IcfRamjet} />
+              <Route path="/casmini-studio" component={CasminiStudio} />
+              <Route path="/executor-assault" component={ExecutorAssault} />
+              <Route path="/raussendorf-lattice" component={RaussendorfLattice} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
