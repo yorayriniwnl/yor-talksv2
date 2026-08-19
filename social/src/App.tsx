@@ -234,6 +234,11 @@ const VasimrRocket = lazyWithRetry(() => import('@/pages/vasimr-rocket'));
 const TalenStudio = lazyWithRetry(() => import('@/pages/talen-studio'));
 const CyberFrogger = lazyWithRetry(() => import('@/pages/cyber-frogger'));
 const QstStudio = lazyWithRetry(() => import('@/pages/qst-studio'));
+const MuonTomography = lazyWithRetry(() => import('@/pages/muon-tomography'));
+const OrionDrive = lazyWithRetry(() => import('@/pages/orion-drive'));
+const PrimeEditorV2 = lazyWithRetry(() => import('@/pages/prime-editor-v2'));
+const BoulderDash = lazyWithRetry(() => import('@/pages/boulder-dash'));
+const RandomizedBenchmarking = lazyWithRetry(() => import('@/pages/randomized-benchmarking'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -462,6 +467,11 @@ function ProtectedRoutes() {
               <Route path="/talen-studio" component={TalenStudio} />
               <Route path="/cyber-frogger" component={CyberFrogger} />
               <Route path="/qst-studio" component={QstStudio} />
+              <Route path="/muon-tomography" component={MuonTomography} />
+              <Route path="/orion-drive" component={OrionDrive} />
+              <Route path="/prime-editor-v2" component={PrimeEditorV2} />
+              <Route path="/boulder-dash" component={BoulderDash} />
+              <Route path="/randomized-benchmarking" component={RandomizedBenchmarking} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

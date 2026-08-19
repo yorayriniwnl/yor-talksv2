@@ -6,7 +6,7 @@ import {
   Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
   Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
   Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search,
-  GitFork, TrendingUp, Cpu, Camera
+  GitFork, TrendingUp, Cpu, Camera, Eye, Gem
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -182,6 +182,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'TALEN Editing', path: '/talen-studio' },
     { icon: Compass, label: 'Cyber Frogger 3D', path: '/cyber-frogger' },
     { icon: Atom, label: 'QST Tomography', path: '/qst-studio' },
+    { icon: Eye, label: 'Muon Tomography', path: '/muon-tomography' },
+    { icon: Rocket, label: 'Project Orion Drive', path: '/orion-drive' },
+    { icon: Scissors, label: 'PEmax Prime Editor', path: '/prime-editor-v2' },
+    { icon: Gem, label: 'Boulder Dash 3D', path: '/boulder-dash' },
+    { icon: Atom, label: 'Clifford RB QCVV', path: '/randomized-benchmarking' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
