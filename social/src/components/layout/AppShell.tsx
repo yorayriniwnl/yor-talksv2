@@ -472,6 +472,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Split, label: 'CRISPR-Cas12λ TAD Insulator', path: '/cas12lambda-insulator' },
     { icon: Bomb, label: 'TIE Oppressor Heavy Bomber', path: '/tie-oppressor-bomber' },
     { icon: Disc, label: 'Fracton Dislocation Loop Braid', path: '/fracton-dislocation-loops' },
+    { icon: Atom, label: 'CTM Environment PEPS QEM', path: '/peps-ctm-environment-qem' },
+    { icon: Flame, label: 'Staged DPF Interceptor', path: '/dense-plasma-focus-interceptor' },
+    { icon: Minimize2, label: 'CRISPR-Cas12μ Chromatin Compactor', path: '/cas12mu-compactor' },
+    { icon: Radar, label: 'TIE Vanguard Recon Scout', path: '/tie-vanguard-interceptor' },
+    { icon: RefreshCw, label: 'Fracton Defect Condensation', path: '/fracton-defect-condensation' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

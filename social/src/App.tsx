@@ -524,6 +524,11 @@ const MagneticCuspDestroyer = lazyWithRetry(() => import('@/pages/magnetic-cusp-
 const Cas12lambdaInsulator = lazyWithRetry(() => import('@/pages/cas12lambda-insulator'));
 const TieOppressorBomber = lazyWithRetry(() => import('@/pages/tie-oppressor-bomber'));
 const FractonDislocationLoops = lazyWithRetry(() => import('@/pages/fracton-dislocation-loops'));
+const PepsCtmEnvironmentQem = lazyWithRetry(() => import('@/pages/peps-ctm-environment-qem'));
+const DensePlasmaFocusInterceptor = lazyWithRetry(() => import('@/pages/dense-plasma-focus-interceptor'));
+const Cas12muCompactor = lazyWithRetry(() => import('@/pages/cas12mu-compactor'));
+const TieVanguardInterceptor = lazyWithRetry(() => import('@/pages/tie-vanguard-interceptor'));
+const FractonDefectCondensation = lazyWithRetry(() => import('@/pages/fracton-defect-condensation'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1042,6 +1047,11 @@ function ProtectedRoutes() {
               <Route path="/cas12lambda-insulator" component={Cas12lambdaInsulator} />
               <Route path="/tie-oppressor-bomber" component={TieOppressorBomber} />
               <Route path="/fracton-dislocation-loops" component={FractonDislocationLoops} />
+              <Route path="/peps-ctm-environment-qem" component={PepsCtmEnvironmentQem} />
+              <Route path="/dense-plasma-focus-interceptor" component={DensePlasmaFocusInterceptor} />
+              <Route path="/cas12mu-compactor" component={Cas12muCompactor} />
+              <Route path="/tie-vanguard-interceptor" component={TieVanguardInterceptor} />
+              <Route path="/fracton-defect-condensation" component={FractonDefectCondensation} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
