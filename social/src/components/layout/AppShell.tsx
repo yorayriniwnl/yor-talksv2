@@ -372,6 +372,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Radio, label: 'CRISPR-Cas12q Diagnostic', path: '/cas12q-diagnostic' },
     { icon: Swords, label: 'U-Wing Troop Extraction', path: '/uwing-extraction' },
     { icon: Orbit, label: 'Fractonic Spin Liquid U(1)', path: '/fracton-spin-liquid' },
+    { icon: FunctionSquare, label: 'Choi Pseudo-Inverse QEM', path: '/choi-pseudoinverse-qem' },
+    { icon: Flame, label: 'Staged MTF Pulsed Interceptor', path: '/staged-mtf-interceptor' },
+    { icon: ShieldAlert, label: 'CRISPR-Cas12r Repressor', path: '/cas12r-repressor' },
+    { icon: Swords, label: 'TIE Reaper Orbital Fleet Drop', path: '/tie-reaper-drop' },
+    { icon: Disc, label: 'Non-Abelian Tensor Fracton', path: '/non-abelian-tensor-fracton' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

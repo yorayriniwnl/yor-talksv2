@@ -424,6 +424,11 @@ const FrcSpheromakDrive = lazyWithRetry(() => import('@/pages/frc-spheromak-driv
 const Cas12qDiagnostic = lazyWithRetry(() => import('@/pages/cas12q-diagnostic'));
 const UwingExtraction = lazyWithRetry(() => import('@/pages/uwing-extraction'));
 const FractonSpinLiquid = lazyWithRetry(() => import('@/pages/fracton-spin-liquid'));
+const ChoiPseudoinverseQem = lazyWithRetry(() => import('@/pages/choi-pseudoinverse-qem'));
+const StagedMtfInterceptor = lazyWithRetry(() => import('@/pages/staged-mtf-interceptor'));
+const Cas12rRepressor = lazyWithRetry(() => import('@/pages/cas12r-repressor'));
+const TieReaperDrop = lazyWithRetry(() => import('@/pages/tie-reaper-drop'));
+const NonAbelianTensorFracton = lazyWithRetry(() => import('@/pages/non-abelian-tensor-fracton'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -842,6 +847,11 @@ function ProtectedRoutes() {
               <Route path="/cas12q-diagnostic" component={Cas12qDiagnostic} />
               <Route path="/uwing-extraction" component={UwingExtraction} />
               <Route path="/fracton-spin-liquid" component={FractonSpinLiquid} />
+              <Route path="/choi-pseudoinverse-qem" component={ChoiPseudoinverseQem} />
+              <Route path="/staged-mtf-interceptor" component={StagedMtfInterceptor} />
+              <Route path="/cas12r-repressor" component={Cas12rRepressor} />
+              <Route path="/tie-reaper-drop" component={TieReaperDrop} />
+              <Route path="/non-abelian-tensor-fracton" component={NonAbelianTensorFracton} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
