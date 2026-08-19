@@ -529,6 +529,11 @@ const DensePlasmaFocusInterceptor = lazyWithRetry(() => import('@/pages/dense-pl
 const Cas12muCompactor = lazyWithRetry(() => import('@/pages/cas12mu-compactor'));
 const TieVanguardInterceptor = lazyWithRetry(() => import('@/pages/tie-vanguard-interceptor'));
 const FractonDefectCondensation = lazyWithRetry(() => import('@/pages/fracton-defect-condensation'));
+const IttMpoPurifierQem = lazyWithRetry(() => import('@/pages/itt-mpo-purifier-qem'));
+const FieldReversedThetaPinch = lazyWithRetry(() => import('@/pages/field-reversed-theta-pinch'));
+const Cas12nuAnchor = lazyWithRetry(() => import('@/pages/cas12nu-anchor'));
+const TieBizarroGunship = lazyWithRetry(() => import('@/pages/tie-bizarro-gunship'));
+const FractonDisclinationCondensates = lazyWithRetry(() => import('@/pages/fracton-disclination-condensates'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1052,6 +1057,11 @@ function ProtectedRoutes() {
               <Route path="/cas12mu-compactor" component={Cas12muCompactor} />
               <Route path="/tie-vanguard-interceptor" component={TieVanguardInterceptor} />
               <Route path="/fracton-defect-condensation" component={FractonDefectCondensation} />
+              <Route path="/itt-mpo-purifier-qem" component={IttMpoPurifierQem} />
+              <Route path="/field-reversed-theta-pinch" component={FieldReversedThetaPinch} />
+              <Route path="/cas12nu-anchor" component={Cas12nuAnchor} />
+              <Route path="/tie-bizarro-gunship" component={TieBizarroGunship} />
+              <Route path="/fracton-disclination-condensates" component={FractonDisclinationCondensates} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
