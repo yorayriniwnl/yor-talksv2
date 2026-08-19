@@ -549,6 +549,11 @@ const HelicalScrewPinch = lazyWithRetry(() => import('@/pages/helical-screw-pinc
 const Cas12piSwitcher = lazyWithRetry(() => import('@/pages/cas12pi-switcher'));
 const TieBombardmentInterceptor = lazyWithRetry(() => import('@/pages/tie-bombardment-interceptor'));
 const FractonHelicalDisclinations = lazyWithRetry(() => import('@/pages/fracton-helical-disclinations'));
+const IttPesoPurifierQem = lazyWithRetry(() => import('@/pages/itt-peso-purifier-qem'));
+const CentrifugalMirrorDreadnought = lazyWithRetry(() => import('@/pages/centrifugal-mirror-dreadnought'));
+const Cas12rhoMotor = lazyWithRetry(() => import('@/pages/cas12rho-motor'));
+const TieBeamInterceptor = lazyWithRetry(() => import('@/pages/tie-beam-interceptor'));
+const FractonDislocationMembranes = lazyWithRetry(() => import('@/pages/fracton-dislocation-membranes'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1092,6 +1097,11 @@ function ProtectedRoutes() {
               <Route path="/cas12pi-switcher" component={Cas12piSwitcher} />
               <Route path="/tie-bombardment-interceptor" component={TieBombardmentInterceptor} />
               <Route path="/fracton-helical-disclinations" component={FractonHelicalDisclinations} />
+              <Route path="/itt-peso-purifier-qem" component={IttPesoPurifierQem} />
+              <Route path="/centrifugal-mirror-dreadnought" component={CentrifugalMirrorDreadnought} />
+              <Route path="/cas12rho-motor" component={Cas12rhoMotor} />
+              <Route path="/tie-beam-interceptor" component={TieBeamInterceptor} />
+              <Route path="/fracton-dislocation-membranes" component={FractonDislocationMembranes} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

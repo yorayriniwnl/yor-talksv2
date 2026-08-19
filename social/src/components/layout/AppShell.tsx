@@ -497,6 +497,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Radio, label: 'CRISPR-Cas12π TAD Switcher', path: '/cas12pi-switcher' },
     { icon: Bomb, label: 'TIE Bombardment Interceptor', path: '/tie-bombardment-interceptor' },
     { icon: Disc3, label: 'Fracton Helical Disclinations', path: '/fracton-helical-disclinations' },
+    { icon: Triangle, label: 'iTT-PESO Frustrated QEM', path: '/itt-peso-purifier-qem' },
+    { icon: Flame, label: 'Centrifugal Mirror Dreadnought', path: '/centrifugal-mirror-dreadnought' },
+    { icon: Minimize2, label: 'CRISPR-Cas12ρ Condensin Motor', path: '/cas12rho-motor' },
+    { icon: Sun, label: 'TIE Beam Interceptor', path: '/tie-beam-interceptor' },
+    { icon: Layers, label: 'Fracton Dislocation Membranes', path: '/fracton-dislocation-membranes' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
