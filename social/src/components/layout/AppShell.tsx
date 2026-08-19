@@ -177,6 +177,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'Base Editor (CBE/ABE)', path: '/base-editor' },
     { icon: Target, label: 'Space Invaders 3D', path: '/space-invaders' },
     { icon: Atom, label: 'QAOA Max-Cut', path: '/qaoa-studio' },
+    { icon: Atom, label: 'CNB Neutrino', path: '/cnb-neutrino' },
+    { icon: Rocket, label: 'VASIMR Rocket', path: '/vasimr-rocket' },
+    { icon: Scissors, label: 'TALEN Editing', path: '/talen-studio' },
+    { icon: Compass, label: 'Cyber Frogger 3D', path: '/cyber-frogger' },
+    { icon: Atom, label: 'QST Tomography', path: '/qst-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

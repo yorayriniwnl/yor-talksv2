@@ -229,6 +229,11 @@ const StellaratorSim = lazyWithRetry(() => import('@/pages/stellarator-sim'));
 const BaseEditor = lazyWithRetry(() => import('@/pages/base-editor'));
 const SpaceInvaders = lazyWithRetry(() => import('@/pages/space-invaders'));
 const QaoaStudio = lazyWithRetry(() => import('@/pages/qaoa-studio'));
+const CnbNeutrino = lazyWithRetry(() => import('@/pages/cnb-neutrino'));
+const VasimrRocket = lazyWithRetry(() => import('@/pages/vasimr-rocket'));
+const TalenStudio = lazyWithRetry(() => import('@/pages/talen-studio'));
+const CyberFrogger = lazyWithRetry(() => import('@/pages/cyber-frogger'));
+const QstStudio = lazyWithRetry(() => import('@/pages/qst-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -452,6 +457,11 @@ function ProtectedRoutes() {
               <Route path="/base-editor" component={BaseEditor} />
               <Route path="/space-invaders" component={SpaceInvaders} />
               <Route path="/qaoa-studio" component={QaoaStudio} />
+              <Route path="/cnb-neutrino" component={CnbNeutrino} />
+              <Route path="/vasimr-rocket" component={VasimrRocket} />
+              <Route path="/talen-studio" component={TalenStudio} />
+              <Route path="/cyber-frogger" component={CyberFrogger} />
+              <Route path="/qst-studio" component={QstStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
