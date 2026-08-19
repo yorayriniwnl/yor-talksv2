@@ -409,6 +409,11 @@ const HdmifFusionCruiser = lazyWithRetry(() => import('@/pages/hdmif-fusion-crui
 const Cas12nHiti = lazyWithRetry(() => import('@/pages/cas12n-hiti'));
 const SnowspeederDefense = lazyWithRetry(() => import('@/pages/snowspeeder-defense'));
 const GaugedSubsystemFracton = lazyWithRetry(() => import('@/pages/gauged-subsystem-fracton'));
+const SpectralFilterQem = lazyWithRetry(() => import('@/pages/spectral-filter-qem'));
+const DpfFastCourier = lazyWithRetry(() => import('@/pages/dpf-fast-courier'));
+const Cas12oTransposase = lazyWithRetry(() => import('@/pages/cas12o-transposase'));
+const VwingEscort = lazyWithRetry(() => import('@/pages/vwing-escort'));
+const FractonElasticity = lazyWithRetry(() => import('@/pages/fracton-elasticity'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -812,6 +817,11 @@ function ProtectedRoutes() {
               <Route path="/cas12n-hiti" component={Cas12nHiti} />
               <Route path="/snowspeeder-defense" component={SnowspeederDefense} />
               <Route path="/gauged-subsystem-fracton" component={GaugedSubsystemFracton} />
+              <Route path="/spectral-filter-qem" component={SpectralFilterQem} />
+              <Route path="/dpf-fast-courier" component={DpfFastCourier} />
+              <Route path="/cas12o-transposase" component={Cas12oTransposase} />
+              <Route path="/vwing-escort" component={VwingEscort} />
+              <Route path="/fracton-elasticity" component={FractonElasticity} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
