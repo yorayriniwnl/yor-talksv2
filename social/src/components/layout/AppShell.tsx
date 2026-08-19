@@ -517,6 +517,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Pin, label: 'CRISPR-Cas12υ Loop Staple', path: '/cas12upsilon-staple' },
     { icon: Rocket, label: 'TIE Heavy Torpedo Interceptor', path: '/tie-heavy-torpedo-interceptor' },
     { icon: Waves, label: 'Fracton Braid Surfaces', path: '/fracton-braid-surfaces' },
+    { icon: Triangle, label: 'iTT-PESMMK Memory QEM', path: '/itt-pesmmk-purifier-qem' },
+    { icon: Flame, label: 'Helicon-FRC Star-Cruiser', path: '/helicon-frc-star-cruiser' },
+    { icon: Disc, label: 'CRISPR-Cas12φ-2 Loop Rivet', path: '/cas12phi2-rivet' },
+    { icon: Zap, label: 'TIE Ion Neutralizer Interceptor', path: '/tie-ion-neutralizer-interceptor' },
+    { icon: Cloud, label: 'Fracton Braid Foam', path: '/fracton-braid-foam' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -569,6 +569,11 @@ const HeliconFrcMirror = lazyWithRetry(() => import('@/pages/helicon-frc-mirror'
 const Cas12upsilonStaple = lazyWithRetry(() => import('@/pages/cas12upsilon-staple'));
 const TieHeavyTorpedoInterceptor = lazyWithRetry(() => import('@/pages/tie-heavy-torpedo-interceptor'));
 const FractonBraidSurfaces = lazyWithRetry(() => import('@/pages/fracton-braid-surfaces'));
+const IttPesmmkPurifierQem = lazyWithRetry(() => import('@/pages/itt-pesmmk-purifier-qem'));
+const HeliconFrcStarCruiser = lazyWithRetry(() => import('@/pages/helicon-frc-star-cruiser'));
+const Cas12phi2Rivet = lazyWithRetry(() => import('@/pages/cas12phi2-rivet'));
+const TieIonNeutralizerInterceptor = lazyWithRetry(() => import('@/pages/tie-ion-neutralizer-interceptor'));
+const FractonBraidFoam = lazyWithRetry(() => import('@/pages/fracton-braid-foam'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1132,6 +1137,11 @@ function ProtectedRoutes() {
               <Route path="/cas12upsilon-staple" component={Cas12upsilonStaple} />
               <Route path="/tie-heavy-torpedo-interceptor" component={TieHeavyTorpedoInterceptor} />
               <Route path="/fracton-braid-surfaces" component={FractonBraidSurfaces} />
+              <Route path="/itt-pesmmk-purifier-qem" component={IttPesmmkPurifierQem} />
+              <Route path="/helicon-frc-star-cruiser" component={HeliconFrcStarCruiser} />
+              <Route path="/cas12phi2-rivet" component={Cas12phi2Rivet} />
+              <Route path="/tie-ion-neutralizer-interceptor" component={TieIonNeutralizerInterceptor} />
+              <Route path="/fracton-braid-foam" component={FractonBraidFoam} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
