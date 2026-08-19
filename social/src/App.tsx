@@ -559,6 +559,11 @@ const HeliconFrcCollider = lazyWithRetry(() => import('@/pages/helicon-frc-colli
 const Cas12sigmaClamp = lazyWithRetry(() => import('@/pages/cas12sigma-clamp'));
 const TieEscortInterceptor = lazyWithRetry(() => import('@/pages/tie-escort-interceptor'));
 const FractonFrankBurgersStrings = lazyWithRetry(() => import('@/pages/fracton-frank-burgers-strings'));
+const IttPeskcoPurifierQem = lazyWithRetry(() => import('@/pages/itt-peskco-purifier-qem'));
+const HelicalCuspDreadnought = lazyWithRetry(() => import('@/pages/helical-cusp-dreadnought'));
+const Cas12tauGate = lazyWithRetry(() => import('@/pages/cas12tau-gate'));
+const TiePlasmaSiegeInterceptor = lazyWithRetry(() => import('@/pages/tie-plasma-siege-interceptor'));
+const FractonBraidNetworks = lazyWithRetry(() => import('@/pages/fracton-braid-networks'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1112,6 +1117,11 @@ function ProtectedRoutes() {
               <Route path="/cas12sigma-clamp" component={Cas12sigmaClamp} />
               <Route path="/tie-escort-interceptor" component={TieEscortInterceptor} />
               <Route path="/fracton-frank-burgers-strings" component={FractonFrankBurgersStrings} />
+              <Route path="/itt-peskco-purifier-qem" component={IttPeskcoPurifierQem} />
+              <Route path="/helical-cusp-dreadnought" component={HelicalCuspDreadnought} />
+              <Route path="/cas12tau-gate" component={Cas12tauGate} />
+              <Route path="/tie-plasma-siege-interceptor" component={TiePlasmaSiegeInterceptor} />
+              <Route path="/fracton-braid-networks" component={FractonBraidNetworks} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

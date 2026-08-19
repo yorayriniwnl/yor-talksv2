@@ -507,6 +507,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Paperclip, label: 'CRISPR-Cas12σ Boundary Clamp', path: '/cas12sigma-clamp' },
     { icon: Shield, label: 'TIE Escort Interceptor', path: '/tie-escort-interceptor' },
     { icon: GitMerge, label: 'Fracton Frank-Burgers Strings', path: '/fracton-frank-burgers-strings' },
+    { icon: Triangle, label: 'iTT-PESKCO Choi QEM', path: '/itt-peskco-purifier-qem' },
+    { icon: Flame, label: 'Helical-Cusp Star-Dreadnought', path: '/helical-cusp-dreadnought' },
+    { icon: DoorClosed, label: 'CRISPR-Cas12τ Insulator Gate', path: '/cas12tau-gate' },
+    { icon: Bomb, label: 'TIE Plasma Siege Interceptor', path: '/tie-plasma-siege-interceptor' },
+    { icon: Network, label: 'Fracton Braid Networks', path: '/fracton-braid-networks' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
