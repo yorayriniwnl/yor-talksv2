@@ -244,6 +244,11 @@ const RdreEngine = lazyWithRetry(() => import('@/pages/rdre-engine'));
 const RetronStudio = lazyWithRetry(() => import('@/pages/retron-studio'));
 const FlappyDrone = lazyWithRetry(() => import('@/pages/flappy-drone'));
 const QptStudio = lazyWithRetry(() => import('@/pages/qpt-studio'));
+const ExomoonSim = lazyWithRetry(() => import('@/pages/exomoon-sim'));
+const DfdFusionRocket = lazyWithRetry(() => import('@/pages/dfd-fusion-rocket'));
+const EpigeneticEditor = lazyWithRetry(() => import('@/pages/epigenetic-editor'));
+const LunarDefender = lazyWithRetry(() => import('@/pages/lunar-defender'));
+const HamiltonianSim = lazyWithRetry(() => import('@/pages/hamiltonian-sim'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -482,6 +487,11 @@ function ProtectedRoutes() {
               <Route path="/retron-studio" component={RetronStudio} />
               <Route path="/flappy-drone" component={FlappyDrone} />
               <Route path="/qpt-studio" component={QptStudio} />
+              <Route path="/exomoon-sim" component={ExomoonSim} />
+              <Route path="/dfd-fusion-rocket" component={DfdFusionRocket} />
+              <Route path="/epigenetic-editor" component={EpigeneticEditor} />
+              <Route path="/lunar-defender" component={LunarDefender} />
+              <Route path="/hamiltonian-sim" component={HamiltonianSim} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -192,6 +192,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'Retron msDNA Editor', path: '/retron-studio' },
     { icon: Plane, label: 'Flappy Drone 3D', path: '/flappy-drone' },
     { icon: Atom, label: 'QPT Chi Matrix', path: '/qpt-studio' },
+    { icon: Globe2, label: 'Exomoon Microlens', path: '/exomoon-sim' },
+    { icon: Rocket, label: 'DFD Fusion Engine', path: '/dfd-fusion-rocket' },
+    { icon: Scissors, label: 'Epigenetic Editor', path: '/epigenetic-editor' },
+    { icon: Crosshair, label: 'Lunar Defender 3D', path: '/lunar-defender' },
+    { icon: Atom, label: 'Trotter Hamiltonian', path: '/hamiltonian-sim' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
