@@ -232,6 +232,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Binary, label: 'CRISPR Logic Gates', path: '/crispr-logic' },
     { icon: Target, label: 'Vanguard 3D Defender', path: '/vanguard-sim' },
     { icon: Network, label: 'Quantum Graph Walk', path: '/graph-walk' },
+    { icon: GitMerge, label: 'Majorana Anyon Braid', path: '/majorana-braiding' },
+    { icon: Rocket, label: 'Magnetic Mirror Fusion', path: '/fusion-mirror' },
+    { icon: Clock, label: 'Epigenetic Aging Clock', path: '/epigenetic-clock' },
+    { icon: Bot, label: 'Berzerk 3D Maze', path: '/berzerk-arcade' },
+    { icon: Waves, label: 'CV Teleportation BK98', path: '/cv-teleport-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -284,6 +284,11 @@ const M2p2Sail = lazyWithRetry(() => import('@/pages/m2p2-sail'));
 const CrisprLogic = lazyWithRetry(() => import('@/pages/crispr-logic'));
 const VanguardSim = lazyWithRetry(() => import('@/pages/vanguard-sim'));
 const GraphWalk = lazyWithRetry(() => import('@/pages/graph-walk'));
+const MajoranaBraiding = lazyWithRetry(() => import('@/pages/majorana-braiding'));
+const FusionMirror = lazyWithRetry(() => import('@/pages/fusion-mirror'));
+const EpigeneticClock = lazyWithRetry(() => import('@/pages/epigenetic-clock'));
+const BerzerkArcade = lazyWithRetry(() => import('@/pages/berzerk-arcade'));
+const CvTeleportStudio = lazyWithRetry(() => import('@/pages/cv-teleport-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -562,6 +567,11 @@ function ProtectedRoutes() {
               <Route path="/crispr-logic" component={CrisprLogic} />
               <Route path="/vanguard-sim" component={VanguardSim} />
               <Route path="/graph-walk" component={GraphWalk} />
+              <Route path="/majorana-braiding" component={MajoranaBraiding} />
+              <Route path="/fusion-mirror" component={FusionMirror} />
+              <Route path="/epigenetic-clock" component={EpigeneticClock} />
+              <Route path="/berzerk-arcade" component={BerzerkArcade} />
+              <Route path="/cv-teleport-studio" component={CvTeleportStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
