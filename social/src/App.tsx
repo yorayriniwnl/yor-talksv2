@@ -224,6 +224,11 @@ const MifFusion = lazyWithRetry(() => import('@/pages/mif-fusion'));
 const ZfnStudio = lazyWithRetry(() => import('@/pages/zfn-studio'));
 const CyberPong = lazyWithRetry(() => import('@/pages/cyber-pong'));
 const VqeStudio = lazyWithRetry(() => import('@/pages/vqe-studio'));
+const AxionHaloscope = lazyWithRetry(() => import('@/pages/axion-haloscope'));
+const StellaratorSim = lazyWithRetry(() => import('@/pages/stellarator-sim'));
+const BaseEditor = lazyWithRetry(() => import('@/pages/base-editor'));
+const SpaceInvaders = lazyWithRetry(() => import('@/pages/space-invaders'));
+const QaoaStudio = lazyWithRetry(() => import('@/pages/qaoa-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -442,6 +447,11 @@ function ProtectedRoutes() {
               <Route path="/zfn-studio" component={ZfnStudio} />
               <Route path="/cyber-pong" component={CyberPong} />
               <Route path="/vqe-studio" component={VqeStudio} />
+              <Route path="/axion-haloscope" component={AxionHaloscope} />
+              <Route path="/stellarator-sim" component={StellaratorSim} />
+              <Route path="/base-editor" component={BaseEditor} />
+              <Route path="/space-invaders" component={SpaceInvaders} />
+              <Route path="/qaoa-studio" component={QaoaStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

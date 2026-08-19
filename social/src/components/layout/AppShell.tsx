@@ -172,6 +172,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'Zinc Finger ZFN', path: '/zfn-studio' },
     { icon: Zap, label: 'Cyber Pong 3D', path: '/cyber-pong' },
     { icon: Atom, label: 'VQE Chemistry', path: '/vqe-studio' },
+    { icon: Radio, label: 'Axion Haloscope', path: '/axion-haloscope' },
+    { icon: Flame, label: 'Stellarator W7-X', path: '/stellarator-sim' },
+    { icon: Scissors, label: 'Base Editor (CBE/ABE)', path: '/base-editor' },
+    { icon: Target, label: 'Space Invaders 3D', path: '/space-invaders' },
+    { icon: Atom, label: 'QAOA Max-Cut', path: '/qaoa-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
