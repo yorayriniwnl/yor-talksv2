@@ -544,6 +544,11 @@ const MirrorCuspBattlecruiser = lazyWithRetry(() => import('@/pages/mirror-cusp-
 const Cas12omicronRegulator = lazyWithRetry(() => import('@/pages/cas12omicron-regulator'));
 const TieWarheadInterceptor = lazyWithRetry(() => import('@/pages/tie-warhead-interceptor'));
 const FractonDislocationGlass = lazyWithRetry(() => import('@/pages/fracton-dislocation-glass'));
+const IttPepsPurifierQem = lazyWithRetry(() => import('@/pages/itt-peps-purifier-qem'));
+const HelicalScrewPinch = lazyWithRetry(() => import('@/pages/helical-screw-pinch'));
+const Cas12piSwitcher = lazyWithRetry(() => import('@/pages/cas12pi-switcher'));
+const TieBombardmentInterceptor = lazyWithRetry(() => import('@/pages/tie-bombardment-interceptor'));
+const FractonHelicalDisclinations = lazyWithRetry(() => import('@/pages/fracton-helical-disclinations'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1082,6 +1087,11 @@ function ProtectedRoutes() {
               <Route path="/cas12omicron-regulator" component={Cas12omicronRegulator} />
               <Route path="/tie-warhead-interceptor" component={TieWarheadInterceptor} />
               <Route path="/fracton-dislocation-glass" component={FractonDislocationGlass} />
+              <Route path="/itt-peps-purifier-qem" component={IttPepsPurifierQem} />
+              <Route path="/helical-screw-pinch" component={HelicalScrewPinch} />
+              <Route path="/cas12pi-switcher" component={Cas12piSwitcher} />
+              <Route path="/tie-bombardment-interceptor" component={TieBombardmentInterceptor} />
+              <Route path="/fracton-helical-disclinations" component={FractonHelicalDisclinations} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

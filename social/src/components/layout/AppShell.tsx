@@ -492,6 +492,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Cpu, label: 'CRISPR-Cas12ο Loop Regulator', path: '/cas12omicron-regulator' },
     { icon: Rocket, label: 'TIE Warhead Interceptor', path: '/tie-warhead-interceptor' },
     { icon: Network, label: 'Fracton Dislocation Glass', path: '/fracton-dislocation-glass' },
+    { icon: Atom, label: 'iTT-PEPS 2D QEM', path: '/itt-peps-purifier-qem' },
+    { icon: Flame, label: 'Helical Screw-Pinch Flagship', path: '/helical-screw-pinch' },
+    { icon: Radio, label: 'CRISPR-Cas12π TAD Switcher', path: '/cas12pi-switcher' },
+    { icon: Bomb, label: 'TIE Bombardment Interceptor', path: '/tie-bombardment-interceptor' },
+    { icon: Disc3, label: 'Fracton Helical Disclinations', path: '/fracton-helical-disclinations' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
