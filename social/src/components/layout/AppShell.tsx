@@ -312,6 +312,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Cpu, label: 'CRISPR-Cas12c Dual Logic', path: '/cas12c-logic' },
     { icon: Gauge, label: 'TIE Interceptor Slalom', path: '/tie-interceptor-slalom' },
     { icon: Box, label: 'Haah\'s Cubic Code Memory', path: '/haah-code' },
+    { icon: Copy, label: 'Twin-State Virtual Verification', path: '/twin-state-qem' },
+    { icon: Zap, label: 'DPF Pinch Fusion Rocket', path: '/dpf-pinch-rocket' },
+    { icon: RefreshCw, label: 'CRISPR-Cas12l Retron', path: '/cas12l-retron' },
+    { icon: Swords, label: 'TIE Silencer Dogfight', path: '/tie-silencer-dogfight' },
+    { icon: Network, label: '3D String Condensation', path: '/string-condensation' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -364,6 +364,11 @@ const AntimatterRamExplorer = lazyWithRetry(() => import('@/pages/antimatter-ram
 const Cas12cLogic = lazyWithRetry(() => import('@/pages/cas12c-logic'));
 const TieInterceptorSlalom = lazyWithRetry(() => import('@/pages/tie-interceptor-slalom'));
 const HaahCode = lazyWithRetry(() => import('@/pages/haah-code'));
+const TwinStateQem = lazyWithRetry(() => import('@/pages/twin-state-qem'));
+const DpfPinchRocket = lazyWithRetry(() => import('@/pages/dpf-pinch-rocket'));
+const Cas12lRetron = lazyWithRetry(() => import('@/pages/cas12l-retron'));
+const TieSilencerDogfight = lazyWithRetry(() => import('@/pages/tie-silencer-dogfight'));
+const StringCondensation = lazyWithRetry(() => import('@/pages/string-condensation'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -722,6 +727,11 @@ function ProtectedRoutes() {
               <Route path="/cas12c-logic" component={Cas12cLogic} />
               <Route path="/tie-interceptor-slalom" component={TieInterceptorSlalom} />
               <Route path="/haah-code" component={HaahCode} />
+              <Route path="/twin-state-qem" component={TwinStateQem} />
+              <Route path="/dpf-pinch-rocket" component={DpfPinchRocket} />
+              <Route path="/cas12l-retron" component={Cas12lRetron} />
+              <Route path="/tie-silencer-dogfight" component={TieSilencerDogfight} />
+              <Route path="/string-condensation" component={StringCondensation} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
