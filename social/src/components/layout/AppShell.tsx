@@ -257,6 +257,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitMerge, label: 'SY14 Chromosome Fusion', path: '/sy14-fusion' },
     { icon: Circle, label: 'Marble Madness 3D', path: '/marble-arcade' },
     { icon: Compass, label: 'Bures Metric QFI', path: '/bures-fisher' },
+    { icon: TrendingDown, label: 'ZNE Error Mitigation', path: '/zne-studio' },
+    { icon: Wind, label: 'Gas-Core Nuclear Rocket', path: '/gas-core-engine' },
+    { icon: Link, label: 'Bio-Orthogonal Click', path: '/click-chemistry' },
+    { icon: Target, label: 'Death Star II Core Run', path: '/death-star-core' },
+    { icon: Pentagram, label: 'KCBS Pentagram Qutrit', path: '/kcbs-pentagram' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

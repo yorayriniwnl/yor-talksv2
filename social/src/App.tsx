@@ -309,6 +309,11 @@ const NswrEngine = lazyWithRetry(() => import('@/pages/nswr-engine'));
 const Sy14Fusion = lazyWithRetry(() => import('@/pages/sy14-fusion'));
 const MarbleArcade = lazyWithRetry(() => import('@/pages/marble-arcade'));
 const BuresFisher = lazyWithRetry(() => import('@/pages/bures-fisher'));
+const ZneStudio = lazyWithRetry(() => import('@/pages/zne-studio'));
+const GasCoreEngine = lazyWithRetry(() => import('@/pages/gas-core-engine'));
+const ClickChemistry = lazyWithRetry(() => import('@/pages/click-chemistry'));
+const DeathStarCore = lazyWithRetry(() => import('@/pages/death-star-core'));
+const KcbsPentagram = lazyWithRetry(() => import('@/pages/kcbs-pentagram'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -612,6 +617,11 @@ function ProtectedRoutes() {
               <Route path="/sy14-fusion" component={Sy14Fusion} />
               <Route path="/marble-arcade" component={MarbleArcade} />
               <Route path="/bures-fisher" component={BuresFisher} />
+              <Route path="/zne-studio" component={ZneStudio} />
+              <Route path="/gas-core-engine" component={GasCoreEngine} />
+              <Route path="/click-chemistry" component={ClickChemistry} />
+              <Route path="/death-star-core" component={DeathStarCore} />
+              <Route path="/kcbs-pentagram" component={KcbsPentagram} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
