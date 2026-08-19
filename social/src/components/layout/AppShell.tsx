@@ -412,6 +412,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: BoxSelect, label: 'CRISPR-Cas12y Transposon', path: '/cas12y-transposon' },
     { icon: Swords, label: 'TIE Aggressor Heavy Gunship', path: '/tie-aggressor-patrol' },
     { icon: Orbit, label: 'Fracton Vortex Glass', path: '/fracton-vortex-glass' },
+    { icon: Triangle, label: 'PESS Simplex Purifier QEM', path: '/pess-purifier-qem' },
+    { icon: Flame, label: 'Fast Ignition Dreadnought', path: '/fast-ignition-dreadnought' },
+    { icon: Sun, label: 'CRISPR-Cas12z Demethylase', path: '/cas12z-demethylase' },
+    { icon: Radio, label: 'TIE Scout Recon Probe', path: '/tie-scout-probe' },
+    { icon: Magnet, label: 'Fracton Meissner Flux Effect', path: '/fracton-meissner-flux' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

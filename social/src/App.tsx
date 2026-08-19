@@ -464,6 +464,11 @@ const PolywellWarpVanguard = lazyWithRetry(() => import('@/pages/polywell-warp-v
 const Cas12yTransposon = lazyWithRetry(() => import('@/pages/cas12y-transposon'));
 const TieAggressorPatrol = lazyWithRetry(() => import('@/pages/tie-aggressor-patrol'));
 const FractonVortexGlass = lazyWithRetry(() => import('@/pages/fracton-vortex-glass'));
+const PessPurifierQem = lazyWithRetry(() => import('@/pages/pess-purifier-qem'));
+const FastIgnitionDreadnought = lazyWithRetry(() => import('@/pages/fast-ignition-dreadnought'));
+const Cas12zDemethylase = lazyWithRetry(() => import('@/pages/cas12z-demethylase'));
+const TieScoutProbe = lazyWithRetry(() => import('@/pages/tie-scout-probe'));
+const FractonMeissnerFlux = lazyWithRetry(() => import('@/pages/fracton-meissner-flux'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -922,6 +927,11 @@ function ProtectedRoutes() {
               <Route path="/cas12y-transposon" component={Cas12yTransposon} />
               <Route path="/tie-aggressor-patrol" component={TieAggressorPatrol} />
               <Route path="/fracton-vortex-glass" component={FractonVortexGlass} />
+              <Route path="/pess-purifier-qem" component={PessPurifierQem} />
+              <Route path="/fast-ignition-dreadnought" component={FastIgnitionDreadnought} />
+              <Route path="/cas12z-demethylase" component={Cas12zDemethylase} />
+              <Route path="/tie-scout-probe" component={TieScoutProbe} />
+              <Route path="/fracton-meissner-flux" component={FractonMeissnerFlux} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
