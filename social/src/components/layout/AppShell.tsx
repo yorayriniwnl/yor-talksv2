@@ -272,6 +272,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Shuffle, label: 'Sc2.0 SCRaMbLE Studio', path: '/scramble-studio' },
     { icon: Cable, label: 'Hoth Speeder Harpoon 3D', path: '/hoth-speeder' },
     { icon: GitFork, label: 'Tripartite W-State', path: '/w-state-studio' },
+    { icon: Filter, label: 'Virtual Distillation QEM', path: '/virtual-distillation' },
+    { icon: Magnet, label: 'Pulsed Plasmoid Fusion', path: '/pulsed-plasmoid' },
+    { icon: ToggleLeft, label: 'Synthetic Riboswitch', path: '/riboswitch-studio' },
+    { icon: Trees, label: 'Endor Speeder Slalom 3D', path: '/endor-speeder' },
+    { icon: Network, label: 'Continuous-Variable MBQC', path: '/cv-mbqc-studio' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

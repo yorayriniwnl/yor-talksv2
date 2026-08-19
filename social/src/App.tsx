@@ -324,6 +324,11 @@ const AcmfRocket = lazyWithRetry(() => import('@/pages/acmf-rocket'));
 const ScrambleStudio = lazyWithRetry(() => import('@/pages/scramble-studio'));
 const HothSpeeder = lazyWithRetry(() => import('@/pages/hoth-speeder'));
 const WStateStudio = lazyWithRetry(() => import('@/pages/w-state-studio'));
+const VirtualDistillation = lazyWithRetry(() => import('@/pages/virtual-distillation'));
+const PulsedPlasmoid = lazyWithRetry(() => import('@/pages/pulsed-plasmoid'));
+const RiboswitchStudio = lazyWithRetry(() => import('@/pages/riboswitch-studio'));
+const EndorSpeeder = lazyWithRetry(() => import('@/pages/endor-speeder'));
+const CvMbqcStudio = lazyWithRetry(() => import('@/pages/cv-mbqc-studio'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -642,6 +647,11 @@ function ProtectedRoutes() {
               <Route path="/scramble-studio" component={ScrambleStudio} />
               <Route path="/hoth-speeder" component={HothSpeeder} />
               <Route path="/w-state-studio" component={WStateStudio} />
+              <Route path="/virtual-distillation" component={VirtualDistillation} />
+              <Route path="/pulsed-plasmoid" component={PulsedPlasmoid} />
+              <Route path="/riboswitch-studio" component={RiboswitchStudio} />
+              <Route path="/endor-speeder" component={EndorSpeeder} />
+              <Route path="/cv-mbqc-studio" component={CvMbqcStudio} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
