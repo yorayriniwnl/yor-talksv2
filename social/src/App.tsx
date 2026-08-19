@@ -484,6 +484,11 @@ const CbtFusionDreadnought = lazyWithRetry(() => import('@/pages/cbt-fusion-drea
 const Cas12gammaCuring = lazyWithRetry(() => import('@/pages/cas12gamma-curing'));
 const TieTorpedoInterceptor = lazyWithRetry(() => import('@/pages/tie-torpedo-interceptor'));
 const FractonVortexRings = lazyWithRetry(() => import('@/pages/fracton-vortex-rings'));
+const ItebdPurifierQem = lazyWithRetry(() => import('@/pages/itebd-purifier-qem'));
+const DynamicScrewPinch = lazyWithRetry(() => import('@/pages/dynamic-screw-pinch'));
+const Cas12deltaScrambler = lazyWithRetry(() => import('@/pages/cas12delta-scrambler'));
+const TieClawcraftSkirmish = lazyWithRetry(() => import('@/pages/tie-clawcraft-skirmish'));
+const FractonMoireFlatband = lazyWithRetry(() => import('@/pages/fracton-moire-flatband'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -962,6 +967,11 @@ function ProtectedRoutes() {
               <Route path="/cas12gamma-curing" component={Cas12gammaCuring} />
               <Route path="/tie-torpedo-interceptor" component={TieTorpedoInterceptor} />
               <Route path="/fracton-vortex-rings" component={FractonVortexRings} />
+              <Route path="/itebd-purifier-qem" component={ItebdPurifierQem} />
+              <Route path="/dynamic-screw-pinch" component={DynamicScrewPinch} />
+              <Route path="/cas12delta-scrambler" component={Cas12deltaScrambler} />
+              <Route path="/tie-clawcraft-skirmish" component={TieClawcraftSkirmish} />
+              <Route path="/fracton-moire-flatband" component={FractonMoireFlatband} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
