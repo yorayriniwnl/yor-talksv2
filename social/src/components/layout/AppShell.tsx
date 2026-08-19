@@ -377,6 +377,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: ShieldAlert, label: 'CRISPR-Cas12r Repressor', path: '/cas12r-repressor' },
     { icon: Swords, label: 'TIE Reaper Orbital Fleet Drop', path: '/tie-reaper-drop' },
     { icon: Disc, label: 'Non-Abelian Tensor Fracton', path: '/non-abelian-tensor-fracton' },
+    { icon: FunctionSquare, label: 'Lindbladian Generator QEM', path: '/lindblad-generator-qem' },
+    { icon: Flame, label: 'Petawatt Boron Star-Cruiser', path: '/petawatt-boron-cruiser' },
+    { icon: GitCommit, label: 'CRISPR-Cas12s Dual Editor', path: '/cas12s-base-editor' },
+    { icon: Swords, label: 'TIE Brute Heavy Patrol', path: '/tie-brute-patrol' },
+    { icon: Grid, label: 'Cauchy Stress Fracton Duality', path: '/fracton-stress-tensor' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

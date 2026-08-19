@@ -429,6 +429,11 @@ const StagedMtfInterceptor = lazyWithRetry(() => import('@/pages/staged-mtf-inte
 const Cas12rRepressor = lazyWithRetry(() => import('@/pages/cas12r-repressor'));
 const TieReaperDrop = lazyWithRetry(() => import('@/pages/tie-reaper-drop'));
 const NonAbelianTensorFracton = lazyWithRetry(() => import('@/pages/non-abelian-tensor-fracton'));
+const LindbladGeneratorQem = lazyWithRetry(() => import('@/pages/lindblad-generator-qem'));
+const PetawattBoronCruiser = lazyWithRetry(() => import('@/pages/petawatt-boron-cruiser'));
+const Cas12sBaseEditor = lazyWithRetry(() => import('@/pages/cas12s-base-editor'));
+const TieBrutePatrol = lazyWithRetry(() => import('@/pages/tie-brute-patrol'));
+const FractonStressTensor = lazyWithRetry(() => import('@/pages/fracton-stress-tensor'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -852,6 +857,11 @@ function ProtectedRoutes() {
               <Route path="/cas12r-repressor" component={Cas12rRepressor} />
               <Route path="/tie-reaper-drop" component={TieReaperDrop} />
               <Route path="/non-abelian-tensor-fracton" component={NonAbelianTensorFracton} />
+              <Route path="/lindblad-generator-qem" component={LindbladGeneratorQem} />
+              <Route path="/petawatt-boron-cruiser" component={PetawattBoronCruiser} />
+              <Route path="/cas12s-base-editor" component={Cas12sBaseEditor} />
+              <Route path="/tie-brute-patrol" component={TieBrutePatrol} />
+              <Route path="/fracton-stress-tensor" component={FractonStressTensor} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
