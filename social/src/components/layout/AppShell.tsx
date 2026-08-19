@@ -482,6 +482,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Anchor, label: 'CRISPR-Cas12ν Loop Anchor', path: '/cas12nu-anchor' },
     { icon: Swords, label: 'TIE Bizarro Turbolaser Gunship', path: '/tie-bizarro-gunship' },
     { icon: Disc3, label: 'Fracton Disclination Condensate', path: '/fracton-disclination-condensates' },
+    { icon: Atom, label: 'iPEPO Thermal Gibbs QEM', path: '/ipepo-purifier-qem' },
+    { icon: Flame, label: 'Dynamic Spheromak Merger Cruiser', path: '/dynamic-spheromak-merger' },
+    { icon: Shield, label: 'CRISPR-Cas12ξ Chromatin Boundary', path: '/cas12xi-boundary' },
+    { icon: FastForward, label: 'TIE Booster Interceptor', path: '/tie-booster-interceptor' },
+    { icon: GitCommit, label: 'Fracton Vortex String Condensate', path: '/fracton-vortex-string-condensates' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

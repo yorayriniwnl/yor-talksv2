@@ -534,6 +534,11 @@ const FieldReversedThetaPinch = lazyWithRetry(() => import('@/pages/field-revers
 const Cas12nuAnchor = lazyWithRetry(() => import('@/pages/cas12nu-anchor'));
 const TieBizarroGunship = lazyWithRetry(() => import('@/pages/tie-bizarro-gunship'));
 const FractonDisclinationCondensates = lazyWithRetry(() => import('@/pages/fracton-disclination-condensates'));
+const IpepoPurifierQem = lazyWithRetry(() => import('@/pages/ipepo-purifier-qem'));
+const DynamicSpheromakMerger = lazyWithRetry(() => import('@/pages/dynamic-spheromak-merger'));
+const Cas12xiBoundary = lazyWithRetry(() => import('@/pages/cas12xi-boundary'));
+const TieBoosterInterceptor = lazyWithRetry(() => import('@/pages/tie-booster-interceptor'));
+const FractonVortexStringCondensates = lazyWithRetry(() => import('@/pages/fracton-vortex-string-condensates'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1062,6 +1067,11 @@ function ProtectedRoutes() {
               <Route path="/cas12nu-anchor" component={Cas12nuAnchor} />
               <Route path="/tie-bizarro-gunship" component={TieBizarroGunship} />
               <Route path="/fracton-disclination-condensates" component={FractonDisclinationCondensates} />
+              <Route path="/ipepo-purifier-qem" component={IpepoPurifierQem} />
+              <Route path="/dynamic-spheromak-merger" component={DynamicSpheromakMerger} />
+              <Route path="/cas12xi-boundary" component={Cas12xiBoundary} />
+              <Route path="/tie-booster-interceptor" component={TieBoosterInterceptor} />
+              <Route path="/fracton-vortex-string-condensates" component={FractonVortexStringCondensates} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
