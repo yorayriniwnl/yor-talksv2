@@ -254,6 +254,11 @@ const HdltThruster = lazyWithRetry(() => import('@/pages/hdlt-thruster'));
 const NcaaStudio = lazyWithRetry(() => import('@/pages/ncaa-studio'));
 const StarCastle = lazyWithRetry(() => import('@/pages/star-castle'));
 const QsvtStudio = lazyWithRetry(() => import('@/pages/qsvt-studio'));
+const PmnsOscillation = lazyWithRetry(() => import('@/pages/pmns-oscillation'));
+const PhotonicRocket = lazyWithRetry(() => import('@/pages/photonic-rocket'));
+const RibosomeO = lazyWithRetry(() => import('@/pages/ribosome-o'));
+const RobotMaze = lazyWithRetry(() => import('@/pages/robot-maze'));
+const IsingQpt = lazyWithRetry(() => import('@/pages/ising-qpt'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -502,6 +507,11 @@ function ProtectedRoutes() {
               <Route path="/ncaa-studio" component={NcaaStudio} />
               <Route path="/star-castle" component={StarCastle} />
               <Route path="/qsvt-studio" component={QsvtStudio} />
+              <Route path="/pmns-oscillation" component={PmnsOscillation} />
+              <Route path="/photonic-rocket" component={PhotonicRocket} />
+              <Route path="/ribosome-o" component={RibosomeO} />
+              <Route path="/robot-maze" component={RobotMaze} />
+              <Route path="/ising-qpt" component={IsingQpt} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

@@ -202,6 +202,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Dna, label: 'ncAA Genetic Code', path: '/ncaa-studio' },
     { icon: Target, label: 'Star Castle 3D', path: '/star-castle' },
     { icon: Atom, label: 'QSVT Grand Unified', path: '/qsvt-studio' },
+    { icon: Atom, label: 'PMNS Neutrino MSW', path: '/pmns-oscillation' },
+    { icon: Rocket, label: 'Photonic Laser Rocket', path: '/photonic-rocket' },
+    { icon: Dna, label: 'Ribo-Q Quadruplet', path: '/ribosome-o' },
+    { icon: Target, label: 'Robot Maze 3D', path: '/robot-maze' },
+    { icon: Atom, label: 'Ising QPT Criticality', path: '/ising-qpt' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
