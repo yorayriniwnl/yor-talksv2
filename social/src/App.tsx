@@ -434,6 +434,11 @@ const PetawattBoronCruiser = lazyWithRetry(() => import('@/pages/petawatt-boron-
 const Cas12sBaseEditor = lazyWithRetry(() => import('@/pages/cas12s-base-editor'));
 const TieBrutePatrol = lazyWithRetry(() => import('@/pages/tie-brute-patrol'));
 const FractonStressTensor = lazyWithRetry(() => import('@/pages/fracton-stress-tensor'));
+const DmrgPurifierQem = lazyWithRetry(() => import('@/pages/dmrg-purifier-qem'));
+const StagedZpinchScout = lazyWithRetry(() => import('@/pages/staged-zpinch-scout'));
+const Cas12tPrimeEditor = lazyWithRetry(() => import('@/pages/cas12t-prime-editor'));
+const TieEchelonRaid = lazyWithRetry(() => import('@/pages/tie-echelon-raid'));
+const FractonDisclinationClumping = lazyWithRetry(() => import('@/pages/fracton-disclination-clumping'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -862,6 +867,11 @@ function ProtectedRoutes() {
               <Route path="/cas12s-base-editor" component={Cas12sBaseEditor} />
               <Route path="/tie-brute-patrol" component={TieBrutePatrol} />
               <Route path="/fracton-stress-tensor" component={FractonStressTensor} />
+              <Route path="/dmrg-purifier-qem" component={DmrgPurifierQem} />
+              <Route path="/staged-zpinch-scout" component={StagedZpinchScout} />
+              <Route path="/cas12t-prime-editor" component={Cas12tPrimeEditor} />
+              <Route path="/tie-echelon-raid" component={TieEchelonRaid} />
+              <Route path="/fracton-disclination-clumping" component={FractonDisclinationClumping} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

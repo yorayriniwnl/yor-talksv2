@@ -382,6 +382,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: GitCommit, label: 'CRISPR-Cas12s Dual Editor', path: '/cas12s-base-editor' },
     { icon: Swords, label: 'TIE Brute Heavy Patrol', path: '/tie-brute-patrol' },
     { icon: Grid, label: 'Cauchy Stress Fracton Duality', path: '/fracton-stress-tensor' },
+    { icon: FunctionSquare, label: 'DMRG Purifier QEM', path: '/dmrg-purifier-qem' },
+    { icon: Flame, label: 'Staged Z-Pinch Fusion Scout', path: '/staged-zpinch-scout' },
+    { icon: PlusCircle, label: 'CRISPR-Cas12t Prime Editor', path: '/cas12t-prime-editor' },
+    { icon: Swords, label: 'TIE Echelon Hyperspace Raid', path: '/tie-echelon-raid' },
+    { icon: Grid, label: 'Fracton Disclination Clumping', path: '/fracton-disclination-clumping' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
