@@ -304,6 +304,11 @@ const StartramSim = lazyWithRetry(() => import('@/pages/startram-sim'));
 const RnaiStudio = lazyWithRetry(() => import('@/pages/rnai-studio'));
 const CommandArcade = lazyWithRetry(() => import('@/pages/command-arcade'));
 const HardyParadox = lazyWithRetry(() => import('@/pages/hardy-paradox'));
+const LaughlinFqhe = lazyWithRetry(() => import('@/pages/laughlin-fqhe'));
+const NswrEngine = lazyWithRetry(() => import('@/pages/nswr-engine'));
+const Sy14Fusion = lazyWithRetry(() => import('@/pages/sy14-fusion'));
+const MarbleArcade = lazyWithRetry(() => import('@/pages/marble-arcade'));
+const BuresFisher = lazyWithRetry(() => import('@/pages/bures-fisher'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -602,6 +607,11 @@ function ProtectedRoutes() {
               <Route path="/rnai-studio" component={RnaiStudio} />
               <Route path="/command-arcade" component={CommandArcade} />
               <Route path="/hardy-paradox" component={HardyParadox} />
+              <Route path="/laughlin-fqhe" component={LaughlinFqhe} />
+              <Route path="/nswr-engine" component={NswrEngine} />
+              <Route path="/sy14-fusion" component={Sy14Fusion} />
+              <Route path="/marble-arcade" component={MarbleArcade} />
+              <Route path="/bures-fisher" component={BuresFisher} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>

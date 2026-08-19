@@ -252,6 +252,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Scissors, label: 'RNAi Dicer Ago2 RISC', path: '/rnai-studio' },
     { icon: ShieldAlert, label: 'Missile Command 3D', path: '/command-arcade' },
     { icon: Atom, label: 'Hardy Paradox Proof', path: '/hardy-paradox' },
+    { icon: Snowflake, label: 'Laughlin Anyon FQHE', path: '/laughlin-fqhe' },
+    { icon: Radiation, label: 'NSWR Fission Rocket', path: '/nswr-engine' },
+    { icon: GitMerge, label: 'SY14 Chromosome Fusion', path: '/sy14-fusion' },
+    { icon: Circle, label: 'Marble Madness 3D', path: '/marble-arcade' },
+    { icon: Compass, label: 'Bures Metric QFI', path: '/bures-fisher' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
