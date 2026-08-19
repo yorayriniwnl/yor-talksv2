@@ -362,6 +362,11 @@ export function AppShell({ children }: AppShellProps) {
     { icon: PackagePlus, label: 'CRISPR-Cas12o Transposase', path: '/cas12o-transposase' },
     { icon: Swords, label: 'V-Wing Starfighter Escort', path: '/vwing-escort' },
     { icon: Grid, label: 'Fracton Elasticity Duality', path: '/fracton-elasticity' },
+    { icon: FunctionSquare, label: 'Operator RB QEM Filter', path: '/operator-rb-qem' },
+    { icon: Flame, label: 'CMM Supersonic Fusion Corvette', path: '/cmm-corvette' },
+    { icon: GitFork, label: 'CRISPR-Cas12p Polygenic Cascade', path: '/cas12p-cascade' },
+    { icon: Swords, label: 'TIE Striker Scarif Skirmish', path: '/tie-striker-skirmish' },
+    { icon: Box, label: 'Higher-Rank Toric Tensor Phase', path: '/higher-rank-toric' },
     { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -414,6 +414,11 @@ const DpfFastCourier = lazyWithRetry(() => import('@/pages/dpf-fast-courier'));
 const Cas12oTransposase = lazyWithRetry(() => import('@/pages/cas12o-transposase'));
 const VwingEscort = lazyWithRetry(() => import('@/pages/vwing-escort'));
 const FractonElasticity = lazyWithRetry(() => import('@/pages/fracton-elasticity'));
+const OperatorRbQem = lazyWithRetry(() => import('@/pages/operator-rb-qem'));
+const CmmCorvette = lazyWithRetry(() => import('@/pages/cmm-corvette'));
+const Cas12pCascade = lazyWithRetry(() => import('@/pages/cas12p-cascade'));
+const TieStrikerSkirmish = lazyWithRetry(() => import('@/pages/tie-striker-skirmish'));
+const HigherRankToric = lazyWithRetry(() => import('@/pages/higher-rank-toric'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -822,6 +827,11 @@ function ProtectedRoutes() {
               <Route path="/cas12o-transposase" component={Cas12oTransposase} />
               <Route path="/vwing-escort" component={VwingEscort} />
               <Route path="/fracton-elasticity" component={FractonElasticity} />
+              <Route path="/operator-rb-qem" component={OperatorRbQem} />
+              <Route path="/cmm-corvette" component={CmmCorvette} />
+              <Route path="/cas12p-cascade" component={Cas12pCascade} />
+              <Route path="/tie-striker-skirmish" component={TieStrikerSkirmish} />
+              <Route path="/higher-rank-toric" component={HigherRankToric} />
               <Route path="/settings" component={Settings} />
               <Route component={NotFound} />
             </Switch>
