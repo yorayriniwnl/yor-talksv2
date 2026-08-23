@@ -48,6 +48,26 @@ export default defineConfig({
   build: {
     outDir: path.resolve(currentDir, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — changes rarely, cache aggressively
+          'vendor-react': ['react', 'react-dom'],
+          // Animation framework
+          'vendor-motion': ['framer-motion'],
+          // Date utilities
+          'vendor-date': ['date-fns'],
+          // Heavy charting (used by dashboard)
+          'vendor-charts': ['recharts'],
+          // Icon library
+          'vendor-icons': ['lucide-react'],
+          // State management + data
+          'vendor-state': ['zustand'],
+          // Mock data (heavy, isolate it)
+          'app-mock-data': ['./src/lib/mockData.ts'],
+        },
+      },
+    },
   },
   server: {
     port,

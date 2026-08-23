@@ -33,7 +33,9 @@ import {
   MOCK_LIVESTREAMS,
   MOCK_CONVERSATIONS,
   MOCK_MESSAGES_BY_CONVERSATION,
-  MOCK_NOTIFICATIONS
+  MOCK_NOTIFICATIONS,
+  MOCK_SHOWCASES,
+  MOCK_PROFILE_COMMENTS
 } from './mockData';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -244,33 +246,34 @@ export type PrivacySettings = {
 function mapUser(u: BackendUser): User {
   return {
     id: u.id,
-    username: u.username,
-    displayName: u.fullName || u.username,
+    username: u.username || 'user',
+    displayName: u.fullName || u.username || 'User',
     avatarUrl: u.avatarUrl || `https://i.pravatar.cc/150?u=${u.id}`,
-    bio: u.bio,
-    verified: false,
-    followers: u.followers?.length ?? 0,
-    following: u.following?.length ?? 0,
-    followingIds: u.following,
-    blockedUserIds: u.blockedUsers,
-    mutedUserIds: u.mutedUsers,
+    bio: u.bio || '',
+    verified: Boolean(u.role === 'admin' || (u as any).verified),
+    followers: Array.isArray(u.followers) ? u.followers.length : 0,
+    following: Array.isArray(u.following) ? u.following.length : 0,
+    followingIds: Array.isArray(u.following) ? u.following : [],
+    blockedUserIds: Array.isArray(u.blockedUsers) ? u.blockedUsers : [],
+    mutedUserIds: Array.isArray(u.mutedUsers) ? u.mutedUsers : [],
   };
 }
 
 function mapStory(s: BackendStory, currentUserId?: string): Story {
+  const viewerIds = Array.isArray(s.viewerIds) ? s.viewerIds : [];
   return {
     id: s.id,
     authorId: s.authorId,
     mediaUrl: s.mediaUrl,
-    type: s.type as Story['type'],
+    type: (s.type as Story['type']) || 'image',
     textContent: s.textContent ?? undefined,
     backgroundGradient: s.backgroundGradient ?? undefined,
-    viewed: currentUserId ? s.viewerIds.includes(currentUserId) : false,
-    createdAt: s.createdAt,
-    expiresAt: s.expiresAt,
-    viewerIds: s.viewerIds,
-    reactions: s.reactions,
-    isHighlight: s.isHighlight,
+    viewed: currentUserId ? viewerIds.includes(currentUserId) : false,
+    createdAt: s.createdAt || new Date().toISOString(),
+    expiresAt: s.expiresAt || new Date(Date.now() + 86400000).toISOString(),
+    viewerIds,
+    reactions: Array.isArray(s.reactions) ? s.reactions : [],
+    isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
   };
 }
@@ -291,31 +294,36 @@ function getSpatialData(id: string) {
 
 function mapPost(p: BackendPost, currentUserId?: string): Post {
   const spatial = getSpatialData(p.id);
+  const likedBy = Array.isArray(p.likedBy) ? p.likedBy : [];
+  const bookmarkedBy = Array.isArray(p.bookmarkedBy) ? p.bookmarkedBy : [];
+  const comments = Array.isArray(p.comments) ? p.comments : [];
+
   return {
     id: p.id,
     authorId: p.authorId,
-    content: p.content,
+    content: p.content || '',
     media: p.images && p.images.length ? p.images : undefined,
-    likes: p.likedBy?.length ?? 0,
-    comments: p.comments?.length ?? 0,
+    likes: likedBy.length,
+    comments: comments.length,
     shares: p.shareCount ?? 0,
     resonanceScore: spatial.resonanceScore,
     x: spatial.x,
     y: spatial.y,
-    createdAt: p.createdAt,
-    likedByMe: currentUserId ? p.likedBy?.includes(currentUserId) : false,
-    savedByMe: currentUserId ? p.bookmarkedBy?.includes(currentUserId) : false,
+    createdAt: p.createdAt || new Date().toISOString(),
+    likedByMe: currentUserId ? likedBy.includes(currentUserId) : false,
+    savedByMe: currentUserId ? bookmarkedBy.includes(currentUserId) : false,
   };
 }
 
 function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
+  const memberIds = Array.isArray(c.memberIds) ? c.memberIds : [];
   return {
     id: c.id,
-    name: c.name,
-    description: c.description,
+    name: c.name || 'Community',
+    description: c.description || '',
     coverUrl: `https://picsum.photos/seed/${c.id}/600/300`,
-    members: c.memberIds?.length ?? 0,
-    isMember: currentUserId ? c.memberIds?.includes(currentUserId) : false,
+    members: memberIds.length,
+    isMember: currentUserId ? memberIds.includes(currentUserId) : false,
     visibility: 'public',
     category: 'General',
   };
@@ -326,9 +334,9 @@ function mapMessage(m: BackendMessage): Message {
     id: m.id,
     conversationId: m.conversationId,
     senderId: m.senderId,
-    content: m.content,
-    createdAt: m.createdAt,
-    read: m.seenAt !== null,
+    content: m.content || '',
+    createdAt: m.createdAt || new Date().toISOString(),
+    read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
     replyToId: m.replyToId ?? null,
   };
 }
@@ -336,9 +344,9 @@ function mapMessage(m: BackendMessage): Message {
 function mapConversation(c: BackendConversation, lastMessage: BackendMessage | null): Conversation {
   return {
     id: c.id,
-    participantIds: c.participantIds ?? [c.participantA, c.participantB],
+    participantIds: Array.isArray(c.participantIds) ? c.participantIds : [c.participantA, c.participantB].filter(Boolean),
     lastMessage: lastMessage ? mapMessage(lastMessage) : undefined,
-    updatedAt: c.updatedAt,
+    updatedAt: c.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -346,27 +354,28 @@ function mapProduct(p: BackendProduct): Product {
   return {
     id: p.id,
     sellerId: p.sellerId,
-    title: p.title,
-    description: p.description,
-    price: p.price,
-    images: p.images,
-    category: p.category,
-    condition: p.condition as Product['condition'],
-    createdAt: p.createdAt,
+    title: p.title || 'Product',
+    description: p.description || '',
+    price: p.price ?? 0,
+    images: Array.isArray(p.images) ? p.images : [],
+    category: p.category || 'General',
+    condition: (p.condition as Product['condition']) || 'new',
+    createdAt: p.createdAt || new Date().toISOString(),
   };
 }
 
 function mapArticle(a: BackendArticle): Article {
+  const readTimeNum = typeof a.readTime === 'number' ? a.readTime : (parseInt(String(a.readTime), 10) || 3);
   return {
     id: a.id,
     authorId: a.authorId,
-    title: a.title,
-    excerpt: a.excerpt,
-    content: a.content,
-    coverUrl: a.coverUrl,
-    readTime: a.readTime,
-    claps: a.claps,
-    createdAt: a.createdAt,
+    title: a.title || 'Untitled Article',
+    excerpt: a.excerpt || '',
+    content: a.content || '',
+    coverUrl: a.coverUrl || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
+    readTime: readTimeNum,
+    claps: a.claps ?? 0,
+    createdAt: a.createdAt || new Date().toISOString(),
     collection: a.collection ?? undefined,
   };
 }
@@ -375,13 +384,13 @@ function mapVideo(v: BackendVideo): Video {
   return {
     id: v.id,
     authorId: v.authorId,
-    videoUrl: v.videoUrl,
-    thumbnailUrl: v.thumbnailUrl,
-    title: v.title,
-    views: v.views,
-    likes: v.likes,
-    createdAt: v.createdAt,
-    type: v.type as Video['type'],
+    videoUrl: v.videoUrl || '',
+    thumbnailUrl: v.thumbnailUrl || '',
+    title: v.title || 'Untitled Video',
+    views: v.views ?? 0,
+    likes: v.likes ?? 0,
+    createdAt: v.createdAt || new Date().toISOString(),
+    type: (v.type as Video['type']) || 'standard',
   };
 }
 
@@ -389,31 +398,34 @@ function mapLiveStream(s: BackendLiveStream): LiveStream {
   return {
     id: s.id,
     hostId: s.hostId,
-    title: s.title,
-    coverUrl: s.coverUrl,
-    kind: s.kind as LiveStream['kind'],
-    status: s.status as LiveStream['status'],
-    viewers: s.viewers,
-    startsAt: s.startsAt,
-    category: s.category,
-    guestIds: s.guestIds,
+    title: s.title || 'Live Stream',
+    coverUrl: s.coverUrl || '',
+    kind: (s.kind as LiveStream['kind']) || 'live',
+    status: (s.status as LiveStream['status']) || 'live',
+    viewers: s.viewers ?? 0,
+    startsAt: s.startsAt || new Date().toISOString(),
+    category: s.category || 'General',
+    guestIds: Array.isArray(s.guestIds) ? s.guestIds : [],
   };
 }
 
 function mapEvent(e: BackendEvent, currentUserId?: string): EventItem {
+  const attendeeIds = Array.isArray(e.attendeeIds) ? e.attendeeIds : [];
+  const interestedIds = Array.isArray(e.interestedIds) ? e.interestedIds : [];
+
   return {
     id: e.id,
     hostId: e.hostId,
-    title: e.title,
-    description: e.description,
+    title: e.title || 'Event',
+    description: e.description || '',
     coverUrl: e.coverUrl,
-    category: e.category,
-    startsAt: e.startsAt,
-    location: e.location,
-    isOnline: e.isOnline,
-    attendeeIds: e.attendeeIds,
-    interestedIds: e.interestedIds,
-    rsvpStatus: currentUserId && e.attendeeIds.includes(currentUserId) ? 'going' : currentUserId && e.interestedIds.includes(currentUserId) ? 'interested' : null,
+    category: e.category || 'General',
+    startsAt: e.startsAt || new Date().toISOString(),
+    location: e.location || 'Online',
+    isOnline: Boolean(e.isOnline),
+    attendeeIds,
+    interestedIds,
+    rsvpStatus: currentUserId && attendeeIds.includes(currentUserId) ? 'going' : currentUserId && interestedIds.includes(currentUserId) ? 'interested' : null,
   };
 }
 
@@ -421,12 +433,12 @@ function mapNotification(n: BackendNotification): Notification {
   return {
     id: n.id,
     type: n.type,
-    title: n.title,
-    message: n.message,
+    title: n.title || 'Notification',
+    message: n.message || '',
     actorId: n.metadata?.actorId,
     targetId: n.relatedId,
-    read: n.readAt !== null,
-    createdAt: n.createdAt,
+    read: Boolean(n.readAt !== null && n.readAt !== undefined),
+    createdAt: n.createdAt || new Date().toISOString(),
   };
 }
 
@@ -601,43 +613,8 @@ export const useAppStore = create<AppState>()(
         messageRequests: true,
         twoFactorEnabled: false,
       },
-      profileComments: {
-        'user-roy': [
-          {
-            id: 'c1',
-            authorId: 'user-sophia',
-            targetUserId: 'user-roy',
-            content: 'Great profile! Love the ambient aesthetic and 3D effects.',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'c2',
-            authorId: 'user-aditi',
-            targetUserId: 'user-roy',
-            content: 'The hackathon page is looking fantastic. Let’s crush it!',
-            createdAt: new Date(Date.now() - 3600000).toISOString()
-          }
-        ]
-      },
-      showcases: {
-        'user-roy': [
-          {
-            id: 's1',
-            userId: 'user-roy',
-            type: 'achievement',
-            title: 'Early Adopter',
-            contentId: 'achievement-1'
-          },
-          {
-            id: 's2',
-            userId: 'user-roy',
-            type: 'custom',
-            title: 'Multiverse Setup',
-            customText: 'Custom built workstation with RTX 4090, 64GB RAM & 38-inch curved OLED.',
-            customImageUrl: 'https://images.unsplash.com/photo-1600861194942-f883de0dfe96?q=80&w=2938&auto=format&fit=crop'
-          }
-        ]
-      },
+      profileComments: MOCK_PROFILE_COMMENTS,
+      showcases: MOCK_SHOWCASES,
 
       login: async (identifier, password) => {
         set({ authError: null });

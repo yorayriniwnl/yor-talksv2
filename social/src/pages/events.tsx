@@ -13,7 +13,56 @@ import { Calendar, MapPin, Users, Globe, Plus, Sparkles, Check } from 'lucide-re
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const EVENT_CATEGORIES = ['Design', 'Tech', 'Business', 'Music', 'Social', 'Other'];
+const EVENT_CATEGORIES = [
+  'AI & Neural Tech',
+  'Esports & Tournaments',
+  'Electronic & Live Music',
+  '3D Art & Shaders',
+  'Fashion & Runway',
+  'Motorsports & Sim Racing',
+  'FPV Drones & Robotics',
+  'Crafts & Maker Expos',
+  'Quantum & Deep Space',
+  'Social & Meetups',
+  'Other'
+];
+
+const EVENT_GENRES = [
+  { id: 'all', label: '🌟 All Genres' },
+  { id: 'tech', label: '🤖 AI & Tech' },
+  { id: 'gaming', label: '🎮 Esports & Gaming' },
+  { id: 'music', label: '🎵 Music & Sound' },
+  { id: 'art', label: '🎨 3D & Design' },
+  { id: 'fashion', label: '👗 Fashion & Runway' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Science & Space' },
+  { id: 'lifestyle', label: '☕ Crafts & Expos' },
+] as const;
+
+function matchesEventGenre(event: any, genre: string): boolean {
+  if (genre === 'all') return true;
+  const text = `${event.title} ${event.description} ${event.category}`.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return text.includes('tech') || text.includes('ai') || text.includes('hackathon') || text.includes('code') || text.includes('silicon');
+    case 'gaming':
+      return text.includes('gaming') || text.includes('esport') || text.includes('tournament') || text.includes('lan') || text.includes('vct');
+    case 'music':
+      return text.includes('music') || text.includes('synth') || text.includes('festival') || text.includes('rave') || text.includes('concert');
+    case 'art':
+      return text.includes('art') || text.includes('design') || text.includes('3d') || text.includes('exhibit') || text.includes('gallery');
+    case 'fashion':
+      return text.includes('fashion') || text.includes('runway') || text.includes('wearable') || text.includes('couture');
+    case 'motorsport':
+      return text.includes('motor') || text.includes('race') || text.includes('drift') || text.includes('sim') || text.includes('grand prix');
+    case 'science':
+      return text.includes('science') || text.includes('quantum') || text.includes('space') || text.includes('astronomy') || text.includes('symposium');
+    case 'lifestyle':
+      return text.includes('tea') || text.includes('coffee') || text.includes('craft') || text.includes('cupping') || text.includes('expo');
+    default:
+      return true;
+  }
+}
 
 function CreateEventDialog() {
   const createEvent = useAppStore((s) => s.createEvent);
@@ -103,10 +152,13 @@ export default function EventsPage() {
   const loadEvents = useAppStore((s) => s.loadEvents);
   const toggleEventRsvp = useAppStore((s) => s.toggleEventRsvp);
   const [tab, setTab] = useState<'Upcoming' | 'Going' | 'Interested'>('Upcoming');
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
   const filteredEvents = events.filter((e) => {
+    const genreMatch = matchesEventGenre(e, selectedGenre);
+    if (!genreMatch) return false;
     if (tab === 'Upcoming') return true;
     if (tab === 'Going') return e.rsvpStatus === 'going';
     if (tab === 'Interested') return e.rsvpStatus === 'interested';
@@ -119,14 +171,14 @@ export default function EventsPage() {
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold font-display text-foreground">Community Events</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Gatherings & Meetups</p>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">Gatherings, hackathons & expos across all genres</p>
         </div>
         <CreateEventDialog />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
-        {/* Category Pills */}
-        <div className="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
+        {/* RSVP Status Tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
           {(['Upcoming', 'Going', 'Interested'] as const).map((t) => (
             <button
               key={t}
@@ -137,6 +189,24 @@ export default function EventsPage() {
               )}
             >
               {t === 'Upcoming' ? '📅 Upcoming Events' : t === 'Going' ? '✅ Going' : '⭐ Interested'}
+            </button>
+          ))}
+        </div>
+
+        {/* Genre Category Pills */}
+        <div className="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
+          {EVENT_GENRES.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setSelectedGenre(g.id)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                selectedGenre === g.id
+                  ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {g.label}
             </button>
           ))}
         </div>

@@ -20,7 +20,7 @@ interface BountyItem {
   sponsor: string;
   sponsorLogo: string;
   grantAmountINR: number;
-  category: 'WebGL & Shaders' | 'Game Dev / Unreal' | 'AI & LLMs' | 'Mobile & UX';
+  category: string;
   deadline: string;
   applicantsCount: number;
   tags: string[];
@@ -31,28 +31,28 @@ interface BountyItem {
 const BOUNTIES: BountyItem[] = [
   {
     id: 'bounty-1',
-    title: 'Bharat Spatial 3D UI & WebGL Shaders Innovation Grant',
+    title: 'Spatial 3D UI & WebGL Shaders Innovation Grant',
     sponsor: 'Yor Labs & Bengaluru Foundation',
     sponsorLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop',
     grantAmountINR: 1000000,
-    category: 'WebGL & Shaders',
+    category: '3D Art & Shaders',
     deadline: 'Sep 15, 2026 (28 Days Left)',
     applicantsCount: 48,
     tags: ['Three.js', 'WebGL', 'GLSL', 'Spatial Audio'],
-    description: 'Build open-source real-time spatial computing surfaces, 3D hologram cards, and WebGL physics engines optimized for 60FPS on Indian mobile devices.',
+    description: 'Build open-source real-time spatial computing surfaces, 3D hologram cards, and WebGL physics engines optimized for 60FPS on mobile devices.',
     status: 'active'
   },
   {
     id: 'bounty-2',
-    title: 'Unreal Engine 5.4 Indie Bharat Game Jam (Theme: Ancient Lore Meets Cyberpunk)',
+    title: 'Unreal Engine 5.4 Indie Game Jam (Theme: Cyberpunk Multiverse)',
     sponsor: 'Mumbai Game Dev Guild',
     sponsorLogo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=200&auto=format&fit=crop',
     grantAmountINR: 500000,
-    category: 'Game Dev / Unreal',
+    category: 'Game Dev & Esports',
     deadline: 'Sep 30, 2026',
     applicantsCount: 82,
     tags: ['UE 5.4', 'Nanite', 'Lumen', 'Indie Game'],
-    description: 'A 48-hour prototype game jam challenging game developers across India to build playable demos blending Indian mythology with futuristic cyberpunk aesthetics.',
+    description: 'A prototype game jam challenging game developers to build playable tactical or combat demos with cutting-edge visual fidelity.',
     status: 'active'
   },
   {
@@ -61,22 +61,65 @@ const BOUNTIES: BountyItem[] = [
     sponsor: 'Cyberabad AI Research',
     sponsorLogo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=200&auto=format&fit=crop',
     grantAmountINR: 250000,
-    category: 'AI & LLMs',
+    category: 'AI & Neural Tech',
     deadline: 'Oct 10, 2026',
     applicantsCount: 34,
-    tags: ['Hindi / Tamil / Bengali', 'Voice AI', 'Sub-100ms Latency'],
-    description: 'Develop low-latency on-device voice translation agents for Indian regional languages integrated into live gaming voice chat.',
+    tags: ['Voice AI', 'Sub-100ms Latency', 'On-Device'],
+    description: 'Develop low-latency on-device voice translation agents integrated into real-time voice chat and gaming lobbies.',
+    status: 'active'
+  },
+  {
+    id: 'bounty-4',
+    title: 'FPV Autonomous Optical Flow & Obstacle Avoidance Challenge',
+    sponsor: 'Aero Robotics Institute',
+    sponsorLogo: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=200&auto=format&fit=crop',
+    grantAmountINR: 750000,
+    category: 'FPV Drones & Robotics',
+    deadline: 'Oct 20, 2026',
+    applicantsCount: 29,
+    tags: ['Optical Flow', 'SLAM', 'Edge AI', '120 FPS'],
+    description: 'Build open-source computer vision algorithms for micro-drones navigating high-speed forest and indoor obstacle courses without GPS.',
+    status: 'active'
+  },
+  {
+    id: 'bounty-5',
+    title: 'Open-Source Modular Synthesizer DSP & Diode Filter Emulation',
+    sponsor: 'Tokyo & Berlin Audio Collective',
+    sponsorLogo: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop',
+    grantAmountINR: 350000,
+    category: 'Music & Audio DSP',
+    deadline: 'Nov 05, 2026',
+    applicantsCount: 22,
+    tags: ['C++', 'JUCE', 'WebAudio', 'Eurorack'],
+    description: 'Create zero-latency analog filter emulation plugins running both as native VST3s and in WebAudio browser environments.',
+    status: 'active'
+  },
+  {
+    id: 'bounty-6',
+    title: 'Post-Quantum Lattice Cryptography & QKD State Verification',
+    sponsor: 'Quantum Space Research Fund',
+    sponsorLogo: 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=200&auto=format&fit=crop',
+    grantAmountINR: 1200000,
+    category: 'Quantum & Deep Science',
+    deadline: 'Nov 15, 2026',
+    applicantsCount: 16,
+    tags: ['Kyber-1024', 'Dilithium', 'Zero-Knowledge', 'Rust'],
+    description: 'Benchmark and optimize post-quantum key encapsulation mechanisms for high-throughput decentralized networks.',
     status: 'active'
   }
 ];
 
 export default function Bounties() {
-  const [bounties, setBounties] = useState<BountyItem[]>(BOUNTIES);
+  const [bounties] = useState<BountyItem[]>(BOUNTIES);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedBounty, setSelectedBounty] = useState<BountyItem | null>(null);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
   const [demoUrl, setDemoUrl] = useState('');
   const [pitchText, setPitchText] = useState('');
+
+  const categories = ['All', ...Array.from(new Set(BOUNTIES.map(b => b.category)))];
+  const filteredBounties = bounties.filter(b => selectedCategory === 'All' || b.category === selectedCategory);
 
   const handleSubmitApplication = () => {
     if (!githubUrl.trim()) {
@@ -112,9 +155,27 @@ export default function Bounties() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        {/* Category Pills */}
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(c)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                selectedCategory === c
+                  ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
         {/* Bounties List Grid */}
         <div className="space-y-4">
-          {bounties.map((b) => (
+          {filteredBounties.map((b) => (
             <div
               key={b.id}
               className="surface-1 rounded-3xl p-6 sm:p-7 border border-border/40 hover:border-primary/40 transition-all duration-300 shadow-md flex flex-col justify-between group"

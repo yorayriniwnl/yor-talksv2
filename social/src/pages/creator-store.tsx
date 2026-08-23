@@ -28,7 +28,7 @@ const STORE_ITEMS: MerchItem[] = [
     creator: 'GodLike Esports',
     price: 1299,
     image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=800&auto=format&fit=crop',
-    category: 'Apparel',
+    category: 'Esports',
     inStock: 14,
     sizes: ['S', 'M', 'L', 'XL']
   },
@@ -48,19 +48,100 @@ const STORE_ITEMS: MerchItem[] = [
     creator: 'Yor Talks Hardware Lab',
     price: 899,
     image: 'https://images.unsplash.com/photo-1616588589596-3e4b78c8a14b?q=80&w=800&auto=format&fit=crop',
-    category: 'Accessories',
+    category: 'Hardware',
     inStock: 32,
     sizes: ['900x400mm']
+  },
+  {
+    id: 'it-4',
+    name: 'Tokyo Underground Modular Eurorack Braided Patch Cables (Set of 8) 🎛️',
+    creator: 'Renata Silva',
+    price: 1499,
+    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop',
+    category: 'Music Gear',
+    inStock: 19,
+    sizes: ['30cm', '60cm', '90cm']
+  },
+  {
+    id: 'it-5',
+    name: 'Cyber-Samurai Holographic Heavyweight Art Print (Numbered 1-500) 🎨',
+    creator: 'Kenji Sato',
+    price: 1899,
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+    category: 'Art Prints',
+    inStock: 25,
+    sizes: ['A3 Foil', 'A2 Giclée']
+  },
+  {
+    id: 'it-6',
+    name: 'Luminescent Fiber-Optic Reactive Scarf 👗',
+    creator: 'Leila Noor',
+    price: 3499,
+    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop',
+    category: 'Techwear',
+    inStock: 6,
+    sizes: ['Standard']
+  },
+  {
+    id: 'it-7',
+    name: 'Nürburgring GT3 Pre-preg Carbon Fiber Aero Keychain 🏎️',
+    creator: 'Mateo Rossi',
+    price: 699,
+    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800&auto=format&fit=crop',
+    category: 'Motorsports',
+    inStock: 45,
+    sizes: ['Gloss 3K', 'Matte Forged']
+  },
+  {
+    id: 'it-8',
+    name: '512-Layer Pattern-Welded Damascus Pocket Bottle Opener ⚔️',
+    creator: 'Thorin Lindqvist',
+    price: 2199,
+    image: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?q=80&w=800&auto=format&fit=crop',
+    category: 'Crafts',
+    inStock: 11,
+    sizes: ['Ladder Pattern', 'Raindrop Pattern']
+  },
+  {
+    id: 'it-9',
+    name: 'Single Estate 96h Anaerobic Gesha Whole Bean Tin (250g) ☕',
+    creator: 'Anika Das',
+    price: 1199,
+    image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=800&auto=format&fit=crop',
+    category: 'Specialty Coffee',
+    inStock: 28,
+    sizes: ['Whole Bean', 'Filter Grind']
+  },
+  {
+    id: 'it-10',
+    name: 'Carina Core Deep-Sky Mosaic Silk Tapestry (120x80cm) 🌌',
+    creator: 'Zara Thorne',
+    price: 1799,
+    image: 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop',
+    category: 'Astrophotography',
+    inStock: 15,
+    sizes: ['120x80cm']
   }
 ];
 
 export default function CreatorStore() {
   const [items] = useState<MerchItem[]>(STORE_ITEMS);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedSize, setSelectedSize] = useState<{ [id: string]: string }>({
     'it-1': 'L',
     'it-2': 'L',
-    'it-3': '900x400mm'
+    'it-3': '900x400mm',
+    'it-4': '60cm',
+    'it-5': 'A3 Foil',
+    'it-6': 'Standard',
+    'it-7': 'Gloss 3K',
+    'it-8': 'Ladder Pattern',
+    'it-9': 'Whole Bean',
+    'it-10': '120x80cm'
   });
+
+  const categories = ['All', ...Array.from(new Set(STORE_ITEMS.map(i => i.category)))];
+  const filteredItems = items.filter(i => selectedCategory === 'All' || i.category === selectedCategory);
 
   const handleBuyNow = (item: MerchItem) => {
     sounds.playChime();
@@ -87,9 +168,27 @@ export default function CreatorStore() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        {/* Category Pills */}
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(c)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                selectedCategory === c
+                  ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div
               key={item.id}
               className="surface-1 rounded-3xl p-5 border border-border/40 flex flex-col justify-between shadow-xl space-y-4 hover:border-primary/50 transition-all"

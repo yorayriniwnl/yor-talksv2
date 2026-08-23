@@ -84,6 +84,43 @@ function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: bool
   );
 }
 
+const EXPLORE_GENRES = [
+  { id: 'all', label: '🌟 All Genres' },
+  { id: 'tech', label: '🤖 AI & Tech' },
+  { id: 'gaming', label: '🎮 Gaming & Esports' },
+  { id: 'music', label: '🎵 Music & Audio' },
+  { id: 'art', label: '🎨 3D & Design' },
+  { id: 'fashion', label: '👗 Fashion & Wearables' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Science & Space' },
+  { id: 'lifestyle', label: '☕ Crafts & Lifestyle' },
+] as const;
+
+function matchesExploreGenre(text: string, genre: string): boolean {
+  if (genre === 'all') return true;
+  const t = text.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return t.includes('ai') || t.includes('tensor') || t.includes('shader') || t.includes('gpu') || t.includes('neural') || t.includes('code') || t.includes('hft') || t.includes('fpga') || t.includes('webgpu');
+    case 'gaming':
+      return t.includes('game') || t.includes('esport') || t.includes('clutch') || t.includes('radiant') || t.includes('arcade') || t.includes('fightstick') || t.includes('scrim') || t.includes('steam');
+    case 'music':
+      return t.includes('music') || t.includes('synth') || t.includes('techno') || t.includes('drum') || t.includes('sitar') || t.includes('audio') || t.includes('sound') || t.includes('rave') || t.includes('kora') || t.includes('oud') || t.includes('beat');
+    case 'art':
+      return t.includes('3d') || t.includes('unreal') || t.includes('render') || t.includes('anime') || t.includes('mecha') || t.includes('art') || t.includes('sculpt') || t.includes('design') || t.includes('illustration');
+    case 'fashion':
+      return t.includes('fashion') || t.includes('couture') || t.includes('sneaker') || t.includes('wearable') || t.includes('textile') || t.includes('denim') || t.includes('apparel');
+    case 'motorsport':
+      return t.includes('car') || t.includes('drift') || t.includes('race') || t.includes('rotary') || t.includes('sim') || t.includes('aero') || t.includes('lap') || t.includes('dyno');
+    case 'science':
+      return t.includes('quantum') || t.includes('space') || t.includes('physics') || t.includes('bio') || t.includes('protein') || t.includes('nebula') || t.includes('cern') || t.includes('deep-sea');
+    case 'lifestyle':
+      return t.includes('coffee') || t.includes('tea') || t.includes('steel') || t.includes('watch') || t.includes('wood') || t.includes('chocolat') || t.includes('craft') || t.includes('roast');
+    default:
+      return true;
+  }
+}
+
 export default function Explore() {
   const [, setLocation] = useLocation();
   const users = useAppStore(s => s.users);
@@ -94,26 +131,118 @@ export default function Explore() {
   const unfollowUser = useAppStore(s => s.unfollowUser);
 
   const [query, setQuery] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Compute feed data
-  const people = useMemo(() => Object.values(users).filter(u => u.id !== currentUser?.id).slice(0, 8), [currentUser, users]);
-  const visualPosts = useMemo(() => posts.filter(p => p.media?.length).slice(0, 18), [posts]); // Explore grid needs lots of posts
-  const rooms = useMemo(() => communities.filter(c => !c.isMember).slice(0, 4), [communities]);
-  const topics = useMemo(() => collectTopics(posts.map(p => p.content)), [posts]);
+  // Compute feed data filtered by selected genre
+  const people = useMemo(() => {
+    return Object.values(users)
+      .filter(u => u.id !== currentUser?.id && matchesExploreGenre(`${u.displayName} ${u.username} ${u.bio || ''}`, selectedGenre))
+      .slice(0, 10);
+  }, [currentUser, users, selectedGenre]);
 
-  // Search Debounce
+  const visualPosts = useMemo(() => {
+    return posts
+      .filter(p => p.media?.length && matchesExploreGenre(`${p.content} ${users[p.authorId]?.bio || ''}`, selectedGenre))
+      .slice(0, 36);
+  }, [posts, users, selectedGenre]);
+
+  const rooms = useMemo(() => {
+    return communities
+      .filter(c => !c.isMember && matchesExploreGenre(`${c.name} ${c.description} ${c.category}`, selectedGenre))
+      .slice(0, 6);
+  }, [communities, selectedGenre]);
+
+  const topics = useMemo(() => {
+    const allTopics = collectTopics(posts.map(p => p.content));
+    if (selectedGenre === 'all') return allTopics;
+    return allTopics.filter(t => matchesExploreGenre(t.name, selectedGenre));
+  }, [posts, selectedGenre]);
+
+  // Search Debounce with full fallback
   useEffect(() => {
-    const trimmed = query.trim();
+    const trimmed = query.trim().toLowerCase();
     if (trimmed.length < 2) { setResults(null); setSearching(false); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
-      try { setResults(await api.search(trimmed)); } catch { setResults({ users: [], posts: [] }); } finally { setSearching(false); }
-    }, 300);
+      try {
+        const apiRes = await api.search(trimmed);
+        if (apiRes && (apiRes.users?.length > 0 || apiRes.posts?.length > 0)) {
+          setResults(apiRes);
+        } else {
+          // Client-side search across all creators and posts
+          const matchedUsers = Object.values(users).filter(u =>
+            u.username.toLowerCase().includes(trimmed) ||
+            u.displayName.toLowerCase().includes(trimmed) ||
+            (u.bio && u.bio.toLowerCase().includes(trimmed))
+          ).slice(0, 12).map(u => ({
+            id: u.id,
+            username: u.username,
+            fullName: u.displayName,
+            avatarUrl: u.avatarUrl,
+            bio: u.bio || '',
+            followers: [],
+            following: [],
+            isOnline: true,
+            createdAt: new Date().toISOString()
+          } as any));
+
+          const matchedPosts = posts.filter(p =>
+            p.content.toLowerCase().includes(trimmed)
+          ).slice(0, 16).map(p => ({
+            id: p.id,
+            authorId: p.authorId,
+            content: p.content,
+            images: p.media || [],
+            likedBy: [],
+            bookmarkedBy: [],
+            comments: [],
+            shareCount: p.shares,
+            createdAt: p.createdAt
+          } as any));
+
+          setResults({ users: matchedUsers, posts: matchedPosts });
+        }
+      } catch {
+        const matchedUsers = Object.values(users).filter(u =>
+          u.username.toLowerCase().includes(trimmed) ||
+          u.displayName.toLowerCase().includes(trimmed) ||
+          (u.bio && u.bio.toLowerCase().includes(trimmed))
+        ).slice(0, 12).map(u => ({
+          id: u.id,
+          username: u.username,
+          fullName: u.displayName,
+          avatarUrl: u.avatarUrl,
+          bio: u.bio || '',
+          followers: [],
+          following: [],
+          isOnline: true,
+          createdAt: new Date().toISOString()
+        } as any));
+
+        const matchedPosts = posts.filter(p =>
+          p.content.toLowerCase().includes(trimmed)
+        ).slice(0, 16).map(p => ({
+          id: p.id,
+          authorId: p.authorId,
+          content: p.content,
+          images: p.media || [],
+          likedBy: [],
+          bookmarkedBy: [],
+          comments: [],
+          shareCount: p.shares,
+          createdAt: p.createdAt
+        } as any));
+
+        setResults({ users: matchedUsers, posts: matchedPosts });
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, users, posts]);
 
   const handleToggleFollow = (targetId: string) => {
     if (!currentUser) return;
@@ -160,7 +289,11 @@ export default function Explore() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onFocus={() => setIsFocused(true)}
-                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                onBlur={(e) => {
+                  // Don't blur if the focus moved to a child of the search results
+                  if (e.relatedTarget && e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) return;
+                  setIsFocused(false);
+                }}
                 placeholder="Search @usernames, #hashtags, or communities..."
                 className="flex-1 bg-transparent border-0 outline-none px-4 py-3 text-base sm:text-lg font-medium placeholder:text-muted-foreground/50"
               />
@@ -227,8 +360,28 @@ export default function Explore() {
             </motion.div>
           ) : (
             /* ── DISCOVERY DEFAULT STATE ──────────────────────────────────── */
-            <motion.div key="discovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-12">
+            <motion.div key="discovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
               
+              {/* GENRE CATEGORY PILLS */}
+              <section>
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                  {EXPLORE_GENRES.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setSelectedGenre(g.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                        selectedGenre === g.id
+                          ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                          : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                      )}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
               {/* TOPICS / HASHTAGS ROW */}
               <section>
                 <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 pt-1 snap-x stagger-in">

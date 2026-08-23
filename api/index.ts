@@ -1,8 +1,8 @@
-import type { Request, Response } from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 // @ts-ignore
 import appModule from "../api-server/dist/app.cjs";
-const app = appModule.default || appModule;
+const app = (appModule && (appModule.default || appModule)) || ((_req: any, res: any) => res.end());
 
 export const config = {
   api: {
@@ -11,27 +11,38 @@ export const config = {
   },
 };
 
-export default async function handler(req: Request, res: Response) {
-  const vercelRes = res as any;
+export default async function handler(req: IncomingMessage | any, res: ServerResponse | any) {
   try {
-    return new Promise((resolve, reject) => {
-      vercelRes.on("finish", resolve);
-      vercelRes.on("close", resolve);
-      vercelRes.on("error", reject);
-      app(req, res, (err: any) => {
+    return await new Promise<void>((resolve, reject) => {
+      res.on("finish", () => resolve());
+      res.on("close", () => resolve());
+      res.on("error", (err: Error) => reject(err));
+      app(req, res, (err?: any) => {
         if (err) return reject(err);
-        resolve(undefined);
+        resolve();
       });
     });
   } catch (err: any) {
     console.error("[Vercel Handler Error]:", err);
-    if (!vercelRes.headersSent) {
-      return vercelRes.status(500).json({
-        success: false,
-        message: "Serverless function initialization error",
-        data: null,
-        errors: [err?.message || "Internal server error"],
-      });
+    if (!res.headersSent) {
+      if (typeof res.status === "function" && typeof res.json === "function") {
+        return res.status(500).json({
+          success: false,
+          message: "Serverless function initialization error",
+          data: null,
+          errors: [err?.message || "Internal server error"],
+        });
+      }
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          success: false,
+          message: "Serverless function initialization error",
+          data: null,
+          errors: [err?.message || "Internal server error"],
+        })
+      );
     }
   }
 }

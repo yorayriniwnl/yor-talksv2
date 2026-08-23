@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, X,
   Home, Compass, Film, MessageCircle, Bell, User, Users, FileText,
-  Video, Radio, Scissors, Tv, Briefcase, Shirt, Box, Monitor, Layers, Sparkles, BarChart3, Volume2, Mic, Headphones, Cast,
-  Trophy, Swords, Activity, Target, ArrowRightLeft, Award, Medal, GraduationCap, ShieldAlert, Calendar, Key, Gavel,
-  Gamepad2, Boxes, ShoppingBag, Navigation, Music, Disc, Smile, Code2, Brain, Wand2,
-  Store, ShoppingCart, Coins, Ticket, Shield, Building2, FileSignature, HandCoins, Heart, Crown, Star,
-  LayoutDashboard, Settings, MapPin, Keyboard, HeartPulse, Mic2, Rocket, Coffee, TrendingUp
+  Video, Radio, Scissors,
+  Trophy, Swords, Gamepad2, Target, Award, Medal, Calendar,
+  BarChart3, Store, ShoppingCart, Briefcase, Shirt, Layers,
+  ShoppingBag, Coins, Ticket, Shield, Building2, HandCoins,
+  Crown, Star, Brain,
+  LayoutDashboard, Settings, Headphones, Mic2, Key
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -43,115 +44,77 @@ export function CommandPalette() {
   };
 
   const filteredUsers = query
-    ? userList.filter((u) => u.displayName.toLowerCase().includes(query.toLowerCase()) || u.username.toLowerCase().includes(query.toLowerCase()))
+    ? userList.filter((u) => 
+        (u.displayName || u.username || '').toLowerCase().includes(query.toLowerCase()) || 
+        (u.username || '').toLowerCase().includes(query.toLowerCase())
+      )
     : userList.slice(0, 4);
 
   const navigationGroups = [
     {
-      label: 'Core & Social',
+      label: 'Core',
       items: [
         { icon: Home, label: 'Home Feed', path: '/' },
-        { icon: Compass, label: 'Explore Grid', path: '/explore' },
-        { icon: Film, label: 'Reels Swiper', path: '/videos' },
-        { icon: MessageCircle, label: 'Direct Messages', path: '/messages' },
+        { icon: Compass, label: 'Explore', path: '/explore' },
+        { icon: Film, label: 'Reels & Videos', path: '/videos' },
+        { icon: MessageCircle, label: 'Messages', path: '/messages' },
         { icon: Bell, label: 'Notifications', path: '/notifications' },
-        { icon: User, label: 'Profile', path: '/profile' },
         { icon: Users, label: 'Communities', path: '/communities' },
         { icon: FileText, label: 'Articles', path: '/articles' },
+        { icon: Radio, label: 'Live', path: '/live' },
+        { icon: Calendar, label: 'Events', path: '/events' },
       ]
     },
     {
-      label: 'Creator & Studio',
+      label: 'Gaming & Esports',
       items: [
-        { icon: Video, label: 'Creator Studio Pro', path: '/studio' },
-        { icon: Radio, label: 'Live Broadcast', path: '/live' },
-        { icon: Scissors, label: 'Bharat Esports Clip & Reel Studio', path: '/clips' },
-        { icon: Tv, label: 'Clan Scrims VOD Review & Annotator', path: '/vods' },
-        { icon: Briefcase, label: 'Creator Media Kit & Rate Card', path: '/media-kit' },
-        { icon: Shirt, label: 'Creator Merchandise & Jersey Studio', path: '/merch' },
-        { icon: Box, label: 'Hologram Studio', path: '/hologram' },
-        { icon: Monitor, label: 'Streamer Chroma Studio & Virtual Sets', path: '/chroma-studio' },
-        { icon: Layers, label: 'Overlay Studio', path: '/overlay-studio' },
-        { icon: Sparkles, label: 'Streamer AI Highlights & Auto-Subtitler', path: '/highlights' },
-        { icon: BarChart3, label: 'Creator Analytics', path: '/creator-analytics' },
-        { icon: Volume2, label: 'Desi Streamer SFX Soundboard', path: '/soundboard' },
-        { icon: Mic, label: 'Streamer Voice FX & Audio Modulator', path: '/voice-fx' },
-        { icon: Headphones, label: 'Streamer Acoustic Room & Soundproof Lab', path: '/acoustics' },
-        { icon: Cast, label: 'Bharat Multistream & Restreamer Studio', path: '/multistream' },
+        { icon: Trophy, label: 'Tournaments', path: '/tournaments' },
+        { icon: Swords, label: 'Scrims', path: '/scrims' },
+        { icon: Shield, label: 'Clans', path: '/clans' },
+        { icon: Gamepad2, label: 'Arcade', path: '/arcade' },
+        { icon: Target, label: 'Predictions', path: '/predictions' },
+        { icon: Star, label: 'Achievements', path: '/achievements' },
+        { icon: Award, label: 'Power Rankings', path: '/rankings' },
+        { icon: Medal, label: 'Trophy Room', path: '/trophies' },
+        { icon: Calendar, label: 'Esports Calendar', path: '/calendar' },
       ]
     },
     {
-      label: 'Esports & Competitive',
+      label: 'Creator Tools',
       items: [
-        { icon: Trophy, label: 'Bharat Esports Tournaments', path: '/tournaments' },
-        { icon: Swords, label: 'Esports Scrims & Map Veto', path: '/scrims' },
-        { icon: Activity, label: 'Esports Match Scoreboard & HUD Studio', path: '/scoreboard' },
-        { icon: Target, label: 'Clan Scrim Tactics & Playbook', path: '/tactics' },
-        { icon: Search, label: 'Esports Talent & Scouting Radar', path: '/scouting' },
-        { icon: ArrowRightLeft, label: 'Esports Player Transfer Portal & Trade', path: '/transfers' },
-        { icon: Award, label: 'National Clan Power Rankings', path: '/rankings' },
-        { icon: Medal, label: 'Virtual Trophy Room & Hall of Fame', path: '/trophies' },
-        { icon: GraduationCap, label: 'Bharat Esports Academy & Masterclasses', path: '/academy' },
-        { icon: ShieldAlert, label: 'Bharat Esports Anti-Cheat Watchtower', path: '/anticheat' },
-        { icon: Calendar, label: 'Bharat Esports Match Schedule & Calendar', path: '/calendar' },
-        { icon: Key, label: 'Bharat Custom Scrims Room & Matchmaker', path: '/rooms' },
-        { icon: Gavel, label: 'Bharat Premier Cricket Mega Auction', path: '/auction' },
+        { icon: Video, label: 'Creator Studio', path: '/studio' },
+        { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+        { icon: ShoppingCart, label: 'Creator Store', path: '/store' },
+        { icon: Scissors, label: 'Clip Studio', path: '/clips' },
+        { icon: Briefcase, label: 'Media Kit', path: '/media-kit' },
+        { icon: Shirt, label: 'Merch Studio', path: '/merch' },
+        { icon: Layers, label: 'Overlay Studio', path: '/overlays' },
       ]
     },
     {
-      label: 'Interactive & Entertainment',
-      items: [
-        { icon: Gamepad2, label: 'Cyber Arcade & Mini-Games', path: '/arcade' },
-        { icon: Boxes, label: '3D Cyber Café Spatial Metaverse', path: '/metaverse' },
-        { icon: ShoppingBag, label: 'Indie Bharat Game Hub', path: '/bazaar' },
-        { icon: Navigation, label: 'Desi Cyber Auto-Rickshaw Drift', path: '/drift' },
-        { icon: Activity, label: 'Hawkeye Cricket Bowling & Speed Lab', path: '/cricket-lab' },
-        { icon: Music, label: '3D Synthwave Matrix Studio', path: '/synth-room' },
-        { icon: Disc, label: 'Desi DJ Turntable & Scratch Studio', path: '/turntable' },
-        { icon: Music, label: 'Desi Tabla & Dholak Percussion Synthesizer', path: '/tabla-synth' },
-        { icon: Smile, label: 'Desi Meme & Sticker Studio', path: '/meme-studio' },
-        { icon: Code2, label: '1v1 Code Duel & Shader Arena', path: '/code-duel' },
-        { icon: Brain, label: 'AI Hub', path: '/ai' },
-        { icon: Wand2, label: 'Bharat AI Art & Thumbnail Studio', path: '/ai-art' },
-        { icon: Mic, label: 'Indic AI Voice & Speech Studio', path: '/voice-ai' },
-        { icon: Sparkles, label: 'Particle Fireworks & Physics Studio', path: '/particles' },
-        { icon: Activity, label: '3D Audio Spectrum & FFT Studio', path: '/spectrum' },
-      ]
-    },
-    {
-      label: 'Economy & Guilds',
+      label: 'Economy',
       items: [
         { icon: Store, label: 'Marketplace', path: '/marketplace' },
-        { icon: ShoppingCart, label: 'Bharat Creator Merch Storefront', path: '/store' },
-        { icon: Coins, label: 'Yor Points Vault', path: '/points-shop' },
+        { icon: ShoppingBag, label: 'Game Bazaar', path: '/bazaar' },
+        { icon: HandCoins, label: 'Bounties', path: '/bounties' },
+        { icon: Building2, label: 'Clan Treasury', path: '/treasury' },
+        { icon: Coins, label: 'Points Shop', path: '/points-shop' },
         { icon: Ticket, label: 'Battle Pass', path: '/pass' },
-        { icon: Shield, label: 'Clan Wars & Squad Command', path: '/clans' },
-        { icon: Building2, label: 'Bharat Guild Multi-Sig Treasury', path: '/treasury' },
-        { icon: FileSignature, label: 'Esports Pro Contract & Signing Maker', path: '/contracts' },
-        { icon: HandCoins, label: 'Bharat Grants & Bounties (₹17.5L)', path: '/bounties' },
-        { icon: Heart, label: 'Live Stream Superchat & Desi Dhol Studio', path: '/superchat' },
-        { icon: Crown, label: 'Creator Fan Club & VIP Memberships', path: '/fanclub' },
-        { icon: Star, label: 'Achievements', path: '/achievements' },
       ]
     },
     {
-      label: 'Utility & Settings',
+      label: 'Social & Tools',
       items: [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-        { icon: Settings, label: 'Settings & Controls', path: '/settings' },
-        { icon: MapPin, label: 'Bharat City Tech Radar', path: '/radar' },
-        { icon: Keyboard, label: 'Gamer Mechanical RGB Gear Customizer', path: '/gear' },
-        { icon: HeartPulse, label: 'Gamer Health & Ergonomics Hub', path: '/health' },
-        { icon: Mic2, label: 'Bharat Squad Voice Comms & Matrix', path: '/comms' },
-        { icon: Radio, label: 'Bharat Live Audio Stage & Podcasts', path: '/podcasts' },
-        { icon: Rocket, label: 'Bharat Indie Game Launchpad', path: '/launchpad' },
-        { icon: Calendar, label: 'Events', path: '/events' },
-        { icon: Coffee, label: 'Desi Chai Stall & Kullad Brew Simulator', path: '/chai' },
-        { icon: Headphones, label: 'Spatial Audio Lounge', path: '/lounge' },
-        { icon: Shirt, label: 'Bharat Esports Jersey 3D Studio', path: '/jersey-customizer' },
-        { icon: TrendingUp, label: 'Esports Pick\'em & Predictions', path: '/predictions' },
+        { icon: Brain, label: 'AI Assistant', path: '/ai' },
+        { icon: Headphones, label: 'Lounge', path: '/lounge' },
+        { icon: Crown, label: 'Fan Club', path: '/fanclub' },
+        { icon: Mic2, label: 'Squad Comms', path: '/comms' },
+        { icon: Key, label: 'Custom Rooms', path: '/rooms' },
+        { icon: Radio, label: 'Podcasts', path: '/podcasts' },
+        { icon: Settings, label: 'Settings', path: '/settings' },
       ]
-    }
+    },
   ];
 
   return (
@@ -196,22 +159,25 @@ export function CommandPalette() {
                     {query ? 'Matching Profiles' : 'Suggested People'}
                   </h4>
                   <div className="space-y-1">
-                    {filteredUsers.map((u) => (
-                      <button
-                         key={u.id}
-                        onClick={() => handleNavigate(`/profile/${u.id}`)}
-                        className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group"
-                      >
-                        <Avatar className="w-9 h-9 border border-border/40 shrink-0">
-                          <AvatarImage src={u.avatarUrl} />
-                          <AvatarFallback className="font-display font-bold">{u.displayName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <h5 className="font-bold text-sm truncate group-hover:text-primary transition-colors">{u.displayName}</h5>
-                          <p className="text-xs text-muted-foreground font-mono truncate">@{u.username}</p>
-                        </div>
-                      </button>
-                    ))}
+                    {filteredUsers.map((u) => {
+                      const displayName = u.displayName || u.username || 'User';
+                      return (
+                        <button
+                          key={u.id}
+                          onClick={() => handleNavigate(`/profile/${u.id}`)}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group"
+                        >
+                          <Avatar className="w-9 h-9 border border-border/40 shrink-0">
+                            <AvatarImage src={u.avatarUrl} />
+                            <AvatarFallback className="font-display font-bold">{displayName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <h5 className="font-bold text-sm truncate group-hover:text-primary transition-colors">{displayName}</h5>
+                            <p className="text-xs text-muted-foreground font-mono truncate">@{u.username}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

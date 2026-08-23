@@ -13,7 +13,19 @@ import { cn } from '@/lib/utils';
 import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeModal';
 import { sounds } from '@/lib/sound';
 
-const PRODUCT_CATEGORIES = ['Furniture', 'Electronics', 'Clothing', 'Books', 'Other'];
+const PRODUCT_CATEGORIES = [
+  'Hardware & Silicon',
+  'Esports & Gaming Gear',
+  'Modular Synth & Audio',
+  '3D Art & Sculpture',
+  'Techwear & Fashion',
+  'Motorsports & Sim Rigs',
+  'FPV Drones & Aero',
+  'Bladesmithing & Watches',
+  'Specialty Coffee & Tea',
+  'Electronics',
+  'Other'
+];
 const PRODUCT_CONDITIONS = ['new', 'like-new', 'used'] as const;
 
 function CreateListingDialog() {

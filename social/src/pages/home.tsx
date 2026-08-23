@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import StoriesRow from '@/components/feed/StoriesRow';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'wouter';
 import { 
   Sparkles, TrendingUp, Compass, Shield, Gamepad2, Play, Pause, 
-  Volume2, CheckCircle2, Gift, Calendar, ArrowLeftRight, Flame, Radio, Award, Star
+  Volume2, CheckCircle2, Gift, Calendar, ArrowLeftRight, Flame, Radio, Award, Star, Loader2
 } from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { sounds } from '@/lib/sound';
@@ -17,6 +17,7 @@ import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
+import { FeedSkeleton } from '@/components/ui/Skeletons';
 
 const DAILY_QUESTS = [
   { id: 'q1', text: 'Engage with 3 Creator Posts', progress: 3, total: 3, done: true, xp: 150 },
@@ -60,6 +61,45 @@ const STEAM_LIVE_FRIENDS = [
   }
 ];
 
+const FEED_GENRES = [
+  { id: 'all', label: '✨ For You' },
+  { id: 'trending', label: '🔥 Trending' },
+  { id: 'tech', label: '🤖 Tech & AI' },
+  { id: 'gaming', label: '🎮 Gaming' },
+  { id: 'music', label: '🎵 Music' },
+  { id: 'art', label: '🎨 Design & 3D' },
+  { id: 'fashion', label: '👗 Fashion' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Science & Space' },
+  { id: 'lifestyle', label: '☕ Lifestyle & Crafts' },
+] as const;
+
+function matchesPostGenre(post: any, author: any, genre: string): boolean {
+  if (genre === 'all') return true;
+  if (genre === 'trending') return (post.likes > 20000 || post.resonanceScore > 0.88);
+  const text = `${post.content} ${author?.bio || ''} ${author?.username || ''}`.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return text.includes('ai') || text.includes('tensor') || text.includes('model') || text.includes('shader') || text.includes('webgpu') || text.includes('neural') || text.includes('gpu') || text.includes('fpga') || text.includes('hft') || text.includes('rust') || text.includes('code');
+    case 'gaming':
+      return text.includes('game') || text.includes('esport') || text.includes('radiant') || text.includes('clutch') || text.includes('scrim') || text.includes('fightstick') || text.includes('arcade') || text.includes('vct') || text.includes('steam');
+    case 'music':
+      return text.includes('music') || text.includes('synth') || text.includes('techno') || text.includes('sitar') || text.includes('drum') || text.includes('beat') || text.includes('audio') || text.includes('sound') || text.includes('track') || text.includes('rave') || text.includes('raga') || text.includes('oud') || text.includes('kora');
+    case 'art':
+      return text.includes('3d') || text.includes('unreal') || text.includes('render') || text.includes('sculpt') || text.includes('anime') || text.includes('mecha') || text.includes('art') || text.includes('design') || text.includes('illustration') || text.includes('typography');
+    case 'fashion':
+      return text.includes('fashion') || text.includes('couture') || text.includes('sneaker') || text.includes('apparel') || text.includes('textile') || text.includes('wearable') || text.includes('denim') || text.includes('cashmere');
+    case 'motorsport':
+      return text.includes('car') || text.includes('drift') || text.includes('race') || text.includes('racing') || text.includes('rotary') || text.includes('sim') || text.includes('dyno') || text.includes('lap') || text.includes('turbo') || text.includes('aero');
+    case 'science':
+      return text.includes('quantum') || text.includes('space') || text.includes('cern') || text.includes('physics') || text.includes('bio') || text.includes('protein') || text.includes('submersible') || text.includes('nebula') || text.includes('telescope') || text.includes('astronomy') || text.includes('neuro');
+    case 'lifestyle':
+      return text.includes('coffee') || text.includes('tea') || text.includes('chocolat') || text.includes('blade') || text.includes('steel') || text.includes('watch') || text.includes('horology') || text.includes('wood') || text.includes('furniture') || text.includes('roast');
+    default:
+      return true;
+  }
+}
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const posts = useAppStore((state) => state.posts);
@@ -67,9 +107,11 @@ export default function Home() {
   const currentUser = useAppStore((state) => state.currentUser);
   const followUser = useAppStore((state) => state.followUser);
   const unfollowUser = useAppStore((state) => state.unfollowUser);
+  const isInitializing = useAppStore((state) => state.isInitializing);
 
   const [questsClaimed, setQuestsClaimed] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   // Suggested users list
   const suggestedUsers = useMemo(() => {
@@ -102,6 +144,38 @@ export default function Home() {
     setPlayingTrackId(prev => prev === trackId ? null : trackId);
   };
 
+  // Filter posts by selected genre
+  const filteredPosts = useMemo(() => {
+    return posts.filter((p) => {
+      const author = users[p.authorId];
+      return matchesPostGenre(p, author, selectedGenre);
+    });
+  }, [posts, users, selectedGenre]);
+
+  // Infinite scroll pagination
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const visiblePosts = useMemo(() => filteredPosts.slice(0, visibleCount), [filteredPosts, visibleCount]);
+  const hasMore = visibleCount < filteredPosts.length;
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredPosts.length));
+  }, [filteredPosts.length]);
+
+  // Auto-load when sentinel enters viewport
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !hasMore) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
+
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
       <div className="max-w-[1100px] mx-auto px-0 sm:px-4 pt-4 sm:pt-6">
@@ -120,7 +194,31 @@ export default function Home() {
               <CreatePost />
             </div>
 
-            {/* Feed Stream */}
+            {/* Feed Genre Category Chips */}
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1">
+              {FEED_GENRES.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => {
+                    setSelectedGenre(g.id);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                    selectedGenre === g.id
+                      ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                      : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Feed Stream — Paginated */}
+            {isInitializing ? (
+              <FeedSkeleton count={3} />
+            ) : (
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -143,7 +241,7 @@ export default function Home() {
                   </Link>
                 </div>
               )}
-              {posts.map((post, i) => (
+              {visiblePosts.map((post, i) => (
                 <ScrollReveal
                   key={post.id}
                   delay={Math.min(i * 0.04, 0.25)}
@@ -152,7 +250,19 @@ export default function Home() {
                   <PostCard post={post} />
                 </ScrollReveal>
               ))}
+              {hasMore && (
+                <div ref={loadMoreRef} className="flex justify-center py-6">
+                  <Button
+                    variant="ghost"
+                    onClick={loadMore}
+                    className="rounded-2xl font-bold text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading more...
+                  </Button>
+                </div>
+              )}
             </motion.div>
+            )}
           </main>
 
           {/* Right Sidebar (Desktop Steam & Instagram Fusion Suite) */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useLocation } from 'wouter';
 import { useAppStore } from '@/lib/store';
 import { 
@@ -6,7 +6,6 @@ import {
   Gamepad2, Trophy, ArrowLeftRight, Award, Shield, Star, CheckCircle2 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { BarChart, Bar, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem, fadeInUp } from '@/lib/motion';
 import { cn } from '@/lib/utils';
@@ -15,6 +14,9 @@ import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
+
+const AnalyticsChart = lazyWithRetry(() => import('@/components/dashboard/AnalyticsChart'));
 
 const activityData = [
   { day: 'Mon', interactions: 12 },
@@ -152,19 +154,9 @@ export default function Dashboard() {
               <h3>Interactions & Resonance Over Time</h3>
             </div>
             <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <Tooltip 
-                    cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
-                    contentStyle={{ borderRadius: '16px', border: '1px solid hsl(var(--border) / 0.5)', background: 'hsl(var(--card))', boxShadow: 'var(--elevate-2)' }}
-                  />
-                  <Bar 
-                    dataKey="interactions" 
-                    fill="hsl(var(--primary))" 
-                    radius={[8, 8, 0, 0]} 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div className="w-full h-full skeleton-aurora rounded-2xl" />}>
+                <AnalyticsChart data={activityData} />
+              </Suspense>
             </div>
           </motion.div>
 

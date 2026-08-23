@@ -23,6 +23,7 @@ import { ProfileTiltCard } from '@/components/ui/ProfileTiltCard';
 import { HoloAvatarCard } from '@/components/ui/HoloAvatarCard';
 import { ParallaxCover } from '@/components/ui/ParallaxCover';
 import { ProfileMusicPlayer } from '@/components/profile/ProfileMusicPlayer';
+import ReelsSwiper from '@/components/video/ReelsSwiper';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { staggerContainer, staggerItem, tapScale, springGentle, springBouncy, layoutIds } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -62,6 +63,28 @@ function formatCount(n: number): string {
   if (n >= 10_000) return (n / 1_000).toFixed(0) + 'K';
   if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
   return n.toString();
+}
+
+function getGenreBadge(bio?: string, username?: string): { label: string; icon: string } {
+  const text = ((bio || '') + ' ' + (username || '')).toLowerCase();
+  if (text.includes('ai') || text.includes('neural') || text.includes('tensor') || text.includes('machine learning') || text.includes('world models')) return { label: 'AI & Neural Tech', icon: '🤖' };
+  if (text.includes('esports') || text.includes('duelist') || text.includes('clutch') || text.includes('arcade') || text.includes('fightstick') || text.includes('game') || text.includes('roguelike')) return { label: 'Esports & Gaming', icon: '🎮' };
+  if (text.includes('beats') || text.includes('modular') || text.includes('synth') || text.includes('audio') || text.includes('drum') || text.includes('techno') || text.includes('sitar') || text.includes('oud') || text.includes('sound') || text.includes('music') || text.includes('kora') || text.includes('vocal')) return { label: 'Music & Sound Design', icon: '🎵' };
+  if (text.includes('3d') || text.includes('unreal') || text.includes('shader') || text.includes('blender') || text.includes('illustrat') || text.includes('anime') || text.includes('mecha') || text.includes('sculpt')) return { label: '3D Art & CGI', icon: '🎨' };
+  if (text.includes('fashion') || text.includes('apparel') || text.includes('couture') || text.includes('wearable') || text.includes('textile') || text.includes('sneaker') || text.includes('denim')) return { label: 'Haute Couture & Wearables', icon: '👗' };
+  if (text.includes('motor') || text.includes('race') || text.includes('rotary') || text.includes('drift') || text.includes('sim') || text.includes('aero') || text.includes('hypercar') || text.includes('lap')) return { label: 'Motorsports & Sim Racing', icon: '🏎️' };
+  if (text.includes('fpv') || text.includes('drone') || text.includes('swarm') || text.includes('slam') || text.includes('pilot')) return { label: 'FPV Drones & Aero', icon: '🛸' };
+  if (text.includes('coffee') || text.includes('tea') || text.includes('roast') || text.includes('barista') || text.includes('siphon') || text.includes('chocolat')) return { label: 'Gastronomy & Beverage', icon: '☕' };
+  if (text.includes('quantum') || text.includes('physics') || text.includes('astronomy') || text.includes('space') || text.includes('mars') || text.includes('nebula') || text.includes('radio interferometry') || text.includes('cern')) return { label: 'Quantum & Deep Space', icon: '🌌' };
+  if (text.includes('bio') || text.includes('neuro') || text.includes('protein') || text.includes('prosthetic') || text.includes('exoskeleton') || text.includes('bci')) return { label: 'Biotech & Neuroscience', icon: '🧬' };
+  if (text.includes('blade') || text.includes('steel') || text.includes('forge') || text.includes('knife') || text.includes('watch') || text.includes('horolog') || text.includes('wood') || text.includes('joiner') || text.includes('furniture')) return { label: 'Artisan Craftsmanship', icon: '⚔️' };
+  if (text.includes('photo') || text.includes('film') || text.includes('colorist') || text.includes('cinema') || text.includes('imax') || text.includes('leica') || text.includes('anamorphic')) return { label: 'Cinematography & Film', icon: '📸' };
+  if (text.includes('security') || text.includes('reverse') || text.includes('exploit') || text.includes('crypto') || text.includes('offensive')) return { label: 'Cybersecurity & Crypto', icon: '🛡️' };
+  if (text.includes('architect') || text.includes('spatial') || text.includes('tessellation') || text.includes('geometry') || text.includes('timber')) return { label: 'Parametric Architecture', icon: '📐' };
+  if (text.includes('chess') || text.includes('grandmaster') || text.includes('alphazero')) return { label: 'Grandmaster Chess', icon: '♟️' };
+  if (text.includes('fpga') || text.includes('hardware') || text.includes('keeb') || text.includes('switch') || text.includes('modder')) return { label: 'Hardware & Silicon', icon: '💻' };
+  if (text.includes('mycelium') || text.includes('biomimetic') || text.includes('clean energy') || text.includes('aeroponic')) return { label: 'Bio-Design & Clean Tech', icon: '🌿' };
+  return { label: 'Multiverse Creator', icon: '✨' };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -288,6 +311,8 @@ export default function Profile() {
   const posts = useAppStore(s => s.posts);
   const stories = useAppStore(s => s.stories);
   const achievements = useAppStore(s => s.achievements);
+  const videos = useAppStore(s => s.videos);
+  const loadVideos = useAppStore(s => s.loadVideos);
   const loadUserProfile = useAppStore(s => s.loadUserProfile);
   const followUser = useAppStore(s => s.followUser);
   const unfollowUser = useAppStore(s => s.unfollowUser);
@@ -301,11 +326,14 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'liked'>('grid');
   const [showAwardPicker, setShowAwardPicker] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
 
   const profileId = id || currentUser?.id;
   const profile = profileId ? users[profileId] : null;
   const isOwnProfile = currentUser?.id === profileId;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
+
+  useEffect(() => { loadVideos(); }, [loadVideos]);
 
   useEffect(() => {
     if (profileId && !users[profileId]) loadUserProfile(profileId);
@@ -315,6 +343,9 @@ export default function Profile() {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileId]);
 
   const userPosts = useMemo(() => posts.filter(p => p.authorId === profile?.id), [posts, profile?.id]);
+  const userVideos = useMemo(() => videos.filter(v => v.authorId === profile?.id), [videos, profile?.id]);
+  const userReels = useMemo(() => userVideos.filter(v => v.type === 'short'), [userVideos]);
+  const genreBadge = useMemo(() => getGenreBadge(profile?.bio, profile?.username), [profile?.bio, profile?.username]);
   const userMedia = useMemo(() => userPosts.flatMap(p => {
     const ml = (p as any).mediaUrls || (p as any).media || [];
     return ml.map((m: any) => typeof m === 'string' ? { url: m, likes: (p as any).likes || 0, comments: (p as any).comments || 0 } : m);
@@ -505,8 +536,10 @@ export default function Profile() {
           <ProfileMusicPlayer />
 
           {/* Category Badge */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <span className="text-[0.7rem] font-bold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">✨ Creator</span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[0.7rem] font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+              <span>{genreBadge.icon}</span> {genreBadge.label}
+            </span>
           </div>
 
           {/* Meta info */}
@@ -660,16 +693,71 @@ export default function Profile() {
               </motion.div>
             )}
 
-            {/* ── Reels Tab ──────────────────────────────────────── */}
+            {/* ── Reels Tab (Instagram/TikTok style Reels Grid) ──────────────────────── */}
             {activeTab === 'reels' && (
               <motion.div key="reels" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                <div className="py-20 text-center">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
-                    <Play className="w-8 h-8 text-muted-foreground/30 ml-1" />
+                {userVideos.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
+                    {userVideos.map((video, idx) => (
+                      <motion.div
+                        key={video.id}
+                        variants={staggerItem}
+                        onClick={() => {
+                          const reelIdx = userReels.length ? userReels.findIndex(r => r.id === video.id) : idx;
+                          setActiveReelIndex(reelIdx !== -1 ? reelIdx : 0);
+                        }}
+                        className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none"
+                      >
+                        <img
+                          src={video.thumbnailUrl}
+                          alt={video.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30 group-hover:from-black/90 transition-colors" />
+
+                        {/* Top-right Reel Badge */}
+                        <div className="absolute top-2 right-2 z-10 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1">
+                          <Film className="w-2.5 h-2.5 text-primary" /> {video.type === 'short' ? 'Reel' : 'Video'}
+                        </div>
+
+                        {/* Center Play Button on Hover */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center text-white shadow-xl transform scale-75 group-hover:scale-100 transition-transform">
+                            <Play className="w-5 h-5 fill-white ml-0.5" />
+                          </div>
+                        </div>
+
+                        {/* Bottom Info & Views */}
+                        <div className="absolute bottom-0 inset-x-0 p-2.5 z-10 flex flex-col justify-end">
+                          <p className="text-[0.72rem] font-bold text-white line-clamp-1 mb-1 drop-shadow-md leading-tight">
+                            {video.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-white/90 text-[0.65rem] font-mono font-bold">
+                            <Play className="w-3 h-3 fill-white" />
+                            <span>{formatCount(video.views || 0)}</span>
+                            <span className="opacity-40">•</span>
+                            <Heart className="w-2.5 h-2.5 fill-rose-500 text-rose-500" />
+                            <span>{formatCount(video.likes || 0)}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
-                  <h3 className="font-display font-bold tracking-tight text-xl mb-1">Share Reels</h3>
-                  <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">Create short, entertaining videos for the community.</p>
-                </div>
+                ) : (
+                  <div className="py-20 text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
+                      <Film className="w-8 h-8 text-muted-foreground/30" />
+                    </div>
+                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">No Reels Shared Yet</h3>
+                    <p className="text-sm text-muted-foreground max-w-[260px] mx-auto mb-4">When short-form reels and creative clips are uploaded, they'll appear here.</p>
+                    <Link href="/videos">
+                      <Button variant="outline" className="rounded-2xl font-bold text-xs">
+                        <Play className="w-3.5 h-3.5 mr-1.5" /> Explore Multiverse Reels
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -790,6 +878,15 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {activeReelIndex !== null && (
+        <ReelsSwiper
+          videos={userReels.length > 0 ? userReels : userVideos}
+          initialIndex={activeReelIndex}
+          onClose={() => setActiveReelIndex(null)}
+        />
+      )}
     </div>
   );
 }
+

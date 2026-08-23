@@ -20,34 +20,65 @@ interface Speaker {
   isMuted: boolean;
 }
 
+interface PodcastStage {
+  id: string;
+  title: string;
+  genre: string;
+  listeners: number;
+  speakers: Speaker[];
+}
+
+const STAGES: PodcastStage[] = [
+  {
+    id: 'stg-1',
+    title: 'VCT Masters Scrims & Tactical Meta Debrief 🎮',
+    genre: 'Esports & Gaming',
+    listeners: 1420,
+    speakers: [
+      { id: 's1', name: 'Aravind Rao', role: 'Host · Radiant Duelist', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
+      { id: 's2', name: 'Yuki Tanaka', role: 'Co-Host · FGC Champion', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false },
+      { id: 's3', name: 'Devansh D.', role: 'Guest · Analyst', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: true }
+    ]
+  },
+  {
+    id: 'stg-2',
+    title: 'Frontier AI Agents, WebGPU & Spatial Interfaces 🤖',
+    genre: 'AI & Neural Tech',
+    listeners: 2890,
+    speakers: [
+      { id: 's4', name: 'Ayush Roy', role: 'Host · Yor Talks Architect', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
+      { id: 's5', name: 'Marcus Vance', role: 'Co-Host · Systems Researcher', avatar: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false },
+      { id: 's6', name: 'Aditi Singh', role: 'Guest · ML Engineer', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+    ]
+  },
+  {
+    id: 'stg-3',
+    title: 'Modular Synthesis, Eurorack & Sound Design Masterclass 🎛️',
+    genre: 'Music & Audio',
+    listeners: 980,
+    speakers: [
+      { id: 's7', name: 'Renata Silva', role: 'Host · Modular Artist', avatar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
+      { id: 's8', name: 'Clara Vogel', role: 'Co-Host · Berlin Techno DJ', avatar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+    ]
+  },
+  {
+    id: 'stg-4',
+    title: 'Damascus Metallurgy, Heat Treatment & Japanese Cutlery ⚔️',
+    genre: 'Craftsmanship & Blades',
+    listeners: 1650,
+    speakers: [
+      { id: 's9', name: 'Thorin Lindqvist', role: 'Host · Master Bladesmith', avatar: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
+      { id: 's10', name: 'Hiroshi Tanaka', role: 'Co-Host · Kyoto Knife Master', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+    ]
+  }
+];
+
 export default function PodcastStudio() {
+  const [selectedStageId, setSelectedStageId] = useState<string>('stg-1');
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [speakers, setSpeakers] = useState<Speaker[]>([
-    {
-      id: 's1',
-      name: 'Tanmay &quot;Scout&quot; Cyber',
-      role: 'Host · Esports Legend',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-      isSpeaking: true,
-      isMuted: false
-    },
-    {
-      id: 's2',
-      name: 'Naman &quot;Mortal&quot; Mathur',
-      role: 'Co-Host · Soul Gaming',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-      isSpeaking: false,
-      isMuted: false
-    },
-    {
-      id: 's3',
-      name: 'Animesh &quot;Thug&quot; Agarwal',
-      role: 'Guest · 8Bit Creatives',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
-      isSpeaking: false,
-      isMuted: true
-    }
-  ]);
+
+  const activeStage = STAGES.find(s => s.id === selectedStageId) || STAGES[0];
+  const speakers = activeStage.speakers;
 
   const handleRaiseHand = () => {
     sounds.playChime();
@@ -91,14 +122,33 @@ export default function PodcastStudio() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        {/* Stage Selector Pills */}
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {STAGES.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedStageId(s.id)}
+              className={cn(
+                "px-4 py-2 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0 text-left flex flex-col gap-0.5",
+                selectedStageId === s.id
+                  ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              <span>{s.title}</span>
+              <span className="text-[0.65rem] opacity-75 font-mono">🎧 {s.listeners.toLocaleString()} listening · {s.genre}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Stage Speakers Grid */}
         <div className="surface-1 rounded-3xl p-8 border border-border/40 space-y-6 shadow-2xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold text-primary flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" /> LIVE STAGE SPEAKERS (3 / 6 SLOTS)
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" /> LIVE STAGE SPEAKERS ({speakers.length} / 6 SLOTS)
             </span>
-            <span className="text-xs font-mono text-muted-foreground">🎧 1,420 Active Listeners</span>
+            <span className="text-xs font-mono text-muted-foreground">🎧 {activeStage.listeners.toLocaleString()} Active Listeners</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

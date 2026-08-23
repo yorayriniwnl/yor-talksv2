@@ -50,6 +50,45 @@ const sampleMusicThumbnails = [
   "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=500&auto=format&fit=crop"
 ];
 
+const GENRE_BIOS = [
+  "AI & Neural Tech Lead · Tensor graph runtimes, WebGPU & spatial interfaces 🤖⚡",
+  "Esports Pro & VCT Radiant Duelist · 1v4 Clutches & Sanwa frame traps 🏆🎮",
+  "Modular Synthesist & Sound Designer · 138 BPM Eurorack live sets 🎛️🎧",
+  "Cyber-Samurai 3D Concept Artist · GLSL raymarching & manga inking 🎨✨",
+  "Haute Couture Pioneer · Bioluminescent LED garments & techwear 👗🔬",
+  "Motorsports Aerodynamicist · 20B 3-rotor rotary & CFD ground effect 🏎️💨",
+  "FPV Proximity Pilot · 8K Alpine crevasse dives & robotic vision 🛸❄️",
+  "Master Bladesmith & Horologist · 512-layer Damascus & tourbillon carriages ⚔️⌚",
+  "Specialty Coffee Brewer · 96h Anaerobic Gesha & Gongfu tea ceremonies ☕🌸",
+  "Quantum Physicist & Astrophotographer · Transmon qubits & deep-sky nebulas 🌌⚛️"
+];
+
+const GENRE_POSTS = [
+  "Benchmarked our new WebGPU quantized transformer runtime — achieved 140 tokens/sec directly inside Chrome with sub-20ms first-token latency! 🤖⚡ #ai #webgpu",
+  "Insane 1v4 clutch on Ascent A-site during VCT scrims tonight! Tracking is crisp at 8000Hz polling rate. Clip dropping in reels soon 🏆🎮 #esports #radiant",
+  "Just patched this 138 BPM dark modular techno groove live from the flight case. Make Noise Maths into dual analog diode filters hits different 🎛️🔊 #modular #synth",
+  "Finished the keyframe concept for Chapter 4: Neon rain reflections over Kyoto's cyberpunk alleys. Drawn with G-Pen and digital watercolor 🎨🖌️ #manga #3dart",
+  "Runway test complete for our optical heartbeat dress: 4,000 micro-LEDs reacting to real-time spatial biometric telemetry! 👗✨ #fashiontech #wearables",
+  "CFD airflow simulation for the new active DRS rear wing: 850kg downforce at 250 km/h with 18% drag reduction on the straights 🏎️💨 #motorsports #aero",
+  "Diving 160 km/h down the volcanic fissure in Iceland. 6S freestyle quad with O3 Air Unit in 8K HDR! 🛸🌋 #fpv #drone",
+  "Just pulled this 512-layer high-carbon Damascus broadsword from the oil quench. Zero warp, perfect temper line! ⚔️🔥 #bladesmith #damascus",
+  "Cupping the new 96-hour anaerobic fermentation Gesha lot: explosive notes of white jasmine, candied peach, and bergamot ☕🌸 #specialtycoffee #pourover",
+  "12 hours of exposure over the Atacama Desert resolved the ionized hydrogen filaments in the core of the Carina Nebula 🔭🌌 #astrophotography #deepspace"
+];
+
+const GENRE_VIDEO_TITLES = [
+  "Spatial WebXR 90 FPS Rendering on Standalone Headsets 🤖",
+  "Radiant 1v4 Clutch with Sheriff on Ascent A-Site 🏆🔥",
+  "Live Eurorack Modular Synth & Dark Techno Session 🎛️⚡",
+  "Unreal Engine 5.4 Nanite & Volumetric Cloud Breakdown 🎨",
+  "3D Printed Voronoi TPU Midsole Sneaker High-Speed Print 👟",
+  "20B 3-Rotor Bridgeport Screaming to 9,800 RPM on Dyno 🏎️",
+  "8K 120 FPS FPV Dive Through Eiger Glacial Crevasse 🛸❄️",
+  "1000 FPS Slow-Mo: Oil Quenching 512-Layer Damascus Blade ⚔️",
+  "96h Anaerobic Gesha Pour-Over: 3-Stage Pulse Bloom ☕🌸",
+  "Chilean ALMA Interferometer Radio Readout of Galactic Core 🌌"
+];
+
 async function seedMassive() {
   console.log("🚀 Starting mega-scale database seed...");
   
@@ -70,7 +109,7 @@ async function seedMassive() {
         username: username,
         passwordHash,
         fullName: `${fName} ${lName}`,
-        bio: `Multiverse explorer, creative technologist & builder (#${i + 1}). Let's connect!`,
+        bio: GENRE_BIOS[i % GENRE_BIOS.length],
         avatarUrl: sampleAvatars[i % sampleAvatars.length],
         role: i < 5 ? "founder" : "user",
         createdAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
@@ -95,22 +134,24 @@ async function seedMassive() {
     createdUserIds.push(...existing.map(u => u.id));
   }
 
-  console.log(`Generating feed posts...`);
+  console.log(`Generating feed posts across all genres...`);
   let postCount = 0;
-  for (const uid of createdUserIds) {
+  for (let uIdx = 0; uIdx < createdUserIds.length; uIdx++) {
+    const uid = createdUserIds[uIdx];
     for (let i = 0; i < POSTS_PER_USER; i++) {
       try {
+        const postContent = GENRE_POSTS[(uIdx * POSTS_PER_USER + i) % GENRE_POSTS.length];
         await db.insert(postsTable).values({
           id: randomUUID(),
           authorId: uid,
-          content: `Exploring spatial physics, modern web architecture, and ambient UI design in 2026. What do you think of this setup? #buildinpublic #${i + 1}`,
-          images: Math.random() > 0.4 ? [sampleCovers[Math.floor(Math.random() * sampleCovers.length)]] : [],
+          content: postContent,
+          images: Math.random() > 0.3 ? [sampleCovers[(uIdx + i) % sampleCovers.length]] : [],
           likedBy: createdUserIds.slice(0, Math.floor(Math.random() * 15)),
           bookmarkedBy: createdUserIds.slice(0, Math.floor(Math.random() * 5)),
           comments: [],
           shareCount: Math.floor(Math.random() * 80),
           score: Math.floor(Math.random() * 500),
-          tags: ["multiverse", "design", "tech", "web3", "ai"],
+          tags: ["multiverse", "creators", "showcase", "2026"],
           createdAt: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
           updatedAt: new Date().toISOString()
         });
@@ -120,21 +161,23 @@ async function seedMassive() {
   }
   console.log(`Generated ${postCount} posts.`);
 
-  console.log(`Generating Reels, Shorts & Audio Tracks...`);
+  console.log(`Generating Reels, Shorts & Audio Tracks across all genres...`);
   let videoCount = 0;
-  for (const uid of createdUserIds) {
+  for (let uIdx = 0; uIdx < createdUserIds.length; uIdx++) {
+    const uid = createdUserIds[uIdx];
     for (let i = 0; i < VIDEOS_PER_USER; i++) {
-      const isSong = Math.random() > 0.5;
+      const vidTitle = GENRE_VIDEO_TITLES[(uIdx * VIDEOS_PER_USER + i) % GENRE_VIDEO_TITLES.length];
+      const isSong = Math.random() > 0.4;
       try {
         await db.insert(videosTable).values({
           id: randomUUID(),
           authorId: uid,
-          title: isSong ? `Cyber-Synth & Binaural Audio Drop Vol. ${i + 1}` : `High-Speed FPV Drone Proximity Run #${i + 1}`,
-          type: isSong ? "standard" : "short",
-          videoUrl: sampleVideoUrls[Math.floor(Math.random() * sampleVideoUrls.length)],
-          thumbnailUrl: isSong ? sampleMusicThumbnails[i % sampleMusicThumbnails.length] : sampleCovers[i % sampleCovers.length],
-          views: Math.floor(Math.random() * 250000) + 5000,
-          likedBy: createdUserIds.slice(0, Math.floor(Math.random() * 25)),
+          title: vidTitle,
+          type: "short",
+          videoUrl: sampleVideoUrls[(uIdx + i) % sampleVideoUrls.length],
+          thumbnailUrl: sampleCovers[(uIdx + i) % sampleCovers.length],
+          views: Math.floor(Math.random() * 450000) + 15000,
+          likedBy: createdUserIds.slice(0, Math.floor(Math.random() * 35)),
           createdAt: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
         });
         videoCount++;

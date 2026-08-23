@@ -258,12 +258,16 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
     <div className="fixed inset-0 z-50 bg-black flex flex-col md:flex-row overflow-hidden font-sans text-white">
       {/* Main Broadcast Stage */}
       <div className="flex-1 relative h-[60vh] md:h-full bg-zinc-950 flex items-center justify-center overflow-hidden">
-        {/* Stream Video Stream Canvas / Image */}
-        <img
-          src={stream.coverUrl}
-          alt={stream.title}
-          className="w-full h-full object-cover opacity-90 transition-transform duration-1000 scale-105"
-        />
+        {/* Stream Video Canvas */}
+        <div className="relative w-full h-full">
+          <img
+            src={stream.coverUrl}
+            alt={stream.title}
+            className="w-full h-full object-cover opacity-90"
+          />
+          {/* Fake scanline overlay for stream feel */}
+          <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.03)_2px,rgba(0,0,0,0.03)_4px)] pointer-events-none" />
+        </div>
         
         {/* Ambient Overlay Vignette */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/60 pointer-events-none" />
@@ -451,6 +455,43 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
   );
 }
 
+const STREAM_GENRES = [
+  { id: 'all', label: '🌟 All Broadcasts' },
+  { id: 'tech', label: '🤖 Tech & AI' },
+  { id: 'gaming', label: '🎮 Gaming & Esports' },
+  { id: 'music', label: '🎵 Music & Sound' },
+  { id: 'art', label: '🎨 3D & Design' },
+  { id: 'fashion', label: '👗 Fashion & Runway' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Quantum & Space' },
+  { id: 'lifestyle', label: '☕ Crafts & Gastronomy' },
+] as const;
+
+function matchesStreamGenre(stream: any, host: any, genre: string): boolean {
+  if (genre === 'all') return true;
+  const text = `${stream.title} ${stream.category} ${host?.bio || ''}`.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return text.includes('tech') || text.includes('ai') || text.includes('tensor') || text.includes('hardware') || text.includes('robot') || text.includes('silicon') || text.includes('code');
+    case 'gaming':
+      return text.includes('game') || text.includes('esport') || text.includes('scrim') || text.includes('duel') || text.includes('steam') || text.includes('vct');
+    case 'music':
+      return text.includes('music') || text.includes('audio') || text.includes('synth') || text.includes('sound') || text.includes('dj') || text.includes('rave') || text.includes('sitar');
+    case 'art':
+      return text.includes('art') || text.includes('3d') || text.includes('render') || text.includes('sculpt') || text.includes('manga') || text.includes('anime');
+    case 'fashion':
+      return text.includes('fashion') || text.includes('runway') || text.includes('wearable') || text.includes('textile');
+    case 'motorsport':
+      return text.includes('car') || text.includes('drift') || text.includes('sim') || text.includes('dyno') || text.includes('race');
+    case 'science':
+      return text.includes('science') || text.includes('quantum') || text.includes('space') || text.includes('astronomy') || text.includes('telescope');
+    case 'lifestyle':
+      return text.includes('tea') || text.includes('coffee') || text.includes('craft') || text.includes('watch') || text.includes('blade') || text.includes('maki-e');
+    default:
+      return true;
+  }
+}
+
 export default function Live() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/live/:id');
@@ -460,6 +501,7 @@ export default function Live() {
   const users = useAppStore((s) => s.users);
   const loadStreams = useAppStore((s) => s.loadStreams);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   useEffect(() => { loadStreams(); }, [loadStreams]);
 
@@ -474,8 +516,13 @@ export default function Live() {
     return <LiveBroadcastRoom streamId={streamId} />;
   }
 
-  const live = liveStreams.filter((s) => s.status === 'live');
-  const scheduled = liveStreams.filter((s) => s.status === 'scheduled');
+  const filteredStreams = liveStreams.filter((s) => {
+    const host = users[s.hostId];
+    return matchesStreamGenre(s, host, selectedGenre);
+  });
+
+  const live = filteredStreams.filter((s) => s.status === 'live');
+  const scheduled = filteredStreams.filter((s) => s.status === 'scheduled');
 
   const renderStreamCard = (stream: typeof liveStreams[number]) => {
     const host = users[stream.hostId];
@@ -548,12 +595,30 @@ export default function Live() {
         <GoLiveDialog />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-10">
-        {liveStreams.length === 0 && (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-10">
+        {/* Genre Category Pills */}
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {STREAM_GENRES.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setSelectedGenre(g.id)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                selectedGenre === g.id
+                  ? "bg-rose-600 text-white border-rose-600 font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredStreams.length === 0 && (
           <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
             <Radio className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-            <h3 className="font-display font-bold text-lg mb-1">No live streams right now</h3>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Be the first to start a live broadcast or audio room for your community.</p>
+            <h3 className="font-display font-bold text-lg mb-1">No streams in this genre</h3>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Start a broadcast or schedule a stream for this topic.</p>
           </div>
         )}
 

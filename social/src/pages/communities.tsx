@@ -365,6 +365,43 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
   );
 }
 
+const COMMUNITY_GENRES = [
+  { id: 'all', label: '🌟 All Circles' },
+  { id: 'tech', label: '🤖 AI & Tech' },
+  { id: 'gaming', label: '🎮 Gaming & Clans' },
+  { id: 'music', label: '🎵 Music & Audio' },
+  { id: 'art', label: '🎨 3D & Design' },
+  { id: 'fashion', label: '👗 Fashion' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Science & Space' },
+  { id: 'lifestyle', label: '☕ Crafts & Lifestyle' },
+] as const;
+
+function matchesCommunityGenre(community: any, genre: string): boolean {
+  if (genre === 'all') return true;
+  const text = `${community.name} ${community.description} ${community.category}`.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return text.includes('tech') || text.includes('ai') || text.includes('tensor') || text.includes('hardware') || text.includes('robot') || text.includes('silicon');
+    case 'gaming':
+      return text.includes('gaming') || text.includes('esport') || text.includes('clan') || text.includes('scrim') || text.includes('arcade') || text.includes('duel');
+    case 'music':
+      return text.includes('music') || text.includes('audio') || text.includes('synth') || text.includes('sound') || text.includes('acoustic') || text.includes('techno');
+    case 'art':
+      return text.includes('art') || text.includes('design') || text.includes('3d') || text.includes('anime') || text.includes('visual');
+    case 'fashion':
+      return text.includes('fashion') || text.includes('textile') || text.includes('couture') || text.includes('wearable');
+    case 'motorsport':
+      return text.includes('motor') || text.includes('race') || text.includes('drift') || text.includes('sim') || text.includes('aero');
+    case 'science':
+      return text.includes('science') || text.includes('quantum') || text.includes('space') || text.includes('biotech') || text.includes('astronomy');
+    case 'lifestyle':
+      return text.includes('tea') || text.includes('coffee') || text.includes('lifestyle') || text.includes('craft') || text.includes('wood') || text.includes('bladesmith');
+    default:
+      return true;
+  }
+}
+
 export default function Communities() {
   const [, params] = useRoute('/communities/:id');
   const communityId = params?.id;
@@ -372,6 +409,7 @@ export default function Communities() {
   const communities = useAppStore((s) => s.communities);
   const joinCommunity = useAppStore((s) => (s as any).joinCommunity || s.toggleCommunityMembership);
   const leaveCommunity = useAppStore((s) => (s as any).leaveCommunity || s.toggleCommunityMembership);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   // If URL matches `/communities/:id`, render the interactive Steam Community Hub & Forum
   if (communityId) {
@@ -379,7 +417,7 @@ export default function Communities() {
   }
 
   const yourCircles = communities.filter(c => c.isMember);
-  const discoverCircles = communities.filter(c => !c.isMember);
+  const discoverCircles = communities.filter(c => !c.isMember && matchesCommunityGenre(c, selectedGenre));
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
@@ -450,13 +488,31 @@ export default function Communities() {
         </section>
 
         <section>
-          <div className="showcase-section-title mb-6">
+          <div className="showcase-section-title mb-4">
             <Compass className="w-4 h-4 text-accent" />
             <h3>Discover Circles</h3>
           </div>
 
+          {/* Genre Category Pills */}
+          <div className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar pb-1">
+            {COMMUNITY_GENRES.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setSelectedGenre(g.id)}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                  selectedGenre === g.id
+                    ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                    : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+
           {discoverCircles.length === 0 ? (
-            <p className="text-xs text-muted-foreground font-mono">No new circles to discover right now.</p>
+            <p className="text-xs text-muted-foreground font-mono">No new circles found in this genre.</p>
           ) : (
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {discoverCircles.map(community => (

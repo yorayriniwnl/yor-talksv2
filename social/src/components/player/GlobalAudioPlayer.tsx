@@ -131,7 +131,11 @@ export function GlobalAudioPlayer() {
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, height, 2);
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(x, y, barWidth, height, 2);
+        } else {
+          ctx.rect(x, y, barWidth, height);
+        }
         ctx.fill();
       }
 

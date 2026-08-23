@@ -74,11 +74,49 @@ function CreateArticleDialog() {
   );
 }
 
+const ARTICLE_GENRES = [
+  { id: 'all', label: '🌟 All Articles' },
+  { id: 'tech', label: '🤖 AI & Tech' },
+  { id: 'gaming', label: '🎮 Gaming & Esports' },
+  { id: 'music', label: '🎵 Music & Sound' },
+  { id: 'art', label: '🎨 3D & Design' },
+  { id: 'fashion', label: '👗 Fashion & Techwear' },
+  { id: 'motorsport', label: '🏎️ Speed & Sim' },
+  { id: 'science', label: '🔬 Quantum & Space' },
+  { id: 'lifestyle', label: '☕ Crafts & Lifestyle' },
+] as const;
+
+function matchesArticleGenre(article: any, author: any, genre: string): boolean {
+  if (genre === 'all') return true;
+  const text = `${article.title} ${article.excerpt} ${article.content} ${article.collection || ''} ${author?.bio || ''}`.toLowerCase();
+  switch (genre) {
+    case 'tech':
+      return text.includes('ai') || text.includes('tensor') || text.includes('transformer') || text.includes('gpu') || text.includes('code') || text.includes('shader') || text.includes('webgpu') || text.includes('interface') || text.includes('design');
+    case 'gaming':
+      return text.includes('game') || text.includes('esport') || text.includes('duel') || text.includes('arcade') || text.includes('tactical') || text.includes('mocap');
+    case 'music':
+      return text.includes('music') || text.includes('audio') || text.includes('synth') || text.includes('sound') || text.includes('acoustics') || text.includes('sitar') || text.includes('raga') || text.includes('techno');
+    case 'art':
+      return text.includes('3d') || text.includes('unreal') || text.includes('render') || text.includes('anime') || text.includes('art') || text.includes('concept') || text.includes('geometry');
+    case 'fashion':
+      return text.includes('fashion') || text.includes('textile') || text.includes('wearable') || text.includes('couture') || text.includes('denim');
+    case 'motorsport':
+      return text.includes('car') || text.includes('aero') || text.includes('cfd') || text.includes('drift') || text.includes('rotary') || text.includes('race') || text.includes('sim');
+    case 'science':
+      return text.includes('quantum') || text.includes('space') || text.includes('biotech') || text.includes('protein') || text.includes('particle') || text.includes('telescope') || text.includes('cryogenics');
+    case 'lifestyle':
+      return text.includes('coffee') || text.includes('tea') || text.includes('wood') || text.includes('steel') || text.includes('watch') || text.includes('roast') || text.includes('bladesmith');
+    default:
+      return true;
+  }
+}
+
 export default function Articles() {
   const articles = useAppStore((s) => s.articles);
   const users = useAppStore((s) => s.users);
   const loadArticles = useAppStore((s) => s.loadArticles);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   useEffect(() => { loadArticles(); }, [loadArticles]);
 
@@ -88,8 +126,13 @@ export default function Articles() {
     }
   }, [articles, users, loadUserProfile]);
 
-  const featuredArticle = articles.length > 0 ? articles[0] : null;
-  const gridArticles = articles.length > 1 ? articles.slice(1) : [];
+  const filteredArticles = articles.filter((a) => {
+    const author = users[a.authorId];
+    return matchesArticleGenre(a, author, selectedGenre);
+  });
+
+  const featuredArticle = filteredArticles.length > 0 ? filteredArticles[0] : null;
+  const gridArticles = filteredArticles.length > 1 ? filteredArticles.slice(1) : [];
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
@@ -97,17 +140,35 @@ export default function Articles() {
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold font-display text-foreground">Long-Form Articles</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">In-depth perspectives from the community</p>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">In-depth perspectives and technical papers across all genres</p>
         </div>
         <CreateArticleDialog />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
-        {articles.length === 0 && (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
+        {/* Genre Category Pills */}
+        <div className="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
+          {ARTICLE_GENRES.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setSelectedGenre(g.id)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
+                selectedGenre === g.id
+                  ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredArticles.length === 0 && (
           <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
             <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-            <h3 className="font-display font-bold text-lg mb-1">No articles published yet</h3>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Be the first writer in your network to publish a long-form article.</p>
+            <h3 className="font-display font-bold text-lg mb-1">No articles found in this category</h3>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Publish the first paper or article in this genre.</p>
           </div>
         )}
 

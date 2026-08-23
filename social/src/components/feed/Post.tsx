@@ -349,8 +349,8 @@ export function PostCard({ post }: { post: PostType }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
                 <DropdownMenuItem onClick={copyPostLink}>Copy link</DropdownMenuItem>
-                <DropdownMenuItem>Report</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">Block user</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast({ title: 'Post reported. We\'ll review it shortly.' })}>Report</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => toast({ title: 'User blocked. You won\'t see their content anymore.' })}>Block user</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -359,9 +359,7 @@ export function PostCard({ post }: { post: PostType }) {
             {post.content}
           </p>
 
-          {(post.content.toLowerCase().includes('sound') || post.content.toLowerCase().includes('audio') || post.id === 'post-3') && (
-            <AudioWaveformPlayer />
-          )}
+
           
           {renderMedia()}
           
@@ -484,7 +482,16 @@ export function PostCard({ post }: { post: PostType }) {
                   <DropdownMenuItem onClick={copyPostLink}>
                     Copy link
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    const url = window.location.origin + '/post/' + post.id;
+                    if (navigator.share) {
+                      navigator.share({ title: 'Check this post on Yor Talks', url }).catch(() => {});
+                    } else {
+                      navigator.clipboard?.writeText(url);
+                      toast({ title: 'Link copied to clipboard!' });
+                    }
+                  }}>
                     Share via...
                   </DropdownMenuItem>
                 </DropdownMenuContent>

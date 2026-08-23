@@ -499,9 +499,19 @@ export default function Messages() {
               </div>
             )}
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="pb-4 space-y-0.5 stagger-in">
-              {conversationList.map((entry) => (
-                <ConversationItem key={entry.conv.id} entry={entry} active={activeConv?.conv.id === entry.conv.id} isTyping={Boolean(typingConversationIds[entry.conv.id])} onSelect={handleSelect} />
-              ))}
+              {conversationList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-6 text-center text-muted-foreground">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <MessageCircle className="w-6 h-6 text-primary" />
+                  </div>
+                  <p className="text-sm font-medium">No messages yet</p>
+                  <p className="text-xs mt-1">Start a conversation from the explore page.</p>
+                </div>
+              ) : (
+                conversationList.map((entry) => (
+                  <ConversationItem key={entry.conv.id} entry={entry} active={activeConv?.conv.id === entry.conv.id} isTyping={Boolean(typingConversationIds[entry.conv.id])} onSelect={handleSelect} />
+                ))
+              )}
             </motion.div>
           </div>
         </div>
@@ -578,7 +588,14 @@ export default function Messages() {
                         {showDate && (
                           <div className="flex justify-center my-6">
                             <span className="text-[11px] font-mono font-medium text-muted-foreground/80 tracking-wider uppercase px-3 py-1 rounded-full surface-2">
-                              {formatDistanceToNow(msgDate, { addSuffix: true })}
+                              {(() => {
+                                const now = new Date();
+                                const diff = now.getTime() - msgDate.getTime();
+                                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                if (days === 0) return 'Today';
+                                if (days === 1) return 'Yesterday';
+                                return msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                              })()}
                             </span>
                           </div>
                         )}
