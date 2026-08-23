@@ -77,14 +77,16 @@ const FIRST_NAMES = [
   "Neil", "Ira", "Kunal", "Maya", "Manish", "Shreya", "Nikhil", "Aadhya", "Rahul", "Priya",
   "Akash", "Ritu", "Alok", "Sunita", "Harsh", "Bhavna", "Gaurav", "Divya", "Pranav", "Natasha",
   "Armaan", "Tanya", "Raghav", "Sanya", "Shaurya", "Kriti", "Yash", "Samaira", "Abhay", "Lavanya",
-  "Rudra", "Myra", "Madhav", "Anvi", "Advait", "Siya", "Vivaan", "Riddhi", "Hrithik", "Navya"
+  "Rudra", "Myra", "Madhav", "Anvi", "Advait", "Siya", "Vivaan", "Riddhi", "Hrithik", "Navya",
+  "Ojas", "Kiara", "Reyan", "Vanya", "Yuvraj", "Ruhi", "Atharv", "Shanaya", "Tejas", "Anika"
 ];
 
 const LAST_NAMES = [
   "Sharma", "Patel", "Verma", "Singh", "Reddy", "Rao", "Nair", "Desai", "Joshi", "Iyer",
   "Chopra", "Kapoor", "Bhatia", "Malhotra", "Mehta", "Saxena", "Sen", "Roy", "Banerjee", "Dutta",
   "Aggarwal", "Gupta", "Mishra", "Trivedi", "Pandey", "Chatterjee", "Mukherjee", "Das", "Menon", "Pillai",
-  "Shetty", "Choudhury", "Bose", "Nambiar", "Gokhale", "Kulkarni", "Prabhu", "Bhardwaj", "Goswami", "Shukla"
+  "Shetty", "Choudhury", "Bose", "Nambiar", "Gokhale", "Kulkarni", "Prabhu", "Bhardwaj", "Goswami", "Shukla",
+  "Vaidya", "Bhatt", "Tripathi", "Dubey", "Dwivedi", "Thakur", "Rathore", "Chauhan", "Parmar", "Solanki"
 ];
 
 const AVATARS = [
@@ -142,10 +144,10 @@ function randomInt(min: number, max: number): number {
 }
 
 async function runMegaScaleSeed() {
-  console.log("🌌 INITIATING ASTRONOMICAL 280K+ META-TIER SEED (PostgreSQL)...");
+  console.log("🌌 INITIATING HALF-MILLION (580K+) META-TIER SEED (PostgreSQL)...");
 
   const passwordHash = await bcrypt.hash("Password123!", 10);
-  const TOTAL_USERS = 12000;
+  const TOTAL_USERS = 25000;
   const POSTS_PER_USER = 12;
   const VIDEOS_PER_USER = 10;
   const createdUserIds: string[] = [];
@@ -157,7 +159,7 @@ async function runMegaScaleSeed() {
     const genre = GENRES[i % GENRES.length];
     const fName = FIRST_NAMES[i % FIRST_NAMES.length];
     const lName = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
-    const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 99999)}`;
+    const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 999999)}`;
     const id = randomUUID();
     createdUserIds.push(id);
 
@@ -167,7 +169,7 @@ async function runMegaScaleSeed() {
       username,
       passwordHash,
       fullName: `${fName} ${lName}`,
-      bio: `Official Pioneer in ${genre.label} ${genre.emoji} · Leading the creator movement on Yor Talks.`,
+      bio: `Official Pioneer in ${genre.label} ${genre.emoji} · Building India's next creator wave on Yor Talks.`,
       avatarUrl: AVATARS[i % AVATARS.length],
       role: i < 100 ? "founder" : (i < 500 ? "moderator" : "user"),
       createdAt: new Date(Date.now() - randomInt(10000000, 8000000000)).toISOString(),
@@ -183,10 +185,10 @@ async function runMegaScaleSeed() {
     });
   }
 
-  for (let c = 0; c < userBatches.length; c += 1000) {
-    const chunk = userBatches.slice(c, c + 1000);
+  for (let c = 0; c < userBatches.length; c += 2500) {
+    const chunk = userBatches.slice(c, c + 2500);
     await db.insert(usersTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 1000, userBatches.length)}/${TOTAL_USERS} users\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 2500, userBatches.length)}/${TOTAL_USERS} users\r`);
   }
   console.log(`\n✅ ${TOTAL_USERS} Profiles Created in DB.`);
 
@@ -230,10 +232,10 @@ async function runMegaScaleSeed() {
     }
   }
 
-  for (let c = 0; c < postBatches.length; c += 2000) {
-    const chunk = postBatches.slice(c, c + 2000);
+  for (let c = 0; c < postBatches.length; c += 5000) {
+    const chunk = postBatches.slice(c, c + 5000);
     await db.insert(postsTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 2000, postBatches.length)}/${postBatches.length} posts\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 5000, postBatches.length)}/${postBatches.length} posts\r`);
   }
   console.log(`\n✅ ${postBatches.length} Posts Ingested into Database.`);
 
@@ -271,10 +273,10 @@ async function runMegaScaleSeed() {
     }
   }
 
-  for (let c = 0; c < videoBatches.length; c += 2000) {
-    const chunk = videoBatches.slice(c, c + 2000);
+  for (let c = 0; c < videoBatches.length; c += 5000) {
+    const chunk = videoBatches.slice(c, c + 5000);
     await db.insert(videosTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 2000, videoBatches.length)}/${videoBatches.length} reels\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 5000, videoBatches.length)}/${videoBatches.length} reels\r`);
   }
   console.log(`\n✅ ${videoBatches.length} Reels & Videos Ingested into Database.`);
 
@@ -287,7 +289,7 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Creators Club ${genre.emoji}`,
-      slug: `${genre.prefix}-creators-club-v4`,
+      slug: `${genre.prefix}-creators-club-v5`,
       description: `The premier Indian & international hub for verified ${genre.label} creators, builders, and enthusiasts.`,
       ownerId,
       moderators: [ownerId, createdUserIds[(g + 1) % createdUserIds.length]],
@@ -299,7 +301,7 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Pro Lounge & Mastermind`,
-      slug: `${genre.prefix}-pro-lounge-v4`,
+      slug: `${genre.prefix}-pro-lounge-v5`,
       description: `High-level project collaborations, venture backing, and private roundtable discussions for ${genre.label}.`,
       ownerId: createdUserIds[(g + 2) % createdUserIds.length],
       moderators: [ownerId],
@@ -315,9 +317,9 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${communityBatches.length} Communities Created.`);
 
-  console.log(`\n5. Generating 500+ Events & Hackathons...`);
+  console.log(`\n5. Generating 1000+ Events & Hackathons...`);
   const eventBatches: any[] = [];
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1000; i++) {
     const genre = GENRES[i % GENRES.length];
     const hostId = createdUserIds[i % createdUserIds.length];
 
@@ -336,15 +338,15 @@ async function runMegaScaleSeed() {
       rsvpStatus: "going"
     });
   }
-  for (let c = 0; c < eventBatches.length; c += 200) {
-    const chunk = eventBatches.slice(c, c + 200);
+  for (let c = 0; c < eventBatches.length; c += 500) {
+    const chunk = eventBatches.slice(c, c + 500);
     await db.insert(eventsTable).values(chunk).onConflictDoNothing();
   }
   console.log(`✅ ${eventBatches.length} Events Created.`);
 
-  console.log(`\n6. Generating 1000+ Marketplace Products...`);
+  console.log(`\n6. Generating 2000+ Marketplace Products...`);
   const productBatches: any[] = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 2000; i++) {
     const genre = GENRES[i % GENRES.length];
     const sellerId = createdUserIds[i % createdUserIds.length];
 
@@ -361,15 +363,15 @@ async function runMegaScaleSeed() {
       createdAt: new Date().toISOString()
     });
   }
-  for (let c = 0; c < productBatches.length; c += 200) {
-    const chunk = productBatches.slice(c, c + 200);
+  for (let c = 0; c < productBatches.length; c += 500) {
+    const chunk = productBatches.slice(c, c + 500);
     await db.insert(productsTable).values(chunk).onConflictDoNothing();
   }
   console.log(`✅ ${productBatches.length} Products Created.`);
 
-  console.log(`\n7. Generating 500+ Long-Form Articles & Guides...`);
+  console.log(`\n7. Generating 1000+ Long-Form Articles & Guides...`);
   const articleBatches: any[] = [];
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1000; i++) {
     const genre = GENRES[i % GENRES.length];
     const authorId = createdUserIds[i % createdUserIds.length];
 
@@ -386,15 +388,15 @@ async function runMegaScaleSeed() {
       collection: genre.tags[0]
     });
   }
-  for (let c = 0; c < articleBatches.length; c += 200) {
-    const chunk = articleBatches.slice(c, c + 200);
+  for (let c = 0; c < articleBatches.length; c += 500) {
+    const chunk = articleBatches.slice(c, c + 500);
     await db.insert(articlesTable).values(chunk).onConflictDoNothing();
   }
   console.log(`✅ ${articleBatches.length} Articles Created.`);
 
-  console.log(`\n8. Generating 2000+ Live Stories & Highlights...`);
+  console.log(`\n8. Generating 5000+ Live Stories & Highlights...`);
   const storyBatches: any[] = [];
-  for (let i = 0; i < 2000; i++) {
+  for (let i = 0; i < 5000; i++) {
     const authorId = createdUserIds[i % createdUserIds.length];
     const genre = GENRES[i % GENRES.length];
 
@@ -412,14 +414,14 @@ async function runMegaScaleSeed() {
       highlightTitle: i % 3 === 0 ? `${genre.prefix.toUpperCase()} Vault` : null
     });
   }
-  for (let c = 0; c < storyBatches.length; c += 500) {
-    const chunk = storyBatches.slice(c, c + 500);
+  for (let c = 0; c < storyBatches.length; c += 1000) {
+    const chunk = storyBatches.slice(c, c + 1000);
     await db.insert(storiesTable).values(chunk).onConflictDoNothing();
   }
   console.log(`✅ ${storyBatches.length} Stories Created.`);
 
   console.log(`\n✨ =========================================================`);
-  console.log(`🎉 ASTRONOMICAL 280K+ META-TIER SEED COMPLETED SUCCESSFULLY!`);
+  console.log(`🎉 HALF-MILLION (580K+) META-TIER SEED COMPLETED SUCCESSFULLY!`);
   console.log(`📊 TOTAL RECORDS IN DATABASE:`);
   console.log(`   - Profiles / Users: ${TOTAL_USERS}`);
   console.log(`   - Feed Posts: ${postBatches.length}`);
