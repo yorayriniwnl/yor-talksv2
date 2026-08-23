@@ -12,7 +12,8 @@
     "start": "node --enable-source-maps ./dist/index.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "node --import tsx ./src/scripts/seed-database.ts",
-    "seed-massive": "node --import tsx ./src/scripts/seed-massive.ts",`n    "seed-ultra": "node --import tsx ./src/scripts/seed-ultra-massive.ts",
+    "seed-massive": "node --import tsx ./src/scripts/seed-massive.ts",
+    "seed-ultra": "node --import tsx ./src/scripts/seed-ultra-massive.ts",
     "test": "node --import tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {
