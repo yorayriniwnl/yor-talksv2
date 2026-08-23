@@ -142,22 +142,22 @@ function randomInt(min: number, max: number): number {
 }
 
 async function runMegaScaleSeed() {
-  console.log("🌌 INITIATING MASSIVE META-TIER SCALE SEED (PostgreSQL)...");
+  console.log("🌌 INITIATING HYPER-MASSIVE 100K+ META-TIER SEED (PostgreSQL)...");
 
   const passwordHash = await bcrypt.hash("Password123!", 10);
-  const TOTAL_USERS = 2000;
-  const POSTS_PER_USER = 10;
-  const VIDEOS_PER_USER = 8;
+  const TOTAL_USERS = 5000;
+  const POSTS_PER_USER = 12;
+  const VIDEOS_PER_USER = 10;
   const createdUserIds: string[] = [];
 
-  console.log(`\n1. Generating ${TOTAL_USERS} diverse creator identities across all 55+ genres...`);
+  console.log(`\n1. Generating ${TOTAL_USERS} diverse creator identities across 55+ genres...`);
   
   const userBatches: any[] = [];
   for (let i = 0; i < TOTAL_USERS; i++) {
     const genre = GENRES[i % GENRES.length];
     const fName = FIRST_NAMES[i % FIRST_NAMES.length];
     const lName = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
-    const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 999)}`;
+    const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 99999)}`;
     const id = randomUUID();
     createdUserIds.push(id);
 
@@ -167,9 +167,9 @@ async function runMegaScaleSeed() {
       username,
       passwordHash,
       fullName: `${fName} ${lName}`,
-      bio: `Official Pioneer in ${genre.label} ${genre.emoji} · Innovating on Yor Talks.`,
+      bio: `Official Pioneer in ${genre.label} ${genre.emoji} · Building India's next creator wave on Yor Talks.`,
       avatarUrl: AVATARS[i % AVATARS.length],
-      role: i < 20 ? "founder" : (i < 100 ? "moderator" : "user"),
+      role: i < 50 ? "founder" : (i < 250 ? "moderator" : "user"),
       createdAt: new Date(Date.now() - randomInt(10000000, 8000000000)).toISOString(),
       updatedAt: new Date().toISOString(),
       followers: [],
@@ -183,10 +183,10 @@ async function runMegaScaleSeed() {
     });
   }
 
-  for (let c = 0; c < userBatches.length; c += 250) {
-    const chunk = userBatches.slice(c, c + 250);
+  for (let c = 0; c < userBatches.length; c += 500) {
+    const chunk = userBatches.slice(c, c + 500);
     await db.insert(usersTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 250, userBatches.length)}/${TOTAL_USERS} users\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 500, userBatches.length)}/${TOTAL_USERS} users\r`);
   }
   console.log(`\n✅ ${TOTAL_USERS} Profiles Created in DB.`);
 
@@ -208,7 +208,9 @@ async function runMegaScaleSeed() {
         `Major milestone unlocked! Big gratitude to everyone backing our mission in ${genre.label}. Let's keep building! 🏆🎉 #${genre.tags.join(" #")}`,
         `Discussion time for all ${genre.label} minds: What tool or breakthrough changed your workflow the most this year? Drop a reply below! 💬👇`,
         `Behind the scenes setup: calibrating the gear for tomorrow's 4K live demonstration of ${genre.label} 🎥⚡ #${genre.tags.join(" #")}`,
-        `Reflecting on 5 years in ${genre.label}. The most important lesson: consistency beats raw talent every single time. ✨🙏 #${genre.tags[0]}`
+        `Reflecting on 5 years in ${genre.label}. The most important lesson: consistency beats raw talent every single time. ✨🙏 #${genre.tags[0]}`,
+        `Just finished reviewing the latest submissions in ${genre.label}. Indian talent is performing on a world-class level! 🇮🇳🔥 #${genre.tags.join(" #")}`,
+        `Interactive challenge for the ${genre.label} community: tag your latest project below for an instant feature! 🌟✨ #${genre.tags[0]}`
       ];
 
       postBatches.push({
@@ -228,10 +230,10 @@ async function runMegaScaleSeed() {
     }
   }
 
-  for (let c = 0; c < postBatches.length; c += 500) {
-    const chunk = postBatches.slice(c, c + 500);
+  for (let c = 0; c < postBatches.length; c += 1000) {
+    const chunk = postBatches.slice(c, c + 1000);
     await db.insert(postsTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 500, postBatches.length)}/${postBatches.length} posts\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 1000, postBatches.length)}/${postBatches.length} posts\r`);
   }
   console.log(`\n✅ ${postBatches.length} Posts Ingested into Database.`);
 
@@ -250,7 +252,9 @@ async function runMegaScaleSeed() {
         `The 3 fatal mistakes beginner ${genre.label} creators make ❌`,
         `High-octane backstage look at ${genre.label} 🎥`,
         `Speedrun test in ${genre.label} — broke our personal record! ⏱️💨`,
-        `Why everyone in India is talking about ${genre.label} right now 🇮🇳✨`
+        `Why everyone in India is talking about ${genre.label} right now 🇮🇳✨`,
+        `4K Ultra Slow-Mo breakdown of ${genre.label} in action 📹`,
+        `Zero to Hero in ${genre.label}: Complete Roadmap 🚀`
       ];
 
       videoBatches.push({
@@ -267,14 +271,14 @@ async function runMegaScaleSeed() {
     }
   }
 
-  for (let c = 0; c < videoBatches.length; c += 500) {
-    const chunk = videoBatches.slice(c, c + 500);
+  for (let c = 0; c < videoBatches.length; c += 1000) {
+    const chunk = videoBatches.slice(c, c + 1000);
     await db.insert(videosTable).values(chunk).onConflictDoNothing();
-    process.stdout.write(`...seeded ${Math.min(c + 500, videoBatches.length)}/${videoBatches.length} reels\r`);
+    process.stdout.write(`...seeded ${Math.min(c + 1000, videoBatches.length)}/${videoBatches.length} reels\r`);
   }
   console.log(`\n✅ ${videoBatches.length} Reels & Videos Ingested into Database.`);
 
-  console.log(`\n4. Generating 200+ Communities & Pro Lounges...`);
+  console.log(`\n4. Generating 300+ Communities & Pro Lounges...`);
   const communityBatches: any[] = [];
   for (let g = 0; g < GENRES.length; g++) {
     const genre = GENRES[g];
@@ -283,7 +287,7 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Creators Club ${genre.emoji}`,
-      slug: `${genre.prefix}-creators-club-v2`,
+      slug: `${genre.prefix}-creators-club-v3`,
       description: `The premier Indian & international hub for verified ${genre.label} creators, builders, and enthusiasts.`,
       ownerId,
       moderators: [ownerId, createdUserIds[(g + 1) % createdUserIds.length]],
@@ -295,23 +299,11 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Pro Lounge & Mastermind`,
-      slug: `${genre.prefix}-pro-lounge-v2`,
+      slug: `${genre.prefix}-pro-lounge-v3`,
       description: `High-level project collaborations, venture backing, and private roundtable discussions for ${genre.label}.`,
       ownerId: createdUserIds[(g + 2) % createdUserIds.length],
       moderators: [ownerId],
       memberIds: createdUserIds.slice(0, randomInt(40, 300)),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-
-    communityBatches.push({
-      id: randomUUID(),
-      name: `${genre.label} Showcase & Critique Arena`,
-      slug: `${genre.prefix}-critique-arena`,
-      description: `Daily constructive feedback, peer reviews, and showcase arena for ${genre.label} practitioners.`,
-      ownerId: createdUserIds[(g + 3) % createdUserIds.length],
-      moderators: [ownerId],
-      memberIds: createdUserIds.slice(0, randomInt(30, 250)),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -323,16 +315,16 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${communityBatches.length} Communities Created.`);
 
-  console.log(`\n5. Generating 200+ Events & Hackathons...`);
+  console.log(`\n5. Generating 300+ Events & Hackathons...`);
   const eventBatches: any[] = [];
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 300; i++) {
     const genre = GENRES[i % GENRES.length];
     const hostId = createdUserIds[i % createdUserIds.length];
 
     eventBatches.push({
       id: randomUUID(),
       hostId,
-      title: `${genre.label} National Summit & Grand Hackathon 2026`,
+      title: `${genre.label} National Summit & Grand Hackathon 2026 #${i + 1}`,
       description: `Join thousands of creators in ${genre.label} for a multi-day hybrid event featuring keynotes, workshops, and ₹1,00,00,000 in creator grants!`,
       coverUrl: randomChoice(COVERS),
       category: genre.tags[0],
@@ -350,9 +342,9 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${eventBatches.length} Events Created.`);
 
-  console.log(`\n6. Generating 300+ Marketplace Products...`);
+  console.log(`\n6. Generating 500+ Marketplace Products...`);
   const productBatches: any[] = [];
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 500; i++) {
     const genre = GENRES[i % GENRES.length];
     const sellerId = createdUserIds[i % createdUserIds.length];
 
@@ -375,16 +367,16 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${productBatches.length} Products Created.`);
 
-  console.log(`\n7. Generating 150+ Long-Form Articles & Guides...`);
+  console.log(`\n7. Generating 300+ Long-Form Articles & Guides...`);
   const articleBatches: any[] = [];
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 300; i++) {
     const genre = GENRES[i % GENRES.length];
     const authorId = createdUserIds[i % createdUserIds.length];
 
     articleBatches.push({
       id: randomUUID(),
       authorId,
-      title: `The 2026 Playbook: Scaling ${genre.label} to Global Dominance`,
+      title: `The 2026 Playbook: Scaling ${genre.label} to Global Dominance #${i + 1}`,
       excerpt: `An exhaustive analysis of how high-tier creators are leveraging modern distribution pipelines and community tokenomics in ${genre.label}.`,
       content: `# Scaling ${genre.label} in 2026\n\nThe landscape for ${genre.label} has undergone massive shifts over the past year. In this comprehensive guide, we dissect the core strategies leading founders and creators use to build enduring moats.\n\n## Strategic Pillars\n1. Direct Community Ownership\n2. Real-time Telemetry & Micro-Drops\n3. High-Bandwidth Spatial Media\n\nRead on for step-by-step case studies from our top creators!`,
       coverUrl: randomChoice(COVERS),
@@ -400,9 +392,9 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${articleBatches.length} Articles Created.`);
 
-  console.log(`\n8. Generating 500+ Live Stories & Highlights...`);
+  console.log(`\n8. Generating 1000+ Live Stories & Highlights...`);
   const storyBatches: any[] = [];
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1000; i++) {
     const authorId = createdUserIds[i % createdUserIds.length];
     const genre = GENRES[i % GENRES.length];
 
@@ -420,14 +412,14 @@ async function runMegaScaleSeed() {
       highlightTitle: i % 3 === 0 ? `${genre.prefix.toUpperCase()} Vault` : null
     });
   }
-  for (let c = 0; c < storyBatches.length; c += 100) {
-    const chunk = storyBatches.slice(c, c + 100);
+  for (let c = 0; c < storyBatches.length; c += 250) {
+    const chunk = storyBatches.slice(c, c + 250);
     await db.insert(storiesTable).values(chunk).onConflictDoNothing();
   }
   console.log(`✅ ${storyBatches.length} Stories Created.`);
 
   console.log(`\n✨ =========================================================`);
-  console.log(`🎉 MEGA META-TIER DATABASE SEED COMPLETED SUCCESSFULLY!`);
+  console.log(`🎉 HYPER-MASSIVE 115K+ META-TIER SEED COMPLETED SUCCESSFULLY!`);
   console.log(`📊 TOTAL RECORDS IN DATABASE:`);
   console.log(`   - Profiles / Users: ${TOTAL_USERS}`);
   console.log(`   - Feed Posts: ${postBatches.length}`);
