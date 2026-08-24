@@ -144,11 +144,11 @@ function randomInt(min: number, max: number): number {
 }
 
 async function runMegaScaleSeed() {
-  console.log("🌌 INITIATING 1.15 MILLION+ META-TIER RECORD SEED (PostgreSQL)...");
+  console.log("🌌 INITIATING 2.5 MILLION+ META-TIER RECORD SEED (PostgreSQL)...");
 
   const passwordHash = await bcrypt.hash("Password123!", 10);
-  const TOTAL_USERS = 50000;
-  const POSTS_PER_USER = 12;
+  const TOTAL_USERS = 100000;
+  const POSTS_PER_USER = 14;
   const VIDEOS_PER_USER = 10;
   const createdUserIds: string[] = [];
 
@@ -161,7 +161,7 @@ async function runMegaScaleSeed() {
       const genre = GENRES[i % GENRES.length];
       const fName = FIRST_NAMES[i % FIRST_NAMES.length];
       const lName = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
-      const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 9999999)}`;
+      const username = `${fName.toLowerCase()}_${genre.prefix}_${i + 1}_${randomInt(10, 99999999)}`;
       const id = randomUUID();
       createdUserIds.push(id);
 
@@ -173,7 +173,7 @@ async function runMegaScaleSeed() {
         fullName: `${fName} ${lName}`,
         bio: `Official Pioneer in ${genre.label} ${genre.emoji} · Building India's creator future on Yor Talks.`,
         avatarUrl: AVATARS[i % AVATARS.length],
-        role: i < 200 ? "founder" : (i < 1000 ? "moderator" : "user"),
+        role: i < 500 ? "founder" : (i < 2500 ? "moderator" : "user"),
         createdAt: new Date(Date.now() - randomInt(10000000, 8000000000)).toISOString(),
         updatedAt: new Date().toISOString(),
         followers: [],
@@ -291,7 +291,7 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Creators Club ${genre.emoji}`,
-      slug: `${genre.prefix}-creators-club-v7`,
+      slug: `${genre.prefix}-creators-club-v8`,
       description: `The premier Indian & international hub for verified ${genre.label} creators, builders, and enthusiasts.`,
       ownerId,
       moderators: [ownerId, createdUserIds[(g + 1) % createdUserIds.length]],
@@ -303,7 +303,7 @@ async function runMegaScaleSeed() {
     communityBatches.push({
       id: randomUUID(),
       name: `${genre.label} Pro Lounge & Mastermind`,
-      slug: `${genre.prefix}-pro-lounge-v7`,
+      slug: `${genre.prefix}-pro-lounge-v8`,
       description: `High-level project collaborations, venture backing, and private roundtable discussions for ${genre.label}.`,
       ownerId: createdUserIds[(g + 2) % createdUserIds.length],
       moderators: [ownerId],
@@ -319,10 +319,10 @@ async function runMegaScaleSeed() {
   }
   console.log(`✅ ${communityBatches.length} Communities Created.`);
 
-  console.log(`\n5. Generating 2000+ Events & Hackathons...`);
-  for (let c = 0; c < 2000; c += 500) {
+  console.log(`\n5. Generating 5000+ Events & Hackathons...`);
+  for (let c = 0; c < 5000; c += 500) {
     const chunk: any[] = [];
-    for (let i = c; i < Math.min(c + 500, 2000); i++) {
+    for (let i = c; i < Math.min(c + 500, 5000); i++) {
       const genre = GENRES[i % GENRES.length];
       const hostId = createdUserIds[i % createdUserIds.length];
 
@@ -343,12 +343,12 @@ async function runMegaScaleSeed() {
     }
     await db.insert(eventsTable).values(chunk).onConflictDoNothing();
   }
-  console.log(`✅ 2000 Events Created.`);
+  console.log(`✅ 5000 Events Created.`);
 
-  console.log(`\n6. Generating 5000+ Marketplace Products...`);
-  for (let c = 0; c < 5000; c += 500) {
+  console.log(`\n6. Generating 10000+ Marketplace Products...`);
+  for (let c = 0; c < 10000; c += 500) {
     const chunk: any[] = [];
-    for (let i = c; i < Math.min(c + 500, 5000); i++) {
+    for (let i = c; i < Math.min(c + 500, 10000); i++) {
       const genre = GENRES[i % GENRES.length];
       const sellerId = createdUserIds[i % createdUserIds.length];
 
@@ -367,12 +367,12 @@ async function runMegaScaleSeed() {
     }
     await db.insert(productsTable).values(chunk).onConflictDoNothing();
   }
-  console.log(`✅ 5000 Products Created.`);
+  console.log(`✅ 10000 Products Created.`);
 
-  console.log(`\n7. Generating 2000+ Long-Form Articles & Guides...`);
-  for (let c = 0; c < 2000; c += 500) {
+  console.log(`\n7. Generating 5000+ Long-Form Articles & Guides...`);
+  for (let c = 0; c < 5000; c += 500) {
     const chunk: any[] = [];
-    for (let i = c; i < Math.min(c + 500, 2000); i++) {
+    for (let i = c; i < Math.min(c + 500, 5000); i++) {
       const genre = GENRES[i % GENRES.length];
       const authorId = createdUserIds[i % createdUserIds.length];
 
@@ -391,12 +391,12 @@ async function runMegaScaleSeed() {
     }
     await db.insert(articlesTable).values(chunk).onConflictDoNothing();
   }
-  console.log(`✅ 2000 Articles Created.`);
+  console.log(`✅ 5000 Articles Created.`);
 
-  console.log(`\n8. Generating 10000+ Live Stories & Highlights...`);
-  for (let c = 0; c < 10000; c += 1000) {
+  console.log(`\n8. Generating 20000+ Live Stories & Highlights...`);
+  for (let c = 0; c < 20000; c += 1000) {
     const chunk: any[] = [];
-    for (let i = c; i < Math.min(c + 1000, 10000); i++) {
+    for (let i = c; i < Math.min(c + 1000, 20000); i++) {
       const authorId = createdUserIds[i % createdUserIds.length];
       const genre = GENRES[i % GENRES.length];
 
@@ -416,20 +416,20 @@ async function runMegaScaleSeed() {
     }
     await db.insert(storiesTable).values(chunk).onConflictDoNothing();
   }
-  console.log(`✅ 10000 Stories Created.`);
+  console.log(`✅ 20000 Stories Created.`);
 
   console.log(`\n✨ =========================================================`);
-  console.log(`🎉 1.15 MILLION+ META-SCALE SEED COMPLETED SUCCESSFULLY!`);
+  console.log(`🎉 2.5 MILLION+ META-SCALE SEED COMPLETED SUCCESSFULLY!`);
   console.log(`📊 TOTAL RECORDS IN DATABASE:`);
   console.log(`   - Profiles / Users: ${TOTAL_USERS}`);
   console.log(`   - Feed Posts: ${TOTAL_POSTS}`);
   console.log(`   - Short-Form Reels: ${TOTAL_REELS}`);
   console.log(`   - Communities: ${communityBatches.length}`);
-  console.log(`   - Events & Hackathons: 2000`);
-  console.log(`   - Marketplace Products: 5000`);
-  console.log(`   - Articles: 2000`);
-  console.log(`   - Stories: 10000`);
-  console.log(`   ⚡ TOTAL NEW ROWS: ${TOTAL_USERS + TOTAL_POSTS + TOTAL_REELS + communityBatches.length + 2000 + 5000 + 2000 + 10000}`);
+  console.log(`   - Events & Hackathons: 5000`);
+  console.log(`   - Marketplace Products: 10000`);
+  console.log(`   - Articles: 5000`);
+  console.log(`   - Stories: 20000`);
+  console.log(`   ⚡ TOTAL NEW ROWS: ${TOTAL_USERS + TOTAL_POSTS + TOTAL_REELS + communityBatches.length + 5000 + 10000 + 5000 + 20000}`);
   console.log(`========================================================= ✨`);
   process.exit(0);
 }
