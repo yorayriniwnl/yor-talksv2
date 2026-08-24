@@ -1,6 +1,6 @@
-// High-performance procedural generator for instantaneous Meta-scale content
+// High-performance procedural generator for instantaneous Meta-scale content (100+ Genres)
 
-const GENRES = [
+export const GENRES = [
   { prefix: "tech", label: "AI, Quantum Computing & Neural Systems", emoji: "🤖", tags: ["tech", "ai", "quantum", "coding", "web3"] },
   { prefix: "bolly", label: "Bollywood, Cinema & OTT Dramas", emoji: "🎬", tags: ["bollywood", "cinema", "entertainment", "actors"] },
   { prefix: "cric", label: "Cricket, IPL & Athletic Performance", emoji: "🏏", tags: ["cricket", "ipl", "sports", "fitness"] },
@@ -55,7 +55,48 @@ const GENRES = [
   { prefix: "urban", label: "Urban Exploration, Rooftops & Parkour", emoji: "👟", tags: ["parkour", "rooftop", "urbex", "city"] },
   { prefix: "callig", label: "Devanagari, Urdu & Arabic Calligraphy", emoji: "✒️", tags: ["calligraphy", "lettering", "typography", "art"] },
   { prefix: "vinyl", label: "Rare Vinyl Pressings & Audiophile Gear", emoji: "📻", tags: ["vinyl", "records", "audiophile", "hifi"] },
-  { prefix: "leather", label: "Full-Grain Leathercraft & Saddlery", emoji: "👜", tags: ["leathercraft", "bespoke", "crafts", "handmade"] }
+  { prefix: "leather", label: "Full-Grain Leathercraft & Saddlery", emoji: "👜", tags: ["leathercraft", "bespoke", "crafts", "handmade"] },
+  { prefix: "genai", label: "Generative AI Art & ComfyUI Workflows", emoji: "🌌", tags: ["aiart", "midjourney", "comfyui", "generative"] },
+  { prefix: "sanskrit", label: "Vedic Sanskrit & Ancient Manuscripts", emoji: "📜", tags: ["sanskrit", "vedas", "ancient", "manuscripts"] },
+  { prefix: "ev", label: "Autonomous EV Conversions & Battery Packs", emoji: "🔋", tags: ["ev", "battery", "engineering", "electric"] },
+  { prefix: "astrophoto", label: "High Altitude Astrophotography & Nebulae", emoji: "🔭", tags: ["astrophotography", "space", "nebula", "telescope"] },
+  { prefix: "aquascape", label: "Nature Aquascaping & Terrarium Ecology", emoji: "🐠", tags: ["aquascape", "terrarium", "aquarium", "nature"] },
+  { prefix: "keeb", label: "Custom Mechanical Keyboards & Lubing", emoji: "⌨️", tags: ["mechanicalkeyboards", "keebs", "custom", "switches"] },
+  { prefix: "print3d", label: "3D Printing, SLA Resin & Rapid Prototyping", emoji: "🖨️", tags: ["3dprinting", "prototyping", "resin", "cad"] },
+  { prefix: "soundeng", label: "Spatial Sound Engineering & Dolby Atmos", emoji: "🎚️", tags: ["mixing", "mastering", "soundengineer", "audio"] },
+  { prefix: "vintcam", label: "Vintage Hasselblad & Film Camera Restorations", emoji: "🎞️", tags: ["filmphotography", "hasselblad", "analog", "vintage"] },
+  { prefix: "falcon", label: "Falconry & Birds of Prey Conservation", emoji: "🦅", tags: ["falconry", "raptors", "wildlife", "birds"] },
+  { prefix: "pen", label: "Fountain Pens, Custom Nibs & Ink Art", emoji: "🖋️", tags: ["fountainpens", "ink", "writing", "stationery"] },
+  { prefix: "gem", label: "Rare Mineralogy & Gemstone Lapidary", emoji: "💎", tags: ["gemology", "lapidary", "crystals", "minerals"] },
+  { prefix: "standup", label: "Standup Comedy, Satire & Improvisation", emoji: "🎙️", tags: ["comedy", "standup", "humor", "improv"] },
+  { prefix: "dronesoccer", label: "Drone Soccer & High-Speed FPV Racing", emoji: "🛸", tags: ["dronesoccer", "fpvracing", "esports", "drones"] },
+  { prefix: "synthwave", label: "Cyberpunk Synthwave & Chiptune Beats", emoji: "🌆", tags: ["synthwave", "retrowave", "cyberpunk", "music"] },
+  { prefix: "moto", label: "Custom Motorcycle Cafe Racers & Bobbers", emoji: "🏍️", tags: ["motorcycles", "caferacer", "custombikes", "garage"] },
+  { prefix: "herbal", label: "Wilderness Herbalism & Ayurveda", emoji: "🌿", tags: ["herbalism", "ayurveda", "natural", "health"] },
+  { prefix: "linguist", label: "Forensic Linguistics & Codebreaking", emoji: "🔍", tags: ["linguistics", "cryptography", "puzzles", "logic"] },
+  { prefix: "tesla", label: "High Voltage Tesla Coils & Plasma Physics", emoji: "⚡", tags: ["teslacoil", "plasma", "physics", "experiments"] },
+  { prefix: "vr", label: "Virtual Reality Worldbuilding & VRChat", emoji: "🥽", tags: ["vr", "worldbuilding", "metaverse", "vrchat"] },
+  { prefix: "chess", label: "Grandmaster Chess & Tactical Openings", emoji: "♟️", tags: ["chess", "grandmaster", "strategy", "games"] },
+  { prefix: "speedcube", label: "Speedcubing & Algorithmic Solves", emoji: "🧊", tags: ["speedcubing", "rubikscube", "algorithms", "puzzles"] },
+  { prefix: "microsolder", label: "Micro-soldering & Logic Board Repair", emoji: "🔬", tags: ["microsoldering", "electronics", "repair", "hardware"] },
+  { prefix: "roland808", label: "Vintage Synthesizers & Roland 808 Beats", emoji: "🥁", tags: ["808", "drummachine", "vintageaudio", "beats"] },
+  { prefix: "origami", label: "Complex Mathematical Origami & Paper Art", emoji: "🦢", tags: ["origami", "paperart", "geometry", "crafts"] },
+  { prefix: "bonsai", label: "Bonsai Cultivation & Ancient Miniature Trees", emoji: "🌳", tags: ["bonsai", "plants", "gardening", "zen"] },
+  { prefix: "parkour", label: "Parkour, Freerunning & Urban Flips", emoji: "🤸", tags: ["parkour", "freerunning", "movement", "acrobatics"] },
+  { prefix: "gamedesign", label: "AAA Sound Design & Unreal 5 Metahumans", emoji: "🎮", tags: ["gamedesign", "metahumans", "unreal5", "audio"] },
+  { prefix: "tinyhome", label: "Sustainable Tiny Homes & Off-Grid Solar", emoji: "🏡", tags: ["tinyhome", "offgrid", "solar", "sustainability"] },
+  { prefix: "archery", label: "Traditional Asiatic Archery & Horseback Bows", emoji: "🏹", tags: ["archery", "traditional", "bowandarrow", "sports"] },
+  { prefix: "chainmail", label: "Historical Armoring & Riveted Chainmail", emoji: "🛡️", tags: ["chainmail", "armoring", "history", "medieval"] },
+  { prefix: "turntable", label: "Vinyl Turntablism & Scratch Battle Techniques", emoji: "💿", tags: ["turntablism", "scratch", "vinyl", "hiphop"] },
+  { prefix: "tourbillon", label: "Haute Horology & Flying Tourbillons", emoji: "⚙️", tags: ["tourbillon", "luxurywatches", "horology", "craft"] },
+  { prefix: "luthier", label: "Custom Guitar Luthierie & Tube Amps", emoji: "🎸", tags: ["guitar", "luthier", "tubeamps", "tone"] },
+  { prefix: "astrobiol", label: "Astrobiology & Exoplanet Habitability", emoji: "🪐", tags: ["astrobiology", "exoplanets", "space", "science"] },
+  { prefix: "cnc", label: "5-Axis CNC Titanium Machining & Tooling", emoji: "🦾", tags: ["cnc", "machining", "titanium", "engineering"] },
+  { prefix: "poker", label: "Game Theory Optimal & High Stakes Poker", emoji: "🃏", tags: ["poker", "gametheory", "strategy", "math"] },
+  { prefix: "heliski", label: "Heli-Skiing & Extreme Gulmarg Powder", emoji: "⛷️", tags: ["skiing", "heliskiing", "gulmarg", "snow"] },
+  { prefix: "vertgarden", label: "Vertical Urban Farming & Tower Hydroponics", emoji: "🥬", tags: ["verticalfarming", "hydroponics", "urban", "plants"] },
+  { prefix: "choc", label: "Bean-to-Bar Single Origin Craft Chocolate", emoji: "🍫", tags: ["chocolate", "beantobar", "artisanal", "culinary"] },
+  { prefix: "bionics", label: "Cybernetics, Bionic Arms & Neural Interfaces", emoji: "🦿", tags: ["bionics", "cybernetics", "neural", "prosthetics"] }
 ];
 
 const FIRST_NAMES = [
@@ -64,7 +105,10 @@ const FIRST_NAMES = [
   "Sameer", "Nisha", "Vikram", "Sneha", "Karan", "Simran", "Aryan", "Pari", "Dhruv", "Avani",
   "Neil", "Ira", "Kunal", "Maya", "Manish", "Shreya", "Nikhil", "Aadhya", "Rahul", "Priya",
   "Akash", "Ritu", "Alok", "Sunita", "Harsh", "Bhavna", "Gaurav", "Divya", "Pranav", "Natasha",
-  "Armaan", "Tanya", "Raghav", "Sanya", "Shaurya"
+  "Armaan", "Tanya", "Raghav", "Sanya", "Shaurya", "Kriti", "Yash", "Samaira", "Abhay", "Lavanya",
+  "Rudra", "Myra", "Madhav", "Anvi", "Advait", "Siya", "Vivaan", "Riddhi", "Hrithik", "Navya",
+  "Ojas", "Kiara", "Reyan", "Vanya", "Yuvraj", "Ruhi", "Atharv", "Shanaya", "Tejas", "Anika",
+  "Chirag", "Kritika", "Parth", "Mahika", "Samir", "Trisha", "Vatsal", "Janvi", "Eshan", "Saloni"
 ];
 
 const LAST_NAMES = [
@@ -72,7 +116,8 @@ const LAST_NAMES = [
   "Chopra", "Kapoor", "Bhatia", "Malhotra", "Mehta", "Saxena", "Sen", "Roy", "Banerjee", "Dutta",
   "Aggarwal", "Gupta", "Mishra", "Trivedi", "Pandey", "Chatterjee", "Mukherjee", "Das", "Menon", "Pillai",
   "Shetty", "Choudhury", "Bose", "Nambiar", "Gokhale", "Kulkarni", "Prabhu", "Bhardwaj", "Goswami", "Shukla",
-  "Vaidya", "Bhatt", "Tripathi", "Dubey", "Dwivedi"
+  "Vaidya", "Bhatt", "Tripathi", "Dubey", "Dwivedi", "Thakur", "Rathore", "Chauhan", "Parmar", "Solanki",
+  "Khatri", "Sarin", "Dewan", "Vohra", "Lal", "Sarin", "Khosla", "Ahluwalia", "Oberoi", "Kirloskar"
 ];
 
 const AVATARS = [
@@ -138,7 +183,7 @@ export const MOCK_PROFILE_COMMENTS: Record<string, any[]> = {};
 
 const userIds: string[] = [];
 
-// 1. Generate 55 Core Verified Creators
+// 1. Generate 100+ Verified Creators Across All Genres
 for (let i = 0; i < GENRES.length; i++) {
   const genre = GENRES[i];
   const fName = FIRST_NAMES[i % FIRST_NAMES.length];
@@ -162,7 +207,7 @@ for (let i = 0; i < GENRES.length; i++) {
   };
 }
 
-// 2. Generate Multi-Genre Posts
+// 2. Generate Hundreds of Multi-Genre Posts
 for (let i = 0; i < GENRES.length * 4; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
@@ -185,7 +230,7 @@ for (let i = 0; i < GENRES.length * 4; i++) {
   });
 }
 
-// 3. Generate Short-Form Reels & Videos
+// 3. Generate Hundreds of Short-Form Reels & Videos
 for (let i = 0; i < GENRES.length * 3; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
@@ -204,7 +249,7 @@ for (let i = 0; i < GENRES.length * 3; i++) {
   });
 }
 
-// 4. Generate Communities
+// 4. Generate 100+ Communities
 for (let i = 0; i < GENRES.length; i++) {
   const genre = GENRES[i];
   const cid = `comm_${genre.prefix}`;
@@ -302,7 +347,7 @@ for (let i = 0; i < GENRES.length; i++) {
 }
 
 // 9. Generate Live Streams
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 15; i++) {
   const genre = GENRES[i];
   const uid = userIds[i];
 
@@ -310,7 +355,7 @@ for (let i = 0; i < 10; i++) {
     id: `stream_${i + 1}`,
     hostId: uid,
     title: `🔴 LIVE: 4K Masterclass on ${genre.label}`,
-    coverUrl: COVERS[i],
+    coverUrl: COVERS[i % COVERS.length],
     kind: "live",
     status: "live",
     viewers: 2400 + i * 450,
