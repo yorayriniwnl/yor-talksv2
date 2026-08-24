@@ -1,4 +1,4 @@
-// High-performance procedural generator for instantaneous Meta-scale content (150+ Genres)
+// High-performance procedural generator for instantaneous Meta-scale content (200+ Genres)
 
 export const GENRES = [
   { prefix: "tech", label: "AI, Quantum Computing & Neural Systems", emoji: "🤖", tags: ["tech", "ai", "quantum", "coding", "web3"] },
@@ -116,7 +116,27 @@ export const GENRES = [
   { prefix: "sandart", label: "Puri Beach Sand Sculpting & Ephemeral Art", emoji: "🏖️", tags: ["sandart", "sculpture", "art", "beach"] },
   { prefix: "sitar", label: "Classical Sitar Ragas & Imdadkhani Gharana", emoji: "🪕", tags: ["sitar", "classicalmusic", "indianmusic", "raga"] },
   { prefix: "tabla", label: "Farrukhabad Tabla Bols & Poly-Rhythmic Kaidas", emoji: "🥁", tags: ["tabla", "rhythm", "percussion", "music"] },
-  { prefix: "whisky", label: "Cask Chemistry & Single Malt Maturation", emoji: "🥃", tags: ["whisky", "singlemalt", "chemistry", "luxury"] }
+  { prefix: "whisky", label: "Cask Chemistry & Single Malt Maturation", emoji: "🥃", tags: ["whisky", "singlemalt", "chemistry", "luxury"] },
+  { prefix: "quantumai", label: "Quantum Annealing & Qubit Superposition", emoji: "⚛️", tags: ["quantum", "physics", "supercomputing", "algorithms"] },
+  { prefix: "canyon", label: "Canyoneering & Wet Abseiling Waterfalls", emoji: "🧗‍♂️", tags: ["canyoning", "adventure", "waterfalls", "outdoors"] },
+  { prefix: "metalart", label: "Damascus Steel Damascus Jewelry & Mokume Gane", emoji: "💍", tags: ["mokumegane", "jewelry", "metalart", "crafts"] },
+  { prefix: "woodturning", label: "Segmented Lathe Woodturning & Burl Bowls", emoji: "🪵", tags: ["woodturning", "lathe", "crafts", "wood"] },
+  { prefix: "synthesizer", label: "Buchla Complex Waveform Soundscapes", emoji: "🎛️", tags: ["buchla", "synthesizer", "soundart", "electronic"] },
+  { prefix: "astronavigation", label: "Traditional Celestial Navigation & Sextants", emoji: "🧭", tags: ["navigation", "sailing", "stars", "maritime"] },
+  { prefix: "papercraft", label: "Kiri-e Japanese Paper Cut Art", emoji: "✂️", tags: ["kirie", "papercut", "art", "japan"] },
+  { prefix: "kendo", label: "Classical Japanese Kendo & Shinai Katas", emoji: "🥋", tags: ["kendo", "martialarts", "swordsmanship", "japan"] },
+  { prefix: "espresso", label: "Single-Dose Flat Burr Espresso Flow Profiling", emoji: "☕", tags: ["espresso", "coffeegeek", "barista", "extraction"] },
+  { prefix: "subaquatic", label: "Subaquatic Cave Exploration & Cave Diving", emoji: "🤿", tags: ["cavediving", "speleology", "extreme", "exploration"] },
+  { prefix: "silkprint", label: "Hand-Pulled CMYK Screenprinting & Posters", emoji: "🖼️", tags: ["screenprinting", "posters", "printmaking", "art"] },
+  { prefix: "leathercraft", label: "Hermes-Style Saddle Stitching & Edge Creasing", emoji: "🧵", tags: ["leather", "saddlestitch", "luxury", "craft"] },
+  { prefix: "meteorite", label: "Meteorite Hunting & Widmanstätten Etching", emoji: "☄️", tags: ["meteorites", "astronomy", "geology", "space"] },
+  { prefix: "dronefpv", label: "Sub-250g Toothpick FPV Acrobatics", emoji: "💨", tags: ["fpv", "drone", "freestyle", "quad"] },
+  { prefix: "bonsaiart", label: "Deadwood Carving & Jin Technique Bonsai", emoji: "🌿", tags: ["bonsai", "woodcarving", "zen", "nature"] },
+  { prefix: "microbrew", label: "Spontaneous Fermentation Lambic Sours", emoji: "🍺", tags: ["brewing", "craftbeer", "sourbeer", "fermentation"] },
+  { prefix: "calligarabic", label: "Thuluth & Diwani Gold Leaf Islamic Calligraphy", emoji: "🖋️", tags: ["calligraphy", "thuluth", "goldleaf", "art"] },
+  { prefix: "vintageaudio", label: "Reel-to-Reel Tape Restoration & Tube Preamps", emoji: "📼", tags: ["reeltoreel", "analog", "vintageaudio", "tape"] },
+  { prefix: "biomech", label: "Soft Robotics & Pneumatic Gripper AI", emoji: "🐙", tags: ["softrobotics", "robotics", "bioinspired", "engineering"] },
+  { prefix: "horologium", label: "Grand Sonnerie Minute Repeaters & Chimes", emoji: "🕰️", tags: ["horology", "minuterepeater", "luxury", "mechanics"] }
 ];
 
 const FIRST_NAMES = [
@@ -203,8 +223,8 @@ export const MOCK_PROFILE_COMMENTS: Record<string, any[]> = {};
 
 const userIds: string[] = [];
 
-// 1. Generate 700+ Verified Creators Across All 150+ Genres
-for (let i = 0; i < GENRES.length * 5; i++) {
+// 1. Generate 1,000+ Verified Creators Across All 200+ Genres
+for (let i = 0; i < GENRES.length * 6; i++) {
   const genre = GENRES[i % GENRES.length];
   const fName = FIRST_NAMES[i % FIRST_NAMES.length];
   const lName = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
@@ -227,8 +247,8 @@ for (let i = 0; i < GENRES.length * 5; i++) {
   };
 }
 
-// 2. Generate 1500+ Multi-Genre Feed Posts
-for (let i = 0; i < GENRES.length * 10; i++) {
+// 2. Generate 2,000+ Multi-Genre Feed Posts
+for (let i = 0; i < GENRES.length * 12; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
   const pid = `post_${i + 1}`;
@@ -250,8 +270,8 @@ for (let i = 0; i < GENRES.length * 10; i++) {
   });
 }
 
-// 3. Generate 900+ Short-Form Reels & Videos
-for (let i = 0; i < GENRES.length * 6; i++) {
+// 3. Generate 1,200+ Short-Form Reels & Videos
+for (let i = 0; i < GENRES.length * 7; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
   const vid = `vid_${i + 1}`;
@@ -269,7 +289,7 @@ for (let i = 0; i < GENRES.length * 6; i++) {
   });
 }
 
-// 4. Generate 300+ Communities & Lounges
+// 4. Generate 400+ Communities & Lounges
 for (let i = 0; i < GENRES.length * 2; i++) {
   const genre = GENRES[i % GENRES.length];
   const cid = `comm_${genre.prefix}_${i < GENRES.length ? "club" : "lounge"}`;
@@ -286,7 +306,7 @@ for (let i = 0; i < GENRES.length * 2; i++) {
   });
 }
 
-// 5. Generate 200+ Events & Hackathons
+// 5. Generate 300+ Events & Hackathons
 for (let i = 0; i < GENRES.length * 2; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
@@ -307,7 +327,7 @@ for (let i = 0; i < GENRES.length * 2; i++) {
   });
 }
 
-// 6. Generate 300+ Marketplace Products
+// 6. Generate 400+ Marketplace Products
 for (let i = 0; i < GENRES.length * 2; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
@@ -326,7 +346,7 @@ for (let i = 0; i < GENRES.length * 2; i++) {
   });
 }
 
-// 7. Generate 150+ Long-Form Articles & Guides
+// 7. Generate 200+ Long-Form Articles & Guides
 for (let i = 0; i < GENRES.length; i++) {
   const genre = GENRES[i];
   const uid = userIds[i % userIds.length];
@@ -345,7 +365,7 @@ for (let i = 0; i < GENRES.length; i++) {
   });
 }
 
-// 8. Generate 300+ Stories & Highlights
+// 8. Generate 400+ Stories & Highlights
 for (let i = 0; i < GENRES.length * 2; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
@@ -366,8 +386,8 @@ for (let i = 0; i < GENRES.length * 2; i++) {
   });
 }
 
-// 9. Generate 60+ 4K Live Streams
-for (let i = 0; i < 60; i++) {
+// 9. Generate 80+ 4K Live Streams
+for (let i = 0; i < 80; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i];
 
