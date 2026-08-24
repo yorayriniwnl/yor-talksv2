@@ -183,17 +183,17 @@ export const MOCK_PROFILE_COMMENTS: Record<string, any[]> = {};
 
 const userIds: string[] = [];
 
-// 1. Generate 100+ Verified Creators Across All Genres
-for (let i = 0; i < GENRES.length; i++) {
-  const genre = GENRES[i];
+// 1. Generate 500+ Verified Creators Across All Genres
+for (let i = 0; i < GENRES.length * 5; i++) {
+  const genre = GENRES[i % GENRES.length];
   const fName = FIRST_NAMES[i % FIRST_NAMES.length];
-  const lName = LAST_NAMES[i % LAST_NAMES.length];
+  const lName = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
   const id = `u_${genre.prefix}_${i + 1}`;
   userIds.push(id);
 
   MOCK_USERS[id] = {
     id,
-    username: `${fName.toLowerCase()}_${genre.prefix}`,
+    username: `${fName.toLowerCase()}_${genre.prefix}_${i + 1}`,
     displayName: `${fName} ${lName}`,
     avatarUrl: AVATARS[i % AVATARS.length],
     coverUrl: COVERS[i % COVERS.length],
@@ -207,8 +207,8 @@ for (let i = 0; i < GENRES.length; i++) {
   };
 }
 
-// 2. Generate Hundreds of Multi-Genre Posts
-for (let i = 0; i < GENRES.length * 4; i++) {
+// 2. Generate 1000+ Multi-Genre Feed Posts
+for (let i = 0; i < GENRES.length * 10; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
   const pid = `post_${i + 1}`;
@@ -216,7 +216,7 @@ for (let i = 0; i < GENRES.length * 4; i++) {
   MOCK_POSTS.push({
     id: pid,
     authorId: uid,
-    content: `Exploring high-precision breakthroughs in ${genre.label}! We just published our newest workflow and benchmarks. What are your thoughts? ${genre.emoji} #${genre.tags.join(" #")}`,
+    content: `Exploring high-precision breakthroughs in ${genre.label}! We just published our newest workflow and telemetry benchmarks. What are your thoughts? ${genre.emoji} #${genre.tags.join(" #")}`,
     media: [COVERS[(i * 3) % COVERS.length]],
     likes: 850 + (i * 27) % 5000,
     comments: 42 + (i * 5) % 300,
@@ -224,14 +224,14 @@ for (let i = 0; i < GENRES.length * 4; i++) {
     resonanceScore: 0.75 + (i % 25) * 0.01,
     x: ((i * 137) % 3000) - 1500,
     y: ((i * 283) % 1600) - 800,
-    createdAt: new Date(Date.now() - i * 3600000 * 3).toISOString(),
+    createdAt: new Date(Date.now() - i * 3600000 * 2).toISOString(),
     likedByMe: i % 3 === 0,
     savedByMe: i % 5 === 0
   });
 }
 
-// 3. Generate Hundreds of Short-Form Reels & Videos
-for (let i = 0; i < GENRES.length * 3; i++) {
+// 3. Generate 600+ Short-Form Reels & Videos
+for (let i = 0; i < GENRES.length * 6; i++) {
   const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
   const vid = `vid_${i + 1}`;
@@ -244,20 +244,20 @@ for (let i = 0; i < GENRES.length * 3; i++) {
     title: `Mastering ${genre.label} in 60 seconds ${genre.emoji}`,
     views: 45000 + i * 12300,
     likes: 3400 + i * 850,
-    createdAt: new Date(Date.now() - i * 3600000 * 4).toISOString(),
+    createdAt: new Date(Date.now() - i * 3600000 * 3).toISOString(),
     type: "short"
   });
 }
 
-// 4. Generate 100+ Communities
-for (let i = 0; i < GENRES.length; i++) {
-  const genre = GENRES[i];
-  const cid = `comm_${genre.prefix}`;
+// 4. Generate 200+ Communities & Lounges
+for (let i = 0; i < GENRES.length * 2; i++) {
+  const genre = GENRES[i % GENRES.length];
+  const cid = `comm_${genre.prefix}_${i < GENRES.length ? "club" : "lounge"}`;
 
   MOCK_COMMUNITIES.push({
     id: cid,
-    name: `${genre.label} Hub ${genre.emoji}`,
-    description: `The primary meeting point for verified ${genre.label} pioneers, designers, and enthusiasts.`,
+    name: i < GENRES.length ? `${genre.label} Creators Club ${genre.emoji}` : `${genre.label} Mastermind Lounge 💎`,
+    description: `The primary meeting point for verified ${genre.label} pioneers, designers, and venture builders.`,
     coverUrl: COVERS[i % COVERS.length],
     members: 3400 + i * 290,
     isMember: i % 2 === 0,
@@ -266,38 +266,38 @@ for (let i = 0; i < GENRES.length; i++) {
   });
 }
 
-// 5. Generate Events & Hackathons
-for (let i = 0; i < GENRES.length; i++) {
-  const genre = GENRES[i];
+// 5. Generate 150+ Events & Hackathons
+for (let i = 0; i < GENRES.length * 2; i++) {
+  const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
 
   MOCK_EVENTS.push({
     id: `ev_${i + 1}`,
     hostId: uid,
-    title: `${genre.label} Grand Summit 2026`,
+    title: `${genre.label} National Summit & Creator Grant 2026 #${i + 1}`,
     description: `Join thousands of creators in ${genre.label} for keynote masterclasses, networking, and creator grants.`,
     coverUrl: COVERS[(i + 4) % COVERS.length],
     category: genre.tags[0],
-    startsAt: new Date(Date.now() + (i + 1) * 86400000 * 3).toISOString(),
+    startsAt: new Date(Date.now() + (i + 1) * 86400000 * 2).toISOString(),
     location: i % 2 === 0 ? "Jio World Convention Centre, Mumbai" : "Live Spatial Virtual Stage",
     isOnline: i % 2 !== 0,
-    attendeeIds: userIds.slice(0, 15),
-    interestedIds: userIds.slice(15, 35),
+    attendeeIds: userIds.slice(0, 25),
+    interestedIds: userIds.slice(25, 60),
     rsvpStatus: i % 3 === 0 ? "going" : "interested"
   });
 }
 
-// 6. Generate Marketplace Hardware & Collectibles
-for (let i = 0; i < GENRES.length; i++) {
-  const genre = GENRES[i];
+// 6. Generate 200+ Marketplace Products
+for (let i = 0; i < GENRES.length * 2; i++) {
+  const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
 
   MOCK_PRODUCTS.push({
     id: `prod_${i + 1}`,
     sellerId: uid,
-    title: `Artisanal Limited Edition ${genre.label} Collector Gear`,
+    title: `Artisanal Limited Edition ${genre.label} Collector Gear #${i + 1}`,
     description: `Handcrafted and numbered custom equipment for ${genre.label}. High durability certification included.`,
-    price: 4999 + i * 1500,
+    price: 4999 + i * 1200,
     images: [COVERS[(i + 2) % COVERS.length]],
     category: genre.tags[0],
     condition: "new",
@@ -306,7 +306,7 @@ for (let i = 0; i < GENRES.length; i++) {
   });
 }
 
-// 7. Generate Articles & Guides
+// 7. Generate 100+ Long-Form Articles & Guides
 for (let i = 0; i < GENRES.length; i++) {
   const genre = GENRES[i];
   const uid = userIds[i % userIds.length];
@@ -314,7 +314,7 @@ for (let i = 0; i < GENRES.length; i++) {
   MOCK_ARTICLES.push({
     id: `art_${i + 1}`,
     authorId: uid,
-    title: `The 2026 Creator Playbook: Scaling ${genre.label}`,
+    title: `The 2026 Creator Playbook: Scaling ${genre.label} to Global Dominance`,
     excerpt: `An in-depth breakdown of how top creators dominate distribution and monetize communities in ${genre.label}.`,
     content: `# Scaling ${genre.label}\n\nOver the past 12 months, creator toolkits have evolved rapidly. Here is the step-by-step framework to maximize your reach.`,
     coverUrl: COVERS[(i + 5) % COVERS.length],
@@ -325,9 +325,9 @@ for (let i = 0; i < GENRES.length; i++) {
   });
 }
 
-// 8. Generate Stories & Highlights
-for (let i = 0; i < GENRES.length; i++) {
-  const genre = GENRES[i];
+// 8. Generate 200+ Stories & Highlights
+for (let i = 0; i < GENRES.length * 2; i++) {
+  const genre = GENRES[i % GENRES.length];
   const uid = userIds[i % userIds.length];
 
   MOCK_STORIES.push({
@@ -335,26 +335,26 @@ for (let i = 0; i < GENRES.length; i++) {
     authorId: uid,
     mediaUrl: COVERS[(i + 1) % COVERS.length],
     type: "image",
-    textContent: `Studio session live for ${genre.label}! ✨`,
+    textContent: `Studio session live for ${genre.label}! ✨ #yortalks`,
     viewed: i % 2 === 0,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 86400000).toISOString(),
-    viewerIds: userIds.slice(0, 10),
+    viewerIds: userIds.slice(0, 15),
     reactions: ["🔥", "❤️"],
     isHighlight: i % 3 === 0,
-    highlightTitle: i % 3 === 0 ? `${genre.prefix.toUpperCase()} Highlights` : undefined
+    highlightTitle: i % 3 === 0 ? `${genre.prefix.toUpperCase()} Vault` : undefined
   });
 }
 
-// 9. Generate Live Streams
-for (let i = 0; i < 15; i++) {
-  const genre = GENRES[i];
+// 9. Generate 50+ 4K Live Streams
+for (let i = 0; i < 50; i++) {
+  const genre = GENRES[i % GENRES.length];
   const uid = userIds[i];
 
   MOCK_LIVESTREAMS.push({
     id: `stream_${i + 1}`,
     hostId: uid,
-    title: `🔴 LIVE: 4K Masterclass on ${genre.label}`,
+    title: `🔴 LIVE 4K: Advanced Masterclass on ${genre.label}`,
     coverUrl: COVERS[i % COVERS.length],
     kind: "live",
     status: "live",
