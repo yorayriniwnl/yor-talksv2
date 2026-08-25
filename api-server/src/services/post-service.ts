@@ -256,6 +256,10 @@ export class PostService {
     return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit), currentUserId);
   }
 
+  close(): void {
+    this.redis.disconnect();
+  }
+
 
   private extractMentions(content: string): string[] {
     return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);

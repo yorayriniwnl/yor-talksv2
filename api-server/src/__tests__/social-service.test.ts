@@ -15,14 +15,18 @@ test("posts support likes, bookmarks, and trending ranking", async () => {
   const liker = await createTestUser(userRepository);
   const postService = new PostService(new PostRepository(), userRepository, new NotificationRepository());
 
-  const post = await postService.createPost(author.id, "Hello world", []);
-  await postService.likePost(post.id, liker.id);
-  await postService.bookmarkPost(post.id, liker.id);
-  await postService.sharePost(post.id);
+  try {
+    const post = await postService.createPost(author.id, "Hello world", []);
+    await postService.likePost(post.id, liker.id);
+    await postService.bookmarkPost(post.id, liker.id);
+    await postService.sharePost(post.id);
 
-  const feed = await postService.getTrendingFeed();
-  assert.equal(feed[0].id, post.id);
-  assert.equal(feed[0].likedBy.length, 1);
-  assert.equal(feed[0].bookmarkedBy.length, 1);
-  assert.equal(feed[0].shareCount, 1);
+    const feed = await postService.getTrendingFeed();
+    assert.equal(feed[0].id, post.id);
+    assert.equal(feed[0].likedBy.length, 1);
+    assert.equal(feed[0].bookmarkedBy.length, 1);
+    assert.equal(feed[0].shareCount, 1);
+  } finally {
+    postService.close();
+  }
 });
