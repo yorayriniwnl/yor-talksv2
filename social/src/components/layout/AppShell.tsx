@@ -70,6 +70,7 @@ export function AppShell({ children }: AppShellProps) {
                 setLocation('/');
               }
             }}
+            aria-label="Go to Orbit home"
             className="flex min-w-0 items-center gap-3 group cursor-pointer text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
@@ -87,6 +88,7 @@ export function AppShell({ children }: AppShellProps) {
               onClick={() => setSidebarCollapsed(true)}
               className="shrink-0 p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
               title="Collapse sidebar"
+              aria-label="Collapse sidebar"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -98,6 +100,7 @@ export function AppShell({ children }: AppShellProps) {
               onClick={() => setSidebarCollapsed(false)}
               className="absolute top-4 -right-3 p-1 rounded-full bg-background border border-border/40 shadow-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors z-50"
               title="Expand sidebar"
+              aria-label="Expand sidebar"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="rotate-180">
                 <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -121,6 +124,7 @@ export function AppShell({ children }: AppShellProps) {
             sidebarCollapsed && "p-2.5"
           )}
           title="Plant a seed"
+          aria-label="Plant a seed"
         >
           <PlusSquare className="w-4 h-4 shrink-0" />
             {!sidebarCollapsed && <span>Plant a seed</span>}
@@ -143,6 +147,9 @@ export function AppShell({ children }: AppShellProps) {
                     sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
                     isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
                   )}
+                  aria-current={isActive ? 'page' : undefined}
+                  aria-label={sidebarCollapsed ? item.label : undefined}
+                  title={sidebarCollapsed ? item.label : undefined}
                 >
                   <div className="relative">
                     <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-105", isActive && "text-primary")} />
@@ -173,6 +180,9 @@ export function AppShell({ children }: AppShellProps) {
                   sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
                   isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
                 )}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={sidebarCollapsed ? item.label : undefined}
+                title={sidebarCollapsed ? item.label : undefined}
               >
                 <div className="relative">
                   <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-105", isActive && "text-primary")} />
@@ -227,23 +237,24 @@ export function AppShell({ children }: AppShellProps) {
               setLocation('/');
             }
           }}
+          aria-current={location === '/' ? 'page' : undefined}
           className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}
         >
           <Orbit className="w-6 h-6" />
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setLocation('/pulse')} aria-label="Pulse" className={cn("p-2 text-muted-foreground relative", location === '/pulse' && "text-primary")}>
+        <button onClick={() => setLocation('/pulse')} aria-label="Pulse" aria-current={location === '/pulse' ? 'page' : undefined} className={cn("p-2 text-muted-foreground relative", location === '/pulse' && "text-primary")}>
           <Activity className="w-6 h-6" />
           {location === '/pulse' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button onClick={() => setIsComposing(true)} aria-label="Create post" className="p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
             <PlusSquare className="w-6 h-6" />
         </button>
-        <button onClick={() => setLocation('/worlds')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/worlds') && "text-primary")} aria-label="Worlds">
+        <button onClick={() => setLocation('/worlds')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/worlds') && "text-primary")} aria-label="Worlds" aria-current={location.startsWith('/worlds') ? 'page' : undefined}>
           <Globe2 className="w-6 h-6" />
           {location.startsWith('/worlds') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button aria-label="Profile" onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
+        <button aria-label="Profile" aria-current={location.startsWith('/profile') ? 'page' : undefined} onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
           {location.startsWith('/profile') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>

@@ -392,11 +392,11 @@ export default function Messages() {
 
   return (
     <div className="messages-page w-full max-w-6xl mx-auto lg:p-4 font-sans">
-      <div className="flex w-full h-[85vh] lg:surface-1 lg:rounded-3xl lg:shadow-xl overflow-hidden border-none lg:border lg:border-border/50">
+      <div className="flex min-h-0 w-full h-full lg:surface-1 lg:rounded-3xl lg:shadow-xl overflow-hidden border-none lg:border lg:border-border/50">
         
         {/* ── SIDEBAR (Chats List) ────────────────────────────────────────── */}
         <div className={cn(
-          "w-full lg:w-[340px] flex-col border-r border-border/50 bg-background lg:bg-transparent",
+          "min-h-0 w-full lg:w-[340px] flex-col border-r border-border/50 bg-background lg:bg-transparent",
           id ? "hidden lg:flex" : "flex"
         )}>
           <div className="p-4 flex flex-col gap-4 border-b border-border/30">
@@ -406,6 +406,7 @@ export default function Messages() {
                 size="icon" 
                 className="rounded-full w-9 h-9 glow-neon-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-md cursor-pointer" 
                 onClick={() => setNewMessageOpen(true)}
+                aria-label="Start a new conversation"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -415,6 +416,7 @@ export default function Messages() {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
               <Input 
                 placeholder="Search conversations" 
+                aria-label="Search conversations"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 surface-2 border-none rounded-xl h-10 text-xs focus-visible:ring-0" 
@@ -422,7 +424,7 @@ export default function Messages() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto hide-scrollbar p-2 space-y-1">
+          <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-2 space-y-1">
             {conversationList.length === 0 ? (
               <div className="p-8 flex flex-col items-center justify-center text-center h-full text-muted-foreground opacity-80">
                 <MessageCircle className="w-8 h-8 mb-3 opacity-50 text-primary" />
@@ -444,13 +446,13 @@ export default function Messages() {
         </div>
 
         {/* ── CHAT THREAD AREA ───────────────────────────────────────────── */}
-        <div className={cn("flex-1 flex-col bg-background lg:bg-transparent", id ? "flex" : "hidden lg:flex")}>
+        <div className={cn("min-h-0 flex-1 flex-col bg-background lg:bg-transparent", id ? "flex" : "hidden lg:flex")}>
           {activeConv ? (
             <>
               {/* Chat Header */}
               <div className="h-16 px-4 border-b border-border/30 flex items-center justify-between glass-heavy sticky top-0 z-10">
                 <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="lg:hidden -ml-2 w-9 h-9 text-muted-foreground hover:text-foreground" onClick={() => setLocation('/messages')}>
+                  <Button variant="ghost" size="icon" className="lg:hidden -ml-2 w-9 h-9 text-muted-foreground hover:text-foreground" onClick={() => setLocation('/messages')} aria-label="Back to conversations">
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
                   <div className="relative">
@@ -481,6 +483,7 @@ export default function Messages() {
                       vanishMode ? "bg-purple-600/30 text-purple-400 border border-purple-500/50" : "text-muted-foreground hover:text-foreground"
                     )}
                     title="Toggle Vanish Mode"
+                    aria-label="Toggle Vanish Mode"
                   >
                     <EyeOff className="w-4 h-4" />
                   </Button>
@@ -492,6 +495,7 @@ export default function Messages() {
                     onClick={() => setTipModalOpen(true)}
                     className="rounded-full w-9 h-9 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 cursor-pointer"
                     title="Tip via UPI"
+                    aria-label="Tip via UPI"
                   >
                     <Zap className="w-4 h-4 fill-amber-400" />
                   </Button>
@@ -506,6 +510,7 @@ export default function Messages() {
                     }}
                     className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer"
                     title="Voice Call"
+                    aria-label="Start voice call"
                   >
                     <Phone className="w-4 h-4" />
                   </Button>
@@ -520,6 +525,7 @@ export default function Messages() {
                     }}
                     className="rounded-full w-9 h-9 text-primary hover:bg-primary/20 cursor-pointer"
                     title="4K Video Call"
+                    aria-label="Start video call"
                   >
                     <Video className="w-4 h-4" />
                   </Button>
@@ -528,14 +534,14 @@ export default function Messages() {
                     partnerName={activeConv.user.displayName}
                     partnerAvatar={activeConv.user.avatarUrl}
                   />
-                  <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                  <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50" aria-label="More conversation options">
                     <MoreVertical className="w-5 h-5" />
                   </Button>
                 </div>
               </div>
 
               {/* Messages Flow */}
-              <div className={cn("flex-1 overflow-y-auto p-4 lg:p-6 flex flex-col hide-scrollbar", vanishMode && "bg-purple-950/20")}>
+              <div className={cn("min-h-0 flex-1 overflow-y-auto p-4 lg:p-6 flex flex-col hide-scrollbar", vanishMode && "bg-purple-950/20")}>
                 {activeMessages.length === 0 && (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="relative overflow-hidden rounded-2xl p-6 text-center surface-1 border border-border/30">
@@ -593,6 +599,7 @@ export default function Messages() {
                             variant="ghost"
                             onClick={() => { setShowImageInput(false); setImageAttachment(''); }}
                             className="rounded-lg h-9 px-2 text-muted-foreground"
+                            aria-label="Close image attachment"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -611,6 +618,7 @@ export default function Messages() {
                         onClick={() => setShowVoiceRecorder(true)}
                         className="rounded-full w-10 h-10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer"
                         title="Record Voice Note"
+                        aria-label="Record voice note"
                       >
                         <Mic className="w-5 h-5" />
                       </Button>
@@ -621,6 +629,7 @@ export default function Messages() {
                         onClick={() => setShowImageInput(prev => !prev)}
                         className="rounded-full w-10 h-10 text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0 cursor-pointer"
                         title="Send Image"
+                        aria-label="Add image attachment"
                       >
                         <ImageIcon className="w-5 h-5" />
                       </Button>
@@ -644,6 +653,7 @@ export default function Messages() {
                         disabled={(!message.trim() && !imageAttachment.trim()) || sending}
                         onClick={handleSend}
                         className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground shrink-0 glow-neon-primary cursor-pointer"
+                        aria-label="Send message"
                       >
                         <SendHorizontal className="w-4 h-4" />
                       </Button>

@@ -104,7 +104,7 @@ function ContactShieldPanel() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={emailInput}
               onChange={(event) => setEmailInput(event.target.value)}
@@ -113,13 +113,13 @@ function ContactShieldPanel() {
               aria-label="Email to shield"
               className="h-11 rounded-2xl border-primary/15 bg-background/60"
             />
-            <Button type="button" onClick={handleManualAdd} disabled={adding} className="h-11 shrink-0 rounded-2xl px-3 sm:px-4">
+            <Button type="button" onClick={handleManualAdd} disabled={adding} className="h-11 w-full shrink-0 rounded-2xl px-3 sm:w-auto sm:px-4">
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               <span className="hidden sm:inline">Shield</span>
             </Button>
           </div>
           {pickerAvailable && (
-            <Button type="button" variant="outline" onClick={handlePickContacts} disabled={adding} className="h-11 rounded-2xl border-primary/20 bg-background/40 font-bold">
+            <Button type="button" variant="outline" onClick={handlePickContacts} disabled={adding} className="h-11 w-full rounded-2xl border-primary/20 bg-background/40 font-bold sm:w-auto">
               <ContactRound className="h-4 w-4" /> Pick contacts
             </Button>
           )}
@@ -383,9 +383,9 @@ export default function Settings() {
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
                 <p className="text-xs text-muted-foreground">Add this secret to your authenticator app, then confirm the generated code.</p>
                 <code className="block break-all rounded-xl bg-background/70 p-3 text-xs tracking-wider">{twoFactorSetup.secret}</code>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" className="rounded-xl" />
-                  <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="rounded-xl">Confirm</Button>
+                  <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Confirm</Button>
                 </div>
               </div>
             )}
@@ -393,9 +393,9 @@ export default function Settings() {
               <Button type="button" variant="ghost" onClick={() => setTwoFactorDisableMode(true)} className="h-auto justify-start p-0 text-xs text-destructive hover:text-destructive">Disable two-factor authentication</Button>
             )}
             {twoFactorEnabled && twoFactorDisableMode && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Current 6-digit code" inputMode="numeric" className="rounded-xl" />
-                <Button type="button" variant="destructive" onClick={() => void disableTwoFactor()} disabled={twoFactorBusy} className="rounded-xl">Disable</Button>
+                <Button type="button" variant="destructive" onClick={() => void disableTwoFactor()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Disable</Button>
               </div>
             )}
           </div>

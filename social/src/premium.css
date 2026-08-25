@@ -82,7 +82,12 @@ body {
 
 .app-shell__content {
   min-height: 100dvh;
+  min-width: 0;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+.app-shell__content main {
+  min-width: 0;
 }
 
 .premium-topbar {
@@ -615,6 +620,9 @@ body {
   .app-shell *::before,
   .app-shell *::after {
     scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

@@ -316,6 +316,7 @@ export default function Profile() {
   const loadUserProfile = useAppStore(s => s.loadUserProfile);
   const followUser = useAppStore(s => s.followUser);
   const unfollowUser = useAppStore(s => s.unfollowUser);
+  const toggleBlockUser = useAppStore(s => s.toggleBlockUser);
   const showcases = useAppStore(s => s.showcases);
   const removeShowcase = useAppStore(s => s.removeShowcase);
   const profileComments = useAppStore(s => s.profileComments);
@@ -329,11 +330,15 @@ export default function Profile() {
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [followerListOpen, setFollowerListOpen] = useState(false);
   const [followerListMode, setFollowerListMode] = useState<'followers' | 'following'>('followers');
+  const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire'>('neon');
+  const [frameDialogOpen, setFrameDialogOpen] = useState(false);
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
 
   const profileId = id || currentUser?.id;
   const profile = profileId ? users[profileId] : null;
   const isOwnProfile = currentUser?.id === profileId;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
+  const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
@@ -381,6 +386,24 @@ export default function Profile() {
     setTimeout(() => setCopiedLink(false), 2000);
   }, []);
 
+  const handleShareProfile = useCallback(async () => {
+    if (navigator.share && profile) {
+      try {
+        await navigator.share({ title: `${profile.displayName} on Yor`, text: `Check out ${profile.displayName}'s profile on Yor.`, url: window.location.href });
+        return;
+      } catch {
+        // Sharing was cancelled or is unavailable; use the copy fallback below.
+      }
+    }
+    handleCopyLink();
+  }, [handleCopyLink, profile]);
+
+  const handleBlockProfile = useCallback(async () => {
+    if (!profile || isOwnProfile) return;
+    await toggleBlockUser(profile.id);
+    setLocation('/');
+  }, [isOwnProfile, profile, setLocation, toggleBlockUser]);
+
   if (!profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
@@ -402,10 +425,6 @@ export default function Profile() {
 
   const suggestedUsers = Object.values(users).filter(u => u.id !== profile.id && u.id !== currentUser?.id).slice(0, 5);
 
-  const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire'>('neon');
-  const [frameDialogOpen, setFrameDialogOpen] = useState(false);
-  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />
@@ -414,12 +433,12 @@ export default function Profile() {
          STICKY GLASS HEADER
          ══════════════════════════════════════════════════════════════════ */}
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-40 glass-heavy px-4 py-2 flex items-center gap-3">
-        <Link href="/"><Button variant="ghost" size="icon" className="rounded-full h-9 w-9 shrink-0"><ArrowLeft className="w-[18px] h-[18px]" /></Button></Link>
+        <Link href="/"><Button variant="ghost" size="icon" className="rounded-full h-9 w-9 shrink-0" aria-label="Back to Orbit"><ArrowLeft className="w-[18px] h-[18px]" /></Button></Link>
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-bold text-[0.92rem] leading-tight truncate">{profile.displayName}</h2>
           <p className="text-[0.6rem] text-muted-foreground font-mono tracking-wide">{userPosts.length} posts</p>
         </div>
-        <button onClick={() => setBadgeModalOpen(true)} className="level-badge cursor-pointer hover:scale-105 transition-transform">
+        <button onClick={() => setBadgeModalOpen(true)} className="level-badge cursor-pointer hover:scale-105 transition-transform" aria-label={`View level ${levelData.level} achievements`}>
           <Shield className="w-3 h-3 text-amber-400" /> Lv.{levelData.level}
         </button>
       </motion.div>
@@ -439,7 +458,7 @@ export default function Profile() {
       <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 pb-28">
 
         {/* ── Avatar + Actions ──────────────────────────────────────── */}
-        <div className="flex justify-between items-end -mt-14 relative z-10 mb-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 -mt-14 relative z-10 mb-4">
           <div className={cn("profile-avatar-ring shadow-xl glow-neon-primary animated-border", `steam-frame-${selectedFrame}`)}>
             <Avatar className="w-[88px] h-[88px] avatar-inner">
               <AvatarImage src={profile.avatarUrl} />
@@ -447,14 +466,14 @@ export default function Profile() {
             </Avatar>
           </div>
 
-          <div className="flex items-center gap-2 pb-0.5">
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 pb-0.5">
             {isOwnProfile ? (
               <>
                 <Dialog open={frameDialogOpen} onOpenChange={setFrameDialogOpen}>
                   <DialogTrigger asChild>
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Button variant="outline" className="rounded-xl h-9 font-bold text-[0.78rem] px-5 border-border/80">
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /> Steam Theme & Frame
+                      <Button variant="outline" aria-label="Customize Steam theme and avatar frame" className="rounded-xl h-9 font-bold text-[0.78rem] px-3 sm:px-5 border-border/80">
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /><span className="hidden sm:inline">Steam Theme &amp; Frame</span><span className="sm:hidden">Frame</span>
                       </Button>
                     </motion.div>
                   </DialogTrigger>
@@ -490,7 +509,7 @@ export default function Profile() {
                 </Dialog>
 
                 <Tooltip><TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={handleCopyLink}>
+                  <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={handleCopyLink} aria-label="Copy profile link">
                     {copiedLink ? <Check className="w-4 h-4 text-success" /> : <Share2 className="w-4 h-4" />}
                   </Button>
                 </TooltipTrigger><TooltipContent>Share profile</TooltipContent></Tooltip>
@@ -506,11 +525,11 @@ export default function Profile() {
                   <Button variant="outline" className="rounded-xl h-9 font-bold text-[0.78rem] px-5" onClick={() => setLocation(`/messages/${profile.id}`)}>Message</Button>
                 </motion.div>
                 <Popover>
-                  <PopoverTrigger asChild><Button variant="outline" size="icon" className="rounded-xl h-9 w-9"><MoreHorizontal className="w-4 h-4" /></Button></PopoverTrigger>
+                  <PopoverTrigger asChild><Button variant="outline" size="icon" className="rounded-xl h-9 w-9" aria-label="More profile actions"><MoreHorizontal className="w-4 h-4" /></Button></PopoverTrigger>
                   <PopoverContent className="w-48 p-1.5 rounded-xl" align="end">
-                    <button className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors"><Share2 className="w-4 h-4" /> Share profile</button>
-                    <button className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors"><Copy className="w-4 h-4" /> Copy link</button>
-                    <button className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors text-destructive"><Shield className="w-4 h-4" /> Block</button>
+                    <button type="button" onClick={() => void handleShareProfile()} className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors"><Share2 className="w-4 h-4" /> Share profile</button>
+                    <button type="button" onClick={handleCopyLink} className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors"><Copy className="w-4 h-4" /> Copy link</button>
+                    <button type="button" onClick={() => void handleBlockProfile()} className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-[0.78rem] font-medium hover:bg-muted transition-colors text-destructive"><Shield className="w-4 h-4" /> {isBlocked ? 'Unblock' : 'Block'}</button>
                   </PopoverContent>
                 </Popover>
               </>
