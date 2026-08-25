@@ -36,7 +36,8 @@ router.post("/", authenticate, async (req, res) => {
     // Ensure user has 'business' in accountTypes
     const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, req.user!.id) });
     if (user) {
-      const types = new Set(user.accountTypes || ["user"]);
+      const accountTypes = Array.isArray(user.accountTypes) ? user.accountTypes : ["user"];
+      const types = new Set<string>(accountTypes);
       types.add("business");
       await db.update(usersTable)
         .set({ accountTypes: Array.from(types) })

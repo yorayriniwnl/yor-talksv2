@@ -6,18 +6,10 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
 import { SecurityService } from "./security-service.js";
-import { randomUUID } from "node:crypto";
-import { emitToUser } from "../lib/realtime.js";
-import { NotificationRepository } from "../repositories/notification-repository.js";
-import { PostRepository } from "../repositories/post-repository.js";
-import { UserRepository } from "../repositories/user-repository.js";
-import { AIService } from "./ai-service.js";
-import { QueueService } from "./queue-service.js";
-import { SecurityService } from "./security-service.js";
 import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from "../types/index.js";
 import { db } from "@workspace/db";
-import { postLikesTable, postBookmarksTable } from "@workspace/db/schema";
-import { inArray, eq, and } from "drizzle-orm";
+import { commentsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 
@@ -131,17 +123,24 @@ export class PostService {
     if (!post) {
       return undefined;
     }
-    const comment: CommentRecord = {
+    const [createdComment] = await db.insert(commentsTable).values({
       id: randomUUID(),
+      postId,
       authorId,
       content,
-      createdAt: new Date().toISOString(),
+    }).returning();
+    const updatedPost = await this.postRepository.update(postId, {
+      commentsCount: post.commentsCount + 1,
+      score: this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount + 1 }),
+    });
+    const comment: CommentRecord = {
+      id: createdComment.id,
+      authorId: createdComment.authorId,
+      content: createdComment.content,
+      createdAt: createdComment.createdAt,
       replies: [],
-      reactions: {},
+      reactions: (createdComment.reactions ?? {}) as Record<string, string[]>,
     };
-    post.comments.push(comment);
-    post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-    await this.postRepository.update(postId, { comments: post.comments, score: post.score });
     if (post.authorId !== authorId) {
       const commenter = await this.userRepository.findById(authorId);
       await this.notify({
@@ -156,7 +155,7 @@ export class PostService {
         metadata: { actorId: authorId },
       });
     }
-    return { post, comment };
+    return { post: updatedPost ?? post, comment };
   }
 
   async replyToComment(postId: string, commentId: string, authorId: string, content: string): Promise<{ post: PostRecord; reply: ReplyRecord } | undefined> {
@@ -164,33 +163,42 @@ export class PostService {
     if (!post) {
       return undefined;
     }
-    const comment = post.comments.find((entry: CommentRecord) => entry.id === commentId);
-    if (!comment) {
+    const [parentComment] = await db.select().from(commentsTable).where(and(
+      eq(commentsTable.id, commentId),
+      eq(commentsTable.postId, postId),
+    ));
+    if (!parentComment) {
       return undefined;
     }
-    const reply: ReplyRecord = {
+    const [createdReply] = await db.insert(commentsTable).values({
       id: randomUUID(),
+      postId,
       authorId,
+      parentId: commentId,
       content,
-      createdAt: new Date().toISOString(),
-      reactions: {},
+    }).returning();
+    await db.update(commentsTable)
+      .set({ repliesCount: sql`${commentsTable.repliesCount} + 1` })
+      .where(eq(commentsTable.id, commentId));
+    const updatedPost = await this.postRepository.update(postId, {
+      commentsCount: post.commentsCount + 1,
+      score: this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount + 1 }),
+    });
+    const reply: ReplyRecord = {
+      id: createdReply.id,
+      authorId: createdReply.authorId,
+      content: createdReply.content,
+      createdAt: createdReply.createdAt,
+      reactions: (createdReply.reactions ?? {}) as Record<string, string[]>,
     };
-    comment.replies.push(reply);
-    post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-    await this.postRepository.update(postId, { comments: post.comments, score: post.score });
-    return { post, reply };
+    return { post: updatedPost ?? post, reply };
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {
     const post = await this.postRepository.findById(postId);
-    if (!post) {
-      return undefined;
-    }
-    if (!post.bookmarkedBy.includes(userId)) {
-      post.bookmarkedBy.push(userId);
-      await this.postRepository.update(postId, { bookmarkedBy: post.bookmarkedBy });
-    }
-    return post;
+    if (!post) return undefined;
+    await this.postRepository.toggleBookmark(postId, userId);
+    return this.postRepository.findById(postId);
   }
 
   async sharePost(postId: string): Promise<PostRecord | undefined> {
@@ -199,7 +207,7 @@ export class PostService {
       return undefined;
     }
     post.shareCount += 1;
-    post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
+    post.score = this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount });
     return this.postRepository.update(postId, { shareCount: post.shareCount, score: post.score });
   }
 

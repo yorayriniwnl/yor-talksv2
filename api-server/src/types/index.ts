@@ -12,8 +12,12 @@ export interface UserRecord {
   permissions: string[];
   createdAt: string;
   updatedAt: string;
-  
-  
+  /** Legacy compatibility fields; follow relationships live in user_follows. */
+  followers?: string[];
+  following?: string[];
+  followerCount?: number;
+  followingCount?: number;
+  accountTypes?: string[];
   settings: UserSettings;
   emailVerified?: boolean;
   passwordResetRequired?: boolean;
@@ -53,6 +57,10 @@ export interface PostRecord {
   tags?: string[];
   mentions?: string[];
   score?: number;
+  /** Legacy compatibility fields; likes, bookmarks, and comments are relational. */
+  likedBy?: string[];
+  bookmarkedBy?: string[];
+  comments?: CommentRecord[];
 }
 
 export interface CommentRecord {
@@ -208,7 +216,8 @@ export interface VideoRecord {
   thumbnailUrl: string;
   title: string;
   views: number;
-  likesCount: number;
+  likesCount?: number;
+  likedBy?: string[];
   createdAt: string;
   type: string;
 }

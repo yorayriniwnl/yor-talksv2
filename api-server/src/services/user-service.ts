@@ -37,11 +37,8 @@ export class UserService {
     if (!follower || !target) {
       return undefined;
     }
-    if (!follower.following.includes(targetId)) {
-      follower.following.push(targetId);
-      target.followers.push(userId);
-      await this.userRepository.update(userId, { following: follower.following });
-      await this.userRepository.update(targetId, { followers: target.followers });
+    const created = await this.userRepository.followUser(userId, targetId);
+    if (created) {
       const followNotification = await this.notificationRepository?.create({
         id: randomUUID(),
         recipientId: targetId,
@@ -58,7 +55,10 @@ export class UserService {
         emitToUser(targetId, "notification:new", followNotification);
       }
     }
-    return { follower, target };
+    return {
+      follower: (await this.userRepository.findById(userId)) ?? follower,
+      target: (await this.userRepository.findById(targetId)) ?? target,
+    };
   }
 
   async unfollowUser(userId: string, targetId: string): Promise<{ follower: UserRecord; target: UserRecord } | undefined> {
@@ -67,29 +67,19 @@ export class UserService {
     if (!follower || !target) {
       return undefined;
     }
-    follower.following = follower.following.filter((entry: string) => entry !== targetId);
-    target.followers = target.followers.filter((entry: string) => entry !== userId);
-    await this.userRepository.update(userId, { following: follower.following });
-    await this.userRepository.update(targetId, { followers: target.followers });
-    return { follower, target };
+    await this.userRepository.unfollowUser(userId, targetId);
+    return {
+      follower: (await this.userRepository.findById(userId)) ?? follower,
+      target: (await this.userRepository.findById(targetId)) ?? target,
+    };
   }
 
   async getFollowers(userId: string): Promise<UserRecord[]> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      return [];
-    }
-    const followers = await Promise.all(user.followers.map((id: string) => this.userRepository.findById(id)));
-    return followers.filter(Boolean) as UserRecord[];
+    return this.userRepository.listFollowers(userId);
   }
 
   async getFollowing(userId: string): Promise<UserRecord[]> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      return [];
-    }
-    const following = await Promise.all(user.following.map((id: string) => this.userRepository.findById(id)));
-    return following.filter(Boolean) as UserRecord[];
+    return this.userRepository.listFollowing(userId);
   }
 
   async updateSettings(userId: string, settings: UserSettings): Promise<UserRecord | undefined> {

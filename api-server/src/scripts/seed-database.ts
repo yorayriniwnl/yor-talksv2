@@ -91,8 +91,6 @@ async function seedDatabase() {
         permissions: ["read:profile", "write:post", "moderate:community"],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        followers: [],
-        following: [],
         settings: { theme: "dark", notificationsEnabled: true },
         devices: [],
         blockedUsers: [],
@@ -122,9 +120,9 @@ async function seedDatabase() {
         "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1600861194942-f883de0dfe96?q=80&w=1200&auto=format&fit=crop"
       ],
-      likedBy: [founderId, aditiId],
-      comments: [],
-      bookmarkedBy: [founderId],
+      likesCount: 2,
+      commentsCount: 0,
+      bookmarksCount: 1,
       shareCount: 42,
       score: 100,
       tags: ["unrealengine", "gamedev", "spatial"],
@@ -138,9 +136,9 @@ async function seedDatabase() {
       images: [
         "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop"
       ],
-      likedBy: [anyaId, aditiId, marcusId, sophiaId],
-      comments: [],
-      bookmarkedBy: [anyaId, aditiId],
+      likesCount: 4,
+      commentsCount: 0,
+      bookmarksCount: 2,
       shareCount: 120,
       score: 250,
       tags: ["design", "multiverse", "uiux"],
@@ -154,9 +152,9 @@ async function seedDatabase() {
       images: [
         "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop"
       ],
-      likedBy: [founderId, anyaId],
-      comments: [],
-      bookmarkedBy: [founderId],
+      likesCount: 2,
+      commentsCount: 0,
+      bookmarksCount: 1,
       shareCount: 88,
       score: 180,
       tags: ["hackathon", "bounties", "ai"],

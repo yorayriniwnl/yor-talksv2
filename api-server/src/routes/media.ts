@@ -46,24 +46,16 @@ router.post(
   authenticate,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { filename, mimeType, size } = req.body;
+      const { filename, mimeType } = req.body;
       if (!filename || !mimeType) {
         res.status(400).json({ success: false, message: "Filename and mimeType required", errors: ["invalid_input"] });
         return;
       }
 
-      const key = `uploads/${Date.now()}-${encodeURIComponent(filename)}`;
-      const presignedUrl = `https://cdn.yortalks.in/upload-gateway/${key}`;
-
-      res.json({
-        success: true,
-        data: {
-          uploadUrl: presignedUrl,
-          downloadUrl: `https://cdn.yortalks.in/${key}`,
-          key,
-          headers: { "Content-Type": mimeType },
-          expiresIn: 3600,
-        },
+      res.status(501).json({
+        success: false,
+        message: "Direct media uploads are not enabled for the college beta. Use the multipart upload endpoint.",
+        errors: ["presign_not_configured"],
       });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message, errors: [] });
@@ -73,7 +65,7 @@ router.post(
 
 // Get HLS streaming manifest
 router.get("/media/:id/hls", (req: Request, res: Response): void => {
-  const { id } = req.params;
+  const id = typeof req.params.id === "string" ? req.params.id : "";
   const manifest = mediaService.generateHlsManifest(id);
   res.json({ success: true, data: manifest });
 });

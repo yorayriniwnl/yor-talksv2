@@ -255,7 +255,7 @@ async function runMegaScaleSeed() {
         content,
         images: prng.boolean(0.4) ? [prng.randomChoice(COVERS)] : [],
         likesCount: likes,
-        commentsCount: comments,
+        commentsCount: 0,
         bookmarksCount: Math.floor(likes * 0.2),
         shareCount: Math.floor(likes * 0.1),
         score: likes * 3 + Math.floor(likes * 0.1) * 5,

@@ -35,8 +35,6 @@ async function createProfiles() {
         permissions: ["read:profile", "write:post"],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        followers: [],
-        following: [],
         settings: {
           theme: "light",
           notificationsEnabled: true,

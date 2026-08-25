@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
-import { projectsTable, projectCollaboratorsTable, usersTable } from "@workspace/db/schema";
+import { projectsTable, projectCollaboratorsTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 
@@ -48,7 +48,10 @@ router.get("/", authenticate, async (req, res) => {
 
 router.post("/:projectId/collaborators", authenticate, async (req, res) => {
   try {
-    const projectId = req.params.projectId;
+    const projectId = typeof req.params.projectId === "string" ? req.params.projectId : "";
+    if (!projectId) {
+      return res.status(400).json({ success: false, error: "Project id is required" });
+    }
     const { userId, role } = req.body;
     
     await db.insert(projectCollaboratorsTable).values({

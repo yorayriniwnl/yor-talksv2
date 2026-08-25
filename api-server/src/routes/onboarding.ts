@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
-import { usersTable, userTopicsTable, topicsTable, followsTable } from "@workspace/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { usersTable, userTopicsTable, topicsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 const router = Router();
@@ -37,20 +37,23 @@ router.post("/complete", authenticate, async (req, res) => {
       }
     }
     
-    // Process Follows
+    // Follow relationships are stored by the same repository used by the users API.
     if (followedCreatorIds && Array.isArray(followedCreatorIds)) {
+      const { UserRepository } = await import("../repositories/user-repository.js");
+      const userRepository = new UserRepository();
       for (const targetId of followedCreatorIds) {
-        // Simple insert into followsTable if it existed.
-        // Assuming user-repository handles follows, but for this step we can directly update it if it exists.
-        // Note: The schema for follows in lib/db isn't explicitly defined here, 
-        // but it's handled via UserRepository.followUser in older code.
-        // Let's just update the onboarding state.
+        if (typeof targetId === "string" && targetId !== req.user!.id) {
+          await userRepository.followUser(req.user!.id, targetId);
+        }
       }
     }
     
-    // Update user onboarding state
+    // The current schema has no dedicated onboarding column. Persist the state
+    // in the user's JSON settings so it survives without schema drift.
+    const [user] = await db.select({ settings: usersTable.settings }).from(usersTable).where(eq(usersTable.id, req.user!.id));
+    const settings = (user?.settings ?? {}) as Record<string, unknown>;
     await db.update(usersTable)
-      .set({ onboardingCompleted: true })
+      .set({ settings: { ...settings, onboardingCompleted: true } })
       .where(eq(usersTable.id, req.user!.id));
 
     res.json({ success: true, message: "Onboarding completed" });

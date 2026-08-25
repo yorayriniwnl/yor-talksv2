@@ -41,7 +41,7 @@ export class AchievementService {
 
     const metrics: Record<AchievementDefinition["metric"], number> = {
       postCount: posts.length,
-      followerCount: user?.followers.length ?? 0,
+      followerCount: user?.followerCount ?? 0,
       communityCount: communities.filter((c) => c.memberIds.includes(userId)).length,
     };
 

@@ -36,8 +36,22 @@ export class PostRepository {
     }
   }
 
+  async toggleBookmark(postId: string, userId: string): Promise<boolean> {
+    const existing = await db
+      .select()
+      .from(postBookmarksTable)
+      .where(and(eq(postBookmarksTable.postId, postId), eq(postBookmarksTable.userId, userId)));
+    if (existing.length > 0) {
+      await this.removeBookmark(postId, userId);
+      return false;
+    }
+    await this.bookmarkPost(postId, userId);
+    return true;
+  }
+
   async create(post: PostRecord): Promise<PostRecord> {
-    const [created] = await db.insert(postsTable).values(post).returning();
+    const { likedBy: _likedBy, bookmarkedBy: _bookmarkedBy, comments: _comments, ...persistedPost } = post;
+    const [created] = await db.insert(postsTable).values(persistedPost).returning();
     return created as PostRecord;
   }
 
@@ -78,8 +92,9 @@ export class PostRepository {
   }
 
   async update(id: string, updates: Partial<PostRecord>): Promise<PostRecord | undefined> {
+    const { likedBy: _likedBy, bookmarkedBy: _bookmarkedBy, comments: _comments, ...persistedUpdates } = updates;
     const [updated] = await db.update(postsTable)
-      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .set({ ...persistedUpdates, updatedAt: new Date().toISOString() })
       .where(eq(postsTable.id, id))
       .returning();
     return updated as PostRecord | undefined;

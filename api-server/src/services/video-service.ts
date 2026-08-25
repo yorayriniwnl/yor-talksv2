@@ -37,9 +37,10 @@ export class VideoService {
   async toggleLike(videoId: string, userId: string): Promise<VideoRecord | undefined> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) return undefined;
-    const likedBy = video.likedBy.includes(userId)
-      ? video.likedBy.filter((id) => id !== userId)
-      : [...video.likedBy, userId];
+    const currentLikes = video.likedBy ?? [];
+    const likedBy = currentLikes.includes(userId)
+      ? currentLikes.filter((id) => id !== userId)
+      : [...currentLikes, userId];
     return this.videoRepository.update(videoId, { likedBy });
   }
 

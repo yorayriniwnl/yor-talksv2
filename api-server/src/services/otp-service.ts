@@ -101,6 +101,10 @@ export class OtpService {
         bio: "Joined Yor Talks (Bharat Edition) 🇮🇳",
         avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop`,
         role: "user",
+        permissions: ["read:profile", "write:post"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        settings: { theme: "light", notificationsEnabled: true, privateAccount: false },
       });
     }
 
