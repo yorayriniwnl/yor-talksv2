@@ -1,0 +1,58 @@
+# Yor Talks production launch runbook
+
+This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain, legal approval and campus authorization listed below. Do not use the development `docker-compose.yml` for public traffic.
+
+## 1. Prepare the host and secrets
+
+Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.production.example` to `.env.production`, replace every `CHANGE_ME` value, and keep the file outside Git. Generate independent URL-safe secrets, for example with `openssl rand -hex 32`.
+
+`DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge.
+
+## 2. Configure the external launch dependencies
+
+- Point the public domain and TLS certificate at the host’s `${WEB_PORT}`. The included Nginx container terminates the application edge; use a managed load balancer, Caddy, or a host reverse proxy for HTTPS and certificate renewal.
+- Verify the Resend sender domain and set `EMAIL_FROM`. Registration is fail-closed when production email delivery is unavailable.
+- Configure Cloudinary for image/video uploads and test file-size, moderation and deletion behavior.
+- Configure LiveKit and test a room from the intended campus network. Keep Razorpay disabled until a legal entity, settlement account, webhook verification and refund process exist.
+- Obtain written KIIT approval for the name/branding, `@kiit.ac.in` access policy and campus beta distribution.
+- Publish reviewed Privacy, Terms, Community Guidelines, copyright/takedown process, retention schedule, support address and the appointed grievance officer’s name/contact. The in-app pages intentionally identify the legal fields that are still unconfigured.
+
+## 3. Deploy
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml config
+docker compose --env-file .env.production -f docker-compose.production.yml build
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+curl -fsS https://your-domain.example/api/healthz
+```
+
+The one-shot `migrate` service applies the idempotent beta schema/index migration before the API starts. Review its logs on every deployment:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml logs --no-log-prefix migrate
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=200 api
+```
+
+## 4. Backups and recovery
+
+Take an encrypted, off-host Postgres backup before schema changes and at least daily thereafter. Test a restore into a separate database before launch day.
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T postgres \
+  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom > yor-talks-$(date +%Y%m%d-%H%M).dump
+```
+
+Backups must be encrypted, access-controlled and have a documented retention period. Redis is operational state and should be recoverable from a clean restart; do not treat it as the source of truth for accounts or reports.
+
+## 5. Launch checks
+
+- Register a real KIIT test account, confirm the email link, sign in, refresh the browser, log out, and verify the refresh cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
+- Upload media, create/report/block content, export data, delete a disposable test account, and verify the deleted account cannot be found.
+- Submit and track a grievance from a fresh browser and confirm it survives an API restart.
+- Verify backups, alerting, error logs, rate limits, CORS, TLS renewal, domain ownership and the incident escalation roster.
+- Run a campus Wi-Fi test on mobile and desktop, including WebSocket reconnects and slow-network behavior.
+
+## 6. Rollback
+
+Keep the previous image tags and the most recent database backup. Roll back application images only after checking migration compatibility; never run an unreviewed destructive schema rollback against the production database.

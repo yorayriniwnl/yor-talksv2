@@ -6,6 +6,7 @@ dist.bak
 .env
 .env.*
 !.env.example
+!ops/.env.production.example
 *.bak
 *.tmp
 update-*.js

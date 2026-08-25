@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: yor_talks
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d yor_talks"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build database package
+        run: pnpm --filter @workspace/db build
+
+      - name: Apply schema migration
+        run: pnpm --filter @workspace/db migrate:beta
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yor_talks
+          REDIS_URL: redis://127.0.0.1:6379
+          CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
+
+      - name: Typecheck API and web
+        run: |
+          pnpm --filter @workspace/api-server typecheck
+          pnpm --filter @workspace/social typecheck
+
+      - name: Run API tests serially
+        run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
+        working-directory: api-server
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yor_talks
+          REDIS_URL: redis://127.0.0.1:6379
+          JWT_SECRET: ci-access-secret-012345678901234567890123456789
+          JWT_REFRESH_SECRET: ci-refresh-secret-012345678901234567890123456789
+          CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
+
+      - name: Build API and web
+        run: |
+          pnpm --filter @workspace/api-server build
+          pnpm --filter @workspace/social build
+
+      - name: Validate production Compose file
+        shell: bash
+        env:
+          POSTGRES_PASSWORD: 01234567890123456789012345678901
+          DATABASE_URL: postgresql://yor_talks:01234567890123456789012345678901@postgres:5432/yor_talks
+          REDIS_PASSWORD: 01234567890123456789012345678901
+          JWT_SECRET: 01234567890123456789012345678901
+          JWT_REFRESH_SECRET: 11234567890123456789012345678901
+          CONTACT_SHIELD_SECRET: 21234567890123456789012345678901
+          CORS_ORIGINS: https://ci.example
+          CLIENT_ORIGIN: https://ci.example
+          CLOUDINARY_CLOUD_NAME: ci
+          CLOUDINARY_API_KEY: ci
+          CLOUDINARY_API_SECRET: ci
+          RESEND_API_KEY: ci
+          EMAIL_FROM: ci@example.com
+          LIVEKIT_URL: wss://ci.example
+          LIVEKIT_API_KEY: ci
+          LIVEKIT_API_SECRET: ci
+        run: docker compose -f docker-compose.production.yml config --quiet
