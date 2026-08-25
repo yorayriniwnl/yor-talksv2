@@ -252,6 +252,10 @@ export const api = {
 
   // ---- Economy ----
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
+  createTipOrder: (payload: { creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
+    request<{ orderId: string; amountMinor: number; currency: string; keyId: string }>('/economy/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  verifyTipPayment: (orderId: string, payload: { paymentId: string; signature: string }) =>
+    request<{ transactionId: string; status: 'paid' }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   sendSuperchat: (payload: { streamId: string; creatorId: string; amountMinor: number; message: string }) =>
     request<{ transactionId: string }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
 
