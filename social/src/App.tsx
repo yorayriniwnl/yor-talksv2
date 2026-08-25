@@ -63,6 +63,7 @@ const EsportsCalendar = lazyWithRetry(() => import('@/pages/esports-calendar'));
 const Studio = lazyWithRetry(() => import('@/pages/studio'));
 const CreatorAnalytics = lazyWithRetry(() => import('@/pages/creator-analytics'));
 const ControlRoom = lazyWithRetry(() => import('@/pages/control-room'));
+const Moderation = lazyWithRetry(() => import('@/pages/moderation'));
 const CreatorStore = lazyWithRetry(() => import('@/pages/creator-store'));
 const ClipStudio = lazyWithRetry(() => import('@/pages/clip-studio'));
 const MediaKit = lazyWithRetry(() => import('@/pages/media-kit'));
@@ -139,6 +140,7 @@ function ProtectedRoutes() {
                 <Route path="/studio" component={Studio} />
                 <Route path="/analytics" component={CreatorAnalytics} />
                 <Route path="/control-room" component={ControlRoom} />
+                <Route path="/moderation" component={Moderation} />
                 <Route path="/store" component={CreatorStore} />
                 <Route path="/clips" component={ClipStudio} />
                 <Route path="/media-kit" component={MediaKit} />

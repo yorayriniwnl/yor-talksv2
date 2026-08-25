@@ -30,6 +30,7 @@ import { connectSocket, disconnectSocket } from '@/lib/socket-client';
 export type User = {
   id: string;
   username: string;
+  role?: string;
   email?: string;
   emailVerified?: boolean;
   displayName: string;
@@ -249,6 +250,7 @@ function mapUser(u: BackendUser): User {
   return {
     id: u.id,
     username: u.username || 'user',
+    role: u.role,
     email: u.email,
     emailVerified: Boolean(u.emailVerified),
     displayName: u.fullName || u.username || 'User',

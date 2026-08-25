@@ -1,51 +1,84 @@
-import { AlertTriangle, BarChart3, Clock, ShieldCheck, Wallet } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'wouter';
+import { BarChart3, Clock3, Eye, Heart, RefreshCw, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { api, type CreatorAnalyticsDaily } from '@/lib/api-client';
+import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 
+function Metric({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: typeof Eye }) {
+  return (
+    <div className="surface-1 rounded-3xl border border-border/40 p-5">
+      <div className="mb-4 flex items-center justify-between text-muted-foreground"><span className="text-[0.62rem] font-bold uppercase tracking-[0.16em]">{label}</span><Icon className="h-4 w-4 text-primary" /></div>
+      <p className="font-display text-3xl font-black tracking-tight">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
+
 export default function CreatorAnalytics() {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const posts = useAppStore((state) => state.posts);
+  const videos = useAppStore((state) => state.videos);
+  const [rows, setRows] = useState<CreatorAnalyticsDaily[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setRows(await api.getCreatorAnalytics());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Server telemetry is not reachable');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const totals = useMemo(() => rows.reduce((sum, row) => ({
+    profileViews: sum.profileViews + (row.profileViews || 0),
+    newFollowers: sum.newFollowers + (row.newFollowers || 0),
+    postViews: sum.postViews + (row.totalPostViews || 0),
+    reelViews: sum.reelViews + (row.totalReelViews || 0),
+    engagement: sum.engagement + (row.totalEngagement || 0),
+    earnings: sum.earnings + (row.estimatedEarnings || 0),
+  }), { profileViews: 0, newFollowers: 0, postViews: 0, reelViews: 0, engagement: 0, earnings: 0 }), [rows]);
+
+  const localPosts = posts.filter((post) => post.authorId === currentUser?.id);
+  const localVideos = videos.filter((video) => video.authorId === currentUser?.id);
+  const isServerConnected = rows.length > 0 && !error;
+
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
-      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-600 text-black flex items-center justify-center font-bold shadow-md">
-          <BarChart3 className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold font-display text-foreground">Creator Telemetry & Payouts</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Beta feature status</p>
+      <div className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-600 text-black shadow-md"><BarChart3 className="h-5 w-5" /></div><div><h1 className="font-display text-xl font-black">Creator Telemetry</h1><p className="text-[0.68rem] text-muted-foreground">Views, resonance, audience growth, and payout readiness</p></div></div>
+          <Button variant="outline" onClick={() => void load()} disabled={loading} className="rounded-2xl text-xs font-bold"><RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /> Refresh</Button>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-10">
-        <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-8 text-center space-y-4">
-          <AlertTriangle className="w-10 h-10 mx-auto text-amber-400" />
-          <h2 className="text-2xl font-bold font-display">Creator payouts are disabled for the college beta</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
-            Payment processing, UPI settlement and production analytics are not
-            connected yet. This page will remain unavailable until transactions
-            are verified server-side and an analytics provider is configured.
-          </p>
-          <Button disabled className="rounded-2xl font-bold text-xs">
-            <Wallet className="w-4 h-4 mr-1.5" /> Payouts unavailable
-          </Button>
-        </div>
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        {error && <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">Daily server telemetry is not available yet: {error}. Local Control Room rollups remain visible below.</div>}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Profile views" value={totals.profileViews.toLocaleString()} detail={isServerConnected ? 'Last 30 recorded days' : 'Awaiting server rollup'} icon={Eye} />
+          <Metric label="Content reach" value={(totals.postViews + totals.reelViews).toLocaleString()} detail={`${localPosts.length + localVideos.length} live content items`} icon={BarChart3} />
+          <Metric label="Engagement" value={totals.engagement.toLocaleString()} detail={isServerConnected ? 'Server-counted actions' : 'Telemetry will backfill'} icon={Heart} />
+          <Metric label="New followers" value={totals.newFollowers.toLocaleString()} detail={`${currentUser?.followers ?? 0} current followers`} icon={Users} />
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-2">
-            <ShieldCheck className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-bold text-sm">Verified payments</h3>
-            <p className="text-xs text-muted-foreground">Not configured</p>
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="surface-1 rounded-3xl border border-border/40 p-6">
+            <div className="mb-5 flex items-center justify-between"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Daily pulse</p><h2 className="mt-1 font-display text-xl font-black">What your signal is doing.</h2></div><Clock3 className="h-5 w-5 text-primary" /></div>
+            {rows.length > 0 ? <div className="space-y-3">{rows.slice(0, 14).map((row) => { const reach = row.totalPostViews + row.totalReelViews; const maxReach = Math.max(...rows.map((item) => item.totalPostViews + item.totalReelViews), 1); return <div key={row.id} className="grid grid-cols-[5.5rem_1fr_4rem] items-center gap-3 text-xs"><span className="text-muted-foreground">{new Date(row.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${Math.max(3, Math.round((reach / maxReach) * 100))}%` }} /></div><span className="text-right font-bold">{reach.toLocaleString()}</span></div>; })}</div> : <div className="rounded-2xl border border-dashed border-border/50 p-8 text-center"><BarChart3 className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">Telemetry is ready for your first daily rollup.</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Publish content and the server can aggregate profile views, reel watch time, engagement, and follower changes here.</p></div>}
           </div>
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-2">
-            <BarChart3 className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-bold text-sm">Live analytics</h3>
-            <p className="text-xs text-muted-foreground">Not connected</p>
+          <div className="space-y-6">
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.15] via-card to-card p-6"><Wallet className="mb-5 h-7 w-7 text-emerald-400" /><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-emerald-300">Earnings ledger</p><h2 className="mt-1 font-display text-3xl font-black">₹{(totals.earnings / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Only verified server-side settlements can enter this number. No client-side counter can create a payout.</p></div>
+            <div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-4 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /><h3 className="font-display font-bold">Trust gates</h3></div><div className="space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-muted-foreground">Content Passport</span><strong className="text-emerald-400">Active</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Payment verification</span><strong className="text-amber-300">Provider-gated</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Daily telemetry</span><strong className={isServerConnected ? 'text-emerald-400' : 'text-amber-300'}>{isServerConnected ? 'Connected' : 'Backfill pending'}</strong></div></div><Link href="/control-room" className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-primary">Open Control Room <BarChart3 className="h-4 w-4" /></Link></div>
           </div>
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-2">
-            <Clock className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-bold text-sm">Expected availability</h3>
-            <p className="text-xs text-muted-foreground">After beta validation</p>
-          </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

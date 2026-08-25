@@ -197,6 +197,30 @@ export interface CreatorWorkspaceItem {
   updatedAt: string;
 }
 
+export interface CreatorAnalyticsDaily {
+  id: string;
+  creatorId: string;
+  date: string;
+  profileViews: number;
+  newFollowers: number;
+  totalPostViews: number;
+  totalReelViews: number;
+  totalEngagement: number;
+  estimatedEarnings: number;
+}
+
+export interface ModerationReport {
+  id: string;
+  reporterId: string;
+  entityType: 'post' | 'user' | 'comment' | 'message';
+  entityId: string;
+  reason: string;
+  details: string | null;
+  status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
 export interface ContactShield {
   id: string;
   type: 'email' | 'phone';
@@ -286,6 +310,10 @@ export const api = {
     request<CreatorWorkspaceItem>('/creator/workspace', { method: 'PUT', body: JSON.stringify(payload) }),
   deleteCreatorWorkspaceItem: (kind: CreatorWorkspaceKind, itemKey: string) =>
     request<null>(`/creator/workspace/${encodeURIComponent(kind)}/${encodeURIComponent(itemKey)}`, { method: 'DELETE' }),
+  getCreatorAnalytics: () => request<CreatorAnalyticsDaily[]>('/economy/analytics'),
+  getModerationQueue: () => request<ModerationReport[]>('/reports/queue'),
+  updateReportStatus: (reportId: string, status: ModerationReport['status']) =>
+    request<ModerationReport>(`/reports/${encodeURIComponent(reportId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   // ---- Posts / feed ----
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),

@@ -6,3 +6,7 @@ export const reportSchema = z.object({
   reason: z.enum(["spam", "harassment", "nsfw", "illegal", "hate_speech", "privacy_violation", "copyright", "other"]),
   details: z.string().trim().max(2000).optional(),
 });
+
+export const reportStatusSchema = z.object({
+  status: z.enum(["pending", "reviewed", "resolved", "dismissed"]),
+});

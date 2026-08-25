@@ -1,11 +1,13 @@
 import { Router } from "express";
-import { authenticate } from "../middlewares/auth.js";
+import { desc, eq } from "drizzle-orm";
+import { authenticate, requireRole } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
 import { reportsTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { validateBody, validateParams } from "../middlewares/validation.js";
 import { grievanceSchema, grievanceTicketParamSchema } from "../validators/grievance.js";
-import { reportSchema } from "../validators/report.js";
+import { reportSchema, reportStatusSchema } from "../validators/report.js";
+import { reportIdParamSchema } from "../validators/params.js";
 import { ModerationService } from "../services/moderation-service.js";
 
 const router = Router();
@@ -54,6 +56,28 @@ router.post("/", authenticate, validateBody(reportSchema), async (req, res) => {
     res.status(201).json({ success: true, message: "Report submitted successfully", data: null, errors: [], meta: {} });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to submit report", data: null, errors: ["Report storage failed"], meta: {} });
+  }
+});
+
+router.get("/queue", authenticate, requireRole("admin", "moderator"), async (_req, res) => {
+  try {
+    const reports = await db.select().from(reportsTable).orderBy(desc(reportsTable.createdAt)).limit(200);
+    return res.status(200).json({ success: true, message: "Moderation queue loaded", data: reports, errors: [], meta: {} });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Moderation queue could not be loaded", data: null, errors: [error instanceof Error ? error.message : "Queue failure"], meta: {} });
+  }
+});
+
+router.patch("/:reportId/status", authenticate, requireRole("admin", "moderator"), validateParams(reportIdParamSchema), validateBody(reportStatusSchema), async (req, res) => {
+  try {
+    const [report] = await db.update(reportsTable)
+      .set({ status: req.body.status, resolvedAt: req.body.status === "resolved" || req.body.status === "dismissed" ? new Date().toISOString() : null })
+      .where(eq(reportsTable.id, req.params.reportId as string))
+      .returning();
+    if (!report) return res.status(404).json({ success: false, message: "Report not found", data: null, errors: ["Report not found"], meta: {} });
+    return res.status(200).json({ success: true, message: "Report status updated", data: report, errors: [], meta: {} });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Report status could not be updated", data: null, errors: [error instanceof Error ? error.message : "Update failure"], meta: {} });
   }
 });
 

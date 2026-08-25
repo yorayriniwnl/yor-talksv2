@@ -117,6 +117,7 @@ export function CommandPalette() {
       items: [
         { icon: Video, label: 'Creator Studio', path: '/studio' },
         { icon: Gauge, label: 'Control Room', path: '/control-room' },
+        { icon: Shield, label: 'Moderation Command', path: '/moderation' },
         { icon: BarChart3, label: 'Analytics', path: '/analytics' },
         { icon: ShoppingCart, label: 'Creator Store', path: '/store' },
         { icon: Scissors, label: 'Clip Studio', path: '/clips' },
