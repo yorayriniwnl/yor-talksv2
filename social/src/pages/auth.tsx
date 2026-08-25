@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion';
 import { toast } from 'sonner';
+import { Link } from 'wouter';
 
 export default function Auth() {
   const login = useAppStore((state) => state.login);
@@ -425,6 +426,7 @@ export default function Auth() {
 
                 <p className="premium-auth-legal">
                   By continuing, you agree to keep Yor Talks respectful and campus-safe. <span>Beta access is limited to seven-digit @kiit.ac.in emails.</span>
+                  <span><Link href="/terms" className="hover:underline">Terms</Link> · <Link href="/privacy" className="hover:underline">Privacy</Link> · <Link href="/community-guidelines" className="hover:underline">Guidelines</Link></span>
                 </p>
               </form>
             </motion.div>

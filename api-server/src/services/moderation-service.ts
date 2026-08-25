@@ -1,4 +1,7 @@
 import { randomUUID } from "crypto";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { grievanceTicketsTable } from "@workspace/db/schema";
 
 export interface ModerationResult {
   isSafe: boolean;
@@ -17,6 +20,7 @@ export interface GrievanceTicket {
   status: "received" | "under_review" | "resolved" | "dismissed";
   slaDeadline: string;
   createdAt: string;
+  officerNote?: string | null;
 }
 
 const BLOCKED_PATTERNS = [
@@ -29,8 +33,6 @@ const BLOCKED_PATTERNS = [
 const FLAGGED_KEYWORDS = [
   "scam", "phishing", "pirated", "free nitro", "hack tool", "illegal"
 ];
-
-const inMemoryGrievanceTickets: GrievanceTicket[] = [];
 
 export class ModerationService {
   /**
@@ -86,12 +88,13 @@ export class ModerationService {
     reporterEmail: string;
     description: string;
   }): Promise<GrievanceTicket> {
-    const ticketId = `YT-GRV-${Date.now().toString().slice(-6)}`;
+    const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
     // 24 hours acknowledgment, 15 days redressal as mandated by Indian IT Rules 2021
     const slaDeadline = new Date(now.getTime() + 15 * 86400 * 1000).toISOString();
 
-    const ticket: GrievanceTicket = {
+    const [ticket] = await db.insert(grievanceTicketsTable).values({
+      id: randomUUID(),
       ticketId,
       category: data.category,
       reportedUrl: data.reportedUrl,
@@ -101,16 +104,19 @@ export class ModerationService {
       status: "received",
       slaDeadline,
       createdAt: now.toISOString(),
-    };
-
-    inMemoryGrievanceTickets.push(ticket);
-    return ticket;
+      updatedAt: now.toISOString(),
+    }).returning();
+    return ticket as GrievanceTicket;
   }
 
   /**
    * Check grievance ticket status
    */
   async getGrievanceStatus(ticketId: string): Promise<GrievanceTicket | null> {
-    return inMemoryGrievanceTickets.find((t) => t.ticketId === ticketId) || null;
+    const [ticket] = await db.select().from(grievanceTicketsTable)
+      .where(eq(grievanceTicketsTable.ticketId, ticketId))
+      .orderBy(desc(grievanceTicketsTable.createdAt))
+      .limit(1);
+    return (ticket as GrievanceTicket | undefined) ?? null;
   }
 }

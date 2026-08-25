@@ -39,37 +39,16 @@ export default function GrievancePortal() {
     sounds.playPop();
 
     try {
-      // Simulate / POST to backend
       const res = await api.request<any>('/reports/grievance', {
         method: 'POST',
         body: JSON.stringify({ category, reportedUrl, reporterName, reporterEmail, description }),
-      }).catch(() => {
-        // Mock ticket if offline
-        return {
-          data: {
-            ticketId: `YT-GRV-${Date.now().toString().slice(-6)}`,
-            category,
-            reportedUrl,
-            status: 'received',
-            createdAt: new Date().toISOString(),
-            slaDeadline: new Date(Date.now() + 15 * 86400 * 1000).toISOString(),
-          },
-        };
       });
-
-      const ticket = res?.data || {
-        ticketId: `YT-GRV-${Date.now().toString().slice(-6)}`,
-        category,
-        reportedUrl,
-        status: 'received',
-        createdAt: new Date().toISOString(),
-        slaDeadline: new Date(Date.now() + 15 * 86400 * 1000).toISOString(),
-      };
+      const ticket = res;
 
       setSubmittedTicket(ticket);
       sounds.playChime();
       triggerConfetti();
-      toast.success(`Grievance ticket ${ticket.ticketId} generated successfully!`);
+      toast.success(`Grievance ticket ${ticket.ticketId} received.`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to submit grievance');
     } finally {
@@ -84,17 +63,14 @@ export default function GrievancePortal() {
     setTrackingLoading(true);
     sounds.playPop();
 
-    setTimeout(() => {
-      setTrackedTicket({
-        ticketId: trackTicketId.trim(),
-        category: 'harassment',
-        status: 'under_review',
-        createdAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-        slaDeadline: new Date(Date.now() + 14 * 86400 * 1000).toISOString(),
-        officerNote: 'Grievance received. Preliminary assessment underway by Trust & Safety Officer.',
-      });
+    try {
+      const ticket = await api.request<any>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
+      setTrackedTicket(ticket);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ticket not found');
+    } finally {
       setTrackingLoading(false);
-    }, 600);
+    }
   };
 
   return (
@@ -102,13 +78,13 @@ export default function GrievancePortal() {
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full surface-1 border border-primary/30 text-primary text-xs font-mono font-bold mb-3">
-          <Scale className="w-3.5 h-3.5" /> India IT Rules 2021 & DPDP Act 2023 Compliant
+          <Scale className="w-3.5 h-3.5" /> Trust, safety & grievance intake
         </div>
         <h1 className="font-display font-black text-3xl lg:text-4xl text-foreground tracking-tight">
           Grievance Redressal & Trust Portal 🇮🇳
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
-          Official statutory grievance mechanism under Rule 3(2) of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.
+          Submit a report to the Yor Talks trust queue. Formal statutory officer details and legal policy publication are launch prerequisites and are shown only after appointment.
         </p>
 
         {/* Tab Switcher */}
@@ -288,9 +264,9 @@ export default function GrievancePortal() {
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
           <Building className="w-4 h-4 text-primary" /> Statutory Grievance Redressal Officer
         </h4>
-        <p><strong>Officer Name:</strong> Grievance Redressal Officer, Yor Talks India Intermediary Operations</p>
-        <p><strong>Email:</strong> <a href="mailto:grievance@yortalks.in" className="text-primary hover:underline">grievance@yortalks.in</a></p>
-        <p><strong>Response Timeline:</strong> Acknowledgment within 24 hours; complete resolution within 15 days as mandated by IT Rules 2021.</p>
+        <p><strong>Officer:</strong> Appointed grievance officer details are not configured yet.</p>
+        <p><strong>Contact:</strong> The official contact address must be published before statutory production launch.</p>
+        <p><strong>Beta handling:</strong> Tickets are persisted, assigned for review, and can be tracked with the ticket ID.</p>
       </div>
     </div>
   );

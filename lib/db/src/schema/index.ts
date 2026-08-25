@@ -514,6 +514,24 @@ export const reportsTable = pgTable("reports", {
   resolvedAt: timestamp("resolved_at", { mode: "string" }),
 });
 
+export const grievanceTicketsTable = pgTable("grievance_tickets", {
+  id: uuid("id").primaryKey(),
+  ticketId: text("ticket_id").notNull().unique(),
+  category: text("category").notNull(),
+  reportedUrl: text("reported_url").notNull(),
+  reporterName: text("reporter_name").notNull(),
+  reporterEmail: text("reporter_email").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("received"),
+  slaDeadline: timestamp("sla_deadline", { mode: "string" }).notNull(),
+  officerNote: text("officer_note"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ticketIdx: index("grievance_ticket_idx").on(table.ticketId),
+  statusIdx: index("grievance_status_idx").on(table.status, table.createdAt),
+}));
+
 /**
  * Contact Shield stores only server-keyed digests of selected contact
  * identifiers. Raw address-book values and contact names are never persisted.
