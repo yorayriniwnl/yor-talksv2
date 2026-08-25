@@ -21,7 +21,6 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
   RAZORPAY_KEY_ID: z.string().default(process.env.RAZORPAY_KEY_ID || ""),
   RAZORPAY_KEY_SECRET: z.string().default(process.env.RAZORPAY_KEY_SECRET || ""),
-  RAZORPAY_WEBHOOK_SECRET: z.string().default(process.env.RAZORPAY_WEBHOOK_SECRET || ""),
   LIVEKIT_URL: z.string().default(process.env.LIVEKIT_URL || ""),
   LIVEKIT_API_KEY: z.string().default(process.env.LIVEKIT_API_KEY || ""),
   LIVEKIT_API_SECRET: z.string().default(process.env.LIVEKIT_API_SECRET || ""),
