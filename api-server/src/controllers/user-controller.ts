@@ -4,9 +4,11 @@ import { StorageService } from "../services/storage-service.js";
 import { UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
+import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
 
 export class UserController {
   private readonly storageService = new StorageService();
+  private readonly contactShieldService = new ContactShieldService();
 
   constructor(
     private readonly userService: UserService,
@@ -15,7 +17,7 @@ export class UserController {
 
   getProfile = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const user = await this.userService.getProfile(userId);
+    const user = await this.userService.getProfile(userId, req.user?.id);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
@@ -56,7 +58,7 @@ export class UserController {
   };
 
   searchUsers = async (req: Request, res: Response) => {
-    const users = await this.userService.searchUsers(req.query.q as string | undefined ?? "");
+    const users = await this.userService.searchUsers(req.query.q as string | undefined ?? "", req.user?.id);
     return res.status(200).json(createResponse("Users loaded", toPublicUsers(users)));
   };
 
@@ -80,13 +82,13 @@ export class UserController {
 
   followers = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const followers = await this.userService.getFollowers(userId);
+    const followers = await this.userService.getFollowers(userId, req.user?.id);
     return res.status(200).json(createResponse("Followers loaded", toPublicUsers(followers)));
   };
 
   following = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const following = await this.userService.getFollowing(userId);
+    const following = await this.userService.getFollowing(userId, req.user?.id);
     return res.status(200).json(createResponse("Following loaded", toPublicUsers(following)));
   };
 
@@ -148,5 +150,29 @@ export class UserController {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("User unmuted", { mutedUsers: user.mutedUsers }));
+  };
+
+  listContactShields = async (req: Request, res: Response) => {
+    const shields = await this.contactShieldService.list(req.user?.id ?? "");
+    return res.status(200).json(createResponse("Contact shields loaded", shields));
+  };
+
+  addContactShields = async (req: Request, res: Response) => {
+    try {
+      const contacts = req.body.contacts as ContactShieldInput[];
+      const shields = await this.contactShieldService.add(req.user?.id ?? "", contacts);
+      return res.status(201).json(createResponse("Contact shields updated", shields));
+    } catch (error) {
+      return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, [error instanceof Error ? error.message : "Invalid contact list"]));
+    }
+  };
+
+  removeContactShield = async (req: Request, res: Response) => {
+    const shieldId = typeof req.params.shieldId === "string" ? req.params.shieldId : "";
+    const removed = await this.contactShieldService.remove(req.user?.id ?? "", shieldId);
+    if (!removed) {
+      return res.status(404).json(createResponse("Contact shield not found", null, {}, ["Contact shield not found"]));
+    }
+    return res.status(200).json(createResponse("Contact shield removed", null));
   };
 }

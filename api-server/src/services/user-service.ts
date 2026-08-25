@@ -4,16 +4,22 @@ import { NotificationRepository } from "../repositories/notification-repository.
 import { UserRepository } from "../repositories/user-repository.js";
 import { QueueService } from "./queue-service.js";
 import type { UserRecord, UserSettings } from "../types/index.js";
+import { ContactShieldService } from "./contact-shield-service.js";
 
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly notificationRepository?: NotificationRepository,
     private readonly queueService?: QueueService,
+    private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
   ) {}
 
-  async getProfile(userId: string): Promise<UserRecord | undefined> {
-    return this.userRepository.findById(userId);
+  async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
+    const user = await this.userRepository.findById(userId);
+    if (!user || !(await this.contactShieldService.canView(viewerId ?? userId, userId))) {
+      return undefined;
+    }
+    return user;
   }
 
   async updateProfile(userId: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
@@ -24,8 +30,8 @@ export class UserService {
     return this.userRepository.update(userId, { avatarUrl });
   }
 
-  async searchUsers(search: string): Promise<UserRecord[]> {
-    return this.userRepository.list(search);
+  async searchUsers(search: string, viewerId?: string): Promise<UserRecord[]> {
+    return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(search));
   }
 
   async followUser(userId: string, targetId: string): Promise<{ follower: UserRecord; target: UserRecord } | undefined> {
@@ -35,6 +41,9 @@ export class UserService {
     const follower = await this.userRepository.findById(userId);
     const target = await this.userRepository.findById(targetId);
     if (!follower || !target) {
+      return undefined;
+    }
+    if (!(await this.contactShieldService.canView(userId, targetId))) {
       return undefined;
     }
     const created = await this.userRepository.followUser(userId, targetId);
@@ -74,12 +83,12 @@ export class UserService {
     };
   }
 
-  async getFollowers(userId: string): Promise<UserRecord[]> {
-    return this.userRepository.listFollowers(userId);
+  async getFollowers(userId: string, viewerId?: string): Promise<UserRecord[]> {
+    return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.listFollowers(userId));
   }
 
-  async getFollowing(userId: string): Promise<UserRecord[]> {
-    return this.userRepository.listFollowing(userId);
+  async getFollowing(userId: string, viewerId?: string): Promise<UserRecord[]> {
+    return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.listFollowing(userId));
   }
 
   async updateSettings(userId: string, settings: UserSettings): Promise<UserRecord | undefined> {

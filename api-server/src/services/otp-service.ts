@@ -4,6 +4,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { AuthTokens } from "../types/index.js";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 
 interface StoredOtp {
   code: string;
@@ -105,6 +106,7 @@ export class OtpService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         settings: { theme: "light", notificationsEnabled: true, privateAccount: false },
+        contactIdentityDigest: getContactIdentifierDigest("email", `${sanitizedPhone.replace("+", "")}@yortalks.in`),
       });
     }
 

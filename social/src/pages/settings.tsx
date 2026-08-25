@@ -1,11 +1,160 @@
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppStore } from '@/lib/store';
+import { api, type ContactShield } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { fadeInUp, springGentle } from '@/lib/motion';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders } from 'lucide-react';
+import { toast } from 'sonner';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X } from 'lucide-react';
+
+type DeviceContact = { name?: string[]; email?: string[] };
+type ContactPickerNavigator = Navigator & {
+  contacts?: {
+    select: (properties: string[], options?: { multiple?: boolean }) => Promise<DeviceContact[]>;
+  };
+};
+
+function ContactShieldPanel() {
+  const [shields, setShields] = useState<ContactShield[]>([]);
+  const [emailInput, setEmailInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [pickerAvailable, setPickerAvailable] = useState(false);
+
+  useEffect(() => {
+    setPickerAvailable(typeof navigator !== 'undefined' && Boolean((navigator as ContactPickerNavigator).contacts?.select));
+    let cancelled = false;
+    api.getContactShields()
+      .then((items) => { if (!cancelled) setShields(items); })
+      .catch(() => { if (!cancelled) toast.error('Could not load your IRL Shield list'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const addEmails = async (emails: string[]) => {
+    const uniqueEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
+    if (uniqueEmails.length === 0) {
+      toast.error('Add a valid email address to shield');
+      return;
+    }
+    setAdding(true);
+    try {
+      const updated = await api.addContactShields(uniqueEmails.map((value) => ({ type: 'email' as const, value })));
+      setShields(updated);
+      setEmailInput('');
+      toast.success(`${uniqueEmails.length} contact${uniqueEmails.length === 1 ? '' : 's'} shielded`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update your shield');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleManualAdd = () => void addEmails(emailInput.split(/[\n,]+/));
+
+  const handlePickContacts = async () => {
+    const picker = (navigator as ContactPickerNavigator).contacts;
+    if (!picker) {
+      toast.error('Your browser does not expose contacts. Add an email manually instead.');
+      return;
+    }
+    try {
+      const contacts = await picker.select(['name', 'email'], { multiple: true });
+      await addEmails(contacts.flatMap((contact) => contact.email ?? []));
+    } catch {
+      // Closing the system picker is a normal, non-error action.
+    }
+  };
+
+  const removeShield = async (shield: ContactShield) => {
+    try {
+      await api.removeContactShield(shield.id);
+      setShields((current) => current.filter((item) => item.id !== shield.id));
+      toast.success('Contact shield removed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not remove contact shield');
+    }
+  };
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+      <div className="relative space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-background/70 text-primary shadow-inner ring-1 ring-primary/20">
+              <Fingerprint className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-base font-bold">IRL Shield</h3>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Private beta</span>
+              </div>
+              <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">Keep selected people from finding your profile, posts or recommendations. They will never be told.</p>
+            </div>
+          </div>
+          <div className="hidden shrink-0 text-right sm:block">
+            <p className="font-display text-2xl font-bold text-primary">{loading ? '—' : shields.length}</p>
+            <p className="text-[0.58rem] font-bold uppercase tracking-[0.15em] text-muted-foreground">shielded</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div className="flex gap-2">
+            <Input
+              value={emailInput}
+              onChange={(event) => setEmailInput(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') handleManualAdd(); }}
+              placeholder="Paste a KIIT email or email from contacts"
+              aria-label="Email to shield"
+              className="h-11 rounded-2xl border-primary/15 bg-background/60"
+            />
+            <Button type="button" onClick={handleManualAdd} disabled={adding} className="h-11 shrink-0 rounded-2xl px-3 sm:px-4">
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              <span className="hidden sm:inline">Shield</span>
+            </Button>
+          </div>
+          {pickerAvailable && (
+            <Button type="button" variant="outline" onClick={handlePickContacts} disabled={adding} className="h-11 rounded-2xl border-primary/20 bg-background/40 font-bold">
+              <ContactRound className="h-4 w-4" /> Pick contacts
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-start gap-2 rounded-2xl border border-border/40 bg-background/35 px-3 py-2.5 text-[0.68rem] leading-relaxed text-muted-foreground">
+          <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+          <span>We retain protected match codes only. Contact names and your full address book stay on your device. Phone-number matching will activate after verified phone identity is added to the beta.</span>
+        </div>
+
+        {shields.length > 0 && (
+          <div className="space-y-2 border-t border-border/40 pt-4">
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Your shield list</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {shields.map((shield, index) => (
+                <div key={shield.id} className="flex items-center justify-between rounded-2xl border border-border/40 bg-background/45 px-3 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><ContactRound className="h-3.5 w-3.5" /></div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold">Protected contact {index + 1}</p>
+                      <p className="text-[0.62rem] text-muted-foreground">{shield.type === 'email' ? 'Email match' : 'Phone match'}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => void removeShield(shield)} aria-label={`Remove protected contact ${index + 1}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -121,6 +270,8 @@ export default function Settings() {
             />
           </div>
         </section>
+
+        <ContactShieldPanel />
 
         {/* Notifications */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">

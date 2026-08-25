@@ -19,7 +19,7 @@ export class PostController {
 
   getPost = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
-    const post = await this.postService.getPost(postId);
+    const post = await this.postService.getPost(postId, req.user?.id);
     if (!post) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }

@@ -27,6 +27,7 @@ export interface UserRecord {
   mutedUsers?: string[];
   privacy?: PrivacySettings;
   totpSecret?: string | null;
+  contactIdentityDigest?: string | null;
 }
 
 export interface UserSettings {

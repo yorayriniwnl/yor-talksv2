@@ -35,6 +35,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-local-only}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-local-only}
+      CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:-contact-shield-development-secret-change-me}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}

@@ -24,6 +24,7 @@ export const db = drizzle(pool, { schema });
 
 export {
   usersTable,
+  contactShieldsTable,
   postsTable,
   conversationsTable,
   messagesTable,

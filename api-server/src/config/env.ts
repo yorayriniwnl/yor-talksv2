@@ -25,6 +25,7 @@ const envSchema = z.object({
   LIVEKIT_API_KEY: z.string().default(process.env.LIVEKIT_API_KEY || ""),
   LIVEKIT_API_SECRET: z.string().default(process.env.LIVEKIT_API_SECRET || ""),
   OPENAI_API_KEY: z.string().optional().default(process.env.OPENAI_API_KEY || ""),
+  CONTACT_SHIELD_SECRET: z.string().default(process.env.CONTACT_SHIELD_SECRET || "contact-shield-development-secret-change-me"),
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -41,6 +42,7 @@ if (parsedEnv.NODE_ENV === "production") {
     "change-me",
     "replace-with-a-random-secret-at-least-32-characters",
     "replace-with-a-different-random-secret-at-least-32-characters",
+    "contact-shield-development-secret-change-me",
     "",
   ]);
   const invalidSecretFields = ["JWT_SECRET", "JWT_REFRESH_SECRET"].filter((field) => {
@@ -49,6 +51,10 @@ if (parsedEnv.NODE_ENV === "production") {
   });
   if (invalidSecretFields.length) {
     throw new Error(`[Config Error] Production requires unique JWT secrets of at least 32 characters: ${invalidSecretFields.join(", ")}`);
+  }
+
+  if (parsedEnv.CONTACT_SHIELD_SECRET.length < 32 || insecureSecrets.has(parsedEnv.CONTACT_SHIELD_SECRET)) {
+    throw new Error("[Config Error] Production requires a unique CONTACT_SHIELD_SECRET of at least 32 characters");
   }
 
   const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);

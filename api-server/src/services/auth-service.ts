@@ -13,6 +13,7 @@ import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
 import { isKiitCollegeEmail } from "../validators/auth.js";
+import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 
 export class TooManyAttemptsError extends Error {}
 export class TwoFactorRequiredError extends Error {}
@@ -65,6 +66,7 @@ export class AuthService {
         allowMentions: true,
       },
       emailVerified: false,
+      contactIdentityDigest: getContactIdentifierDigest("email", email),
       passwordResetRequired: false,
       lastLoginAt: null,
       devices: [],

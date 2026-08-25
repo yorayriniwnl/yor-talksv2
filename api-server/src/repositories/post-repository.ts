@@ -1,4 +1,4 @@
-import { eq, desc, ilike, lt, and } from "drizzle-orm";
+import { eq, desc, ilike, lt, and, notInArray } from "drizzle-orm";
 import { postsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
 import { db, pool } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
@@ -67,35 +67,40 @@ export class PostRepository {
     return created as PostRecord;
   }
 
-  async findById(id: string): Promise<PostRecord | undefined> {
-    const [post] = await db.select().from(postsTable).where(eq(postsTable.id, id));
+  async findById(id: string, excludedAuthorIds: string[] = []): Promise<PostRecord | undefined> {
+    const filters = [eq(postsTable.id, id)];
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    const [post] = await db.select().from(postsTable).where(and(...filters));
     return post as PostRecord | undefined;
   }
 
-  async listByUser(userId: string, cursor?: string, limit: number = 20): Promise<PostRecord[]> {
+  async listByUser(userId: string, cursor?: string, limit: number = 20, excludedAuthorIds: string[] = []): Promise<PostRecord[]> {
     const filters = [eq(postsTable.authorId, userId)];
     if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
-  async list(cursor?: string, limit: number = 20): Promise<PostRecord[]> {
+  async list(cursor?: string, limit: number = 20, excludedAuthorIds: string[] = []): Promise<PostRecord[]> {
     const filters: any[] = [];
     if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     let q = db.select().from(postsTable).$dynamic();
     if (filters.length > 0) q = q.where(and(...filters));
     return (await q.orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
-  async listTrending(cursor?: number, limit: number = 20): Promise<PostRecord[]> {
+  async listTrending(cursor?: number, limit: number = 20, excludedAuthorIds: string[] = []): Promise<PostRecord[]> {
     const filters: any[] = [];
     if (cursor) filters.push(lt(postsTable.score, cursor));
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     let q = db.select().from(postsTable).$dynamic();
     if (filters.length > 0) q = q.where(and(...filters));
     return (await q.orderBy(desc(postsTable.score), desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
-  async search(query: string, limit: number = 50): Promise<PostRecord[]> {
+  async search(query: string, limit: number = 50, excludedAuthorIds: string[] = []): Promise<PostRecord[]> {
     const indexState = await pool.query<{ is_ready: boolean }>(`
       SELECT EXISTS (
         SELECT 1
@@ -114,18 +119,22 @@ export class PostRepository {
         .limit(250)
         .as("recent_searchable_posts");
 
+      const recentFilters: any[] = [ilike(recentPosts.content, `%${query}%`)];
+      if (excludedAuthorIds.length > 0) recentFilters.push(notInArray(recentPosts.authorId, excludedAuthorIds));
       return (await db
         .select()
         .from(recentPosts)
-        .where(ilike(recentPosts.content, `%${query}%`))
+        .where(and(...recentFilters))
         .orderBy(desc(recentPosts.createdAt))
         .limit(limit)) as PostRecord[];
     }
 
+    const filters: any[] = [ilike(postsTable.content, `%${query}%`)];
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     return (await db
       .select()
       .from(postsTable)
-      .where(ilike(postsTable.content, `%${query}%`))
+      .where(and(...filters))
       .orderBy(desc(postsTable.createdAt))
       .limit(limit)) as PostRecord[];
   }

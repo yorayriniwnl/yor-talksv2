@@ -21,3 +21,10 @@ export const privacySchema = z.object({
   messageRequests: z.boolean().optional(),
   allowDmFromStrangers: z.boolean().optional(),
 });
+
+export const contactShieldSchema = z.object({
+  contacts: z.array(z.object({
+    type: z.enum(["email", "phone"]),
+    value: z.string().trim().min(3).max(320),
+  })).min(1).max(500),
+});

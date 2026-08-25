@@ -171,6 +171,12 @@ export interface BackendUser {
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
+export interface ContactShield {
+  id: string;
+  type: 'email' | 'phone';
+  createdAt: string;
+}
+
 export interface BackendProject {
   id: string;
   ownerId: string;
@@ -231,6 +237,11 @@ export const api = {
   unblockUser: (userId: string) => request<{ blockedUsers: string[] }>(`/users/${userId}/unblock`, { method: 'POST' }),
   muteUser: (userId: string) => request<{ mutedUsers: string[] }>(`/users/${userId}/mute`, { method: 'POST' }),
   unmuteUser: (userId: string) => request<{ mutedUsers: string[] }>(`/users/${userId}/unmute`, { method: 'POST' }),
+  getContactShields: () => request<ContactShield[]>('/users/me/contact-shields'),
+  addContactShields: (contacts: Array<{ type: 'email' | 'phone'; value: string }>) =>
+    request<ContactShield[]>('/users/me/contact-shields', { method: 'POST', body: JSON.stringify({ contacts }) }),
+  removeContactShield: (shieldId: string) =>
+    request<null>(`/users/me/contact-shields/${shieldId}`, { method: 'DELETE' }),
 
   // ---- Posts / feed ----
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),

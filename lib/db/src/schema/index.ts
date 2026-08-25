@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, jsonb, uuid, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb, uuid, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 
@@ -24,6 +24,7 @@ export const usersTable = pgTable("users", {
   mutedUsers: jsonb("muted_users").default([]),
   privacy: jsonb("privacy").default({}),
   totpSecret: text("totp_secret"),
+  contactIdentityDigest: text("contact_identity_digest"),
   location: text("location"),
   country: text("country"),
   language: text("language"),
@@ -512,6 +513,22 @@ export const reportsTable = pgTable("reports", {
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { mode: "string" }),
 });
+
+/**
+ * Contact Shield stores only server-keyed digests of selected contact
+ * identifiers. Raw address-book values and contact names are never persisted.
+ */
+export const contactShieldsTable = pgTable("contact_shields", {
+  id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  identifierType: text("identifier_type").notNull(),
+  identifierDigest: text("identifier_digest").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ownerIdx: index("contact_shields_owner_idx").on(table.ownerId),
+  digestIdx: index("contact_shields_digest_idx").on(table.identifierType, table.identifierDigest),
+  uniqueIdentifier: uniqueIndex("contact_shields_owner_identifier_idx").on(table.ownerId, table.identifierType, table.identifierDigest),
+}));
 
 
 // ==================== PHASE 9: ECONOMIC ECOSYSTEM & BUSINESS PROFILES ====================

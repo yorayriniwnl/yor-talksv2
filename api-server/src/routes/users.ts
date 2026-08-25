@@ -9,7 +9,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
-import { privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
+import { contactShieldSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
 import { userIdParamSchema } from "../validators/params.js";
 
 const router = Router();
@@ -33,5 +33,8 @@ router.post("/users/:userId/block", authenticate, validateParams(userIdParamSche
 router.post("/users/:userId/unblock", authenticate, validateParams(userIdParamSchema), userController.unblockUser);
 router.post("/users/:userId/mute", authenticate, validateParams(userIdParamSchema), userController.muteUser);
 router.post("/users/:userId/unmute", authenticate, validateParams(userIdParamSchema), userController.unmuteUser);
+router.get("/users/me/contact-shields", authenticate, userController.listContactShields);
+router.post("/users/me/contact-shields", authenticate, validateBody(contactShieldSchema), userController.addContactShields);
+router.delete("/users/me/contact-shields/:shieldId", authenticate, userController.removeContactShield);
 
 export default router;

@@ -12,6 +12,7 @@ import { commentsTable, postLikesTable, postBookmarksTable } from "@workspace/db
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
+import { ContactShieldService } from "./contact-shield-service.js";
 
 export class PostService {
 
@@ -47,6 +48,7 @@ export class PostService {
     // safely block real posts on.
     private readonly aiService: AIService = new AIService(),
     private readonly securityService: SecurityService = new SecurityService(),
+    private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
   ) {}
 
   private async notify(input: NotificationRecord) {
@@ -56,8 +58,9 @@ export class PostService {
     return notification;
   }
 
-  async getPost(postId: string): Promise<PostRecord | undefined> {
-    return this.postRepository.findById(postId);
+  async getPost(postId: string, currentUserId?: string): Promise<PostRecord | undefined> {
+    const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
+    return this.postRepository.findById(postId, excludedAuthorIds);
   }
 
   async createPost(authorId: string, content: string, images: string[]): Promise<PostRecord> {
@@ -229,12 +232,14 @@ export class PostService {
 
   
   async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
-    return this.attachInteractions(await this.postRepository.list(cursor, limit), currentUserId);
+    const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
+    return this.attachInteractions(await this.postRepository.list(cursor, limit, excludedAuthorIds), currentUserId);
   }
 
     private redis = new Redis(env.REDIS_URL);
 
   async getTrendingFeed(cursor?: number, limit: number = 20, currentUserId?: string): Promise<any[]> {
+    const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const cacheKey = `feed:trending:${cursor || 0}:${limit}`;
     
     // Try Redis cache first (Phase 5 Caching Architecture)
@@ -242,18 +247,25 @@ export class PostService {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        return this.attachInteractions(parsed, currentUserId);
+        const visible = excludedAuthorIds.length > 0 ? parsed.filter((post: PostRecord) => !excludedAuthorIds.includes(post.authorId)) : parsed;
+        return this.attachInteractions(visible, currentUserId);
       } catch (e) { /* ignore parse error */ }
     }
 
-    const posts = await (this.postRepository as any).listTrending(cursor, limit);
+    // Cache the unfiltered candidate set. Contact Shield visibility is per
+    // viewer, so storing one user's filtered list would hide those posts from
+    // every other viewer sharing the cache key.
+    const posts = await this.postRepository.listTrending(cursor, limit);
     
     // Cache for 60 seconds
     await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
-    return this.attachInteractions(posts, currentUserId);
+    const visible = excludedAuthorIds.length > 0 ? posts.filter((post) => !excludedAuthorIds.includes(post.authorId)) : posts;
+    return this.attachInteractions(visible, currentUserId);
   }
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
-    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit), currentUserId);
+    if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
+    const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
+    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds), currentUserId);
   }
 
   close(): void {
