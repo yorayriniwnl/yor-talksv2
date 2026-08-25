@@ -10,7 +10,7 @@ export class VideoRepository {
   }
 
   async list(): Promise<VideoRecord[]> {
-    return (await db.select().from(videosTable).orderBy(desc(videosTable.createdAt))) as VideoRecord[];
+    return (await db.select().from(videosTable).orderBy(desc(videosTable.createdAt)).limit(100)) as VideoRecord[];
   }
 
   async findById(id: string): Promise<VideoRecord | undefined> {

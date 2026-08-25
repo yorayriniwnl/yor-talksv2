@@ -524,6 +524,19 @@ interface AppState {
   switchAccount: (userId: string) => void;
 }
 
+function hydrateSessionData(get: () => AppState): void {
+  // These datasets power independent surfaces. Loading them in the background
+  // lets the authenticated shell render as soon as identity is restored; one
+  // slow optional service must never hold every route behind a skeleton.
+  void Promise.allSettled([
+    get().loadFeed(),
+    get().loadCommunities(),
+    get().loadNotifications(),
+    get().loadConversations(),
+    get().loadStories(),
+  ]);
+}
+
 function setupRealtime(
   set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
   get: () => AppState,
@@ -592,7 +605,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
-          await Promise.all([get().loadFeed(), get().loadCommunities(), get().loadNotifications(), get().loadConversations(), get().loadEvents(), get().loadProducts(), get().loadArticles(), get().loadVideos(), get().loadStreams(), get().loadStories()]);
+          hydrateSessionData(get);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
           throw err;
@@ -607,7 +620,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
-          await Promise.all([get().loadFeed(), get().loadCommunities(), get().loadNotifications(), get().loadConversations(), get().loadEvents(), get().loadProducts(), get().loadArticles(), get().loadVideos(), get().loadStreams(), get().loadStories()]);
+          hydrateSessionData(get);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
           throw err;
@@ -622,7 +635,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
-          await Promise.all([get().loadFeed(), get().loadCommunities(), get().loadNotifications(), get().loadConversations(), get().loadEvents(), get().loadProducts(), get().loadArticles(), get().loadVideos(), get().loadStreams(), get().loadStories()]);
+          hydrateSessionData(get);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
           throw err;
@@ -693,25 +706,8 @@ export const useAppStore = create<AppState>()(
         }
 
         setupRealtime(set, get);
-
-        try {
-          await Promise.all([
-            get().loadFeed(),
-            get().loadCommunities(),
-            get().loadNotifications(),
-            get().loadConversations(),
-            get().loadEvents(),
-            get().loadProducts(),
-            get().loadArticles(),
-            get().loadVideos(),
-            get().loadStreams(),
-            get().loadStories()
-          ]);
-        } catch {
-          // Graceful fallback to mock data already initialized
-        } finally {
-          set({ isInitializing: false });
-        }
+        set({ isInitializing: false });
+        hydrateSessionData(get);
       },
 
       loadFeed: async () => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'wouter';
 import {
@@ -54,7 +54,14 @@ export default function Pulse() {
   const communities = useAppStore((state) => state.communities);
   const events = useAppStore((state) => state.events);
   const liveStreams = useAppStore((state) => state.liveStreams);
+  const loadEvents = useAppStore((state) => state.loadEvents);
+  const loadStreams = useAppStore((state) => state.loadStreams);
   const [filter, setFilter] = useState<PulseFilter>('everything');
+
+  useEffect(() => {
+    void loadEvents();
+    void loadStreams();
+  }, [loadEvents, loadStreams]);
 
   const signals = useMemo(() => {
     return posts

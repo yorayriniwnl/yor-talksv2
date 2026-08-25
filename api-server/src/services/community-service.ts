@@ -29,7 +29,7 @@ export class CommunityService {
   }
 
   async listCommunities(): Promise<CommunityRecord[]> {
-    return (await db.select().from(communitiesTable)) as CommunityRecord[];
+    return (await db.select().from(communitiesTable).limit(100)) as CommunityRecord[];
   }
 
   async getCommunity(id: string): Promise<CommunityRecord | undefined> {

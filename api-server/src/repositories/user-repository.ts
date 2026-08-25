@@ -56,7 +56,7 @@ export class UserRepository {
 
   async list(search = ""): Promise<UserRecord[]> {
     if (!search) {
-      return (await db.select().from(usersTable)) as UserRecord[];
+      return (await db.select().from(usersTable).limit(100)) as UserRecord[];
     }
     const query = `%${search}%`;
     return (await db.select().from(usersTable).where(
@@ -64,7 +64,7 @@ export class UserRepository {
         ilike(usersTable.username, query),
         ilike(usersTable.fullName, query)
       )
-    )) as UserRecord[];
+    ).limit(100)) as UserRecord[];
   }
 
   async listFollowers(userId: string): Promise<UserRecord[]> {

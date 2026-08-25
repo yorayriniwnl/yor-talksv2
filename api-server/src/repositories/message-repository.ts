@@ -11,7 +11,13 @@ export class MessageRepository {
   }
 
   async listConversation(conversationId: string): Promise<MessageRecord[]> {
-    return (await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId)).orderBy(messagesTable.createdAt)) as MessageRecord[];
+    const messages = await db
+      .select()
+      .from(messagesTable)
+      .where(eq(messagesTable.conversationId, conversationId))
+      .orderBy(desc(messagesTable.createdAt))
+      .limit(200);
+    return messages.reverse() as MessageRecord[];
   }
 
   async lastMessageForConversation(conversationId: string): Promise<MessageRecord | undefined> {
@@ -110,13 +116,15 @@ export class ConversationRepository {
           eq(conversationsTable.participantB, userId),
           inArray(conversationsTable.id, convIds)
         ))
-        .orderBy(desc(conversationsTable.updatedAt))) as ConversationRecord[];
+        .orderBy(desc(conversationsTable.updatedAt))
+        .limit(100)) as ConversationRecord[];
     } else {
       return (await db
         .select()
         .from(conversationsTable)
         .where(or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId)))
-        .orderBy(desc(conversationsTable.updatedAt))) as ConversationRecord[];
+        .orderBy(desc(conversationsTable.updatedAt))
+        .limit(100)) as ConversationRecord[];
     }
   }
 }

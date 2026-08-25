@@ -10,7 +10,7 @@ export class EventRepository {
   }
 
   async list(): Promise<EventRecord[]> {
-    return (await db.select().from(eventsTable).orderBy(eventsTable.startsAt)) as EventRecord[];
+    return (await db.select().from(eventsTable).orderBy(eventsTable.startsAt).limit(100)) as EventRecord[];
   }
 
   async findById(id: string): Promise<EventRecord | undefined> {

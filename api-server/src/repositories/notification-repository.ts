@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { notificationsTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { NotificationRecord } from "../types/index.js";
@@ -10,7 +10,12 @@ export class NotificationRepository {
   }
 
   async listForUser(userId: string): Promise<NotificationRecord[]> {
-    return (await db.select().from(notificationsTable).where(eq(notificationsTable.recipientId, userId))) as NotificationRecord[];
+    return (await db
+      .select()
+      .from(notificationsTable)
+      .where(eq(notificationsTable.recipientId, userId))
+      .orderBy(desc(notificationsTable.createdAt))
+      .limit(100)) as NotificationRecord[];
   }
 
   async findById(id: string): Promise<NotificationRecord | undefined> {

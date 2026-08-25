@@ -15,7 +15,8 @@ export class StoryRepository {
       .select()
       .from(storiesTable)
       .where(gt(storiesTable.expiresAt, new Date().toISOString()))
-      .orderBy(desc(storiesTable.createdAt))) as StoryRecord[];
+      .orderBy(desc(storiesTable.createdAt))
+      .limit(100)) as StoryRecord[];
   }
 
   async findById(id: string): Promise<StoryRecord | undefined> {

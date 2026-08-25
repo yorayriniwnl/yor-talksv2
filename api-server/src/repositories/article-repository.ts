@@ -10,7 +10,7 @@ export class ArticleRepository {
   }
 
   async list(): Promise<ArticleRecord[]> {
-    return (await db.select().from(articlesTable).orderBy(desc(articlesTable.createdAt))) as ArticleRecord[];
+    return (await db.select().from(articlesTable).orderBy(desc(articlesTable.createdAt)).limit(100)) as ArticleRecord[];
   }
 
   async findById(id: string): Promise<ArticleRecord | undefined> {

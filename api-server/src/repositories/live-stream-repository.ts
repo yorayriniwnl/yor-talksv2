@@ -10,7 +10,7 @@ export class LiveStreamRepository {
   }
 
   async list(): Promise<LiveStreamRecord[]> {
-    return (await db.select().from(liveStreamsTable).orderBy(desc(liveStreamsTable.startsAt))) as LiveStreamRecord[];
+    return (await db.select().from(liveStreamsTable).orderBy(desc(liveStreamsTable.startsAt)).limit(100)) as LiveStreamRecord[];
   }
 
   async findById(id: string): Promise<LiveStreamRecord | undefined> {

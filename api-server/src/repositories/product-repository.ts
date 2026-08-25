@@ -10,7 +10,7 @@ export class ProductRepository {
   }
 
   async list(): Promise<ProductRecord[]> {
-    return (await db.select().from(productsTable).orderBy(desc(productsTable.createdAt))) as ProductRecord[];
+    return (await db.select().from(productsTable).orderBy(desc(productsTable.createdAt)).limit(100)) as ProductRecord[];
   }
 
   async findById(id: string): Promise<ProductRecord | undefined> {
