@@ -302,9 +302,9 @@ export const api = {
   likeVideo: (id: string) => request<BackendVideo>(`/videos/${id}/like`, { method: 'POST' }),
 
   // ---- Live streams ----
-  // Metadata/scheduling only — no real WebRTC/media pipeline is wired up.
   getStreams: () => request<BackendLiveStream[]>('/streams'),
   getStream: (id: string) => request<BackendLiveStream>(`/streams/${id}`),
+  getStreamToken: (id: string) => request<{ token: string; wsUrl: string; roomName: string }>(`/streams/${id}/token`),
   createStream: (payload: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: string }) =>
     request<BackendLiveStream>('/streams', { method: 'POST', body: JSON.stringify(payload) }),
   setStreamStatus: (id: string, status: 'scheduled' | 'live' | 'ended') =>
