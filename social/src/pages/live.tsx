@@ -4,6 +4,7 @@ import { useAppStore, type LiveStream } from '@/lib/store';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Radio, Users, Calendar, Sparkles, Play, Heart, Send, Gift, 
   Share2, MessageCircle, Volume2, VolumeX, Maximize2, Shield, 
