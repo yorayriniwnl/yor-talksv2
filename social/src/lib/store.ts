@@ -684,6 +684,14 @@ export const useAppStore = create<AppState>()(
           users: { ...state.users },
         }));
 
+        // Do not block the signed-out entry point on protected social data.
+        // Auth should be usable even when the feed or a secondary service is
+        // slow, unavailable, or still warming up in the beta environment.
+        if (!currentUser) {
+          set({ isInitializing: false });
+          return;
+        }
+
         setupRealtime(set, get);
 
         try {

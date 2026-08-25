@@ -195,7 +195,7 @@ export default function Auth() {
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
                 <p>
-                  {mode === 'login' ? 'Enter your details to enter the universe.' : 'Join the next generation of social interaction.'}
+                  {mode === 'login' ? 'Sign in to your campus space.' : 'Create your place in the campus conversation.'}
                 </p>
               </div>
 
