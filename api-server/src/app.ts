@@ -56,11 +56,7 @@ app.use(compression());
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || corsOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        callback(null, true);
-      } else {
-        callback(null, true);
-      }
+      callback(null, !origin || corsOrigins.includes(origin));
     },
     credentials: true,
   }),

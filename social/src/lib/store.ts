@@ -724,8 +724,11 @@ export const useAppStore = create<AppState>()(
           const updated = post.likedByMe ? await api.unlikePost(postId) : await api.likePost(postId);
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
-        } catch {
-          // Local state already updated
+        } catch (error) {
+          set((state) => ({
+            posts: state.posts.map((p) => (p.id === postId ? { ...p, likedByMe: post.likedByMe, likes: post.likes } : p)),
+          }));
+          toast.error(error instanceof Error ? error.message : 'Could not update the like');
         }
       },
 
@@ -739,50 +742,46 @@ export const useAppStore = create<AppState>()(
         }));
       },
       addPost: async (content, media, poll) => {
-        const currentUserId = get().currentUser?.id || 'user-roy';
-        const newPost: Post = {
-          id: `post-${Date.now()}`,
-          authorId: currentUserId,
-          content,
-          media,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          resonanceScore: 0.9,
-          x: Math.floor(Math.random() * 400 - 200),
-          y: Math.floor(Math.random() * 400 - 200),
-          createdAt: new Date().toISOString(),
-          poll,
-          likedByMe: false,
-        };
-        set((state) => ({ posts: [newPost, ...state.posts] }));
+        const currentUserId = get().currentUser?.id;
+        if (!currentUserId) {
+          toast.error('Sign in with your KIIT email before posting');
+          return;
+        }
+        if (poll) {
+          toast.error('Polls are not enabled in the college beta yet');
+          return;
+        }
         try {
-          await api.createPost({ content, images: media });
-        } catch {
-          // Local post retained
+          const created = await api.createPost({ content, images: media });
+          set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not publish the post');
         }
       },
 
       toggleSavePost: async (postId) => {
-        set((state) => ({
-          posts: state.posts.map(p => p.id === postId ? { ...p, savedByMe: !p.savedByMe } : p)
-        }));
+        const post = get().posts.find((p) => p.id === postId);
+        if (!post) return;
         try {
-          await api.bookmarkPost(postId);
-        } catch {
-          // Local post retained
+          const updated = await api.bookmarkPost(postId);
+          const currentUserId = get().currentUser?.id;
+          set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not update saved posts');
         }
       },
 
       sharePost: async (postId) => {
-        set((state) => ({
-          posts: state.posts.map(p => p.id === postId ? { ...p, shares: p.shares + 1 } : p)
-        }));
-        toast.success('Post link copied to clipboard!');
         try {
-          await api.sharePost(postId);
-        } catch {
-          // Local post retained
+          const updated = await api.sharePost(postId);
+          const currentUserId = get().currentUser?.id;
+          set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
+          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            await navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
+          }
+          toast.success('Post link copied to clipboard!');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not share this post');
         }
       },
 
@@ -823,19 +822,14 @@ export const useAppStore = create<AppState>()(
       toggleCommunityMembership: async (communityId) => {
         const community = get().communities.find((c) => c.id === communityId);
         if (!community) return;
-        set((state) => ({
-          communities: state.communities.map((c) =>
-            c.id === communityId ? { ...c, isMember: !c.isMember, members: c.isMember ? c.members - 1 : c.members + 1 } : c
-          ),
-        }));
         try {
-          if (community.isMember) {
-            await api.leaveCommunity(communityId);
-          } else {
-            await api.joinCommunity(communityId);
-          }
-        } catch {
-          // Local state updated
+          const updated = community.isMember
+            ? await api.leaveCommunity(communityId)
+            : await api.joinCommunity(communityId);
+          const currentUserId = get().currentUser?.id;
+          set((state) => ({ communities: state.communities.map((c) => (c.id === communityId ? mapCommunity(updated, currentUserId) : c)) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not update community membership');
         }
       },
 
@@ -935,36 +929,38 @@ export const useAppStore = create<AppState>()(
       followUser: async (userId) => {
         const user = get().users[userId];
         if (!user) return;
-        set((state) => ({
-          users: { ...state.users, [userId]: { ...user, followers: user.followers + 1 } },
-          currentUser: state.currentUser ? {
-            ...state.currentUser,
-            following: state.currentUser.following + 1,
-            followingIds: [...(state.currentUser.followingIds || []), userId]
-          } : state.currentUser,
-        }));
         try {
-          await api.followUser(userId);
-        } catch {
-          // Local state updated
+          const result = await api.followUser(userId);
+          const follower = mapUser(result.follower);
+          const target = mapUser(result.target);
+          set((state) => ({
+            users: { ...state.users, [target.id]: target, [follower.id]: follower },
+            currentUser: state.currentUser?.id === follower.id ? {
+              ...follower,
+              followingIds: [...new Set([...(state.currentUser.followingIds || []), userId])],
+            } : state.currentUser,
+          }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not follow this student');
         }
       },
 
       unfollowUser: async (userId) => {
         const user = get().users[userId];
         if (!user) return;
-        set((state) => ({
-          users: { ...state.users, [userId]: { ...user, followers: Math.max(0, user.followers - 1) } },
-          currentUser: state.currentUser ? {
-            ...state.currentUser,
-            following: Math.max(0, state.currentUser.following - 1),
-            followingIds: (state.currentUser.followingIds || []).filter(id => id !== userId)
-          } : state.currentUser,
-        }));
         try {
-          await api.unfollowUser(userId);
-        } catch {
-          // Local state updated
+          const result = await api.unfollowUser(userId);
+          const follower = mapUser(result.follower);
+          const target = mapUser(result.target);
+          set((state) => ({
+            users: { ...state.users, [target.id]: target, [follower.id]: follower },
+            currentUser: state.currentUser?.id === follower.id ? {
+              ...follower,
+              followingIds: (state.currentUser.followingIds || []).filter((id) => id !== userId),
+            } : state.currentUser,
+          }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not unfollow this student');
         }
       },
 

@@ -328,9 +328,14 @@ export interface BackendPost {
   content: string;
   images: string[];
   createdAt: string;
-  likedBy: string[];
-  comments: { id: string; authorId: string; content: string; createdAt: string }[];
-  bookmarkedBy: string[];
+  likedBy?: string[];
+  comments?: { id: string; authorId: string; content: string; createdAt: string }[];
+  bookmarkedBy?: string[];
+  likesCount?: number;
+  commentsCount?: number;
+  bookmarksCount?: number;
+  likedByMe?: boolean;
+  savedByMe?: boolean;
   shareCount: number;
 }
 

@@ -82,8 +82,6 @@ export class RedisRepository {
 
   /** Closes the underlying connection. Callers (tests, graceful shutdown) must invoke this or the process/event loop stays alive. */
   async disconnect(): Promise<void> {
-    try {
-      await this.client.quit();
-    } catch {}
+    this.client.disconnect();
   }
 }

@@ -4,9 +4,38 @@ import { logger } from "../lib/logger.js";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
-export const feedQueue = new Queue("feed-ranking", { connection: { url: env.REDIS_URL } });
+export let feedQueue: Queue | null = null;
 
-export async function startFeedWorker() {
+function isRedisCompatibleVersion(redisVersion: string): boolean {
+  const [major = 0, minor = 0, patch = 0] = redisVersion.split(".").map((value) => Number(value));
+  if (major !== 5) return major > 5;
+  if (minor !== 0) return minor > 0;
+  return patch >= 0;
+}
+
+async function canStartFeedWorker(): Promise<boolean> {
+  const { Redis } = await import("ioredis");
+  const client = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
+  try {
+    await client.connect();
+    const info = await client.info("server");
+    const versionLine = info.split("\n").find((line) => line.startsWith("redis_version:"));
+    const version = versionLine?.split(":")[1]?.trim();
+    return Boolean(version && isRedisCompatibleVersion(version));
+  } catch {
+    return false;
+  } finally {
+    client.disconnect();
+  }
+}
+
+export async function startFeedWorker(): Promise<Worker | null> {
+  if (!(await canStartFeedWorker())) {
+    logger.warn({ redisUrl: env.REDIS_URL }, "Feed worker disabled because Redis is older than BullMQ supports");
+    return null;
+  }
+
+  feedQueue = new Queue("feed-ranking", { connection: { url: env.REDIS_URL } });
   const worker = new Worker(
     "feed-ranking",
     async (job) => {
@@ -21,7 +50,8 @@ export async function startFeedWorker() {
         await db.execute(sql`
           UPDATE posts 
           SET score = (
-            (COALESCE(like_count, 0) * 2.0) + 
+            (COALESCE(likes_count, 0) * 2.0) +
+            (COALESCE(comments_count, 0) * 3.0) +
             (COALESCE(share_count, 0) * 5.0)
           ) / POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8)
           WHERE created_at > NOW() - INTERVAL '7 days'

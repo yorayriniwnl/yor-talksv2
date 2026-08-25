@@ -1,10 +1,8 @@
 import { z } from "zod";
 
-const isProduction = process.env.NODE_ENV === "production";
-
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.string().optional().transform(() => process.env.API_PORT || "4000"),
+  PORT: z.string().default(process.env.PORT || process.env.API_PORT || "4000"),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || "change-me-access"),
   JWT_REFRESH_SECRET: z.string().default(process.env.JWT_REFRESH_SECRET || "change-me-refresh"),
   // Uploads are optional in local development; production still validates all three values below.
@@ -29,9 +27,22 @@ const cloudinaryFields = [
 ] as const;
 
 if (parsedEnv.NODE_ENV === "production") {
+  const insecureSecrets = new Set(["change-me-access", "change-me-refresh", "change-me", ""]);
+  const invalidSecretFields = ["JWT_SECRET", "JWT_REFRESH_SECRET"].filter((field) => {
+    const value = parsedEnv[field as "JWT_SECRET" | "JWT_REFRESH_SECRET"];
+    return insecureSecrets.has(value) || value.length < 32;
+  });
+  if (invalidSecretFields.length) {
+    throw new Error(`[Config Error] Production requires unique JWT secrets of at least 32 characters: ${invalidSecretFields.join(", ")}`);
+  }
+
   const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);
   if (missingCloudinaryConfig.length) {
-    console.warn(`[Config Warning] Missing Cloudinary keys: ${missingCloudinaryConfig.join(", ")}. Cloudinary uploads will be disabled.`);
+    console.warn(`[Config Warning] Missing Cloudinary keys: ${missingCloudinaryConfig.join(", ")}. Image uploads will be disabled.`);
+  }
+
+  if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {
+    throw new Error("[Config Error] Production CORS_ORIGINS must list explicit browser origins; wildcard is not allowed.");
   }
 }
 

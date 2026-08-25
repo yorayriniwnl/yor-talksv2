@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
@@ -8,7 +8,7 @@ const router = Router();
 const redis = new Redis(env.REDIS_URL);
 
 // Phase 7: Platform Reliability & Operations
-router.get("/", async (req, res) => {
+const healthHandler = async (req: Request, res: Response) => {
   try {
     // Check DB
     await db.execute(sql`SELECT 1`);
@@ -33,7 +33,10 @@ router.get("/", async (req, res) => {
       error: (error as Error).message
     });
   }
-});
+};
+
+router.get("/", healthHandler);
+router.get("/healthz", healthHandler);
 
 export const healthRoutes = router;
 export default router;

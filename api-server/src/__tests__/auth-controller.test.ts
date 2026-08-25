@@ -5,9 +5,13 @@ import { AuthController } from "../controllers/auth-controller.js";
 import { AuthService } from "../services/auth-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { pool } from "@workspace/db";
 
 const redisRepository = new RedisRepository();
-after(() => redisRepository.disconnect());
+after(async () => {
+  await redisRepository.disconnect();
+  await pool.end();
+});
 
 const makeResponse = () => {
   let statusCode = 200;

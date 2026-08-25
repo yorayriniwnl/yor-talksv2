@@ -3,9 +3,13 @@ import { after, test } from "node:test";
 import { AuthService } from "../services/auth-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { pool } from "@workspace/db";
 
 const redisRepository = new RedisRepository();
-after(() => redisRepository.disconnect());
+after(async () => {
+  await redisRepository.disconnect();
+  await pool.end();
+});
 
 test("register and login issue tokens and persist session", async () => {
   const authService = new AuthService(new UserRepository(), redisRepository);
