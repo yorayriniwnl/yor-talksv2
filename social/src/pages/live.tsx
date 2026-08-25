@@ -4,9 +4,6 @@ import { useAppStore, type LiveStream } from '@/lib/store';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Radio, Users, Calendar, Sparkles, Play, Heart, Send, Gift, 
   Share2, MessageCircle, Volume2, VolumeX, Maximize2, Shield, 
@@ -18,8 +15,6 @@ import { useLocation, useRoute } from 'wouter';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { connectSocket } from '@/lib/socket-client';
-import { api } from '@/lib/api-client';
-import { toast } from 'sonner';
 
 interface LiveComment {
   id: string;
@@ -38,89 +33,11 @@ const INITIAL_LIVE_COMMENTS: LiveComment[] = [
   { id: '4', user: 'Alex_Chen', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', badge: 'mod', text: 'Reminder: Steam trade giveaway starts in 10 minutes!', timestamp: 'Just now' },
 ];
 
-const LIVE_GIFTS = [
-  { id: 'gift-diya', name: 'Diya Light', icon: '✨', cost: 100, color: 'from-amber-300 to-yellow-500' },
-  { id: 'gift-chai', name: 'Chai Break', icon: '☕', cost: 250, color: 'from-amber-600 to-orange-700' },
-  { id: 'gift-trishul', name: 'Trishul Power', icon: '🔱', cost: 500, color: 'from-amber-400 to-red-500' },
-  { id: 'gift-kohinoor', name: 'Koh-i-Noor Gem', icon: '💎', cost: 1000, color: 'from-cyan-400 to-blue-600' },
-  { id: 'gift-rocket', name: 'ISRO Supernova', icon: '🚀', cost: 2500, color: 'from-rose-500 to-purple-600' },
-];
-
 function GoLiveDialog() {
-  const createStream = useAppStore((s) => s.createStream);
-  const setStreamStatus = useAppStore((s) => s.setStreamStatus);
-  const [, setLocation] = useLocation();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Gaming');
-  const [kind, setKind] = useState<'video' | 'audio'>('video');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleGoLive = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await createStream({
-        title: title.trim(),
-        coverUrl: `https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop`,
-        kind,
-        startsAt: new Date().toISOString(),
-        category,
-      });
-      const created = useAppStore.getState().liveStreams[0];
-      if (created) {
-        await setStreamStatus(created.id, 'live');
-        setOpen(false);
-        setLocation(`/live/${created.id}`);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start stream');
-    }
-    setLoading(false);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="rounded-xl font-bold text-xs px-4 glow-neon-primary bg-rose-600 hover:bg-rose-700 text-white shadow-lg">
-          <Radio className="w-4 h-4 mr-1.5 animate-pulse" /> Go Live
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60">
-        <DialogHeader>
-          <DialogTitle className="font-display font-bold text-xl flex items-center gap-2">
-            <Radio className="w-5 h-5 text-rose-500 animate-pulse" /> Start Live Broadcast
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleGoLive} className="space-y-4">
-          {error && <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-          <div className="space-y-1.5">
-            <Label htmlFor="stream-title" className="text-xs font-mono uppercase text-muted-foreground">Broadcast Title</Label>
-            <Input id="stream-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="Cyberpunk 2077 Night City & Steam Giveaway" className="rounded-xl" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="stream-category" className="text-xs font-mono uppercase text-muted-foreground">Category</Label>
-              <Input id="stream-category" value={category} onChange={(e) => setCategory(e.target.value)} required placeholder="Gaming" className="rounded-xl" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="stream-kind" className="text-xs font-mono uppercase text-muted-foreground">Format</Label>
-              <select id="stream-kind" value={kind} onChange={(e) => setKind(e.target.value as 'video' | 'audio')} className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm font-medium">
-                <option value="video">Full HD Video Broadcast</option>
-                <option value="audio">Interactive Audio Room</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={loading || title.trim().length < 2} className="rounded-xl font-bold text-xs px-6 bg-rose-600 hover:bg-rose-700 text-white shadow-lg">
-              <Radio className="w-4 h-4 mr-1.5" /> {loading ? 'Starting Broadcast…' : 'Go Live Now'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Button disabled title="Live media is not enabled for the college beta" className="rounded-xl font-bold text-xs px-4 bg-rose-600/50 text-white">
+      <Radio className="w-4 h-4 mr-1.5" /> Live media unavailable in beta
+    </Button>
   );
 }
 
@@ -134,13 +51,12 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
   const stream = liveStreams.find((s) => s.id === streamId) || liveStreams[0];
   const host = stream ? users[stream.hostId] : currentUser;
 
-  const [comments, setComments] = useState<LiveComment[]>(INITIAL_LIVE_COMMENTS);
+  const [comments, setComments] = useState<LiveComment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [floatingHearts, setFloatingHearts] = useState<{ id: number; left: number; color: string }[]>([]);
-  const [viewerCount, setViewerCount] = useState(stream?.viewers || 1420);
+  const [viewerCount] = useState(stream?.viewers || 0);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [showGiftDrawer, setShowGiftDrawer] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -179,44 +95,6 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
     }
   }, [comments]);
 
-  // Simulate incoming live viewers & chat messages
-  useEffect(() => {
-    const viewerInterval = setInterval(() => {
-      setViewerCount((v) => v + Math.floor(Math.random() * 7) - 3);
-    }, 4000);
-
-    const chatInterval = setInterval(() => {
-      const simulatedMessages = [
-        "THIS BROADCAST IS INSANE!! 🔥🔥",
-        "Can you showcase your Steam inventory? 🎒",
-        "W stream, dropped a follow! ✨",
-        "Subscribed for 6 months! 👑",
-        "That gameplay fps is butter smooth 🎮"
-      ];
-      const randomMsg = simulatedMessages[Math.floor(Math.random() * simulatedMessages.length)];
-      const randomUser = (Object.values(users) as any[])[Math.floor(Math.random() * Object.values(users).length)];
-      
-      if (randomUser) {
-        setComments((prev) => [
-          ...prev.slice(-25),
-          {
-            id: Math.random().toString(),
-            user: randomUser.displayName || randomUser.username || 'Viewer',
-            avatar: randomUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
-            badge: Math.random() > 0.6 ? 'sub' : undefined,
-            text: randomMsg,
-            timestamp: 'Just now',
-          },
-        ]);
-      }
-    }, 5000);
-
-    return () => {
-      clearInterval(viewerInterval);
-      clearInterval(chatInterval);
-    };
-  }, [users]);
-
   // Floating heart burst generator
   const triggerHeartBurst = () => {
     sounds.playPop();
@@ -252,23 +130,6 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
     ]);
     setCommentInput('');
     triggerHeartBurst();
-  };
-
-  const handleSendGift = async (gift: typeof LIVE_GIFTS[number]) => {
-    try {
-      await api.sendSuperchat({
-        streamId,
-        creatorId: host.id,
-        amountMinor: gift.cost * 100,
-        message: `Sent ${gift.name}!`
-      });
-      
-      sounds.playChime();
-      toast.success(`Sent ${gift.icon} ${gift.name} to ${host?.displayName || 'Host'}!`);
-      setShowGiftDrawer(false);
-    } catch (e) {
-      toast.error("Failed to send superchat");
-    }
   };
 
   if (!stream) {
@@ -389,10 +250,11 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
             <MessageCircle className="w-4 h-4 text-primary" /> Live Discussion
           </div>
           <button
-            onClick={() => setShowGiftDrawer(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold hover:bg-amber-500/30 transition-colors"
+            disabled
+            title="Superchats are not enabled for the college beta"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300/50 border border-amber-500/20 text-xs font-mono font-bold cursor-not-allowed"
           >
-            <Gift className="w-3.5 h-3.5 text-amber-400" /> Send Gift
+            <Gift className="w-3.5 h-3.5 text-amber-400/50" /> Gifts unavailable
           </button>
         </div>
 
@@ -433,38 +295,6 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
             </div>
           ))}
         </div>
-
-        {/* Gift Selector Drawer Modal */}
-        <AnimatePresence>
-          {showGiftDrawer && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="p-4 bg-zinc-900 border-t border-border/40 font-sans"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-display font-bold text-xs text-white">🎁 Choose Superchat Gift</span>
-                <button onClick={() => setShowGiftDrawer(false)} className="text-xs text-zinc-400 hover:text-white">Close</button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {LIVE_GIFTS.map((gift) => (
-                  <button
-                    key={gift.id}
-                    onClick={() => handleSendGift(gift)}
-                    className="p-2.5 rounded-2xl bg-zinc-950 border border-border/40 hover:border-amber-400 transition-all text-left flex items-center gap-2 group"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">{gift.icon}</span>
-                    <div className="min-w-0">
-                      <div className="font-bold text-xs text-white truncate">{gift.name}</div>
-                      <div className="text-[0.62rem] font-mono text-amber-400">{gift.cost} Pts</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Chat Input Bar */}
         <form onSubmit={handleSendComment} className="p-3 border-t border-border/40 bg-zinc-900/80 flex items-center gap-2">
@@ -539,9 +369,23 @@ export default function Live() {
     }
   }, [liveStreams, users, loadUserProfile]);
 
-  // If URL matches `/live/:id`, render the interactive Live Broadcast Room
+  // The current backend stores stream metadata only; there is no media
+  // transport in the college beta, so never present a poster as a live feed.
   if (streamId) {
-    return <LiveBroadcastRoom streamId={streamId} />;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center bg-background">
+        <div className="max-w-md space-y-4">
+          <Radio className="w-12 h-12 mx-auto text-rose-500/60" />
+          <h2 className="text-xl font-bold font-display">Live media is not enabled yet</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Stream scheduling metadata is available for planning, but video,
+            audio rooms, viewer counts, chat and Superchats are disabled for this
+            college beta.
+          </p>
+          <Button onClick={() => setLocation('/live')}>Return to Streams</Button>
+        </div>
+      </div>
+    );
   }
 
   const filteredStreams = liveStreams.filter((s) => {
@@ -618,7 +462,7 @@ export default function Live() {
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold font-display text-foreground">Live Broadcasts</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Real-time streams, audio rooms & Superchats</p>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">Stream metadata only · media features are coming later</p>
         </div>
         <GoLiveDialog />
       </div>
