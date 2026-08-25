@@ -24,6 +24,7 @@ import { inviteRoutes } from "./invites.js";
 import { onboardingRoutes } from "./onboarding.js";
 import { projectRoutes } from "./projects.js";
 import { reportRoutes } from "./reports.js";
+import { creatorWorkspaceRoutes } from "./creator-workspace.js";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,7 @@ router.use(storyRouter);
 router.use(streamRouter);
 router.use(achievementRouter);
 router.use("/reports", reportRoutes);
+router.use("/creator", creatorWorkspaceRoutes);
 router.use("/business", businessRoutes);
 router.use("/ai", aiRoutes);
 router.use("/invites", inviteRoutes);

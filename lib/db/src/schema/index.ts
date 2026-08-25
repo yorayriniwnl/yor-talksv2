@@ -500,6 +500,19 @@ export const waitlistTable = pgTable("waitlist", {
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 });
 
+export const creatorWorkspaceItemsTable = pgTable("creator_workspace_items", {
+  id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  kind: text("kind").notNull(),
+  itemKey: text("item_key").notNull(),
+  payload: jsonb("payload").notNull().default({}),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ownerKindIdx: index("creator_workspace_owner_kind_idx").on(table.ownerId, table.kind),
+  uniqueItem: uniqueIndex("creator_workspace_owner_kind_key_idx").on(table.ownerId, table.kind, table.itemKey),
+}));
+
 export const invitesTable = pgTable("invites", {
   id: uuid("id").primaryKey(),
   inviterId: uuid("inviter_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -722,6 +735,9 @@ export type ConversationMember = typeof conversationMembersTable.$inferSelect;
 export const insertCreatorAnalyticsDailySchema = createInsertSchema(creatorAnalyticsDailyTable);
 export type InsertCreatorAnalyticsDaily = typeof creatorAnalyticsDailyTable.$inferInsert;
 export type CreatorAnalyticsDaily = typeof creatorAnalyticsDailyTable.$inferSelect;
+export const insertCreatorWorkspaceItemSchema = createInsertSchema(creatorWorkspaceItemsTable);
+export type InsertCreatorWorkspaceItem = typeof creatorWorkspaceItemsTable.$inferInsert;
+export type CreatorWorkspaceItem = typeof creatorWorkspaceItemsTable.$inferSelect;
 
 export const insertLedgerTransactionSchema = createInsertSchema(ledgerTransactionsTable);
 export type InsertLedgerTransaction = typeof ledgerTransactionsTable.$inferInsert;

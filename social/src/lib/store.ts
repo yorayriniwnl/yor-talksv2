@@ -30,6 +30,8 @@ import { connectSocket, disconnectSocket } from '@/lib/socket-client';
 export type User = {
   id: string;
   username: string;
+  email?: string;
+  emailVerified?: boolean;
   displayName: string;
   avatarUrl: string;
   coverUrl?: string;
@@ -247,6 +249,8 @@ function mapUser(u: BackendUser): User {
   return {
     id: u.id,
     username: u.username || 'user',
+    email: u.email,
+    emailVerified: Boolean(u.emailVerified),
     displayName: u.fullName || u.username || 'User',
     avatarUrl: u.avatarUrl || `https://i.pravatar.cc/150?u=${u.id}`,
     bio: u.bio || '',

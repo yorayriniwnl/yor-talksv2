@@ -9,7 +9,7 @@ import {
   BarChart3, Store, ShoppingCart, Briefcase, Shirt, Layers,
   ShoppingBag, Coins, Ticket, Shield, Building2, HandCoins,
   Crown, Star, Brain,
-  LayoutDashboard, Settings, Headphones, Mic2, Key
+  LayoutDashboard, Settings, Headphones, Mic2, Key, Gauge
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { BrainCircuit, Sparkles } from 'lucide-react';
@@ -116,6 +116,7 @@ export function CommandPalette() {
       label: 'Creator Tools',
       items: [
         { icon: Video, label: 'Creator Studio', path: '/studio' },
+        { icon: Gauge, label: 'Control Room', path: '/control-room' },
         { icon: BarChart3, label: 'Analytics', path: '/analytics' },
         { icon: ShoppingCart, label: 'Creator Store', path: '/store' },
         { icon: Scissors, label: 'Clip Studio', path: '/clips' },

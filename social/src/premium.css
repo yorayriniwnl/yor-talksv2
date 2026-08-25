@@ -2161,3 +2161,25 @@ a.yor-secondary-action:hover {
   .yor-post__actions { width: calc(100% + 3.65rem); margin-left: -3.65rem; }
   .yor-post-media { border-radius: 0 !important; }
 }
+html.yor-accessibility-large-text {
+  font-size: 112.5%;
+}
+
+html.yor-accessibility-high-contrast {
+  --muted-foreground: 240 6% 28%;
+  --border: 240 8% 70%;
+}
+
+.dark.yor-accessibility-high-contrast {
+  --muted-foreground: 240 6% 78%;
+  --border: 240 8% 34%;
+}
+
+html.yor-accessibility-reduced-motion *,
+html.yor-accessibility-reduced-motion *::before,
+html.yor-accessibility-reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}

@@ -48,4 +48,6 @@ export {
   insertVideoSchema,
   insertLiveStreamSchema,
   insertStorySchema,
+  creatorWorkspaceItemsTable,
+  insertCreatorWorkspaceItemSchema,
 } from "./schema";

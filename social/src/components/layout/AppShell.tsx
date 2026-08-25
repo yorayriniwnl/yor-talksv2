@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
-  Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare,
+  Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
   UserRound, Settings, Camera, Radio, WandSparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,7 @@ export function AppShell({ children }: AppShellProps) {
     { icon: WandSparkles, label: 'Dream', path: '/dream' },
     { icon: Radio, label: 'Live', path: '/live' },
     { icon: Camera, label: 'Creator Studio', path: '/studio' },
+    { icon: Gauge, label: 'Control Room', path: '/control-room' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 

@@ -185,6 +185,18 @@ export interface BackendUser {
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
+export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
+
+export interface CreatorWorkspaceItem {
+  id: string;
+  ownerId: string;
+  kind: CreatorWorkspaceKind;
+  itemKey: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ContactShield {
   id: string;
   type: 'email' | 'phone';
@@ -266,6 +278,14 @@ export const api = {
     request<ContactShield[]>('/users/me/contact-shields', { method: 'POST', body: JSON.stringify({ contacts }) }),
   removeContactShield: (shieldId: string) =>
     request<null>(`/users/me/contact-shields/${shieldId}`, { method: 'DELETE' }),
+
+  // ---- Creator workspace ----
+  getCreatorWorkspace: (kind?: CreatorWorkspaceKind) =>
+    request<CreatorWorkspaceItem[]>(`/creator/workspace${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
+  saveCreatorWorkspaceItem: (payload: { kind: CreatorWorkspaceKind; itemKey: string; payload: Record<string, unknown> }) =>
+    request<CreatorWorkspaceItem>('/creator/workspace', { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteCreatorWorkspaceItem: (kind: CreatorWorkspaceKind, itemKey: string) =>
+    request<null>(`/creator/workspace/${encodeURIComponent(kind)}/${encodeURIComponent(itemKey)}`, { method: 'DELETE' }),
 
   // ---- Posts / feed ----
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
