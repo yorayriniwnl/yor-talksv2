@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
+import { AuthService, EmailOtpInvalidError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
@@ -29,6 +29,42 @@ export class AuthController {
         return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
       }
       return res.status(401).json(createResponse("Login failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  requestEmailOtp = async (req: Request, res: Response) => {
+    try {
+      await this.authService.requestEmailOtp(req.body.email);
+      return res.status(202).json(createResponse("If that KIIT email is registered, a sign-in code has been sent", null));
+    } catch (error) {
+      if (error instanceof EmailOtpInvalidError) {
+        return res.status(400).json(createResponse("Sign-in code request failed", null, {}, [error.message]));
+      }
+      if (error instanceof TooManyAttemptsError) {
+        return res.status(429).json(createResponse("Please wait before requesting another code", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryNotConfiguredError) {
+        return res.status(503).json(createResponse("Email sign-in is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryProviderError) {
+        return res.status(502).json(createResponse("Email sign-in delivery failed", null, {}, [error.message]));
+      }
+      return res.status(500).json(createResponse("Sign-in code request failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  verifyEmailOtp = async (req: Request, res: Response) => {
+    try {
+      const result = await this.authService.loginWithEmailOtp(req.body);
+      return res.status(200).json(createResponse("Login successful", { ...result, user: toOwnUser(result.user) }, { authenticated: true }));
+    } catch (error) {
+      if (error instanceof TwoFactorRequiredError) {
+        return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
+      }
+      if (error instanceof EmailOtpInvalidError) {
+        return res.status(401).json(createResponse("Email sign-in failed", null, {}, [error.message]));
+      }
+      return res.status(500).json(createResponse("Email sign-in failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
   };
 

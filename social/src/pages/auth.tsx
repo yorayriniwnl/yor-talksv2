@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 
 export default function Auth() {
   const login = useAppStore((state) => state.login);
+  const loginWithEmailOtp = useAppStore((state) => state.loginWithEmailOtp);
   const register = useAppStore((state) => state.register);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
@@ -21,6 +23,10 @@ export default function Auth() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'password' | 'email-code'>('password');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [requestingOtp, setRequestingOtp] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,9 +39,12 @@ export default function Auth() {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) errors.username = 'Username must be 3-20 characters, alphanumeric and underscores only';
       if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) errors.email = 'Use your 7-digit KIIT college email, for example 2329027@kiit.ac.in';
       if (password.length < 8) errors.password = 'Password must be at least 8 characters';
-    } else {
+    } else if (loginMethod === 'password') {
       if (!email) errors.email = 'Email/Username is required';
       if (!password) errors.password = 'Password is required';
+    } else {
+      if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) errors.email = 'Use your 7-digit KIIT college email';
+      if (!/^\d{6}$/.test(otpCode)) errors.otpCode = 'Enter the six-digit code sent to your email';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -46,7 +55,8 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(email, password);
+        if (loginMethod === 'email-code') await loginWithEmailOtp(email, otpCode);
+        else await login(email, password);
       } else {
         await register(username, email, password, fullName);
       }
@@ -60,6 +70,38 @@ export default function Auth() {
     setMode(newMode);
     setErrorMsg('');
     setFieldErrors({});
+    setOtpSent(false);
+    setOtpCode('');
+  };
+
+  const requestEmailCode = async () => {
+    if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) {
+      setFieldErrors({ email: 'Use your 7-digit KIIT college email' });
+      return;
+    }
+    setRequestingOtp(true);
+    try {
+      await api.requestEmailOtp(email.trim());
+      setOtpSent(true);
+      toast.success('If that account exists, a sign-in code is on its way.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not send the sign-in code');
+    } finally {
+      setRequestingOtp(false);
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    if (!email.trim()) {
+      setFieldErrors({ email: 'Enter your KIIT email first' });
+      return;
+    }
+    try {
+      await api.requestPasswordReset(email.trim());
+      toast.success('If that account exists, a password reset link has been sent.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not request a password reset');
+    }
   };
 
   return (
@@ -229,12 +271,12 @@ export default function Auth() {
                       <Label htmlFor="loginUsername" className="sr-only">Username or Email</Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <User className="h-4 w-4 text-muted-foreground" />
+                          {loginMethod === 'password' ? <User className="h-4 w-4 text-muted-foreground" /> : <Mail className="h-4 w-4 text-muted-foreground" />}
                         </div>
                         <Input
                           id="loginUsername"
-                          type="text"
-                          placeholder="Username or email"
+                          type={loginMethod === 'password' ? 'text' : 'email'}
+                          placeholder={loginMethod === 'password' ? 'Username or email' : 'KIIT email address'}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
@@ -245,7 +287,39 @@ export default function Auth() {
                     </motion.div>
                   )}
 
-                  <motion.div variants={staggerItem} className="space-y-1">
+                  {mode === 'login' && (
+                    <div className="flex items-center justify-between text-xs">
+                      <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); }}>
+                        Use password
+                      </button>
+                      <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setLoginMethod('email-code'); setPassword(''); }}>
+                        Sign in with email code
+                      </button>
+                    </div>
+                  )}
+
+                  {mode === 'login' && loginMethod === 'email-code' && (
+                    <motion.div variants={staggerItem} className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          id="otpCode"
+                          inputMode="numeric"
+                          maxLength={6}
+                          placeholder="6-digit code"
+                          value={otpCode}
+                          onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="h-11 rounded-xl font-mono tracking-[0.3em]"
+                          required
+                        />
+                        <Button type="button" variant="outline" onClick={requestEmailCode} disabled={requestingOtp} className="h-11 shrink-0 rounded-xl text-xs">
+                          {requestingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : otpSent ? 'Resend' : 'Send code'}
+                        </Button>
+                      </div>
+                      {fieldErrors.otpCode && <p className="text-xs text-destructive">{fieldErrors.otpCode}</p>}
+                    </motion.div>
+                  )}
+
+                  {(mode === 'register' || loginMethod === 'password') && <motion.div variants={staggerItem} className="space-y-1">
                     <Label htmlFor="password" className="sr-only">Password</Label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -267,7 +341,7 @@ export default function Auth() {
                     {fieldErrors.password && <p className="text-xs text-destructive mt-1">{fieldErrors.password}</p>}
                     {mode === 'login' && (
                       <div className="text-right">
-                        <button type="button" className="text-xs text-primary hover:underline font-medium" onClick={() => toast.info('Password reset link sent! Check your email.')}>
+                        <button type="button" className="text-xs text-primary hover:underline font-medium" onClick={requestPasswordReset}>
                           Forgot password?
                         </button>
                       </div>
@@ -284,7 +358,7 @@ export default function Auth() {
                         </p>
                       </div>
                     )}
-                  </motion.div>
+                  </motion.div>}
                 </motion.div>
 
                 <motion.div whileTap={tapScale} className="pt-2">
@@ -296,7 +370,7 @@ export default function Auth() {
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     ) : mode === 'login' ? (
-                      'Sign In'
+                      loginMethod === 'email-code' ? 'Verify code & sign in' : 'Sign In'
                     ) : (
                       'Create Account'
                     )}

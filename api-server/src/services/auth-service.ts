@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
-import { randomUUID, randomBytes } from "node:crypto";
+import { randomUUID, randomBytes, randomInt } from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
@@ -16,6 +16,7 @@ import { isKiitCollegeEmail } from "../validators/auth.js";
 
 export class TooManyAttemptsError extends Error {}
 export class TwoFactorRequiredError extends Error {}
+export class EmailOtpInvalidError extends Error {}
 
 export class AuthService {
   constructor(
@@ -130,6 +131,93 @@ export class AuthService {
     };
   }
 
+  async requestEmailOtp(email: string): Promise<boolean> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isKiitCollegeEmail(normalizedEmail)) {
+      throw new EmailOtpInvalidError("Only seven-digit KIIT college emails can request a sign-in code");
+    }
+    const user = await this.userRepository.findByEmail(normalizedEmail);
+    if (!user) {
+      // Avoid account enumeration. The controller returns the same accepted
+      // response whether the address is registered or not.
+      return false;
+    }
+
+    const keyHash = await this.redisRepository.hashToken(normalizedEmail);
+    const key = `email-login-otp:${keyHash}`;
+    const existing = await this.redisRepository.getStrict(key);
+    if (existing) {
+      throw new TooManyAttemptsError("A sign-in code was already sent. Please wait a minute before requesting another.");
+    }
+
+    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    await this.redisRepository.setStrict(key, JSON.stringify({
+      userId: user.id,
+      codeHash: await this.redisRepository.hashToken(code),
+      attempts: 0,
+      expiresAt,
+    }), 5 * 60);
+    try {
+      await this.emailService.sendEmailLoginCode(user.email, code);
+    } catch (error) {
+      await this.redisRepository.delStrict(key);
+      throw error;
+    }
+    logger.info({ userId: user.id }, "Email login code dispatched");
+    return true;
+  }
+
+  async loginWithEmailOtp(input: { email: string; code: string; totpCode?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const keyHash = await this.redisRepository.hashToken(normalizedEmail);
+    const key = `email-login-otp:${keyHash}`;
+    const raw = await this.redisRepository.getStrict(key);
+    if (!raw) {
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+
+    let state: { userId: string; codeHash: string; attempts: number; expiresAt: number };
+    try {
+      state = JSON.parse(raw) as typeof state;
+    } catch {
+      await this.redisRepository.delStrict(key);
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+    if (state.expiresAt <= Date.now() || state.attempts >= 5) {
+      await this.redisRepository.delStrict(key);
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+
+    const suppliedHash = await this.redisRepository.hashToken(input.code);
+    if (suppliedHash !== state.codeHash) {
+      const attempts = state.attempts + 1;
+      const remainingTtl = Math.max(1, Math.ceil((state.expiresAt - Date.now()) / 1000));
+      await this.redisRepository.setStrict(key, JSON.stringify({ ...state, attempts }), remainingTtl);
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+
+    const user = await this.userRepository.findById(state.userId);
+    if (!user || user.email !== normalizedEmail || !isKiitCollegeEmail(user.email)) {
+      await this.redisRepository.delStrict(key);
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+    if (user.totpSecret) {
+      if (!input.totpCode) throw new TwoFactorRequiredError("Two-factor authentication code required");
+      if (!authenticator.check(input.totpCode, user.totpSecret)) {
+        throw new EmailOtpInvalidError("Invalid two-factor authentication code");
+      }
+    }
+
+    await this.redisRepository.delStrict(key);
+    const deviceId = randomUUID();
+    const refreshToken = this.issueRefreshToken(user, deviceId);
+    await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
+    const updatedUser = await this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString(), emailVerified: true });
+    const finalUser = updatedUser ?? user;
+    return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
+  }
+
   async logoutAllDevices(userId: string): Promise<void> {
     // We would need a way to list and delete all keys, but for now we can rely on standard del if redis supports pattern matching or we can just leave it as is if redis doesn't.
     // Wait, with multiple devices we can't just del `session:${userId}`. 
@@ -177,12 +265,7 @@ export class AuthService {
     }
   }
 
-  /**
-   * Generates a single-use, expiring reset token and returns it so the caller
-   * (controller) can send it — this service has no email transport configured,
-   * so nothing is actually emailed yet. Only the hash is stored, matching how
-   * passwords themselves are never stored raw.
-   */
+  /** Generates a single-use, expiring reset token and dispatches it by email. */
   async requestPasswordReset(email: string): Promise<string | undefined> {
     if (!isKiitCollegeEmail(email)) {
       return undefined;
@@ -194,9 +277,15 @@ export class AuthService {
     }
     const token = randomBytes(32).toString("hex");
     const hashed = await this.redisRepository.hashToken(token);
-    await this.redisRepository.set(`password-reset:${hashed}`, user.id, 60 * 60);
+    await this.redisRepository.setStrict(`password-reset:${hashed}`, user.id, 60 * 60);
     await this.userRepository.update(user.id, { passwordResetRequired: true });
-    await this.emailService.sendPasswordResetEmail(user.email, token);
+    try {
+      await this.emailService.sendPasswordResetEmail(user.email, token);
+    } catch (error) {
+      await this.redisRepository.delStrict(`password-reset:${hashed}`);
+      await this.userRepository.update(user.id, { passwordResetRequired: false });
+      throw error;
+    }
     logger.info({ userId: user.id }, "Password reset requested and email dispatched");
     return token;
   }
@@ -217,7 +306,7 @@ export class AuthService {
     return true;
   }
 
-  /** Same shape as password reset: single-use, expiring, hash-stored token. No email transport configured yet. */
+  /** Same shape as password reset: single-use, expiring, hash-stored token. */
   async requestEmailVerification(userId: string): Promise<string | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user || user.emailVerified) {
@@ -225,8 +314,13 @@ export class AuthService {
     }
     const token = randomBytes(32).toString("hex");
     const hashed = await this.redisRepository.hashToken(token);
-    await this.redisRepository.set(`email-verify:${hashed}`, userId, 24 * 60 * 60);
-    await this.emailService.sendVerificationEmail(user.email, token);
+    await this.redisRepository.setStrict(`email-verify:${hashed}`, userId, 24 * 60 * 60);
+    try {
+      await this.emailService.sendVerificationEmail(user.email, token);
+    } catch (error) {
+      await this.redisRepository.delStrict(`email-verify:${hashed}`);
+      throw error;
+    }
     logger.info({ userId }, "Email verification requested and email dispatched");
     return token;
   }

@@ -25,6 +25,16 @@ export const loginSchema = z.object({
   totpCode: z.string().length(6).optional(),
 });
 
+export const emailOtpRequestSchema = z.object({
+  email: z.string().trim().email(),
+});
+
+export const emailOtpVerifySchema = z.object({
+  email: z.string().trim().email().regex(KIIT_EMAIL_PATTERN, "Use your seven-digit KIIT college email"),
+  code: z.string().regex(/^\d{6}$/, "Enter the six-digit sign-in code"),
+  totpCode: z.string().length(6).optional(),
+});
+
 export const totpCodeSchema = z.object({
   code: z.string().length(6),
 });

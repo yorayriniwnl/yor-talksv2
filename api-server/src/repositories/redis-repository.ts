@@ -84,4 +84,22 @@ export class RedisRepository {
   async disconnect(): Promise<void> {
     this.client.disconnect();
   }
+
+  /** Authentication flows use these strict variants so a Redis outage cannot
+   * silently turn a one-time token into an unusable or unverifiable token. */
+  async getStrict(key: string): Promise<string | null> {
+    return this.client.get(key);
+  }
+
+  async setStrict(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    if (ttlSeconds) {
+      await this.client.set(key, value, "EX", ttlSeconds);
+    } else {
+      await this.client.set(key, value);
+    }
+  }
+
+  async delStrict(key: string): Promise<void> {
+    await this.client.del(key);
+  }
 }

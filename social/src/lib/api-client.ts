@@ -178,6 +178,10 @@ export const api = {
 
   login: (payload: { identifier: string; password: string }) =>
     request<{ user: BackendUser; tokens: AuthTokens }>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  requestEmailOtp: (email: string) =>
+    request<null>('/auth/email-otp/send', { method: 'POST', body: JSON.stringify({ email }) }),
+  loginWithEmailOtp: (payload: { email: string; code: string; totpCode?: string }) =>
+    request<{ user: BackendUser; tokens: AuthTokens }>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
     const tokens = getStoredTokens();

@@ -5,7 +5,7 @@ import { validateBody } from "../middlewares/validation.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
-import { loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema } from "../validators/auth.js";
+import { emailOtpRequestSchema, emailOtpVerifySchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema } from "../validators/auth.js";
 
 const router = Router();
 const userRepo = new UserRepository();
@@ -25,6 +25,8 @@ router.post("/auth/otp/verify", async (req, res): Promise<void> => {
 
 router.post("/auth/register", validateBody(registerSchema), authController.register);
 router.post("/auth/login", validateBody(loginSchema), authController.login);
+router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
+router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
 router.post("/auth/refresh", authController.refresh);
 router.post("/auth/logout", authenticate, authController.logout);
 router.post("/auth/logout-all", authenticate, authController.logoutAllDevices);

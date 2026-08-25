@@ -90,4 +90,21 @@ export class EmailService {
     `;
     return this.sendEmail({ to: email, subject: "Yor Talks - Verify Your Email", html });
   }
+
+  async sendEmailLoginCode(email: string, code: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background: #0a0906; color: #f0e8d8;">
+        <h2 style="color: #c9a84c;">Yor Talks - Sign-in code</h2>
+        <p>Use this one-time code to sign in to your Yor Talks account:</p>
+        <p style="font-size: 32px; letter-spacing: 8px; font-weight: bold; color: #c9a84c;">${code}</p>
+        <p style="font-size: 0.85em; color: #a89878;">This code expires in 5 minutes and can be used once. If you did not request it, ignore this email.</p>
+      </div>
+    `;
+    return this.sendEmail({
+      to: email,
+      subject: "Yor Talks - Your sign-in code",
+      html,
+      text: `Your Yor Talks sign-in code is ${code}. It expires in 5 minutes.`,
+    });
+  }
 }

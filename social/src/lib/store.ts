@@ -457,6 +457,7 @@ interface AppState {
   showcases: Record<string, Showcase[]>;
 
   login: (identifier: string, password: string) => Promise<void>;
+  loginWithEmailOtp: (email: string, code: string, totpCode?: string) => Promise<void>;
   register: (username: string, email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -594,6 +595,21 @@ export const useAppStore = create<AppState>()(
           await Promise.all([get().loadFeed(), get().loadCommunities(), get().loadNotifications(), get().loadConversations(), get().loadEvents(), get().loadProducts(), get().loadArticles(), get().loadVideos(), get().loadStreams(), get().loadStories()]);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
+          throw err;
+        }
+      },
+
+      loginWithEmailOtp: async (email, code, totpCode) => {
+        set({ authError: null });
+        try {
+          const result = await api.loginWithEmailOtp({ email, code, ...(totpCode ? { totpCode } : {}) });
+          setStoredTokens(result.tokens);
+          const mapped = mapUser(result.user);
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          setupRealtime(set, get);
+          await Promise.all([get().loadFeed(), get().loadCommunities(), get().loadNotifications(), get().loadConversations(), get().loadEvents(), get().loadProducts(), get().loadArticles(), get().loadVideos(), get().loadStreams(), get().loadStories()]);
+        } catch (err) {
+          set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
           throw err;
         }
       },
