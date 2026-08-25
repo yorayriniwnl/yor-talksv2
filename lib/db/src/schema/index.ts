@@ -271,6 +271,27 @@ export const liveStreamsTable = pgTable("live_streams", {
   hostIdx: index("livestream_host_idx").on(table.hostId)
 }));
 
+export const paymentOrdersTable = pgTable("payment_orders", {
+  id: uuid("id").primaryKey(),
+  payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  streamId: uuid("stream_id").references(() => liveStreamsTable.id, { onDelete: "set null" }),
+  provider: text("provider").notNull().default("razorpay"),
+  providerOrderId: text("provider_order_id").notNull().unique(),
+  providerPaymentId: text("provider_payment_id"),
+  providerSignature: text("provider_signature"),
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull().default("INR"),
+  status: text("status").notNull().default("created"),
+  message: text("message").notNull().default(""),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { mode: "string" }),
+}, (table) => ({
+  payerIdx: index("payment_order_payer_idx").on(table.payerId),
+  creatorIdx: index("payment_order_creator_idx").on(table.creatorId),
+  streamIdx: index("payment_order_stream_idx").on(table.streamId),
+}));
+
 
 
 export const postLikesTable = pgTable("post_likes", {
@@ -640,6 +661,10 @@ export type Video = typeof videosTable.$inferSelect;
 export const insertLiveStreamSchema = createInsertSchema(liveStreamsTable);
 export type InsertLiveStream = typeof liveStreamsTable.$inferInsert;
 export type LiveStream = typeof liveStreamsTable.$inferSelect;
+
+export const insertPaymentOrderSchema = createInsertSchema(paymentOrdersTable);
+export type InsertPaymentOrder = typeof paymentOrdersTable.$inferInsert;
+export type PaymentOrder = typeof paymentOrdersTable.$inferSelect;
 
 
 export const insertCommentSchema = createInsertSchema(commentsTable);

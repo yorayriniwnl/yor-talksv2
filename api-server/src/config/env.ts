@@ -18,6 +18,12 @@ const envSchema = z.object({
   CLIENT_ORIGIN: z.string().default(process.env.CLIENT_ORIGIN || "http://localhost:5173"),
   RESEND_API_KEY: z.string().default(process.env.RESEND_API_KEY || ""),
   EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
+  RAZORPAY_KEY_ID: z.string().default(process.env.RAZORPAY_KEY_ID || ""),
+  RAZORPAY_KEY_SECRET: z.string().default(process.env.RAZORPAY_KEY_SECRET || ""),
+  RAZORPAY_WEBHOOK_SECRET: z.string().default(process.env.RAZORPAY_WEBHOOK_SECRET || ""),
+  LIVEKIT_URL: z.string().default(process.env.LIVEKIT_URL || ""),
+  LIVEKIT_API_KEY: z.string().default(process.env.LIVEKIT_API_KEY || ""),
+  LIVEKIT_API_SECRET: z.string().default(process.env.LIVEKIT_API_SECRET || ""),
   OPENAI_API_KEY: z.string().optional().default(process.env.OPENAI_API_KEY || ""),
 });
 

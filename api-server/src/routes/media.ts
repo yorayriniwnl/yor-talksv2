@@ -65,9 +65,12 @@ router.post(
 
 // Get HLS streaming manifest
 router.get("/media/:id/hls", (req: Request, res: Response): void => {
-  const id = typeof req.params.id === "string" ? req.params.id : "";
-  const manifest = mediaService.generateHlsManifest(id);
-  res.json({ success: true, data: manifest });
+  res.status(501).json({
+    success: false,
+    message: "Adaptive HLS streaming is not enabled for stored media in this beta",
+    data: null,
+    errors: ["hls_not_configured"],
+  });
 });
 
 export default router;
