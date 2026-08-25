@@ -69,7 +69,9 @@ export const postsTable = pgTable("posts", {
   views: integer("views").default(0),
   engagementRate: integer("engagement_rate").default(0),
 }, (table) => ({
-  authorIdx: index("post_author_idx").on(table.authorId)
+  authorIdx: index("post_author_idx").on(table.authorId),
+  scoreIdx: index("post_score_idx").on(table.score, table.createdAt),
+  createdAtIdx: index("post_created_at_idx").on(table.createdAt)
 }));
 
 
@@ -664,4 +666,3 @@ export type Subscription = typeof subscriptionsTable.$inferSelect;
 export const insertEntitlementSchema = createInsertSchema(entitlementsTable);
 export type InsertEntitlement = typeof entitlementsTable.$inferInsert;
 export type Entitlement = typeof entitlementsTable.$inferSelect;
-
