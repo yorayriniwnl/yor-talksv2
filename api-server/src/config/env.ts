@@ -27,7 +27,14 @@ const cloudinaryFields = [
 ] as const;
 
 if (parsedEnv.NODE_ENV === "production") {
-  const insecureSecrets = new Set(["change-me-access", "change-me-refresh", "change-me", ""]);
+  const insecureSecrets = new Set([
+    "change-me-access",
+    "change-me-refresh",
+    "change-me",
+    "replace-with-a-random-secret-at-least-32-characters",
+    "replace-with-a-different-random-secret-at-least-32-characters",
+    "",
+  ]);
   const invalidSecretFields = ["JWT_SECRET", "JWT_REFRESH_SECRET"].filter((field) => {
     const value = parsedEnv[field as "JWT_SECRET" | "JWT_REFRESH_SECRET"];
     return insecureSecrets.has(value) || value.length < 32;
