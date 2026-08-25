@@ -1606,8 +1606,8 @@ a.yor-secondary-action:hover {
 .dream-blueprint__topline > span { display: inline-flex; align-items: center; gap: 0.4rem; color: hsl(var(--primary)); font-family: var(--app-font-mono); font-size: 0.56rem; font-weight: 700; text-transform: uppercase; }
 .dream-blueprint__topline button { color: hsl(var(--muted-foreground)); font-size: 0.6rem; text-decoration: underline; text-underline-offset: 3px; }
 .dream-title-field { margin-top: 1.3rem; }
-.dream-title-field input { height: auto; padding: 0.2rem 0 0.6rem; border: 0; border-bottom: 1px solid hsl(var(--border)); border-radius: 0; background: transparent; font-family: var(--app-font-display); font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 760; letter-spacing: -0.045em; }
-.dream-title-field input:focus-visible { box-shadow: none; border-color: hsl(var(--primary) / 0.55); }
+.dream-title-field textarea { min-height: 0; padding: 0.2rem 0 0.6rem; overflow: hidden; border: 0; border-bottom: 1px solid hsl(var(--border)); border-radius: 0; background: transparent; font-family: var(--app-font-display); font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 760; letter-spacing: -0.045em; line-height: 1.08; resize: none; }
+.dream-title-field textarea:focus-visible { box-shadow: none; border-color: hsl(var(--primary) / 0.55); }
 .dream-blueprint__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin-top: 1.2rem; }
 .dream-panel { padding: 1rem; border: 1px solid hsl(var(--border) / 0.76); border-radius: 0.9rem; background: hsl(var(--background) / 0.32); }
 .dream-panel ol { display: grid; margin-top: 0.55rem; }
@@ -1692,7 +1692,7 @@ a.yor-secondary-action:hover {
   .dream-starters > div,
   .dream-blueprint__grid,
   .dream-project-list { grid-template-columns: 1fr; }
-  .dream-title-field input { font-size: 1.55rem; }
+  .dream-title-field textarea { font-size: 1.55rem; }
   .dream-controls > label,
   .dream-controls > button { grid-template-columns: 1.8rem minmax(0, 1fr) auto; }
 }

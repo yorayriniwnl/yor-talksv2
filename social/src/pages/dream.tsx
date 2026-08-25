@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import {
   ArrowRight,
@@ -18,7 +18,6 @@ import {
 import { api, type BackendProject } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -87,10 +86,18 @@ export default function Dream() {
   const [activating, setActivating] = useState(false);
   const [createdProject, setCreatedProject] = useState<BackendProject | null>(null);
   const [projects, setProjects] = useState<BackendProject[]>([]);
+  const titleFieldRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     api.getProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
+
+  useEffect(() => {
+    const titleField = titleFieldRef.current;
+    if (!titleField || !blueprint) return;
+    titleField.style.height = 'auto';
+    titleField.style.height = `${titleField.scrollHeight}px`;
+  }, [blueprint]);
 
   const activeProjects = useMemo(
     () => projects.filter((project) => project.status !== 'completed' && project.status !== 'cancelled').slice(0, 4),
@@ -222,10 +229,12 @@ export default function Dream() {
 
                 <label className="yor-field dream-title-field">
                   <span>Give it a name</span>
-                  <Input
+                  <Textarea
+                    ref={titleFieldRef}
                     value={blueprint.title}
                     onChange={(event) => setBlueprint({ ...blueprint, title: event.target.value })}
                     maxLength={120}
+                    rows={1}
                   />
                 </label>
 
