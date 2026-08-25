@@ -19,7 +19,7 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     const { to, subject, html } = options;
 
-    if (env.NODE_ENV === "production") {
+    if ((env.NODE_ENV as string) === "production") {
       throw new EmailDeliveryNotConfiguredError();
     }
 
