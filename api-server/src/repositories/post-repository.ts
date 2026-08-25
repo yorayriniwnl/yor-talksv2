@@ -10,14 +10,26 @@ export class PostRepository {
     const existing = await db.select().from(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, userId)));
     if (existing.length === 0) {
       await db.insert(postLikesTable).values({ postId, userId });
-      await db.execute(sql`UPDATE posts SET likes_count = likes_count + 1 WHERE id = ${postId}`);
+      await db.execute(sql`
+        UPDATE posts
+        SET likes_count = likes_count + 1,
+            score = ((likes_count + 1) * 2) + (comments_count * 3) + (share_count * 5),
+            updated_at = NOW()
+        WHERE id = ${postId}
+      `);
     }
   }
 
   async unlikePost(postId: string, userId: string): Promise<void> {
     const deleted = await db.delete(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, userId))).returning();
     if (deleted.length > 0) {
-      await db.execute(sql`UPDATE posts SET likes_count = GREATEST(0, likes_count - 1) WHERE id = ${postId}`);
+      await db.execute(sql`
+        UPDATE posts
+        SET likes_count = GREATEST(0, likes_count - 1),
+            score = (GREATEST(0, likes_count - 1) * 2) + (comments_count * 3) + (share_count * 5),
+            updated_at = NOW()
+        WHERE id = ${postId}
+      `);
     }
   }
 
