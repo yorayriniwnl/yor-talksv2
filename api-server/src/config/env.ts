@@ -16,6 +16,8 @@ const envSchema = z.object({
   // anyway (see social/vite.config.ts), so this default is rarely exercised.
   CORS_ORIGINS: z.string().default(process.env.CORS_ORIGINS || "http://localhost:5173"),
   CLIENT_ORIGIN: z.string().default(process.env.CLIENT_ORIGIN || "http://localhost:5173"),
+  RESEND_API_KEY: z.string().default(process.env.RESEND_API_KEY || ""),
+  EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
   OPENAI_API_KEY: z.string().optional().default(process.env.OPENAI_API_KEY || ""),
 });
 

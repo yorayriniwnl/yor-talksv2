@@ -8,6 +8,13 @@ export class EmailDeliveryNotConfiguredError extends Error {
   }
 }
 
+export class EmailDeliveryProviderError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailDeliveryProviderError";
+  }
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -19,21 +26,43 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     const { to, subject, html } = options;
 
-    if ((env.NODE_ENV as string) === "production") {
-      throw new EmailDeliveryNotConfiguredError();
-    }
-
-    // Development uses console delivery so local flows remain testable.
-    logger.info({ to, subject }, "Email dispatch requested");
-
-    if (env.NODE_ENV !== "production") {
+    if ((env.NODE_ENV as string) !== "production" && !env.RESEND_API_KEY) {
+      // Development and tests stay usable without an external email account.
+      logger.info({ to, subject }, "Email dispatch requested");
       console.log("==========================================");
       console.log(`[EMAIL DISPATCH] To: ${to}`);
       console.log(`[SUBJECT]: ${subject}`);
       console.log(`[BODY]:\n${html}`);
       console.log("==========================================");
+      return true;
     }
 
+    if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {
+      throw new EmailDeliveryNotConfiguredError();
+    }
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.EMAIL_FROM,
+        to: [to],
+        subject,
+        html,
+        ...(options.text ? { text: options.text } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "Unknown Resend error");
+      logger.error({ status: response.status, detail }, "Resend email delivery failed");
+      throw new EmailDeliveryProviderError(`Resend rejected the email (${response.status})`);
+    }
+
+    logger.info({ to, subject }, "Email delivered through Resend");
     return true;
   }
 

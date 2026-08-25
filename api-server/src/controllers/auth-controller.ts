@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
 import { AuthService, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
-import { EmailDeliveryNotConfiguredError } from "../services/email-service.js";
+import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
 
@@ -116,6 +116,9 @@ export class AuthController {
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Password reset is unavailable", null, {}, [error.message]));
       }
+      if (error instanceof EmailDeliveryProviderError) {
+        return res.status(502).json(createResponse("Password reset delivery failed", null, {}, [error.message]));
+      }
       return res.status(500).json(createResponse("Password reset failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
   };
@@ -140,6 +143,9 @@ export class AuthController {
     } catch (error) {
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Email verification is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryProviderError) {
+        return res.status(502).json(createResponse("Email verification delivery failed", null, {}, [error.message]));
       }
       return res.status(500).json(createResponse("Failed to send verification email", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
