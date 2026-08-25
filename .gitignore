@@ -17,3 +17,5 @@ api-server/delete-meat.ts
 api-server/find-meat*.ts
 api-server/scan-redis.ts
 api-server/migrate.cjs
+
+.vercel
