@@ -5,7 +5,8 @@ const envSchema = z.object({
   PORT: z.string().default(process.env.PORT || process.env.API_PORT || "4000"),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || "change-me-access"),
   JWT_REFRESH_SECRET: z.string().default(process.env.JWT_REFRESH_SECRET || "change-me-refresh"),
-  // Uploads are optional in local development; production still validates all three values below.
+  // Provider-backed uploads are optional in local development and fail closed
+  // in production when Cloudinary is missing.
   CLOUDINARY_CLOUD_NAME: z.string().default(process.env.CLOUDINARY_CLOUD_NAME || ""),
   CLOUDINARY_API_KEY: z.string().default(process.env.CLOUDINARY_API_KEY || ""),
   CLOUDINARY_API_SECRET: z.string().default(process.env.CLOUDINARY_API_SECRET || ""),
@@ -54,6 +55,16 @@ if (parsedEnv.NODE_ENV === "production") {
   const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);
   if (missingCloudinaryConfig.length) {
     console.warn(`[Config Warning] Missing Cloudinary keys: ${missingCloudinaryConfig.join(", ")}. Image uploads will be disabled.`);
+  }
+
+  if (!parsedEnv.RESEND_API_KEY || !parsedEnv.EMAIL_FROM) {
+    console.warn("[Config Warning] Resend is not fully configured. Password reset, verification, and email OTP delivery will be disabled.");
+  }
+  if (!parsedEnv.RAZORPAY_KEY_ID || !parsedEnv.RAZORPAY_KEY_SECRET) {
+    console.warn("[Config Warning] Razorpay is not configured. Tip orders and payment settlement will be disabled.");
+  }
+  if (!parsedEnv.LIVEKIT_URL || !parsedEnv.LIVEKIT_API_KEY || !parsedEnv.LIVEKIT_API_SECRET) {
+    console.warn("[Config Warning] LiveKit is not fully configured. Live rooms will be disabled.");
   }
 
   if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {
