@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,28 +9,60 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yor_talks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   api:
     build:
       context: .
       dockerfile: api-server/Dockerfile
     environment:
       PORT: 4000
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/yor_talks
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: change-me
-      JWT_REFRESH_SECRET: change-me
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-only}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-local-only}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - "4000:4000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:4000/api/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: social/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   postgres_data:
