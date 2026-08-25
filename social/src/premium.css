@@ -1351,6 +1351,19 @@ a.yor-secondary-action:hover {
 .seed-dialog-dream-link strong { font-size: 0.72rem; }
 .seed-dialog-dream-link small { color: hsl(var(--muted-foreground)); font-size: 0.64rem; }
 
+.shell-utility-row {
+  display: flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.2rem;
+  border: 1px solid hsl(var(--border) / 0.62);
+  border-radius: 0.8rem;
+  background: hsl(var(--card) / 0.42);
+}
+
 /* Worlds */
 
 .worlds-hero {

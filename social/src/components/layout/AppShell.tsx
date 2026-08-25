@@ -61,7 +61,7 @@ export function AppShell({ children }: AppShellProps) {
       )} data-collapsed={sidebarCollapsed ? 'true' : 'false'}>
         
         {/* Brand */}
-        <div className={cn("flex items-center mb-6", sidebarCollapsed ? "justify-center px-0" : "justify-between px-1")}>
+        <div className={cn("flex items-center", sidebarCollapsed ? "mb-6 justify-center px-0" : "mb-3 justify-between gap-2 px-1")}>
           <button
             onClick={() => {
               if (location === '/') {
@@ -70,28 +70,22 @@ export function AppShell({ children }: AppShellProps) {
                 setLocation('/');
               }
             }}
-            className="flex items-center gap-3 group cursor-pointer text-left"
+            className="flex min-w-0 items-center gap-3 group cursor-pointer text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
               Y
             </div>
             {!sidebarCollapsed && (
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor</span>
-                <span className="text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase mt-0.5 font-semibold">First world · KIIT</span>
+                <span className="mt-0.5 whitespace-nowrap text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase font-semibold">First world · KIIT</span>
               </div>
             )}
           </button>
           {!sidebarCollapsed && (
-            <div className="flex items-center gap-1">
-              <LanguageSelector />
-              <ThemeMorpher />
-            </div>
-          )}
-          {!sidebarCollapsed && (
             <button
               onClick={() => setSidebarCollapsed(true)}
-              className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              className="shrink-0 p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
               title="Collapse sidebar"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -112,6 +106,13 @@ export function AppShell({ children }: AppShellProps) {
           )}
         </div>
 
+        {!sidebarCollapsed && (
+          <div className="shell-utility-row">
+            <LanguageSelector />
+            <ThemeMorpher />
+          </div>
+        )}
+
         {/* Primary create action */}
         <button
           onClick={() => setIsComposing(true)}
@@ -119,7 +120,7 @@ export function AppShell({ children }: AppShellProps) {
             "premium-create-button w-full justify-center mb-5",
             sidebarCollapsed && "p-2.5"
           )}
-          title="Create a post"
+          title="Plant a seed"
         >
           <PlusSquare className="w-4 h-4 shrink-0" />
             {!sidebarCollapsed && <span>Plant a seed</span>}
