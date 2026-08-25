@@ -37,6 +37,7 @@ const healthHandler = async (req: Request, res: Response) => {
 
 router.get("/", healthHandler);
 router.get("/healthz", healthHandler);
+router.get("/readyz", healthHandler);
 
 export const healthRoutes = router;
 export default router;

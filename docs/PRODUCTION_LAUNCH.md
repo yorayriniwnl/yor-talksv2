@@ -25,6 +25,7 @@ docker compose --env-file .env.production -f docker-compose.production.yml build
 docker compose --env-file .env.production -f docker-compose.production.yml up -d
 docker compose --env-file .env.production -f docker-compose.production.yml ps
 curl -fsS https://your-domain.example/api/healthz
+BASE_URL=https://your-domain.example pnpm smoke
 ```
 
 The one-shot `migrate` service applies the idempotent beta schema/index migration before the API starts. Review its logs on every deployment:
