@@ -182,8 +182,10 @@ export default function Auth() {
           <div className="premium-auth-mode" role="tablist" aria-label="Account access">
             <button
               type="button"
+              role="tab"
               onClick={() => switchMode('login')}
               aria-selected={mode === 'login'}
+              aria-controls="auth-form-panel"
               className={`premium-auth-mode__button ${
                 mode === 'login'
                   ? 'is-active'
@@ -194,8 +196,10 @@ export default function Auth() {
             </button>
             <button
               type="button"
+              role="tab"
               onClick={() => switchMode('register')}
               aria-selected={mode === 'register'}
+              aria-controls="auth-form-panel"
               className={`premium-auth-mode__button ${
                 mode === 'register'
                   ? 'is-active'
@@ -209,6 +213,8 @@ export default function Auth() {
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
+              id="auth-form-panel"
+              role="tabpanel"
               variants={fadeInUp}
               initial="hidden"
               animate="visible"
@@ -381,7 +387,7 @@ export default function Auth() {
                         className="premium-auth-input pl-10 pr-10 h-11 rounded-xl"
                         required
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                      <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-foreground transition-colors">
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>

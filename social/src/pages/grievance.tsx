@@ -88,18 +88,18 @@ export default function GrievancePortal() {
         </p>
 
         {/* Tab Switcher */}
-        <div className="flex justify-center gap-2 mt-6">
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-2 mt-6">
           <Button
             variant={activeTab === 'file' ? 'default' : 'outline'}
             onClick={() => setActiveTab('file')}
-            className="rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
+            className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
           >
             <FileText className="w-4 h-4 mr-1.5" /> File a Grievance
           </Button>
           <Button
             variant={activeTab === 'track' ? 'default' : 'outline'}
             onClick={() => setActiveTab('track')}
-            className="rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
+            className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
           >
             <Search className="w-4 h-4 mr-1.5" /> Track Existing Ticket
           </Button>
@@ -147,8 +147,9 @@ export default function GrievancePortal() {
           <form onSubmit={handleFileGrievance} className="max-w-2xl mx-auto p-6 rounded-3xl glass-heavy border border-border/50 shadow-xl space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs font-mono font-bold text-muted-foreground uppercase">Your Full Name *</label>
+                <label htmlFor="reporterName" className="text-xs font-mono font-bold text-muted-foreground uppercase">Your Full Name *</label>
                 <Input
+                  id="reporterName"
                   required
                   value={reporterName}
                   onChange={(e) => setReporterName(e.target.value)}
@@ -158,8 +159,9 @@ export default function GrievancePortal() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-mono font-bold text-muted-foreground uppercase">Email Address *</label>
+                <label htmlFor="reporterEmail" className="text-xs font-mono font-bold text-muted-foreground uppercase">Email Address *</label>
                 <Input
+                  id="reporterEmail"
                   type="email"
                   required
                   value={reporterEmail}
@@ -171,8 +173,9 @@ export default function GrievancePortal() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-mono font-bold text-muted-foreground uppercase">Violation Category *</label>
+              <label htmlFor="category" className="text-xs font-mono font-bold text-muted-foreground uppercase">Violation Category *</label>
               <select
+                id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full h-10 rounded-xl surface-2 border border-border/40 px-3 text-xs text-foreground outline-none"
@@ -187,8 +190,9 @@ export default function GrievancePortal() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-mono font-bold text-muted-foreground uppercase">Reported Post / Reel / Profile URL *</label>
+              <label htmlFor="reportedUrl" className="text-xs font-mono font-bold text-muted-foreground uppercase">Reported Post / Reel / Profile URL *</label>
               <Input
+                id="reportedUrl"
                 required
                 value={reportedUrl}
                 onChange={(e) => setReportedUrl(e.target.value)}
@@ -198,8 +202,9 @@ export default function GrievancePortal() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-mono font-bold text-muted-foreground uppercase">Detailed Description & Evidence *</label>
+              <label htmlFor="description" className="text-xs font-mono font-bold text-muted-foreground uppercase">Detailed Description & Evidence *</label>
               <textarea
+                id="description"
                 required
                 rows={4}
                 value={description}
@@ -221,17 +226,18 @@ export default function GrievancePortal() {
       ) : (
         /* Track Existing Ticket */
         <div className="max-w-xl mx-auto space-y-4">
-          <form onSubmit={handleTrackTicket} className="flex gap-2">
+          <form onSubmit={handleTrackTicket} className="flex flex-col sm:flex-row gap-2">
             <Input
+              id="trackTicketId"
               value={trackTicketId}
               onChange={(e) => setTrackTicketId(e.target.value)}
               placeholder="Enter Ticket ID (e.g. YT-GRV-849201)"
-              className="rounded-2xl surface-2 border-border/50 text-xs h-11"
+              className="min-w-0 flex-1 rounded-2xl surface-2 border-border/50 text-xs h-11"
             />
             <Button
               type="submit"
               disabled={trackingLoading || !trackTicketId.trim()}
-              className="rounded-2xl text-xs font-bold px-6 h-11 bg-primary text-primary-foreground shrink-0 cursor-pointer"
+              className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-11 bg-primary text-primary-foreground shrink-0 cursor-pointer"
             >
               {trackingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Track'}
             </Button>

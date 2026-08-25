@@ -1085,7 +1085,8 @@ body {
     display: block;
     height: auto;
     min-height: 100dvh;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .premium-auth-hero {
