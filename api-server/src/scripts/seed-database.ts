@@ -26,7 +26,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "yorayriniwnl",
-      email: "ayush@yortalks.com",
+      email: "2329001@kiit.ac.in",
       passwordHash: adminPasswordHash,
       fullName: "Ayush Roy",
       bio: "Founder & Full-Stack Architect @ Yor Talks. Building ambient systems, spatial computing tools, and high-performance product surfaces. 🚀⚡",
@@ -36,7 +36,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "anyaa_yaps",
-      email: "anya@yortalks.com",
+      email: "2329002@kiit.ac.in",
       passwordHash: defaultPasswordHash,
       fullName: "Anya",
       bio: "3D World Builder & Unreal Engine 5.4 Enthusiast 🎮✨ Exploring procedural environments, volumetric lighting & shader graphs.",
@@ -46,7 +46,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "aditi_cofounder",
-      email: "aditi@yortalks.com",
+      email: "2329003@kiit.ac.in",
       passwordHash: defaultPasswordHash,
       fullName: "Aditi Singh",
       bio: "Co-Founder @ Yor Talks & Yor Zenith 🌌 Multimodal AI, community ecosystems & modern aesthetics. Organizing Global Hackathon 2026!",
@@ -56,7 +56,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "marcus_ai",
-      email: "marcus@yortalks.com",
+      email: "2329004@kiit.ac.in",
       passwordHash: defaultPasswordHash,
       fullName: "Marcus Vance",
       bio: "AI Researcher & Spatial Computing Lead 🤖 Neuromorphic architecture, world models & real-time perception.",
@@ -66,7 +66,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "sophia_ui",
-      email: "sophia@yortalks.com",
+      email: "2329005@kiit.ac.in",
       passwordHash: defaultPasswordHash,
       fullName: "Sophia Chen",
       bio: "Design Systems Lead @ Multiverse Studio. Minimalist typography, micro-interactions & tactile interfaces. ☕📐",

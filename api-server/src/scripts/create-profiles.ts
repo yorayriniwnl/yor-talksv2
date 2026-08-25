@@ -6,14 +6,14 @@ async function createProfiles() {
   const usersToCreate = [
     {
       username: "yorayriniwnl",
-      email: "yorayriniwnl@example.com",
+      email: "2329001@kiit.ac.in",
       password: "yorayriniwnl",
       fullName: "Ayush Roy",
       role: "founder"
     },
     {
       username: "aditisingh",
-      email: "aditi@example.com",
+      email: "2329003@kiit.ac.in",
       password: "aditisingh",
       fullName: "Aditi Singh",
       role: "co-founder"
