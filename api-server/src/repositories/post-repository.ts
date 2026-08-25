@@ -1,6 +1,6 @@
 import { eq, desc, ilike, lt, and } from "drizzle-orm";
 import { postsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
 
 import { sql } from "drizzle-orm";
@@ -96,6 +96,32 @@ export class PostRepository {
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
   async search(query: string, limit: number = 50): Promise<PostRecord[]> {
+    const indexState = await pool.query<{ is_ready: boolean }>(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_index
+        WHERE indexrelid = to_regclass('public.post_content_trgm_idx')
+          AND indisvalid
+          AND indisready
+      ) AS is_ready
+    `);
+
+    if (!indexState.rows[0]?.is_ready) {
+      const recentPosts = db
+        .select()
+        .from(postsTable)
+        .orderBy(desc(postsTable.createdAt))
+        .limit(250)
+        .as("recent_searchable_posts");
+
+      return (await db
+        .select()
+        .from(recentPosts)
+        .where(ilike(recentPosts.content, `%${query}%`))
+        .orderBy(desc(recentPosts.createdAt))
+        .limit(limit)) as PostRecord[];
+    }
+
     return (await db
       .select()
       .from(postsTable)
