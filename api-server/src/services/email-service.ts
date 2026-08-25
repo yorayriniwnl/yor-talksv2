@@ -1,6 +1,13 @@
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
 
+export class EmailDeliveryNotConfiguredError extends Error {
+  constructor() {
+    super("Email delivery is not configured for this deployment");
+    this.name = "EmailDeliveryNotConfiguredError";
+  }
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -12,7 +19,11 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     const { to, subject, html } = options;
 
-    // Log for local dev / unconfigured SMTP
+    if (env.NODE_ENV === "production") {
+      throw new EmailDeliveryNotConfiguredError();
+    }
+
+    // Development uses console delivery so local flows remain testable.
     logger.info({ to, subject }, "Email dispatch requested");
 
     if (env.NODE_ENV !== "production") {
