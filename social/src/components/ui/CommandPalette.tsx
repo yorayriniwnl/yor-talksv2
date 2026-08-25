@@ -11,6 +11,8 @@ import {
   Crown, Star, Brain,
   LayoutDashboard, Settings, Headphones, Mic2, Key
 } from 'lucide-react';
+import { api } from '@/lib/api-client';
+import { BrainCircuit, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
@@ -20,6 +22,29 @@ export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const userList = Object.values(useAppStore((s) => s.users));
+
+  const [aiResults, setAiResults] = useState<{id: string, content: string, score: number}[]>([]);
+  const [searchingAI, setSearchingAI] = useState(false);
+
+  useEffect(() => {
+    if (query.length > 3) {
+      const delay = setTimeout(async () => {
+        setSearchingAI(true);
+        try {
+          const res = await api.request<any>(`/ai/search?q=${encodeURIComponent(query)}`);
+          setAiResults(res?.results || []);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setSearchingAI(false);
+        }
+      }, 500);
+      return () => clearTimeout(delay);
+    } else {
+      setAiResults([]);
+    }
+  }, [query]);
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -153,7 +178,32 @@ export function CommandPalette() {
               </div>
 
               <div className="p-4 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {/* Users Section */}
+                
+                  {/* AI Semantic Results Section */}
+                  {query.length > 3 && (
+                    <div className="mt-4">
+                      <h4 className="flex items-center gap-2 text-[0.68rem] font-mono font-bold uppercase text-primary tracking-wider mb-2 px-2 glow-neon-primary">
+                        <BrainCircuit className="w-3 h-3" />
+                        AI Semantic Search {searchingAI && <span className="animate-pulse">...</span>}
+                      </h4>
+                      <div className="space-y-2">
+                        {aiResults.map((r, i) => (
+                          <div key={i} className="p-3 rounded-2xl bg-primary/10 border border-primary/30 flex items-start gap-3 cursor-pointer hover:bg-primary/20 transition-colors">
+                            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-foreground">{r.content}</p>
+                              <span className="text-[10px] text-primary/70 font-mono mt-1 block">Match Score: {(r.score * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        ))}
+                        {!searchingAI && aiResults.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-2">No semantic matches found.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Users Section */}
                 <div>
                   <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
                     {query ? 'Matching Profiles' : 'Suggested People'}

@@ -14,6 +14,7 @@ const messageService = new MessageService(new ConversationRepository(), new Mess
 const messageController = new MessageController(messageService);
 
 router.post("/messages", authenticate, validateBody(messageSchema), messageController.sendMessage);
+router.post("/conversations/group", authenticate, messageController.createGroupChat);
 router.get("/conversations", authenticate, messageController.listConversations);
 router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), messageController.listConversation);
 router.post("/messages/:messageId/seen", authenticate, validateParams(messageIdParamSchema), messageController.markSeen);

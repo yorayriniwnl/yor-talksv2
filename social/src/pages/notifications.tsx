@@ -43,6 +43,25 @@ function getActionText(type: string, actorName: string) {
   }
 }
 
+function typeLabel(type: string): string {
+  switch (type) {
+    case 'like': return 'liked your post';
+    case 'comment': return 'commented on your post';
+    case 'follow': return 'started following you';
+    case 'mention': return 'mentioned you';
+    default: return 'interacted with you';
+  }
+}
+
+type GroupedNotification = {
+  key: string;
+  type: string;
+  targetId?: string;
+  actors: string[];
+  latestNotif: any;
+  count: number;
+};
+
 /* ─── link target helper ─────────────────────────────────────────────────── */
 
 function getNotifHref(notif: { type: string; actorId?: string; targetId?: string | null }) {
@@ -79,6 +98,38 @@ export default function Notifications() {
 
     return { Today: today, Yesterday: yesterday, 'This Week': thisWeek, Earlier: earlier };
   }, [notifications]);
+
+  const groupNotifications = useCallback((items: typeof notifications): GroupedNotification[] => {
+    const map = new Map<string, GroupedNotification>();
+    
+    for (const n of items) {
+      // Group by type + targetId (e.g., all likes on the same post)
+      const key = `${n.type}-${n.targetId || n.id}`;
+      const existing = map.get(key);
+      
+      if (existing && n.actorId && !existing.actors.includes(n.actorId)) {
+        existing.actors.push(n.actorId);
+        existing.count++;
+        // Keep the most recent notification as the representative
+        if (new Date(n.createdAt) > new Date(existing.latestNotif.createdAt)) {
+          existing.latestNotif = n;
+        }
+      } else if (!existing) {
+        map.set(key, {
+          key,
+          type: n.type,
+          targetId: n.targetId || undefined,
+          actors: n.actorId ? [n.actorId] : [],
+          latestNotif: n,
+          count: 1,
+        });
+      }
+    }
+    
+    return [...map.values()].sort((a, b) => 
+      new Date(b.latestNotif.createdAt).getTime() - new Date(a.latestNotif.createdAt).getTime()
+    );
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -146,8 +197,11 @@ export default function Notifications() {
                 className="space-y-1.5"
               >
                 <AnimatePresence mode="popLayout">
-                  {items.map((notif) => {
-                    const actor = notif.actorId ? users[notif.actorId] : null;
+                  {groupNotifications(items).map((group) => {
+                    const notif = group.latestNotif;
+                    const primaryActor = group.actors.length > 0 ? users[group.actors[0]] : null;
+                    const actorName = primaryActor?.displayName || 'Someone';
+                    const othersCount = group.count - 1;
                     const isUnread = !notif.read;
                     const cfg = typeConfig[notif.type] ?? typeConfig.like;
                     const IconComp = cfg.icon;
@@ -157,7 +211,7 @@ export default function Notifications() {
                       <motion.div
                         layout
                         variants={staggerItem}
-                        key={notif.id}
+                        key={group.key}
                         className="relative"
                       >
                         <Link
@@ -176,11 +230,16 @@ export default function Notifications() {
                           {/* ── avatar + type badge ── */}
                           <div className="relative shrink-0">
                             <Avatar className="w-11 h-11 ring-2 ring-background shadow-sm">
-                              {actor && <AvatarImage src={actor.avatarUrl} alt={actor.displayName} />}
+                              {primaryActor && <AvatarImage src={primaryActor.avatarUrl} alt={primaryActor.displayName} />}
                               <AvatarFallback className="text-sm font-medium">
-                                {actor?.displayName?.[0]?.toUpperCase() || '?'}
+                                {actorName[0]?.toUpperCase() || '?'}
                               </AvatarFallback>
                             </Avatar>
+                            {othersCount > 0 && (
+                              <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background px-1 z-10 shadow-sm">
+                                +{othersCount > 9 ? '9+' : othersCount}
+                              </span>
+                            )}
                             {/* type icon pill */}
                             <span
                               className={cn(
@@ -200,9 +259,9 @@ export default function Notifications() {
                           {/* ── body ── */}
                           <div className="flex-1 min-w-0">
                             <p className="text-[13.5px] leading-snug text-muted-foreground">
-                              {actor
-                                ? getActionText(notif.type, actor.displayName)
-                                : notif.message}
+                              <span className="font-semibold text-foreground">{actorName}</span>
+                              {othersCount > 0 && <span className="text-muted-foreground"> and {othersCount} {othersCount === 1 ? 'other' : 'others'}</span>}
+                              {' '}<span className="text-muted-foreground">{notif.message?.replace(actorName, '').trim() || typeLabel(notif.type)}</span>
                             </p>
 
                             {/* show comment/message excerpt */}

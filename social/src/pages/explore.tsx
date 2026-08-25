@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { ArrowUpRight, Compass, Search, Sparkles, Users, Heart, MessageCircle, Play } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { ArrowUpRight, Compass, Search, Sparkles, Users, Heart, MessageCircle, Play, Loader2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,9 +26,9 @@ function formatCount(n: number): string {
 function collectTopics(contents: string[]) {
   const counts = new Map<string, number>();
   contents.forEach(content => {
-    const matches = content.match(/#[\p{L}\p{N}_-]+/gu) ?? [];
+    const matches: string[] = (content.match(/#[\p{L}\p{N}_-]+/gu) ?? []) as string[];
     matches.forEach(match => {
-      const name = match.slice(1);
+      const name = String(match).slice(1);
       counts.set(name, (counts.get(name) ?? 0) + 1);
     });
   });
@@ -123,12 +123,12 @@ function matchesExploreGenre(text: string, genre: string): boolean {
 
 export default function Explore() {
   const [, setLocation] = useLocation();
-  const users = useAppStore(s => s.users);
-  const posts = useAppStore(s => s.posts);
-  const communities = useAppStore(s => s.communities);
-  const currentUser = useAppStore(s => s.currentUser);
-  const followUser = useAppStore(s => s.followUser);
-  const unfollowUser = useAppStore(s => s.unfollowUser);
+  const users = useAppStore((s: any) => s.users || {}) as Record<string, User>;
+  const posts = useAppStore((s: any) => s.posts || []) as Post[];
+  const communities = useAppStore((s: any) => s.communities || []) as Community[];
+  const currentUser = useAppStore((s: any) => s.currentUser);
+  const followUser = useAppStore((s: any) => s.followUser);
+  const unfollowUser = useAppStore((s: any) => s.unfollowUser);
 
   const [query, setQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -145,9 +145,34 @@ export default function Explore() {
 
   const visualPosts = useMemo(() => {
     return posts
-      .filter(p => p.media?.length && matchesExploreGenre(`${p.content} ${users[p.authorId]?.bio || ''}`, selectedGenre))
-      .slice(0, 36);
+      .filter(p => p.media?.length && matchesExploreGenre(`${p.content} ${users[p.authorId]?.bio || ''}`, selectedGenre));
   }, [posts, users, selectedGenre]);
+
+  const GRID_PAGE_SIZE = 18;
+  const [visibleGridCount, setVisibleGridCount] = useState(GRID_PAGE_SIZE);
+  const gridLoadMoreRef = useRef<HTMLDivElement>(null);
+
+  const visibleGridPosts = useMemo(() => visualPosts.slice(0, visibleGridCount), [visualPosts, visibleGridCount]);
+  const hasMoreGrid = visibleGridCount < visualPosts.length;
+
+  const loadMoreGrid = useCallback(() => {
+    setVisibleGridCount(prev => Math.min(prev + GRID_PAGE_SIZE, visualPosts.length));
+  }, [visualPosts.length]);
+
+  useEffect(() => {
+    setVisibleGridCount(GRID_PAGE_SIZE);
+  }, [selectedGenre]);
+
+  useEffect(() => {
+    const el = gridLoadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting && hasMoreGrid) loadMoreGrid(); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMoreGrid, loadMoreGrid]);
 
   const rooms = useMemo(() => {
     return communities
@@ -282,7 +307,7 @@ export default function Explore() {
             )} />
             <div className={cn(
               "relative flex items-center glass-heavy bg-card/60 backdrop-blur-xl border-2 rounded-2xl p-2 transition-all duration-300",
-              isFocused ? "border-primary/50 shadow-2xl glow-neon-primary" : "border-border/50 shadow-lg"
+              isFocused ? "border-primary/50 shadow-lg" : "border-border/50 shadow-sm"
             )}>
               <Search className={cn("w-6 h-6 ml-3 transition-colors", isFocused ? "text-primary" : "text-muted-foreground")} />
               <input
@@ -372,7 +397,7 @@ export default function Explore() {
                       className={cn(
                         "px-4 py-2 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
                         selectedGenre === g.id
-                          ? "bg-primary text-primary-foreground border-primary glow-neon-primary font-bold shadow-md"
+                          ? "bg-primary/10 text-primary border-primary/30 font-bold"
                           : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
                       )}
                     >
@@ -417,13 +442,22 @@ export default function Explore() {
                 </div>
                 
                 {visualPosts.length > 0 ? (
-                  <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4 auto-rows-[minmax(120px,1fr)] md:auto-rows-[minmax(160px,1fr)] lg:auto-rows-[minmax(200px,1fr)] stagger-in">
-                    {visualPosts.map((post, i) => {
-                      // Make every 7th item (roughly) span 2x2 for that Instagram Explore layout feel
-                      const isLarge = i === 0 || i === 7 || i === 14;
-                      return <ExploreGridItem key={post.id} post={post} isLarge={isLarge} onClick={() => setLocation(`/post/${post.id}`)} />;
-                    })}
-                  </motion.div>
+                  <>
+                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4 auto-rows-[minmax(120px,1fr)] md:auto-rows-[minmax(160px,1fr)] lg:auto-rows-[minmax(200px,1fr)] stagger-in">
+                      {visibleGridPosts.map((post, i) => {
+                        // Make every 7th item (roughly) span 2x2 for that Instagram Explore layout feel
+                        const isLarge = i === 0 || i === 7 || i === 14;
+                        return <ExploreGridItem key={post.id} post={post} isLarge={isLarge} onClick={() => setLocation(`/post/${post.id}`)} />;
+                      })}
+                    </motion.div>
+                    {hasMoreGrid && (
+                      <div ref={gridLoadMoreRef} className="flex justify-center py-8 col-span-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Loading more...
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="py-24 text-center rounded-3xl border border-dashed border-border/50 surface-1">
                     <Compass className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
@@ -440,17 +474,18 @@ export default function Explore() {
                     <h3 className="font-display font-bold text-xl flex items-center gap-2"><Users className="w-5 h-5 text-accent" /> Discover People</h3>
                   </div>
                   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x stagger-in">
-                    {people.map(person => {
+                    {people.map((person: any) => {
                       const isFollowed = currentUser?.followingIds?.includes(person.id);
+                      const displayName = person.displayName || person.username || 'User';
                       return (
                         <motion.div key={person.id} whileHover={{ y: -4 }} className="surface-1 p-5 rounded-[24px] min-w-[200px] shrink-0 snap-start flex flex-col items-center text-center border border-border/50 hover:border-accent/30 transition-all shadow-sm hover-lift">
                           <Link href={`/profile/${person.id}`}>
                             <Avatar className="w-20 h-20 mb-3 cursor-pointer ring-2 ring-transparent hover:ring-accent/50 transition-all">
-                              <AvatarImage src={person.avatarUrl} /><AvatarFallback className="font-display text-2xl">{person.displayName.charAt(0)}</AvatarFallback>
+                              <AvatarImage src={person.avatarUrl} /><AvatarFallback className="font-display text-2xl">{displayName.charAt(0)}</AvatarFallback>
                             </Avatar>
                           </Link>
                           <Link href={`/profile/${person.id}`} className="w-full">
-                            <h4 className="font-bold text-[0.95rem] truncate w-full cursor-pointer hover:underline">{person.displayName}</h4>
+                            <h4 className="font-bold text-[0.95rem] truncate w-full cursor-pointer hover:underline">{displayName}</h4>
                           </Link>
                           <p className="text-[0.72rem] text-muted-foreground mb-4 truncate w-full font-mono">@{person.username}</p>
                           <Button 

@@ -7,7 +7,10 @@
 export interface Tokens {
   accessToken: string;
   refreshToken: string;
+  expiresAt?: string;
 }
+
+export type AuthTokens = Tokens;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 
@@ -26,6 +29,15 @@ export function setStoredTokens(tokens: Tokens | null): void {
   } else {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
+}
+
+export interface PaginatedResponse<T> {
+  data: T;
+  meta: {
+    nextCursor: string | null;
+    hasMore: boolean;
+    limit: number;
+  };
 }
 
 export class ApiError extends Error {
@@ -104,8 +116,42 @@ async function request<T>(path: string, options: RequestInit = {}, isRetry = fal
   return json.data;
 }
 
+export interface PaginatedResult<T> {
+  data: T;
+  nextCursor?: string;
+  hasMore?: boolean;
+}
+
+async function requestPaginated<T>(path: string, options: RequestInit = {}): Promise<PaginatedResult<T>> {
+  const tokens = getStoredTokens();
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (tokens) {
+    headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+  }
+
+  const res = await fetch(`/api${path}`, { ...options, headers });
+  let json: any = null;
+  try {
+    json = await res.json();
+  } catch {
+    // no body
+  }
+
+  if (!res.ok || !json?.success) {
+    throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
+  }
+
+  const data = (Array.isArray(json.data) ? json.data : json.data?.items ?? json.data ?? []) as T;
+  const nextCursor = json.meta?.nextCursor ?? json.data?.nextCursor;
+  const hasMore = Boolean(json.meta?.hasMore ?? json.data?.hasMore ?? (Array.isArray(data) && (data as any[]).length > 0));
+
+  return { data, nextCursor, hasMore };
+}
+
 // ---- Auth ----
-export interface AuthTokens { accessToken: string; refreshToken: string; expiresAt: string }
 export interface BackendUser {
   id: string;
   username: string;
@@ -124,6 +170,7 @@ export interface BackendUser {
 }
 
 export const api = {
+  request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
     request<{ user: BackendUser; tokens: AuthTokens }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
@@ -168,7 +215,7 @@ export const api = {
   unmuteUser: (userId: string) => request<{ mutedUsers: string[] }>(`/users/${userId}/unmute`, { method: 'POST' }),
 
   // ---- Posts / feed ----
-  getFeed: (page = 1, pageSize = 20) => request<BackendPost[]>(`/feed?page=${page}&pageSize=${pageSize}`),
+  getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
   getTrendingFeed: (page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?page=${page}&pageSize=${pageSize}`),
   getUserFeed: (userId: string, page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?page=${page}&pageSize=${pageSize}`),
   createPost: (payload: { content: string; images?: string[] }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
@@ -200,6 +247,11 @@ export const api = {
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+
+  // ---- Economy ----
+  getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
+  sendSuperchat: (payload: { streamId: string; creatorId: string; amountMinor: number; message: string }) =>
+    request<{ transactionId: string }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
 
   // ---- Messages ----
   sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion';
+import { OtpLoginModal } from '@/components/auth/OtpLoginModal';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -303,6 +304,18 @@ export default function Auth() {
                   </Button>
                 </motion.div>
 
+                {/* 1-Tap WhatsApp & Phone Number OTP Button */}
+                <OtpLoginModal
+                  trigger={
+                    <Button
+                      type="button"
+                      className="w-full h-11 rounded-xl font-display font-extrabold text-xs bg-gradient-to-r from-emerald-500 via-teal-500 to-primary text-black glow-neon-primary shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      <Smartphone className="w-4 h-4 mr-2" /> 1-Tap WhatsApp / Mobile OTP Login 🇮🇳
+                    </Button>
+                  }
+                />
+
                 {/* Instant Demo Login Button */}
                 <Button
                   type="button"
@@ -310,7 +323,7 @@ export default function Auth() {
                   onClick={() => {
                     login('yorayriniwnl', 'password').catch(() => {});
                   }}
-                  className="w-full h-10 rounded-xl font-bold text-xs border-primary/30 text-primary hover:bg-primary/10 transition-all"
+                  className="w-full h-10 rounded-xl font-bold text-xs border-primary/30 text-primary hover:bg-primary/10 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /> Enter Demo Account Immediately
                 </Button>

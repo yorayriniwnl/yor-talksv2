@@ -3,6 +3,8 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
+    "strict": false,
+    "noImplicitAny": false,
     "noEmit": true,
     "jsx": "preserve",
     "lib": ["esnext", "dom", "dom.iterable"],

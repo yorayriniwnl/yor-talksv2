@@ -403,7 +403,7 @@ function matchesCommunityGenre(community: any, genre: string): boolean {
 }
 
 export default function Communities() {
-  const [, params] = useRoute('/communities/:id');
+  const [, params] = useRoute<{ id: string }>('/communities/:id');
   const communityId = params?.id;
 
   const communities = useAppStore((s) => s.communities);

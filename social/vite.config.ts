@@ -63,8 +63,6 @@ export default defineConfig({
           'vendor-icons': ['lucide-react'],
           // State management + data
           'vendor-state': ['zustand'],
-          // Mock data (heavy, isolate it)
-          'app-mock-data': ['./src/lib/mockData.ts'],
         },
       },
     },

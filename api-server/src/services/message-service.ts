@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
+import { db } from "@workspace/db";
+import { messageReadsTable, messagesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
+export class UnauthorizedError extends Error {}
 
 export class MessageService {
   constructor(
@@ -31,6 +35,7 @@ export class MessageService {
     return this.conversationRepository.create(conversation);
   }
 
+  // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
@@ -39,18 +44,27 @@ export class MessageService {
       }
     }
     const conversation = await this.createConversation(senderId, recipientId);
+    return this.sendMessageToConversation(senderId, conversation.id, content, options);
+  }
+
+  async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
+    const members = await this.conversationRepository.getMembers(conversationId);
+    if (!members.includes(senderId)) {
+      throw new UnauthorizedError("You are not a member of this conversation");
+    }
+
     const replyToId = options?.replyToId ?? null;
     if (replyToId) {
       const replyTarget = await this.messageRepository.findById(replyToId);
-      if (!replyTarget || replyTarget.conversationId !== conversation.id) {
+      if (!replyTarget || replyTarget.conversationId !== conversationId) {
         throw new InvalidReplyTargetError("Reply target must belong to this conversation");
       }
     }
     const message: MessageRecord = {
       id: randomUUID(),
-      conversationId: conversation.id,
+      conversationId,
       senderId,
-      recipientId,
+      recipientId: senderId, // Dummy value since schema expects it for now, but not used for group logic
       content,
       createdAt: new Date().toISOString(),
       seenAt: null,
@@ -67,8 +81,8 @@ export class MessageService {
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
-    const conversation = await this.conversationRepository.findById(conversationId);
-    if (!conversation || !conversation.participantIds?.includes(userId)) {
+    const members = await this.conversationRepository.getMembers(conversationId);
+    if (!members.includes(userId)) {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId);
@@ -87,17 +101,26 @@ export class MessageService {
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
-      return undefined;
-    }
+    if (!message) return undefined;
+    
+    const members = await this.conversationRepository.getMembers(message.conversationId);
+    if (!members.includes(userId)) return undefined;
+
+    // Track read receipt
+    await db.insert(messageReadsTable).values({
+      messageId,
+      userId,
+      readAt: new Date().toISOString(),
+    }).onConflictDoNothing();
+
     message.seenAt = new Date().toISOString();
     return this.messageRepository.update(messageId, { seenAt: message.seenAt });
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
-      return undefined;
+    if (!message || message.senderId !== userId) {
+      return undefined; // Only sender can edit
     }
     message.content = content;
     message.editedAt = new Date().toISOString();
@@ -106,20 +129,20 @@ export class MessageService {
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || (message.senderId !== userId && message.recipientId !== userId)) {
-      return undefined;
+    if (!message || message.senderId !== userId) {
+      return undefined; // Only sender can delete for now
     }
     message.deletedAt = new Date().toISOString();
     return this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
   }
 
-  /** Both reactions and pinning now require actual conversation membership — previously anyone authenticated could react to or pin any message by guessing/discovering its ID. */
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
     const message = await this.messageRepository.findById(messageId);
     if (!message) {
       throw new Error("Message not found");
     }
-    if (message.senderId !== userId && message.recipientId !== userId) {
+    const members = await this.conversationRepository.getMembers(message.conversationId);
+    if (!members.includes(userId)) {
       throw new Error("Not a participant in this conversation");
     }
     return message;

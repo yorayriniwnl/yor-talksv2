@@ -80,7 +80,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                   <div className="p-0.5 bg-zinc-950 rounded-full">
                     <Avatar className="w-14 h-14 border-2 border-zinc-950">
                       <AvatarImage src={user.avatarUrl} />
-                      <AvatarFallback className="font-display font-bold text-base bg-zinc-800 text-white">{user.displayName.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="font-display font-bold text-base bg-zinc-800 text-white">{(user.displayName || user.username || 'U').charAt(0)}</AvatarFallback>
                     </Avatar>
                   </div>
                 </div>
@@ -104,7 +104,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
               <div className="mb-2">
                 <div className="flex items-center gap-1.5">
                   <h4 className="font-display font-bold text-base leading-tight truncate text-white">
-                    {user.displayName}
+                    {user.displayName || user.username || 'User'}
                   </h4>
                   {user.verified && (
                     <svg className="w-4 h-4 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>

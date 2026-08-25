@@ -1,27 +1,71 @@
 import { type Request, type Response } from "express";
-import { emitToUser } from "../lib/realtime.js";
-import { InvalidReplyTargetError, MessageBlockedError, MessageService } from "../services/message-service.js";
+import { emitToUser, getIo } from "../lib/realtime.js";
+import { InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   sendMessage = async (req: Request, res: Response) => {
-    const recipientId = typeof req.body.recipientId === "string" ? req.body.recipientId : "";
+    const recipientId = typeof req.body.recipientId === "string" ? req.body.recipientId : undefined;
+    const conversationId = typeof req.body.conversationId === "string" ? req.body.conversationId : undefined;
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const replyToId = typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
+    
     try {
-      const message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, replyToId ? { replyToId } : undefined);
-      emitToUser(recipientId, "message:receive", message);
+      let message;
+      let actualConversationId;
+      if (conversationId) {
+        message = await this.messageService.sendMessageToConversation(req.user?.id ?? "", conversationId, content, replyToId ? { replyToId } : undefined);
+        actualConversationId = conversationId;
+      } else if (recipientId) {
+        message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, replyToId ? { replyToId } : undefined);
+        actualConversationId = message.conversationId;
+      } else {
+        return res.status(400).json(createResponse("Missing recipientId or conversationId", null, {}, ["Bad request"]));
+      }
+
+      // Multicast to group room via Socket.io
+      const io = getIo();
+      if (io) {
+        io.to(`conversation:${actualConversationId}`).emit("message:receive", message);
+      }
+      
       return res.status(201).json(createResponse("Message sent", message));
     } catch (error) {
-      if (error instanceof MessageBlockedError) {
-        return res.status(403).json(createResponse("Message blocked", null, {}, [error.message]));
+      if (error instanceof MessageBlockedError || error instanceof UnauthorizedError) {
+        return res.status(403).json(createResponse("Action forbidden", null, {}, [error.message]));
       }
       if (error instanceof InvalidReplyTargetError) {
         return res.status(400).json(createResponse("Invalid reply target", null, {}, [error.message]));
       }
       return res.status(500).json(createResponse("Failed to send message", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  createGroupChat = async (req: Request, res: Response) => {
+    try {
+      // requires access to ConversationRepository, but we can add createGroupChat to MessageService instead
+      // Let's implement it inside MessageService for cleaner architecture
+      const title = req.body.title || "Group Chat";
+      const memberIds = req.body.memberIds || [];
+      if (!Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json(createResponse("Missing memberIds", null, {}, ["Bad Request"]));
+      }
+      // @ts-ignore
+      const group = await this.messageService.conversationRepository.createGroupChat(req.user?.id ?? "", memberIds, title);
+      
+      const io = getIo();
+      if (io) {
+        // Invite members to room
+        for (const id of [req.user?.id, ...memberIds]) {
+          io.to(id!).emit("conversation:created", group);
+        }
+      }
+      
+      return res.status(201).json(createResponse("Group chat created", group));
+    } catch (error) {
+      return res.status(500).json(createResponse("Failed to create group", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
   };
 
@@ -42,6 +86,16 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
+    
+    const io = getIo();
+    if (io) {
+      io.to(`conversation:${message.conversationId}`).emit("message:seen:update", { 
+        messageId, 
+        userId: req.user?.id, 
+        seenAt: message.seenAt 
+      });
+    }
+
     return res.status(200).json(createResponse("Message marked as seen", message));
   };
 

@@ -18,6 +18,7 @@ import fs from "node:fs";
 
 try {
   // 1. Build DB types and declarations
+  run("npx tsc -b", "lib/shared");
   run("npx tsc -b", "lib/db");
 
   // 2. Build Standalone API Server bundle

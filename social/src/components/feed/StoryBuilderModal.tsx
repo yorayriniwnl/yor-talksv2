@@ -60,7 +60,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           <div className="flex items-center justify-between text-white relative z-10">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs font-display backdrop-blur-md px-3 py-1 rounded-full bg-white/20">
-                {currentUser?.displayName}'s Story
+                {(currentUser?.displayName || currentUser?.username || 'User')}'s Story
               </span>
             </div>
             <button onClick={() => onOpenChange(false)} className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">

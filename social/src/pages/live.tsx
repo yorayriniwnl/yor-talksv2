@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { useLocation, useRoute } from 'wouter';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
+import { connectSocket } from '@/lib/socket-client';
+import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 interface LiveComment {
@@ -141,6 +143,35 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
   const [showGiftDrawer, setShowGiftDrawer] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const socket = connectSocket();
+    if (!socket) return;
+    
+    socket.emit('stream:join', { streamId });
+
+    const onSuperchat = (data: any) => {
+      const newComment: LiveComment = {
+        id: data.id,
+        user: 'Anonymous',
+        avatar: 'https://ui-avatars.com/api/?name=User',
+        badge: 'vip',
+        text: data.message || 'Sent a superchat!',
+        timestamp: 'Just now',
+        gift: { name: 'Superchat', icon: '💎', amount: data.amountMinor ? data.amountMinor / 100 : 10 }
+      };
+      setComments((prev) => [...prev, newComment]);
+      triggerConfetti();
+      sounds.playChime();
+    };
+
+    socket.on('stream:superchat', onSuperchat);
+
+    return () => {
+      socket.emit('stream:leave', { streamId });
+      socket.off('stream:superchat', onSuperchat);
+    };
+  }, [streamId]);
+
   // Auto-scroll chat
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -163,15 +194,15 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
         "That gameplay fps is butter smooth 🎮"
       ];
       const randomMsg = simulatedMessages[Math.floor(Math.random() * simulatedMessages.length)];
-      const randomUser = Object.values(users)[Math.floor(Math.random() * Object.values(users).length)];
+      const randomUser = (Object.values(users) as any[])[Math.floor(Math.random() * Object.values(users).length)];
       
       if (randomUser) {
         setComments((prev) => [
           ...prev.slice(-25),
           {
             id: Math.random().toString(),
-            user: randomUser.displayName,
-            avatar: randomUser.avatarUrl,
+            user: randomUser.displayName || randomUser.username || 'Viewer',
+            avatar: randomUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150',
             badge: Math.random() > 0.6 ? 'sub' : undefined,
             text: randomMsg,
             timestamp: 'Just now',
@@ -223,24 +254,21 @@ function LiveBroadcastRoom({ streamId }: { streamId: string }) {
     triggerHeartBurst();
   };
 
-  const handleSendGift = (gift: typeof LIVE_GIFTS[number]) => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success(`Sent ${gift.icon} ${gift.name} to ${host?.displayName || 'Host'}!`);
-    setShowGiftDrawer(false);
-
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        user: currentUser?.displayName || 'You',
-        avatar: currentUser?.avatarUrl || 'https://picsum.photos/seed/you/200/200',
-        badge: 'vip',
-        text: `Sent a gift!`,
-        timestamp: 'Just now',
-        gift: { name: gift.name, icon: gift.icon, amount: gift.cost },
-      },
-    ]);
+  const handleSendGift = async (gift: typeof LIVE_GIFTS[number]) => {
+    try {
+      await api.sendSuperchat({
+        streamId,
+        creatorId: host.id,
+        amountMinor: gift.cost * 100,
+        message: `Sent ${gift.name}!`
+      });
+      
+      sounds.playChime();
+      toast.success(`Sent ${gift.icon} ${gift.name} to ${host?.displayName || 'Host'}!`);
+      setShowGiftDrawer(false);
+    } catch (e) {
+      toast.error("Failed to send superchat");
+    }
   };
 
   if (!stream) {
@@ -494,13 +522,13 @@ function matchesStreamGenre(stream: any, host: any, genre: string): boolean {
 
 export default function Live() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute('/live/:id');
+  const [, params] = useRoute<{ id: string }>('/live/:id');
   const streamId = params?.id;
 
-  const liveStreams = useAppStore((s) => s.liveStreams);
-  const users = useAppStore((s) => s.users);
-  const loadStreams = useAppStore((s) => s.loadStreams);
-  const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const liveStreams = useAppStore((s: any) => s.liveStreams || []);
+  const users = useAppStore((s: any) => s.users || {});
+  const loadStreams = useAppStore((s: any) => s.loadStreams);
+  const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   useEffect(() => { loadStreams(); }, [loadStreams]);

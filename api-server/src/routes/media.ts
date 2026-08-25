@@ -1,0 +1,81 @@
+import { Router, Request, Response } from "express";
+import { MediaService } from "../services/media-service.js";
+import { upload } from "../middlewares/upload.js";
+import { authenticate } from "../middlewares/auth.js";
+
+const router = Router();
+const mediaService = new MediaService();
+
+// Direct multipart upload endpoint
+router.post(
+  "/media/upload",
+  authenticate,
+  upload.single("file"),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ success: false, message: "No file provided", errors: ["file_required"] });
+        return;
+      }
+
+      const result = await mediaService.processUpload(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      res.status(201).json({
+        success: true,
+        message: "Media uploaded successfully",
+        data: result,
+        errors: [],
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        message: err.message || "Media processing failed",
+        errors: ["media_processing_error"],
+      });
+    }
+  }
+);
+
+// Presigned upload URL generator for direct S3 / R2 uploads
+router.post(
+  "/media/presign",
+  authenticate,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { filename, mimeType, size } = req.body;
+      if (!filename || !mimeType) {
+        res.status(400).json({ success: false, message: "Filename and mimeType required", errors: ["invalid_input"] });
+        return;
+      }
+
+      const key = `uploads/${Date.now()}-${encodeURIComponent(filename)}`;
+      const presignedUrl = `https://cdn.yortalks.in/upload-gateway/${key}`;
+
+      res.json({
+        success: true,
+        data: {
+          uploadUrl: presignedUrl,
+          downloadUrl: `https://cdn.yortalks.in/${key}`,
+          key,
+          headers: { "Content-Type": mimeType },
+          expiresIn: 3600,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message, errors: [] });
+    }
+  }
+);
+
+// Get HLS streaming manifest
+router.get("/media/:id/hls", (req: Request, res: Response): void => {
+  const { id } = req.params;
+  const manifest = mediaService.generateHlsManifest(id);
+  res.json({ success: true, data: manifest });
+});
+
+export default router;

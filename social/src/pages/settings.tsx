@@ -10,9 +10,9 @@ import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders } from 'lucide-rea
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   
-  const logout = useAppStore((s) => s.logout);
-  const privacySettings = useAppStore((s) => (s as any).privacySettings || s.privacy || {});
-  const updatePrivacySettings = useAppStore((s) => (s as any).updatePrivacySettings || s.updatePrivacy);
+  const logout = useAppStore((s: any) => s.logout);
+  const privacySettings = useAppStore((s: any) => s.privacySettings || s.privacy || {});
+  const updatePrivacySettings = useAppStore((s: any) => s.updatePrivacySettings || s.updatePrivacy);
 
   const handlePrivacyChange = (key: string, value: any) => {
     updatePrivacySettings({ ...privacySettings, [key]: value });

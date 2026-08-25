@@ -109,11 +109,11 @@ function CreateListingDialog() {
 }
 
 export default function Marketplace() {
-  const products = useAppStore((s) => s.products);
-  const users = useAppStore((s) => s.users);
-  const loadProducts = useAppStore((s) => s.loadProducts);
-  const loadUserProfile = useAppStore((s) => s.loadUserProfile);
-  const toggleSaveProduct = useAppStore((s) => s.toggleSaveProduct);
+  const products = useAppStore((s: any) => s.products || []);
+  const users = useAppStore((s: any) => s.users || {});
+  const loadProducts = useAppStore((s: any) => s.loadProducts);
+  const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
+  const toggleSaveProduct = useAppStore((s: any) => s.toggleSaveProduct);
 
   const [mode, setMode] = useState<'store' | 'inventory'>('store');
   const [query, setQuery] = useState('');
@@ -127,10 +127,10 @@ export default function Marketplace() {
     }
   }, [products, users, loadUserProfile]);
 
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
-  const filtered = products.filter(p =>
+  const categories: string[] = ['All', ...Array.from(new Set<string>(products.map((p: any) => String(p.category || 'Other'))))];
+  const filtered = products.filter((p: any) =>
     (category === 'All' || p.category === category) &&
-    p.title.toLowerCase().includes(query.toLowerCase())
+    (p.title || '').toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -276,7 +276,7 @@ export default function Marketplace() {
               animate="visible"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
-              {filtered.map((product) => {
+              {filtered.map((product: any) => {
                 const seller = users[product.sellerId];
                 const isSaved = product.savedByMe;
                 

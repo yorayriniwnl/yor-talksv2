@@ -36,28 +36,32 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     const userId = socket.data.userId as string;
     onlineUsers.set(userId, socket.id);
     socket.join(userId);
     logger.info({ userId }, "socket connected");
     socket.emit("presence:update", { online: true, userId });
 
+    // Join all conversations the user is part of for group multicasting
+    try {
+      const conversations = await conversationRepository.listForUser(userId);
+      for (const conv of conversations) {
+        socket.join(`conversation:${conv.id}`);
+      }
+    } catch (err) {
+      logger.error({ err, userId }, "Failed to join conversation rooms");
+    }
+
     const relayTyping = async (event: "typing:start" | "typing:end", conversationId: unknown) => {
       if (typeof conversationId !== "string") return;
 
       try {
-        const conversation = await conversationRepository.findById(conversationId);
-        if (!conversation || !conversation.participantIds?.includes(userId)) return;
+        const members = await conversationRepository.getMembers(conversationId);
+        if (!members.includes(userId)) return;
 
-        const recipientId = conversation.participantIds.find((participantId) => participantId !== userId);
-        if (!recipientId) return;
-
-        // Presence signals follow the same block boundary as direct messages.
-        const recipient = await userRepository.findById(recipientId);
-        if (recipient?.blockedUsers?.includes(userId)) return;
-
-        io.to(recipientId).emit(event, { userId, conversationId });
+        // Broadcast to everyone else in the conversation room
+        socket.to(`conversation:${conversationId}`).emit(event, { userId, conversationId });
       } catch (err) {
         logger.warn({ err, userId, conversationId }, "Failed to relay typing signal");
       }
@@ -71,27 +75,52 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       void relayTyping("typing:end", payload.conversationId);
     });
 
-    // Previously this just relayed the raw payload in-memory with no
-    // persistence at all — a message sent while the recipient was offline
-    // was lost forever, and blocked users could still reach you. Now it goes
-    // through the same MessageService the REST endpoint uses: persisted to
-    // Postgres, block-list checked, with a real message id and timestamp.
-    socket.on("message:send", async ({ recipientId, content }) => {
-      if (typeof recipientId !== "string" || typeof content !== "string" || !content.trim()) {
+    // Modified to support group chats via conversationId
+    socket.on("message:send", async ({ recipientId, conversationId, content }) => {
+      if (typeof content !== "string" || !content.trim()) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
       }
       try {
-        const message = await messageService.sendMessage(userId, recipientId, content);
-        io.to(recipientId).emit("message:receive", message);
-        socket.emit("message:sent", message);
+        let message;
+        let actualConversationId = conversationId;
+
+        if (conversationId) {
+          message = await messageService.sendMessageToConversation(userId, conversationId, content);
+        } else if (recipientId) {
+          message = await messageService.sendMessage(userId, recipientId, content);
+          actualConversationId = message.conversationId;
+          
+          // Ensure sender is in the room if it's a new conversation
+          socket.join(`conversation:${actualConversationId}`);
+        } else {
+          socket.emit("message:error", { error: "Missing recipient or conversation" });
+          return;
+        }
+
+        // Multicast to all conversation members (including the sender's other devices via the room)
+        io.to(`conversation:${actualConversationId}`).emit("message:receive", message);
+        socket.emit("message:sent", message); // Confirm to sender's current device
       } catch (err) {
         if (err instanceof MessageBlockedError) {
           socket.emit("message:error", { error: err.message });
         } else {
-          logger.error({ err, userId, recipientId }, "Failed to persist socket message");
+          logger.error({ err, userId, recipientId, conversationId }, "Failed to persist socket message");
           socket.emit("message:error", { error: "Failed to send message" });
         }
+      }
+    });
+
+    socket.on("message:seen", async ({ messageId }) => {
+      if (typeof messageId !== "string") return;
+      try {
+        const updated = await messageService.markSeen(messageId, userId);
+        if (updated) {
+          // Notify others in the conversation that it was seen
+          socket.to(`conversation:${updated.conversationId}`).emit("message:seen:update", { messageId, userId, seenAt: updated.seenAt });
+        }
+      } catch (err) {
+        logger.warn({ err, messageId, userId }, "Failed to mark message seen");
       }
     });
 

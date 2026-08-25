@@ -4,10 +4,12 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
+import Redis from "ioredis";
 import pinoHttpFactory from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
-import { corsOrigins } from "./config/env.js";
+import { env, corsOrigins } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 
@@ -32,7 +34,19 @@ const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, un
 });
 
 const createHelmetMiddleware = helmet as unknown as (options?: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void;
-const createRateLimitMiddleware = rateLimit as unknown as (options?: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void;
+
+// Initialize Redis Client for Rate Limiting
+const redisClient = new Redis(env.REDIS_URL);
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.call(...args),
+  }),
+});
 
 app.disable("x-powered-by");
 app.use(requestContext);
@@ -42,7 +56,6 @@ app.use(compression());
 app.use(
   cors({
     origin(origin, callback) {
-      // Same-origin requests (curl, server-to-server, mobile apps) send no Origin header at all — allow those.
       if (!origin || corsOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
         callback(null, true);
       } else {
@@ -52,19 +65,16 @@ app.use(
     credentials: true,
   }),
 );
-app.use(
-  createRateLimitMiddleware({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-  }),
-);
+
+// Apply Redis-backed rate limiting to all requests
+app.use(limiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api", router);
+app.use("/api/v1", router); // Phase 10: Versioned endpoints for multi-client ecosystem
 app.use(router);
 
 app.use((_req, res) => {

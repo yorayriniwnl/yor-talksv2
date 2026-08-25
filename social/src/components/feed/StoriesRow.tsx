@@ -64,7 +64,7 @@ export default function StoriesRow() {
                 <AvatarImage src={currentUser.avatarUrl} />
                 <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md glow-neon-primary">
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md">
                 <Plus className="w-3.5 h-3.5" />
               </div>
             </div>

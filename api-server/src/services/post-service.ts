@@ -6,9 +6,45 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
 import { SecurityService } from "./security-service.js";
+import { randomUUID } from "node:crypto";
+import { emitToUser } from "../lib/realtime.js";
+import { NotificationRepository } from "../repositories/notification-repository.js";
+import { PostRepository } from "../repositories/post-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
+import { AIService } from "./ai-service.js";
+import { QueueService } from "./queue-service.js";
+import { SecurityService } from "./security-service.js";
 import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from "../types/index.js";
+import { db } from "@workspace/db";
+import { postLikesTable, postBookmarksTable } from "@workspace/db/schema";
+import { inArray, eq, and } from "drizzle-orm";
+import { Redis } from "ioredis";
+import { env } from "../config/env.js";
 
 export class PostService {
+
+  private async attachInteractions(posts: PostRecord[], userId?: string) {
+    if (!userId || posts.length === 0) return posts;
+    const postIds = posts.map(p => p.id);
+    const { postLikesTable, postBookmarksTable } = await import("@workspace/db/schema");
+    const { inArray, and, eq } = await import("drizzle-orm");
+    const { db } = await import("@workspace/db");
+    
+    const [likes, bookmarks] = await Promise.all([
+      db.select({ postId: postLikesTable.postId }).from(postLikesTable).where(and(inArray(postLikesTable.postId, postIds), eq(postLikesTable.userId, userId))),
+      db.select({ postId: postBookmarksTable.postId }).from(postBookmarksTable).where(and(inArray(postBookmarksTable.postId, postIds), eq(postBookmarksTable.userId, userId)))
+    ]);
+    
+    const likedSet = new Set(likes.map(l => l.postId));
+    const bookmarkedSet = new Set(bookmarks.map(b => b.postId));
+    
+    return posts.map(p => ({
+      ...p,
+      likedByMe: likedSet.has(p.id),
+      savedByMe: bookmarkedSet.has(p.id)
+    }));
+  }
+
   constructor(
     private readonly postRepository: PostRepository,
     private readonly userRepository: UserRepository,
@@ -42,9 +78,9 @@ export class PostService {
       images,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      likedBy: [],
-      comments: [],
-      bookmarkedBy: [],
+      likesCount: 0,
+      commentsCount: 0,
+      bookmarksCount: 0,
       shareCount: 0,
       reactions: {},
       tags,
@@ -79,42 +115,15 @@ export class PostService {
     return this.postRepository.update(postId, { content, updatedAt: new Date().toISOString() });
   }
 
+  
   async likePost(postId: string, userId: string): Promise<PostRecord | undefined> {
-    const post = await this.postRepository.findById(postId);
-    if (!post) {
-      return undefined;
-    }
-    if (!post.likedBy.includes(userId)) {
-      post.likedBy.push(userId);
-      post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-      await this.postRepository.update(postId, { likedBy: post.likedBy, score: post.score });
-      const author = await this.userRepository.findById(post.authorId);
-      if (author && author.id !== userId) {
-        const liker = await this.userRepository.findById(userId);
-        await this.notify({
-          id: randomUUID(),
-          recipientId: author.id,
-          type: "like",
-          title: "New like",
-          message: `${liker?.username ?? "Someone"} liked your post`,
-          relatedId: post.id,
-          createdAt: new Date().toISOString(),
-          readAt: null,
-          metadata: { actorId: userId },
-        });
-      }
-    }
-    return post;
+    await this.postRepository.likePost(postId, userId);
+    return this.postRepository.findById(postId);
   }
 
   async unlikePost(postId: string, userId: string): Promise<PostRecord | undefined> {
-    const post = await this.postRepository.findById(postId);
-    if (!post) {
-      return undefined;
-    }
-    post.likedBy = post.likedBy.filter((entry: string) => entry !== userId);
-    post.score = this.calculateScore({ likes: post.likedBy.length, shares: post.shareCount, comments: post.comments.length });
-    return this.postRepository.update(postId, { likedBy: post.likedBy, score: post.score });
+    await this.postRepository.unlikePost(postId, userId);
+    return this.postRepository.findById(postId);
   }
 
   async commentOnPost(postId: string, authorId: string, content: string): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
@@ -210,18 +219,35 @@ export class PostService {
     return post;
   }
 
-  async getFeed(): Promise<PostRecord[]> {
-    return this.sortPosts(await this.postRepository.list());
+  
+  async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+    return this.attachInteractions(await this.postRepository.list(cursor, limit), currentUserId);
   }
 
-  async getTrendingFeed(): Promise<PostRecord[]> {
-    const posts = await this.postRepository.list();
-    return this.sortPosts(posts).slice(0, 10);
+    private redis = new Redis(env.REDIS_URL);
+
+  async getTrendingFeed(cursor?: number, limit: number = 20, currentUserId?: string): Promise<any[]> {
+    const cacheKey = `feed:trending:${cursor || 0}:${limit}`;
+    
+    // Try Redis cache first (Phase 5 Caching Architecture)
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return this.attachInteractions(parsed, currentUserId);
+      } catch (e) { /* ignore parse error */ }
+    }
+
+    const posts = await (this.postRepository as any).listTrending(cursor, limit);
+    
+    // Cache for 60 seconds
+    await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
+    return this.attachInteractions(posts, currentUserId);
+  }
+  async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit), currentUserId);
   }
 
-  async getUserFeed(userId: string): Promise<PostRecord[]> {
-    return this.sortPosts(await this.postRepository.listByUser(userId));
-  }
 
   private extractMentions(content: string): string[] {
     return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
@@ -235,7 +261,5 @@ export class PostService {
     return input.likes * 3 + input.shares * 5 + input.comments * 2;
   }
 
-  private sortPosts(posts: PostRecord[]): PostRecord[] {
-    return [...posts].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  }
+  
 }

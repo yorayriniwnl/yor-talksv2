@@ -2,11 +2,7 @@ import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
-  UserRound, Settings, ImageIcon, Send, ShoppingBag, Music, Zap, Activity, BrainCircuit, Terminal,
-  Orbit, Crosshair, Waves, Swords, Dna, Cable, Rocket, Network, Building2,
-  Atom, Gauge, Sparkles, Target, ShieldAlert, Sun, Wind, Skull, ShieldCheck,
-  Droplets, Brain, Radio, Car, Mic, Plane, Key, Flame, Globe2, Grid, Scissors, Bot, Search,
-  GitFork, TrendingUp, Cpu, Camera, Eye, Gem
+  UserRound, Settings, ImageIcon, Send, ShoppingBag, Camera, Sparkles, Globe 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -21,6 +17,9 @@ import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { GlobalAudioPlayer } from '@/components/player/GlobalAudioPlayer';
+import { StudioCameraModal } from '@/components/studio/StudioCameraModal';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
+import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 
 interface AppShellProps {
   children: ReactNode;
@@ -33,7 +32,11 @@ export function AppShell({ children }: AppShellProps) {
   const notifications = useAppStore((state) => state.notifications);
   const unreadNotifs = notifications.filter(n => !n.read).length;
 
+  const conversations = useAppStore((state) => state.conversations);
+  const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -57,6 +60,8 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
+  const currentDisplayName = currentUser?.displayName || currentUser?.username || 'User';
+
   return (
     <div className="app-shell relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
       <ScrollProgress />
@@ -76,9 +81,18 @@ export function AppShell({ children }: AppShellProps) {
         "transition-all duration-300 ease-out"
       )}>
         
-        {/* Brand Logo & Live Theme Morpher */}
-        <div className={cn("flex items-center mb-8", sidebarCollapsed ? "justify-center px-0" : "justify-between px-1")}>
-          <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+        {/* Brand Logo & Live Controls */}
+        <div className={cn("flex items-center mb-6", sidebarCollapsed ? "justify-center px-0" : "justify-between px-1")}>
+          <button
+            onClick={() => {
+              if (location === '/') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                setLocation('/');
+              }
+            }}
+            className="flex items-center gap-3 group cursor-pointer text-left"
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
               Y
             </div>
@@ -88,8 +102,13 @@ export function AppShell({ children }: AppShellProps) {
                 <span className="text-[0.62rem] font-mono text-primary tracking-wider uppercase mt-0.5 font-bold">Bharat Edition 🇮🇳</span>
               </div>
             )}
-          </Link>
-          {!sidebarCollapsed && <ThemeMorpher />}
+          </button>
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-1">
+              <LanguageSelector />
+              <ThemeMorpher />
+            </div>
+          )}
           {!sidebarCollapsed && (
             <button
               onClick={() => setSidebarCollapsed(true)}
@@ -114,6 +133,19 @@ export function AppShell({ children }: AppShellProps) {
           )}
         </div>
 
+        {/* Ultra Studio Camera Quick Launcher */}
+        <button
+          onClick={() => setStudioOpen(true)}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-gradient-to-r from-primary via-purple-600 to-accent text-white font-display font-extrabold text-xs shadow-lg glow-neon-primary hover:scale-[1.02] active:scale-95 transition-all mb-4 cursor-pointer",
+            sidebarCollapsed && "p-2.5"
+          )}
+          title="Ultra Studio Camera 4K"
+        >
+          <Camera className="w-4 h-4 shrink-0" />
+          {!sidebarCollapsed && <span>Studio Camera 4K</span>}
+        </button>
+
         {/* Navigation List */}
         <nav className="flex-1 space-y-1.5">
           {navItems.map((item) => {
@@ -124,8 +156,7 @@ export function AppShell({ children }: AppShellProps) {
               <button
                 key={item.label}
                 onClick={() => {
-                  if ('action' in item && typeof item.action === 'function') item.action();
-                  else if ('path' in item && typeof item.path === 'string') setLocation(item.path);
+                  if ('path' in item && typeof item.path === 'string') setLocation(item.path);
                 }}
                 className={cn(
                   "flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50 hover-lift",
@@ -133,33 +164,15 @@ export function AppShell({ children }: AppShellProps) {
                   isActive && "text-foreground bg-primary/10 font-bold border border-primary/20 border-l-2 border-l-primary"
                 )}
               >
-                {item.label === 'Create' ? (
-                  <MagneticButton>
-                    <div className={cn("flex items-center w-full", sidebarCollapsed ? "justify-center gap-0" : "gap-4")}>
-                      <div className="relative">
-                        <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
-                        {item.badge && (
-                          <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
-                            {item.badge}
-                          </span>
-                        )}
-                      </div>
-                      {!sidebarCollapsed && <span>{item.label}</span>}
-                    </div>
-                  </MagneticButton>
-                ) : (
-                  <>
-                    <div className="relative">
-                      <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
-                      {item.badge && (
-                        <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                    {!sidebarCollapsed && <span>{item.label}</span>}
-                  </>
-                )}
+                <div className="relative">
+                  <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "text-primary fill-primary/20 drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]")} />
+                  {item.badge && (
+                    <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[0.62rem] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-background">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                {!sidebarCollapsed && <span>{item.label}</span>}
               </button>
             );
           })}
@@ -172,11 +185,11 @@ export function AppShell({ children }: AppShellProps) {
               <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
                 <Avatar className="w-9 h-9 border border-border/50 shrink-0 group-hover:ring-2 ring-primary/40 transition-all">
                   <AvatarImage src={currentUser.avatarUrl} />
-                  <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 {!sidebarCollapsed && (
                   <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{currentUser.displayName}</h4>
+                    <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{currentDisplayName}</h4>
                     <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
                   </div>
                 )}
@@ -198,7 +211,16 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
       <nav className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 md:hidden">
-        <button onClick={() => setLocation('/')} className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}>
+        <button
+          onClick={() => {
+            if (location === '/') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              setLocation('/');
+            }
+          }}
+          className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}
+        >
           <Home className="w-6 h-6" />
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
@@ -211,13 +233,14 @@ export function AppShell({ children }: AppShellProps) {
             <PlusSquare className="w-6 h-6" />
           </button>
         </MagneticButton>
-        <button onClick={() => setLocation('/notifications')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/notifications') && "text-primary")}>
-          <Heart className="w-6 h-6" />
-          {unreadNotifs > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white font-mono text-[0.55rem] font-bold min-w-[16px] h-4 px-1 rounded-full ring-2 ring-background flex items-center justify-center">
-              {unreadNotifs > 99 ? '99+' : unreadNotifs}
+        <button onClick={() => setLocation('/messages')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/messages') && "text-primary")} aria-label="Messages">
+          <MessageCircle className="w-6 h-6" />
+          {unreadMessages > 0 && (
+            <span className="absolute top-0.5 right-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold ring-2 ring-background px-1">
+              {unreadMessages > 9 ? '9+' : unreadMessages}
             </span>
           )}
+          {location.startsWith('/messages') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
@@ -237,9 +260,9 @@ export function AppShell({ children }: AppShellProps) {
               <div className="flex items-center gap-3">
                 <Avatar className="w-9 h-9">
                   <AvatarImage src={currentUser.avatarUrl} />
-                  <AvatarFallback className="font-display font-bold">{currentUser.displayName.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="font-bold text-sm">{currentUser.displayName}</span>
+                <span className="font-bold text-sm">{currentDisplayName}</span>
               </div>
             )}
 
@@ -287,6 +310,8 @@ export function AppShell({ children }: AppShellProps) {
       </Dialog>
 
       <GlobalAudioPlayer />
+      <StudioCameraModal isOpen={studioOpen} onOpenChange={setStudioOpen} />
+      <PwaInstallPrompt />
     </div>
   );
 }
@@ -301,7 +326,7 @@ function AccountSwitcherDialog() {
   const userList = Object.values(users || {});
   const filteredUsers = userList.filter((u) => 
     (u.displayName || u.username || '').toLowerCase().includes(search.toLowerCase()) || 
-    (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.username || '').toLowerCase().includes(search.toLowerCase()) || 
     (u.bio && u.bio.toLowerCase().includes(search.toLowerCase()))
   );
 

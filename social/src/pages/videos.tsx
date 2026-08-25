@@ -15,7 +15,7 @@ import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 function UploadVideoDialog() {
-  const createVideo = useAppStore((s) => s.createVideo);
+  const createVideo = useAppStore((s: any) => s.createVideo);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'file' | 'url'>('file');
   const [title, setTitle] = useState('');
@@ -255,10 +255,10 @@ function matchesGenre(video: any, author: any, genre: string): boolean {
 }
 
 export default function Videos() {
-  const users = useAppStore((s) => s.users);
-  const videos = useAppStore((s) => s.videos);
-  const loadVideos = useAppStore((s) => s.loadVideos);
-  const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const users = useAppStore((s: any) => s.users);
+  const videos = useAppStore((s: any) => s.videos);
+  const loadVideos = useAppStore((s: any) => s.loadVideos);
+  const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
   const [formatTab, setFormatTab] = useState<'All' | 'short' | 'standard'>('All');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
@@ -266,19 +266,19 @@ export default function Videos() {
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
   useEffect(() => {
-    for (const video of videos) {
+    for (const video of (videos || [])) {
       if (!users[video.authorId]) loadUserProfile(video.authorId);
     }
   }, [videos, users, loadUserProfile]);
 
-  const filteredVideos = videos.filter((v) => {
+  const filteredVideos = (videos || []).filter((v: any) => {
     const formatMatch = formatTab === 'All' || v.type === formatTab;
     const author = users[v.authorId];
     const genreMatch = matchesGenre(v, author, selectedGenre);
     return formatMatch && genreMatch;
   });
 
-  const swiperVideos = filteredVideos.filter(v => v.type === 'short');
+  const swiperVideos = filteredVideos.filter((v: any) => v.type === 'short');
   const activeSwiperList = swiperVideos.length > 0 ? swiperVideos : filteredVideos;
 
   return (
@@ -345,7 +345,7 @@ export default function Videos() {
           animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {filteredVideos.map((video) => {
+          {filteredVideos.map((video: any) => {
             const author = users[video.authorId];
 
             return (
@@ -356,7 +356,7 @@ export default function Videos() {
                 whileHover={{ y: -4 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 onClick={() => {
-                  const idx = activeSwiperList.findIndex(v => v.id === video.id);
+                  const idx = activeSwiperList.findIndex((v: any) => v.id === video.id);
                   if (idx !== -1) setActiveReelIndex(idx);
                 }}
               >

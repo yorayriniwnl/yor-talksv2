@@ -1,3 +1,5 @@
+
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toast } from 'sonner';
@@ -7,36 +9,20 @@ import {
   getStoredTokens,
   setStoredTokens,
   type BackendUser,
+  type BackendStory,
+  type BackendEvent,
   type BackendPost,
   type BackendCommunity,
   type BackendNotification,
   type BackendConversation,
   type BackendMessage,
-  type BackendEvent,
   type BackendProduct,
   type BackendArticle,
   type BackendVideo,
   type BackendLiveStream,
-  type BackendStory,
-  type Tokens
-} from './api-client';
-import { connectSocket, disconnectSocket } from './socket-client';
-import {
-  MOCK_USERS,
-  MOCK_POSTS,
-  MOCK_STORIES,
-  MOCK_COMMUNITIES,
-  MOCK_EVENTS,
-  MOCK_PRODUCTS,
-  MOCK_ARTICLES,
-  MOCK_VIDEOS,
-  MOCK_LIVESTREAMS,
-  MOCK_CONVERSATIONS,
-  MOCK_MESSAGES_BY_CONVERSATION,
-  MOCK_NOTIFICATIONS,
-  MOCK_SHOWCASES,
-  MOCK_PROFILE_COMMENTS
-} from './mockData';
+  type AuthTokens
+} from '@/lib/api-client';
+import { connectSocket, disconnectSocket } from '@/lib/socket-client';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -303,15 +289,15 @@ function mapPost(p: BackendPost, currentUserId?: string): Post {
     authorId: p.authorId,
     content: p.content || '',
     media: p.images && p.images.length ? p.images : undefined,
-    likes: likedBy.length,
-    comments: comments.length,
-    shares: p.shareCount ?? 0,
+    likes: (p as any).likesCount ?? (Array.isArray((p as any).likes) ? (p as any).likes.length : ((p as any).likes || 0)),
+    comments: (p as any).commentsCount ?? (Array.isArray((p as any).comments) ? (p as any).comments.length : ((p as any).comments || 0)),
+    shares: (p as any).shareCount ?? (p as any).shares ?? 0,
     resonanceScore: spatial.resonanceScore,
     x: spatial.x,
     y: spatial.y,
     createdAt: p.createdAt || new Date().toISOString(),
-    likedByMe: currentUserId ? likedBy.includes(currentUserId) : false,
-    savedByMe: currentUserId ? bookmarkedBy.includes(currentUserId) : false,
+    likedByMe: !!(p as any).likedByMe,
+    savedByMe: !!(p as any).savedByMe,
   };
 }
 
@@ -400,7 +386,7 @@ function mapLiveStream(s: BackendLiveStream): LiveStream {
     hostId: s.hostId,
     title: s.title || 'Live Stream',
     coverUrl: s.coverUrl || '',
-    kind: (s.kind as LiveStream['kind']) || 'live',
+    kind: ((s.kind as any) === 'audio' ? 'audio' : 'video') as LiveStream['kind'],
     status: (s.status as LiveStream['status']) || 'live',
     viewers: s.viewers ?? 0,
     startsAt: s.startsAt || new Date().toISOString(),
@@ -442,35 +428,15 @@ function mapNotification(n: BackendNotification): Notification {
   };
 }
 
-const MOCK_ACHIEVEMENTS: Achievement[] = [
-  { id: 'ac1', title: 'First Post', description: 'Publish your first post', icon: 'Sparkles', unlocked: true, progress: 1, goal: 1, xp: 50 },
-  { id: 'ac2', title: 'Rising Voice', description: 'Reach 1,000 followers', icon: 'TrendingUp', unlocked: true, progress: 1420, goal: 1000, xp: 200 },
-  { id: 'ac3', title: 'Community Builder', description: 'Join 5 communities', icon: 'Users', unlocked: true, progress: 5, goal: 5, xp: 100 },
-  { id: 'ac4', title: 'Spatial Pioneer', description: 'Explore the 3D Multiverse canvas', icon: 'Compass', unlocked: true, progress: 1, goal: 1, xp: 150 },
-  { id: 'ac5', title: 'Tourney Champion', description: 'Win an esports tournament bracket', icon: 'Trophy', unlocked: true, progress: 3, goal: 3, xp: 500 },
-  { id: 'ac6', title: 'Soundboard Maestro', description: 'Trigger 50 streamer sound pads', icon: 'Volume2', unlocked: true, progress: 50, goal: 50, xp: 150 },
-  { id: 'ac7', title: 'Arcade Grandmaster', description: 'Score over 10,000 pts in Arcade games', icon: 'Gamepad2', unlocked: true, progress: 12450, goal: 10000, xp: 300 },
-  { id: 'ac8', title: 'Spatial Lounge Host', description: 'Host a proximity audio lounge room', icon: 'Headphones', unlocked: true, progress: 1, goal: 1, xp: 250 },
-  { id: 'ac9', title: 'Marketplace Trader', description: 'List or purchase a verified hardware item', icon: 'ShoppingBag', unlocked: true, progress: 2, goal: 2, xp: 200 },
-  { id: 'ac10', title: 'Quantum Pioneer', description: 'Read or publish a research paper in Articles', icon: 'Atom', unlocked: true, progress: 5, goal: 5, xp: 350 },
-  { id: 'ac11', title: 'Clan Veteran', description: 'Complete 10 clan war scrim matches', icon: 'Shield', unlocked: true, progress: 10, goal: 10, xp: 400 },
-  { id: 'ac12', title: 'Verified Legend', description: 'Attain the diamond checkmark badge', icon: 'Award', unlocked: true, progress: 1, goal: 1, xp: 1000 },
-  { id: 'ac13', title: 'Speed Demon', description: 'Record a sub-7 minute Nordschleife lap in Sim Racing', icon: 'Flame', unlocked: true, progress: 1, goal: 1, xp: 450 },
-  { id: 'ac14', title: 'Cryo Master', description: 'Benchmark memory frequency past 10,000 MT/s at -200°C', icon: 'Snowflake', unlocked: true, progress: 1, goal: 1, xp: 600 },
-  { id: 'ac15', title: 'Eco Swarm Admiral', description: 'Plant over 10,000 tree seeds with autonomous drone fleets', icon: 'Sprout', unlocked: true, progress: 50000, goal: 10000, xp: 500 },
-  { id: 'ac16', title: 'Master Bladesmith', description: 'Forge or collect a 512+ layer folded Damascus blade', icon: 'Sword', unlocked: true, progress: 1, goal: 1, xp: 350 },
-  { id: 'ac17', title: 'Optical Cryptographer', description: 'Lock a 1,000+ km satellite quantum key downlink', icon: 'Radio', unlocked: true, progress: 1, goal: 1, xp: 550 },
-  { id: 'ac18', title: 'Multiverse Sovereign', description: 'Unlock level 50 and earn 5,000+ total platform XP', icon: 'Crown', unlocked: true, progress: 5400, goal: 5000, xp: 2000 }
-];
 
-const MOCK_AI_MESSAGES: AIMessage[] = [
-  { id: 'ai1', role: 'assistant', content: "Greetings! I'm your Yor Talks Multiverse AI assistant. How can I help you explore communities, analyze trends, or draft high-resonance posts today?", createdAt: new Date().toISOString() },
-];
+
+
 
 interface AppState {
   currentUser: User | null;
-  tokens: Tokens | null;
+  tokens: AuthTokens | null;
   isInitializing: boolean;
+  hasMoreFeed?: boolean;
   authError: string | null;
   users: Record<string, User>;
   posts: Post[];
@@ -501,6 +467,7 @@ interface AppState {
   loadPost: (postId: string) => Promise<void>;
   likePost: (postId: string) => Promise<void>;
   addPost: (content: string, media?: string[], poll?: Post['poll']) => Promise<void>;
+  updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
 
@@ -549,7 +516,7 @@ interface AppState {
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: string }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   toggleSaveProduct: (productId: string) => void;
-  sendAIMessage: (content: string) => void;
+  sendAIMessage: (content: string) => Promise<void>;
   updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
   toggleMuteUser: (userId: string) => Promise<void>;
@@ -589,32 +556,32 @@ function setupRealtime(
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      currentUser: MOCK_USERS['user-roy'],
+      currentUser: null,
       tokens: null,
       isInitializing: false,
       authError: null,
-      users: MOCK_USERS,
-      posts: MOCK_POSTS,
-      stories: MOCK_STORIES,
-      communities: MOCK_COMMUNITIES,
-      liveStreams: MOCK_LIVESTREAMS,
-      events: MOCK_EVENTS,
-      products: MOCK_PRODUCTS,
-      articles: MOCK_ARTICLES,
-      videos: MOCK_VIDEOS,
-      achievements: MOCK_ACHIEVEMENTS,
-      notifications: MOCK_NOTIFICATIONS,
-      conversations: MOCK_CONVERSATIONS,
-      messagesByConversation: MOCK_MESSAGES_BY_CONVERSATION,
-      aiMessages: MOCK_AI_MESSAGES,
+      users: {},
+      posts: [],
+      stories: [],
+      communities: [],
+      liveStreams: [],
+      events: [],
+      products: [],
+      articles: [],
+      videos: [],
+      achievements: [],
+      notifications: [],
+      conversations: [],
+      messagesByConversation: {},
+      aiMessages: [],
       privacy: {
         profileVisibility: 'public',
         allowDmFromStrangers: true,
         messageRequests: true,
         twoFactorEnabled: false,
       },
-      profileComments: MOCK_PROFILE_COMMENTS,
-      showcases: MOCK_SHOWCASES,
+      profileComments: {},
+      showcases: {},
 
       login: async (identifier, password) => {
         set({ authError: null });
@@ -658,7 +625,7 @@ export const useAppStore = create<AppState>()(
       },
 
       switchAccount: (userId: string) => {
-        const targetUser = get().users[userId] || MOCK_USERS[userId];
+        const targetUser = get().users[userId];
         if (targetUser) {
           set({ currentUser: targetUser });
           toast.success(`Switched account to @${targetUser.username}`, {
@@ -684,7 +651,7 @@ export const useAppStore = create<AppState>()(
               set((state) => ({
                 currentUser: mapped,
                 tokens,
-                users: { ...MOCK_USERS, ...state.users, [mapped.id]: mapped },
+                users: { ...state.users, [mapped.id]: mapped },
               }));
               setupRealtime(set, get);
             }
@@ -695,10 +662,10 @@ export const useAppStore = create<AppState>()(
         }
 
         // If still no user after token check, use mock user for demo mode
-        const currentUser = get().currentUser || MOCK_USERS['user-roy'];
+        const currentUser = get().currentUser;
         set((state) => ({
           currentUser,
-          users: { ...MOCK_USERS, ...state.users },
+          users: { ...state.users },
         }));
 
         setupRealtime(set, get);
@@ -725,7 +692,8 @@ export const useAppStore = create<AppState>()(
 
       loadFeed: async () => {
         try {
-          const backendPosts = await api.getFeed(1, 50);
+          const res = await api.getFeed();
+          const backendPosts = res.data;
           const currentUserId = get().currentUser?.id;
           if (backendPosts && backendPosts.length > 0) {
             set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)) });
@@ -734,7 +702,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ posts: MOCK_POSTS });
+        set({ posts: [] });
       },
 
       loadPost: async (postId) => {
@@ -743,12 +711,7 @@ export const useAppStore = create<AppState>()(
           const post = await api.getPost(postId);
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: [...state.posts, mapPost(post, currentUserId)] }));
-        } catch {
-          const mock = MOCK_POSTS.find(p => p.id === postId);
-          if (mock) {
-            set((state) => ({ posts: [...state.posts, mock] }));
-          }
-        }
+        } catch {}
       },
 
       likePost: async (postId) => {
@@ -766,6 +729,15 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      updateProfile: (updates) => {
+        set((state) => ({
+          currentUser: state.currentUser ? { ...state.currentUser, ...updates } : state.currentUser,
+          users: state.currentUser ? {
+            ...state.users,
+            [state.currentUser.id]: { ...state.users[state.currentUser.id], ...updates }
+          } : state.users
+        }));
+      },
       addPost: async (content, media, poll) => {
         const currentUserId = get().currentUser?.id || 'user-roy';
         const newPost: Post = {
@@ -825,7 +797,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ communities: MOCK_COMMUNITIES });
+        set({ communities: [] });
       },
 
       createCommunity: async (name, slug, description) => {
@@ -877,7 +849,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ notifications: MOCK_NOTIFICATIONS });
+        set({ notifications: [] });
       },
 
       markNotificationRead: async (id) => {
@@ -904,8 +876,8 @@ export const useAppStore = create<AppState>()(
           // fallback
         }
         set({
-          conversations: MOCK_CONVERSATIONS,
-          messagesByConversation: MOCK_MESSAGES_BY_CONVERSATION
+          conversations: [],
+          messagesByConversation: {}
         });
       },
 
@@ -918,14 +890,6 @@ export const useAppStore = create<AppState>()(
           }
         } catch {
           // fallback
-        }
-        if (!get().messagesByConversation[conversationId] && MOCK_MESSAGES_BY_CONVERSATION[conversationId]) {
-          set((state) => ({
-            messagesByConversation: {
-              ...state.messagesByConversation,
-              [conversationId]: MOCK_MESSAGES_BY_CONVERSATION[conversationId]
-            }
-          }));
         }
       },
 
@@ -965,11 +929,7 @@ export const useAppStore = create<AppState>()(
           const user = await api.getProfile(userId);
           const mapped = mapUser(user);
           set((state) => ({ users: { ...state.users, [mapped.id]: mapped } }));
-        } catch {
-          if (MOCK_USERS[userId]) {
-            set((state) => ({ users: { ...state.users, [userId]: MOCK_USERS[userId] } }));
-          }
-        }
+        } catch {}
       },
 
       followUser: async (userId) => {
@@ -1036,7 +996,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ stories: MOCK_STORIES });
+        set({ stories: [] });
       },
 
       viewStory: async (storyId) => {
@@ -1105,7 +1065,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ events: MOCK_EVENTS });
+        set({ events: [] });
       },
 
       createEvent: async (input) => {
@@ -1160,7 +1120,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ products: MOCK_PRODUCTS });
+        set({ products: [] });
       },
 
       createProduct: async (input) => {
@@ -1190,7 +1150,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ articles: MOCK_ARTICLES });
+        set({ articles: [] });
       },
 
       createArticle: async (input) => {
@@ -1233,7 +1193,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ videos: MOCK_VIDEOS });
+        set({ videos: [] });
       },
 
       createVideo: async (input) => {
@@ -1275,7 +1235,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ liveStreams: MOCK_LIVESTREAMS });
+        set({ liveStreams: [] });
       },
 
       createStream: async (input) => {
@@ -1311,22 +1271,34 @@ export const useAppStore = create<AppState>()(
         products: state.products.map(p => p.id === productId ? { ...p, savedByMe: !p.savedByMe } : p)
       })),
 
-      sendAIMessage: (content) => set((state) => {
-        const userMsg: AIMessage = { id: `ai_${Date.now()}`, role: 'user', content, createdAt: new Date().toISOString() };
-        const replies = [
-          "That's a fascinating vision for the Multiverse! I've indexed your prompt and will suggest relevant communities and collaborators.",
-          "Great question! When designing spatial interfaces in 2026, balancing 3D depth with accessibility is paramount. Let me know if you need CSS code snippets!",
-          "I analyzed trending topics across Yor Talks: Spatial AI, Custom Hardware, and Generative Shaders are gaining massive resonance this week."
-        ];
-        const randomReply = replies[Math.floor(Math.random() * replies.length)];
-        const reply: AIMessage = {
-          id: `ai_${Date.now() + 1}`,
-          role: 'assistant',
-          content: randomReply,
-          createdAt: new Date(Date.now() + 600).toISOString(),
-        };
-        return { aiMessages: [...state.aiMessages, userMsg, reply] };
-      }),
+      
+      sendAIMessage: async (content) => {
+        const userMsg = { id: `ai_${Date.now()}`, role: 'user', content, createdAt: new Date().toISOString() };
+        // Optimistic update
+        set((state) => ({ aiMessages: [...state.aiMessages, userMsg as any] }));
+        try {
+          const res = await api.request<any>('/ai/chat', {
+            method: 'POST',
+            body: JSON.stringify({ message: content })
+          });
+          const reply = {
+            id: `ai_${Date.now() + 1}`,
+            role: 'assistant',
+            content: res?.message || res?.content || "No response received",
+            createdAt: new Date().toISOString(),
+          };
+          set((state) => ({ aiMessages: [...state.aiMessages, reply as any] }));
+        } catch (e) {
+          const errorReply = {
+            id: `ai_${Date.now() + 1}`,
+            role: 'assistant',
+            content: "Sorry, the Yor Talks AI engine is currently offline.",
+            createdAt: new Date().toISOString(),
+          };
+          set((state) => ({ aiMessages: [...state.aiMessages, errorReply as any] }));
+        }
+      },
+
 
       updatePrivacy: async (patch) => {
         const { twoFactorEnabled, ...backendPatch } = patch;

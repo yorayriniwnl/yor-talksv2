@@ -23,9 +23,12 @@ import { PageTransition } from '@/components/ui/PageTransition';
 
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
+  const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
+const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
 const Home = lazyWithRetry(() => import('@/pages/home'));
 const Explore = lazyWithRetry(() => import('@/pages/explore'));
 const Profile = lazyWithRetry(() => import('@/pages/profile'));
+  const Projects = lazyWithRetry(() => import('@/pages/projects'));
 const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
 const Messages = lazyWithRetry(() => import('@/pages/messages'));
 const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
@@ -74,6 +77,9 @@ const FanClub = lazyWithRetry(() => import('@/pages/fan-club'));
 const SquadComms = lazyWithRetry(() => import('@/pages/squad-comms'));
 const CustomRoom = lazyWithRetry(() => import('@/pages/custom-room'));
 const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
+const Grievance = lazyWithRetry(() => import('@/pages/grievance'));
+
+import { PushNotificationManager } from '@/components/notifications/PushNotificationManager';
 
 // ═══════════════════════════════════════════════════════════════
 //  PROTECTED ROUTES
@@ -94,6 +100,7 @@ function ProtectedRoutes() {
                 <Route path="/explore" component={Explore} />
                 <Route path="/post/:id" component={PostDetail} />
                 <Route path="/profile/:id?" component={Profile} />
+                <Route path="/projects" component={Projects} />
                 <Route path="/messages/:id?" component={Messages} />
                 <Route path="/notifications" component={Notifications} />
                 <Route path="/settings" component={Settings} />
@@ -141,6 +148,7 @@ function ProtectedRoutes() {
                 <Route path="/comms" component={SquadComms} />
                 <Route path="/rooms" component={CustomRoom} />
                 <Route path="/podcasts" component={PodcastStudio} />
+                <Route path="/grievance" component={Grievance} />
 
                 {/* 404 */}
                 <Route component={NotFound} />
@@ -175,20 +183,27 @@ function Router() {
   }
 
   return (
-    <Switch>
-      {!currentUser && <Route path="/auth" component={Auth} />}
-      {!currentUser && (
-        <Route>
-          <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
-        </Route>
-      )}
-      {currentUser && <Route path="/auth" component={AuthRedirect} />}
-      {currentUser && (
-        <Route>
-          <ProtectedRoutes />
-        </Route>
-      )}
-    </Switch>
+      <Switch>
+        {!currentUser && (
+          <>
+            <Route path="/auth" component={Auth} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/grievance" component={Grievance} />
+            <Route>
+              <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
+            </Route>
+          </>
+        )}
+        {currentUser && (
+          <>
+            <Route path="/auth" component={AuthRedirect} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route>
+              <ProtectedRoutes />
+            </Route>
+          </>
+        )}
+      </Switch>
   );
 }
 
@@ -204,6 +219,7 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <Router />
           </WouterRouter>
+          <PushNotificationManager />
           <Toaster />
         </TooltipProvider>
       </MotionConfig>

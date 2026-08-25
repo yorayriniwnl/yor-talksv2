@@ -6,11 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Heart, MessageCircle, Share2, X, Music, Volume2, VolumeX, 
-  Send, Bookmark, Sparkles, Copy, Check, QrCode 
+  Send, Bookmark, Sparkles, Copy, Check, QrCode, Zap, 
+  Gauge, Subtitles, Wand2 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
+import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
+import { StudioCameraModal } from '@/components/studio/StudioCameraModal';
+import { RichCommentComposer, RichCommentData } from '@/components/comments/RichCommentComposer';
+import { RichCommentList, CommentItem } from '@/components/comments/RichCommentList';
 import { toast } from 'sonner';
 
 interface ReelsSwiperProps {
@@ -19,19 +24,10 @@ interface ReelsSwiperProps {
   onClose: () => void;
 }
 
-interface ReelComment {
-  id: string;
-  user: string;
-  avatar: string;
-  text: string;
-  time: string;
-  likes: number;
-}
-
-const INITIAL_REEL_COMMENTS: ReelComment[] = [
-  { id: '1', user: 'Valkyrie_Zero', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', text: 'The motion graphics lighting is incredible! 🤯🔥', time: '1h ago', likes: 42 },
-  { id: '2', user: 'Kai_Takahashi', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', text: 'Need the tutorial for that camera shader! ✨', time: '3h ago', likes: 18 },
-  { id: '3', user: 'Elena_Rostova', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', text: 'Looping this 10 times in a row 🔥', time: '5h ago', likes: 89 },
+const INITIAL_REEL_COMMENTS: CommentItem[] = [
+  { id: '1', authorId: 'u1', authorName: 'Valkyrie_Zero', authorUsername: 'valkyrie', authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', content: 'The motion graphics lighting is incredible! 🤯🔥', createdAt: new Date(Date.now() - 3600000).toISOString(), likes: 42 },
+  { id: '2', authorId: 'u2', authorName: 'Kai_Takahashi', authorUsername: 'kai_t', authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', content: 'Need the tutorial for that camera shader! ✨', gifUrl: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif', createdAt: new Date(Date.now() - 7200000).toISOString(), likes: 18 },
+  { id: '3', authorId: 'u3', authorName: 'Elena_Rostova', authorUsername: 'elena_r', authorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', content: 'Looping this 10 times in a row 🔥', tipAmount: 50, createdAt: new Date(Date.now() - 14400000).toISOString(), likes: 89 },
 ];
 
 export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwiperProps) {
@@ -51,9 +47,15 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
 
   // Comments drawer & share modal
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<ReelComment[]>(INITIAL_REEL_COMMENTS);
-  const [newComment, setNewComment] = useState('');
+  const [comments, setComments] = useState<CommentItem[]>(INITIAL_REEL_COMMENTS);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Pro Playback & Studio Controls
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
+  const [studioOpen, setStudioOpen] = useState<boolean>(false);
+  const [activeRemixAudio, setActiveRemixAudio] = useState<{ title: string; artist: string } | undefined>(undefined);
+  const [tippingCreator, setTippingCreator] = useState<{ id: string; displayName: string; username: string; avatarUrl?: string } | null>(null);
 
   // Keyboard navigation for reels
   useEffect(() => {
@@ -122,23 +124,24 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     lastTapRef.current = now;
   };
 
-  const handleSendComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
+  const handleAddRichComment = (data: RichCommentData) => {
     sounds.playPop();
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        user: currentUser?.displayName || 'You',
-        avatar: currentUser?.avatarUrl || 'https://picsum.photos/seed/you/200/200',
-        text: newComment.trim(),
-        time: 'Just now',
-        likes: 0,
-      },
-    ]);
-    setNewComment('');
+    const newCommentItem: CommentItem = {
+      id: Date.now().toString(),
+      authorId: currentUser?.id || 'guest',
+      authorName: currentUser?.displayName || currentUser?.username || 'You',
+      authorUsername: currentUser?.username || 'you',
+      authorAvatar: currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200',
+      content: data.text,
+      imageUrl: data.imageUrl,
+      gifUrl: data.gifUrl,
+      voiceNoteUrl: data.voiceNoteUrl,
+      voiceDuration: data.voiceDuration,
+      tipAmount: data.tipAmount,
+      likes: 0,
+      createdAt: new Date().toISOString(),
+    };
+    setComments((prev) => [newCommentItem, ...prev]);
   };
 
   const handleCopyShareLink = () => {
@@ -158,21 +161,55 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="fixed inset-0 z-50 bg-black flex justify-center font-sans text-white"
       >
-        {/* Top Floating Close & Audio Mute Button */}
+        {/* Top Floating Action Bar */}
         <div className="absolute top-6 left-4 right-4 z-50 flex items-center justify-between pointer-events-auto">
-          <button 
-            onClick={onClose} 
-            className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onClose} 
+              className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
-          >
-            {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
-          </button>
+            {/* Playback Speed Controller */}
+            <button
+              onClick={() => {
+                const speeds = [1, 1.5, 2, 0.5];
+                const nextSpeed = speeds[(speeds.indexOf(playbackSpeed) + 1) % speeds.length];
+                setPlaybackSpeed(nextSpeed);
+                sounds.playPop();
+                toast.success(`Speed: ${nextSpeed}x`);
+              }}
+              className="px-3 py-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10 text-xs font-mono font-bold flex items-center gap-1"
+              title="Change Speed"
+            >
+              <Gauge className="w-3.5 h-3.5 text-primary" /> {playbackSpeed}x
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Auto-Subtitles Toggle */}
+            <button
+              onClick={() => {
+                setShowSubtitles(!showSubtitles);
+                sounds.playPop();
+              }}
+              className={cn(
+                "p-3 rounded-full backdrop-blur-md transition-colors border border-white/10",
+                showSubtitles ? "bg-primary text-black font-bold" : "bg-black/50 text-white hover:bg-black/80"
+              )}
+              title="Toggle Captions"
+            >
+              <Subtitles className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+            >
+              {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         <div 
@@ -237,6 +274,29 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                     </span>
                   </div>
                   
+                  {/* Direct Instant UPI Creator Tip Button */}
+                  <div className="flex flex-col items-center gap-1 group">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sounds.playPop();
+                        if (author) {
+                          setTippingCreator({
+                            id: author.id,
+                            displayName: author.displayName,
+                            username: author.username,
+                            avatarUrl: author.avatarUrl,
+                          });
+                        }
+                      }}
+                      className="p-3.5 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-full text-black font-bold backdrop-blur-md hover:scale-110 transition-all shadow-lg border border-amber-300/40 glow-neon-primary cursor-pointer"
+                      title="Tip Creator via UPI"
+                    >
+                      <Zap className="w-6 h-6 fill-black" />
+                    </button>
+                    <span className="text-amber-400 text-[0.68rem] font-mono font-black drop-shadow-md">Tip UPI</span>
+                  </div>
+
                   {/* Comments Button */}
                   <div className="flex flex-col items-center gap-1 group">
                     <button 
@@ -285,7 +345,16 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                   </div>
 
                   {/* Spinning Audio Vinyl Disc */}
-                  <div className="p-1 rounded-full bg-zinc-900 border border-white/20 animate-[spin_4s_linear_infinite] shadow-xl">
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sounds.playPop();
+                      setActiveRemixAudio({ title: video.title, artist: author?.displayName || 'Soundtrack' });
+                      setStudioOpen(true);
+                    }}
+                    className="p-1 rounded-full bg-zinc-900 border border-white/20 animate-[spin_4s_linear_infinite] shadow-xl cursor-pointer hover:scale-110 transition-transform"
+                    title="Use this sound"
+                  >
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={author?.avatarUrl} />
                       <AvatarFallback>M</AvatarFallback>
@@ -310,9 +379,19 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                     {video.title}
                   </p>
 
-                  <div className="flex items-center gap-2 text-white/90 text-xs font-mono bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full w-fit border border-white/10">
+                  {/* Remix Sound Banner */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sounds.playPop();
+                      setActiveRemixAudio({ title: video.title, artist: author?.displayName || 'Soundtrack' });
+                      setStudioOpen(true);
+                    }}
+                    className="flex items-center gap-2 text-white/90 text-xs font-mono bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full w-fit border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
+                  >
                     <Music className="w-3.5 h-3.5 animate-pulse text-primary" />
-                    <span className="truncate max-w-[200px]">Original Audio — {author?.displayName || 'Soundtrack'}</span>
+                    <span className="truncate max-w-[170px]">Audio: {video.title}</span>
+                    <span className="text-[0.62rem] px-1.5 py-0.5 rounded bg-primary/30 text-primary font-bold ml-1">Use Sound</span>
                   </div>
                 </div>
               </div>
@@ -337,35 +416,18 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto py-4 space-y-4 hide-scrollbar">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex items-start gap-3 text-xs">
-                    <Avatar className="w-8 h-8 shrink-0 border border-white/10">
-                      <AvatarImage src={c.avatar} />
-                      <AvatarFallback>{c.user.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{c.user}</span>
-                        <span className="text-[0.62rem] text-zinc-400 font-mono">{c.time}</span>
-                      </div>
-                      <p className="text-zinc-200 mt-0.5 leading-relaxed">{c.text}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex-1 overflow-y-auto py-3 space-y-3 hide-scrollbar">
+                <RichCommentList comments={comments} />
               </div>
 
-              <form onSubmit={handleSendComment} className="pt-3 border-t border-border/40 flex items-center gap-2">
-                <Input
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment…"
-                  className="rounded-xl bg-zinc-900 border-border/60 text-xs h-10 text-white placeholder:text-zinc-500"
+              <div className="pt-2 border-t border-border/40">
+                <RichCommentComposer
+                  postId={videos[playingIndex]?.id || 'reel'}
+                  creatorUser={users[videos[playingIndex]?.authorId]}
+                  placeholder="Add a comment, photo, GIF or tip..."
+                  onCommentSubmit={handleAddRichComment}
                 />
-                <Button type="submit" size="sm" className="rounded-xl h-10 px-4 bg-primary text-primary-foreground font-bold shrink-0">
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -405,6 +467,25 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Upi Tip Jar Modal */}
+        {tippingCreator && (
+          <UpiTipJarModal
+            creator={tippingCreator}
+            isOpen={Boolean(tippingCreator)}
+            onOpenChange={(open) => {
+              if (!open) setTippingCreator(null);
+            }}
+          />
+        )}
+
+        {/* Studio Camera Remix Modal */}
+        <StudioCameraModal
+          isOpen={studioOpen}
+          onOpenChange={setStudioOpen}
+          defaultMode="reel"
+          initialAudioTrack={activeRemixAudio}
+        />
       </motion.div>
     </AnimatePresence>
   );

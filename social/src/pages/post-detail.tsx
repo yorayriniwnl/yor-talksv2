@@ -2,22 +2,46 @@ import { useParams, Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
-import { ArrowLeft, MessageCircle, Sparkles, SendHorizontal } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion } from 'framer-motion';
-import { fadeInUp, springGentle } from '@/lib/motion';
-import { formatDistanceToNow } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { fadeInUp } from '@/lib/motion';
+import { RichCommentComposer, RichCommentData } from '@/components/comments/RichCommentComposer';
+import { RichCommentList, CommentItem } from '@/components/comments/RichCommentList';
 
 export default function PostDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
   const posts = useAppStore((s) => s.posts);
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
-  const [replyText, setReplyText] = useState('');
   
   const post = posts.find((p) => p.id === id);
+
+  // Initial demo comments
+  const [commentList, setCommentList] = useState<CommentItem[]>([
+    {
+      id: 'c1',
+      authorId: 'u_aarav',
+      authorName: 'Aarav Patel',
+      authorUsername: 'aarav_p',
+      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200',
+      content: 'This Bharat creator update is revolutionary! The UPI tip jar is instant. 🇮🇳',
+      tipAmount: 100,
+      likes: 14,
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: 'c2',
+      authorId: 'u_sneha',
+      authorName: 'Sneha Sharma',
+      authorUsername: 'sneha_creates',
+      authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200',
+      content: 'Loving the Cyberpunk and Bharat Gold filters on the 4K studio camera!',
+      gifUrl: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
+      likes: 8,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+    },
+  ]);
 
   if (!post) {
     return (
@@ -30,27 +54,41 @@ export default function PostDetail() {
     );
   }
 
-  // Mock related posts
+  // Related posts
   const relatedPosts = posts.filter(p => p.id !== id).slice(0, 2);
 
-  // Mock comments
-  const comments = [
-    { id: 'c1', authorId: Object.keys(users)[1] || currentUser?.id, content: 'This is an insightful comment about the post above. Really makes you think.', createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: 'c2', authorId: Object.keys(users)[2] || currentUser?.id, content: 'Completely agree with this perspective!', createdAt: new Date(Date.now() - 7200000).toISOString() },
-  ];
+  const handleAddComment = (data: RichCommentData) => {
+    const newComment: CommentItem = {
+      id: `c_${Date.now()}`,
+      authorId: currentUser?.id || 'guest',
+      authorName: currentUser?.displayName || currentUser?.username || 'You',
+      authorUsername: currentUser?.username || 'you',
+      authorAvatar: currentUser?.avatarUrl,
+      content: data.text,
+      imageUrl: data.imageUrl,
+      gifUrl: data.gifUrl,
+      voiceNoteUrl: data.voiceNoteUrl,
+      voiceDuration: data.voiceDuration,
+      tipAmount: data.tipAmount,
+      likes: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    setCommentList((prev) => [newComment, ...prev]);
+  };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 font-sans">
       {/* Sticky Glass Header */}
-      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 flex items-center gap-4">
+      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 flex items-center gap-4 border-b border-border/30">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9">
+          <Button variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9 cursor-pointer">
             <ArrowLeft className="w-4.5 h-4.5" />
           </Button>
         </Link>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display font-bold text-base leading-tight">Thread</h2>
-          <p className="text-[0.65rem] text-muted-foreground font-mono">Conversation View</p>
+          <h2 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h2>
+          <p className="text-[0.65rem] text-muted-foreground font-mono">Replies, Photos, GIFs & Super Comments 🇮🇳</p>
         </div>
       </div>
 
@@ -60,87 +98,41 @@ export default function PostDetail() {
         animate="animate"
         className="max-w-2xl mx-auto px-4 sm:px-6 pt-6"
       >
-        <div className="mb-8 rounded-2xl overflow-hidden surface-1 border border-border/40 shadow-sm">
+        <div className="mb-6 rounded-3xl overflow-hidden surface-1 border border-border/40 shadow-sm">
           <PostCard post={post} />
         </div>
 
-        {/* Thread Section */}
-        <div className="mb-10">
-          <div className="showcase-section-title mb-6">
+        {/* Rich Media Comment Section */}
+        <div className="mb-10 space-y-4">
+          <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            <h3>Replies</h3>
+            <h3 className="font-display font-extrabold text-sm text-foreground">
+              Replies & Super Comments ({commentList.length})
+            </h3>
           </div>
           
-          {/* Composer */}
-          <div className="comment-composer mb-6">
-            <Avatar className="w-10 h-10 shrink-0 ring-1 ring-border/50">
-              <AvatarImage src={currentUser?.avatarUrl} />
-              <AvatarFallback className="font-display font-bold">{currentUser?.displayName.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 flex flex-col gap-3">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Post your reply..."
-                className="w-full bg-transparent resize-none outline-none text-sm placeholder:text-muted-foreground/60 min-h-[50px]"
-              />
-              <div className="flex justify-end">
-                <Button 
-                  disabled={!replyText.trim()}
-                  className={cn(
-                    "rounded-xl font-bold text-xs h-9 px-5 transition-all",
-                    replyText.trim() ? "glow-neon-primary bg-primary" : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  <SendHorizontal className="w-3.5 h-3.5 mr-1.5" /> Reply
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* Rich Composer */}
+          <RichCommentComposer
+            postId={post.id}
+            creatorUser={users[post.authorId]}
+            placeholder="Add a reply, photo, GIF, voice note or tip..."
+            onCommentSubmit={handleAddComment}
+          />
 
-          {/* Comments list */}
-          <div className="space-y-3">
-            {comments.map((comment) => {
-              const author = users[comment.authorId as string];
-              if (!author) return null;
-              return (
-                <div key={comment.id} className="comment-card group">
-                  <Avatar className="w-9 h-9 shrink-0 ring-1 ring-border">
-                    <AvatarImage src={author.avatarUrl} />
-                    <AvatarFallback className="font-display text-xs">{author.displayName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-sm hover:underline cursor-pointer">
-                        {author.displayName}
-                      </span>
-                      <span className="text-muted-foreground text-xs font-mono">
-                        @{author.username}
-                      </span>
-                      <span className="text-muted-foreground text-[0.65rem] font-mono ml-auto">
-                        {formatDistanceToNow(new Date(comment.createdAt))} ago
-                      </span>
-                    </div>
-                    <p className="text-sm font-serif leading-relaxed text-foreground/90">
-                      {comment.content}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* Comments List */}
+          <RichCommentList comments={commentList} />
         </div>
 
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <div>
-            <div className="showcase-section-title mb-4">
+            <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4 text-accent" />
-              <h3>More from the community</h3>
+              <h3 className="font-display font-extrabold text-sm text-foreground">More from the community</h3>
             </div>
             <div className="space-y-4">
               {relatedPosts.map(p => (
-                <div key={p.id} className="surface-1 rounded-2xl overflow-hidden border border-border/30">
+                <div key={p.id} className="surface-1 rounded-3xl overflow-hidden border border-border/30">
                   <PostCard post={p} />
                 </div>
               ))}

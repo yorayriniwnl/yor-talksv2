@@ -12,8 +12,8 @@ export interface UserRecord {
   permissions: string[];
   createdAt: string;
   updatedAt: string;
-  followers: string[];
-  following: string[];
+  
+  
   settings: UserSettings;
   emailVerified?: boolean;
   passwordResetRequired?: boolean;
@@ -45,9 +45,9 @@ export interface PostRecord {
   images: string[];
   createdAt: string;
   updatedAt: string;
-  likedBy: string[];
-  comments: CommentRecord[];
-  bookmarkedBy: string[];
+  likesCount: number;
+  commentsCount: number;
+  bookmarksCount: number;
   shareCount: number;
   reactions?: Record<string, string[]>;
   tags?: string[];
@@ -208,7 +208,7 @@ export interface VideoRecord {
   thumbnailUrl: string;
   title: string;
   views: number;
-  likedBy: string[];
+  likesCount: number;
   createdAt: string;
   type: string;
 }

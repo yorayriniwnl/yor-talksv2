@@ -21,6 +21,7 @@ import { sounds } from '@/lib/sound';
 import { TiltCard } from '@/components/ui/TiltCard';
 import { RippleEffect } from '@/components/ui/RippleEffect';
 import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
+import { RichCommentComposer } from '@/components/comments/RichCommentComposer';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -101,12 +102,14 @@ export function CreatePost() {
   const isNearingLimit = content.length > MAX_POST_LENGTH * 0.8;
   const isOverLimit = content.length > MAX_POST_LENGTH;
 
+  const currentDisplayName = currentUser.displayName || currentUser.username || 'User';
+
   return (
     <div className="border-b border-border/40 pb-4 pt-5 px-5 sm:px-6">
       <div className="flex gap-4">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-primary/20">
           <AvatarImage src={currentUser.avatarUrl} />
-          <AvatarFallback>{currentUser.displayName.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{currentDisplayName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <textarea
@@ -225,12 +228,15 @@ export function CreatePost() {
 
 export function PostCard({ post }: { post: PostType }) {
   const users = useAppStore((state) => state.users);
+  const currentUser = useAppStore((state) => state.currentUser);
   const likePost = useAppStore((state) => state.likePost);
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
   const [, setLocation] = useLocation();
   const { particles, burst: heartBurst } = useHeartBurst();
+  const [commentText, setCommentText] = useState('');
+  const [showCommentInput, setShowCommentInput] = useState(false);
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
 
@@ -251,6 +257,16 @@ export function PostCard({ post }: { post: PostType }) {
 
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [showHeartOverlay, setShowHeartOverlay] = useState(false);
+
+  const handleDoubleTap = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!post.likedByMe) {
+      likePost(post.id);
+    }
+    setShowHeartOverlay(true);
+    setTimeout(() => setShowHeartOverlay(false), 900);
+  };
 
   const openMediaViewer = (event: React.MouseEvent, index: number) => {
     event.stopPropagation();
@@ -262,37 +278,108 @@ export function PostCard({ post }: { post: PostType }) {
     if (!post.media || post.media.length === 0) return null;
     const len = post.media.length;
     
-    return (
-      <div className={cn("mt-3 grid gap-[3px] overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300 image-hover-zoom", len === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-        {post.media.map((url, index) => (
+    const authorDisplayName = author.displayName || author.username || 'User';
+
+    // Single image: keep current behavior
+    if (len === 1) {
+      return (
+        <div 
+          className="mt-3 overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300 image-hover-zoom"
+          onDoubleClick={handleDoubleTap}
+        >
+          {showHeartOverlay && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <Heart 
+                className="w-20 h-20 text-white fill-white drop-shadow-lg" 
+                style={{ animation: 'heart-pop 0.9s ease-out forwards' }}
+              />
+            </div>
+          )}
           <button
             type="button"
-            key={index} 
-            onClick={(event) => openMediaViewer(event, index)}
-            className={cn("relative overflow-hidden bg-muted group/media select-none text-left focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", len === 3 && index === 0 && 'col-span-2')}
-            aria-label={`Open image ${index + 1} of ${len}`}
+            onClick={(event) => openMediaViewer(event, 0)}
+            className="relative overflow-hidden bg-muted group/media select-none text-left w-full focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Open image 1 of 1"
           >
             <img 
-              src={url} 
-              alt={`${author.displayName}'s post`} 
-              className={cn(
-                "w-full object-cover transition-transform duration-700 group-hover/media:scale-[1.02] aspect-auto",
-                len === 1 ? 'max-h-[480px]' : 'max-h-[320px]',
-                len === 3 && index === 0 ? 'max-h-[280px]' : ''
-              )} 
+              src={post.media[0]} 
+              alt={`${authorDisplayName}'s post`} 
+              className="w-full object-cover transition-transform duration-700 group-hover/media:scale-[1.02] max-h-[480px]" 
               loading="lazy" 
             />
-            <span className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-7 text-[0.7rem] font-medium text-white opacity-0 transition-all duration-300 group-hover/media:translate-y-0 group-hover/media:opacity-100 group-focus-visible/media:translate-y-0 group-focus-visible/media:opacity-100">
-              View in gallery
-            </span>
           </button>
-        ))}
+        </div>
+      );
+    }
+    
+    // Multiple images: swipable carousel
+    return (
+      <div className="mt-3 relative overflow-hidden rounded-2xl border border-border/20 shadow-sm" onDoubleClick={handleDoubleTap}>
+        {showHeartOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <Heart 
+              className="w-20 h-20 text-white fill-white drop-shadow-lg" 
+              style={{ animation: 'heart-pop 0.9s ease-out forwards' }}
+            />
+          </div>
+        )}
+        <div 
+          className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const index = Math.round(el.scrollLeft / el.clientWidth);
+            setActiveMediaIndex(index);
+          }}
+        >
+          {post.media.map((url, index) => (
+            <button
+              type="button"
+              key={index}
+              onClick={(event) => openMediaViewer(event, index)}
+              className="min-w-full snap-center flex-shrink-0 relative bg-muted select-none text-left focus-visible:outline-none"
+              aria-label={`Image ${index + 1} of ${len}`}
+            >
+              <img 
+                src={url} 
+                alt={`${authorDisplayName}'s post`} 
+                className="w-full object-cover max-h-[480px]" 
+                loading="lazy" 
+              />
+            </button>
+          ))}
+        </div>
+        {/* Dot indicators */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          {post.media.map((_, index) => (
+            <span
+              key={index}
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all",
+                index === activeMediaIndex 
+                  ? "bg-white w-2 h-2 shadow-sm" 
+                  : "bg-white/50"
+              )}
+            />
+          ))}
+        </div>
       </div>
     );
   };
 
+  const authorDisplayName = author.displayName || author.username || 'User';
+
   return (
     <TiltCard className="w-full block">
+      <style>{`
+        @keyframes heart-pop {
+          0% { transform: scale(0); opacity: 0; }
+          15% { transform: scale(1.2); opacity: 1; }
+          30% { transform: scale(0.95); opacity: 1; }
+          45% { transform: scale(1.05); opacity: 0.9; }
+          80% { transform: scale(1); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 0; }
+        }
+      `}</style>
       {post.media && post.media.length > 0 && (
         <CinematicMediaLightbox
           media={post.media}
@@ -300,7 +387,7 @@ export function PostCard({ post }: { post: PostType }) {
           onActiveIndexChange={setActiveMediaIndex}
           open={mediaViewerOpen}
           onOpenChange={setMediaViewerOpen}
-          authorName={author.displayName}
+          authorName={authorDisplayName}
           caption={post.content}
         />
       )}
@@ -313,11 +400,11 @@ export function PostCard({ post }: { post: PostType }) {
       >
       <div className="flex gap-3.5">
         <MiniProfileCard user={author}>
-          <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View ${author.displayName}'s profile`}>
+          <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View ${authorDisplayName}'s profile`}>
             <div className="relative">
               <Avatar className="h-11 w-11 ring-2 ring-primary/10 transition-all duration-300 hover:ring-primary/30 shadow-sm">
                 <AvatarImage src={author.avatarUrl} />
-                <AvatarFallback className="font-display font-bold">{author.displayName.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="font-display font-bold">{authorDisplayName.charAt(0)}</AvatarFallback>
               </Avatar>
             </div>
           </Link>
@@ -328,7 +415,7 @@ export function PostCard({ post }: { post: PostType }) {
             <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
               <MiniProfileCard user={author}>
                 <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} className="truncate font-bold text-[0.88rem] tracking-tight hover:underline">
-                  {author.displayName}
+                  {authorDisplayName}
                 </Link>
               </MiniProfileCard>
               {author.verified && (
@@ -443,7 +530,7 @@ export function PostCard({ post }: { post: PostType }) {
                     {...tapScale}
                     aria-label="Reply to post"
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); setLocation(`/post/${post.id}`); }}
+                    onClick={(event) => { event.stopPropagation(); setShowCommentInput(prev => !prev); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-surface-2 transition-colors">
                       <MessageCircle className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
@@ -516,6 +603,30 @@ export function PostCard({ post }: { post: PostType }) {
           </TooltipProvider>
         </div>
       </div>
+
+      {post.comments > 0 && (
+        <button
+          type="button"
+          className="px-5 sm:px-6 pb-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={(e) => { e.stopPropagation(); setLocation(`/post/${post.id}`); }}
+        >
+          View all {post.comments} comments
+        </button>
+      )}
+
+      {/* Inline Rich Comment Composer (Photos, GIFs, Voice Memos, Super Comments) */}
+      {showCommentInput && (
+        <div className="px-5 pb-4 pt-1 sm:px-6" onClick={(e) => e.stopPropagation()}>
+          <RichCommentComposer
+            postId={post.id}
+            creatorUser={author}
+            onCommentSubmit={(data) => {
+              toast({ title: 'Rich comment published! 💬' });
+              setShowCommentInput(false);
+            }}
+          />
+        </div>
+      )}
     </motion.article>
     <HeartBurstLayer particles={particles} />
     </TiltCard>

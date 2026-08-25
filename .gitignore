@@ -6,3 +6,13 @@ dist.bak
 .env
 .env.*
 !.env.example
+*.bak
+*.tmp
+update-*.js
+fix-*.js
+add-phase-tables.*
+migrate.sql
+api-server/delete-meat.ts
+api-server/find-meat*.ts
+api-server/scan-redis.ts
+api-server/migrate.cjs

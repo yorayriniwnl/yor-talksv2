@@ -4,6 +4,7 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { attachSocketServer } from "./socket/index.js";
 import { startNotificationWorker } from "./workers/notification-worker.js";
+import { startFeedWorker } from "./workers/feed-worker.js";
 import { env } from "./config/env.js";
 
 async function main() {
@@ -11,6 +12,7 @@ async function main() {
 
   const httpServer = createServer(app);
   const io = attachSocketServer(httpServer);
+  const feedWorker = await startFeedWorker().catch((err) => { logger.warn({ err }, "Feed worker failed to start"); return null; });
   const notificationWorker = await startNotificationWorker().catch((err) => {
     logger.warn({ err }, "Notification worker failed to start");
     return null;
@@ -43,6 +45,7 @@ async function main() {
         io.close((err) => (err ? reject(err) : resolve()));
       });
       await notificationWorker?.close();
+      await feedWorker?.close();
       await pool.end();
       logger.info("Shutdown complete");
       process.exit(0);

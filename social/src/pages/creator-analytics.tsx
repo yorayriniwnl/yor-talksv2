@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BarChart3, IndianRupee, TrendingUp, Users, ArrowUpRight, 
@@ -11,12 +11,23 @@ import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { api } from '@/lib/api-client';
 
 export default function CreatorAnalytics() {
-  const [balanceINR, setBalanceINR] = useState(48500);
+  const [balanceMinor, setBalanceMinor] = useState(4850000); // fallback 48500 INR
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
-  const [upiId, setUpiId] = useState('ayushroy@okhdfcbank');
-  const [withdrawAmount, setWithdrawAmount] = useState('25000');
+  const [upiId, setUpiId] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+
+  useEffect(() => {
+    api.getCreatorWallet().then(data => {
+      if (data && typeof data.balanceMinor === 'number') {
+        setBalanceMinor(data.balanceMinor);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const balanceINR = balanceMinor / 100;
 
   const handleWithdraw = () => {
     const amt = Number(withdrawAmount);
@@ -26,7 +37,7 @@ export default function CreatorAnalytics() {
     }
     sounds.playChime();
     triggerConfetti();
-    setBalanceINR(b => b - amt);
+    setBalanceMinor(b => Math.max(0, b - amt * 100));
     toast.success(`🎉 Instant UPI Payout of ₹${amt.toLocaleString()} processed to ${upiId}! Reference ID: UPI-${Date.now()}`);
     setIsWithdrawOpen(false);
   };

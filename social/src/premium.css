@@ -85,6 +85,194 @@ body {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
+.premium-topbar {
+  border-bottom: 1px solid hsl(var(--border) / 0.72);
+  background: hsl(var(--background) / 0.78);
+  backdrop-filter: blur(18px) saturate(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(1.05);
+}
+
+.premium-topbar__inner {
+  display: flex;
+  min-height: 4.25rem;
+  align-items: center;
+  gap: 1rem;
+  width: min(100%, 80rem);
+  margin: 0 auto;
+  padding: 0.65rem clamp(1rem, 2vw, 2rem);
+}
+
+.premium-topbar__title {
+  display: flex;
+  min-width: 10.5rem;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.premium-topbar__kicker {
+  overflow: hidden;
+  margin: 0 0 0.08rem;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.61rem;
+  font-weight: 600;
+  letter-spacing: 0.075em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.premium-topbar__heading {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.premium-topbar__mobile-mark {
+  display: none;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 0.7rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-family: var(--app-font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  box-shadow: 0 6px 16px hsl(var(--primary) / 0.22);
+}
+
+.premium-search {
+  display: flex;
+  width: min(100%, 28rem);
+  height: 2.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-inline: auto;
+  padding: 0 0.6rem 0 0.85rem;
+  border: 1px solid hsl(var(--border) / 0.86);
+  border-radius: 0.85rem;
+  background: hsl(var(--card) / 0.7);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+  text-align: left;
+  transition: border-color 180ms var(--premium-ease), box-shadow 180ms var(--premium-ease), background-color 180ms var(--premium-ease);
+}
+
+.premium-search:hover,
+.premium-search:focus-visible {
+  border-color: hsl(var(--primary) / 0.42);
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.09);
+  color: hsl(var(--foreground));
+  outline: none;
+}
+
+.premium-search__shortcut {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0.21rem 0.36rem;
+  border: 1px solid hsl(var(--border) / 0.8);
+  border-radius: 0.35rem;
+  background: hsl(var(--muted) / 0.72);
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.premium-topbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-width: max-content;
+}
+
+.premium-icon-button,
+.premium-topbar__profile {
+  display: inline-flex;
+  position: relative;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  color: hsl(var(--muted-foreground));
+  transition: color 180ms var(--premium-ease), background-color 180ms var(--premium-ease), border-color 180ms var(--premium-ease);
+}
+
+.premium-icon-button {
+  width: 2.4rem;
+}
+
+.premium-icon-button:hover,
+.premium-topbar__profile:hover {
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted) / 0.75);
+  color: hsl(var(--foreground));
+}
+
+.premium-topbar__profile {
+  padding: 0.18rem;
+}
+
+.premium-topbar__profile > span {
+  padding-right: 0.45rem;
+}
+
+.premium-notification-dot {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.08rem;
+  display: grid;
+  min-width: 1rem;
+  height: 1rem;
+  place-items: center;
+  padding: 0 0.16rem;
+  border: 2px solid hsl(var(--background));
+  border-radius: 99px;
+  background: hsl(350 82% 58%);
+  color: white;
+  font-family: var(--app-font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+}
+
+.premium-create-button {
+  display: inline-flex;
+  height: 2.4rem;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-family: var(--app-font-sans);
+  font-size: 0.76rem;
+  font-weight: 700;
+  box-shadow: 0 8px 18px hsl(var(--primary) / 0.2);
+  transition: transform 180ms var(--premium-ease), box-shadow 180ms var(--premium-ease), filter 180ms var(--premium-ease);
+}
+
+.premium-create-button:hover {
+  box-shadow: 0 10px 24px hsl(var(--primary) / 0.28);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.premium-create-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
 .app-shell__rail {
   width: 15.5rem !important;
   padding: 1.25rem 0.8rem !important;
@@ -133,6 +321,11 @@ body {
 }
 
 .app-shell__mobile-nav {
+  position: fixed !important;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto !important;
   min-height: calc(4.6rem + env(safe-area-inset-bottom));
   padding: 0.65rem 1.1rem calc(0.65rem + env(safe-area-inset-bottom)) !important;
   background: hsl(var(--background) / 0.9) !important;
@@ -201,6 +394,16 @@ body {
   box-shadow: 0 10px 24px hsl(var(--premium-shadow-deep) / 0.11) !important;
 }
 
+.premium-interactive-card {
+  transition: transform 180ms var(--premium-ease), box-shadow 180ms var(--premium-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .premium-interactive-card:hover {
+    transform: translateY(-1px);
+  }
+}
+
 /* Make the feed read like a comfortable stream rather than a collection of
  * application cards. */
 .app-shell__content .max-w-\[1100px\] {
@@ -233,6 +436,12 @@ body {
   border-radius: 1.125rem;
 }
 
+/* Direct messages owns a viewport-height layout. Keep its composer clear of
+ * the app header and touch navigation on every device size. */
+.messages-page {
+  height: calc(100dvh - 8.75rem - env(safe-area-inset-bottom));
+}
+
 .level-badge {
   border-radius: 999px !important;
   border-color: hsl(var(--primary) / 0.2) !important;
@@ -247,10 +456,52 @@ body {
 }
 
 /* The persistent player was competing with the primary mobile controls. It
- * remains usable on larger screens, where it can breathe beside content. */
+ * It is intentionally out of the primary reading experience. */
+.app-shell > .fixed.bottom-3.left-3.right-3 {
+  display: none !important;
+}
+
+.app-shell__content .surface-1:empty {
+  display: none;
+}
+
 @media (max-width: 767px) {
-  .app-shell > .fixed.bottom-3.left-3.right-3 {
-    display: none !important;
+  .premium-topbar__inner {
+    min-height: 3.85rem;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+  }
+
+  .premium-topbar__title {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .premium-topbar__mobile-mark {
+    display: grid;
+  }
+
+  .premium-topbar__kicker {
+    display: none;
+  }
+
+  .premium-topbar__heading {
+    font-size: 0.88rem;
+  }
+
+  .premium-search {
+    width: 2.4rem;
+    flex: 0 0 2.4rem;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .premium-search > span,
+  .premium-search__shortcut,
+  .premium-create-button,
+  .premium-topbar__profile {
+    display: none;
   }
 
   .app-shell__content > main > .min-h-screen {
@@ -272,6 +523,16 @@ body {
   .app-shell__content {
     padding-bottom: 2rem;
   }
+
+  .messages-page {
+    height: calc(100dvh - 4.25rem);
+  }
+
+  .app-shell__rail {
+    position: sticky !important;
+    top: 0;
+    height: 100dvh !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -280,4 +541,87 @@ body {
   .app-shell *::after {
     scroll-behavior: auto !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOCUS — Accessible focus-visible ring
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.5);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR — Thin, clean, only on hover
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.app-shell__content {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.app-shell__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-shell__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-shell__content::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+}
+
+.app-shell__content::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DOUBLE-TAP HEART — Instagram-style like animation
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes heart-pop {
+  0%  { transform: scale(0); opacity: 0; }
+  15% { transform: scale(1.2); opacity: 1; }
+  30% { transform: scale(0.95); opacity: 1; }
+  45% { transform: scale(1.05); opacity: 0.9; }
+  80% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMFORT — Subtle micro-interactions
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Smooth image loading */
+.app-shell__content img {
+  transition: opacity 300ms var(--premium-ease);
+}
+
+/* Text selection color */
+.app-shell__content ::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}
+
+/* Links feel tappable */
+.app-shell__content a {
+  transition: color 150ms var(--premium-ease);
+}
+
+/* Buttons have a consistent pressed feel */
+.app-shell__content button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Hide scrollbar on horizontal scroll containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -1,3 +1,4 @@
+import { ai } from '../services/ai/AIGateway.js';
 import { type Request, type Response } from "express";
 import { PostService } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
@@ -39,7 +40,21 @@ export class PostController {
   };
 
   createPost = async (req: Request, res: Response) => {
+    
     const content = typeof req.body.content === "string" ? req.body.content : "";
+    
+    // AI Moderation check
+    if (content) {
+      try {
+        const modResult = await ai.moderateContent(content);
+        if (modResult.isToxic) {
+          return res.status(400).json({ success: false, error: "Content violated community guidelines", flags: modResult.flags });
+        }
+      } catch (e) {
+        console.error("Moderation check failed (soft fail):", e);
+      }
+    }
+
     const images = Array.isArray(req.body.images) ? req.body.images : [];
     const post = await this.postService.createPost(req.user?.id ?? "", content, images);
     return res.status(201).json(createResponse("Post created", post));
@@ -121,22 +136,31 @@ export class PostController {
     return res.status(200).json(createResponse("Share count updated", post));
   };
 
+  
   feed = async (req: Request, res: Response) => {
-    const { page, pageSize } = parsePagination(req);
-    const result = this.paginationService.paginate(await this.postService.getFeed(), page, pageSize);
-    return res.status(200).json(createResponse("Feed loaded", result.items, { page: result.page, pageSize: result.pageSize, total: result.total }));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const cursor = req.query.cursor as string | undefined;
+    const items = await this.postService.getFeed(cursor, limit, req.user?.id);
+    const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
+    return res.status(200).json(createResponse("Feed loaded", items, { nextCursor, limit }));
   };
 
   trendingFeed = async (req: Request, res: Response) => {
-    const { page, pageSize } = parsePagination(req);
-    const result = this.paginationService.paginate(await this.postService.getTrendingFeed(), page, pageSize);
-    return res.status(200).json(createResponse("Trending feed loaded", result.items, { page: result.page, pageSize: result.pageSize, total: result.total }));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const cursorStr = req.query.cursor as string | undefined;
+    const cursor = cursorStr ? Number(cursorStr) : undefined;
+    const items = await this.postService.getTrendingFeed(cursor, limit, req.user?.id);
+    const nextCursor = items.length === limit ? items[items.length - 1].score : null;
+    return res.status(200).json(createResponse("Trending feed loaded", items, { nextCursor, limit }));
   };
 
   userFeed = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
-    const { page, pageSize } = parsePagination(req);
-    const result = this.paginationService.paginate(await this.postService.getUserFeed(userId), page, pageSize);
-    return res.status(200).json(createResponse("User feed loaded", result.items, { page: result.page, pageSize: result.pageSize, total: result.total }));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const cursor = req.query.cursor as string | undefined;
+    const items = await this.postService.getUserFeed(userId, cursor, limit, req.user?.id);
+    const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
+    return res.status(200).json(createResponse("User feed loaded", items, { nextCursor, limit }));
   };
+
 }

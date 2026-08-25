@@ -10,3 +10,7 @@ export function setIo(io: Server): void {
 export function emitToUser(userId: string, event: string, payload: unknown): void {
   ioInstance?.to(userId).emit(event, payload);
 }
+
+export function getIo(): Server | null {
+  return ioInstance;
+}

@@ -1,7 +1,8 @@
-import { eq, or, and, desc } from "drizzle-orm";
-import { messagesTable, conversationsTable } from "@workspace/db/schema";
+import { eq, or, and, desc, inArray } from "drizzle-orm";
+import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
+import { randomUUID } from "crypto";
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
@@ -9,7 +10,6 @@ export class MessageRepository {
     return created as MessageRecord;
   }
 
-  /** Fixed: this previously had no ORDER BY at all, so chat messages could come back in any order. */
   async listConversation(conversationId: string): Promise<MessageRecord[]> {
     return (await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId)).orderBy(messagesTable.createdAt)) as MessageRecord[];
   }
@@ -44,6 +44,25 @@ export class ConversationRepository {
     return created as ConversationRecord;
   }
 
+  async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
+    const [created] = await db.insert(conversationsTable).values({
+      id: randomUUID(),
+      participantA: creatorId, // Legacy column
+      participantB: creatorId, // Legacy column
+      participantIds: [creatorId, ...memberIds],
+      isGroup: true,
+      title,
+    }).returning();
+    
+    const members = [creatorId, ...memberIds].map(id => ({
+      conversationId: created.id,
+      userId: id,
+      role: id === creatorId ? "admin" : "member"
+    }));
+    await db.insert(conversationMembersTable).values(members);
+    return created as ConversationRecord;
+  }
+
   async findBetween(participantA: string, participantB: string): Promise<ConversationRecord | undefined> {
     const [conversation] = await db.select().from(conversationsTable).where(
       or(
@@ -59,12 +78,45 @@ export class ConversationRepository {
     return conversation as ConversationRecord | undefined;
   }
 
-  /** Didn't exist before — there was no way to list "my conversations" at all. */
+  async getMembers(conversationId: string): Promise<string[]> {
+    const members = await db.select({ userId: conversationMembersTable.userId })
+      .from(conversationMembersTable)
+      .where(eq(conversationMembersTable.conversationId, conversationId));
+    
+    if (members.length > 0) {
+      return members.map(m => m.userId);
+    }
+    
+    // Fallback to legacy array if members table is empty
+    const conv = await this.findById(conversationId);
+    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : []);
+  }
+
   async listForUser(userId: string): Promise<ConversationRecord[]> {
-    return (await db
-      .select()
-      .from(conversationsTable)
-      .where(or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId)))
-      .orderBy(desc(conversationsTable.updatedAt))) as ConversationRecord[];
+    // 1. Get from new junction table
+    const memberRows = await db.select({ conversationId: conversationMembersTable.conversationId })
+      .from(conversationMembersTable)
+      .where(eq(conversationMembersTable.userId, userId));
+    
+    const convIds = memberRows.map(r => r.conversationId);
+    
+    // 2. Query conversations matching those IDs, OR the legacy participantA/B
+    if (convIds.length > 0) {
+      return (await db
+        .select()
+        .from(conversationsTable)
+        .where(or(
+          eq(conversationsTable.participantA, userId),
+          eq(conversationsTable.participantB, userId),
+          inArray(conversationsTable.id, convIds)
+        ))
+        .orderBy(desc(conversationsTable.updatedAt))) as ConversationRecord[];
+    } else {
+      return (await db
+        .select()
+        .from(conversationsTable)
+        .where(or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId)))
+        .orderBy(desc(conversationsTable.updatedAt))) as ConversationRecord[];
+    }
   }
 }

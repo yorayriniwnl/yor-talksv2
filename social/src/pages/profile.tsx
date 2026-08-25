@@ -304,7 +304,7 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
 //  PROFILE PAGE — Main Component
 // ═══════════════════════════════════════════════════════════════════════════
 export default function Profile() {
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
   const [, setLocation] = useLocation();
   const currentUser = useAppStore(s => s.currentUser);
   const users = useAppStore(s => s.users);
@@ -327,6 +327,8 @@ export default function Profile() {
   const [showAwardPicker, setShowAwardPicker] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
+  const [followerListOpen, setFollowerListOpen] = useState(false);
+  const [followerListMode, setFollowerListMode] = useState<'followers' | 'following'>('followers');
 
   const profileId = id || currentUser?.id;
   const profile = profileId ? users[profileId] : null;
@@ -557,14 +559,14 @@ export default function Profile() {
               <AnimatedCounter value={userPosts.length} className="profile-stat-value" />
               <span className="profile-stat-label">Posts</span>
             </div>
-            <div className="profile-stat hover-lift">
+            <button onClick={() => { setFollowerListMode('followers'); setFollowerListOpen(true); }} className="profile-stat hover-lift cursor-pointer hover:opacity-70 transition-opacity">
               <AnimatedCounter value={profile.followers || 0} className="profile-stat-value" />
               <span className="profile-stat-label">Followers</span>
-            </div>
-            <div className="profile-stat hover-lift">
+            </button>
+            <button onClick={() => { setFollowerListMode('following'); setFollowerListOpen(true); }} className="profile-stat hover-lift cursor-pointer hover:opacity-70 transition-opacity">
               <AnimatedCounter value={profile.following || 0} className="profile-stat-value" />
               <span className="profile-stat-label">Following</span>
-            </div>
+            </button>
           </div>
 
           {/* ── Mutual Followers ────────────────────────────────────── */}
@@ -886,7 +888,57 @@ export default function Profile() {
           onClose={() => setActiveReelIndex(null)}
         />
       )}
+
+      <FollowerListModal
+        isOpen={followerListOpen}
+        onOpenChange={setFollowerListOpen}
+        mode={followerListMode}
+        userId={profile?.id || ''}
+      />
     </div>
   );
 }
 
+function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boolean; onOpenChange: (open: boolean) => void; mode: 'followers' | 'following'; userId: string }) {
+  const users = useAppStore((state) => state.users);
+  const currentUser = useAppStore((state) => state.currentUser);
+  const allUsers = Object.values(users);
+  
+  // Mock: show a subset of users as followers/following
+  const displayUsers = useMemo(() => {
+    return allUsers
+      .filter(u => u.id !== userId)
+      .slice(0, 20);
+  }, [allUsers, userId]);
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[420px] rounded-3xl max-h-[70vh] flex flex-col p-0">
+        <DialogHeader className="p-4 pb-2 border-b border-border/40">
+          <DialogTitle className="font-display font-bold text-base text-center capitalize">{mode}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {displayUsers.map((user) => (
+            <Link key={user.id} href={`/profile/${user.id}`} onClick={() => onOpenChange(false)}>
+              <div className="flex items-center gap-3 hover:bg-muted/40 rounded-xl p-2 transition-colors cursor-pointer">
+                <Avatar className="w-10 h-10 border border-border/50">
+                  <AvatarImage src={user.avatarUrl} />
+                  <AvatarFallback className="font-bold text-xs">{(user.displayName || user.username || 'U').charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-sm truncate">{user.displayName}</h4>
+                  <p className="text-xs text-muted-foreground font-mono truncate">@{user.username}</p>
+                </div>
+                {user.id !== currentUser?.id && (
+                  <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold h-8 shrink-0">
+                    Follow
+                  </Button>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

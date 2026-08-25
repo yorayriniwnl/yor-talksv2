@@ -99,6 +99,12 @@ export const fadeInUp: Variants = {
     y: 0,
     transition: springGentle,
   },
+  initial: { opacity: 0, y: 12 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: springGentle,
+  },
 };
 
 /** Fade in + scale — for modals, popovers */

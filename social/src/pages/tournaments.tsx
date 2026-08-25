@@ -165,7 +165,7 @@ const BRACKET_MATCHES: BracketMatch[] = [
 
 export default function Tournaments() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute('/tournaments/:id');
+  const [, params] = useRoute<{ id: string }>('/tournaments/:id');
   const activeTourneyId = params?.id;
 
   const [tournaments, setTournaments] = useState(TOURNAMENTS);

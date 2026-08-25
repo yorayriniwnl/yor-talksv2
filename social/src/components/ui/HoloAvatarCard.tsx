@@ -25,11 +25,11 @@ export function HoloAvatarCard({ user, level = 5 }: HoloAvatarCardProps) {
         <div className="steam-frame-neon p-1 rounded-full mb-3 shadow-xl">
           <Avatar className="w-20 h-20 border-2 border-background">
             <AvatarImage src={user.avatarUrl} />
-            <AvatarFallback className="font-display font-bold text-2xl">{user.displayName.charAt(0)}</AvatarFallback>
+            <AvatarFallback className="font-display font-bold text-2xl">{(user.displayName || user.username || 'U').charAt(0)}</AvatarFallback>
           </Avatar>
         </div>
 
-        <h4 className="font-display font-extrabold text-base leading-tight truncate">{user.displayName}</h4>
+        <h4 className="font-display font-extrabold text-base leading-tight truncate">{user.displayName || user.username || 'User'}</h4>
         <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
 
         <div className="level-badge mt-3 text-xs">

@@ -1,9 +1,41 @@
-import { eq, desc, ilike } from "drizzle-orm";
-import { postsTable } from "@workspace/db/schema";
+import { eq, desc, ilike, lt, and } from "drizzle-orm";
+import { postsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
 
+import { sql } from "drizzle-orm";
 export class PostRepository {
+
+  async likePost(postId: string, userId: string): Promise<void> {
+    const existing = await db.select().from(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, userId)));
+    if (existing.length === 0) {
+      await db.insert(postLikesTable).values({ postId, userId });
+      await db.execute(sql`UPDATE posts SET likes_count = likes_count + 1 WHERE id = ${postId}`);
+    }
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    const deleted = await db.delete(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, userId))).returning();
+    if (deleted.length > 0) {
+      await db.execute(sql`UPDATE posts SET likes_count = GREATEST(0, likes_count - 1) WHERE id = ${postId}`);
+    }
+  }
+
+  async bookmarkPost(postId: string, userId: string): Promise<void> {
+    const existing = await db.select().from(postBookmarksTable).where(and(eq(postBookmarksTable.postId, postId), eq(postBookmarksTable.userId, userId)));
+    if (existing.length === 0) {
+      await db.insert(postBookmarksTable).values({ postId, userId });
+      await db.execute(sql`UPDATE posts SET bookmarks_count = bookmarks_count + 1 WHERE id = ${postId}`);
+    }
+  }
+
+  async removeBookmark(postId: string, userId: string): Promise<void> {
+    const deleted = await db.delete(postBookmarksTable).where(and(eq(postBookmarksTable.postId, postId), eq(postBookmarksTable.userId, userId))).returning();
+    if (deleted.length > 0) {
+      await db.execute(sql`UPDATE posts SET bookmarks_count = GREATEST(0, bookmarks_count - 1) WHERE id = ${postId}`);
+    }
+  }
+
   async create(post: PostRecord): Promise<PostRecord> {
     const [created] = await db.insert(postsTable).values(post).returning();
     return created as PostRecord;
@@ -14,12 +46,26 @@ export class PostRepository {
     return post as PostRecord | undefined;
   }
 
-  async listByUser(userId: string): Promise<PostRecord[]> {
-    return (await db.select().from(postsTable).where(eq(postsTable.authorId, userId)).orderBy(desc(postsTable.createdAt))) as PostRecord[];
+  async listByUser(userId: string, cursor?: string, limit: number = 20): Promise<PostRecord[]> {
+    const filters = [eq(postsTable.authorId, userId)];
+    if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
-  async list(): Promise<PostRecord[]> {
-    return (await db.select().from(postsTable).orderBy(desc(postsTable.createdAt))) as PostRecord[];
+  async list(cursor?: string, limit: number = 20): Promise<PostRecord[]> {
+    const filters: any[] = [];
+    if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    let q = db.select().from(postsTable).$dynamic();
+    if (filters.length > 0) q = q.where(and(...filters));
+    return (await q.orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
+  }
+
+  async listTrending(cursor?: number, limit: number = 20): Promise<PostRecord[]> {
+    const filters: any[] = [];
+    if (cursor) filters.push(lt(postsTable.score, cursor));
+    let q = db.select().from(postsTable).$dynamic();
+    if (filters.length > 0) q = q.where(and(...filters));
+    return (await q.orderBy(desc(postsTable.score), desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
