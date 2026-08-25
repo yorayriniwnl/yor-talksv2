@@ -22,6 +22,14 @@ export class UserService {
     return user;
   }
 
+  async getProfileByUsername(username: string, viewerId?: string): Promise<UserRecord | undefined> {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user || !(await this.contactShieldService.canView(viewerId ?? user.id, user.id))) {
+      return undefined;
+    }
+    return user;
+  }
+
   async updateProfile(userId: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
     return this.userRepository.update(userId, updates);
   }

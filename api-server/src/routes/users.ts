@@ -10,7 +10,7 @@ import { AuthService } from "../services/auth-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
 import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
-import { userIdParamSchema } from "../validators/params.js";
+import { userIdParamSchema, usernameParamSchema } from "../validators/params.js";
 import { AccountService } from "../services/account-service.js";
 
 const router = Router();
@@ -24,6 +24,7 @@ router.get("/users/search", authenticate, validateQuery(searchUsersSchema), user
 router.get("/users/me", authenticate, userController.getCurrentUser);
 router.get("/users/me/export", authenticate, userController.exportAccount);
 router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), userController.deleteAccount);
+router.get("/users/by-username/:username", authenticate, validateParams(usernameParamSchema), userController.getProfileByUsername);
 router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);
 router.put("/users/me", authenticate, validateBody(updateProfileSchema), userController.updateProfile);
 router.post("/users/me/avatar", authenticate, imageUpload.single("avatar"), userController.uploadAvatar);

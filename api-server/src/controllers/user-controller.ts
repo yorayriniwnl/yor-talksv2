@@ -27,6 +27,15 @@ export class UserController {
     return res.status(200).json(createResponse("Profile loaded", toPublicUser(user)));
   };
 
+  getProfileByUsername = async (req: Request, res: Response) => {
+    const username = typeof req.params.username === "string" ? req.params.username : "";
+    const user = await this.userService.getProfileByUsername(username, req.user?.id);
+    if (!user) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    return res.status(200).json(createResponse("Profile loaded", toPublicUser(user)));
+  };
+
   getCurrentUser = async (req: Request, res: Response) => {
     const user = await this.userService.getProfile(req.user?.id ?? "");
     if (!user) {

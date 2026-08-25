@@ -304,7 +304,7 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
 //  PROFILE PAGE — Main Component
 // ═══════════════════════════════════════════════════════════════════════════
 export default function Profile() {
-  const { id } = useParams<{ id?: string }>();
+  const { id, username } = useParams<{ id?: string; username?: string }>();
   const [, setLocation] = useLocation();
   const currentUser = useAppStore(s => s.currentUser);
   const users = useAppStore(s => s.users);
@@ -314,6 +314,7 @@ export default function Profile() {
   const videos = useAppStore(s => s.videos);
   const loadVideos = useAppStore(s => s.loadVideos);
   const loadUserProfile = useAppStore(s => s.loadUserProfile);
+  const loadUserFeed = useAppStore(s => s.loadUserFeed);
   const followUser = useAppStore(s => s.followUser);
   const unfollowUser = useAppStore(s => s.unfollowUser);
   const toggleBlockUser = useAppStore(s => s.toggleBlockUser);
@@ -334,8 +335,15 @@ export default function Profile() {
   const [frameDialogOpen, setFrameDialogOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
 
-  const profileId = id || currentUser?.id;
-  const profile = profileId ? users[profileId] : null;
+  const profileLookup = id || username || currentUser?.id;
+  const profile = id
+    ? users[id]
+    : username
+      ? Object.values(users).find((user) => user.username.toLowerCase() === username.toLowerCase()) ?? null
+      : currentUser
+        ? users[currentUser.id] ?? currentUser
+        : null;
+  const profileId = profile?.id;
   const isOwnProfile = currentUser?.id === profileId;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
   const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
@@ -343,11 +351,15 @@ export default function Profile() {
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
   useEffect(() => {
-    if (profileId && !users[profileId]) loadUserProfile(profileId);
-  }, [profileId, users, loadUserProfile]);
+    if (profileLookup && !profile) loadUserProfile(profileLookup);
+  }, [profileLookup, profile, loadUserProfile]);
+
+  useEffect(() => {
+    if (profile?.id) loadUserFeed(profile.id);
+  }, [profile?.id, loadUserFeed]);
 
   // Scroll to top on profile change
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileId]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileLookup]);
 
   const userPosts = useMemo(() => posts.filter(p => p.authorId === profile?.id), [posts, profile?.id]);
   const userVideos = useMemo(() => videos.filter(v => v.authorId === profile?.id), [videos, profile?.id]);
@@ -568,7 +580,7 @@ export default function Profile() {
             {profile.bio && (
               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 shrink-0" /> Earth</span>
             )}
-            <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5 shrink-0" /> <a href={`https://yor-talks.in/@${profile.username}`} className="text-primary hover:underline font-medium">yor-talks.in/@{profile.username}</a></span>
+            <span className="flex items-center gap-1"><LinkIcon className="w-3.5 h-3.5 shrink-0" /> <Link href={`/@${profile.username}`} className="text-primary hover:underline font-medium">yor-talks.in/@{profile.username}</Link></span>
             <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 shrink-0" /> Member</span>
           </div>
 

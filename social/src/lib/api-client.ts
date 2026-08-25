@@ -238,6 +238,7 @@ export const api = {
   exportMyData: () => request<Record<string, unknown>>('/users/me/export'),
   deleteAccount: (password: string) => request<null>('/users/me', { method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE', password }) }),
   getProfile: (userId: string) => request<BackendUser>(`/users/${userId}`),
+  getProfileByUsername: (username: string) => request<BackendUser>(`/users/by-username/${encodeURIComponent(username)}`),
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: (file: File) => {

@@ -491,6 +491,7 @@ interface AppState {
 
   loadStories: () => Promise<void>;
   loadFeed: () => Promise<void>;
+  loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
   likePost: (postId: string) => Promise<void>;
   addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory) => Promise<void>;
@@ -749,6 +750,22 @@ export const useAppStore = create<AppState>()(
           // fallback
         }
         set({ posts: [] });
+      },
+
+      loadUserFeed: async (userId) => {
+        try {
+          const backendPosts = await api.getUserFeed(userId, 1, 100);
+          const currentUserId = get().currentUser?.id;
+          const profilePosts = backendPosts.map((post) => mapPost(post, currentUserId));
+          set((state) => ({
+            posts: [
+              ...state.posts.filter((post) => post.authorId !== userId),
+              ...profilePosts,
+            ],
+          }));
+        } catch {
+          // The profile can still render its identity if its feed is unavailable.
+        }
       },
 
       loadPost: async (postId) => {

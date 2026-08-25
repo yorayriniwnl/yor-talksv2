@@ -107,6 +107,7 @@ function ProtectedRoutes() {
                 <Route path="/dream" component={Dream} />
                 <Route path="/explore" component={Explore} />
                 <Route path="/post/:id" component={PostDetail} />
+                <Route path="/@:username" component={Profile} />
                 <Route path="/profile/:id?" component={Profile} />
                 <Route path="/projects" component={Projects} />
                 <Route path="/messages/:id?" component={Messages} />
