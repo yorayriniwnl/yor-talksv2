@@ -114,31 +114,31 @@ export default function Auth() {
           <div className="premium-brand-lockup">
             <div className="premium-brand-mark">Y</div>
             <div>
-              <p className="premium-brand-name">Yor Talks</p>
-              <p className="premium-brand-meta">KIIT student beta</p>
+              <p className="premium-brand-name">Yor</p>
+              <p className="premium-brand-meta">First world · KIIT</p>
             </div>
           </div>
 
-          <p className="premium-auth-eyebrow">Built for the campus, by the campus</p>
+          <p className="premium-auth-eyebrow">The living internet begins here</p>
           <h1 className="premium-auth-title">
-            Make campus<br /><span>feel smaller.</span>
+            Don’t just post.<br /><span>Make things happen.</span>
           </h1>
           <p className="premium-auth-description">
-            A thoughtful place to share what you are building, find your people, and keep the conversations that matter close.
+            Share a seed, find its people, and turn an unfinished thought into something real. KIIT is Yor’s first trusted world—not its final boundary.
           </p>
 
           <div className="premium-auth-proof">
             <div className="premium-auth-proof__item">
               <Sparkles className="h-4 w-4" />
-              <div><strong>Signal over noise</strong><span>See people, not a feed designed to keep you scrolling.</span></div>
+              <div><strong>Your Orbit</strong><span>Control what enters your attention instead of serving an endless feed.</span></div>
             </div>
             <div className="premium-auth-proof__item">
               <Users className="h-4 w-4" />
-              <div><strong>Find your circles</strong><span>Clubs, creators, projects, and friends in one calm space.</span></div>
+              <div><strong>Worlds with gravity</strong><span>People, projects, rituals, and memories held in one living place.</span></div>
             </div>
             <div className="premium-auth-proof__item">
               <Shield className="h-4 w-4" />
-              <div><strong>Private by default</strong><span>College-only access while the beta is taking shape.</span></div>
+              <div><strong>Trusted first world</strong><span>College-only access while the global product earns its shape.</span></div>
             </div>
           </div>
 
@@ -149,7 +149,7 @@ export default function Auth() {
       <section className="premium-auth-form-shell">
         <div className="premium-auth-mobile-brand">
           <div className="premium-brand-mark">Y</div>
-          <div><p className="premium-brand-name">Yor Talks</p><p className="premium-brand-meta">KIIT student beta</p></div>
+          <div><p className="premium-brand-name">Yor</p><p className="premium-brand-meta">First world · KIIT</p></div>
         </div>
 
         <div className="premium-auth-form">

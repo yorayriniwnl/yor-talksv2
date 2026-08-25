@@ -1,8 +1,8 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
-  Home, Compass, Film, MessageCircle, Heart, PlusSquare, 
-  UserRound, Settings, ShoppingBag, Camera, Radio, Users
+  Activity, Compass, Film, Globe2, MessageCircle, Orbit, PlusSquare,
+  UserRound, Settings, Camera, Radio, WandSparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -24,8 +24,6 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [location, setLocation] = useLocation();
   const currentUser = useAppStore((state) => state.currentUser);
-  const notifications = useAppStore((state) => state.notifications);
-  const unreadNotifs = notifications.filter(n => !n.read).length;
 
   const conversations = useAppStore((state) => state.conversations);
   const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
@@ -34,18 +32,18 @@ export function AppShell({ children }: AppShellProps) {
   const [isComposing, setIsComposing] = useState(false);
 
   const primaryNavItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Compass, label: 'Explore', path: '/explore' },
-    { icon: Film, label: 'Reels', path: '/videos' },
-    { icon: Radio, label: 'Live', path: '/live' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
-    { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifs > 0 ? unreadNotifs : null },
+    { icon: Orbit, label: 'Orbit', path: '/' },
+    { icon: Activity, label: 'Pulse', path: '/pulse' },
+    { icon: Globe2, label: 'Worlds', path: '/worlds' },
+    { icon: WandSparkles, label: 'Dream', path: '/dream' },
+    { icon: MessageCircle, label: 'Inbox', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
   ];
 
   const secondaryNavItems = [
-    { icon: Users, label: 'Communities', path: '/communities' },
+    { icon: Compass, label: 'Explore', path: '/explore' },
+    { icon: Film, label: 'Watch', path: '/videos' },
+    { icon: Radio, label: 'Live', path: '/live' },
     { icon: Camera, label: 'Creator Studio', path: '/studio' },
-    { icon: ShoppingBag, label: 'Points Vault', path: '/points-shop' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
@@ -79,8 +77,8 @@ export function AppShell({ children }: AppShellProps) {
             </div>
             {!sidebarCollapsed && (
               <div className="flex flex-col">
-                <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor Talks</span>
-                <span className="text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase mt-0.5 font-semibold">KIIT student beta</span>
+                <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor</span>
+                <span className="text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase mt-0.5 font-semibold">First world · KIIT</span>
               </div>
             )}
           </button>
@@ -124,13 +122,13 @@ export function AppShell({ children }: AppShellProps) {
           title="Create a post"
         >
           <PlusSquare className="w-4 h-4 shrink-0" />
-          {!sidebarCollapsed && <span>Create</span>}
+            {!sidebarCollapsed && <span>Plant a seed</span>}
         </button>
 
         {/* Navigation List */}
         <nav className="flex-1 space-y-5">
           <div className="space-y-1.5">
-            {!sidebarCollapsed && <p className="px-3.5 pb-1 text-[0.62rem] font-mono font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Your space</p>}
+            {!sidebarCollapsed && <p className="px-3.5 pb-1 text-[0.62rem] font-mono font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Living internet</p>}
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.path === '/' ? location === '/' : location.startsWith(item.path);
@@ -229,24 +227,19 @@ export function AppShell({ children }: AppShellProps) {
           }}
           className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}
         >
-          <Home className="w-6 h-6" />
+          <Orbit className="w-6 h-6" />
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setLocation('/explore')} className={cn("p-2 text-muted-foreground relative", location === '/explore' && "text-primary")}>
-          <Compass className="w-6 h-6" />
-          {location === '/explore' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
+        <button onClick={() => setLocation('/pulse')} aria-label="Pulse" className={cn("p-2 text-muted-foreground relative", location === '/pulse' && "text-primary")}>
+          <Activity className="w-6 h-6" />
+          {location === '/pulse' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button onClick={() => setIsComposing(true)} aria-label="Create post" className="p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
             <PlusSquare className="w-6 h-6" />
         </button>
-        <button onClick={() => setLocation('/messages')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/messages') && "text-primary")} aria-label="Messages">
-          <MessageCircle className="w-6 h-6" />
-          {unreadMessages > 0 && (
-            <span className="absolute top-0.5 right-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold ring-2 ring-background px-1">
-              {unreadMessages > 9 ? '9+' : unreadMessages}
-            </span>
-          )}
-          {location.startsWith('/messages') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
+        <button onClick={() => setLocation('/worlds')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/worlds') && "text-primary")} aria-label="Worlds">
+          <Globe2 className="w-6 h-6" />
+          {location.startsWith('/worlds') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
@@ -258,8 +251,14 @@ export function AppShell({ children }: AppShellProps) {
       <Dialog open={isComposing} onOpenChange={setIsComposing}>
         <DialogContent className="sm:max-w-[560px] rounded-[1.5rem] p-0 font-sans overflow-hidden">
           <DialogHeader className="border-b border-border/70 px-5 py-4 sm:px-6">
-            <DialogTitle className="font-display font-bold text-lg">Share with your people</DialogTitle>
-            <p className="text-xs text-muted-foreground">A thought, a photo, or something worth keeping.</p>
+            <div className="pr-8">
+              <DialogTitle className="font-display font-bold text-lg">Plant a seed</DialogTitle>
+              <p className="text-xs text-muted-foreground">A thought, a photo, or the beginning of something larger.</p>
+            </div>
+            <Link href="/dream" onClick={() => setIsComposing(false)} className="seed-dialog-dream-link">
+              <WandSparkles className="h-4 w-4" />
+              <span><strong>Have a bigger idea?</strong><small>Open the Dream Engine</small></span>
+            </Link>
           </DialogHeader>
           <CreatePost onPublished={() => setIsComposing(false)} />
         </DialogContent>

@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, X,
-  Home, Compass, Film, MessageCircle, Bell, User, Users, FileText,
+  Activity, Compass, Film, Globe2, MessageCircle, Bell, User, Users, FileText, Orbit, WandSparkles,
   Video, Radio, Scissors,
   Trophy, Swords, Gamepad2, Target, Award, Medal, Calendar,
   BarChart3, Store, ShoppingCart, Briefcase, Shirt, Layers,
@@ -77,14 +77,22 @@ export function CommandPalette() {
 
   const navigationGroups = [
     {
-      label: 'Core',
+      label: 'Living internet',
       items: [
-        { icon: Home, label: 'Home Feed', path: '/' },
+        { icon: Orbit, label: 'Orbit', path: '/' },
+        { icon: Activity, label: 'Pulse', path: '/pulse' },
+        { icon: Globe2, label: 'Worlds', path: '/worlds' },
+        { icon: WandSparkles, label: 'Dream Engine', path: '/dream' },
+        { icon: MessageCircle, label: 'Inbox', path: '/messages' },
+      ]
+    },
+    {
+      label: 'Discover & create',
+      items: [
         { icon: Compass, label: 'Explore', path: '/explore' },
         { icon: Film, label: 'Reels & Videos', path: '/videos' },
-        { icon: MessageCircle, label: 'Messages', path: '/messages' },
         { icon: Bell, label: 'Notifications', path: '/notifications' },
-        { icon: Users, label: 'Communities', path: '/communities' },
+        { icon: Users, label: 'Legacy Communities', path: '/communities' },
         { icon: FileText, label: 'Articles', path: '/articles' },
         { icon: Radio, label: 'Live', path: '/live' },
         { icon: Calendar, label: 'Events', path: '/events' },

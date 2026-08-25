@@ -26,6 +26,9 @@ const Auth = lazyWithRetry(() => import('@/pages/auth'));
   const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
 const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
 const Home = lazyWithRetry(() => import('@/pages/home'));
+const Pulse = lazyWithRetry(() => import('@/pages/pulse'));
+const Worlds = lazyWithRetry(() => import('@/pages/worlds'));
+const Dream = lazyWithRetry(() => import('@/pages/dream'));
 const Explore = lazyWithRetry(() => import('@/pages/explore'));
 const Profile = lazyWithRetry(() => import('@/pages/profile'));
   const Projects = lazyWithRetry(() => import('@/pages/projects'));
@@ -97,6 +100,9 @@ function ProtectedRoutes() {
               <Switch location={location}>
                 {/* Core Social */}
                 <Route path="/" component={Home} />
+                <Route path="/pulse" component={Pulse} />
+                <Route path="/worlds" component={Worlds} />
+                <Route path="/dream" component={Dream} />
                 <Route path="/explore" component={Explore} />
                 <Route path="/post/:id" component={PostDetail} />
                 <Route path="/profile/:id?" component={Profile} />

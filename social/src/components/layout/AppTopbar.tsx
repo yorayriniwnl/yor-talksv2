@@ -1,4 +1,4 @@
-import { Bell, Plus, Search } from 'lucide-react';
+import { Bell, MessageCircle, Plus, Search } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppStore } from '@/lib/store';
@@ -9,20 +9,23 @@ interface AppTopbarProps {
 }
 
 const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
+  { match: '/pulse', title: 'Pulse', kicker: 'What is moving right now' },
+  { match: '/worlds', title: 'Worlds', kicker: 'Places with shared gravity' },
+  { match: '/dream', title: 'Dream Engine', kicker: 'Turn intent into motion' },
   { match: '/explore', title: 'Explore', kicker: 'Find your next interest' },
   { match: '/videos', title: 'Reels', kicker: 'Short-form highlights' },
   { match: '/messages', title: 'Messages', kicker: 'Stay close to your people' },
   { match: '/notifications', title: 'Activity', kicker: 'What you missed' },
-  { match: '/profile', title: 'Profile', kicker: 'Your corner of Yor Talks' },
+  { match: '/profile', title: 'Your world', kicker: 'Identity in full color' },
   { match: '/communities', title: 'Communities', kicker: 'Gather around what matters' },
   { match: '/events', title: 'Events', kicker: 'Make plans together' },
   { match: '/live', title: 'Live now', kicker: 'See what is happening' },
-  { match: '/settings', title: 'Settings', kicker: 'Make Yor Talks yours' },
+  { match: '/settings', title: 'Settings', kicker: 'Make Yor yours' },
 ];
 
 function getPageLabel(location: string) {
-  if (location === '/') return { title: 'Home', kicker: 'Your people, your signal' };
-  return PAGE_LABELS.find((item) => location.startsWith(item.match)) ?? { title: 'Yor Talks', kicker: 'Your corner of the internet' };
+  if (location === '/') return { title: 'Orbit', kicker: 'Your internet, in your control' };
+  return PAGE_LABELS.find((item) => location.startsWith(item.match)) ?? { title: 'Yor', kicker: 'The living internet' };
 }
 
 function openCommandPalette() {
@@ -38,6 +41,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
   const [location] = useLocation();
   const currentUser = useAppStore((state) => state.currentUser);
   const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
+  const unreadMessages = useAppStore((state) => state.conversations.filter((conversation) => conversation.lastMessage && !conversation.lastMessage.read).length);
   const page = getPageLabel(location);
   const displayName = currentUser?.displayName || currentUser?.username || 'You';
 
@@ -54,13 +58,18 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
           </div>
         </div>
 
-        <button type="button" className="premium-search" onClick={openCommandPalette} aria-label="Search Yor Talks">
+        <button type="button" className="premium-search" onClick={openCommandPalette} aria-label="Search Yor">
           <Search className="h-4 w-4 shrink-0" />
-          <span>Search Yor Talks</span>
+          <span>Search Yor</span>
           <kbd className="premium-search__shortcut">Ctrl K</kbd>
         </button>
 
         <div className="premium-topbar__actions">
+          <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread messages` : 'Messages'}>
+            <MessageCircle className="h-[18px] w-[18px]" />
+            {unreadMessages > 0 && <span className="premium-notification-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
+          </Link>
+
           <Link href="/notifications" className="premium-icon-button" aria-label={unreadNotifications ? `${unreadNotifications} unread notifications` : 'Notifications'}>
             <Bell className="h-[18px] w-[18px]" />
             {unreadNotifications > 0 && <span className="premium-notification-dot">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
@@ -68,7 +77,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
 
           <button type="button" className="premium-create-button" onClick={onCompose}>
             <Plus className="h-4 w-4" strokeWidth={2.5} />
-            <span>Create</span>
+            <span>Seed</span>
           </button>
 
           {currentUser && (
