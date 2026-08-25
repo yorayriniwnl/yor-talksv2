@@ -6,6 +6,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Type, Mic, Upload, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 const GRADIENTS = [
   'from-violet-500 to-fuchsia-500',
@@ -24,6 +26,7 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
   // Text state
   const [text, setText] = useState('');
   const [gradient, setGradient] = useState(GRADIENTS[0]);
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   
   // Photo state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -38,28 +41,32 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
   };
 
   const publish = () => {
+    if (!contentCategory) return;
     if (activeTab === 'text') {
       if (!text.trim()) return;
       addStory({ 
         type: 'text', 
         mediaUrl: '', 
         textContent: text.trim(), 
-        backgroundGradient: gradient 
+        backgroundGradient: gradient,
+        contentCategory,
       });
     } else if (activeTab === 'photo') {
       // In a real app we'd upload the file to a server here.
       // For now we use the preview URL or a placeholder if none selected.
       addStory({ 
         type: 'image', 
-        mediaUrl: imagePreview || `https://picsum.photos/seed/story_${Date.now()}/400/700` 
+        mediaUrl: imagePreview || `https://picsum.photos/seed/story_${Date.now()}/400/700`,
+        contentCategory,
       });
     } else if (activeTab === 'voice') {
-      addStory({ type: 'voice', mediaUrl: '' });
+      addStory({ type: 'voice', mediaUrl: '', contentCategory });
     }
     
     // Reset state
     setText('');
     setImagePreview(null);
+    setContentCategory('');
     setOpen(false);
   };
 
@@ -81,6 +88,9 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
               <Mic className="w-4 h-4" /> Voice
             </TabsTrigger>
           </TabsList>
+          <div className="px-4 pt-4">
+            <ContentCategorySelect id="legacy-story-content-category" value={contentCategory} onChange={setContentCategory} />
+          </div>
           
           <div className="aspect-[9/16] sm:aspect-auto sm:h-[500px] relative">
             <TabsContent value="photo" className="m-0 h-full">

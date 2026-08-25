@@ -57,6 +57,7 @@ export interface PostRecord {
   commentsCount: number;
   bookmarksCount: number;
   shareCount: number;
+  contentCategory?: string;
   contentRating?: ContentRating;
   reactions?: Record<string, string[]>;
   tags?: string[];
@@ -212,6 +213,7 @@ export interface ArticleRecord {
   readTime: number;
   claps: number;
   createdAt: string;
+  contentCategory?: string;
   contentRating?: ContentRating;
   collection?: string | null;
 }
@@ -227,6 +229,7 @@ export interface VideoRecord {
   likedBy?: string[];
   createdAt: string;
   type: string;
+  contentCategory?: string;
   contentRating?: ContentRating;
 }
 
@@ -262,5 +265,6 @@ export interface StoryRecord {
   reactions: StoryReaction[];
   isHighlight: boolean;
   highlightTitle?: string | null;
+  contentCategory?: string;
   contentRating?: ContentRating;
 }

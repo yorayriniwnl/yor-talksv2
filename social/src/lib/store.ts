@@ -23,6 +23,7 @@ import {
   type AuthTokens
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket } from '@/lib/socket-client';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ export type Post = {
   createdAt: string;
   likedByMe?: boolean;
   savedByMe?: boolean;
+  contentCategory: string;
   contentRating: ContentRating;
   poll?: {
     question: string;
@@ -99,6 +101,7 @@ export type Story = {
   reactions: { userId: string; emoji: string }[];
   isHighlight?: boolean;
   highlightTitle?: string;
+  contentCategory: string;
   contentRating: ContentRating;
 };
 
@@ -143,6 +146,7 @@ export type Article = {
   createdAt: string;
   savedByMe?: boolean;
   collection?: string;
+  contentCategory: string;
   contentRating: ContentRating;
 };
 
@@ -167,6 +171,7 @@ export type Video = {
   likes: number;
   createdAt: string;
   type: 'short' | 'standard';
+  contentCategory: string;
   contentRating: ContentRating;
 };
 
@@ -273,6 +278,7 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     reactions: Array.isArray(s.reactions) ? s.reactions : [],
     isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
+    contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: s.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
@@ -311,6 +317,7 @@ function mapPost(p: BackendPost, currentUserId?: string): Post {
     createdAt: p.createdAt || new Date().toISOString(),
     likedByMe: !!(p as any).likedByMe,
     savedByMe: !!(p as any).savedByMe,
+    contentCategory: p.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
@@ -377,6 +384,7 @@ function mapArticle(a: BackendArticle): Article {
     claps: a.claps ?? 0,
     createdAt: a.createdAt || new Date().toISOString(),
     collection: a.collection ?? undefined,
+    contentCategory: a.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: a.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
@@ -392,6 +400,7 @@ function mapVideo(v: BackendVideo): Video {
     likes: v.likes ?? 0,
     createdAt: v.createdAt || new Date().toISOString(),
     type: (v.type as Video['type']) || 'standard',
+    contentCategory: v.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: v.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
@@ -484,7 +493,7 @@ interface AppState {
   loadFeed: () => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
   likePost: (postId: string) => Promise<void>;
-  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating) => Promise<void>;
+  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory) => Promise<void>;
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
@@ -519,19 +528,19 @@ interface AppState {
   createProduct: (input: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used' }) => Promise<void>;
 
   loadArticles: () => Promise<void>;
-  createArticle: (input: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentRating?: ContentRating }) => Promise<void>;
+  createArticle: (input: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   clapArticle: (articleId: string) => Promise<void>;
 
   loadVideos: () => Promise<void>;
-  createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentRating?: ContentRating }) => Promise<void>;
+  createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   likeVideo: (videoId: string) => Promise<void>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string) => Promise<void>;
 
   loadStreams: () => Promise<void>;
-  createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: string; contentRating?: ContentRating }) => Promise<void>;
+  createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
   toggleSaveProduct: (productId: string) => void;
@@ -778,7 +787,7 @@ export const useAppStore = create<AppState>()(
           } : state.users
         }));
       },
-      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING) => {
+      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY) => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
           toast.error('Sign in with your KIIT email before posting');
@@ -789,7 +798,7 @@ export const useAppStore = create<AppState>()(
           return;
         }
         try {
-          const created = await api.createPost({ content, images: media, contentRating });
+          const created = await api.createPost({ content, images: media, contentCategory, contentRating });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
@@ -1078,6 +1087,7 @@ export const useAppStore = create<AppState>()(
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
           viewerIds: [],
           reactions: [],
+          contentCategory: story.contentCategory,
           contentRating: story.contentRating ?? DEFAULT_CONTENT_RATING,
         };
         set((state) => ({ stories: [newStory, ...state.stories] }));
@@ -1197,6 +1207,7 @@ export const useAppStore = create<AppState>()(
           claps: 0,
           createdAt: new Date().toISOString(),
           savedByMe: false,
+          contentCategory: input.contentCategory,
           contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
         };
         set((state) => ({ articles: [newArticle, ...state.articles] }));
@@ -1240,6 +1251,7 @@ export const useAppStore = create<AppState>()(
           views: 0,
           likes: 0,
           createdAt: new Date().toISOString(),
+          contentCategory: input.contentCategory,
           contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
         };
         set((state) => ({ videos: [newVideo, ...state.videos] }));

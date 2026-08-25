@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { StoryRepository } from "../repositories/story-repository.js";
 import type { StoryRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 
 export class StoryService {
@@ -18,6 +19,7 @@ export class StoryService {
     backgroundGradient?: string;
     isHighlight: boolean;
     highlightTitle?: string;
+    contentCategory?: StoryRecord["contentCategory"];
     contentRating?: StoryRecord["contentRating"];
   }): Promise<StoryRecord> {
     const now = new Date();
@@ -36,6 +38,7 @@ export class StoryService {
       reactions: [],
       isHighlight: input.isHighlight,
       highlightTitle: input.highlightTitle || null,
+      contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     return this.storyRepository.create(story);

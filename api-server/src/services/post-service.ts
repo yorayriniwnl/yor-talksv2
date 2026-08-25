@@ -14,6 +14,7 @@ import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 
 export class PostService {
@@ -67,7 +68,7 @@ export class PostService {
     return this.postRepository.findById(postId, excludedAuthorIds, contentFilter);
   }
 
-  async createPost(authorId: string, content: string, images: string[], contentRating = DEFAULT_CONTENT_RATING): Promise<PostRecord> {
+  async createPost(authorId: string, content: string, images: string[], contentCategory = DEFAULT_CONTENT_CATEGORY, contentRating = DEFAULT_CONTENT_RATING): Promise<PostRecord> {
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -85,6 +86,7 @@ export class PostService {
       tags,
       mentions,
       score: this.calculateScore({ likes: 0, shares: 0, comments: 0 }),
+      contentCategory,
       contentRating,
     };
     const created = await this.postRepository.create(post);

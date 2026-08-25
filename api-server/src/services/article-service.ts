@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ArticleRepository } from "../repositories/article-repository.js";
 import type { ArticleRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 
 // Claps are an increment-only counter on the row (matching the schema, and
@@ -23,6 +24,7 @@ export class ArticleService {
     coverUrl: string;
     readTime: number;
     collection?: string;
+    contentCategory?: ArticleRecord["contentCategory"];
     contentRating?: ArticleRecord["contentRating"];
   }): Promise<ArticleRecord> {
     const article: ArticleRecord = {
@@ -30,6 +32,7 @@ export class ArticleService {
       ...input,
       claps: 0,
       createdAt: new Date().toISOString(),
+      contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     return this.articleRepository.create(article);

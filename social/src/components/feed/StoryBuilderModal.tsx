@@ -10,6 +10,8 @@ import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 interface StoryBuilderModalProps {
   isOpen: boolean;
@@ -32,11 +34,13 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
   const [imageUrl, setImageUrl] = useState('');
   const [storyType, setStoryType] = useState<'text' | 'image'>('text');
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
   const handlePublishStory = () => {
     if (storyType === 'text' && !textContent.trim()) return;
     if (storyType === 'image' && !imageUrl.trim()) return;
+    if (!contentCategory) return;
 
     sounds.playChime();
     triggerConfetti();
@@ -46,12 +50,14 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
       textContent: storyType === 'text' ? textContent.trim() : undefined,
       mediaUrl: storyType === 'image' ? imageUrl.trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
       backgroundGradient: selectedGradient.css,
+      contentCategory,
       contentRating,
     });
 
     toast.success('Story published to your highlights! ✨');
     setTextContent('');
     setImageUrl('');
+    setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
     onOpenChange(false);
   };
@@ -127,6 +133,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           )}
 
           {/* Gradient Palette Picker */}
+          <ContentCategorySelect id="story-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="story-content-rating" value={contentRating} onChange={setContentRating} />
 
           <div>
@@ -155,7 +162,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           <DialogFooter>
             <Button
               onClick={handlePublishStory}
-              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim())}
+              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim()) || !contentCategory}
               className="w-full rounded-xl font-bold text-xs h-11 glow-neon-primary bg-primary text-primary-foreground"
             >
               <Send className="w-3.5 h-3.5 mr-1.5" /> Share Story Live

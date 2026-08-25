@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contentCategorySchema } from "../utils/content-category.js";
 
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
@@ -9,6 +10,7 @@ export const createStorySchema = z.object({
   backgroundGradient: z.string().optional(),
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
+  contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema.default("regular"),
 });
 

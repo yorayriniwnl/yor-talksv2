@@ -15,6 +15,8 @@ import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 function UploadVideoDialog() {
   const createVideo = useAppStore((s: any) => s.createVideo);
@@ -24,6 +26,7 @@ function UploadVideoDialog() {
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [type, setType] = useState<'short' | 'standard'>('short');
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [fileName, setFileName] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
@@ -77,6 +80,10 @@ function UploadVideoDialog() {
       setError('Please select a video file or provide a valid video URL.');
       return;
     }
+    if (!contentCategory) {
+      setError('Choose a category before publishing this video.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -85,6 +92,7 @@ function UploadVideoDialog() {
         videoUrl: finalVideoUrl, 
         thumbnailUrl: finalThumb, 
         type,
+        contentCategory,
         contentRating,
       });
       triggerConfetti();
@@ -96,6 +104,7 @@ function UploadVideoDialog() {
       setFileName('');
       setPreviewUrl('');
       setType('short');
+      setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
     } catch (err: any) {
       setError(err.message || 'Failed to add video');
@@ -205,10 +214,11 @@ function UploadVideoDialog() {
             </div>
           </div>
 
+          <ContentCategorySelect id="video-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="video-content-rating" value={contentRating} onChange={setContentRating} />
 
           <DialogFooter className="pt-2">
-            <Button type="submit" disabled={loading || title.trim().length < 2 || !videoUrl.trim()} className="rounded-xl font-bold text-xs px-6 glow-neon-primary bg-primary w-full sm:w-auto">
+            <Button type="submit" disabled={loading || title.trim().length < 2 || !videoUrl.trim() || !contentCategory} className="rounded-xl font-bold text-xs px-6 glow-neon-primary bg-primary w-full sm:w-auto">
               {loading ? 'Publishing…' : '🚀 Publish to Feed & Reels'}
             </Button>
           </DialogFooter>

@@ -13,6 +13,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 function CreateArticleDialog() {
   const createArticle = useAppStore((s) => s.createArticle);
@@ -20,6 +22,7 @@ function CreateArticleDialog() {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,10 +39,11 @@ function CreateArticleDialog() {
         content: content.trim(),
         coverUrl: `https://picsum.photos/seed/${encodeURIComponent(title)}/800/400`,
         readTime: Math.max(1, Math.round(wordCount / 200)),
+        contentCategory: contentCategory as ContentCategory,
         contentRating,
       });
       setOpen(false);
-      setTitle(''); setExcerpt(''); setContent(''); setContentRating(DEFAULT_CONTENT_RATING);
+      setTitle(''); setExcerpt(''); setContent(''); setContentCategory(''); setContentRating(DEFAULT_CONTENT_RATING);
     } catch (err: any) {
       setError(err.message || 'Failed to publish article');
     }
@@ -59,6 +63,7 @@ function CreateArticleDialog() {
             <Label htmlFor="article-title" className="text-xs font-mono uppercase text-muted-foreground">Title</Label>
             <Input id="article-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="The Future of Interface Design" className="rounded-xl" />
           </div>
+          <ContentCategorySelect id="article-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="article-content-rating" value={contentRating} onChange={setContentRating} />
           <div className="space-y-1.5">
             <Label htmlFor="article-excerpt" className="text-xs font-mono uppercase text-muted-foreground">Excerpt</Label>
@@ -69,7 +74,7 @@ function CreateArticleDialog() {
             <Textarea id="article-content" value={content} onChange={(e) => setContent(e.target.value)} required rows={10} placeholder="Write your article…" className="rounded-xl font-serif" />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || title.trim().length < 2 || !excerpt.trim() || !content.trim()} className="rounded-xl font-bold text-xs px-6">
+            <Button type="submit" disabled={loading || title.trim().length < 2 || !excerpt.trim() || !content.trim() || !contentCategory} className="rounded-xl font-bold text-xs px-6">
               {loading ? 'Publishing…' : 'Publish Article'}
             </Button>
           </DialogFooter>

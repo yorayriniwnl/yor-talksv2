@@ -25,6 +25,8 @@ import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 import { RichCommentComposer } from '@/components/comments/RichCommentComposer';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -44,6 +46,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -70,7 +73,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   if (!currentUser) return null;
 
   const validPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
-  const canPublish = Boolean(content.trim()) && content.length <= MAX_POST_LENGTH && (!pollOpen || validPollOptions.length >= 2);
+  const canPublish = Boolean(content.trim()) && Boolean(contentCategory) && content.length <= MAX_POST_LENGTH && (!pollOpen || validPollOptions.length >= 2);
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
@@ -107,7 +110,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
       const uploadedMedia = mediaFiles.length
         ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
         : undefined;
-      await addPost(content.trim(), uploadedMedia, poll, contentRating);
+      await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory);
     } catch (error) {
       toast({ title: 'Could not upload your images', description: error instanceof Error ? error.message : 'Try again in a moment.' });
       setIsUploading(false);
@@ -119,6 +122,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     setContent('');
     setPollOpen(false);
     setPollOptions(['', '']);
+    setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
     
     if (textareaRef.current) {
@@ -211,6 +215,10 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
               )}
             </div>
           )}
+
+          <div className="mt-3 max-w-xs">
+            <ContentCategorySelect id="post-content-category" value={contentCategory} onChange={setContentCategory} />
+          </div>
 
           <div className="mt-3 max-w-xs">
             <ContentRatingSelect id="post-content-rating" value={contentRating} onChange={setContentRating} />

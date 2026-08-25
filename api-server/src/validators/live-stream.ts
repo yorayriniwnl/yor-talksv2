@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contentCategorySchema } from "../utils/content-category.js";
 
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
@@ -7,7 +8,7 @@ export const createStreamSchema = z.object({
   coverUrl: z.string().url(),
   kind: z.enum(["video", "audio"]),
   startsAt: z.string().datetime({ offset: true }),
-  category: z.string().min(1).max(50),
+  category: contentCategorySchema,
   contentRating: contentRatingSchema.default("regular"),
 });
 

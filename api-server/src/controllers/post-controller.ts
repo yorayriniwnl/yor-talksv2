@@ -56,7 +56,7 @@ export class PostController {
     }
 
     const images = Array.isArray(req.body.images) ? req.body.images : [];
-    const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentRating);
+    const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating);
     return res.status(201).json(createResponse("Post created", post));
   };
 

@@ -11,24 +11,30 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80';
 
 function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Campus');
+  const [category, setCategory] = useState<ContentCategory | ''>('');
   const [kind, setKind] = useState<'video' | 'audio'>('video');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!category) {
+      toast.error('Choose a category before going live');
+      return;
+    }
     setLoading(true);
     try {
       const stream = await api.createStream({
         title: title.trim(),
-        category: category.trim(),
+        category,
         kind,
         coverUrl: DEFAULT_COVER,
         startsAt: new Date().toISOString(),
@@ -37,6 +43,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
       const liveStream = await api.setStreamStatus(stream.id, 'live');
       setOpen(false);
       setTitle('');
+      setCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       onCreated(liveStream);
       toast.success('You are live');
@@ -57,7 +64,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
         <form onSubmit={submit} className="space-y-4">
           <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What are you sharing?" minLength={2} maxLength={200} required />
           <div className="grid grid-cols-2 gap-3">
-            <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Category" maxLength={50} required />
+            <ContentCategorySelect id="stream-content-category" value={category} onChange={setCategory} />
             <select value={kind} onChange={(event) => setKind(event.target.value as 'video' | 'audio')} className="h-10 rounded-md border bg-background px-3 text-sm">
               <option value="video">Video + audio</option>
               <option value="audio">Audio only</option>
@@ -65,7 +72,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
           </div>
           <ContentRatingSelect id="stream-content-rating" value={contentRating} onChange={setContentRating} />
           <p className="text-xs text-muted-foreground">Your browser will ask for camera and microphone permission after the LiveKit room connects.</p>
-          <Button type="submit" disabled={loading || title.trim().length < 2} className="w-full rounded-xl">
+          <Button type="submit" disabled={loading || title.trim().length < 2 || !category} className="w-full rounded-xl">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? 'Connecting…' : 'Start room'}
           </Button>

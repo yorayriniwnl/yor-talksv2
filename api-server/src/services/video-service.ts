@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { VideoRepository } from "../repositories/video-repository.js";
 import type { VideoRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 
 export class VideoService {
@@ -16,6 +17,7 @@ export class VideoService {
     thumbnailUrl: string;
     title: string;
     type: string;
+    contentCategory?: VideoRecord["contentCategory"];
     contentRating?: VideoRecord["contentRating"];
   }): Promise<VideoRecord> {
     const video: VideoRecord = {
@@ -24,6 +26,7 @@ export class VideoService {
       views: 0,
       likedBy: [],
       createdAt: new Date().toISOString(),
+      contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     return this.videoRepository.create(video);

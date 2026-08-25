@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { type ContentCategory } from '@/lib/content-category';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -79,6 +81,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   // Publishing form
   const [caption, setCaption] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -205,6 +208,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   };
 
   const handlePublish = async () => {
+    if (!contentCategory) {
+      toast.error('Choose a category before publishing.');
+      return;
+    }
     setPublishing(true);
     sounds.playChime();
     triggerConfetti();
@@ -218,6 +225,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           videoUrl: mediaUrl,
           thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
           type: 'short',
+          contentCategory,
           contentRating,
         });
         toast.success('🎬 Reel published to the Bharat Reel Swiper!');
@@ -227,11 +235,12 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           mediaUrl,
           textContent: caption.trim() || undefined,
           backgroundGradient: 'from-purple-900 via-indigo-900 to-black',
+          contentCategory,
           contentRating,
         });
         toast.success('✨ Story added to your 24h highlights!');
       } else {
-        addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [mediaUrl], undefined, contentRating);
+        addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [mediaUrl], undefined, contentRating, contentCategory);
         toast.success('🚀 Published to the global feed!');
       }
 
@@ -239,6 +248,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       // Reset
       setRecordedPreviewUrl(null);
       setCaption('');
+      setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setActiveStickers([]);
     } catch {
@@ -499,6 +509,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                   className="w-full h-20 rounded-xl surface-2 border border-border/40 p-2.5 text-xs outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground resize-none font-sans"
                 />
               </div>
+              <ContentCategorySelect id="studio-content-category" value={contentCategory} onChange={setContentCategory} />
               <ContentRatingSelect id="studio-content-rating" value={contentRating} onChange={setContentRating} />
             </div>
 
@@ -506,7 +517,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             <div className="pt-4 border-t border-border/30">
               <Button
                 onClick={handlePublish}
-                disabled={publishing}
+                disabled={publishing || !contentCategory}
                 className="w-full rounded-2xl font-display font-extrabold text-xs h-12 bg-gradient-to-r from-primary via-purple-600 to-accent text-white glow-neon-primary shadow-xl cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-1.5" />
