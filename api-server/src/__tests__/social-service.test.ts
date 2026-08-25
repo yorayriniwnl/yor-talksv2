@@ -21,10 +21,10 @@ test("posts support likes, bookmarks, and trending ranking", async () => {
     await postService.bookmarkPost(post.id, liker.id);
     await postService.sharePost(post.id);
 
-    const feed = await postService.getTrendingFeed();
+    const feed = await postService.getTrendingFeed(undefined, 20, liker.id);
     assert.equal(feed[0].id, post.id);
-    assert.equal(feed[0].likedBy.length, 1);
-    assert.equal(feed[0].bookmarkedBy.length, 1);
+    assert.equal(feed[0].likedByMe, true);
+    assert.equal(feed[0].savedByMe, true);
     assert.equal(feed[0].shareCount, 1);
   } finally {
     postService.close();
