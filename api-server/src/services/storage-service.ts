@@ -9,6 +9,13 @@ if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SE
   });
 }
 
+export class MediaProviderNotConfiguredError extends Error {
+  constructor() {
+    super("Cloudinary media storage is not configured for this deployment");
+    this.name = "MediaProviderNotConfiguredError";
+  }
+}
+
 export class StorageService {
   async uploadAvatar(buffer: Buffer, originalName: string): Promise<string> {
     return this.uploadBuffer(buffer, "image", "avatars", originalName);
@@ -28,7 +35,11 @@ export class StorageService {
     folder: string,
     originalName: string
   ): Promise<string> {
-    if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
+    const cloudinaryConfigured = Boolean(
+      env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
+    );
+
+    if (cloudinaryConfigured) {
       try {
         return await new Promise<string>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
@@ -43,12 +54,17 @@ export class StorageService {
           uploadStream.end(buffer);
         });
       } catch (err) {
-        console.warn("Cloudinary upload failed, falling back to data URL:", err);
+        console.error("Cloudinary upload failed", err);
+        throw err;
       }
     }
-    // Fallback for dev / unconfigured Cloudinary: return a data URL
+
+    if ((env.NODE_ENV as string) === "production") {
+      throw new MediaProviderNotConfiguredError();
+    }
+
+    // Local development/test fallback; production never stores user media in a data URL.
     const mimeType = resourceType === "video" ? "video/mp4" : "image/jpeg";
     return `data:${mimeType};base64,${buffer.toString("base64")}`;
   }
 }
-
