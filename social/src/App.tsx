@@ -23,6 +23,7 @@ import { PageTransition } from '@/components/ui/PageTransition';
 
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
+const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
   const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
 const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
 const Home = lazyWithRetry(() => import('@/pages/home'));
@@ -193,6 +194,7 @@ function Router() {
         {!currentUser && (
           <>
             <Route path="/auth" component={Auth} />
+            <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/onboarding" component={Onboarding} />
             <Route path="/grievance" component={Grievance} />
             <Route>
@@ -203,6 +205,7 @@ function Router() {
         {currentUser && (
           <>
             <Route path="/auth" component={AuthRedirect} />
+            <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/onboarding" component={Onboarding} />
             <Route>
               <ProtectedRoutes />

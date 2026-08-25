@@ -6,18 +6,28 @@
 
 export interface Tokens {
   accessToken: string;
-  refreshToken: string;
+  /** Refresh tokens are HttpOnly cookies and are never available to JS. */
+  refreshToken?: string;
   expiresAt?: string;
 }
 
 export type AuthTokens = Tokens;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
+let memoryAccessToken: string | null = null;
 
 export function getStoredTokens(): Tokens | null {
+  if (memoryAccessToken) return { accessToken: memoryAccessToken };
   try {
     const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Tokens) : null;
+    if (!raw) return null;
+    const legacy = JSON.parse(raw) as Partial<Tokens>;
+    // Migrate legacy browser storage by retaining only the short-lived access
+    // token. The refresh credential is now supplied by an HttpOnly cookie.
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    if (typeof legacy.accessToken !== 'string' || !legacy.accessToken) return null;
+    memoryAccessToken = legacy.accessToken;
+    return { accessToken: memoryAccessToken };
   } catch {
     return null;
   }
@@ -25,8 +35,9 @@ export function getStoredTokens(): Tokens | null {
 
 export function setStoredTokens(tokens: Tokens | null): void {
   if (tokens) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+    memoryAccessToken = tokens.accessToken;
   } else {
+    memoryAccessToken = null;
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 }
@@ -57,8 +68,6 @@ interface ApiEnvelope<T> {
 let refreshInFlight: Promise<Tokens | null> | null = null;
 
 async function tryRefresh(): Promise<Tokens | null> {
-  const current = getStoredTokens();
-  if (!current) return null;
   // Coalesce concurrent refreshes (e.g. several components hitting a 401 at once)
   // into a single request instead of racing multiple refresh calls.
   if (!refreshInFlight) {
@@ -67,7 +76,7 @@ async function tryRefresh(): Promise<Tokens | null> {
         const res = await fetch('/api/auth/refresh', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: current.refreshToken }),
+          credentials: 'include',
         });
         if (!res.ok) return null;
         const json = (await res.json()) as ApiEnvelope<Tokens>;
@@ -92,9 +101,9 @@ async function request<T>(path: string, options: RequestInit = {}, isRetry = fal
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  const res = await fetch(`/api${path}`, { ...options, headers, credentials: 'include' });
 
-  if (res.status === 401 && !isRetry && tokens) {
+  if (res.status === 401 && !isRetry) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       setStoredTokens(refreshed);
@@ -132,7 +141,7 @@ async function requestPaginated<T>(path: string, options: RequestInit = {}): Pro
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  const res = await fetch(`/api${path}`, { ...options, headers, credentials: 'include' });
   let json: any = null;
   try {
     json = await res.json();
@@ -192,7 +201,7 @@ export interface BackendProject {
 export const api = {
   request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
-    request<{ user: BackendUser; tokens: AuthTokens }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+    request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
   login: (payload: { identifier: string; password: string }) =>
     request<{ user: BackendUser; tokens: AuthTokens }>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
@@ -202,8 +211,7 @@ export const api = {
     request<{ user: BackendUser; tokens: AuthTokens }>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
-    const tokens = getStoredTokens();
-    return request<null>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: tokens?.refreshToken }) });
+    return request<null>('/auth/logout', { method: 'POST' });
   },
 
   requestPasswordReset: (email: string) =>
@@ -213,6 +221,8 @@ export const api = {
     request<null>('/auth/reset-password/confirm', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
 
   resendVerificationEmail: () => request<{ devVerificationToken?: string } | null>('/auth/verify-email/resend', { method: 'POST' }),
+  resendPublicVerificationEmail: (email: string) => request<null>('/auth/verify-email/resend-public', { method: 'POST', body: JSON.stringify({ email }) }),
+  verifyEmail: (token: string) => request<{ user: BackendUser }>(`/auth/verify-email/${encodeURIComponent(token)}`),
 
   // ---- Users ----
   getCurrentUser: () => request<BackendUser>('/users/me'),

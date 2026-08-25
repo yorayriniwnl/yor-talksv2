@@ -123,6 +123,7 @@ export interface ConversationRecord {
 
 export interface AuthTokens {
   accessToken: string;
+  /** Kept in the service layer; controllers only serialize the access token. */
   refreshToken: string;
   expiresAt?: string;
 }

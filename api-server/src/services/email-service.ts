@@ -80,7 +80,7 @@ export class EmailService {
   }
 
   async sendVerificationEmail(email: string, verifyToken: string): Promise<boolean> {
-    const verifyUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/verify-email?token=${verifyToken}`;
+    const verifyUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/verify-email/${encodeURIComponent(verifyToken)}`;
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background: #0a0906; color: #f0e8d8;">
         <h2 style="color: #c9a84c;">Yor Talks - Verify Email</h2>

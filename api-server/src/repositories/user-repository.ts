@@ -54,6 +54,10 @@ export class UserRepository {
     return updated as UserRecord | undefined;
   }
 
+  async deleteById(id: string): Promise<void> {
+    await db.delete(usersTable).where(eq(usersTable.id, id));
+  }
+
   async list(search = ""): Promise<UserRecord[]> {
     if (!search) {
       return (await db.select().from(usersTable).limit(100)) as UserRecord[];

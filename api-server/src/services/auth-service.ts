@@ -18,6 +18,7 @@ import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 export class TooManyAttemptsError extends Error {}
 export class TwoFactorRequiredError extends Error {}
 export class EmailOtpInvalidError extends Error {}
+export class EmailVerificationRequiredError extends Error {}
 
 export class AuthService {
   constructor(
@@ -32,7 +33,7 @@ export class AuthService {
     email: string;
     password: string;
     fullName: string;
-  }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  }): Promise<{ user: UserRecord; verificationToken?: string }> {
     const email = input.email.trim().toLowerCase();
     if (!isKiitCollegeEmail(email)) {
       throw new Error("Only seven-digit @kiit.ac.in college emails can join this beta");
@@ -80,12 +81,18 @@ export class AuthService {
     };
 
     await this.userRepository.create(user);
-    const deviceId = randomUUID();
-    const refreshToken = this.issueRefreshToken(user, deviceId);
-    await this.redisRepository.set(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
+    let verificationToken: string | undefined;
+    try {
+      verificationToken = await this.requestEmailVerification(user.id);
+    } catch (error) {
+      // Do not leave an account that can never complete onboarding when the
+      // production email provider rejects the first verification message.
+      await this.userRepository.deleteById(user.id);
+      throw error;
+    }
     return {
       user,
-      tokens: this.issueTokens(user, refreshToken, deviceId),
+      verificationToken,
     };
   }
 
@@ -111,6 +118,11 @@ export class AuthService {
     if (!valid) {
       this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — wrong password`);
       throw new Error("Invalid credentials");
+    }
+
+    if (!user.emailVerified) {
+      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — email not verified`);
+      throw new EmailVerificationRequiredError("Verify your KIIT email before signing in");
     }
 
     if (user.totpSecret) {
@@ -325,6 +337,29 @@ export class AuthService {
     }
     logger.info({ userId }, "Email verification requested and email dispatched");
     return token;
+  }
+
+  async requestEmailVerificationByEmail(email: string): Promise<string | undefined> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isKiitCollegeEmail(normalizedEmail)) {
+      return undefined;
+    }
+    const user = await this.userRepository.findByEmail(normalizedEmail);
+    if (!user || user.emailVerified) {
+      return undefined;
+    }
+
+    const throttleKey = `email-verify-resend:${await this.redisRepository.hashToken(normalizedEmail)}`;
+    if (await this.redisRepository.getStrict(throttleKey)) {
+      throw new TooManyAttemptsError("A verification email was already sent. Please wait a minute before requesting another.");
+    }
+    await this.redisRepository.setStrict(throttleKey, "1", 60);
+    try {
+      return await this.requestEmailVerification(user.id);
+    } catch (error) {
+      await this.redisRepository.delStrict(throttleKey);
+      throw error;
+    }
   }
 
   async confirmEmailVerification(token: string): Promise<UserRecord | undefined> {

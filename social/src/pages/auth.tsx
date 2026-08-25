@@ -27,11 +27,14 @@ export default function Auth() {
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [requestingOtp, setRequestingOtp] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setErrorMsg('');
     setFieldErrors({});
+    setVerificationPending(false);
 
     const errors: Record<string, string> = {};
     if (mode === 'register') {
@@ -59,6 +62,10 @@ export default function Auth() {
         else await login(email, password);
       } else {
         await register(username, email, password, fullName);
+        setVerificationPending(true);
+        setMode('login');
+        setLoginMethod('password');
+        toast.success('Account created — verify your KIIT email before signing in.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong');
@@ -72,6 +79,23 @@ export default function Auth() {
     setFieldErrors({});
     setOtpSent(false);
     setOtpCode('');
+    setVerificationPending(false);
+  };
+
+  const resendVerification = async () => {
+    if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) {
+      setFieldErrors({ email: 'Enter your seven-digit KIIT email first' });
+      return;
+    }
+    setResendingVerification(true);
+    try {
+      await api.resendPublicVerificationEmail(email.trim());
+      toast.success('If that account needs verification, a new email has been sent.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not resend verification email');
+    } finally {
+      setResendingVerification(false);
+    }
   };
 
   const requestEmailCode = async () => {
@@ -208,6 +232,15 @@ export default function Auth() {
                 {errorMsg && (
                   <div className="p-3.5 text-xs font-mono text-destructive bg-destructive/10 rounded-xl border border-destructive/30">
                     {errorMsg}
+                  </div>
+                )}
+
+                {verificationPending && (
+                  <div className="p-4 text-xs text-foreground bg-primary/10 rounded-xl border border-primary/20 space-y-3">
+                    <div><strong>One last step:</strong> open the verification link in your KIIT inbox, then sign in here.</div>
+                    <button type="button" onClick={resendVerification} disabled={resendingVerification} className="text-primary font-semibold hover:underline disabled:opacity-60">
+                      {resendingVerification ? 'Sending…' : 'Resend verification email'}
+                    </button>
                   </div>
                 )}
 

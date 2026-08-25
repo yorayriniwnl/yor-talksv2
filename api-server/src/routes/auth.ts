@@ -32,6 +32,7 @@ router.post("/auth/logout", authenticate, authController.logout);
 router.post("/auth/logout-all", authenticate, authController.logoutAllDevices);
 router.post("/auth/reset-password", validateBody(resetPasswordSchema), authController.resetPassword);
 router.post("/auth/reset-password/confirm", validateBody(confirmResetPasswordSchema), authController.confirmResetPassword);
+router.post("/auth/verify-email/resend-public", validateBody(emailOtpRequestSchema), authController.resendVerificationEmailPublic);
 router.post("/auth/verify-email/resend", authenticate, authController.resendVerificationEmail);
 router.get("/auth/verify-email/:token", authController.verifyEmail);
 router.post("/auth/2fa/setup", authenticate, authController.beginTwoFactorSetup);

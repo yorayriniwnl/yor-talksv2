@@ -630,12 +630,11 @@ export const useAppStore = create<AppState>()(
       register: async (username, email, password, fullName) => {
         set({ authError: null });
         try {
-          const result = await api.register({ username, email, password, fullName });
-          setStoredTokens(result.tokens);
-          const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          await api.register({ username, email, password, fullName });
+          // Registration is intentionally not an authenticated session. The
+          // account must prove ownership of the KIIT mailbox first.
+          setStoredTokens(null);
+          set({ currentUser: null, tokens: null });
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
           throw err;

@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EmailOtpInvalidError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
+import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
@@ -8,11 +8,40 @@ import { toOwnUser } from "../utils/user-view.js";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private setRefreshCookie(res: Response, refreshToken: string): void {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  private clearRefreshCookie(res: Response): void {
+    res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+  }
+
+  private clientTokens(tokens: { accessToken: string; expiresAt?: string }) {
+    return { accessToken: tokens.accessToken, expiresAt: tokens.expiresAt };
+  }
+
   register = async (req: Request, res: Response) => {
     try {
       const result = await this.authService.register(req.body);
-      return res.status(201).json(createResponse("User registered", { ...result, user: toOwnUser(result.user) }, { authenticated: true }));
+      const data = {
+        user: toOwnUser(result.user),
+        verificationRequired: true,
+        ...(result.verificationToken && env.NODE_ENV !== "production" ? { devVerificationToken: result.verificationToken } : {}),
+      };
+      return res.status(201).json(createResponse("Check your KIIT email to verify your account", data, { authenticated: false }));
     } catch (error) {
+      if (error instanceof EmailDeliveryNotConfiguredError) {
+        return res.status(503).json(createResponse("Registration is temporarily unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryProviderError) {
+        return res.status(502).json(createResponse("Registration email could not be delivered", null, {}, [error.message]));
+      }
       return res.status(409).json(createResponse("Registration failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
   };
@@ -20,13 +49,17 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     try {
       const result = await this.authService.login(req.body);
-      return res.status(200).json(createResponse("Login successful", { ...result, user: toOwnUser(result.user) }, { authenticated: true }));
+      this.setRefreshCookie(res, result.tokens.refreshToken);
+      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TooManyAttemptsError) {
         return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
       }
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
+      }
+      if (error instanceof EmailVerificationRequiredError) {
+        return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
       }
       return res.status(401).json(createResponse("Login failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
@@ -56,7 +89,8 @@ export class AuthController {
   verifyEmailOtp = async (req: Request, res: Response) => {
     try {
       const result = await this.authService.loginWithEmailOtp(req.body);
-      return res.status(200).json(createResponse("Login successful", { ...result, user: toOwnUser(result.user) }, { authenticated: true }));
+      this.setRefreshCookie(res, result.tokens.refreshToken);
+      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
@@ -106,28 +140,49 @@ export class AuthController {
 
   refresh = async (req: Request, res: Response) => {
     try {
-      const refreshToken = req.body.refreshToken as string | undefined;
+      // Refresh credentials are deliberately accepted only from an
+      // HttpOnly cookie. Accepting them in JSON makes them readable by any
+      // injected script and defeats the point of the cookie boundary.
+      const refreshToken = req.cookies?.refreshToken as string | undefined;
       if (!refreshToken) {
-        return res.status(400).json(createResponse("Refresh token required", null, {}, ["Missing refresh token"]));
+        return res.status(401).json(createResponse("Refresh session required", null, {}, ["Missing refresh session"]));
       }
       const tokens = await this.authService.refreshAccessToken(refreshToken);
       if (!tokens) {
         return res.status(401).json(createResponse("Invalid refresh token", null, {}, ["Unauthorized"]));
       }
-      return res.status(200).json(createResponse("Token refreshed", tokens, { authenticated: true }));
+      this.setRefreshCookie(res, tokens.refreshToken);
+      return res.status(200).json(createResponse("Token refreshed", this.clientTokens(tokens), { authenticated: true }));
     } catch (error) {
       return res.status(500).json(createResponse("Token refresh failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
     }
   };
 
   logout = async (req: Request, res: Response) => {
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken;
     if (refreshToken) {
       await this.authService.logoutByToken(refreshToken);
     }
-    res.clearCookie("refreshToken");
-    res.clearCookie("accessToken");
+    this.clearRefreshCookie(res);
     return res.status(200).json(createResponse("Logged out", null));
+  };
+
+  resendVerificationEmailPublic = async (req: Request, res: Response) => {
+    try {
+      await this.authService.requestEmailVerificationByEmail(req.body.email);
+      return res.status(202).json(createResponse("If that account needs verification, an email has been sent", null));
+    } catch (error) {
+      if (error instanceof TooManyAttemptsError) {
+        return res.status(429).json(createResponse("Please wait before requesting another email", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryNotConfiguredError) {
+        return res.status(503).json(createResponse("Email verification is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof EmailDeliveryProviderError) {
+        return res.status(502).json(createResponse("Email verification delivery failed", null, {}, [error.message]));
+      }
+      return res.status(500).json(createResponse("Could not send verification email", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
   };
 
   logoutAllDevices = async (req: Request, res: Response) => {

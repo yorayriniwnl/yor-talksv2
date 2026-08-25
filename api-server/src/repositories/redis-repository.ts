@@ -8,7 +8,10 @@ export class RedisRepository {
 
   constructor() {
     this.client = new Redis(env.REDIS_URL, {
-      lazyConnect: true,
+      // Strict authentication operations need a live connection before their
+      // first command. With lazyConnect + offline queues disabled, ioredis
+      // rejects that first command instead of opening the socket.
+      lazyConnect: false,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
       retryStrategy(times) {
