@@ -38,6 +38,8 @@ export type User = {
   followingIds?: string[];
   blockedUserIds?: string[];
   mutedUserIds?: string[];
+  twoFactorEnabled?: boolean;
+  notificationsEnabled?: boolean;
 };
 
 export type ProfileComment = {
@@ -242,6 +244,8 @@ function mapUser(u: BackendUser): User {
     followingIds: Array.isArray(u.following) ? u.following : [],
     blockedUserIds: Array.isArray(u.blockedUsers) ? u.blockedUsers : [],
     mutedUserIds: Array.isArray(u.mutedUsers) ? u.mutedUsers : [],
+    twoFactorEnabled: Boolean(u.twoFactorEnabled),
+    notificationsEnabled: u.settings?.notificationsEnabled !== false,
   };
 }
 

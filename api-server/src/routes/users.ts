@@ -9,17 +9,21 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
-import { contactShieldSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
+import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
 import { userIdParamSchema } from "../validators/params.js";
+import { AccountService } from "../services/account-service.js";
 
 const router = Router();
 const userRepository = new UserRepository();
+const redisRepository = new RedisRepository();
 const userService = new UserService(userRepository, new NotificationRepository(), new QueueService());
-const authService = new AuthService(userRepository, new RedisRepository());
-const userController = new UserController(userService, authService);
+const authService = new AuthService(userRepository, redisRepository);
+const userController = new UserController(userService, authService, new AccountService(userRepository, redisRepository));
 
 router.get("/users/search", authenticate, validateQuery(searchUsersSchema), userController.searchUsers);
 router.get("/users/me", authenticate, userController.getCurrentUser);
+router.get("/users/me/export", authenticate, userController.exportAccount);
+router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), userController.deleteAccount);
 router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);
 router.put("/users/me", authenticate, validateBody(updateProfileSchema), userController.updateProfile);
 router.post("/users/me/avatar", authenticate, imageUpload.single("avatar"), userController.uploadAvatar);

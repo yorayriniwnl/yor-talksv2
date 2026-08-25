@@ -177,6 +177,8 @@ export interface BackendUser {
   createdAt: string;
   blockedUsers?: string[];
   mutedUsers?: string[];
+  twoFactorEnabled?: boolean;
+  settings?: { notificationsEnabled?: boolean; privateAccount?: boolean; theme?: 'light' | 'dark' };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
@@ -220,12 +222,18 @@ export const api = {
   confirmPasswordReset: (token: string, newPassword: string) =>
     request<null>('/auth/reset-password/confirm', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
 
+  setupTwoFactor: () => request<{ secret: string; otpauthUrl: string }>('/auth/2fa/setup', { method: 'POST' }),
+  confirmTwoFactor: (code: string) => request<null>('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+  disableTwoFactor: (code: string) => request<null>('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
+
   resendVerificationEmail: () => request<{ devVerificationToken?: string } | null>('/auth/verify-email/resend', { method: 'POST' }),
   resendPublicVerificationEmail: (email: string) => request<null>('/auth/verify-email/resend-public', { method: 'POST', body: JSON.stringify({ email }) }),
   verifyEmail: (token: string) => request<{ user: BackendUser }>(`/auth/verify-email/${encodeURIComponent(token)}`),
 
   // ---- Users ----
   getCurrentUser: () => request<BackendUser>('/users/me'),
+  exportMyData: () => request<Record<string, unknown>>('/users/me/export'),
+  deleteAccount: (password: string) => request<null>('/users/me', { method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE', password }) }),
   getProfile: (userId: string) => request<BackendUser>(`/users/${userId}`),
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),

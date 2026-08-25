@@ -9,7 +9,7 @@ import { api, type ContactShield } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { fadeInUp, springGentle } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X } from 'lucide-react';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound } from 'lucide-react';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -160,11 +160,122 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   
   const logout = useAppStore((s: any) => s.logout);
+  const currentUser = useAppStore((s: any) => s.currentUser);
   const privacySettings = useAppStore((s: any) => s.privacySettings || s.privacy || {});
   const updatePrivacySettings = useAppStore((s: any) => s.updatePrivacySettings || s.updatePrivacy);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(currentUser?.notificationsEnabled ?? true);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
+  const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorDisableMode, setTwoFactorDisableMode] = useState(false);
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handlePrivacyChange = (key: string, value: any) => {
     updatePrivacySettings({ ...privacySettings, [key]: value });
+  };
+
+  const handleNotificationChange = async (value: boolean) => {
+    setNotificationsEnabled(value);
+    try {
+      await api.updateSettings({ notificationsEnabled: value });
+    } catch (error) {
+      setNotificationsEnabled(!value);
+      toast.error(error instanceof Error ? error.message : 'Could not update notification preferences');
+    }
+  };
+
+  const beginTwoFactorSetup = async () => {
+    setTwoFactorBusy(true);
+    try {
+      setTwoFactorSetup(await api.setupTwoFactor());
+      setTwoFactorCode('');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not start two-factor setup');
+    } finally {
+      setTwoFactorBusy(false);
+    }
+  };
+
+  const confirmTwoFactorSetup = async () => {
+    if (!/^\d{6}$/.test(twoFactorCode)) {
+      toast.error('Enter the six-digit code from your authenticator app');
+      return;
+    }
+    setTwoFactorBusy(true);
+    try {
+      await api.confirmTwoFactor(twoFactorCode);
+      setTwoFactorEnabled(true);
+      setTwoFactorSetup(null);
+      setTwoFactorCode('');
+      toast.success('Two-factor authentication enabled');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Invalid authenticator code');
+    } finally {
+      setTwoFactorBusy(false);
+    }
+  };
+
+  const disableTwoFactor = async () => {
+    if (!/^\d{6}$/.test(twoFactorCode)) {
+      toast.error('Enter your current six-digit authenticator code');
+      return;
+    }
+    setTwoFactorBusy(true);
+    try {
+      await api.disableTwoFactor(twoFactorCode);
+      setTwoFactorEnabled(false);
+      setTwoFactorCode('');
+      setTwoFactorDisableMode(false);
+      toast.success('Two-factor authentication disabled');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Invalid authenticator code');
+    } finally {
+      setTwoFactorBusy(false);
+    }
+  };
+
+  const exportAccount = async () => {
+    setExporting(true);
+    try {
+      const data = await api.exportMyData();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'yor-talks-account-export.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Your account export is ready');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not export your data');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      toast.error('Type DELETE to confirm account removal');
+      return;
+    }
+    if (deletePassword.length < 8) {
+      toast.error('Enter your password to confirm account removal');
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.deleteAccount(deletePassword);
+      await logout();
+      toast.success('Your Yor account and associated data have been deleted');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete your account');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -250,24 +361,43 @@ export default function Settings() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold">Message filtering</p>
-              <p className="text-xs text-muted-foreground">Automatically filter spam messages</p>
+              <p className="text-sm font-semibold">Message requests</p>
+              <p className="text-xs text-muted-foreground">Allow non-followers to send message requests</p>
             </div>
             <Switch 
-              checked={privacySettings.messageRequestsEnabled ?? true} 
-              onCheckedChange={(val) => handlePrivacyChange('messageRequestsEnabled', val)} 
+              checked={privacySettings.messageRequests ?? true} 
+              onCheckedChange={(val) => handlePrivacyChange('messageRequests', val)} 
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Two-factor authentication</p>
-              <p className="text-xs text-muted-foreground">Extra security for your identity</p>
+          <div className="space-y-3 border-t border-border/30 pt-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Two-factor authentication</p>
+                <p className="text-xs text-muted-foreground">Protect sign-ins with an authenticator app</p>
+              </div>
+              {!twoFactorEnabled && !twoFactorSetup && <Button type="button" variant="outline" onClick={() => void beginTwoFactorSetup()} disabled={twoFactorBusy} className="rounded-xl text-xs font-bold">Set up</Button>}
+              {twoFactorEnabled && !twoFactorSetup && <span className="text-xs font-semibold text-emerald-600">Enabled</span>}
             </div>
-            <Switch 
-              checked={privacySettings.twoFactorEnabled ?? false} 
-              onCheckedChange={(val) => handlePrivacyChange('twoFactorEnabled', val)} 
-            />
+            {twoFactorSetup && (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <p className="text-xs text-muted-foreground">Add this secret to your authenticator app, then confirm the generated code.</p>
+                <code className="block break-all rounded-xl bg-background/70 p-3 text-xs tracking-wider">{twoFactorSetup.secret}</code>
+                <div className="flex gap-2">
+                  <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" className="rounded-xl" />
+                  <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="rounded-xl">Confirm</Button>
+                </div>
+              </div>
+            )}
+            {twoFactorEnabled && !twoFactorSetup && !twoFactorDisableMode && (
+              <Button type="button" variant="ghost" onClick={() => setTwoFactorDisableMode(true)} className="h-auto justify-start p-0 text-xs text-destructive hover:text-destructive">Disable two-factor authentication</Button>
+            )}
+            {twoFactorEnabled && twoFactorDisableMode && (
+              <div className="flex gap-2">
+                <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Current 6-digit code" inputMode="numeric" className="rounded-xl" />
+                <Button type="button" variant="destructive" onClick={() => void disableTwoFactor()} disabled={twoFactorBusy} className="rounded-xl">Disable</Button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -286,21 +416,12 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Receive instant alerts on this device</p>
             </div>
             <Switch 
-              checked={privacySettings.pushNotifications ?? true} 
-              onCheckedChange={(val) => handlePrivacyChange('pushNotifications', val)} 
+              checked={notificationsEnabled} 
+              onCheckedChange={(val) => void handleNotificationChange(val)} 
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Weekly digest</p>
-              <p className="text-xs text-muted-foreground">Curated highlights from your network</p>
-            </div>
-            <Switch 
-              checked={privacySettings.emailDigest ?? true} 
-              onCheckedChange={(val) => handlePrivacyChange('emailDigest', val)} 
-            />
-          </div>
+          <p className="text-xs leading-5 text-muted-foreground">Browser push permission is managed by your device. Email digests are not enabled in the college beta.</p>
         </section>
 
         {/* Account Management */}
@@ -325,11 +446,33 @@ export default function Settings() {
               <p className="text-sm font-semibold text-destructive">Delete Account</p>
               <p className="text-xs text-muted-foreground">Permanently wipe your profile & data</p>
             </div>
-            <Button variant="destructive" className="rounded-xl font-bold text-xs">
+            <Button variant="destructive" className="rounded-xl font-bold text-xs" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
             </Button>
           </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+            <div>
+              <p className="text-sm font-semibold">Download your data</p>
+              <p className="text-xs text-muted-foreground">Export your profile, posts, relationships and reports</p>
+            </div>
+            <Button variant="outline" className="rounded-xl font-bold text-xs" onClick={() => void exportAccount()} disabled={exporting}>
+              {exporting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />} Export
+            </Button>
+          </div>
         </section>
+
+        {deleteOpen && (
+          <section className="surface-1 rounded-2xl border border-destructive/40 bg-destructive/5 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"><KeyRound className="h-4 w-4" /></div>
+              <div><h3 className="font-bold text-destructive">Permanently delete this account?</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">This removes your profile, posts, comments, relationships and contact shields. Financial audit records are retained without your identity.</p></div>
+            </div>
+            <Input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE" className="rounded-xl" />
+            <Input value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Your password" type="password" className="rounded-xl" />
+            <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)} className="rounded-xl">Cancel</Button><Button type="button" variant="destructive" onClick={() => void deleteAccount()} disabled={deleting} className="rounded-xl">{deleting ? 'Deleting…' : 'Delete permanently'}</Button></div>
+          </section>
+        )}
       </motion.div>
     </div>
   );

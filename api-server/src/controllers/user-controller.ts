@@ -5,6 +5,8 @@ import { UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
 import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
+import { AccountService, InvalidAccountPasswordError } from "../services/account-service.js";
+import { env } from "../config/env.js";
 
 export class UserController {
   private readonly storageService = new StorageService();
@@ -13,6 +15,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly authService: AuthService,
+    private readonly accountService: AccountService,
   ) {}
 
   getProfile = async (req: Request, res: Response) => {
@@ -150,6 +153,31 @@ export class UserController {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("User unmuted", { mutedUsers: user.mutedUsers }));
+  };
+
+  exportAccount = async (req: Request, res: Response) => {
+    const data = await this.accountService.exportAccount(req.user?.id ?? "");
+    if (!data) {
+      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    res.setHeader("Content-Disposition", 'attachment; filename="yor-talks-account-export.json"');
+    return res.status(200).json(createResponse("Account export ready", data));
+  };
+
+  deleteAccount = async (req: Request, res: Response) => {
+    try {
+      const deleted = await this.accountService.deleteAccount(req.user?.id ?? "", req.body.password);
+      if (!deleted) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+      return res.status(200).json(createResponse("Account deleted", null));
+    } catch (error) {
+      if (error instanceof InvalidAccountPasswordError) {
+        return res.status(401).json(createResponse("Password confirmation failed", null, {}, [error.message]));
+      }
+      throw error;
+    }
   };
 
   listContactShields = async (req: Request, res: Response) => {

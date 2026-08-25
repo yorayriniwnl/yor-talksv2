@@ -22,6 +22,11 @@ export const privacySchema = z.object({
   allowDmFromStrangers: z.boolean().optional(),
 });
 
+export const deleteAccountSchema = z.object({
+  confirmation: z.literal("DELETE"),
+  password: z.string().min(8),
+});
+
 export const contactShieldSchema = z.object({
   contacts: z.array(z.object({
     type: z.enum(["email", "phone"]),
