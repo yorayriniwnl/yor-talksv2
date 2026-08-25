@@ -10,7 +10,7 @@ after(() => redisRepository.disconnect());
 test("register and login issue tokens and persist session", async () => {
   const authService = new AuthService(new UserRepository(), redisRepository);
   const unique = Date.now();
-  const email = `alice-${unique}@example.com`;
+  const email = `${String(unique).slice(-7)}@kiit.ac.in`;
 
   const registered = await authService.register({
     username: `alice-${unique}`,

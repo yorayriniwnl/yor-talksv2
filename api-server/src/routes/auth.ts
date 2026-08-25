@@ -7,34 +7,20 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
 import { loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema } from "../validators/auth.js";
 
-import { OtpService } from "../services/otp-service.js";
-
 const router = Router();
 const userRepo = new UserRepository();
 const redisRepo = new RedisRepository();
 const authService = new AuthService(userRepo, redisRepo);
-const otpService = new OtpService(userRepo, redisRepo);
 const authController = new AuthController(authService);
 
-// ── Phone & WhatsApp OTP Routes ──────────────────────────────────────────
+// Phone/WhatsApp OTP is intentionally unavailable in the college beta: the
+// project has no verified SMS provider and must not expose test OTP codes.
 router.post("/auth/otp/send", async (req, res): Promise<void> => {
-  try {
-    const { phoneNumber, channel } = req.body;
-    const result = await otpService.sendOtp(phoneNumber, channel || "whatsapp");
-    res.json({ success: true, message: result.message, data: result });
-  } catch (err: any) {
-    res.status(400).json({ success: false, message: err.message, errors: ["otp_error"] });
-  }
+  res.status(410).json({ success: false, message: "Phone OTP is not enabled for the KIIT college beta", errors: ["otp_not_configured"] });
 });
 
 router.post("/auth/otp/verify", async (req, res): Promise<void> => {
-  try {
-    const { phoneNumber, code } = req.body;
-    const result = await otpService.verifyOtp(phoneNumber, code);
-    res.json({ success: true, message: "Logged in successfully via OTP", data: result });
-  } catch (err: any) {
-    res.status(400).json({ success: false, message: err.message, errors: ["otp_verify_error"] });
-  }
+  res.status(410).json({ success: false, message: "Phone OTP is not enabled for the KIIT college beta", errors: ["otp_not_configured"] });
 });
 
 router.post("/auth/register", validateBody(registerSchema), authController.register);

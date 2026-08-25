@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
+import { isKiitCollegeEmail } from "../validators/auth.js";
 
 export class TooManyAttemptsError extends Error {}
 export class TwoFactorRequiredError extends Error {}
@@ -30,7 +31,12 @@ export class AuthService {
     password: string;
     fullName: string;
   }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
-    const existingEmail = await this.userRepository.findByEmail(input.email);
+    const email = input.email.trim().toLowerCase();
+    if (!isKiitCollegeEmail(email)) {
+      throw new Error("Only seven-digit @kiit.ac.in college emails can join this beta");
+    }
+
+    const existingEmail = await this.userRepository.findByEmail(email);
     const existingUsername = await this.userRepository.findByUsername(input.username);
     const existing = existingEmail ?? existingUsername;
     
@@ -42,7 +48,7 @@ export class AuthService {
     const user: UserRecord = {
       id: randomUUID(),
       username: input.username,
-      email: input.email,
+      email,
       passwordHash,
       fullName: input.fullName,
       bio: "",
@@ -51,8 +57,6 @@ export class AuthService {
       permissions: ["read:profile", "write:post"],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      followers: [],
-      following: [],
       settings: {
         theme: "light",
         notificationsEnabled: true,
@@ -92,6 +96,11 @@ export class AuthService {
     const user = byEmail ?? await this.userRepository.findByUsername(input.identifier);
     if (!user) {
       this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — unknown identifier`);
+      throw new Error("Invalid credentials");
+    }
+
+    if (!isKiitCollegeEmail(user.email)) {
+      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — non-KIIT account`);
       throw new Error("Invalid credentials");
     }
 
@@ -175,6 +184,9 @@ export class AuthService {
    * passwords themselves are never stored raw.
    */
   async requestPasswordReset(email: string): Promise<string | undefined> {
+    if (!isKiitCollegeEmail(email)) {
+      return undefined;
+    }
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
       // Don't reveal whether this email is registered.

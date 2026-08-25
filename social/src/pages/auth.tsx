@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, Smartphone } from 'lucide-react';
+import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion';
-import { OtpLoginModal } from '@/components/auth/OtpLoginModal';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -32,7 +31,7 @@ export default function Auth() {
     if (mode === 'register') {
       if (fullName.length < 2) errors.fullName = 'Full name must be at least 2 characters';
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) errors.username = 'Username must be 3-20 characters, alphanumeric and underscores only';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Invalid email address';
+      if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) errors.email = 'Use your 7-digit KIIT college email, for example 2329027@kiit.ac.in';
       if (password.length < 8) errors.password = 'Password must be at least 8 characters';
     } else {
       if (!email) errors.email = 'Email/Username is required';
@@ -304,29 +303,11 @@ export default function Auth() {
                   </Button>
                 </motion.div>
 
-                {/* 1-Tap WhatsApp & Phone Number OTP Button */}
-                <OtpLoginModal
-                  trigger={
-                    <Button
-                      type="button"
-                      className="w-full h-11 rounded-xl font-display font-extrabold text-xs bg-gradient-to-r from-emerald-500 via-teal-500 to-primary text-black glow-neon-primary shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-                    >
-                      <Smartphone className="w-4 h-4 mr-2" /> 1-Tap WhatsApp / Mobile OTP Login 🇮🇳
-                    </Button>
-                  }
-                />
-
-                {/* Instant Demo Login Button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    login('yorayriniwnl', 'password').catch(() => {});
-                  }}
-                  className="w-full h-10 rounded-xl font-bold text-xs border-primary/30 text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /> Enter Demo Account Immediately
-                </Button>
+                {mode === 'register' && (
+                  <p className="text-center text-[0.68rem] font-mono text-muted-foreground">
+                    KIIT beta access is limited to seven-digit <span className="text-primary">@kiit.ac.in</span> emails.
+                  </p>
+                )}
               </form>
             </motion.div>
           </AnimatePresence>

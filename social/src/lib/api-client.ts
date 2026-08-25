@@ -160,8 +160,10 @@ export interface BackendUser {
   bio: string;
   avatarUrl: string | null;
   role: string;
-  followers: string[];
-  following: string[];
+  followers?: string[];
+  following?: string[];
+  followerCount?: number;
+  followingCount?: number;
   emailVerified: boolean;
   createdAt: string;
   blockedUsers?: string[];

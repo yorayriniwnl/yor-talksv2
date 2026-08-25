@@ -1,8 +1,14 @@
 import { z } from "zod";
 
+export const KIIT_EMAIL_PATTERN = /^\d{7}@kiit\.ac\.in$/i;
+
+export function isKiitCollegeEmail(email: string): boolean {
+  return KIIT_EMAIL_PATTERN.test(email.trim());
+}
+
 export const registerSchema = z.object({
   username: z.string().min(3).max(24),
-  email: z.string().email(),
+  email: z.string().trim().email().regex(KIIT_EMAIL_PATTERN, "Use your seven-digit KIIT college email (for example, 2329027@kiit.ac.in)"),
   password: z
     .string()
     .min(8)
