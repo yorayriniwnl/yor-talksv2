@@ -27,8 +27,8 @@ export default function Projects() {
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const res = await api.request<{ projects: any[] }>('/projects');
-      setProjects(res.projects);
+      const result = await api.getProjects();
+      setProjects(result);
     } catch (e) {
       toast.error("Failed to load projects");
     } finally {
@@ -39,10 +39,7 @@ export default function Projects() {
   const handleCreate = async () => {
     if (!title) { toast.error("Title is required"); return; }
     try {
-      await api.request('/projects', {
-        method: 'POST',
-        body: JSON.stringify({ title, description, visibility: 'public', lookingForCollaborators: looking })
-      });
+      await api.createProject({ title, description, visibility: 'public', lookingForCollaborators: looking });
       toast.success("Project created successfully!");
       setShowCreate(false);
       setTitle('');

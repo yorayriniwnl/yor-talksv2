@@ -171,6 +171,18 @@ export interface BackendUser {
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
+export interface BackendProject {
+  id: string;
+  ownerId: string;
+  title: string;
+  description: string | null;
+  status: 'planning' | 'active' | 'completed' | 'cancelled';
+  visibility: 'public' | 'private';
+  lookingForCollaborators: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const api = {
   request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
@@ -246,6 +258,13 @@ export const api = {
     request<BackendCommunity>('/communities', { method: 'POST', body: JSON.stringify(payload) }),
   joinCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/join`, { method: 'POST' }),
   leaveCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/leave`, { method: 'POST' }),
+
+  // ---- Projects / dreams ----
+  getProjects: () => request<{ projects: BackendProject[] }>('/projects').then((result) => result.projects),
+  createProject: (payload: { title: string; description?: string; visibility?: 'public' | 'private'; lookingForCollaborators?: boolean }) =>
+    request<BackendProject>('/projects', { method: 'POST', body: JSON.stringify(payload) }),
+  inviteProjectCollaborator: (projectId: string, userId: string, role?: 'collaborator' | 'advisor') =>
+    request<null>(`/projects/${projectId}/collaborators`, { method: 'POST', body: JSON.stringify({ userId, role }) }),
 
   // ---- Stories ----
   getStories: () => request<BackendStory[]>('/stories'),
