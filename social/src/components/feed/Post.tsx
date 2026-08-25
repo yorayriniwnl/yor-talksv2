@@ -263,6 +263,7 @@ export function PostCard({ post }: { post: PostType }) {
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
+  const toggleBlockUser = useAppStore((state) => state.toggleBlockUser);
   const [, setLocation] = useLocation();
   const { particles, burst: heartBurst } = useHeartBurst();
   const [commentText, setCommentText] = useState('');
@@ -277,6 +278,22 @@ export function PostCard({ post }: { post: PostType }) {
     try { await navigator.clipboard?.writeText(`${window.location.origin}/post/${post.id}`); } catch { /* Ignore */ }
     sharePost(post.id);
     toast({ title: 'Link copied', description: 'Share the conversation anywhere.' });
+  };
+
+  const reportPost = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await api.submitReport({ entityType: 'post', entityId: post.id, reason: 'other', details: 'Reported from the post action menu.' });
+      toast({ title: 'Report submitted', description: 'Thanks — the trust queue will review this post.' });
+    } catch (error) {
+      toast({ title: 'Could not submit report', description: error instanceof Error ? error.message : 'Try again in a moment.' });
+    }
+  };
+
+  const blockAuthor = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    await toggleBlockUser(author.id);
+    toast({ title: 'User blocked', description: 'You will no longer see this user’s content.' });
   };
 
   const getTextSizeClass = (length: number) => {
@@ -466,8 +483,8 @@ export function PostCard({ post }: { post: PostType }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
                 <DropdownMenuItem onClick={copyPostLink}>Copy link</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast({ title: 'Post reported. We\'ll review it shortly.' })}>Report</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => toast({ title: 'User blocked. You won\'t see their content anymore.' })}>Block user</DropdownMenuItem>
+                <DropdownMenuItem onClick={reportPost}>Report</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={blockAuthor}>Block user</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

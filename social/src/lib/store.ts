@@ -1345,9 +1345,17 @@ export const useAppStore = create<AppState>()(
             await api.unblockUser(userId);
           } else {
             await api.blockUser(userId);
+            set((state) => ({ posts: state.posts.filter((post) => post.authorId !== userId) }));
           }
-        } catch {
-          // Local state updated
+        } catch (error) {
+          set((state) => {
+            if (!state.currentUser) return state;
+            const blockedUserIds = isBlocked
+              ? [...(state.currentUser.blockedUserIds || []), userId]
+              : (state.currentUser.blockedUserIds || []).filter(id => id !== userId);
+            return { currentUser: { ...state.currentUser, blockedUserIds } };
+          });
+          toast.error(error instanceof Error ? error.message : 'Could not update blocked users');
         }
       },
 

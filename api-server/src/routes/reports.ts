@@ -5,6 +5,7 @@ import { reportsTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { validateBody, validateParams } from "../middlewares/validation.js";
 import { grievanceSchema, grievanceTicketParamSchema } from "../validators/grievance.js";
+import { reportSchema } from "../validators/report.js";
 import { ModerationService } from "../services/moderation-service.js";
 
 const router = Router();
@@ -35,7 +36,7 @@ router.get("/grievance/:ticketId", validateParams(grievanceTicketParamSchema), a
   return res.status(200).json({ success: true, message: "Grievance status loaded", data: publicTicket, errors: [], meta: {} });
 });
 
-router.post("/", authenticate, async (req, res) => {
+router.post("/", authenticate, validateBody(reportSchema), async (req, res) => {
   try {
     const { entityType, entityId, reason, details } = req.body;
     
@@ -50,9 +51,9 @@ router.post("/", authenticate, async (req, res) => {
       createdAt: new Date().toISOString()
     });
     
-    res.status(201).json({ success: true, message: "Report submitted successfully" });
+    res.status(201).json({ success: true, message: "Report submitted successfully", data: null, errors: [], meta: {} });
   } catch (err) {
-    res.status(500).json({ error: "Failed to submit report" });
+    res.status(500).json({ success: false, message: "Failed to submit report", data: null, errors: ["Report storage failed"], meta: {} });
   }
 });
 

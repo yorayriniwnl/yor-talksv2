@@ -118,7 +118,7 @@ export default function GrievancePortal() {
             </div>
             <h3 className="font-display font-black text-2xl text-foreground">Grievance Ticket Acknowledged</h3>
             <p className="text-xs text-muted-foreground">
-              Your report has been logged with statutory priority. An official acknowledgment has been registered.
+              Your report has been logged in the Yor Talks trust queue. Keep this ticket ID for status tracking.
             </p>
 
             <div className="surface-1 p-4 rounded-2xl border border-border/40 text-left space-y-2 font-mono text-xs">

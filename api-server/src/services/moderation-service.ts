@@ -79,7 +79,7 @@ export class ModerationService {
   }
 
   /**
-   * File an official grievance ticket under India's IT (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021
+   * File a persisted grievance ticket for trust-and-safety review.
    */
   async fileGrievance(data: {
     category: GrievanceTicket["category"];
