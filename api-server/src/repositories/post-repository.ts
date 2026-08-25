@@ -95,12 +95,13 @@ export class PostRepository {
   }
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
-  async search(query: string): Promise<PostRecord[]> {
+  async search(query: string, limit: number = 50): Promise<PostRecord[]> {
     return (await db
       .select()
       .from(postsTable)
       .where(ilike(postsTable.content, `%${query}%`))
-      .orderBy(desc(postsTable.createdAt))) as PostRecord[];
+      .orderBy(desc(postsTable.createdAt))
+      .limit(limit)) as PostRecord[];
   }
 
   async update(id: string, updates: Partial<PostRecord>): Promise<PostRecord | undefined> {

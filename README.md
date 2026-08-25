@@ -76,6 +76,7 @@ After changing provider variables:
 ```bash
 docker compose up --build -d api web
 docker compose exec api pnpm --filter @workspace/db push
+docker compose exec api pnpm --filter @workspace/db migrate:beta
 ```
 
 Check `docker compose logs api` for provider warnings. A warning means that
@@ -88,8 +89,9 @@ starting.
 2. Copy `api-server/.env.example` to `api-server/.env` and set local secrets.
 3. Install packages from the root: `pnpm install`.
 4. Push the schema: `pnpm --filter @workspace/db push`.
-5. Start the API: `pnpm --filter @workspace/api-server dev`.
-6. Start the frontend in another terminal: `pnpm --filter @workspace/social dev`.
+5. Install the idempotent beta indexes: `pnpm --filter @workspace/db migrate:beta`.
+6. Start the API: `pnpm --filter @workspace/api-server dev`.
+7. Start the frontend in another terminal: `pnpm --filter @workspace/social dev`.
 
 The Vite server runs on port 5173 and proxies `/api` and `/socket.io` to the
 API on port 4000.
