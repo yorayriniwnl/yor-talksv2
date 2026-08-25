@@ -23,6 +23,8 @@ import { TiltCard } from '@/components/ui/TiltCard';
 import { RippleEffect } from '@/components/ui/RippleEffect';
 import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 import { RichCommentComposer } from '@/components/comments/RichCommentComposer';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -41,6 +43,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -104,7 +107,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
       const uploadedMedia = mediaFiles.length
         ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
         : undefined;
-      await addPost(content.trim(), uploadedMedia, poll);
+      await addPost(content.trim(), uploadedMedia, poll, contentRating);
     } catch (error) {
       toast({ title: 'Could not upload your images', description: error instanceof Error ? error.message : 'Try again in a moment.' });
       setIsUploading(false);
@@ -116,6 +119,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     setContent('');
     setPollOpen(false);
     setPollOptions(['', '']);
+    setContentRating(DEFAULT_CONTENT_RATING);
     
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -207,6 +211,10 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
               )}
             </div>
           )}
+
+          <div className="mt-3 max-w-xs">
+            <ContentRatingSelect id="post-content-rating" value={contentRating} onChange={setContentRating} />
+          </div>
 
           <div className="mt-2 flex items-center justify-between pt-1">
             <div className="flex items-center gap-1 text-primary">
@@ -472,6 +480,9 @@ export function PostCard({ post }: { post: PostType }) {
               <span className="shrink-0 text-[0.78rem] text-muted-foreground">&middot;</span>
               <span className="shrink-0 text-[0.72rem] text-muted-foreground font-mono hover:underline">
                 {formatDistanceToNow(new Date(post.createdAt), { addSuffix: false })}
+              </span>
+              <span className="shrink-0 rounded-full border border-border/50 px-1.5 py-0.5 text-[0.58rem] font-semibold text-muted-foreground">
+                {contentRatingLabel(post.contentRating)}
               </span>
             </div>
             

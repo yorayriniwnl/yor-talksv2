@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { StoryRepository } from "../repositories/story-repository.js";
 import type { StoryRecord } from "../types/index.js";
+import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { ContentSafetyService } from "./content-safety-service.js";
 
 export class StoryService {
-  constructor(private readonly storyRepository: StoryRepository) {}
+  constructor(
+    private readonly storyRepository: StoryRepository,
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+  ) {}
 
   async createStory(input: {
     authorId: string;
@@ -13,6 +18,7 @@ export class StoryService {
     backgroundGradient?: string;
     isHighlight: boolean;
     highlightTitle?: string;
+    contentRating?: StoryRecord["contentRating"];
   }): Promise<StoryRecord> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
@@ -30,17 +36,18 @@ export class StoryService {
       reactions: [],
       isHighlight: input.isHighlight,
       highlightTitle: input.highlightTitle || null,
+      contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     return this.storyRepository.create(story);
   }
 
-  async listActiveStories(): Promise<StoryRecord[]> {
-    return this.storyRepository.listActive();
+  async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
+    return this.contentSafetyService.filterVisible(await this.storyRepository.listActive(), viewerId);
   }
 
   async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findById(storyId);
-    if (!story) return undefined;
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
 
     if (!story.viewerIds.includes(userId)) {
       const viewerIds = [...story.viewerIds, userId];
@@ -51,7 +58,7 @@ export class StoryService {
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findById(storyId);
-    if (!story) return undefined;
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
 
     const filteredReactions = story.reactions.filter(r => r.userId !== userId);
     const reactions = [...filteredReactions, { userId, emoji }];

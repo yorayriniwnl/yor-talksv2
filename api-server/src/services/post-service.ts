@@ -13,6 +13,8 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { ContactShieldService } from "./contact-shield-service.js";
+import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { ContentSafetyService } from "./content-safety-service.js";
 
 export class PostService {
 
@@ -49,6 +51,7 @@ export class PostService {
     private readonly aiService: AIService = new AIService(),
     private readonly securityService: SecurityService = new SecurityService(),
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
   ) {}
 
   private async notify(input: NotificationRecord) {
@@ -60,10 +63,11 @@ export class PostService {
 
   async getPost(postId: string, currentUserId?: string): Promise<PostRecord | undefined> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
-    return this.postRepository.findById(postId, excludedAuthorIds);
+    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
+    return this.postRepository.findById(postId, excludedAuthorIds, contentFilter);
   }
 
-  async createPost(authorId: string, content: string, images: string[]): Promise<PostRecord> {
+  async createPost(authorId: string, content: string, images: string[], contentRating = DEFAULT_CONTENT_RATING): Promise<PostRecord> {
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -81,6 +85,7 @@ export class PostService {
       tags,
       mentions,
       score: this.calculateScore({ likes: 0, shares: 0, comments: 0 }),
+      contentRating,
     };
     const created = await this.postRepository.create(post);
 
@@ -104,25 +109,27 @@ export class PostService {
     return this.postRepository.delete(postId);
   }
 
-  async editPost(postId: string, userId: string, content: string): Promise<PostRecord | undefined> {
+  async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"]): Promise<PostRecord | undefined> {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return undefined;
-    return this.postRepository.update(postId, { content, updatedAt: new Date().toISOString() });
+    return this.postRepository.update(postId, { content, ...(contentRating ? { contentRating } : {}), updatedAt: new Date().toISOString() });
   }
 
   
   async likePost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.getPost(postId, userId))) return undefined;
     await this.postRepository.likePost(postId, userId);
-    return this.postRepository.findById(postId);
+    return this.getPost(postId, userId);
   }
 
   async unlikePost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.getPost(postId, userId))) return undefined;
     await this.postRepository.unlikePost(postId, userId);
-    return this.postRepository.findById(postId);
+    return this.getPost(postId, userId);
   }
 
   async commentOnPost(postId: string, authorId: string, content: string): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
-    const post = await this.postRepository.findById(postId);
+    const post = await this.getPost(postId, authorId);
     if (!post) {
       return undefined;
     }
@@ -162,7 +169,7 @@ export class PostService {
   }
 
   async replyToComment(postId: string, commentId: string, authorId: string, content: string): Promise<{ post: PostRecord; reply: ReplyRecord } | undefined> {
-    const post = await this.postRepository.findById(postId);
+    const post = await this.getPost(postId, authorId);
     if (!post) {
       return undefined;
     }
@@ -198,24 +205,25 @@ export class PostService {
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {
-    const post = await this.postRepository.findById(postId);
+    const post = await this.getPost(postId, userId);
     if (!post) return undefined;
     await this.postRepository.toggleBookmark(postId, userId);
-    return this.postRepository.findById(postId);
+    return this.getPost(postId, userId);
   }
 
-  async sharePost(postId: string): Promise<PostRecord | undefined> {
-    const post = await this.postRepository.findById(postId);
+  async sharePost(postId: string, userId?: string): Promise<PostRecord | undefined> {
+    const post = await this.getPost(postId, userId);
     if (!post) {
       return undefined;
     }
     post.shareCount += 1;
     post.score = this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount });
-    return this.postRepository.update(postId, { shareCount: post.shareCount, score: post.score });
+    await this.postRepository.update(postId, { shareCount: post.shareCount, score: post.score });
+    return this.getPost(postId, userId);
   }
 
   async addReaction(postId: string, userId: string, reaction: string): Promise<PostRecord | undefined> {
-    const post = await this.postRepository.findById(postId);
+    const post = await this.getPost(postId, userId);
     if (!post) {
       return undefined;
     }
@@ -227,19 +235,21 @@ export class PostService {
       post.reactions = reactions;
       await this.postRepository.update(postId, { reactions: post.reactions });
     }
-    return post;
+    return this.getPost(postId, userId);
   }
 
   
   async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
-    return this.attachInteractions(await this.postRepository.list(cursor, limit, excludedAuthorIds), currentUserId);
+    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
+    return this.attachInteractions(await this.postRepository.list(cursor, limit, excludedAuthorIds, contentFilter), currentUserId);
   }
 
     private redis = new Redis(env.REDIS_URL);
 
   async getTrendingFeed(cursor?: number, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
+    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const cacheKey = `feed:trending:${cursor || 0}:${limit}`;
     
     // Try Redis cache first (Phase 5 Caching Architecture)
@@ -247,7 +257,9 @@ export class PostService {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        const visible = excludedAuthorIds.length > 0 ? parsed.filter((post: PostRecord) => !excludedAuthorIds.includes(post.authorId)) : parsed;
+        const visible = parsed.filter((post: PostRecord) =>
+          !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
+        );
         return this.attachInteractions(visible, currentUserId);
       } catch (e) { /* ignore parse error */ }
     }
@@ -259,13 +271,16 @@ export class PostService {
     
     // Cache for 60 seconds
     await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
-    const visible = excludedAuthorIds.length > 0 ? posts.filter((post) => !excludedAuthorIds.includes(post.authorId)) : posts;
+    const visible = posts.filter((post) =>
+      !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
+    );
     return this.attachInteractions(visible, currentUserId);
   }
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
-    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds), currentUserId);
+    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
+    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds, contentFilter), currentUserId);
   }
 
   close(): void {

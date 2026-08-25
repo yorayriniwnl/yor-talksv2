@@ -69,6 +69,7 @@ export const postsTable = pgTable("posts", {
   trendingScore: integer("trending_score").default(0),
   views: integer("views").default(0),
   engagementRate: integer("engagement_rate").default(0),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("post_author_idx").on(table.authorId),
   scoreIdx: index("post_score_idx").on(table.score, table.createdAt),
@@ -192,6 +193,7 @@ export const storiesTable = pgTable("stories", {
   reactions: jsonb("reactions").notNull().default([]),
   isHighlight: boolean("is_highlight").notNull().default(false),
   highlightTitle: text("highlight_title"),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("story_author_idx").on(table.authorId)
 }));
@@ -239,6 +241,7 @@ export const articlesTable = pgTable("articles", {
   claps: integer("claps").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   collection: text("collection"),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("article_author_idx").on(table.authorId)
 }));
@@ -253,6 +256,7 @@ export const videosTable = pgTable("videos", {
   likedBy: jsonb("liked_by").notNull().default([]),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   type: text("type").notNull(),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("video_author_idx").on(table.authorId)
 }));
@@ -268,6 +272,7 @@ export const liveStreamsTable = pgTable("live_streams", {
   startsAt: timestamp("starts_at", { mode: "string" }).notNull(),
   category: text("category").notNull(),
   guestIds: jsonb("guest_ids").notNull().default([]),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   hostIdx: index("livestream_host_idx").on(table.hostId)
 }));

@@ -14,6 +14,8 @@ import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -77,6 +79,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   // Publishing form
   const [caption, setCaption] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -215,6 +218,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           videoUrl: mediaUrl,
           thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
           type: 'short',
+          contentRating,
         });
         toast.success('🎬 Reel published to the Bharat Reel Swiper!');
       } else if (mode === 'story') {
@@ -223,10 +227,11 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           mediaUrl,
           textContent: caption.trim() || undefined,
           backgroundGradient: 'from-purple-900 via-indigo-900 to-black',
+          contentRating,
         });
         toast.success('✨ Story added to your 24h highlights!');
       } else {
-        addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [mediaUrl]);
+        addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [mediaUrl], undefined, contentRating);
         toast.success('🚀 Published to the global feed!');
       }
 
@@ -234,6 +239,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       // Reset
       setRecordedPreviewUrl(null);
       setCaption('');
+      setContentRating(DEFAULT_CONTENT_RATING);
       setActiveStickers([]);
     } catch {
       toast.error('Failed to publish. Please try again.');
@@ -493,6 +499,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                   className="w-full h-20 rounded-xl surface-2 border border-border/40 p-2.5 text-xs outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground resize-none font-sans"
                 />
               </div>
+              <ContentRatingSelect id="studio-content-rating" value={contentRating} onChange={setContentRating} />
             </div>
 
             {/* Publishing Footer Button */}

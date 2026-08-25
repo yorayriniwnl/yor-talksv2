@@ -65,6 +65,7 @@ export class AuthService {
         notificationsEnabled: true,
         privateAccount: false,
         allowMentions: true,
+        contentFilter: "regular",
       },
       emailVerified: false,
       contactIdentityDigest: getContactIdentifierDigest("email", email),

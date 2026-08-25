@@ -13,6 +13,8 @@ import { formatDistanceToNow } from 'date-fns';
 import ReelsSwiper from '@/components/video/ReelsSwiper';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 function UploadVideoDialog() {
   const createVideo = useAppStore((s: any) => s.createVideo);
@@ -22,6 +24,7 @@ function UploadVideoDialog() {
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [type, setType] = useState<'short' | 'standard'>('short');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [fileName, setFileName] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +84,8 @@ function UploadVideoDialog() {
         title: title.trim(), 
         videoUrl: finalVideoUrl, 
         thumbnailUrl: finalThumb, 
-        type 
+        type,
+        contentRating,
       });
       triggerConfetti();
       toast.success('🎬 Video published successfully! Live on your profile and reels stream.');
@@ -92,6 +96,7 @@ function UploadVideoDialog() {
       setFileName('');
       setPreviewUrl('');
       setType('short');
+      setContentRating(DEFAULT_CONTENT_RATING);
     } catch (err: any) {
       setError(err.message || 'Failed to add video');
     }
@@ -199,6 +204,8 @@ function UploadVideoDialog() {
               <Input id="video-thumb" type="url" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} placeholder="Auto-captured or Image URL" className="rounded-xl h-10 text-xs" />
             </div>
           </div>
+
+          <ContentRatingSelect id="video-content-rating" value={contentRating} onChange={setContentRating} />
 
           <DialogFooter className="pt-2">
             <Button type="submit" disabled={loading || title.trim().length < 2 || !videoUrl.trim()} className="rounded-xl font-bold text-xs px-6 glow-neon-primary bg-primary w-full sm:w-auto">

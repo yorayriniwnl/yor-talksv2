@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
+
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2).optional(),
   bio: z.string().max(280).optional(),
@@ -14,6 +16,7 @@ export const settingsSchema = z.object({
   theme: z.enum(["light", "dark"]).optional(),
   notificationsEnabled: z.boolean().optional(),
   privateAccount: z.boolean().optional(),
+  contentFilter: contentRatingSchema.optional(),
 });
 
 export const privacySchema = z.object({

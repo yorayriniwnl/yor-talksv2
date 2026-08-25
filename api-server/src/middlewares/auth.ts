@@ -56,6 +56,23 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+/** Public content endpoints can personalize results without rejecting anonymous viewers. */
+export const optionalAuthenticate = async (req: Request, _res: Response, next: NextFunction) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return next();
+
+  try {
+    const decoded = jwt.verify(header.split(" ")[1], env.JWT_SECRET) as JwtPayload;
+    const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
+    if (activeSession) {
+      req.user = { id: decoded.sub, role: decoded.role, permissions: decoded.permissions ?? [] };
+    }
+  } catch {
+    // An invalid optional credential is treated as anonymous access.
+  }
+  return next();
+};
+
 export const requireRole = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {

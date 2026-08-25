@@ -14,6 +14,7 @@ export interface Tokens {
 export type AuthTokens = Tokens;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
+export type ContentRating = 'child_safe' | 'regular' | 'mature';
 let memoryAccessToken: string | null = null;
 
 export function getStoredTokens(): Tokens | null {
@@ -178,7 +179,7 @@ export interface BackendUser {
   blockedUsers?: string[];
   mutedUsers?: string[];
   twoFactorEnabled?: boolean;
-  settings?: { notificationsEnabled?: boolean; privateAccount?: boolean; theme?: 'light' | 'dark' };
+  settings?: { notificationsEnabled?: boolean; privateAccount?: boolean; theme?: 'light' | 'dark'; contentFilter?: ContentRating };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
@@ -247,7 +248,7 @@ export const api = {
   unfollowUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser }>(`/users/${userId}/unfollow`, { method: 'POST' }),
   getFollowers: (userId: string) => request<BackendUser[]>(`/users/${userId}/followers`),
   getFollowing: (userId: string) => request<BackendUser[]>(`/users/${userId}/following`),
-  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean }) =>
+  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
     request<BackendUser>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>
     request<{ profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean }>('/users/me/privacy', { method: 'PUT', body: JSON.stringify(payload) }),
@@ -267,7 +268,7 @@ export const api = {
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
   getTrendingFeed: (page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?page=${page}&pageSize=${pageSize}`),
   getUserFeed: (userId: string, page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?page=${page}&pageSize=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[] }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; images?: string[]; contentRating?: ContentRating }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -299,7 +300,7 @@ export const api = {
 
   // ---- Stories ----
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; contentRating?: ContentRating }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
@@ -344,14 +345,14 @@ export const api = {
   // ---- Articles ----
   getArticles: () => request<BackendArticle[]>('/articles'),
   getArticle: (id: string) => request<BackendArticle>(`/articles/${id}`),
-  createArticle: (payload: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string }) =>
+  createArticle: (payload: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentRating?: ContentRating }) =>
     request<BackendArticle>('/articles', { method: 'POST', body: JSON.stringify(payload) }),
   clapArticle: (id: string, count = 1) => request<BackendArticle>(`/articles/${id}/clap`, { method: 'POST', body: JSON.stringify({ count }) }),
 
   // ---- Videos ----
   getVideos: () => request<BackendVideo[]>('/videos'),
   getVideo: (id: string) => request<BackendVideo>(`/videos/${id}`),
-  createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard' }) =>
+  createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),
   likeVideo: (id: string) => request<BackendVideo>(`/videos/${id}/like`, { method: 'POST' }),
 
@@ -359,7 +360,7 @@ export const api = {
   getStreams: () => request<BackendLiveStream[]>('/streams'),
   getStream: (id: string) => request<BackendLiveStream>(`/streams/${id}`),
   getStreamToken: (id: string) => request<{ token: string; wsUrl: string; roomName: string }>(`/streams/${id}/token`),
-  createStream: (payload: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: string }) =>
+  createStream: (payload: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: string; contentRating?: ContentRating }) =>
     request<BackendLiveStream>('/streams', { method: 'POST', body: JSON.stringify(payload) }),
   setStreamStatus: (id: string, status: 'scheduled' | 'live' | 'ended') =>
     request<BackendLiveStream>(`/streams/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
@@ -378,6 +379,7 @@ export interface BackendStory {
   reactions: { userId: string; emoji: string }[];
   isHighlight: boolean;
   highlightTitle: string | null;
+  contentRating?: ContentRating;
 }
 
 export interface BackendPost {
@@ -395,6 +397,7 @@ export interface BackendPost {
   likedByMe?: boolean;
   savedByMe?: boolean;
   shareCount: number;
+  contentRating?: ContentRating;
 }
 
 export interface BackendCommunity {
@@ -445,6 +448,7 @@ export interface BackendArticle {
   claps: number;
   createdAt: string;
   collection?: string | null;
+  contentRating?: ContentRating;
 }
 
 export interface BackendVideo {
@@ -457,6 +461,7 @@ export interface BackendVideo {
   likes: number;
   createdAt: string;
   type: string;
+  contentRating?: ContentRating;
 }
 
 export interface BackendLiveStream {
@@ -470,6 +475,7 @@ export interface BackendLiveStream {
   startsAt: string;
   category: string;
   guestIds: string[];
+  contentRating?: ContentRating;
 }
 
 export interface BackendConversation {

@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 interface StoryBuilderModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
   const [imageUrl, setImageUrl] = useState('');
   const [storyType, setStoryType] = useState<'text' | 'image'>('text');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
   const handlePublishStory = () => {
     if (storyType === 'text' && !textContent.trim()) return;
@@ -43,11 +46,13 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
       textContent: storyType === 'text' ? textContent.trim() : undefined,
       mediaUrl: storyType === 'image' ? imageUrl.trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
       backgroundGradient: selectedGradient.css,
+      contentRating,
     });
 
     toast.success('Story published to your highlights! ✨');
     setTextContent('');
     setImageUrl('');
+    setContentRating(DEFAULT_CONTENT_RATING);
     onOpenChange(false);
   };
 
@@ -122,6 +127,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           )}
 
           {/* Gradient Palette Picker */}
+          <ContentRatingSelect id="story-content-rating" value={contentRating} onChange={setContentRating} />
+
           <div>
             <label className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground mb-2 block">
               Canvas Background Style

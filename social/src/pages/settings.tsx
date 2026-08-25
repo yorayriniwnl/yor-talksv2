@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { fadeInUp, springGentle } from '@/lib/motion';
 import { toast } from 'sonner';
 import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound } from 'lucide-react';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -161,9 +162,11 @@ export default function Settings() {
   
   const logout = useAppStore((s: any) => s.logout);
   const currentUser = useAppStore((s: any) => s.currentUser);
+  const updateContentFilter = useAppStore((s: any) => s.updateContentFilter);
   const privacySettings = useAppStore((s: any) => s.privacySettings || s.privacy || {});
   const updatePrivacySettings = useAppStore((s: any) => s.updatePrivacySettings || s.updatePrivacy);
   const [notificationsEnabled, setNotificationsEnabled] = useState(currentUser?.notificationsEnabled ?? true);
+  const [contentFilter, setContentFilter] = useState<ContentRating>(currentUser?.contentFilter ?? DEFAULT_CONTENT_RATING);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -186,6 +189,18 @@ export default function Settings() {
     } catch (error) {
       setNotificationsEnabled(!value);
       toast.error(error instanceof Error ? error.message : 'Could not update notification preferences');
+    }
+  };
+
+  const handleContentFilterChange = async (value: ContentRating) => {
+    const previous = contentFilter;
+    setContentFilter(value);
+    try {
+      await updateContentFilter(value);
+      toast.success('Content filter updated');
+    } catch (error) {
+      setContentFilter(previous);
+      toast.error(error instanceof Error ? error.message : 'Could not update content filter');
     }
   };
 
@@ -368,6 +383,21 @@ export default function Settings() {
               checked={privacySettings.messageRequests ?? true} 
               onCheckedChange={(val) => handlePrivacyChange('messageRequests', val)} 
             />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">Content filter</p>
+              <p className="text-xs text-muted-foreground">Choose the highest audience layer shown to you</p>
+            </div>
+            <Select value={contentFilter} onValueChange={(value) => void handleContentFilterChange(value as ContentRating)}>
+              <SelectTrigger className="w-40 rounded-xl font-medium"><SelectValue placeholder="Content level" /></SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="child_safe">Child-safe only</SelectItem>
+                <SelectItem value="regular">Child-safe + Regular</SelectItem>
+                <SelectItem value="mature">All content</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-3 border-t border-border/30 pt-4">

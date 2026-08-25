@@ -20,13 +20,13 @@ export class LiveStreamController {
     return res.status(201).json(createResponse("Stream scheduled", stream));
   };
 
-  list = async (_req: Request, res: Response) => {
-    const streams = await this.liveStreamService.listStreams();
+  list = async (req: Request, res: Response) => {
+    const streams = await this.liveStreamService.listStreams(req.user?.id);
     return res.status(200).json(createResponse("Streams retrieved", streams));
   };
 
   get = async (req: Request, res: Response) => {
-    const stream = await this.liveStreamService.getStream(paramId(req));
+    const stream = await this.liveStreamService.getStream(paramId(req), req.user?.id);
     if (!stream) {
       return res.status(404).json(createResponse("Stream not found", null, {}, ["Not found"]));
     }

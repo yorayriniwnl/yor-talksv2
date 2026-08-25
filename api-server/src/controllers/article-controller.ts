@@ -18,13 +18,13 @@ export class ArticleController {
     return res.status(201).json(createResponse("Article published", article));
   };
 
-  list = async (_req: Request, res: Response) => {
-    const articles = await this.articleService.listArticles();
+  list = async (req: Request, res: Response) => {
+    const articles = await this.articleService.listArticles(req.user?.id);
     return res.status(200).json(createResponse("Articles retrieved", articles));
   };
 
   get = async (req: Request, res: Response) => {
-    const article = await this.articleService.getArticle(paramId(req));
+    const article = await this.articleService.getArticle(paramId(req), req.user?.id);
     if (!article) {
       return res.status(404).json(createResponse("Article not found", null, {}, ["Not found"]));
     }
@@ -32,7 +32,7 @@ export class ArticleController {
   };
 
   clap = async (req: Request, res: Response) => {
-    const article = await this.articleService.clap(paramId(req), req.body.count ?? 1);
+    const article = await this.articleService.clap(paramId(req), req.body.count ?? 1, req.user?.id);
     if (!article) {
       return res.status(404).json(createResponse("Article not found", null, {}, ["Not found"]));
     }

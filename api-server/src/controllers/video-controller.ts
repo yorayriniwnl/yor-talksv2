@@ -18,13 +18,13 @@ export class VideoController {
     return res.status(201).json(createResponse("Video uploaded", video));
   };
 
-  list = async (_req: Request, res: Response) => {
-    const videos = await this.videoService.listVideos();
+  list = async (req: Request, res: Response) => {
+    const videos = await this.videoService.listVideos(req.user?.id);
     return res.status(200).json(createResponse("Videos retrieved", videos));
   };
 
   get = async (req: Request, res: Response) => {
-    const video = await this.videoService.getVideo(paramId(req));
+    const video = await this.videoService.getVideo(paramId(req), req.user?.id);
     if (!video) {
       return res.status(404).json(createResponse("Video not found", null, {}, ["Not found"]));
     }

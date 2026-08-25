@@ -56,7 +56,7 @@ export class PostController {
     }
 
     const images = Array.isArray(req.body.images) ? req.body.images : [];
-    const post = await this.postService.createPost(req.user?.id ?? "", content, images);
+    const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentRating);
     return res.status(201).json(createResponse("Post created", post));
   };
 
@@ -72,7 +72,7 @@ export class PostController {
   editPost = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const post = await this.postService.editPost(postId, req.user?.id ?? "", content);
+    const post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating);
     if (!post) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }
@@ -129,7 +129,7 @@ export class PostController {
 
   share = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
-    const post = await this.postService.sharePost(postId);
+    const post = await this.postService.sharePost(postId, req.user?.id ?? "");
     if (!post) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }

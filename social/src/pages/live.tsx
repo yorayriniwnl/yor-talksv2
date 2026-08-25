@@ -9,6 +9,8 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80';
 
@@ -17,6 +19,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Campus');
   const [kind, setKind] = useState<'video' | 'audio'>('video');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
@@ -29,10 +32,12 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
         kind,
         coverUrl: DEFAULT_COVER,
         startsAt: new Date().toISOString(),
+        contentRating,
       });
       const liveStream = await api.setStreamStatus(stream.id, 'live');
       setOpen(false);
       setTitle('');
+      setContentRating(DEFAULT_CONTENT_RATING);
       onCreated(liveStream);
       toast.success('You are live');
     } catch (error) {
@@ -58,6 +63,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
               <option value="audio">Audio only</option>
             </select>
           </div>
+          <ContentRatingSelect id="stream-content-rating" value={contentRating} onChange={setContentRating} />
           <p className="text-xs text-muted-foreground">Your browser will ask for camera and microphone permission after the LiveKit room connects.</p>
           <Button type="submit" disabled={loading || title.trim().length < 2} className="w-full rounded-xl">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}

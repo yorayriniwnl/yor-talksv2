@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
+
 export const createArticleSchema = z.object({
   title: z.string().min(2).max(200),
   excerpt: z.string().min(1).max(500),
@@ -7,6 +9,7 @@ export const createArticleSchema = z.object({
   coverUrl: z.string().url(),
   readTime: z.number().int().min(0).default(0),
   collection: z.string().max(100).optional(),
+  contentRating: contentRatingSchema.default("regular"),
 });
 
 export const clapSchema = z.object({

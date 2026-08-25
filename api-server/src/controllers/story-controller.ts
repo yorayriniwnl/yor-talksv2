@@ -18,8 +18,8 @@ export class StoryController {
     return res.status(201).json(createResponse("Story created", story));
   };
 
-  listActive = async (_req: Request, res: Response) => {
-    const stories = await this.storyService.listActiveStories();
+  listActive = async (req: Request, res: Response) => {
+    const stories = await this.storyService.listActiveStories(req.user?.id);
     return res.status(200).json(createResponse("Stories retrieved", stories));
   };
 

@@ -1,4 +1,5 @@
 export type UserRole = "user" | "moderator" | "admin";
+import type { ContentRating } from "../utils/content-safety.js";
 
 export interface UserRecord {
   id: string;
@@ -35,6 +36,8 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   privateAccount: boolean;
   allowMentions?: boolean;
+  /** Highest content rating this viewer wants to see. */
+  contentFilter?: ContentRating;
 }
 
 export interface PrivacySettings {
@@ -54,6 +57,7 @@ export interface PostRecord {
   commentsCount: number;
   bookmarksCount: number;
   shareCount: number;
+  contentRating?: ContentRating;
   reactions?: Record<string, string[]>;
   tags?: string[];
   mentions?: string[];
@@ -208,6 +212,7 @@ export interface ArticleRecord {
   readTime: number;
   claps: number;
   createdAt: string;
+  contentRating?: ContentRating;
   collection?: string | null;
 }
 
@@ -222,6 +227,7 @@ export interface VideoRecord {
   likedBy?: string[];
   createdAt: string;
   type: string;
+  contentRating?: ContentRating;
 }
 
 export interface LiveStreamRecord {
@@ -235,6 +241,7 @@ export interface LiveStreamRecord {
   startsAt: string;
   category: string;
   guestIds: string[];
+  contentRating?: ContentRating;
 }
 
 export interface StoryReaction {
@@ -255,4 +262,5 @@ export interface StoryRecord {
   reactions: StoryReaction[];
   isHighlight: boolean;
   highlightTitle?: string | null;
+  contentRating?: ContentRating;
 }

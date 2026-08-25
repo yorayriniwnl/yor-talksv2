@@ -5,6 +5,8 @@ import { LiveKitNotConfiguredError, LiveKitService } from "./livekit-service.js"
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { ContentSafetyService } from "./content-safety-service.js";
 
 const VALID_STATUSES = ["scheduled", "live", "ended"] as const;
 type StreamStatus = (typeof VALID_STATUSES)[number];
@@ -16,6 +18,7 @@ export class LiveStreamService {
   constructor(
     private readonly liveStreamRepository: LiveStreamRepository,
     private readonly liveKitService: LiveKitService = new LiveKitService(),
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
   ) {}
 
   async createStream(input: {
@@ -25,6 +28,7 @@ export class LiveStreamService {
     kind: string;
     startsAt: string;
     category: string;
+    contentRating?: LiveStreamRecord["contentRating"];
   }): Promise<LiveStreamRecord> {
     const stream: LiveStreamRecord = {
       id: randomUUID(),
@@ -32,16 +36,18 @@ export class LiveStreamService {
       status: "scheduled",
       viewers: 0,
       guestIds: [],
+      contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     return this.liveStreamRepository.create(stream);
   }
 
-  async listStreams(): Promise<LiveStreamRecord[]> {
-    return this.liveStreamRepository.list();
+  async listStreams(viewerId?: string): Promise<LiveStreamRecord[]> {
+    return this.contentSafetyService.filterVisible(await this.liveStreamRepository.list(), viewerId);
   }
 
-  async getStream(id: string): Promise<LiveStreamRecord | undefined> {
-    return this.liveStreamRepository.findById(id);
+  async getStream(id: string, viewerId?: string): Promise<LiveStreamRecord | undefined> {
+    const stream = await this.liveStreamRepository.findById(id);
+    return await this.contentSafetyService.isVisible(stream, viewerId) ? stream : undefined;
   }
 
   async setStatus(id: string, hostId: string, status: StreamStatus): Promise<LiveStreamRecord | undefined> {
@@ -58,6 +64,9 @@ export class LiveStreamService {
   async getRoomAccessToken(id: string, userId: string) {
     const stream = await this.liveStreamRepository.findById(id);
     if (!stream) {
+      throw new LiveStreamNotFoundError("Stream not found");
+    }
+    if (!(await this.contentSafetyService.isVisible(stream, userId))) {
       throw new LiveStreamNotFoundError("Stream not found");
     }
     const isHost = stream.hostId === userId;
