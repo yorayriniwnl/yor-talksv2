@@ -5,6 +5,7 @@ import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, R
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,14 +27,20 @@ import { RichCommentComposer } from '@/components/comments/RichCommentComposer';
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
 
-export function CreatePost() {
+interface CreatePostProps {
+  onPublished?: () => void;
+}
+
+export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const currentUser = useAppStore((state) => state.currentUser);
   const addPost = useAppStore((state) => state.addPost);
   const [content, setContent] = useState('');
   const [media, setMedia] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,23 +75,44 @@ export function CreatePost() {
     if (imageFiles.length !== files.length) {
       toast({ title: 'Some images were skipped', description: 'Choose image files smaller than 10 MB.' });
     }
-    setMedia((existing) => [...existing, ...imageFiles.map((file) => URL.createObjectURL(file))].slice(0, 4));
+    const availableSlots = Math.max(0, 4 - media.length);
+    const selectedFiles = imageFiles.slice(0, availableSlots);
+    if (selectedFiles.length < imageFiles.length) {
+      toast({ title: 'You can add up to four images', description: 'Remove an image to choose another.' });
+    }
+    setMedia((existing) => [...existing, ...selectedFiles.map((file) => URL.createObjectURL(file))]);
+    setMediaFiles((existing) => [...existing, ...selectedFiles]);
   };
 
   const removeMedia = (url: string) => {
+    const index = media.indexOf(url);
+    if (index < 0) return;
     URL.revokeObjectURL(url);
     setMedia((existing) => existing.filter((item) => item !== url));
+    setMediaFiles((files) => files.filter((_, fileIndex) => fileIndex !== index));
   };
 
-  const publish = () => {
+  const publish = async () => {
     if (!canPublish) return;
+    setIsUploading(true);
     const poll = pollOpen ? {
       question: content.trim(),
       options: validPollOptions.map((text, index) => ({ id: `option_${Date.now()}_${index}`, text, votes: 0 })),
       totalVotes: 0,
     } : undefined;
-    addPost(content.trim(), media.length ? media : undefined, poll);
+    try {
+      const uploadedMedia = mediaFiles.length
+        ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
+        : undefined;
+      await addPost(content.trim(), uploadedMedia, poll);
+    } catch (error) {
+      toast({ title: 'Could not upload your images', description: error instanceof Error ? error.message : 'Try again in a moment.' });
+      setIsUploading(false);
+      return;
+    }
+    media.forEach((url) => URL.revokeObjectURL(url));
     setMedia([]);
+    setMediaFiles([]);
     setContent('');
     setPollOpen(false);
     setPollOptions(['', '']);
@@ -95,6 +123,8 @@ export function CreatePost() {
     
     setIsSuccess(true);
     setTimeout(() => setIsSuccess(false), 800);
+    setIsUploading(false);
+    onPublished?.();
     
     toast({ title: 'Your thought is live', description: 'It is now part of your community’s pulse.' });
   };
@@ -213,10 +243,10 @@ export function CreatePost() {
               <Button 
                 type="button" 
                 className={cn("h-9 rounded-full px-5 font-semibold transition-all duration-300", isSuccess && "shadow-[0_0_15px_rgba(var(--primary),0.6)] bg-primary scale-105")} 
-                disabled={!canPublish || isOverLimit} 
+                disabled={!canPublish || isOverLimit || isUploading}
                 onClick={publish}
               >
-                Share
+                {isUploading ? 'Publishing…' : 'Share'}
               </Button>
             </div>
           </div>

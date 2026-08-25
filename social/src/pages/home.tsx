@@ -16,16 +16,16 @@ import { cn } from '@/lib/utils';
 import { FeedSkeleton } from '@/components/ui/Skeletons';
 
 const FEED_GENRES = [
-  { id: 'all', label: '✨ For You' },
-  { id: 'trending', label: '🔥 Trending' },
-  { id: 'tech', label: '🤖 Tech & AI' },
-  { id: 'gaming', label: '🎮 Gaming' },
-  { id: 'music', label: '🎵 Music' },
-  { id: 'art', label: '🎨 Design & 3D' },
-  { id: 'fashion', label: '👗 Fashion' },
-  { id: 'motorsport', label: '🏎️ Speed & Sim' },
-  { id: 'science', label: '🔬 Science & Space' },
-  { id: 'lifestyle', label: '☕ Lifestyle & Crafts' },
+  { id: 'all', label: 'For you' },
+  { id: 'trending', label: 'Trending' },
+  { id: 'tech', label: 'Tech & AI' },
+  { id: 'gaming', label: 'Gaming' },
+  { id: 'music', label: 'Music' },
+  { id: 'art', label: 'Design' },
+  { id: 'fashion', label: 'Fashion' },
+  { id: 'motorsport', label: 'Speed & Sim' },
+  { id: 'science', label: 'Science' },
+  { id: 'lifestyle', label: 'Lifestyle' },
 ] as const;
 
 function matchesPostGenre(post: any, author: any, genre: string): boolean {
@@ -134,47 +134,47 @@ export default function Home() {
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'User';
 
   return (
-    <div className="min-h-screen bg-background pb-24 font-sans">
-      <div className="max-w-[1100px] mx-auto px-0 sm:px-4 pt-4 sm:pt-6">
+    <div className="premium-feed-page min-h-screen bg-background pb-24 font-sans">
+      <div className="max-w-[1180px] mx-auto px-0 sm:px-4 pt-3 sm:pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Main Feed Column (Instagram Style) */}
           <main className="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4">
             
             {/* Feed Mode Tabs */}
-            <div className="flex items-center border-b border-border/40 mb-1">
+            <div className="premium-feed-switcher">
               <button
                 onClick={() => { setFeedMode('following'); setVisibleCount(PAGE_SIZE); }}
                 className={cn(
-                  "flex-1 py-3 text-sm font-bold transition-colors relative",
+                  "premium-feed-switcher__button",
                   feedMode === 'following' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
                 )}
               >
                 Following
                 {feedMode === 'following' && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-foreground rounded-full" />
+                  <span className="premium-feed-switcher__indicator" />
                 )}
               </button>
               <button
                 onClick={() => { setFeedMode('forYou'); setVisibleCount(PAGE_SIZE); }}
                 className={cn(
-                  "flex-1 py-3 text-sm font-bold transition-colors relative",
+                  "premium-feed-switcher__button",
                   feedMode === 'forYou' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/70'
                 )}
               >
                 For You
                 {feedMode === 'forYou' && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-foreground rounded-full" />
+                  <span className="premium-feed-switcher__indicator" />
                 )}
               </button>
             </div>
 
             {/* Pull to Refresh */}
-            <div className="flex justify-center py-2 -mb-2 relative z-10">
+            <div className="flex justify-center py-1 -mb-1 relative z-10">
               <button
                 onClick={handleRefresh}
                 className={cn(
-                  "mx-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-primary text-primary-foreground shadow-md transition-all",
+                  "premium-refresh-pill mx-auto flex items-center gap-1.5",
                   isRefreshing && "opacity-70 pointer-events-none"
                 )}
               >
@@ -195,7 +195,7 @@ export default function Home() {
 
             {/* Feed Genre Category Chips */}
             {feedMode === 'forYou' && (
-              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1">
+              <div className="premium-feed-filters flex gap-2 overflow-x-auto hide-scrollbar pb-1 px-1">
                 {FEED_GENRES.map((g) => (
                   <button
                     key={g.id}
@@ -266,7 +266,7 @@ export default function Home() {
             )}
           </main>
 
-          {/* Right Sidebar (Desktop Steam & Instagram Fusion Suite) */}
+          {/* Right Sidebar */}
           <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 space-y-5 sticky top-6 h-fit">
             
             {/* Current User Steam Card */}
@@ -294,9 +294,10 @@ export default function Home() {
 
             {/* Trending Topics */}
             <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm">
-              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 mb-3 flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-primary" /> Trending now
+              <h3 className="font-display font-bold text-sm tracking-tight text-foreground mb-1 flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-primary" /> Trending across KIIT
               </h3>
+              <p className="mb-3 text-xs text-muted-foreground">A quick pulse from your campus.</p>
               <div className="flex flex-wrap gap-2">
                 {['#IndieGaming', '#CreatorEconomy', '#AIArt', '#Esports', '#PixelArt', '#GameDev', '#RetroGaming', '#Streaming'].map((tag) => (
                   <Link key={tag} href={`/explore?q=${encodeURIComponent(tag)}`} className="px-3 py-1.5 rounded-full text-xs font-semibold border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all">
@@ -309,8 +310,8 @@ export default function Home() {
             {/* Suggested Creators & Circles */}
             <div className="surface-1 rounded-3xl p-5 border border-border/40 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-foreground/80 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-primary" /> Suggested for you
+                <h3 className="font-display font-bold text-sm tracking-tight text-foreground flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-primary" /> People you may know
                 </h3>
                 <Link href="/explore" className="text-xs font-mono font-bold text-primary hover:underline">
                   See all
@@ -355,7 +356,7 @@ export default function Home() {
                 <Link href="/marketplace" className="hover:underline">Marketplace</Link> •
                 <Link href="/points-shop" className="hover:underline">Points Shop</Link>
               </div>
-              <p>© 2026 Yor Talks Multiverse • Instagram + Steam Hybrid</p>
+              <p>© 2026 Yor Talks · Built for the KIIT community</p>
             </div>
 
           </aside>

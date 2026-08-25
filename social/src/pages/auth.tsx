@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -105,63 +105,64 @@ export default function Auth() {
   };
 
   return (
-    <main className="min-h-screen bg-background flex font-sans relative overflow-hidden">
-      {/* Background ambient glowing spheres */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/20 blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-accent/20 blur-[120px] pointer-events-none animate-pulse" />
+    <main className="premium-auth-shell min-h-screen font-sans relative overflow-hidden">
+      <div className="premium-auth-glow premium-auth-glow--one" aria-hidden="true" />
+      <div className="premium-auth-glow premium-auth-glow--two" aria-hidden="true" />
 
-      {/* Left Panel (Desktop Only) */}
-      <section className="hidden lg:flex flex-1 relative overflow-hidden bg-card/30 backdrop-blur-xl border-r border-border/40 flex-col justify-center px-12 xl:px-24">
-        <div className="absolute inset-0 aurora-bg opacity-20 mix-blend-screen pointer-events-none" />
-        <div className="absolute inset-0 noise-overlay pointer-events-none" />
-        
-        <div className="relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-accent grid place-items-center text-white text-3xl font-extrabold mb-8 shadow-2xl glow-neon-primary font-display">
-            Y
+      <section className="premium-auth-hero">
+        <div className="premium-auth-hero__inner">
+          <div className="premium-brand-lockup">
+            <div className="premium-brand-mark">Y</div>
+            <div>
+              <p className="premium-brand-name">Yor Talks</p>
+              <p className="premium-brand-meta">KIIT student beta</p>
+            </div>
           </div>
-          <h1 className="font-display text-5xl xl:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
-            Step into the <br /><span className="text-shimmer">Multiverse</span>.
+
+          <p className="premium-auth-eyebrow">Built for the campus, by the campus</p>
+          <h1 className="premium-auth-title">
+            Make campus<br /><span>feel smaller.</span>
           </h1>
-          <p className="text-lg text-muted-foreground mt-6 font-serif leading-relaxed max-w-md">
-            A calmer, deeply expressive social space where your identity, achievements, and circles shine with resonance.
+          <p className="premium-auth-description">
+            A thoughtful place to share what you are building, find your people, and keep the conversations that matter close.
           </p>
 
-          <div className="mt-10 space-y-3.5 font-mono text-xs">
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-primary/40 transition-colors">
-              <Sparkles className="w-5 h-5 text-primary shrink-0" />
-              <span className="font-medium text-foreground">Real interactions, no algorithms</span>
+          <div className="premium-auth-proof">
+            <div className="premium-auth-proof__item">
+              <Sparkles className="h-4 w-4" />
+              <div><strong>Signal over noise</strong><span>See people, not a feed designed to keep you scrolling.</span></div>
             </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-accent/40 transition-colors">
-              <Users className="w-5 h-5 text-accent shrink-0" />
-              <span className="font-medium text-foreground">Gamified profiles & Steam-style walls</span>
+            <div className="premium-auth-proof__item">
+              <Users className="h-4 w-4" />
+              <div><strong>Find your circles</strong><span>Clubs, creators, projects, and friends in one calm space.</span></div>
             </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl glass-heavy border border-border/40 max-w-sm hover:border-emerald-500/40 transition-colors">
-              <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span className="font-medium text-foreground">Complete privacy & circle control</span>
+            <div className="premium-auth-proof__item">
+              <Shield className="h-4 w-4" />
+              <div><strong>Private by default</strong><span>College-only access while the beta is taking shape.</span></div>
             </div>
           </div>
+
+          <p className="premium-auth-footnote">Private beta · Seven-digit @kiit.ac.in email required</p>
         </div>
       </section>
 
-      {/* Right Panel - Auth Form */}
-      <section className="flex-1 flex flex-col justify-center items-center p-6 lg:p-12 relative overflow-y-auto z-10">
-        {/* Mobile Logo */}
-        <div className="lg:hidden absolute top-8 left-1/2 -translate-x-1/2">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white text-xl font-bold shadow-md glow-neon-primary font-display">
-            Y
-          </div>
+      <section className="premium-auth-form-shell">
+        <div className="premium-auth-mobile-brand">
+          <div className="premium-brand-mark">Y</div>
+          <div><p className="premium-brand-name">Yor Talks</p><p className="premium-brand-meta">KIIT student beta</p></div>
         </div>
 
-        <div className="w-full max-w-md mx-auto mt-12 lg:mt-0 glass-heavy p-8 rounded-3xl border border-border/50 shadow-2xl">
+        <div className="premium-auth-form">
           {/* Mode Switcher Tabs */}
-          <div className="flex p-1 bg-muted/60 rounded-2xl mb-8">
+          <div className="premium-auth-mode" role="tablist" aria-label="Account access">
             <button
               type="button"
               onClick={() => switchMode('login')}
-              className={`flex-1 py-2 text-xs font-bold font-display rounded-xl transition-all ${
+              aria-selected={mode === 'login'}
+              className={`premium-auth-mode__button ${
                 mode === 'login'
-                  ? 'bg-background text-foreground shadow-md'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'is-active'
+                  : ''
               }`}
             >
               Sign In
@@ -169,10 +170,11 @@ export default function Auth() {
             <button
               type="button"
               onClick={() => switchMode('register')}
-              className={`flex-1 py-2 text-xs font-bold font-display rounded-xl transition-all ${
+              aria-selected={mode === 'register'}
+              className={`premium-auth-mode__button ${
                 mode === 'register'
-                  ? 'bg-background text-foreground shadow-md'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'is-active'
+                  : ''
               }`}
             >
               Create Account
@@ -188,13 +190,18 @@ export default function Auth() {
               exit="hidden"
               className="w-full"
             >
-              <div className="mb-6 text-center lg:text-left">
-                <h2 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
+              <div className="premium-auth-heading">
+                <h2>
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="text-xs lg:text-sm text-muted-foreground mt-1.5 font-serif">
+                <p>
                   {mode === 'login' ? 'Enter your details to enter the universe.' : 'Join the next generation of social interaction.'}
                 </p>
+              </div>
+
+              <div className="premium-auth-beta-note">
+                <Shield className="h-4 w-4 shrink-0" />
+                <div><strong>KIIT beta access</strong><span>Use your seven-digit college email to get started.</span></div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -208,7 +215,7 @@ export default function Auth() {
                   {mode === 'register' && (
                     <>
                       <motion.div variants={staggerItem} className="space-y-1">
-                        <Label htmlFor="fullName" className="sr-only">Full name</Label>
+                        <Label htmlFor="fullName" className="premium-auth-label">Full name</Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <User className="h-4 w-4 text-muted-foreground" />
@@ -219,7 +226,8 @@ export default function Auth() {
                             placeholder="Full name"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+                            autoComplete="name"
+                            className="premium-auth-input pl-10 h-11 rounded-xl"
                             required
                           />
                         </div>
@@ -227,7 +235,7 @@ export default function Auth() {
                       </motion.div>
                       
                       <motion.div variants={staggerItem} className="space-y-1">
-                        <Label htmlFor="username" className="sr-only">Username</Label>
+                        <Label htmlFor="username" className="premium-auth-label">Username</Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <AtSign className="h-4 w-4 text-muted-foreground" />
@@ -238,7 +246,8 @@ export default function Auth() {
                             placeholder="Username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm font-mono"
+                            autoComplete="username"
+                            className="premium-auth-input pl-10 h-11 rounded-xl font-mono"
                             required
                           />
                         </div>
@@ -246,7 +255,7 @@ export default function Auth() {
                       </motion.div>
                       
                       <motion.div variants={staggerItem} className="space-y-1">
-                        <Label htmlFor="email" className="sr-only">Email</Label>
+                        <Label htmlFor="email" className="premium-auth-label">College email</Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -257,7 +266,8 @@ export default function Auth() {
                             placeholder="Email address"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+                            autoComplete="email"
+                            className="premium-auth-input pl-10 h-11 rounded-xl"
                             required
                           />
                         </div>
@@ -268,7 +278,7 @@ export default function Auth() {
 
                   {mode === 'login' && (
                     <motion.div variants={staggerItem} className="space-y-1">
-                      <Label htmlFor="loginUsername" className="sr-only">Username or Email</Label>
+                      <Label htmlFor="loginUsername" className="premium-auth-label">{loginMethod === 'password' ? 'Username or email' : 'College email'}</Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                           {loginMethod === 'password' ? <User className="h-4 w-4 text-muted-foreground" /> : <Mail className="h-4 w-4 text-muted-foreground" />}
@@ -279,7 +289,8 @@ export default function Auth() {
                           placeholder={loginMethod === 'password' ? 'Username or email' : 'KIIT email address'}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+                          autoComplete={loginMethod === 'password' ? 'username' : 'email'}
+                          className="premium-auth-input pl-10 h-11 rounded-xl"
                           required
                         />
                       </div>
@@ -288,12 +299,12 @@ export default function Auth() {
                   )}
 
                   {mode === 'login' && (
-                    <div className="flex items-center justify-between text-xs">
-                      <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); }}>
-                        Use password
+                    <div className="premium-auth-methods" role="tablist" aria-label="Sign in method">
+                      <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); }}>
+                        <KeyRound className="h-3.5 w-3.5" /> Password
                       </button>
-                      <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setLoginMethod('email-code'); setPassword(''); }}>
-                        Sign in with email code
+                      <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => { setLoginMethod('email-code'); setPassword(''); }}>
+                        <Mail className="h-3.5 w-3.5" /> Email code
                       </button>
                     </div>
                   )}
@@ -308,7 +319,8 @@ export default function Auth() {
                           placeholder="6-digit code"
                           value={otpCode}
                           onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="h-11 rounded-xl font-mono tracking-[0.3em]"
+                          aria-label="Six-digit email code"
+                          className="premium-auth-input h-11 rounded-xl font-mono tracking-[0.3em]"
                           required
                         />
                         <Button type="button" variant="outline" onClick={requestEmailCode} disabled={requestingOtp} className="h-11 shrink-0 rounded-xl text-xs">
@@ -320,7 +332,7 @@ export default function Auth() {
                   )}
 
                   {(mode === 'register' || loginMethod === 'password') && <motion.div variants={staggerItem} className="space-y-1">
-                    <Label htmlFor="password" className="sr-only">Password</Label>
+                    <Label htmlFor="password" className="premium-auth-label">Password</Label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <Lock className="h-4 w-4 text-muted-foreground" />
@@ -331,7 +343,8 @@ export default function Auth() {
                         placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 pr-10 h-11 rounded-xl surface-1 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+                        autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                        className="premium-auth-input pl-10 pr-10 h-11 rounded-xl"
                         required
                       />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-foreground transition-colors">
@@ -365,7 +378,7 @@ export default function Auth() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-11 rounded-xl font-bold text-sm bg-primary text-primary-foreground glow-neon-primary border-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="premium-auth-submit w-full h-11 rounded-xl font-bold text-sm"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -377,11 +390,9 @@ export default function Auth() {
                   </Button>
                 </motion.div>
 
-                {mode === 'register' && (
-                  <p className="text-center text-[0.68rem] font-mono text-muted-foreground">
-                    KIIT beta access is limited to seven-digit <span className="text-primary">@kiit.ac.in</span> emails.
-                  </p>
-                )}
+                <p className="premium-auth-legal">
+                  By continuing, you agree to keep Yor Talks respectful and campus-safe. <span>Beta access is limited to seven-digit @kiit.ac.in emails.</span>
+                </p>
               </form>
             </motion.div>
           </AnimatePresence>
