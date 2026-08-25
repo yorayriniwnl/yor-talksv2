@@ -144,62 +144,57 @@ export default function Home() {
   return (
     <div className="orbit-page">
       <div className="orbit-wrap">
-        <section className="orbit-welcome">
-          <div className="orbit-welcome__copy">
-            <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> Your orbit · KIIT first world</span>
+        <section className="home-feed-heading">
+          <div>
+            <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> Home · KIIT first world</span>
             <h1>{greeting()}, {firstName}.</h1>
-            <p>What do you want from the internet right now?</p>
           </div>
-          <Link href="/dream" className="orbit-dream-callout">
-            <span><WandSparkles className="h-4 w-4" /></span>
-            <div><small>Dream Engine</small><strong>Turn an idea into motion</strong></div>
-            <ArrowRight className="h-4 w-4" />
+          <Link href="/dream" className="home-dream-link">
+            <WandSparkles className="h-4 w-4" />
+            <span>Dream</span>
           </Link>
         </section>
 
-        <section className="orbit-mode-grid" aria-label="Choose how Yor should shape this visit">
+        <nav className="home-feed-tabs" aria-label="Choose a feed">
           <button onClick={() => changeMode('close')} className={cn(mode === 'close' && 'is-active')}>
-            <span className="orbit-mode-grid__icon"><Users className="h-4 w-4" /></span>
-            <div><strong>Stay close</strong><small>People you chose</small></div>
-            <i />
+            <Users className="h-4 w-4" />
+            <span>Following</span>
           </button>
           <button onClick={() => changeMode('discover')} className={cn(mode === 'discover' && 'is-active')}>
-            <span className="orbit-mode-grid__icon"><Compass className="h-4 w-4" /></span>
-            <div><strong>Discover</strong><small>Outside your edges</small></div>
-            <i />
+            <Compass className="h-4 w-4" />
+            <span>For you</span>
           </button>
           <button onClick={() => changeMode('build')} className={cn(mode === 'build' && 'is-active')}>
-            <span className="orbit-mode-grid__icon"><Zap className="h-4 w-4" /></span>
-            <div><strong>Build something</strong><small>Ideas seeking momentum</small></div>
-            <i />
+            <Zap className="h-4 w-4" />
+            <span>Build</span>
           </button>
-        </section>
+        </nav>
 
         <div className="orbit-layout">
           <main className="orbit-stream">
-            <section className="orbit-now-card">
-              <div className="orbit-section-heading">
-                <div><span>Ambient presence</span><h2>Now</h2></div>
-                <Link href="/pulse">Open Pulse <ArrowRight className="h-3.5 w-3.5" /></Link>
+            <section className="orbit-now-card home-stories-card">
+              <div className="home-section-heading">
+                <h2>Stories</h2>
+                <Link href="/pulse">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
               <StoriesRow />
             </section>
 
-            <section className="orbit-composer-card">
-              <div className="orbit-section-heading orbit-section-heading--composer">
-                <div><span>Seeds can grow</span><h2>Put something into your orbit</h2></div>
+            <section className="orbit-composer-card home-composer-card">
+              <div className="home-section-heading">
+                <h2>Create post</h2>
               </div>
               <CreatePost />
             </section>
 
-            <div className="orbit-stream-controls">
+            <div className="home-feed-toolbar">
               <div>
-                <span>{mode === 'close' ? 'Chosen by you' : mode === 'discover' ? 'Ranked by signal' : 'Open to collaboration'}</span>
-                <strong>{mode === 'close' ? 'Close orbit' : mode === 'discover' ? 'Discovery orbit' : 'Builder orbit'}</strong>
+                <span>Latest posts</span>
+                <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : 'Build'}</strong>
               </div>
-              <button onClick={refresh} disabled={isRefreshing} aria-label="Refresh orbit">
+              <button onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
                 <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-                {isRefreshing ? 'Refreshing' : 'Refresh'}
+                <span>{isRefreshing ? 'Refreshing' : 'Refresh'}</span>
               </button>
             </div>
 

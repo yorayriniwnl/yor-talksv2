@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
-  Activity, Compass, Film, Globe2, MessageCircle, Orbit, PlusSquare,
+  Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare,
   UserRound, Settings, Camera, Radio, WandSparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,21 +27,23 @@ export function AppShell({ children }: AppShellProps) {
 
   const conversations = useAppStore((state) => state.conversations);
   const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
+  const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
 
   const primaryNavItems = [
-    { icon: Orbit, label: 'Orbit', path: '/' },
-    { icon: Activity, label: 'Pulse', path: '/pulse' },
-    { icon: Globe2, label: 'Worlds', path: '/worlds' },
-    { icon: WandSparkles, label: 'Dream', path: '/dream' },
-    { icon: MessageCircle, label: 'Inbox', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
+    { icon: House, label: 'Home', path: '/' },
+    { icon: Compass, label: 'Explore', path: '/explore' },
+    { icon: Film, label: 'Reels', path: '/videos' },
+    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
+    { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifications > 0 ? unreadNotifications : null },
   ];
 
   const secondaryNavItems = [
-    { icon: Compass, label: 'Explore', path: '/explore' },
-    { icon: Film, label: 'Watch', path: '/videos' },
+    { icon: Globe2, label: 'Worlds', path: '/worlds' },
+    { icon: Activity, label: 'Pulse', path: '/pulse' },
+    { icon: WandSparkles, label: 'Dream', path: '/dream' },
     { icon: Radio, label: 'Live', path: '/live' },
     { icon: Camera, label: 'Creator Studio', path: '/studio' },
     { icon: Settings, label: 'Settings', path: '/settings' },
@@ -70,7 +72,7 @@ export function AppShell({ children }: AppShellProps) {
                 setLocation('/');
               }
             }}
-            aria-label="Go to Orbit home"
+            aria-label="Go to Home"
             className="flex min-w-0 items-center gap-3 group cursor-pointer text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
@@ -123,11 +125,11 @@ export function AppShell({ children }: AppShellProps) {
             "premium-create-button w-full justify-center mb-5",
             sidebarCollapsed && "p-2.5"
           )}
-          title="Plant a seed"
-          aria-label="Plant a seed"
+          title="Create a post"
+          aria-label="Create a post"
         >
           <PlusSquare className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span>Plant a seed</span>}
+            {!sidebarCollapsed && <span>Create</span>}
         </button>
 
         {/* Navigation List */}
@@ -229,7 +231,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
       <nav className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 md:hidden">
         <button
-          aria-label="Orbit"
+          aria-label="Home"
           onClick={() => {
             if (location === '/') {
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -240,19 +242,19 @@ export function AppShell({ children }: AppShellProps) {
           aria-current={location === '/' ? 'page' : undefined}
           className={cn("p-2 text-muted-foreground relative", location === '/' && "text-primary")}
         >
-          <Orbit className="w-6 h-6" />
+          <House className="w-6 h-6" />
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setLocation('/pulse')} aria-label="Pulse" aria-current={location === '/pulse' ? 'page' : undefined} className={cn("p-2 text-muted-foreground relative", location === '/pulse' && "text-primary")}>
-          <Activity className="w-6 h-6" />
-          {location === '/pulse' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
+        <button onClick={() => setLocation('/explore')} aria-label="Explore" aria-current={location.startsWith('/explore') ? 'page' : undefined} className={cn("p-2 text-muted-foreground relative", location.startsWith('/explore') && "text-primary")}>
+          <Compass className="w-6 h-6" />
+          {location.startsWith('/explore') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button onClick={() => setIsComposing(true)} aria-label="Create post" className="p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
             <PlusSquare className="w-6 h-6" />
         </button>
-        <button onClick={() => setLocation('/worlds')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/worlds') && "text-primary")} aria-label="Worlds" aria-current={location.startsWith('/worlds') ? 'page' : undefined}>
-          <Globe2 className="w-6 h-6" />
-          {location.startsWith('/worlds') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
+        <button onClick={() => setLocation('/videos')} className={cn("p-2 text-muted-foreground relative", location.startsWith('/videos') && "text-primary")} aria-label="Reels" aria-current={location.startsWith('/videos') ? 'page' : undefined}>
+          <Film className="w-6 h-6" />
+          {location.startsWith('/videos') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
         <button aria-label="Profile" aria-current={location.startsWith('/profile') ? 'page' : undefined} onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
@@ -265,8 +267,8 @@ export function AppShell({ children }: AppShellProps) {
         <DialogContent className="sm:max-w-[560px] rounded-[1.5rem] p-0 font-sans overflow-hidden">
           <DialogHeader className="border-b border-border/70 px-5 py-4 sm:px-6">
             <div className="pr-8">
-              <DialogTitle className="font-display font-bold text-lg">Plant a seed</DialogTitle>
-              <p className="text-xs text-muted-foreground">A thought, a photo, or the beginning of something larger.</p>
+              <DialogTitle className="font-display font-bold text-lg">Create post</DialogTitle>
+              <p className="text-xs text-muted-foreground">Share a thought, photo, or update with your people.</p>
             </div>
             <Link href="/dream" onClick={() => setIsComposing(false)} className="seed-dialog-dream-link">
               <WandSparkles className="h-4 w-4" />

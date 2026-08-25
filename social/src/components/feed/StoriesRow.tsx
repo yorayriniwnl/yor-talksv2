@@ -44,15 +44,13 @@ export default function StoriesRow() {
     return bLatest - aLatest;
   });
 
-  if (authors.length === 0) return null;
-
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'You';
 
   return (
     <>
       <StoryBuilderModal isOpen={builderOpen} onOpenChange={setBuilderOpen} />
 
-      <div className="flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
+      <div className="home-story-row flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
         {/* Add Story Button */}
         {currentUser && (
           <button

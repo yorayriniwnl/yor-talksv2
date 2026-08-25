@@ -24,7 +24,7 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
 ];
 
 function getPageLabel(location: string) {
-  if (location === '/') return { title: 'Orbit', kicker: 'Your internet, in your control' };
+  if (location === '/') return { title: 'Home', kicker: 'Your feed, your people' };
   return PAGE_LABELS.find((item) => location.startsWith(item.match)) ?? { title: 'Yor', kicker: 'The living internet' };
 }
 
@@ -46,7 +46,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
   const displayName = currentUser?.displayName || currentUser?.username || 'You';
 
   return (
-    <header className="premium-topbar sticky top-0 z-30">
+    <header className="premium-topbar sticky top-0 z-30" data-home={location === '/' ? 'true' : undefined}>
       <div className="premium-topbar__inner">
         <div className="premium-topbar__title">
           <Link href="/" className="premium-topbar__mobile-mark" aria-label="Go to home">
@@ -75,9 +75,9 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
             {unreadNotifications > 0 && <span className="premium-notification-dot">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
           </Link>
 
-          <button type="button" className="premium-create-button" onClick={onCompose}>
+          <button type="button" className="premium-create-button" onClick={onCompose} aria-label="Create a post">
             <Plus className="h-4 w-4" strokeWidth={2.5} />
-            <span>Seed</span>
+            <span>Create</span>
           </button>
 
           {currentUser && (

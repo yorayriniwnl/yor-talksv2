@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Share, Smile, X, Plus } from 'lucide-react';
+import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, SendHorizonal, Smile, X, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
@@ -135,7 +135,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const currentDisplayName = currentUser.displayName || currentUser.username || 'User';
 
   return (
-    <div className="border-b border-border/40 pb-4 pt-5 px-5 sm:px-6">
+    <div className="yor-composer border-b border-border/40 pb-4 pt-5 px-5 sm:px-6">
       <div className="flex gap-4">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-primary/20">
           <AvatarImage src={currentUser.avatarUrl} />
@@ -146,7 +146,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
             ref={textareaRef}
             id="post-composer"
             aria-label="Write a post"
-            placeholder={pollOpen ? 'Ask your community a great question…' : 'What resonates with you?'}
+            placeholder={pollOpen ? 'Ask a question…' : "What's on your mind?"}
             value={content}
             onChange={handleInput}
             onKeyDown={(event) => {
@@ -246,7 +246,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
                 disabled={!canPublish || isOverLimit || isUploading}
                 onClick={publish}
               >
-                {isUploading ? 'Publishing…' : 'Share'}
+                {isUploading ? 'Posting…' : 'Post'}
               </Button>
             </div>
           </div>
@@ -331,7 +331,7 @@ export function PostCard({ post }: { post: PostType }) {
     if (len === 1) {
       return (
         <div 
-          className="mt-3 overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300 image-hover-zoom"
+          className="yor-post-media mt-3 overflow-hidden rounded-2xl border border-border/20 relative shadow-sm hover:shadow-md transition-shadow duration-300 image-hover-zoom"
           onDoubleClick={handleDoubleTap}
         >
           {showHeartOverlay && (
@@ -361,7 +361,7 @@ export function PostCard({ post }: { post: PostType }) {
     
     // Multiple images: swipable carousel
     return (
-      <div className="mt-3 relative overflow-hidden rounded-2xl border border-border/20 shadow-sm" onDoubleClick={handleDoubleTap}>
+      <div className="yor-post-media mt-3 relative overflow-hidden rounded-2xl border border-border/20 shadow-sm" onDoubleClick={handleDoubleTap}>
         {showHeartOverlay && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <Heart 
@@ -442,10 +442,10 @@ export function PostCard({ post }: { post: PostType }) {
         variants={fadeInUp}
         initial="initial"
         animate="animate"
-        className="group cursor-pointer border-b border-border/20 px-5 py-5 transition-all hover:bg-muted/20 card-shine sm:px-6"
+        className="yor-post group cursor-pointer border-b border-border/20 px-5 py-5 transition-all hover:bg-muted/20 card-shine sm:px-6"
         onClick={handleOpen}
       >
-      <div className="flex gap-3.5">
+      <div className="yor-post__body flex gap-3.5">
         <MiniProfileCard user={author}>
           <Link href={`/profile/${author.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View ${authorDisplayName}'s profile`}>
             <div className="relative">
@@ -489,13 +489,11 @@ export function PostCard({ post }: { post: PostType }) {
             </DropdownMenu>
           </div>
           
-          <p className={cn("mt-2 whitespace-pre-wrap leading-[1.65] text-foreground font-serif", getTextSizeClass(post.content.length))}>
+          {renderMedia()}
+
+          <p className={cn("yor-post__caption mt-2 whitespace-pre-wrap leading-[1.65] text-foreground", getTextSizeClass(post.content.length))}>
             {post.content}
           </p>
-
-
-          
-          {renderMedia()}
           
           {post.poll && (
             <div className="mt-4 rounded-2xl border border-border/30 bg-card/50 p-5" onClick={(event) => event.stopPropagation()}>
@@ -540,7 +538,7 @@ export function PostCard({ post }: { post: PostType }) {
           )}
           
           <TooltipProvider delayDuration={400}>
-            <div className="mt-4 flex max-w-md items-center justify-between text-muted-foreground pr-4 -ml-1.5">
+            <div className="yor-post__actions mt-4 flex max-w-md items-center justify-between text-muted-foreground pr-4 -ml-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <motion.button 
@@ -594,20 +592,20 @@ export function PostCard({ post }: { post: PostType }) {
                     <DropdownMenuTrigger asChild>
                       <motion.button 
                         {...tapScale}
-                        aria-label="Echo post"
+                        aria-label="Share post"
                         className="group flex items-center gap-1.5 focus-visible:outline-none"
                         onClick={(event) => event.stopPropagation()}
                       >
                         <RippleEffect className="rounded-full">
                         <div className="p-1.5 rounded-full group-hover:bg-surface-2 transition-colors">
-                          <Repeat2 className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
+                          <SendHorizonal className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
                         </div>
                         </RippleEffect>
                         <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.shares > 0 && post.shares}</span>
                       </motion.button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Echo</TooltipContent>
+                  <TooltipContent>Share</TooltipContent>
                 </Tooltip>
                 <DropdownMenuContent align="start" className="rounded-xl">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sharePost(post.id); toast({ title: 'Echoed to feed' }); }}>
