@@ -1092,8 +1092,9 @@ export const useAppStore = create<AppState>()(
 
       addStory: async (story) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const optimisticId = `story-${Date.now()}`;
         const newStory: Story = {
-          id: `story-${Date.now()}`,
+          id: optimisticId,
           authorId: uid,
           mediaUrl: story.mediaUrl,
           type: story.type,
@@ -1109,9 +1110,11 @@ export const useAppStore = create<AppState>()(
         };
         set((state) => ({ stories: [newStory, ...state.stories] }));
         try {
-          await api.createStory(story);
-        } catch {
-          // Local state updated
+          const created = await api.createStory(story);
+          set((state) => ({ stories: state.stories.map((item) => item.id === optimisticId ? mapStory(created, uid) : item) }));
+        } catch (error) {
+          set((state) => ({ stories: state.stories.filter((item) => item.id !== optimisticId) }));
+          toast.error(error instanceof Error ? error.message : 'Could not publish the story');
         }
       },
 
@@ -1216,9 +1219,10 @@ export const useAppStore = create<AppState>()(
 
       createArticle: async (input) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const optimisticId = `art-${Date.now()}`;
         const newArticle: Article = {
           ...input,
-          id: `art-${Date.now()}`,
+          id: optimisticId,
           authorId: uid,
           readTime: input.readTime || 5,
           claps: 0,
@@ -1229,9 +1233,12 @@ export const useAppStore = create<AppState>()(
         };
         set((state) => ({ articles: [newArticle, ...state.articles] }));
         try {
-          await api.createArticle(input);
-        } catch {
-          // Local state updated
+          const created = await api.createArticle(input);
+          set((state) => ({ articles: state.articles.map((article) => article.id === optimisticId ? mapArticle(created) : article) }));
+        } catch (error) {
+          set((state) => ({ articles: state.articles.filter((article) => article.id !== optimisticId) }));
+          toast.error(error instanceof Error ? error.message : 'Could not publish the article');
+          throw error;
         }
       },
 
@@ -1261,9 +1268,10 @@ export const useAppStore = create<AppState>()(
 
       createVideo: async (input) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const optimisticId = `vid-${Date.now()}`;
         const newVideo: Video = {
           ...input,
-          id: `vid-${Date.now()}`,
+          id: optimisticId,
           authorId: uid,
           views: 0,
           likes: 0,
@@ -1273,9 +1281,12 @@ export const useAppStore = create<AppState>()(
         };
         set((state) => ({ videos: [newVideo, ...state.videos] }));
         try {
-          await api.createVideo(input);
-        } catch {
-          // Local state updated
+          const created = await api.createVideo(input);
+          set((state) => ({ videos: state.videos.map((video) => video.id === optimisticId ? mapVideo(created) : video) }));
+        } catch (error) {
+          set((state) => ({ videos: state.videos.filter((video) => video.id !== optimisticId) }));
+          toast.error(error instanceof Error ? error.message : 'Could not publish the video');
+          throw error;
         }
       },
 
@@ -1305,9 +1316,10 @@ export const useAppStore = create<AppState>()(
 
       createStream: async (input) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const optimisticId = `stream-${Date.now()}`;
         const newStream: LiveStream = {
           ...input,
-          id: `stream-${Date.now()}`,
+          id: optimisticId,
           hostId: uid,
           status: 'scheduled',
           viewers: 0,
@@ -1316,9 +1328,11 @@ export const useAppStore = create<AppState>()(
         };
         set((state) => ({ liveStreams: [newStream, ...state.liveStreams] }));
         try {
-          await api.createStream(input);
-        } catch {
-          // Local state updated
+          const created = await api.createStream(input);
+          set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === optimisticId ? mapLiveStream(created) : stream) }));
+        } catch (error) {
+          set((state) => ({ liveStreams: state.liveStreams.filter((stream) => stream.id !== optimisticId) }));
+          toast.error(error instanceof Error ? error.message : 'Could not schedule the live room');
         }
       },
 

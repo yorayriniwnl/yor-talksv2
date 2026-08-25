@@ -13,3 +13,16 @@ export const CONTENT_CATEGORIES = [
 
 export type ContentCategory = typeof CONTENT_CATEGORIES[number]['value'];
 export const DEFAULT_CONTENT_CATEGORY: ContentCategory = 'other';
+
+export function resolveContentCategory(value?: string) {
+  const normalized = value?.trim().toLowerCase();
+  const match = CONTENT_CATEGORIES.find((category) => category.value === normalized || category.label.toLowerCase() === normalized);
+
+  if (match) return match;
+
+  return {
+    value: DEFAULT_CONTENT_CATEGORY,
+    label: value?.trim() || 'Other',
+    emoji: '✨',
+  } as const;
+}

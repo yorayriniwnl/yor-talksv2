@@ -220,7 +220,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       const mediaUrl = recordedPreviewUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop';
 
       if (mode === 'reel') {
-        createVideo({
+        await createVideo({
           title: caption.trim() || 'New Cinematic Reel ✨',
           videoUrl: mediaUrl,
           thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',

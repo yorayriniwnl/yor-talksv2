@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
-import { type ContentCategory } from '@/lib/content-category';
+import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
+import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 
 function CreateArticleDialog() {
   const createArticle = useAppStore((s) => s.createArticle);
@@ -126,6 +127,7 @@ export default function Articles() {
   const users = useAppStore((s) => s.users);
   const loadArticles = useAppStore((s) => s.loadArticles);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const [selectedCategory, setSelectedCategory] = useState<ContentCategory | 'all'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
 
   useEffect(() => { loadArticles(); }, [loadArticles]);
@@ -137,6 +139,7 @@ export default function Articles() {
   }, [articles, users, loadUserProfile]);
 
   const filteredArticles = articles.filter((a) => {
+    if (selectedCategory !== 'all' && resolveContentCategory(a.contentCategory).value !== selectedCategory) return false;
     const author = users[a.authorId];
     return matchesArticleGenre(a, author, selectedGenre);
   });
@@ -156,6 +159,30 @@ export default function Articles() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="mb-4 flex gap-2 overflow-x-auto hide-scrollbar pb-1" aria-label="Filter articles by content category">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={cn(
+              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
+              selectedCategory === 'all' ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            ✨ All categories
+          </button>
+          {CONTENT_CATEGORIES.map((category) => (
+            <button
+              key={category.value}
+              onClick={() => setSelectedCategory(category.value)}
+              className={cn(
+                'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
+                selectedCategory === category.value ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {category.emoji} {category.label}
+            </button>
+          ))}
+        </div>
+
         {/* Genre Category Pills */}
         <div className="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
           {ARTICLE_GENRES.map((g) => (
@@ -194,6 +221,7 @@ export default function Articles() {
             >
               <img src={featuredArticle.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={featuredArticle.title} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8">
+                <ContentCategoryBadge value={featuredArticle.contentCategory} className="mb-3 w-fit border-white/25 bg-white/15 text-white" />
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white mb-3 line-clamp-2 leading-tight">{featuredArticle.title}</h2>
                 <p className="text-white/80 font-serif text-sm line-clamp-2 mb-4 max-w-2xl">{featuredArticle.excerpt}</p>
                 <div className="flex items-center gap-3 text-white/90 text-xs font-mono">
@@ -237,6 +265,7 @@ export default function Articles() {
                   >
                     <div className="h-44 overflow-hidden relative">
                       <img src={article.coverUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={article.title} />
+                      <ContentCategoryBadge value={article.contentCategory} className="absolute left-3 top-3 border-white/25 bg-black/45 text-white backdrop-blur-md" />
                       <button 
                         onClick={(e) => { e.stopPropagation(); }} 
                         className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"

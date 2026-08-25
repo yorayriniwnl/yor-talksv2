@@ -25,6 +25,7 @@ import { staggerContainer } from '@/lib/motion';
 import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
 import { FeedSkeleton } from '@/components/ui/Skeletons';
+import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 
 type OrbitMode = 'close' | 'discover' | 'build';
 type Topic = 'all' | 'ideas' | 'tech' | 'creative' | 'culture' | 'play';
@@ -76,6 +77,7 @@ export default function Home() {
 
   const [mode, setMode] = useState<OrbitMode>('close');
   const [topic, setTopic] = useState<Topic>('all');
+  const [contentCategory, setContentCategory] = useState<ContentCategory | 'all'>('all');
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -109,8 +111,12 @@ export default function Home() {
         return matchesTopic(post, `${author?.bio ?? ''} ${author?.username ?? ''}`, topic);
       });
     }
+
+    if (contentCategory !== 'all') {
+      result = result.filter((post) => resolveContentCategory(post.contentCategory).value === contentCategory);
+    }
     return result;
-  }, [currentUser?.id, followingIds, mode, posts, topic, users]);
+  }, [contentCategory, currentUser?.id, followingIds, mode, posts, topic, users]);
 
   const visiblePosts = filteredPosts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPosts.length;
@@ -120,6 +126,7 @@ export default function Home() {
   const changeMode = (nextMode: OrbitMode) => {
     setMode(nextMode);
     setTopic('all');
+    setContentCategory('all');
     setVisibleCount(8);
   };
 
@@ -207,6 +214,24 @@ export default function Home() {
                 ))}
               </div>
             )}
+
+            <div className="orbit-topic-row" aria-label="Filter by content category">
+              <button
+                onClick={() => { setContentCategory('all'); setVisibleCount(8); }}
+                className={cn(contentCategory === 'all' && 'is-active')}
+              >
+                ✨ All categories
+              </button>
+              {CONTENT_CATEGORIES.map((category) => (
+                <button
+                  key={category.value}
+                  onClick={() => { setContentCategory(category.value); setVisibleCount(8); }}
+                  className={cn(contentCategory === category.value && 'is-active')}
+                >
+                  {category.emoji} {category.label}
+                </button>
+              ))}
+            </div>
 
             {isInitializing ? (
               <FeedSkeleton count={3} />

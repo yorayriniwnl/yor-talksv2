@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
-import { type ContentCategory } from '@/lib/content-category';
+import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
+import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 
 function UploadVideoDialog() {
   const createVideo = useAppStore((s: any) => s.createVideo);
@@ -277,6 +278,7 @@ export default function Videos() {
   const loadVideos = useAppStore((s: any) => s.loadVideos);
   const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
   const [formatTab, setFormatTab] = useState<'All' | 'short' | 'standard'>('All');
+  const [selectedCategory, setSelectedCategory] = useState<ContentCategory | 'all'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
 
@@ -290,9 +292,10 @@ export default function Videos() {
 
   const filteredVideos = (videos || []).filter((v: any) => {
     const formatMatch = formatTab === 'All' || v.type === formatTab;
+    const categoryMatch = selectedCategory === 'all' || resolveContentCategory(v.contentCategory).value === selectedCategory;
     const author = users[v.authorId];
     const genreMatch = matchesGenre(v, author, selectedGenre);
-    return formatMatch && genreMatch;
+    return formatMatch && categoryMatch && genreMatch;
   });
 
   const swiperVideos = filteredVideos.filter((v: any) => v.type === 'short');
@@ -326,6 +329,30 @@ export default function Videos() {
               )}
             >
               {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1" aria-label="Filter videos by content category">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={cn(
+              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
+              selectedCategory === 'all' ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            ✨ All categories
+          </button>
+          {CONTENT_CATEGORIES.map((category) => (
+            <button
+              key={category.value}
+              onClick={() => setSelectedCategory(category.value)}
+              className={cn(
+                'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
+                selectedCategory === category.value ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {category.emoji} {category.label}
             </button>
           ))}
         </div>
@@ -387,6 +414,7 @@ export default function Videos() {
                   <div className="absolute bottom-2.5 right-2.5 bg-black/70 text-white font-mono text-[0.65rem] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm">
                     {video.type === 'short' ? 'REEL' : 'VIDEO'}
                   </div>
+                  <ContentCategoryBadge value={video.contentCategory} className="absolute left-2.5 top-2.5 border-white/25 bg-black/50 text-white backdrop-blur-md" />
                 </div>
                 <div className="p-4">
                   <h3 className="font-display font-bold text-sm line-clamp-2 mb-2.5 group-hover:text-primary transition-colors leading-tight">{video.title}</h3>

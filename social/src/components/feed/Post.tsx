@@ -27,6 +27,7 @@ import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
+import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -492,6 +493,7 @@ export function PostCard({ post }: { post: PostType }) {
               <span className="shrink-0 rounded-full border border-border/50 px-1.5 py-0.5 text-[0.58rem] font-semibold text-muted-foreground">
                 {contentRatingLabel(post.contentRating)}
               </span>
+              <ContentCategoryBadge value={post.contentCategory} className="hidden sm:inline-flex" />
             </div>
             
             <DropdownMenu>

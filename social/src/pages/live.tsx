@@ -13,6 +13,7 @@ import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
+import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80';
 
@@ -258,7 +259,7 @@ export default function Live() {
               </div>
               <div className="space-y-2 p-4">
                 <h2 className="line-clamp-2 font-display font-bold">{stream.title}</h2>
-                <div className="flex items-center justify-between text-xs text-muted-foreground"><span>{stream.category} · {stream.kind}</span><span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{format(new Date(stream.startsAt), 'PPp')}</span></div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="flex items-center gap-2"><ContentCategoryBadge value={stream.category} /> <span>{stream.kind}</span></span><span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{format(new Date(stream.startsAt), 'PPp')}</span></div>
               </div>
             </button>
           ))}
