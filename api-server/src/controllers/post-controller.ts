@@ -44,7 +44,7 @@ export class PostController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const images = Array.isArray(req.body.images) ? req.body.images : [];
     try {
-      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating);
+      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.poll);
       return res.status(201).json(createResponse("Post created", post));
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {
@@ -162,6 +162,33 @@ export class PostController {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }
     return res.status(200).json(createResponse("Share count updated", post));
+  };
+
+  repost = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const post = await this.postService.repostPost(postId, req.user?.id ?? "", req.body.note);
+    if (!post) {
+      return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+    }
+    return res.status(200).json(createResponse("Post reposted", post));
+  };
+
+  unrepost = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const post = await this.postService.unrepostPost(postId, req.user?.id ?? "");
+    if (!post) {
+      return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+    }
+    return res.status(200).json(createResponse("Repost removed", post));
+  };
+
+  votePoll = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const post = await this.postService.votePoll(postId, req.body.optionId, req.user?.id ?? "");
+    if (!post) {
+      return res.status(404).json(createResponse("Poll or option not found", null, {}, ["Poll or option not found"]));
+    }
+    return res.status(200).json(createResponse("Poll vote recorded", post));
   };
 
   

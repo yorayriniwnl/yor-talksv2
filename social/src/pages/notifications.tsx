@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { Bell, Heart, MessageCircle, UserPlus, AtSign, Check, Clock, Calendar, CalendarDays, Archive } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAppStore } from '@/lib/store';
+import { useAppStore, type FollowRequest } from '@/lib/store';
 import { formatDistanceToNow, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,6 +76,9 @@ function getNotifHref(notif: { type: string; actorId?: string; targetId?: string
 export default function Notifications() {
   const users = useAppStore((s) => s.users);
   const notifications = useAppStore((s) => s.notifications);
+  const followRequests = useAppStore((s) => s.followRequests);
+  const acceptFollowRequest = useAppStore((s) => s.acceptFollowRequest);
+  const rejectFollowRequest = useAppStore((s) => s.rejectFollowRequest);
 
   // Use markNotificationsRead if available, else fallback to markAllNotificationsRead
   const markAll = useAppStore((s) => (s as any).markNotificationsRead || s.markAllNotificationsRead);
@@ -144,6 +147,10 @@ export default function Notifications() {
         {/* Header */}
         <StickyHeader unreadCount={0} onMarkAllRead={handleMarkAllRead} />
 
+        {followRequests.length > 0 && (
+          <FollowRequestsSection requests={followRequests} onAccept={acceptFollowRequest} onReject={rejectFollowRequest} />
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,6 +178,10 @@ export default function Notifications() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 min-h-screen">
       <StickyHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} />
+
+      {followRequests.length > 0 && (
+        <FollowRequestsSection requests={followRequests} onAccept={acceptFollowRequest} onReject={rejectFollowRequest} />
+      )}
 
       <div className="space-y-8 mt-2">
         {Object.entries(grouped).map(([label, items]) => {
@@ -292,6 +303,46 @@ export default function Notifications() {
         })}
       </div>
     </div>
+  );
+}
+
+function FollowRequestsSection({
+  requests,
+  onAccept,
+  onReject,
+}: {
+  requests: FollowRequest[];
+  onAccept: (requestId: string) => Promise<void>;
+  onReject: (requestId: string) => Promise<void>;
+}) {
+  return (
+    <section className="mb-6 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-sm font-bold">Follow requests</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Choose who can see your private posts.</p>
+        </div>
+        <UserPlus className="h-4 w-4 text-primary" />
+      </div>
+      <div className="space-y-2">
+        {requests.map((request) => (
+          <div key={request.id} className="flex items-center gap-3 rounded-xl bg-background/50 p-2.5">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={request.requester.avatarUrl} alt={request.requester.displayName} />
+              <AvatarFallback>{request.requester.displayName.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{request.requester.displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">@{request.requester.username}</p>
+            </div>
+            <div className="flex shrink-0 gap-1.5">
+              <button type="button" onClick={() => void onReject(request.id)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted">Decline</button>
+              <button type="button" onClick={() => void onAccept(request.id)} className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Accept</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

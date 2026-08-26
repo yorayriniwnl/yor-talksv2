@@ -63,6 +63,7 @@ export interface PostRecord {
   commentsCount: number;
   bookmarksCount: number;
   shareCount: number;
+  repostCount?: number;
   contentCategory?: string;
   contentRating?: ContentRating;
   reactions?: Record<string, string[]>;
@@ -73,6 +74,31 @@ export interface PostRecord {
   likedBy?: string[];
   bookmarkedBy?: string[];
   comments?: CommentRecord[];
+  poll?: PostPoll;
+}
+
+export interface FollowRequestRecord {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  status: "pending" | "accepted" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostPollOption {
+  id: string;
+  text: string;
+  position: number;
+  votes: number;
+}
+
+export interface PostPoll {
+  id: string;
+  question: string;
+  options: PostPollOption[];
+  totalVotes: number;
+  votedOptionId?: string;
 }
 
 export interface CommentRecord {

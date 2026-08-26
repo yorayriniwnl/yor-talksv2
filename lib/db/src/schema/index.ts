@@ -58,6 +58,7 @@ export const postsTable = pgTable("posts", {
   commentsCount: integer("comments_count").notNull().default(0),
   bookmarksCount: integer("bookmarks_count").notNull().default(0),
   shareCount: integer("share_count").notNull().default(0),
+  repostCount: integer("repost_count").notNull().default(0),
   reactions: jsonb("reactions").default({}),
   tags: jsonb("tags").default([]),
   mentions: jsonb("mentions").default([]),
@@ -325,6 +326,51 @@ export const postBookmarksTable = pgTable("post_bookmarks", {
   userIdx: index("post_bookmarks_user_idx").on(t.userId)
 }));
 
+/** A first-class repost is distinct from a link share: it is a durable
+ * relationship that can be shown in a user's profile and counted safely. */
+export const postRepostsTable = pgTable("post_reposts", {
+  id: uuid("id").primaryKey(),
+  postId: uuid("post_id").references(() => postsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  userPostIdx: uniqueIndex("post_reposts_user_post_idx").on(t.userId, t.postId),
+  postIdx: index("post_reposts_post_idx").on(t.postId, t.createdAt),
+  userIdx: index("post_reposts_user_idx").on(t.userId, t.createdAt),
+}));
+
+export const postPollsTable = pgTable("post_polls", {
+  id: uuid("id").primaryKey(),
+  postId: uuid("post_id").references(() => postsTable.id, { onDelete: "cascade" }).notNull(),
+  question: text("question").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  postIdx: uniqueIndex("post_polls_post_idx").on(t.postId),
+}));
+
+export const postPollOptionsTable = pgTable("post_poll_options", {
+  id: uuid("id").primaryKey(),
+  pollId: uuid("poll_id").references(() => postPollsTable.id, { onDelete: "cascade" }).notNull(),
+  text: text("text").notNull(),
+  position: integer("position").notNull(),
+  voteCount: integer("vote_count").notNull().default(0),
+}, (t) => ({
+  pollPositionIdx: uniqueIndex("post_poll_options_poll_position_idx").on(t.pollId, t.position),
+  pollIdx: index("post_poll_options_poll_idx").on(t.pollId),
+}));
+
+export const postPollVotesTable = pgTable("post_poll_votes", {
+  pollId: uuid("poll_id").references(() => postPollsTable.id, { onDelete: "cascade" }).notNull(),
+  optionId: uuid("option_id").references(() => postPollOptionsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.pollId, t.userId] }),
+  optionIdx: index("post_poll_votes_option_idx").on(t.optionId),
+  userIdx: index("post_poll_votes_user_idx").on(t.userId),
+}));
+
 export const userFollowsTable = pgTable("user_follows", {
   followerId: uuid("follower_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   followingId: uuid("following_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -332,6 +378,19 @@ export const userFollowsTable = pgTable("user_follows", {
 }, (t) => ({
   pk: primaryKey({ columns: [t.followerId, t.followingId] }),
   followingIdx: index("user_follows_following_idx").on(t.followingId)
+}));
+
+export const followRequestsTable = pgTable("follow_requests", {
+  id: uuid("id").primaryKey(),
+  requesterId: uuid("requester_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  targetId: uuid("target_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  requesterTargetIdx: uniqueIndex("follow_requests_requester_target_idx").on(t.requesterId, t.targetId),
+  targetStatusIdx: index("follow_requests_target_status_idx").on(t.targetId, t.status, t.createdAt),
+  requesterStatusIdx: index("follow_requests_requester_status_idx").on(t.requesterId, t.status),
 }));
 
 export const reelViewsTable = pgTable("reel_views", {

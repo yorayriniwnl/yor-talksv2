@@ -205,6 +205,16 @@ export interface BackendUser {
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
+export interface BackendFollowRequest {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  requester: BackendUser;
+}
+
 export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
 
 export interface CreatorWorkspaceItem {
@@ -318,10 +328,13 @@ export const api = {
     return request<BackendUser>('/users/me/avatar', { method: 'POST', body: form });
   },
   searchUsers: (q: string) => request<BackendUser[]>(`/users/search?q=${encodeURIComponent(q)}`),
-  followUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser }>(`/users/${userId}/follow`, { method: 'POST' }),
+  followUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser; status: 'accepted' | 'pending' }>(`/users/${userId}/follow`, { method: 'POST' }),
   unfollowUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser }>(`/users/${userId}/unfollow`, { method: 'POST' }),
   getFollowers: (userId: string) => request<BackendUser[]>(`/users/${userId}/followers`),
   getFollowing: (userId: string) => request<BackendUser[]>(`/users/${userId}/following`),
+  getFollowRequests: () => request<BackendFollowRequest[]>('/users/me/follow-requests'),
+  acceptFollowRequest: (requestId: string) => request<{ request: BackendFollowRequest; follower: BackendUser; target: BackendUser }>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/accept`, { method: 'POST' }),
+  rejectFollowRequest: (requestId: string) => request<BackendFollowRequest>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/reject`, { method: 'POST' }),
   updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
     request<BackendUser>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>
@@ -354,7 +367,7 @@ export const api = {
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; images?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -362,6 +375,9 @@ export const api = {
   unlikePost: (postId: string) => request<BackendPost>(`/posts/${postId}/unlike`, { method: 'POST' }),
   bookmarkPost: (postId: string) => request<BackendPost>(`/posts/${postId}/bookmark`, { method: 'POST' }),
   sharePost: (postId: string) => request<BackendPost>(`/posts/${postId}/share`, { method: 'POST' }),
+  repostPost: (postId: string, note?: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) }),
+  unrepostPost: (postId: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'DELETE' }),
+  votePostPoll: (postId: string, optionId: string) => request<BackendPost>(`/posts/${postId}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
   commentOnPost: (postId: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) => request<{ post: BackendPost; comment: BackendComment }>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
   getPostComments: (postId: string) => request<BackendComment[]>(`/posts/${postId}/comments`),
   uploadPostImage: (file: File) => {
@@ -497,6 +513,15 @@ export interface BackendPost {
   likedByMe?: boolean;
   savedByMe?: boolean;
   shareCount: number;
+  repostCount?: number;
+  repostedByMe?: boolean;
+  poll?: {
+    id: string;
+    question: string;
+    options: { id: string; text: string; position: number; votes: number }[];
+    totalVotes: number;
+    votedOptionId?: string;
+  };
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
 }

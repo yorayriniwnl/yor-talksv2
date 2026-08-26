@@ -104,6 +104,36 @@ export class UserController {
     return res.status(200).json(createResponse("Following loaded", toPublicUsers(following)));
   };
 
+  listFollowRequests = async (req: Request, res: Response) => {
+    const requests = await this.userService.listFollowRequests(req.user?.id ?? "");
+    return res.status(200).json(createResponse("Follow requests loaded", requests.map(({ request, requester }) => ({
+      ...request,
+      requester: toPublicUser(requester),
+    }))));
+  };
+
+  acceptFollowRequest = async (req: Request, res: Response) => {
+    const requestId = typeof req.params.requestId === "string" ? req.params.requestId : "";
+    const result = await this.userService.acceptFollowRequest(requestId, req.user?.id ?? "");
+    if (!result) {
+      return res.status(404).json(createResponse("Follow request not found", null, {}, ["Follow request not found"]));
+    }
+    return res.status(200).json(createResponse("Follow request accepted", {
+      request: result.request,
+      follower: toOwnUser(result.follower),
+      target: toPublicUser(result.target),
+    }));
+  };
+
+  rejectFollowRequest = async (req: Request, res: Response) => {
+    const requestId = typeof req.params.requestId === "string" ? req.params.requestId : "";
+    const request = await this.userService.rejectFollowRequest(requestId, req.user?.id ?? "");
+    if (!request) {
+      return res.status(404).json(createResponse("Follow request not found", null, {}, ["Follow request not found"]));
+    }
+    return res.status(200).json(createResponse("Follow request declined", request));
+  };
+
   settings = async (req: Request, res: Response) => {
     const user = await this.userService.updateSettings(req.user?.id ?? "", req.body);
     if (!user) {

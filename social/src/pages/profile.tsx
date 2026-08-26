@@ -347,6 +347,7 @@ export default function Profile() {
   const profileId = profile?.id;
   const isOwnProfile = currentUser?.id === profileId;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
+  const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(profileId ?? '');
   const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
@@ -390,7 +391,7 @@ export default function Profile() {
 
   const handleToggleFollow = useCallback((targetId: string) => {
     if (!currentUser) return;
-    currentUser.followingIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
+    currentUser.followingIds?.includes(targetId) || currentUser.pendingFollowIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
   }, [currentUser, followUser, unfollowUser]);
 
   const handleCopyLink = useCallback(() => {
@@ -530,8 +531,8 @@ export default function Profile() {
             ) : (
               <>
                 <motion.div whileTap={{ scale: 0.95 }}>
-                  <Button variant={isFollowing ? 'outline' : 'default'} className={cn("rounded-xl h-9 font-bold text-[0.78rem] px-6", !isFollowing && "glow-neon-primary")} onClick={() => handleToggleFollow(profile.id)}>
-                    {isFollowing ? 'Following' : (<><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Follow</>)}
+                  <Button variant={isFollowing || isFollowPending ? 'outline' : 'default'} className={cn("rounded-xl h-9 font-bold text-[0.78rem] px-6", !isFollowing && !isFollowPending && "glow-neon-primary")} onClick={() => handleToggleFollow(profile.id)}>
+                    {isFollowing ? 'Following' : isFollowPending ? 'Requested' : (<><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Follow</>)}
                   </Button>
                 </motion.div>
                 <motion.div whileTap={{ scale: 0.95 }}>

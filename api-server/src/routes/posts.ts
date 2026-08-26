@@ -8,7 +8,7 @@ import { PostRepository } from "../repositories/post-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { PostService } from "../services/post-service.js";
 import { QueueService } from "../services/queue-service.js";
-import { commentSchema, createPostSchema, editPostSchema, replySchema } from "../validators/post.js";
+import { commentSchema, createPostSchema, editPostSchema, pollVoteSchema, repostSchema, replySchema } from "../validators/post.js";
 import { postIdParamSchema, userIdParamSchema, commentIdParamSchema } from "../validators/params.js";
 
 const router = Router();
@@ -27,6 +27,9 @@ router.get("/posts/:postId/comments", authenticate, validateParams(postIdParamSc
 router.post("/posts/:postId/comments/:commentId/replies", authenticate, validateParams(postIdParamSchema.merge(commentIdParamSchema)), validateBody(replySchema), postController.reply);
 router.post("/posts/:postId/bookmark", authenticate, validateParams(postIdParamSchema), postController.bookmark);
 router.post("/posts/:postId/share", authenticate, validateParams(postIdParamSchema), postController.share);
+router.post("/posts/:postId/repost", authenticate, validateParams(postIdParamSchema), validateBody(repostSchema), postController.repost);
+router.delete("/posts/:postId/repost", authenticate, validateParams(postIdParamSchema), postController.unrepost);
+router.post("/posts/:postId/poll/vote", authenticate, validateParams(postIdParamSchema), validateBody(pollVoteSchema), postController.votePoll);
 router.get("/feed", authenticate, postController.feed);
 router.get("/feed/trending", authenticate, postController.trendingFeed);
 router.get("/users/:userId/feed", authenticate, validateParams(userIdParamSchema), postController.userFeed);

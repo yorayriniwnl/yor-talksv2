@@ -8,7 +8,7 @@ import { QueueService } from "./queue-service.js";
 import { SecurityService } from "./security-service.js";
 import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from "../types/index.js";
 import { db } from "@workspace/db";
-import { commentsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
+import { commentsTable, postLikesTable, postBookmarksTable, postRepostsTable } from "@workspace/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
@@ -25,24 +25,28 @@ export class PostService {
   }
 
   private async attachInteractions(posts: PostRecord[], userId?: string) {
-    if (!userId || posts.length === 0) return posts;
+    if (posts.length === 0) return posts;
     const postIds = posts.map(p => p.id);
-    const { postLikesTable, postBookmarksTable } = await import("@workspace/db/schema");
-    const { inArray, and, eq } = await import("drizzle-orm");
-    const { db } = await import("@workspace/db");
-    
-    const [likes, bookmarks] = await Promise.all([
+    const polls = await this.postRepository.getPolls(postIds, userId);
+    if (!userId) {
+      return posts.map((post) => ({ ...post, ...(polls.get(post.id) ? { poll: polls.get(post.id) } : {}) }));
+    }
+    const [likes, bookmarks, reposts] = await Promise.all([
       db.select({ postId: postLikesTable.postId }).from(postLikesTable).where(and(inArray(postLikesTable.postId, postIds), eq(postLikesTable.userId, userId))),
-      db.select({ postId: postBookmarksTable.postId }).from(postBookmarksTable).where(and(inArray(postBookmarksTable.postId, postIds), eq(postBookmarksTable.userId, userId)))
+      db.select({ postId: postBookmarksTable.postId }).from(postBookmarksTable).where(and(inArray(postBookmarksTable.postId, postIds), eq(postBookmarksTable.userId, userId))),
+      db.select({ postId: postRepostsTable.postId }).from(postRepostsTable).where(and(inArray(postRepostsTable.postId, postIds), eq(postRepostsTable.userId, userId))),
     ]);
-    
+
     const likedSet = new Set(likes.map(l => l.postId));
     const bookmarkedSet = new Set(bookmarks.map(b => b.postId));
-    
+    const repostedSet = new Set(reposts.map((repost) => repost.postId));
+
     return posts.map(p => ({
       ...p,
       likedByMe: likedSet.has(p.id),
-      savedByMe: bookmarkedSet.has(p.id)
+      savedByMe: bookmarkedSet.has(p.id),
+      repostedByMe: repostedSet.has(p.id),
+      ...(polls.get(p.id) ? { poll: polls.get(p.id) } : {}),
     }));
   }
 
@@ -70,10 +74,19 @@ export class PostService {
   async getPost(postId: string, currentUserId?: string): Promise<PostRecord | undefined> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    return this.postRepository.findById(postId, excludedAuthorIds, contentFilter);
+    const post = await this.postRepository.findById(postId, excludedAuthorIds, contentFilter);
+    if (!post || !(await this.canViewAuthorContent(post.authorId, currentUserId))) return undefined;
+    return (await this.attachInteractions([post], currentUserId))[0];
   }
 
-  async createPost(authorId: string, content: string, images: string[], contentCategory = DEFAULT_CONTENT_CATEGORY, contentRating = DEFAULT_CONTENT_RATING): Promise<PostRecord> {
+  async createPost(
+    authorId: string,
+    content: string,
+    images: string[],
+    contentCategory = DEFAULT_CONTENT_CATEGORY,
+    contentRating = DEFAULT_CONTENT_RATING,
+    poll?: { question: string; options: Array<{ text: string }> },
+  ): Promise<PostRecord> {
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -87,6 +100,7 @@ export class PostService {
       commentsCount: 0,
       bookmarksCount: 0,
       shareCount: 0,
+      repostCount: 0,
       reactions: {},
       tags,
       mentions,
@@ -98,8 +112,13 @@ export class PostService {
     if (moderation.spam || moderation.toxicity || moderation.nsfw) {
       throw new ContentPolicyViolationError("This post was blocked by the safety filter", moderation);
     }
-    const created = await this.postRepository.create(post);
-    return created;
+    const normalizedPoll = poll ? {
+      id: randomUUID(),
+      question: poll.question.trim(),
+      options: poll.options.map((option, position) => ({ id: randomUUID(), text: option.text.trim(), position })),
+    } : undefined;
+    const created = await this.postRepository.create(post, normalizedPoll);
+    return (await this.getPost(created.id, authorId)) ?? created;
   }
 
   async deletePost(postId: string, userId: string): Promise<boolean> {
@@ -274,6 +293,24 @@ export class PostService {
     return this.getPost(postId, userId);
   }
 
+  async repostPost(postId: string, userId: string, note?: string): Promise<PostRecord | undefined> {
+    if (!(await this.getPost(postId, userId))) return undefined;
+    await this.postRepository.repostPost(postId, userId, note);
+    return this.getPost(postId, userId);
+  }
+
+  async unrepostPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.getPost(postId, userId))) return undefined;
+    await this.postRepository.unrepostPost(postId, userId);
+    return this.getPost(postId, userId);
+  }
+
+  async votePoll(postId: string, optionId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.getPost(postId, userId))) return undefined;
+    if (!(await this.postRepository.votePoll(postId, optionId, userId))) return undefined;
+    return this.getPost(postId, userId);
+  }
+
   async addReaction(postId: string, userId: string, reaction: string): Promise<PostRecord | undefined> {
     const post = await this.getPost(postId, userId);
     if (!post) {
@@ -294,7 +331,8 @@ export class PostService {
   async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    return this.attachInteractions(await this.postRepository.list(cursor, limit, excludedAuthorIds, contentFilter), currentUserId);
+    const posts = await this.postRepository.list(cursor, limit, excludedAuthorIds, contentFilter);
+    return this.attachInteractions(await this.filterVisiblePosts(posts, currentUserId), currentUserId);
   }
 
     private redis = new Redis(env.REDIS_URL);
@@ -317,7 +355,7 @@ export class PostService {
         const visible = parsed.filter((post: PostRecord) =>
           !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
         );
-        return this.attachInteractions(visible, currentUserId);
+        return this.attachInteractions(await this.filterVisiblePosts(visible, currentUserId), currentUserId);
       } catch (e) { /* ignore parse error */ }
     }
 
@@ -335,13 +373,31 @@ export class PostService {
     const visible = posts.filter((post) =>
       !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
     );
-    return this.attachInteractions(visible, currentUserId);
+    return this.attachInteractions(await this.filterVisiblePosts(visible, currentUserId), currentUserId);
   }
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    return this.attachInteractions(await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds, contentFilter), currentUserId);
+    const posts = await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds, contentFilter);
+    return this.attachInteractions(await this.filterVisiblePosts(posts, currentUserId), currentUserId);
+  }
+
+  private async filterVisiblePosts(posts: PostRecord[], viewerId?: string): Promise<PostRecord[]> {
+    if (posts.length === 0 || !viewerId) return posts;
+    const visible = await Promise.all(posts.map(async (post) => ({
+      post,
+      allowed: await this.canViewAuthorContent(post.authorId, viewerId),
+    })));
+    return visible.filter(({ allowed }) => allowed).map(({ post }) => post);
+  }
+
+  private async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
+    if (!viewerId || authorId === viewerId) return true;
+    const author = await this.userRepository.findById(authorId);
+    if (!author) return false;
+    const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
+    return visibility === "public" || await this.userRepository.isFollowing(viewerId, authorId);
   }
 
   close(): void {

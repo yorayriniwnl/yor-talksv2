@@ -10,7 +10,7 @@ import { AuthService } from "../services/auth-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
 import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
-import { userIdParamSchema, usernameParamSchema } from "../validators/params.js";
+import { followRequestIdParamSchema, userIdParamSchema, usernameParamSchema } from "../validators/params.js";
 import { AccountService } from "../services/account-service.js";
 
 const router = Router();
@@ -32,6 +32,9 @@ router.post("/users/:userId/follow", authenticate, validateParams(userIdParamSch
 router.post("/users/:userId/unfollow", authenticate, validateParams(userIdParamSchema), userController.unfollowUser);
 router.get("/users/:userId/followers", authenticate, validateParams(userIdParamSchema), userController.followers);
 router.get("/users/:userId/following", authenticate, validateParams(userIdParamSchema), userController.following);
+router.get("/users/me/follow-requests", authenticate, userController.listFollowRequests);
+router.post("/users/me/follow-requests/:requestId/accept", authenticate, validateParams(followRequestIdParamSchema), userController.acceptFollowRequest);
+router.post("/users/me/follow-requests/:requestId/reject", authenticate, validateParams(followRequestIdParamSchema), userController.rejectFollowRequest);
 router.put("/users/me/settings", authenticate, validateBody(settingsSchema), userController.settings);
 router.put("/users/me/privacy", authenticate, validateBody(privacySchema), userController.updatePrivacy);
 router.post("/users/:userId/block", authenticate, validateParams(userIdParamSchema), userController.blockUser);

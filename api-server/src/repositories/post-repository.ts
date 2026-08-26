@@ -1,5 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { eq, desc, ilike, lt, and, notInArray, inArray, or } from "drizzle-orm";
-import { postsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
+import {
+  postsTable,
+  postLikesTable,
+  postBookmarksTable,
+  postRepostsTable,
+  postPollsTable,
+  postPollOptionsTable,
+  postPollVotesTable,
+} from "@workspace/db/schema";
 import { db, pool } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
 
@@ -93,10 +102,117 @@ export class PostRepository {
     return true;
   }
 
-  async create(post: PostRecord): Promise<PostRecord> {
-    const { likedBy: _likedBy, bookmarkedBy: _bookmarkedBy, comments: _comments, ...persistedPost } = post;
-    const [created] = await db.insert(postsTable).values(persistedPost).returning();
+  async create(post: PostRecord, poll?: { id: string; question: string; options: Array<{ id: string; text: string; position: number }> }): Promise<PostRecord> {
+    const { likedBy: _likedBy, bookmarkedBy: _bookmarkedBy, comments: _comments, poll: _poll, ...persistedPost } = post;
+    const [created] = await db.transaction(async (tx) => {
+      const [createdPost] = await tx.insert(postsTable).values(persistedPost).returning();
+      if (poll) {
+        await tx.insert(postPollsTable).values({
+          id: poll.id,
+          postId: createdPost.id,
+          question: poll.question,
+        });
+        if (poll.options.length > 0) {
+          await tx.insert(postPollOptionsTable).values(poll.options.map((option) => ({
+            id: option.id,
+            pollId: poll.id,
+            text: option.text,
+            position: option.position,
+          })));
+        }
+      }
+      return [createdPost];
+    });
     return created as PostRecord;
+  }
+
+  async repostPost(postId: string, userId: string, note?: string): Promise<void> {
+    const inserted = await db.insert(postRepostsTable)
+      .values({ id: randomUUID(), postId, userId, note: note ?? null })
+      .onConflictDoNothing()
+      .returning({ id: postRepostsTable.id });
+    if (inserted.length > 0) {
+      await db.execute(sql`UPDATE posts SET repost_count = repost_count + 1, updated_at = NOW() WHERE id = ${postId}`);
+    }
+  }
+
+  async unrepostPost(postId: string, userId: string): Promise<void> {
+    const deleted = await db.delete(postRepostsTable)
+      .where(and(eq(postRepostsTable.postId, postId), eq(postRepostsTable.userId, userId)))
+      .returning({ id: postRepostsTable.id });
+    if (deleted.length > 0) {
+      await db.execute(sql`UPDATE posts SET repost_count = GREATEST(0, repost_count - 1), updated_at = NOW() WHERE id = ${postId}`);
+    }
+  }
+
+  async hasReposted(postId: string, userId: string): Promise<boolean> {
+    const [row] = await db.select({ id: postRepostsTable.id })
+      .from(postRepostsTable)
+      .where(and(eq(postRepostsTable.postId, postId), eq(postRepostsTable.userId, userId)))
+      .limit(1);
+    return Boolean(row);
+  }
+
+  async votePoll(postId: string, optionId: string, userId: string): Promise<boolean> {
+    const [poll] = await db.select({ id: postPollsTable.id })
+      .from(postPollsTable)
+      .where(eq(postPollsTable.postId, postId))
+      .limit(1);
+    if (!poll) return false;
+
+    const [option] = await db.select({ id: postPollOptionsTable.id })
+      .from(postPollOptionsTable)
+      .where(and(eq(postPollOptionsTable.id, optionId), eq(postPollOptionsTable.pollId, poll.id)))
+      .limit(1);
+    if (!option) return false;
+
+    const inserted = await db.insert(postPollVotesTable)
+      .values({ pollId: poll.id, optionId, userId })
+      .onConflictDoNothing()
+      .returning({ pollId: postPollVotesTable.pollId });
+    if (inserted.length > 0) {
+      await db.execute(sql`UPDATE post_poll_options SET vote_count = vote_count + 1 WHERE id = ${optionId}`);
+    }
+    return true;
+  }
+
+  async getPolls(postIds: string[], userId?: string): Promise<Map<string, PostRecord["poll"]>> {
+    const result = new Map<string, PostRecord["poll"]>();
+    if (postIds.length === 0) return result;
+    const polls = await db.select().from(postPollsTable).where(inArray(postPollsTable.postId, postIds));
+    if (polls.length === 0) return result;
+    const pollIds = polls.map((poll) => poll.id);
+    const options = await db.select().from(postPollOptionsTable)
+      .where(inArray(postPollOptionsTable.pollId, pollIds))
+      .orderBy(postPollOptionsTable.position);
+    const votes = userId
+      ? await db.select({ pollId: postPollVotesTable.pollId, optionId: postPollVotesTable.optionId })
+        .from(postPollVotesTable)
+        .where(and(inArray(postPollVotesTable.pollId, pollIds), eq(postPollVotesTable.userId, userId)))
+      : [];
+    const votedOptions = new Map(votes.map((vote) => [vote.pollId, vote.optionId]));
+    const optionsByPoll = new Map<string, typeof options>();
+    for (const option of options) {
+      const current = optionsByPoll.get(option.pollId) ?? [];
+      current.push(option);
+      optionsByPoll.set(option.pollId, current);
+    }
+    for (const poll of polls) {
+      const pollOptions = optionsByPoll.get(poll.id) ?? [];
+      result.set(poll.postId, {
+        id: poll.id,
+        question: poll.question,
+        options: pollOptions.map((option) => ({
+          id: option.id,
+          text: option.text,
+          position: option.position,
+          votes: option.voteCount,
+        })),
+        totalVotes: pollOptions.reduce((total, option) => total + option.voteCount, 0),
+        ...(votedOptions.has(poll.id) ? { votedOptionId: votedOptions.get(poll.id) } : {}),
+      });
+    }
+    return result;
   }
 
   async findById(id: string, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord | undefined> {

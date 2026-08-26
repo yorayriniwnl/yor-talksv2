@@ -274,7 +274,7 @@ export default function Explore() {
 
   const handleToggleFollow = (targetId: string) => {
     if (!currentUser) return;
-    currentUser.followingIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
+    currentUser.followingIds?.includes(targetId) || currentUser.pendingFollowIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
   };
 
   const isSearching = query.trim().length >= 2 || isFocused;
@@ -479,6 +479,7 @@ export default function Explore() {
                   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x stagger-in">
                     {people.map((person: any) => {
                       const isFollowed = currentUser?.followingIds?.includes(person.id);
+                      const isFollowPending = currentUser?.pendingFollowIds?.includes(person.id);
                       const displayName = person.displayName || person.username || 'User';
                       return (
                         <motion.div key={person.id} whileHover={{ y: -4 }} className="surface-1 p-5 rounded-[24px] min-w-[200px] shrink-0 snap-start flex flex-col items-center text-center border border-border/50 hover:border-accent/30 transition-all shadow-sm hover-lift">
@@ -492,11 +493,11 @@ export default function Explore() {
                           </Link>
                           <p className="text-[0.72rem] text-muted-foreground mb-4 truncate w-full font-mono">@{person.username}</p>
                           <Button 
-                            variant={isFollowed ? 'outline' : 'default'} 
-                            className={cn("w-full rounded-xl h-9 text-[0.8rem] font-bold", !isFollowed && "bg-accent hover:bg-accent/90 text-white")}
+                            variant={isFollowed || isFollowPending ? 'outline' : 'default'}
+                            className={cn("w-full rounded-xl h-9 text-[0.8rem] font-bold", !isFollowed && !isFollowPending && "bg-accent hover:bg-accent/90 text-white")}
                             onClick={() => handleToggleFollow(person.id)}
                           >
-                            {isFollowed ? 'Following' : 'Follow'}
+                            {isFollowed ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
                           </Button>
                         </motion.div>
                       );

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, SendHorizonal, Smile, X, Plus } from 'lucide-react';
+import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, X, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
@@ -280,6 +280,7 @@ export function PostCard({ post }: { post: PostType }) {
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
+  const toggleRepost = useAppStore((state) => state.toggleRepost);
   const toggleBlockUser = useAppStore((state) => state.toggleBlockUser);
   const [, setLocation] = useLocation();
   const { particles, burst: heartBurst } = useHeartBurst();
@@ -649,6 +650,23 @@ export function PostCard({ post }: { post: PostType }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    {...tapScale}
+                    aria-label={post.repostedByMe ? 'Remove repost' : 'Repost'}
+                    className="group flex items-center gap-1.5 focus-visible:outline-none"
+                    onClick={(event) => { event.stopPropagation(); void toggleRepost(post.id); }}
+                  >
+                    <div className="p-1.5 rounded-full group-hover:bg-emerald-500/10 transition-colors">
+                      <Repeat2 className={cn('h-[18px] w-[18px] transition-colors', post.repostedByMe ? 'text-emerald-500' : 'group-hover:text-foreground')} />
+                    </div>
+                    <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.reposts > 0 && post.reposts}</span>
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent>{post.repostedByMe ? 'Remove repost' : 'Repost'}</TooltipContent>
+              </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>

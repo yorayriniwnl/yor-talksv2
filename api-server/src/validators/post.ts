@@ -8,6 +8,18 @@ export const createPostSchema = z.object({
   images: z.array(z.string().url()).optional().default([]),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema.default("regular"),
+  poll: z.object({
+    question: z.string().trim().min(1).max(240),
+    options: z.array(z.object({ text: z.string().trim().min(1).max(80) })).min(2).max(4),
+  }).optional(),
+});
+
+export const pollVoteSchema = z.object({
+  optionId: z.string().uuid("Invalid poll option ID"),
+});
+
+export const repostSchema = z.object({
+  note: z.string().trim().max(500).optional(),
 });
 
 export const editPostSchema = z.object({

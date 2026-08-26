@@ -9,6 +9,7 @@ import {
   getStoredTokens,
   setStoredTokens,
   type BackendUser,
+  type BackendFollowRequest,
   type BackendStory,
   type BackendEvent,
   type BackendPost,
@@ -43,6 +44,7 @@ export type User = {
   followers: number;
   following: number;
   followingIds?: string[];
+  pendingFollowIds?: string[];
   blockedUserIds?: string[];
   mutedUserIds?: string[];
   twoFactorEnabled?: boolean;
@@ -76,12 +78,14 @@ export type Post = {
   likes: number;
   comments: number;
   shares: number;
+  reposts: number;
   resonanceScore: number;
   x: number;
   y: number;
   createdAt: string;
   likedByMe?: boolean;
   savedByMe?: boolean;
+  repostedByMe?: boolean;
   contentCategory: string;
   contentRating: ContentRating;
   poll?: {
@@ -247,6 +251,15 @@ export type PrivacySettings = {
   twoFactorEnabled: boolean;
 };
 
+export type FollowRequest = {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  requester: User;
+};
+
 // ── Mappers: real API responses → the UI shapes above ──────────────────
 function mapUser(u: BackendUser): User {
   return {
@@ -262,6 +275,7 @@ function mapUser(u: BackendUser): User {
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),
     following: Array.isArray(u.following) ? u.following.length : (u.followingCount ?? 0),
     followingIds: Array.isArray(u.following) ? u.following : [],
+    pendingFollowIds: [],
     blockedUserIds: Array.isArray(u.blockedUsers) ? u.blockedUsers : [],
     mutedUserIds: Array.isArray(u.mutedUsers) ? u.mutedUsers : [],
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
@@ -319,14 +333,22 @@ function mapPost(p: BackendPost, currentUserId?: string): Post {
     likes: (p as any).likesCount ?? (Array.isArray((p as any).likes) ? (p as any).likes.length : ((p as any).likes || 0)),
     comments: (p as any).commentsCount ?? (Array.isArray((p as any).comments) ? (p as any).comments.length : ((p as any).comments || 0)),
     shares: (p as any).shareCount ?? (p as any).shares ?? 0,
+    reposts: p.repostCount ?? 0,
     resonanceScore: spatial.resonanceScore,
     x: spatial.x,
     y: spatial.y,
     createdAt: p.createdAt || new Date().toISOString(),
     likedByMe: !!(p as any).likedByMe,
     savedByMe: !!(p as any).savedByMe,
+    repostedByMe: !!p.repostedByMe,
     contentCategory: p.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
+    poll: p.poll ? {
+      question: p.poll.question,
+      options: p.poll.options.map((option) => ({ id: option.id, text: option.text, votes: option.votes })),
+      totalVotes: p.poll.totalVotes,
+      votedOptionId: p.poll.votedOptionId,
+    } : undefined,
   };
 }
 
@@ -463,6 +485,17 @@ function mapNotification(n: BackendNotification): Notification {
   };
 }
 
+function mapFollowRequest(request: BackendFollowRequest): FollowRequest {
+  return {
+    id: request.id,
+    requesterId: request.requesterId,
+    targetId: request.targetId,
+    status: request.status,
+    createdAt: request.createdAt,
+    requester: mapUser(request.requester),
+  };
+}
+
 
 
 
@@ -485,6 +518,7 @@ interface AppState {
   videos: Video[];
   achievements: Achievement[];
   notifications: Notification[];
+  followRequests: FollowRequest[];
   conversations: Conversation[];
   messagesByConversation: Record<string, Message[]>;
   aiMessages: AIMessage[];
@@ -511,12 +545,16 @@ interface AppState {
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
+  toggleRepost: (postId: string) => Promise<void>;
 
   loadCommunities: () => Promise<void>;
   createCommunity: (name: string, slug: string, description: string) => Promise<void>;
   toggleCommunityMembership: (communityId: string) => Promise<void>;
 
   loadNotifications: () => Promise<void>;
+  loadFollowRequests: () => Promise<void>;
+  acceptFollowRequest: (requestId: string) => Promise<void>;
+  rejectFollowRequest: (requestId: string) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
 
@@ -533,7 +571,7 @@ interface AppState {
   followUser: (userId: string) => Promise<void>;
   unfollowUser: (userId: string) => Promise<void>;
 
-  votePoll: (postId: string, optionId: string) => void;
+  votePoll: (postId: string, optionId: string) => Promise<void>;
   loadEvents: () => Promise<void>;
   createEvent: (input: { title: string; description: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline: boolean }) => Promise<void>;
   toggleEventRsvp: (eventId: string, status: 'going' | 'interested') => Promise<void>;
@@ -575,6 +613,7 @@ function hydrateSessionData(get: () => AppState): void {
     get().loadFeed(),
     get().loadCommunities(),
     get().loadNotifications(),
+    get().loadFollowRequests(),
     get().loadConversations(),
     get().loadStories(),
     get().loadWorldPreferences(),
@@ -647,6 +686,7 @@ export const useAppStore = create<AppState>()(
       videos: [],
       achievements: [],
       notifications: [],
+      followRequests: [],
       conversations: [],
       messagesByConversation: {},
       aiMessages: [],
@@ -891,12 +931,8 @@ export const useAppStore = create<AppState>()(
           toast.error('Verify your email before posting');
           return;
         }
-        if (poll) {
-          toast.error('Polls are not enabled in the college beta yet');
-          return;
-        }
         try {
-          const created = await api.createPost({ content, images: media, contentCategory, contentRating });
+          const created = await api.createPost({ content, images: media, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
@@ -927,6 +963,19 @@ export const useAppStore = create<AppState>()(
           toast.success('Post link copied to clipboard!');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not share this post');
+        }
+      },
+
+      toggleRepost: async (postId) => {
+        const post = get().posts.find((item) => item.id === postId);
+        if (!post) return;
+        try {
+          const updated = post.repostedByMe ? await api.unrepostPost(postId) : await api.repostPost(postId);
+          const currentUserId = get().currentUser?.id;
+          set((state) => ({ posts: state.posts.map((item) => item.id === postId ? mapPost(updated, currentUserId) : item) }));
+          toast.success(post.repostedByMe ? 'Repost removed' : 'Post reposted to your profile');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not update repost');
         }
       },
 
@@ -1051,11 +1100,22 @@ export const useAppStore = create<AppState>()(
           const result = await api.followUser(userId);
           const follower = mapUser(result.follower);
           const target = mapUser(result.target);
+          if (result.status === 'pending') {
+            set((state) => ({
+              users: { ...state.users, [target.id]: target, [follower.id]: follower },
+              currentUser: state.currentUser?.id === follower.id
+                ? { ...follower, pendingFollowIds: [...new Set([...(state.currentUser.pendingFollowIds || []), userId])] }
+                : state.currentUser,
+            }));
+            toast.info('Follow request sent');
+            return;
+          }
           set((state) => ({
             users: { ...state.users, [target.id]: target, [follower.id]: follower },
             currentUser: state.currentUser?.id === follower.id ? {
               ...follower,
               followingIds: [...new Set([...(state.currentUser.followingIds || []), userId])],
+              pendingFollowIds: (state.currentUser.pendingFollowIds || []).filter((id) => id !== userId),
             } : state.currentUser,
           }));
         } catch (error) {
@@ -1075,6 +1135,7 @@ export const useAppStore = create<AppState>()(
             currentUser: state.currentUser?.id === follower.id ? {
               ...follower,
               followingIds: (state.currentUser.followingIds || []).filter((id) => id !== userId),
+              pendingFollowIds: (state.currentUser.pendingFollowIds || []).filter((id) => id !== userId),
             } : state.currentUser,
           }));
         } catch (error) {
@@ -1082,8 +1143,48 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      votePoll: () => {
-        toast.info('Poll voting is not available until it is connected to the server.');
+      loadFollowRequests: async () => {
+        try {
+          const requests = await api.getFollowRequests();
+          set({ followRequests: requests.map(mapFollowRequest) });
+        } catch {
+          // Keep the last successful snapshot during a transient outage.
+        }
+      },
+
+      acceptFollowRequest: async (requestId) => {
+        try {
+          const result = await api.acceptFollowRequest(requestId);
+          const follower = mapUser(result.follower);
+          const target = mapUser(result.target);
+          set((state) => ({
+            followRequests: state.followRequests.filter((request) => request.id !== requestId),
+            users: { ...state.users, [follower.id]: follower, [target.id]: target },
+            currentUser: state.currentUser?.id === target.id ? target : state.currentUser,
+          }));
+          toast.success('Follow request accepted');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not accept follow request');
+        }
+      },
+
+      rejectFollowRequest: async (requestId) => {
+        try {
+          await api.rejectFollowRequest(requestId);
+          set((state) => ({ followRequests: state.followRequests.filter((request) => request.id !== requestId) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not decline follow request');
+        }
+      },
+
+      votePoll: async (postId, optionId) => {
+        try {
+          const updated = await api.votePostPoll(postId, optionId);
+          const currentUserId = get().currentUser?.id;
+          set((state) => ({ posts: state.posts.map((item) => item.id === postId ? mapPost(updated, currentUserId) : item) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not record poll vote');
+        }
       },
 
       loadStories: async () => {

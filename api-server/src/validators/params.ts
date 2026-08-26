@@ -8,6 +8,10 @@ export const userIdParamSchema = z.object({
   userId: z.string().uuid("Invalid user ID format"),
 });
 
+export const followRequestIdParamSchema = z.object({
+  requestId: z.string().uuid("Invalid follow request ID format"),
+});
+
 export const usernameParamSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_]{3,24}$/, "Invalid username format"),
 });

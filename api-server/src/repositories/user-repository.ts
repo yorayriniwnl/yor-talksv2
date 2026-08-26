@@ -1,7 +1,8 @@
-import { and, eq, ilike, or, sql } from "drizzle-orm";
-import { userFollowsTable, usersTable } from "@workspace/db/schema";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { followRequestsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
-import type { UserRecord } from "../types/index.js";
+import type { FollowRequestRecord, UserRecord } from "../types/index.js";
 
 export class UserRepository {
 
@@ -29,6 +30,66 @@ export class UserRepository {
       await db.execute(sql`UPDATE users SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}`);
       await db.execute(sql`UPDATE users SET follower_count = GREATEST(0, follower_count - 1) WHERE id = ${followingId}`);
     }
+  }
+
+  async findFollowRequest(requesterId: string, targetId: string): Promise<FollowRequestRecord | undefined> {
+    const [request] = await db.select().from(followRequestsTable).where(and(
+      eq(followRequestsTable.requesterId, requesterId),
+      eq(followRequestsTable.targetId, targetId),
+    )).limit(1);
+    return request as FollowRequestRecord | undefined;
+  }
+
+  async findFollowRequestById(id: string, targetId: string): Promise<FollowRequestRecord | undefined> {
+    const [request] = await db.select().from(followRequestsTable).where(and(
+      eq(followRequestsTable.id, id),
+      eq(followRequestsTable.targetId, targetId),
+    )).limit(1);
+    return request as FollowRequestRecord | undefined;
+  }
+
+  async createFollowRequest(requesterId: string, targetId: string): Promise<FollowRequestRecord> {
+    const existing = await this.findFollowRequest(requesterId, targetId);
+    if (existing) {
+      if (existing.status === "pending") return existing;
+      const [updated] = await db.update(followRequestsTable)
+        .set({ status: "pending", updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() })
+        .where(eq(followRequestsTable.id, existing.id))
+        .returning();
+      return updated as FollowRequestRecord;
+    }
+    const [created] = await db.insert(followRequestsTable).values({
+      id: randomUUID(),
+      requesterId,
+      targetId,
+      status: "pending",
+    }).returning();
+    return created as FollowRequestRecord;
+  }
+
+  async listPendingFollowRequests(targetId: string): Promise<Array<{ request: FollowRequestRecord; requester: UserRecord }>> {
+    return (await db.select({ request: followRequestsTable, requester: usersTable })
+      .from(followRequestsTable)
+      .innerJoin(usersTable, eq(usersTable.id, followRequestsTable.requesterId))
+      .where(and(eq(followRequestsTable.targetId, targetId), eq(followRequestsTable.status, "pending")))
+      .orderBy(desc(followRequestsTable.createdAt)))
+      .map(({ request, requester }) => ({ request: request as FollowRequestRecord, requester: requester as UserRecord }));
+  }
+
+  async setFollowRequestStatus(id: string, targetId: string, status: "accepted" | "rejected"): Promise<FollowRequestRecord | undefined> {
+    const [updated] = await db.update(followRequestsTable)
+      .set({ status, updatedAt: new Date().toISOString() })
+      .where(and(eq(followRequestsTable.id, id), eq(followRequestsTable.targetId, targetId), eq(followRequestsTable.status, "pending")))
+      .returning();
+    return updated as FollowRequestRecord | undefined;
+  }
+
+  async removeFollowRequest(requesterId: string, targetId: string): Promise<void> {
+    await db.delete(followRequestsTable).where(and(
+      eq(followRequestsTable.requesterId, requesterId),
+      eq(followRequestsTable.targetId, targetId),
+      eq(followRequestsTable.status, "pending"),
+    ));
   }
 
   async create(user: UserRecord): Promise<UserRecord> {

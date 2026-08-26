@@ -25,6 +25,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
 
   const isOwnProfile = currentUser?.id === user.id;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(user.id);
+  const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(user.id);
 
   const handleMouseEnter = () => {
     const timer = setTimeout(() => setIsOpen(true), 300);
@@ -39,7 +40,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
   const handleToggleFollow = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentUser) return;
-    isFollowing ? unfollowUser(user.id) : followUser(user.id);
+    isFollowing || isFollowPending ? unfollowUser(user.id) : followUser(user.id);
   };
 
   return (
@@ -89,12 +90,12 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                   <div className="flex gap-1.5">
                     <Button
                       size="sm"
-                      variant={isFollowing ? "outline" : "default"}
+                      variant={isFollowing || isFollowPending ? "outline" : "default"}
                       onClick={handleToggleFollow}
-                      className={cn("rounded-xl h-8 font-bold text-xs px-3", !isFollowing && "glow-neon-primary bg-primary")}
+                      className={cn("rounded-xl h-8 font-bold text-xs px-3", !isFollowing && !isFollowPending && "glow-neon-primary bg-primary")}
                     >
                       {isFollowing ? <Check className="w-3.5 h-3.5 mr-1 text-success" /> : <UserPlus className="w-3.5 h-3.5 mr-1" />}
-                      {isFollowing ? 'Following' : 'Follow'}
+                      {isFollowing ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
                     </Button>
                   </div>
                 )}
