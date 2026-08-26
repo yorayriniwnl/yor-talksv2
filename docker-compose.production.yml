@@ -40,6 +40,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
+      DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
     depends_on:
       postgres:
@@ -61,6 +62,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.production}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
       ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+      DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set CLIENT_ORIGIN in .env.production}

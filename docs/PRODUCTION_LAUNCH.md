@@ -6,7 +6,7 @@ This repository now has a production Compose profile, but a public launch still 
 
 Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.production.example` to `.env.production`, replace every `CHANGE_ME` value, and keep the file outside Git. Generate independent URL-safe secrets, for example with `openssl rand -hex 32`.
 
-`DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge.
+`DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge. The included Postgres container is not TLS-enabled, so keep `DB_SSL=false`; set it to `true` only when using a TLS-enabled managed database.
 
 ## 2. Configure the external launch dependencies
 
