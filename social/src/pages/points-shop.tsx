@@ -43,24 +43,8 @@ export default function PointsShop() {
   const [previewBackground, setPreviewBackground] = useState<string>('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop');
 
   const handlePurchase = (item: typeof SHOP_ITEMS[number]) => {
-    if (unlockedItems.includes(item.id)) {
-      sounds.playPop();
-      if (item.type === 'frame') setPreviewFrame(item.previewColor || 'from-cyan-400 to-blue-500');
-      if (item.type === 'background') setPreviewBackground(item.coverUrl || '');
-      toast.info(`Equipped ${item.title}`);
-      return;
-    }
-    if (points < item.points) {
-      toast.error('Insufficient Steam Points balance!');
-      return;
-    }
-    sounds.playChime();
-    triggerConfetti();
-    setPoints(p => p - item.points);
-    setUnlockedItems(prev => [...prev, item.id]);
-    if (item.type === 'frame') setPreviewFrame(item.previewColor || 'from-cyan-400 to-blue-500');
-    if (item.type === 'background') setPreviewBackground(item.coverUrl || '');
-    toast.success(`Unlocked & Equipped ${item.title}!`);
+    void item;
+    toast.info('The points shop is currently a preview. No points were spent and no item was unlocked.');
   };
 
   const filteredItems = SHOP_ITEMS.filter(i => filter === 'all' || i.type === filter);
@@ -75,7 +59,7 @@ export default function PointsShop() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Steam Points Shop</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Customize your Profile, Avatar Frames & Themes</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Preview only — points and item ownership are not connected yet</p>
           </div>
         </div>
 
@@ -221,13 +205,14 @@ export default function PointsShop() {
                   <Button
                     size="sm"
                     onClick={() => handlePurchase(item)}
+                    disabled
                     className={cn(
                       "rounded-xl font-bold text-xs flex-1 shadow-md",
                       isUnlocked ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "glow-neon-primary bg-primary text-primary-foreground"
                     )}
                   >
                     {isUnlocked ? <Check className="w-3.5 h-3.5 mr-1 text-white" /> : <ShoppingBag className="w-3.5 h-3.5 mr-1" />}
-                    {isUnlocked ? 'Equip' : 'Unlock'}
+                    Shop unavailable
                   </Button>
                 </div>
               </motion.div>

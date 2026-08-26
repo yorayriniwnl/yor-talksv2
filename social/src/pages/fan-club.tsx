@@ -66,13 +66,8 @@ const FAN_TIERS: FanTier[] = [
 ];
 
 export default function FanClubSubscriptions() {
-  const [activeTier, setActiveTier] = useState<string | null>(null);
-
-  const handleSubscribe = (tier: FanTier) => {
-    sounds.playChime();
-    triggerConfetti();
-    setActiveTier(tier.id);
-    toast.success(`🎉 Subscribed to ${tier.name}! ₹${tier.price}/mo UPI Autopay Mandate Active.`);
+  const handleSubscribe = () => {
+    toast.info('Subscriptions are not available yet. No payment or autopay mandate was created.');
   };
 
   return (
@@ -85,27 +80,25 @@ export default function FanClubSubscriptions() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Creator Fan Club & VIP Subscriptions</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Unlock Exclusive Clan Scrims, Badges & UPI Autopay Perks</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Fan club preview — payment subscriptions are not available yet</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> UPI Recurring Autopay (NPCI Verified)
+          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Subscriptions unavailable
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {FAN_TIERS.map((tier) => {
-            const isSubscribed = activeTier === tier.id;
-
             return (
               <div
                 key={tier.id}
                 className={cn(
                   "surface-1 rounded-3xl p-6 sm:p-7 border flex flex-col justify-between shadow-xl relative transition-all",
                   tier.popular ? "border-primary ring-2 ring-primary/30" : "border-border/40",
-                  isSubscribed && "border-emerald-500 bg-emerald-500/10 shadow-2xl"
+                  "border-border/40"
                 )}
               >
                 {tier.popular && (
@@ -144,18 +137,16 @@ export default function FanClubSubscriptions() {
 
                 <div className="pt-6">
                   <Button
-                    onClick={() => handleSubscribe(tier)}
-                    disabled={isSubscribed}
+                    onClick={() => handleSubscribe()}
+                    disabled
                     className={cn(
                       "w-full rounded-2xl font-bold text-xs h-11 shadow-lg transition-all",
-                      isSubscribed
-                        ? "bg-emerald-500 text-black"
-                        : tier.popular
+                      tier.popular
                         ? "bg-primary text-primary-foreground glow-neon-primary"
                         : "bg-muted/40 hover:bg-muted text-foreground"
                     )}
                   >
-                    {isSubscribed ? 'Active Subscription ✓' : `Join ${tier.name.split(' ')[0]} (₹${tier.price}/mo)`}
+                    Subscriptions unavailable
                   </Button>
                 </div>
               </div>

@@ -47,26 +47,15 @@ export default function ClanTreasury() {
   ]);
 
   const handleVote = (id: string, type: 'for' | 'against') => {
-    sounds.playPop();
-    setProposals(prev => prev.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
-          votesFor: type === 'for' ? p.votesFor + 1 : p.votesFor,
-          votesAgainst: type === 'against' ? p.votesAgainst + 1 : p.votesAgainst,
-        };
-      }
-      return p;
-    }));
-    toast.success(`Multi-sig vote registered on proposal!`);
+    void id;
+    void type;
+    toast.info('Treasury voting is not connected to a server ledger yet.');
   };
 
   const handleExecutePayout = (id: string, amt: number) => {
-    sounds.playChime();
-    triggerConfetti();
-    setInrBalance(b => b - amt);
-    setProposals(prev => prev.map(p => p.id === id ? { ...p, status: 'executed' } : p));
-    toast.success(`🎉 Treasury Grant of ₹${amt.toLocaleString()} successfully paid via Instant UPI Multi-Sig!`);
+    void id;
+    void amt;
+    toast.info('Treasury payouts are not available. No money was transferred.');
   };
 
   return (
@@ -79,12 +68,12 @@ export default function ClanTreasury() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Guild Multi-Sig Treasury</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Decentralized Clan Reserves, Liquid Liquidity & Instant UPI Payouts</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Treasury preview — balances, voting, and payouts are not connected yet</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Multi-Sig Verified: 3/5 Keys
+          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Treasury unavailable
         </div>
       </div>
 
@@ -145,17 +134,17 @@ export default function ClanTreasury() {
                   <div className="flex items-center gap-2">
                     {p.status === 'active' && (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => handleVote(p.id, 'for')} className="rounded-xl text-xs h-8">
+                        <Button size="sm" variant="outline" onClick={() => handleVote(p.id, 'for')} disabled className="rounded-xl text-xs h-8">
                           Vote Yes
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleVote(p.id, 'against')} className="rounded-xl text-xs h-8">
+                        <Button size="sm" variant="outline" onClick={() => handleVote(p.id, 'against')} disabled className="rounded-xl text-xs h-8">
                           Vote No
                         </Button>
                       </>
                     )}
                     {p.status === 'approved' && (
-                      <Button size="sm" onClick={() => handleExecutePayout(p.id, p.requestedAmt)} className="rounded-xl font-bold text-xs h-8 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary">
-                        Execute Payout (UPI)
+                      <Button size="sm" onClick={() => handleExecutePayout(p.id, p.requestedAmt)} disabled className="rounded-xl font-bold text-xs h-8 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary">
+                        Payout unavailable
                       </Button>
                     )}
                     {p.status === 'executed' && (

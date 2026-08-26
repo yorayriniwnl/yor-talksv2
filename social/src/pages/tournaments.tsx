@@ -176,10 +176,9 @@ export default function Tournaments() {
   );
 
   const handlePredictWinner = (matchId: string, teamName: string) => {
-    sounds.playPop();
-    setPickemPredictions(prev => ({ ...prev, [matchId]: teamName }));
-    triggerConfetti();
-    toast.success(`Prediction locked for ${teamName}! +100 Karma Points on match win.`);
+    void matchId;
+    void teamName;
+    toast.info('Tournament predictions are not connected to a server ledger yet.');
   };
 
   return (
@@ -192,7 +191,7 @@ export default function Tournaments() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Esports Arena</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">National Tournaments, Live Brackets & Squad Leagues</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Tournament preview — registrations and rewards are not available yet</p>
           </div>
         </div>
 
@@ -374,6 +373,7 @@ export default function Tournaments() {
                         <Button
                           variant="outline"
                           onClick={() => handlePredictWinner(match.id, match.teamA.name)}
+                          disabled
                           className={cn(
                             "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all",
                             currentPick === match.teamA.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60"
@@ -386,6 +386,7 @@ export default function Tournaments() {
                         <Button
                           variant="outline"
                           onClick={() => handlePredictWinner(match.id, match.teamB.name)}
+                          disabled
                           className={cn(
                             "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all",
                             currentPick === match.teamB.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60"

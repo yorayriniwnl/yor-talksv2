@@ -31,23 +31,14 @@ const PASS_TIERS: PassTier[] = [
 export default function SuperPass() {
   const [currentTier, setCurrentTier] = useState(4);
   const [tiers, setTiers] = useState<PassTier[]>(PASS_TIERS);
-  const [hasElitePass, setHasElitePass] = useState(true);
+  const hasElitePass = false;
 
   const handleClaim = (tierNum: number) => {
-    sounds.playChime();
-    triggerConfetti();
-    setTiers(prev => prev.map(t => {
-      if (t.tier === tierNum) return { ...t, claimed: true };
-      return t;
-    }));
-    toast.success(`🎉 Claimed Tier ${tierNum} Rewards! Added to your Creator Vault.`);
+    toast.info(`Tier ${tierNum} rewards are preview-only and cannot be claimed yet.`);
   };
 
   const handleBuyPass = () => {
-    sounds.playChime();
-    triggerConfetti();
-    setHasElitePass(true);
-    toast.success('👑 Elite Bharat Super Pass Activated! All 100 Mythic Tiers Unlocked.');
+    toast.info('The Elite Pass is not available yet. No payment was taken.');
   };
 
   return (
@@ -60,7 +51,7 @@ export default function SuperPass() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Super Pass (Season 1)</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">100 Tiers of Mythic Rewards, Frames & Karma XP</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Reward track preview — purchases and claims are not available yet</p>
           </div>
         </div>
 
@@ -68,13 +59,14 @@ export default function SuperPass() {
           {!hasElitePass ? (
             <Button
               onClick={handleBuyPass}
+              disabled
               className="rounded-2xl font-bold text-xs h-10 px-6 bg-gradient-to-r from-amber-400 to-orange-500 text-black glow-neon-primary shadow-lg"
             >
               <Crown className="w-4 h-4 mr-1.5 fill-black" /> Unlock Elite Pass (₹299 INR)
             </Button>
           ) : (
             <div className="level-badge shadow-sm">
-              <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> Elite Pass Active
+              <Crown className="w-3.5 h-3.5 text-amber-400" /> Elite Pass unavailable
             </div>
           )}
         </div>
@@ -173,9 +165,10 @@ export default function SuperPass() {
                     ) : isUnlocked ? (
                       <Button
                         onClick={() => handleClaim(tier.tier)}
+                        disabled
                         className="w-full md:w-auto rounded-xl font-bold text-xs h-9 bg-amber-500 hover:bg-amber-600 text-black glow-neon-primary"
                       >
-                        Claim All
+                        Claims unavailable
                       </Button>
                     ) : (
                       <Button variant="outline" disabled className="w-full md:w-auto rounded-xl font-bold text-xs h-9 border-border/40">

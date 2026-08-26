@@ -47,10 +47,10 @@ export default function PredictionsArena() {
   const [lockedPicks, setLockedPicks] = useState<{ [matchId: string]: string }>({});
 
   const handleLockPick = (matchId: string, teamName: string, odds: number) => {
-    sounds.playChime();
-    triggerConfetti();
-    setLockedPicks(prev => ({ ...prev, [matchId]: teamName }));
-    toast.success(`🎉 Prediction Locked on ${teamName}! Potential Win: ${Math.round(stakeAmount * odds)} Karma.`);
+    void matchId;
+    void teamName;
+    void odds;
+    toast.info('Predictions are not connected to a server ledger yet. No Karma was staked.');
   };
 
   return (
@@ -63,7 +63,7 @@ export default function PredictionsArena() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Esports Pick&apos;em & Predictions Arena</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Predict Match Victors & Stake Karma Points</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Prediction preview — Karma staking is not available yet</p>
           </div>
         </div>
 
@@ -86,10 +86,7 @@ export default function PredictionsArena() {
                 key={amt}
                 size="sm"
                 variant={stakeAmount === amt ? 'default' : 'outline'}
-                onClick={() => {
-                  sounds.playPop();
-                  setStakeAmount(amt);
-                }}
+                onClick={() => setStakeAmount(amt)}
                 className={cn("rounded-xl font-mono text-xs font-bold", stakeAmount === amt && "bg-primary text-primary-foreground")}
               >
                 {amt} XP
@@ -126,7 +123,7 @@ export default function PredictionsArena() {
                   {/* Team A */}
                   <button
                     onClick={() => handleLockPick(m.id, m.teamA.name, m.teamA.odds)}
-                    disabled={!!userPick}
+                    disabled
                     className={cn(
                       "p-5 rounded-2xl border text-left transition-all flex items-center justify-between group",
                       userPick === m.teamA.name
@@ -156,7 +153,7 @@ export default function PredictionsArena() {
                   {/* Team B */}
                   <button
                     onClick={() => handleLockPick(m.id, m.teamB.name, m.teamB.odds)}
-                    disabled={!!userPick}
+                    disabled
                     className={cn(
                       "p-5 rounded-2xl border text-left transition-all flex items-center justify-between group",
                       userPick === m.teamB.name
