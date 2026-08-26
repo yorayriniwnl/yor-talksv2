@@ -1162,7 +1162,8 @@ export const useAppStore = create<AppState>()(
       },
 
       createCommunity: async (name, slug, description, contentRating) => {
-        const currentUserId = get().currentUser?.id || 'user-roy';
+        const currentUserId = get().currentUser?.id;
+        if (!currentUserId) return;
         try {
           const created = await api.createCommunity({ name, slug, description, contentRating });
           set((state) => ({ communities: [mapCommunity(created, currentUserId), ...state.communities] }));
@@ -1422,7 +1423,8 @@ export const useAppStore = create<AppState>()(
       },
 
       viewStory: async (storyId) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
         set((state) => ({
           stories: state.stories.map(s =>
@@ -1440,7 +1442,8 @@ export const useAppStore = create<AppState>()(
       },
 
       reactToStory: async (storyId, emoji) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
         set((state) => ({
           stories: state.stories.map(s =>
@@ -1468,7 +1471,8 @@ export const useAppStore = create<AppState>()(
       },
 
       addStory: async (story) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const optimisticId = `story-${Date.now()}`;
         const newStory: Story = {
           id: optimisticId,
@@ -1521,7 +1525,8 @@ export const useAppStore = create<AppState>()(
       },
 
       createEvent: async (input) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         try {
           const created = await api.createEvent(input);
           set((state) => ({ events: [mapEvent(created, uid), ...state.events] }));
@@ -1532,7 +1537,8 @@ export const useAppStore = create<AppState>()(
       },
 
       toggleEventRsvp: async (eventId, status) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const event = get().events.find((e) => e.id === eventId);
         if (!event) return;
         const newStatus = event.rsvpStatus === status ? null : status;
@@ -1588,7 +1594,8 @@ export const useAppStore = create<AppState>()(
       },
 
       createArticle: async (input) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const optimisticId = `art-${Date.now()}`;
         const newArticle: Article = {
           ...input,
@@ -1637,7 +1644,8 @@ export const useAppStore = create<AppState>()(
       },
 
       createVideo: async (input) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const optimisticId = `vid-${Date.now()}`;
         const newVideo: Video = {
           ...input,
@@ -1693,7 +1701,8 @@ export const useAppStore = create<AppState>()(
       },
 
       createStream: async (input) => {
-        const uid = get().currentUser?.id || 'user-roy';
+        const uid = get().currentUser?.id;
+        if (!uid) return;
         const optimisticId = `stream-${Date.now()}`;
         const newStream: LiveStream = {
           ...input,
