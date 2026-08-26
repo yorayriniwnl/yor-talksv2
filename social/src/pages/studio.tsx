@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Video, Sliders, Wand2, Sparkles, Mic, Radio, Volume2, 
@@ -10,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 const SHADER_FILTERS = [
@@ -22,8 +22,8 @@ const SHADER_FILTERS = [
 ];
 
 export default function Studio() {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'broadcast' | 'vfx' | 'ai'>('broadcast');
-  const [isLive, setIsLive] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(SHADER_FILTERS[0]);
   
   // Audio Mixer State
@@ -35,18 +35,6 @@ export default function Studio() {
   const [aiTopic, setAiTopic] = useState('');
   const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
-
-  const handleToggleLive = () => {
-    sounds.playChime();
-    if (!isLive) {
-      triggerConfetti();
-      setIsLive(true);
-      toast.success('Live broadcast started on Yor Talks India! Telemetry health: 1080p 60FPS.');
-    } else {
-      setIsLive(false);
-      toast.info('Live stream session ended and archived to Creator Vault.');
-    }
-  };
 
   const handleGenerateHooks = () => {
     if (!aiTopic.trim()) return;
@@ -60,8 +48,7 @@ export default function Studio() {
         `💡 "The secret shader math behind high-performance WebGL reels you see on Yor Talks."`,
       ]);
       setGenerating(false);
-      triggerConfetti();
-      toast.success('Generated 3 Viral Video Hooks & Captions!');
+      toast.info('Generated 3 local hook drafts. Connect an AI provider to generate production copy.');
     }, 1200);
   };
 
@@ -75,20 +62,16 @@ export default function Studio() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">YOR Creator Studio Pro</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Live Broadcast Console, VFX Canvas & AI Suite</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Live control handoff, VFX canvas & hook drafting</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <Button
-            onClick={handleToggleLive}
-            className={cn(
-              "rounded-2xl font-bold text-xs px-6 h-10 shadow-lg transition-all",
-              isLive ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse" : "glow-neon-primary bg-primary text-primary-foreground"
-            )}
+            onClick={() => setLocation('/live')}
+            className="rounded-2xl font-bold text-xs px-6 h-10 shadow-lg glow-neon-primary bg-primary text-primary-foreground"
           >
-            <Radio className="w-4 h-4 mr-1.5" />
-            {isLive ? '🔴 LIVE (01:24:12)' : 'Start Broadcast'}
+            <Radio className="w-4 h-4 mr-1.5" /> Open Live Control
           </Button>
         </div>
       </div>
@@ -138,8 +121,8 @@ export default function Studio() {
 
                 {/* Live Overlays */}
                 <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className={cn("px-3 py-1 rounded-full text-xs font-mono font-bold shadow-lg border", isLive ? "bg-rose-600 text-white border-white/20" : "bg-black/60 text-zinc-400 border-white/10")}>
-                    {isLive ? '🔴 LIVE ON AIR' : 'PREVIEW MODE'}
+                  <span className="px-3 py-1 rounded-full text-xs font-mono font-bold shadow-lg border bg-black/60 text-zinc-400 border-white/10">
+                    PREVIEW MODE
                   </span>
                   <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-mono border border-white/10">
                     Filter: {selectedFilter.name}
@@ -157,16 +140,16 @@ export default function Studio() {
               {/* Creator Analytics Quick Strip */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="surface-1 p-4 rounded-2xl border border-border/40">
-                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Estimated Superchats</div>
-                  <div className="font-display font-extrabold text-xl text-emerald-400">₹14,500 INR</div>
+                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Superchats</div>
+                  <div className="font-display font-extrabold text-xl text-muted-foreground">Not connected</div>
                 </div>
                 <div className="surface-1 p-4 rounded-2xl border border-border/40">
-                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Live Peak Viewers</div>
-                  <div className="font-display font-extrabold text-xl text-foreground">3,420</div>
+                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Peak viewers</div>
+                  <div className="font-display font-extrabold text-xl text-muted-foreground">Use Live room</div>
                 </div>
                 <div className="surface-1 p-4 rounded-2xl border border-border/40">
-                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Karma Drops Claimed</div>
-                  <div className="font-display font-extrabold text-xl text-amber-400">+1,200 Pts</div>
+                  <div className="text-[0.62rem] font-mono text-muted-foreground uppercase">Karma drops</div>
+                  <div className="font-display font-extrabold text-xl text-muted-foreground">Ledger pending</div>
                 </div>
               </div>
             </div>

@@ -1,83 +1,21 @@
-import { useState, lazy, Suspense } from 'react';
-import { useLocation } from 'wouter';
+import { useMemo, lazy, Suspense } from 'react';
 import { useAppStore } from '@/lib/store';
-import { 
-  LayoutDashboard, TrendingUp, TrendingDown, Sparkles, Activity, 
-  Gamepad2, Trophy, ArrowLeftRight, Award, Shield, Star, CheckCircle2 
+import {
+  Sparkles, Activity, Gamepad2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem, fadeInUp } from '@/lib/motion';
-import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
-import { toast } from 'sonner';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 
 const AnalyticsChart = lazyWithRetry(() => import('@/components/dashboard/AnalyticsChart'));
 
-const activityData = [
-  { day: 'Mon', interactions: 12 },
-  { day: 'Tue', interactions: 19 },
-  { day: 'Wed', interactions: 8 },
-  { day: 'Thu', interactions: 24 },
-  { day: 'Fri', interactions: 15 },
-  { day: 'Sat', interactions: 31 },
-  { day: 'Sun', interactions: 22 },
-];
-
-const STEAM_FRIEND_ACTIVITIES = [
-  {
-    id: 'act-1',
-    user: 'Valkyrie_Zero',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-    type: 'achievement',
-    title: 'Unlocked Achievement',
-    desc: '🏆 "Legendary Mercenary" in Cyberpunk 2077: Phantom Liberty',
-    time: '12 minutes ago',
-    badgeColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-  },
-  {
-    id: 'act-2',
-    user: 'Kai_Takahashi',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-    type: 'trade',
-    title: 'Steam Trade Completed',
-    desc: '🔄 Traded Butterfly Knife | Gamma Doppler (Emerald)',
-    time: '45 minutes ago',
-    badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-  },
-  {
-    id: 'act-3',
-    user: 'Elena_Rostova',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
-    type: 'level',
-    title: 'Steam Level Up',
-    desc: '🛡️ Reached Steam Level 90 · Crafted "Cosmic Architect" Badge',
-    time: '2 hours ago',
-    badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20'
-  },
-  {
-    id: 'act-4',
-    user: 'Alex_Chen',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop',
-    type: 'review',
-    title: 'Steam Game Review',
-    desc: '👍 Recommended Counter-Strike 2 (1,240 hrs on record)',
-    time: '5 hours ago',
-    badgeColor: 'text-primary bg-primary/10 border-primary/20'
-  }
-];
-
 export default function Dashboard() {
-  const [, setLocation] = useLocation();
   const currentUser = useAppStore((s) => s.currentUser);
   const posts = useAppStore((s) => s.posts);
   const users = useAppStore((s) => s.users);
-
-  const [friendActivities, setFriendActivities] = useState(STEAM_FRIEND_ACTIVITIES);
+  const notifications = useAppStore((s) => s.notifications);
 
   // Derived stats
   const myPosts = posts.filter(p => p.authorId === currentUser?.id);
@@ -88,17 +26,37 @@ export default function Dashboard() {
   const engagementRate = totalPosts > 0 ? ((totalWaves / (followers || 1)) * 100).toFixed(1) : '0.0';
 
   const stats = [
-    { label: 'Total Posts', value: totalPosts, trend: 12, positive: true },
-    { label: 'Waves Received', value: totalWaves, trend: 8, positive: true },
-    { label: 'Followers', value: followers, trend: -2, positive: false },
-    { label: 'Steam Level', value: 'Lv. 88', trend: 14, positive: true },
+    { label: 'Total Posts', value: totalPosts, detail: 'Loaded from your account' },
+    { label: 'Waves Received', value: totalWaves, detail: 'Across loaded posts' },
+    { label: 'Followers', value: followers, detail: 'Current account total' },
+    { label: 'Engagement Rate', value: `${engagementRate}%`, detail: 'Waves ÷ followers' },
   ];
 
-  const handleCelebrate = (userName: string) => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success(`Sent +10 Steam XP & GG congratulations to ${userName}!`);
-  };
+  const activityData = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(today);
+      day.setHours(0, 0, 0, 0);
+      day.setDate(today.getDate() - (6 - index));
+      const nextDay = new Date(day);
+      nextDay.setDate(day.getDate() + 1);
+      const interactions = myPosts
+        .filter((post) => {
+          const createdAt = new Date(post.createdAt);
+          return createdAt >= day && createdAt < nextDay;
+        })
+        .reduce((sum, post) => sum + post.likes + post.comments + post.shares + post.reposts, 0);
+      return { day: day.toLocaleDateString(undefined, { weekday: 'short' }), interactions };
+    });
+  }, [myPosts]);
+
+  const recentActivity = notifications.slice(0, 4).map((notification) => ({
+    id: notification.id,
+    user: notification.actorId ? users[notification.actorId]?.displayName || users[notification.actorId]?.username || 'Yor member' : 'Yor Talks',
+    avatar: notification.actorId ? users[notification.actorId]?.avatarUrl : undefined,
+    desc: notification.message || notification.title,
+    time: formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }),
+  }));
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
@@ -106,10 +64,10 @@ export default function Dashboard() {
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold font-display text-foreground">Creator & Gaming Dashboard</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Performance analytics & live Steam friend activity</p>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">Account-backed performance analytics & recent network activity</p>
         </div>
         <div className="level-badge">
-          <Activity className="w-3.5 h-3.5" /> Live Telemetry Active
+          <Activity className="w-3.5 h-3.5" /> Account Snapshot
         </div>
       </div>
 
@@ -128,13 +86,7 @@ export default function Dashboard() {
               </h3>
               <div className="flex items-end justify-between">
                 <span className="font-display text-3xl font-extrabold text-foreground">{stat.value}</span>
-                <div className={cn(
-                  "flex items-center gap-1 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full",
-                  stat.positive ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                )}>
-                  {stat.positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  {Math.abs(stat.trend)}%
-                </div>
+                <span className="text-[0.62rem] font-mono font-semibold text-muted-foreground text-right">{stat.detail}</span>
               </div>
             </motion.div>
           ))}
@@ -160,7 +112,7 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Steam & Platform Friend Activity Feed */}
+          {/* Recent platform activity */}
           <motion.div 
             variants={fadeInUp}
             initial="hidden"
@@ -169,10 +121,11 @@ export default function Dashboard() {
           >
             <div className="showcase-section-title mb-4">
               <Gamepad2 className="w-4 h-4 text-cyan-400" />
-              <h3>Steam Friend Activity</h3>
+              <h3>Recent Yor Activity</h3>
             </div>
             <div className="flex-1 space-y-4">
-              {friendActivities.map((act) => (
+              {recentActivity.length === 0 && <p className="rounded-2xl border border-dashed border-border/40 p-5 text-xs leading-relaxed text-muted-foreground">Notifications from your network will appear here as people interact with your posts, stories, and profile.</p>}
+              {recentActivity.map((act) => (
                 <div key={act.id} className="p-3 rounded-2xl bg-muted/30 border border-border/30 hover:border-primary/40 transition-all flex flex-col justify-between group">
                   <div className="flex items-start gap-3">
                     <Avatar className="w-8 h-8 shrink-0 border border-border/40">
@@ -188,16 +141,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end mt-2 pt-2 border-t border-border/20">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleCelebrate(act.user)}
-                      className="h-7 text-[0.68rem] font-mono font-bold px-2 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-                    >
-                      🎉 Send GG (+10 XP)
-                    </Button>
-                  </div>
                 </div>
               ))}
             </div>
