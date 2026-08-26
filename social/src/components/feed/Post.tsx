@@ -46,6 +46,8 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   
@@ -53,6 +55,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const mediaRef = useRef<string[]>([]);
+  const draftStorageKey = `yor-composer-draft:${currentUser?.id ?? 'anonymous'}`;
   useEffect(() => {
     mediaRef.current = media;
   }, [media]);
@@ -62,6 +65,50 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
       mediaRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const savedDraft = window.localStorage.getItem(draftStorageKey);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating };
+        if (draft.content || draft.pollOpen || draft.contentCategory) {
+          setContent(typeof draft.content === 'string' ? draft.content : '');
+          setPollOpen(Boolean(draft.pollOpen));
+          setPollOptions(Array.isArray(draft.pollOptions) && draft.pollOptions.length >= 2 ? draft.pollOptions.slice(0, 4) : ['', '']);
+          setContentCategory(draft.contentCategory ?? '');
+          setContentRating(draft.contentRating ?? DEFAULT_CONTENT_RATING);
+          setDraftSaved(true);
+        }
+      }
+    } catch {
+      // Local draft restoration is best-effort in restricted browser contexts.
+    } finally {
+      setDraftReady(true);
+    }
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length);
+    try {
+      if (hasDraft) {
+        window.localStorage.setItem(draftStorageKey, JSON.stringify({
+          content,
+          pollOpen,
+          pollOptions,
+          contentCategory,
+          contentRating,
+          savedAt: new Date().toISOString(),
+        }));
+        setDraftSaved(true);
+      } else {
+        window.localStorage.removeItem(draftStorageKey);
+        setDraftSaved(false);
+      }
+    } catch {
+      // Draft persistence is an enhancement; posting must work without storage.
+    }
+  }, [content, contentCategory, contentRating, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -125,6 +172,8 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     setPollOptions(['', '']);
     setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
+    try { window.localStorage.removeItem(draftStorageKey); } catch { /* Ignore storage failures. */ }
+    setDraftSaved(false);
     
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -254,6 +303,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
                   {content.length}/{MAX_POST_LENGTH}
                 </span>
               )}
+              {draftSaved && !isUploading && <span className="yor-composer__draft-status">Draft saved</span>}
               <Button 
                 type="button" 
                 className={cn("h-9 rounded-full px-5 font-semibold transition-all duration-300", isSuccess && "shadow-[0_0_15px_rgba(var(--primary),0.6)] bg-primary scale-105")} 

@@ -2533,6 +2533,15 @@ html.yor-low-bandwidth video {
   font-size: 0.72rem;
 }
 
+.yor-composer__draft-status {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .home-composer-card .yor-composer__publishing-controls {
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
   margin-inline: 0.1rem;
