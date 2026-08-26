@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeftRight, Sparkles, Shield, Check, Plus, Trash2, DollarSign, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeftRight, Sparkles, Shield, Check, Trash2, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 export interface SteamItem {
@@ -134,17 +133,21 @@ export function SteamTradeModal({
   const yourTotalINR = yourOffer.reduce((sum, i) => sum + i.inrPrice, 0);
   const theirTotalINR = theirOffer.reduce((sum, i) => sum + i.inrPrice, 0);
 
-  const handleSendOffer = () => {
+  const handleSaveDraft = () => {
     if (yourOffer.length === 0 && theirOffer.length === 0) {
       toast.error('Select at least 1 item to trade');
       return;
     }
+    const draftKey = `yor-vault-trade-draft:${encodeURIComponent(partnerName)}`;
+    localStorage.setItem(draftKey, JSON.stringify({
+      partnerName,
+      yourOffer: yourOffer.map(({ id }) => id),
+      theirOffer: theirOffer.map(({ id }) => id),
+      savedAt: new Date().toISOString(),
+    }));
     sounds.playChime();
-    triggerConfetti();
-    toast.success(`YOR Vault Trade Offer sent to ${partnerName}! Escrow 2FA verification generated.`);
+    toast.info(`Trade draft saved on this device. No offer was sent and no inventory or funds were moved.`);
     setOpen(false);
-    setYourOffer([]);
-    setTheirOffer([]);
   };
 
   return (
@@ -167,8 +170,8 @@ export function SteamTradeModal({
             <div>
               <DialogTitle className="font-display font-bold text-lg text-white flex items-center gap-2">
                 YOR Gear Vault & Trade
-                <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <Lock className="w-2.5 h-2.5 inline mr-1" /> Verified Escrow
+                <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  <Info className="w-2.5 h-2.5 inline mr-1" /> Trade Preview
                 </span>
               </DialogTitle>
               <p className="text-xs text-zinc-400 font-mono">Peer-to-Peer Trading with {partnerName}</p>
@@ -177,7 +180,7 @@ export function SteamTradeModal({
 
           <div className="flex items-center gap-3 font-mono text-xs">
             <div className="text-right">
-              <div className="text-[0.65rem] text-zinc-400 uppercase">Valuation Balance</div>
+              <div className="text-[0.65rem] text-zinc-400 uppercase">Preview Value</div>
               <div className={cn("font-bold", yourTotalINR > theirTotalINR ? "text-amber-400" : "text-emerald-400")}>
                 ₹{yourTotalINR.toLocaleString()} ⇄ ₹{theirTotalINR.toLocaleString()}
               </div>
@@ -318,8 +321,8 @@ export function SteamTradeModal({
         {/* Footer Actions */}
         <div className="p-4 border-t border-border/40 bg-zinc-950 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            <span>Escrow Protected · 0% Platform Fee · YOR Vault</span>
+            <Shield className="w-4 h-4 text-amber-400" />
+            <span>Preview values only · No escrow or inventory transfer connected</span>
           </div>
 
           <div className="flex gap-2">
@@ -327,10 +330,10 @@ export function SteamTradeModal({
               Cancel
             </Button>
             <Button
-              onClick={handleSendOffer}
-              className="rounded-xl font-bold text-xs px-6 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary"
+              onClick={handleSaveDraft}
+              className="rounded-xl font-bold text-xs px-6 bg-amber-500 hover:bg-amber-600 text-black"
             >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Make Vault Trade Offer
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Save Trade Draft
             </Button>
           </div>
         </div>

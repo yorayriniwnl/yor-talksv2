@@ -1,14 +1,11 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, Clock, Trophy, Bell, Share2, 
-  Sparkles, CheckCircle2, Flame, MapPin, Swords 
+  Calendar, Bell, CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface ScheduledMatch {
@@ -17,9 +14,8 @@ interface ScheduledMatch {
   game: string;
   teamA: { name: string; tag: string; logo: string };
   teamB: { name: string; tag: string; logo: string };
-  time: string;
-  date: string;
   stage: string;
+  startsAt: Date;
   streamUrl: string;
   reminderSet?: boolean;
 }
@@ -39,8 +35,7 @@ const UPCOMING_MATCHES: ScheduledMatch[] = [
       tag: 'SOUL',
       logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop'
     },
-    date: 'Today',
-    time: '18:00 IST',
+    startsAt: getMatchStart(0, 18, 0),
     stage: 'Grand Final Match 6 (Erangel)',
     streamUrl: '/live'
   },
@@ -58,22 +53,75 @@ const UPCOMING_MATCHES: ScheduledMatch[] = [
       tag: 'RCK',
       logo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop'
     },
-    date: 'Tomorrow',
-    time: '19:30 IST',
+    startsAt: getMatchStart(1, 19, 30),
     stage: 'Upper Bracket Semifinals (Bo3)',
     streamUrl: '/live'
   }
 ];
 
+function getMatchStart(daysFromToday: number, hour: number, minute: number): Date {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+function escapeIcsText(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+
+function toIcsDate(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
 export default function EsportsCalendar() {
-  const [matches, setMatches] = useState<ScheduledMatch[]>(UPCOMING_MATCHES);
+  const [matches, setMatches] = useState<ScheduledMatch[]>(() => {
+    if (typeof window === 'undefined') return UPCOMING_MATCHES;
+    let reminderIds: string[] = [];
+    try {
+      const stored = localStorage.getItem('yor-esports-calendar-reminders');
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed)) reminderIds = parsed.filter((id): id is string => typeof id === 'string');
+    } catch {
+      // Ignore malformed local reminder state.
+    }
+    return UPCOMING_MATCHES.map((match) => ({ ...match, reminderSet: reminderIds.includes(match.id) }));
+  });
   const [selectedGame, setSelectedGame] = useState<'all' | 'BGMI' | 'Valorant'>('all');
 
   const handleSetReminder = (id: string, matchName: string) => {
+    const match = matches.find((item) => item.id === id);
+    if (!match) return;
+    const end = new Date(match.startsAt.getTime() + 90 * 60 * 1000);
+    const event = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Yor Talks//Esports Calendar//EN',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${match.id}@yor.talks`,
+      `DTSTAMP:${toIcsDate(new Date())}`,
+      `DTSTART:${toIcsDate(match.startsAt)}`,
+      `DTEND:${toIcsDate(end)}`,
+      `SUMMARY:${escapeIcsText(`${match.teamA.name} vs ${match.teamB.name} · ${match.tournament}`)}`,
+      `DESCRIPTION:${escapeIcsText(`${match.stage}. Watch on Yor Talks: ${match.streamUrl}`)}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n') + '\r\n';
+    const url = URL.createObjectURL(new Blob([event], { type: 'text/calendar;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yor-${match.id}-calendar.ics`;
+    link.click();
+    URL.revokeObjectURL(url);
+
     sounds.playChime();
-    triggerConfetti();
-    setMatches(prev => prev.map(m => m.id === id ? { ...m, reminderSet: true } : m));
-    toast.success(`🔔 Calendar Alert & Discord Webhook active for ${matchName}!`);
+    setMatches(prev => {
+      const next = prev.map(m => m.id === id ? { ...m, reminderSet: true } : m);
+      localStorage.setItem('yor-esports-calendar-reminders', JSON.stringify(next.filter((m) => m.reminderSet).map((m) => m.id)));
+      return next;
+    });
+    toast.success(`Calendar file downloaded for ${matchName}. Add it to your calendar to receive reminders.`);
   };
 
   const filtered = matches.filter(m => selectedGame === 'all' || m.game === selectedGame);
@@ -88,7 +136,7 @@ export default function EsportsCalendar() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Esports Schedule & Match Calendar</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Live Timetable, Google Calendar Sync & Match Alerts</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Live timetable and downloadable calendar reminders</p>
           </div>
         </div>
 
@@ -159,14 +207,18 @@ export default function EsportsCalendar() {
               {/* Right Column: Time & Calendar Sync Action */}
               <div className="flex items-center justify-between sm:justify-end gap-5 font-mono text-xs">
                 <div className="text-right">
-                  <span className="text-emerald-400 font-bold block text-sm">{match.date} &middot; {match.time}</span>
-                  <span className="text-[0.65rem] text-muted-foreground">Official Broadcast 1080p 60fps</span>
+                  <span className="text-emerald-400 font-bold block text-sm">{match.startsAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {match.startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</span>
+                  <span className="text-[0.65rem] text-muted-foreground">Broadcast details may change; check the stream before joining</span>
                 </div>
 
                 {match.reminderSet ? (
-                  <span className="px-4 py-2 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4" /> Alert Active
-                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSetReminder(match.id, `${match.teamA.tag} vs ${match.teamB.tag}`)}
+                    className="rounded-2xl font-bold text-xs h-11 px-5 border-emerald-500/30 text-emerald-400"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Download Again
+                  </Button>
                 ) : (
                   <Button
                     onClick={() => handleSetReminder(match.id, `${match.teamA.tag} vs ${match.teamB.tag}`)}

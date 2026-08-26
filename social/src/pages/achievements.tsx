@@ -1,15 +1,14 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import { 
-  Sparkles, TrendingUp, Users, Flame, BookOpen, Trophy, 
-  Star, Shield, Hammer, CheckCircle2, Award, Zap, ArrowRight, Layers 
+  Sparkles, TrendingUp, Users, Flame, BookOpen, Trophy,
+  Star, Shield, Hammer, CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 const ICONS: Record<string, any> = { Sparkles, TrendingUp, Users, Flame, BookOpen };
@@ -64,8 +63,28 @@ const INITIAL_CARD_SETS: TradingCardSet[] = [
 
 export default function Achievements() {
   const achievements = useAppStore((s) => s.achievements);
-  const [cardSets, setCardSets] = useState<TradingCardSet[]>(INITIAL_CARD_SETS);
+  const [cardSets, setCardSets] = useState<TradingCardSet[]>(() => {
+    if (typeof window === 'undefined') return INITIAL_CARD_SETS;
+    try {
+      const stored = localStorage.getItem('yor-achievement-card-sets');
+      if (stored) {
+        const parsed = JSON.parse(stored) as TradingCardSet[];
+        if (Array.isArray(parsed) && parsed.every((set) => typeof set.id === 'string' && typeof set.crafted === 'boolean')) {
+          return INITIAL_CARD_SETS.map((initial) => parsed.find((set) => set.id === initial.id) ?? initial);
+        }
+      }
+    } catch {
+      // Ignore malformed local preview state and restore the catalogue defaults.
+    }
+    return INITIAL_CARD_SETS;
+  });
   const [activeTab, setActiveTab] = useState<'achievements' | 'crafting'>('achievements');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yor-achievement-card-sets', JSON.stringify(cardSets));
+    }
+  }, [cardSets]);
   
   const totalXp = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
   const level = Math.floor(Math.sqrt(totalXp / 50)) + 1;
@@ -76,14 +95,13 @@ export default function Achievements() {
 
   const handleCraftBadge = (setId: string) => {
     sounds.playChime();
-    triggerConfetti();
     setCardSets(prev => prev.map(set => {
       if (set.id === setId) {
         return { ...set, crafted: true };
       }
       return set;
     }));
-    toast.success(`🎉 Crafted Foil Badge! Gained +500 Steam XP, 1 Animated Avatar Frame, & 100 Steam Points!`);
+    toast.info('Badge marked as crafted in this browser. XP, frames, points, and marketplace ownership are not connected yet.');
   };
 
   return (
@@ -96,7 +114,7 @@ export default function Achievements() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Steam Achievements & Badges</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Trophies, Trading Cards & Badge Crafting</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Trophies, Trading Cards & local badge preview</p>
           </div>
         </div>
         <div className="level-badge shadow-sm">
@@ -154,7 +172,7 @@ export default function Achievements() {
                 <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
                   <Hammer className="w-5 h-5 text-amber-400" /> Steam Trading Card Sets
                 </h3>
-                <p className="text-xs text-muted-foreground font-mono mt-1">Collect all 5 trading cards per game to craft an animated Foil Badge & level up!</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">Collect all 5 cards to preview a badge craft. Account rewards are granted only after the backend ledger is connected.</p>
               </div>
             </div>
 
@@ -184,14 +202,14 @@ export default function Achievements() {
 
                       {set.crafted ? (
                         <Button disabled className="w-full rounded-2xl font-bold text-xs h-10 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          <CheckCircle2 className="w-4 h-4 mr-1.5" /> Badge Crafted & Active
+                          <CheckCircle2 className="w-4 h-4 mr-1.5" /> Crafted in this browser
                         </Button>
                       ) : isReady ? (
                         <Button
                           onClick={() => handleCraftBadge(set.id)}
                           className="w-full rounded-2xl font-bold text-xs h-10 glow-neon-primary bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                         >
-                          <Hammer className="w-4 h-4 mr-1.5" /> Craft Foil Badge Now
+                          <Hammer className="w-4 h-4 mr-1.5" /> Mark Crafted (Preview)
                         </Button>
                       ) : (
                         <Button variant="outline" disabled className="w-full rounded-2xl font-bold text-xs h-10 border-border/60">
