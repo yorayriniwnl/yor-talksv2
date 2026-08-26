@@ -24,6 +24,9 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().default(process.env.GOOGLE_CLIENT_ID || ""),
   RESEND_API_KEY: z.string().default(process.env.RESEND_API_KEY || ""),
   EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
+  WEB_PUSH_VAPID_PUBLIC_KEY: z.string().default(process.env.WEB_PUSH_VAPID_PUBLIC_KEY || ""),
+  WEB_PUSH_VAPID_PRIVATE_KEY: z.string().default(process.env.WEB_PUSH_VAPID_PRIVATE_KEY || ""),
+  WEB_PUSH_VAPID_SUBJECT: z.string().default(process.env.WEB_PUSH_VAPID_SUBJECT || "mailto:security@yortalks.com"),
   RAZORPAY_KEY_ID: z.string().default(process.env.RAZORPAY_KEY_ID || ""),
   RAZORPAY_KEY_SECRET: z.string().default(process.env.RAZORPAY_KEY_SECRET || ""),
   LIVEKIT_URL: z.string().default(process.env.LIVEKIT_URL || ""),
@@ -69,6 +72,9 @@ if (parsedEnv.NODE_ENV === "production") {
 
   if (!parsedEnv.RESEND_API_KEY || !parsedEnv.EMAIL_FROM) {
     console.warn("[Config Warning] Resend is not fully configured. Password reset, verification, and email OTP delivery will be disabled.");
+  }
+  if (!parsedEnv.WEB_PUSH_VAPID_PUBLIC_KEY || !parsedEnv.WEB_PUSH_VAPID_PRIVATE_KEY) {
+    console.warn("[Config Warning] Web Push VAPID keys are not configured. Device push delivery will be disabled.");
   }
   if (!parsedEnv.GOOGLE_CLIENT_ID) {
     console.warn("[Config Warning] GOOGLE_CLIENT_ID is not configured. Google sign-in will be disabled.");

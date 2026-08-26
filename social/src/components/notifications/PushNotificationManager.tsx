@@ -4,8 +4,18 @@ import { Bell, BellRing, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
+import { api } from '@/lib/api-client';
+import { useAppStore } from '@/lib/store';
+
+function decodeVapidKey(value: string): Uint8Array {
+  const padding = '='.repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
 
 export function PushNotificationManager() {
+  const currentUser = useAppStore((state) => state.currentUser);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [showPrompt, setShowPrompt] = useState(false);
 
@@ -15,7 +25,7 @@ export function PushNotificationManager() {
       setPermission(Notification.permission);
       
       // If default and user has been active for 5s, suggest enabling
-      if (Notification.permission === 'default') {
+      if (currentUser && Notification.permission === 'default') {
         const timer = setTimeout(() => {
           setShowPrompt(true);
         }, 5000);
@@ -29,7 +39,38 @@ export function PushNotificationManager() {
         console.warn('SW registration info:', err);
       });
     }
-  }, []);
+  }, [currentUser]);
+
+  const registerPushSubscription = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Push notifications are not supported by this browser');
+    }
+    const { publicKey } = await api.getPushPublicKey();
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: decodeVapidKey(publicKey) as unknown as BufferSource,
+      });
+    const json = subscription.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
+      throw new Error('The browser returned an incomplete push subscription');
+    }
+    await api.savePushSubscription({
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      userAgent: navigator.userAgent,
+    });
+  };
+
+  useEffect(() => {
+    if (currentUser && permission === 'granted') {
+      registerPushSubscription().catch(() => {
+        // A provider/configuration outage must not interrupt the signed-in shell.
+      });
+    }
+    // The subscription is synchronized once per signed-in user/device.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, permission]);
 
   const handleRequestPermission = async () => {
     sounds.playPop();
@@ -45,22 +86,11 @@ export function PushNotificationManager() {
 
       if (perm === 'granted') {
         sounds.playChime();
-        toast.success('🔔 Lockscreen push notifications enabled!');
-        
-        // Show test notification
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then((registration) => {
-            registration.showNotification('Yor Talks 🇮🇳', {
-              body: 'Welcome to instant Bharat alerts! You will get notified for Likes, DMs & Calls.',
-              icon: '/favicon.ico',
-              vibrate: [200, 100, 200],
-            } as any);
-          });
-        } else {
-          new Notification('Yor Talks 🇮🇳', {
-            body: 'Welcome to instant Bharat alerts! You will get notified for Likes, DMs & Calls.',
-            icon: '/favicon.ico',
-          });
+        try {
+          await registerPushSubscription();
+          toast.success('🔔 Lockscreen push notifications enabled!');
+        } catch (error) {
+          toast.info(error instanceof Error ? error.message : 'Device push delivery is not configured yet.');
         }
       } else {
         toast.info('Notifications were not enabled.');

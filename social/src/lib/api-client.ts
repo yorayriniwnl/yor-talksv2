@@ -437,6 +437,11 @@ export const api = {
   getNotifications: () => request<BackendNotification[]>('/notifications'),
   markNotificationRead: (notificationId: string) => request<BackendNotification>(`/notifications/${notificationId}/read`, { method: 'POST' }),
   markAllNotificationsRead: () => request<null>('/notifications/read-all', { method: 'POST' }),
+  getPushPublicKey: () => request<{ publicKey: string }>('/notifications/push/public-key'),
+  savePushSubscription: (subscription: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }) =>
+    request<{ id: string }>('/notifications/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
+  removePushSubscription: (endpoint: string) =>
+    request<null>('/notifications/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 
   // ---- Search ----
   search: (q: string) => request<{ users: BackendUser[]; posts: BackendPost[] }>(`/search?q=${encodeURIComponent(q)}`),

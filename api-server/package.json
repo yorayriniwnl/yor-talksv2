@@ -17,6 +17,7 @@
     "test": "node --import tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {
+    "@types/web-push": "^3.6.4",
     "@workspace/api-zod": "file:../lib/api-zod",
     "@workspace/db": "file:../lib/db",
     "bcryptjs": "^2.4.0",
@@ -40,6 +41,7 @@
     "pino-http": "^10.5.0",
     "rate-limit-redis": "^6.0.1",
     "socket.io": "^4.0.0",
+    "web-push": "^3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {

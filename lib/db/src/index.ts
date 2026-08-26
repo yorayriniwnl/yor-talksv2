@@ -46,6 +46,7 @@ export {
   storyPollsTable,
   storyPollOptionsTable,
   storyPollVotesTable,
+  pushSubscriptionsTable,
   insertUserSchema,
   insertPostSchema,
   insertConversationSchema,

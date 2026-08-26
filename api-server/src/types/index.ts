@@ -168,6 +168,17 @@ export interface AuthTokens {
   expiresAt?: string;
 }
 
+export interface PushSubscriptionRecord {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userAgent?: string | null;
+  createdAt: string;
+  lastUsedAt?: string | null;
+}
+
 export interface SessionRecord {
   id: string;
   userId: string;

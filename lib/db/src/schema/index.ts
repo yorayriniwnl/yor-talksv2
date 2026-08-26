@@ -285,6 +285,20 @@ export const liveStreamsTable = pgTable("live_streams", {
   hostIdx: index("livestream_host_idx").on(table.hostId)
 }));
 
+export const pushSubscriptionsTable = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { mode: "string" }),
+}, (t) => ({
+  userEndpointIdx: uniqueIndex("push_subscriptions_user_endpoint_idx").on(t.userId, t.endpoint),
+  userIdx: index("push_subscriptions_user_idx").on(t.userId),
+}));
+
 export const storyPollsTable = pgTable("story_polls", {
   id: uuid("id").primaryKey(),
   storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
