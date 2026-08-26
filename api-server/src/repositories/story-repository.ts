@@ -1,4 +1,4 @@
-import { eq, gt, desc, and, inArray, sql } from "drizzle-orm";
+import { eq, gt, desc, and, inArray, or, sql } from "drizzle-orm";
 import { storyPollOptionsTable, storyPollsTable, storyPollVotesTable, storiesTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { StoryRecord } from "../types/index.js";
@@ -27,7 +27,7 @@ export class StoryRepository {
     return (await db
       .select()
       .from(storiesTable)
-      .where(gt(storiesTable.expiresAt, new Date().toISOString()))
+      .where(or(eq(storiesTable.isHighlight, true), gt(storiesTable.expiresAt, new Date().toISOString())))
       .orderBy(desc(storiesTable.createdAt))
       .limit(100)) as StoryRecord[];
   }

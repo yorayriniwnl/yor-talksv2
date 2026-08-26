@@ -16,6 +16,7 @@ import { type ContentCategory } from '@/lib/content-category';
 interface StoryBuilderModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  isHighlight?: boolean;
 }
 
 const STORY_GRADIENTS = [
@@ -26,7 +27,7 @@ const STORY_GRADIENTS = [
   { id: 'cosmic', name: 'Deep Cosmic', css: 'from-fuchsia-600 via-purple-900 to-black' },
 ];
 
-export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalProps) {
+export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }: StoryBuilderModalProps) {
   const addStory = useAppStore((s) => s.addStory);
   const currentUser = useAppStore((s) => s.currentUser);
 
@@ -34,6 +35,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
   const [imageUrl, setImageUrl] = useState('');
   const [storyType, setStoryType] = useState<'text' | 'image'>('text');
+  const [highlightTitle, setHighlightTitle] = useState('');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [pollOpen, setPollOpen] = useState(false);
@@ -55,13 +57,16 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
         backgroundGradient: selectedGradient.css,
         contentCategory,
         contentRating,
+        isHighlight,
+        ...(isHighlight ? { highlightTitle: highlightTitle.trim() || 'Highlights' } : {}),
         ...(pollOpen ? { poll: { question: pollQuestion.trim(), options: normalizedPollOptions.map((text) => ({ text })) } } : {}),
       });
       sounds.playChime();
       triggerConfetti();
-      toast.success('Story published to your highlights! ✨');
+      toast.success(isHighlight ? 'Story added to your highlights! ✨' : 'Story published for 24 hours! ✨');
       setTextContent('');
       setImageUrl('');
+      setHighlightTitle('');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setPollOpen(false);
@@ -146,6 +151,17 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           {/* Gradient Palette Picker */}
           <ContentCategorySelect id="story-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="story-content-rating" value={contentRating} onChange={setContentRating} />
+
+          {isHighlight && (
+            <input
+              value={highlightTitle}
+              onChange={(event) => setHighlightTitle(event.target.value)}
+              placeholder="Highlight name (for example, Travel)"
+              maxLength={40}
+              className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50"
+              aria-label="Highlight name"
+            />
+          )}
 
           <div className="rounded-2xl border border-border/40 bg-background/30 p-3">
             <button type="button" onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">

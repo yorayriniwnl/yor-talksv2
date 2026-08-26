@@ -19,7 +19,7 @@ export default function StoriesRow() {
     const groups: Record<string, Story[]> = {};
     for (const story of stories) {
       // Basic expiration check just in case backend didn't filter
-      if (new Date(story.expiresAt) < new Date()) continue;
+      if (!story.isHighlight && new Date(story.expiresAt) < new Date()) continue;
       
       if (!groups[story.authorId]) groups[story.authorId] = [];
       groups[story.authorId].push(story);

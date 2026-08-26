@@ -24,6 +24,8 @@ import { HoloAvatarCard } from '@/components/ui/HoloAvatarCard';
 import { ParallaxCover } from '@/components/ui/ParallaxCover';
 import { ProfileMusicPlayer } from '@/components/profile/ProfileMusicPlayer';
 import ReelsSwiper from '@/components/video/ReelsSwiper';
+import StoryViewer from '@/components/feed/StoryViewer';
+import { StoryBuilderModal } from '@/components/feed/StoryBuilderModal';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { staggerContainer, staggerItem, tapScale, springGentle, springBouncy, layoutIds } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -41,13 +43,6 @@ const AWARDS = [
   { emoji: '💎', label: 'Diamond', xp: 100 },
   { emoji: '❤️', label: 'Heart', xp: 10 },
   { emoji: '🚀', label: 'Rocket', xp: 30 },
-];
-
-const HIGHLIGHT_COVERS = [
-  { id: 'h1', title: 'Travel', emoji: '✈️', gradient: 'from-blue-500 to-cyan-400' },
-  { id: 'h2', title: 'Music', emoji: '🎵', gradient: 'from-purple-500 to-pink-400' },
-  { id: 'h3', title: 'Food', emoji: '🍜', gradient: 'from-orange-500 to-yellow-400' },
-  { id: 'h4', title: 'Pets', emoji: '🐾', gradient: 'from-emerald-500 to-teal-400' },
 ];
 
 function computeLevel(achievements: { unlocked: boolean; xp: number }[]) {
@@ -336,6 +331,8 @@ export default function Profile() {
   const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire'>('neon');
   const [frameDialogOpen, setFrameDialogOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [highlightBuilderOpen, setHighlightBuilderOpen] = useState(false);
+  const [highlightViewerOpen, setHighlightViewerOpen] = useState(false);
 
   const profileLookup = id || username || currentUser?.id;
   const profile = id
@@ -385,6 +382,15 @@ export default function Profile() {
   const userHighlights = useMemo(() => {
     return stories.filter(s => s.authorId === profile?.id && s.isHighlight);
   }, [stories, profile?.id]);
+
+  const highlightGroups = useMemo(() => {
+    const groups = new Map<string, Story[]>();
+    for (const story of userHighlights) {
+      const title = story.highlightTitle?.trim() || 'Highlights';
+      groups.set(title, [...(groups.get(title) ?? []), story]);
+    }
+    return [...groups.entries()].map(([title, groupStories]) => ({ title, stories: groupStories }));
+  }, [userHighlights]);
 
   const mutualFollowers = useMemo(() => {
     if (isOwnProfile || !currentUser?.followingIds) return [];
@@ -446,6 +452,15 @@ export default function Profile() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />
+      <StoryBuilderModal isOpen={highlightBuilderOpen} onOpenChange={setHighlightBuilderOpen} isHighlight />
+      {highlightViewerOpen && profile && userHighlights.length > 0 && (
+        <StoryViewer
+          initialAuthorId={profile.id}
+          groupedStories={{ [profile.id]: userHighlights }}
+          authors={[profile.id]}
+          onClose={() => setHighlightViewerOpen(false)}
+        />
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
          STICKY GLASS HEADER
@@ -632,23 +647,26 @@ export default function Profile() {
            ══════════════════════════════════════════════════════════════ */}
         <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-5 mb-1 border-b border-border/50">
           {isOwnProfile && (
-            <div className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group">
+            <button type="button" onClick={() => setHighlightBuilderOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group">
               <div className="w-[62px] h-[62px] rounded-full border-[1.5px] border-dashed border-muted-foreground/40 flex items-center justify-center group-hover:border-primary transition-colors">
                 <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <span className="text-[0.62rem] font-semibold text-muted-foreground truncate w-full text-center">New</span>
-            </div>
+            </button>
           )}
-          {HIGHLIGHT_COVERS.map(h => (
-            <div key={h.id} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group">
+          {highlightGroups.map((group, index) => {
+            const cover = group.stories[0];
+            const gradients = ['from-blue-500 to-cyan-400', 'from-purple-500 to-pink-400', 'from-orange-500 to-yellow-400', 'from-emerald-500 to-teal-400'];
+            return <button type="button" key={group.title} onClick={() => setHighlightViewerOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group" aria-label={`Open ${group.title} highlights`}>
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-muted-foreground/20 to-muted-foreground/10">
-                <div className={cn("w-[58px] h-[58px] rounded-full bg-gradient-to-br flex items-center justify-center text-xl border-[3px] border-background", h.gradient)}>
-                  {h.emoji}
+                <div className={cn("relative w-[58px] h-[58px] overflow-hidden rounded-full bg-gradient-to-br flex items-center justify-center text-xl border-[3px] border-background", gradients[index % gradients.length])}>
+                  {cover.type === 'image' && cover.mediaUrl ? <img src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
                 </div>
               </div>
-              <span className="text-[0.62rem] font-semibold text-foreground/80 truncate w-full text-center">{h.title}</span>
-            </div>
-          ))}
+              <span className="text-[0.62rem] font-semibold text-foreground/80 truncate w-full text-center">{group.title}</span>
+            </button>;
+          })}
+          {!isOwnProfile && highlightGroups.length === 0 && <span className="py-6 text-xs text-muted-foreground">No highlights yet.</span>}
         </div>
 
         {/* ══════════════════════════════════════════════════════════════

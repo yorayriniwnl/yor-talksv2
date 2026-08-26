@@ -636,7 +636,7 @@ interface AppState {
   createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   likeVideo: (videoId: string) => Promise<void>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string) => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
@@ -1324,6 +1324,8 @@ export const useAppStore = create<AppState>()(
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
           viewerIds: [],
           reactions: [],
+          isHighlight: Boolean(story.isHighlight),
+          highlightTitle: story.highlightTitle,
           poll: story.poll ? {
             question: story.poll.question,
             options: story.poll.options.map((option, index) => ({ id: `optimistic-story-poll-${index}`, ...option, votes: 0 })),
