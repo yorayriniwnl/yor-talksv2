@@ -39,7 +39,7 @@ export class MessageController {
       if (error instanceof InvalidReplyTargetError) {
         return res.status(400).json(createResponse("Invalid reply target", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Failed to send message", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Failed to send message", null, {}, ["Internal server error"]));
     }
   };
 
@@ -62,7 +62,10 @@ export class MessageController {
       
       return res.status(201).json(createResponse("Group chat created", group));
     } catch (error) {
-      return res.status(500).json(createResponse("Failed to create group", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      if (error instanceof MessageBlockedError || error instanceof UnauthorizedError) {
+        return res.status(403).json(createResponse("Cannot create group", null, {}, [error.message]));
+      }
+      return res.status(500).json(createResponse("Failed to create group", null, {}, ["Internal server error"]));
     }
   };
 

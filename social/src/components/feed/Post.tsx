@@ -113,7 +113,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
         : undefined;
       await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory);
     } catch (error) {
-      toast({ title: 'Could not upload your images', description: error instanceof Error ? error.message : 'Try again in a moment.' });
+      toast({ title: 'Could not publish your thought', description: error instanceof Error ? error.message : 'Try again in a moment.' });
       setIsUploading(false);
       return;
     }
@@ -231,7 +231,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary" onClick={() => fileInputRef.current?.click()} aria-label="Add an image">
                 <ImagePlus className="h-[18px] w-[18px]" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className={cn('h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary', pollOpen && 'bg-primary/10')} onClick={() => setPollOpen((open) => !open)} aria-label="Add a poll">
+              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground" disabled title="Polls are coming soon" aria-label="Polls are coming soon">
                 <BarChart2 className="h-[18px] w-[18px]" />
               </Button>
               <Popover>

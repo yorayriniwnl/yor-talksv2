@@ -190,11 +190,13 @@ export default function Explore() {
   useEffect(() => {
     const trimmed = query.trim().toLowerCase();
     if (trimmed.length < 2) { setResults(null); setSearching(false); return; }
+    let active = true;
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
         const apiRes = await api.search(trimmed);
-        if (apiRes && (apiRes.users?.length > 0 || apiRes.posts?.length > 0)) {
+        if (!active) return;
+        if (apiRes) {
           setResults(apiRes);
         } else {
           // Client-side search across all creators and posts
@@ -210,7 +212,7 @@ export default function Explore() {
             bio: u.bio || '',
             followers: [],
             following: [],
-            isOnline: true,
+            isOnline: false,
             createdAt: new Date().toISOString()
           } as any));
 
@@ -231,6 +233,7 @@ export default function Explore() {
           setResults({ users: matchedUsers, posts: matchedPosts });
         }
       } catch {
+        if (!active) return;
         const matchedUsers = Object.values(users).filter(u =>
           u.username.toLowerCase().includes(trimmed) ||
           u.displayName.toLowerCase().includes(trimmed) ||
@@ -243,7 +246,7 @@ export default function Explore() {
           bio: u.bio || '',
           followers: [],
           following: [],
-          isOnline: true,
+          isOnline: false,
           createdAt: new Date().toISOString()
         } as any));
 
@@ -263,10 +266,10 @@ export default function Explore() {
 
         setResults({ users: matchedUsers, posts: matchedPosts });
       } finally {
-        setSearching(false);
+        if (active) setSearching(false);
       }
     }, 250);
-    return () => clearTimeout(timer);
+    return () => { active = false; clearTimeout(timer); };
   }, [query, users, posts]);
 
   const handleToggleFollow = (targetId: string) => {

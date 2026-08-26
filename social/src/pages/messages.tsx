@@ -121,13 +121,14 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); return; }
+    let active = true;
     const handle = setTimeout(async () => {
       try {
         const users = await api.searchUsers(query.trim());
-        setResults(users.filter((u) => u.id !== currentUser?.id));
+        if (active) setResults(users.filter((u) => u.id !== currentUser?.id));
       } catch { /* ignore transient search errors */ }
     }, 250);
-    return () => clearTimeout(handle);
+    return () => { active = false; clearTimeout(handle); };
   }, [query, currentUser?.id]);
 
   const handleSend = async () => {

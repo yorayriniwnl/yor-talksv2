@@ -27,22 +27,25 @@ export function CommandPalette() {
   const [searchingAI, setSearchingAI] = useState(false);
 
   useEffect(() => {
+    let active = true;
     if (query.length > 3) {
       const delay = setTimeout(async () => {
         setSearchingAI(true);
         try {
           const res = await api.request<any>(`/ai/search?q=${encodeURIComponent(query)}`);
-          setAiResults(res?.results || []);
+          if (active) setAiResults(res?.results || []);
         } catch (e) {
           console.error(e);
         } finally {
-          setSearchingAI(false);
+          if (active) setSearchingAI(false);
         }
       }, 500);
-      return () => clearTimeout(delay);
+      return () => { active = false; clearTimeout(delay); };
     } else {
       setAiResults([]);
+      setSearchingAI(false);
     }
+    return () => { active = false; };
   }, [query]);
 
 

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, jsonb, uuid, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 
@@ -225,7 +225,7 @@ export const productsTable = pgTable("products", {
   sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  price: integer("price").notNull(),
+  price: numeric("price", { precision: 12, scale: 2, mode: "number" }).notNull(),
   images: jsonb("images").notNull().default([]),
   category: text("category").notNull(),
   condition: text("condition").notNull(),

@@ -47,6 +47,8 @@ function CreateListingDialog() {
       await createProduct({
         title: title.trim(),
         description: description.trim(),
+        // Keep the client and API contract in sync with the two-decimal
+        // currency column used by the marketplace.
         price: Math.round(Number(price) * 100) / 100,
         images: [`https://picsum.photos/seed/${encodeURIComponent(title)}/500/500`],
         category,

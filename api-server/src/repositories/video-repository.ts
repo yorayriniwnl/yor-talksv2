@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { videosTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { VideoRecord } from "../types/index.js";
@@ -19,9 +19,11 @@ export class VideoRepository {
   }
 
   async incrementViews(id: string): Promise<VideoRecord | undefined> {
-    const video = await this.findById(id);
-    if (!video) return undefined;
-    const [updated] = await db.update(videosTable).set({ views: video.views + 1 }).where(eq(videosTable.id, id)).returning();
+    const [updated] = await db
+      .update(videosTable)
+      .set({ views: sql`${videosTable.views} + 1` })
+      .where(eq(videosTable.id, id))
+      .returning();
     return updated as VideoRecord | undefined;
   }
 

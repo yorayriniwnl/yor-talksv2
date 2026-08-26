@@ -115,7 +115,9 @@ export class UserService {
     }
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
-    const blockedUsers = user.blockedUsers ?? [];
+    const target = await this.userRepository.findById(targetId);
+    if (!target) return undefined;
+    const blockedUsers = [...(user.blockedUsers ?? [])];
     if (!blockedUsers.includes(targetId)) {
       blockedUsers.push(targetId);
     }
@@ -135,7 +137,9 @@ export class UserService {
     }
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
-    const mutedUsers = user.mutedUsers ?? [];
+    const target = await this.userRepository.findById(targetId);
+    if (!target) return undefined;
+    const mutedUsers = [...(user.mutedUsers ?? [])];
     if (!mutedUsers.includes(targetId)) {
       mutedUsers.push(targetId);
     }

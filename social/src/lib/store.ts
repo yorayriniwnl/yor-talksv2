@@ -581,12 +581,22 @@ function hydrateSessionData(get: () => AppState): void {
   ]);
 }
 
+let realtimePollingTimer: number | null = null;
+
+function stopRealtime(): void {
+  disconnectSocket();
+  if (realtimePollingTimer !== null && typeof window !== 'undefined') {
+    window.clearInterval(realtimePollingTimer);
+    realtimePollingTimer = null;
+  }
+}
+
 function setupRealtime(
   set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
   get: () => AppState,
 ) {
-  if (typeof window !== 'undefined' && !(setupRealtime as any).pollingTimer) {
-    (setupRealtime as any).pollingTimer = window.setInterval(() => {
+  if (typeof window !== 'undefined' && realtimePollingTimer === null) {
+    realtimePollingTimer = window.setInterval(() => {
       if (!get().currentUser) return;
       void get().loadNotifications();
       void get().loadConversations();
@@ -735,7 +745,7 @@ export const useAppStore = create<AppState>()(
         } catch {
           // ignore
         }
-        disconnectSocket();
+        stopRealtime();
         setStoredTokens(null);
         set({ currentUser: null, tokens: null });
       },
@@ -755,6 +765,7 @@ export const useAppStore = create<AppState>()(
       },
 
       initialize: async () => {
+        stopRealtime();
         set({ isInitializing: true });
         // The access token is intentionally memory-only. Never trust a
         // persisted profile as an authenticated session after a reload.
@@ -821,14 +832,11 @@ export const useAppStore = create<AppState>()(
           const res = await api.getFeed();
           const backendPosts = res.data;
           const currentUserId = get().currentUser?.id;
-          if (backendPosts && backendPosts.length > 0) {
-            set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)) });
-            return;
-          }
+          set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ posts: [] });
       },
 
       loadUserFeed: async (userId) => {
@@ -898,6 +906,7 @@ export const useAppStore = create<AppState>()(
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
+          throw error;
         }
       },
 
@@ -931,14 +940,11 @@ export const useAppStore = create<AppState>()(
         try {
           const backendCommunities = await api.getCommunities();
           const currentUserId = get().currentUser?.id;
-          if (backendCommunities && backendCommunities.length > 0) {
-            set({ communities: backendCommunities.map((c) => mapCommunity(c, currentUserId)) });
-            return;
-          }
+          set({ communities: backendCommunities.map((c) => mapCommunity(c, currentUserId)) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ communities: [] });
       },
 
       createCommunity: async (name, slug, description) => {
@@ -969,10 +975,8 @@ export const useAppStore = create<AppState>()(
       loadNotifications: async () => {
         try {
           const backendNotifications = await api.getNotifications();
-          if (backendNotifications && backendNotifications.length > 0) {
-            set({ notifications: backendNotifications.map(mapNotification) });
-            return;
-          }
+          set({ notifications: backendNotifications.map(mapNotification) });
+          return;
         } catch {
           // Keep the last successful notification snapshot during a transient outage.
         }
@@ -999,28 +1003,23 @@ export const useAppStore = create<AppState>()(
       loadConversations: async () => {
         try {
           const results = await api.getConversations();
-          if (results && results.length > 0) {
-            set({ conversations: results.map((r) => mapConversation(r.conversation, r.lastMessage)) });
-            return;
-          }
+          set({
+            conversations: results.map((r) => mapConversation(r.conversation, r.lastMessage)),
+            ...(results.length === 0 ? { messagesByConversation: {} } : {}),
+          });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({
-          conversations: [],
-          messagesByConversation: {}
-        });
       },
 
       loadConversationMessages: async (conversationId) => {
         try {
           const messages = await api.getConversationMessages(conversationId);
-          if (messages && messages.length > 0) {
-            set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
-            return;
-          }
+          set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
       },
 
@@ -1239,14 +1238,11 @@ export const useAppStore = create<AppState>()(
       loadProducts: async () => {
         try {
           const backendProducts = await api.getProducts();
-          if (backendProducts && backendProducts.length > 0) {
-            set({ products: backendProducts.map(mapProduct) });
-            return;
-          }
+          set({ products: backendProducts.map(mapProduct) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ products: [] });
       },
 
       createProduct: async (input) => {
@@ -1262,14 +1258,11 @@ export const useAppStore = create<AppState>()(
       loadArticles: async () => {
         try {
           const backendArticles = await api.getArticles();
-          if (backendArticles && backendArticles.length > 0) {
-            set({ articles: backendArticles.map(mapArticle) });
-            return;
-          }
+          set({ articles: backendArticles.map(mapArticle) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ articles: [] });
       },
 
       createArticle: async (input) => {
@@ -1314,14 +1307,11 @@ export const useAppStore = create<AppState>()(
       loadVideos: async () => {
         try {
           const backendVideos = await api.getVideos();
-          if (backendVideos && backendVideos.length > 0) {
-            set({ videos: backendVideos.map(mapVideo) });
-            return;
-          }
+          set({ videos: backendVideos.map(mapVideo) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ videos: [] });
       },
 
       createVideo: async (input) => {
@@ -1362,14 +1352,11 @@ export const useAppStore = create<AppState>()(
       loadStreams: async () => {
         try {
           const backendStreams = await api.getStreams();
-          if (backendStreams && backendStreams.length > 0) {
-            set({ liveStreams: backendStreams.map(mapLiveStream) });
-            return;
-          }
+          set({ liveStreams: backendStreams.map(mapLiveStream) });
+          return;
         } catch {
-          // fallback
+          // Keep the last successful snapshot during a transient outage.
         }
-        set({ liveStreams: [] });
       },
 
       createStream: async (input) => {
@@ -1391,6 +1378,7 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           set((state) => ({ liveStreams: state.liveStreams.filter((stream) => stream.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not schedule the live room');
+          throw error;
         }
       },
 

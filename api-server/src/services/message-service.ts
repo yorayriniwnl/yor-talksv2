@@ -43,6 +43,10 @@ export class MessageService {
     if (this.userRepository) {
       const members = await Promise.all([creatorId, ...uniqueMemberIds].map((id) => this.userRepository!.findById(id)));
       if (members.some((member) => !member)) throw new Error("One or more group members do not exist");
+      const creator = members[0]!;
+      if (members.slice(1).some((member) => member!.blockedUsers?.includes(creatorId) || creator.blockedUsers?.includes(member!.id))) {
+        throw new MessageBlockedError("A group member has blocked this account");
+      }
     }
     return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat");
   }
@@ -64,9 +68,26 @@ export class MessageService {
   }
 
   async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
+    const conversation = await this.conversationRepository.findById(conversationId);
+    if (!conversation) {
+      throw new UnauthorizedError("Conversation not found");
+    }
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(senderId)) {
       throw new UnauthorizedError("You are not a member of this conversation");
+    }
+
+    if (this.userRepository) {
+      const participants = await Promise.all(
+        members.filter((memberId) => memberId !== senderId).map((memberId) => this.userRepository!.findById(memberId)),
+      );
+      const sender = await this.userRepository.findById(senderId);
+      if (!sender || participants.some((recipient) => !recipient || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipient.id))) {
+        throw new MessageBlockedError("You can't message this user");
+      }
+      if (conversation.isGroup !== true && participants.length === 1 && participants[0] && participants[0].privacy?.allowDmFromStrangers === false && !(await this.userRepository.isFollowing(senderId, participants[0].id))) {
+        throw new MessageBlockedError("This user does not accept messages from strangers");
+      }
     }
 
     const replyToId = options?.replyToId ?? null;
