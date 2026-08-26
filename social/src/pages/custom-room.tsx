@@ -34,7 +34,7 @@ export default function CustomRoomLobby() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Custom Scrims Room & Slot Matchmaker</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Automated Slot Allocation & Anti-Leak Room Key Distribution</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Room allocation preview · live tournament service is not connected</p>
           </div>
         </div>
 
@@ -64,7 +64,7 @@ export default function CustomRoomLobby() {
         <div className="space-y-4">
           <div className="showcase-section-title">
             <Users className="w-4 h-4 text-emerald-400" />
-            <h3>Squad Slot Distribution</h3>
+            <h3>Squad slot distribution preview</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

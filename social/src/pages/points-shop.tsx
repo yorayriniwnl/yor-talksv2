@@ -36,8 +36,8 @@ const SHOP_ITEMS = [
 
 export default function PointsShop() {
   const currentUser = useAppStore((s) => s.currentUser);
-  const [points, setPoints] = useState(4850);
-  const [unlockedItems, setUnlockedItems] = useState<string[]>(['frame-neon']);
+  const [points] = useState(0);
+  const [unlockedItems] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'frame' | 'background' | 'badge'>('all');
   const [previewFrame, setPreviewFrame] = useState<string>('from-cyan-400 to-blue-500');
   const [previewBackground, setPreviewBackground] = useState<string>('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop');

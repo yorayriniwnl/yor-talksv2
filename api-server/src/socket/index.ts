@@ -81,7 +81,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
     socket.on("conversation:join", async (payload: { conversationId?: unknown } = {}) => {
       const conversationId = payload.conversationId;
-      if (typeof conversationId !== "string" || !/^[0-9a-f-]{36}$/i.test(conversationId)) return;
+      if (typeof conversationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(conversationId)) return;
       const members = await conversationRepository.getMembers(conversationId);
       if (members.includes(userId)) socket.join(`conversation:${conversationId}`);
     });

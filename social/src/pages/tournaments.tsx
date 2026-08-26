@@ -13,7 +13,7 @@ import { staggerContainer, staggerItem } from '@/lib/motion';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
-import { useLocation, useRoute } from 'wouter';
+import { useRoute } from 'wouter';
 
 interface MatchTeam {
   id: string;
@@ -55,9 +55,9 @@ const TOURNAMENTS: Tournament[] = [
     coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
     prizePoolINR: 2500000,
     teamsCount: 16,
-    startDate: 'Live Now — Grand Finals',
+    startDate: 'Preview schedule — official feed unavailable',
     tier: 'Major',
-    status: 'live',
+    status: 'registering',
     organizer: 'Yor Esports & Krafton',
     description: 'The premier national championship featuring India’s top 16 squads competing for ₹25 Lakhs and the coveted Conqueror Trophy.'
   },
@@ -150,8 +150,8 @@ const BRACKET_MATCHES: BracketMatch[] = [
     round: 'Semifinals',
     teamA: { id: 't1', name: 'GodLike Esports', tag: 'GODL', logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', score: 1 },
     teamB: { id: 't3', name: 'Global Esports', tag: 'GE', logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', score: 1 },
-    time: 'LIVE NOW (Map 3 Decider)',
-    status: 'live'
+    time: 'Preview match — official feed unavailable',
+    status: 'upcoming'
   },
   {
     id: 'm4',
@@ -164,7 +164,6 @@ const BRACKET_MATCHES: BracketMatch[] = [
 ];
 
 export default function Tournaments() {
-  const [, setLocation] = useLocation();
   const [, params] = useRoute<{ id: string }>('/tournaments/:id');
   const activeTourneyId = params?.id;
 
@@ -196,7 +195,7 @@ export default function Tournaments() {
         </div>
 
         <div className="level-badge shadow-sm">
-          <Crown className="w-3.5 h-3.5 fill-amber-400" /> ₹42,50,000 Total Prize Pool
+          <Crown className="w-3.5 h-3.5 fill-amber-400" /> Preview catalog
         </div>
       </div>
 
@@ -207,13 +206,6 @@ export default function Tournaments() {
             <img src={selectedTournament.coverUrl} alt="" className="w-full h-full object-cover opacity-80 transition-transform duration-700 hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-black/30" />
             
-            {/* Live Indicator */}
-            {selectedTournament.status === 'live' && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-mono font-bold shadow-lg border border-white/20">
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" /> LIVE BROADCAST
-              </div>
-            )}
-
             <div className="absolute bottom-6 left-4 sm:left-6 right-4 sm:right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/40 text-xs font-mono font-bold text-primary mb-2">
@@ -223,7 +215,7 @@ export default function Tournaments() {
                   {selectedTournament.title}
                 </h2>
                 <div className="flex items-center gap-4 text-xs font-mono text-zinc-300 mt-2">
-                  <span className="text-amber-400 font-bold text-sm">₹{selectedTournament.prizePoolINR.toLocaleString()} INR Prize Pool</span>
+                  <span className="text-amber-400 font-bold text-sm">Prize details unavailable</span>
                   <span>·</span>
                   <span>{selectedTournament.teamsCount} Elite Squads</span>
                   <span>·</span>
@@ -233,10 +225,11 @@ export default function Tournaments() {
 
               <div className="flex gap-2">
                 <Button
-                  onClick={() => setLocation(`/live/${selectedTournament.id}`)}
-                  className="rounded-2xl font-bold text-xs px-6 h-11 bg-rose-600 hover:bg-rose-700 text-white glow-neon-primary shadow-lg"
+                  onClick={() => toast.info('Tournament viewing is not connected to an official broadcast yet.')}
+                  disabled
+                  className="rounded-2xl font-bold text-xs px-6 h-11 bg-muted text-muted-foreground"
                 >
-                  <Play className="w-4 h-4 mr-1.5 fill-white" /> Watch Live Match
+                  <Play className="w-4 h-4 mr-1.5" /> Live viewing unavailable
                 </Button>
               </div>
             </div>
@@ -262,7 +255,7 @@ export default function Tournaments() {
               <div className="min-w-0">
                 <span className="text-[0.62rem] font-mono uppercase text-primary font-bold">{t.game}</span>
                 <h4 className="font-display font-bold text-sm text-foreground truncate">{t.title}</h4>
-                <p className="text-xs font-mono text-amber-400 font-bold mt-0.5">₹{t.prizePoolINR.toLocaleString()}</p>
+                <p className="text-xs font-mono text-amber-400 font-bold mt-0.5">Prize details unavailable</p>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
             </div>
@@ -337,10 +330,11 @@ export default function Tournaments() {
                     {match.status === 'live' && (
                       <Button
                         size="sm"
-                        onClick={() => setLocation(`/live/${selectedTournament.id}`)}
-                        className="mt-4 w-full rounded-xl font-bold text-xs h-8 bg-rose-600 hover:bg-rose-700 text-white"
+                        onClick={() => toast.info('Tournament viewing is not connected to an official broadcast yet.')}
+                        disabled
+                        className="mt-4 w-full rounded-xl font-bold text-xs h-8 bg-muted text-muted-foreground"
                       >
-                        <Play className="w-3 h-3 mr-1 fill-white" /> Watch Match Live
+                        <Play className="w-3 h-3 mr-1" /> Live viewing unavailable
                       </Button>
                     )}
                   </div>

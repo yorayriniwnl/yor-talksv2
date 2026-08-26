@@ -30,6 +30,11 @@ export function connectSocket(): Socket | null {
   }
 
   const realtimeUrl = (import.meta.env.VITE_REALTIME_URL as string | undefined)?.trim() || undefined;
+  // Vercel's serverless function serves HTTP only. Keep production clients
+  // from repeatedly attempting a Socket.IO connection to a host that cannot
+  // keep a durable WebSocket process alive. Docker/Nginx explicitly opts in
+  // with VITE_REALTIME_ENABLED=true because it proxies to the long-lived API.
+  if (import.meta.env.PROD && !realtimeUrl && import.meta.env.VITE_REALTIME_ENABLED !== 'true') return null;
   socket = io(realtimeUrl, {
     auth: { token: tokens.accessToken },
     path: '/socket.io',

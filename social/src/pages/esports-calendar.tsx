@@ -136,7 +136,7 @@ export default function EsportsCalendar() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Esports Schedule & Match Calendar</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Live timetable and downloadable calendar reminders</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Preview timetable · official esports feeds are not connected yet</p>
           </div>
         </div>
 

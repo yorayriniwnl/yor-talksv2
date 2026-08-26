@@ -23,28 +23,9 @@ interface GrantProposal {
 }
 
 export default function ClanTreasury() {
-  const [inrBalance, setInrBalance] = useState(4280000);
-  const [karmaPool, setKarmaPool] = useState(650000);
-  const [proposals, setProposals] = useState<GrantProposal[]>([
-    {
-      id: 'gp-1',
-      title: 'Mumbai Bootcamp High-Speed Fiber Internet & LAN Hub',
-      requestedAmt: 120000,
-      recipient: 'Soul Gaming House',
-      votesFor: 18,
-      votesAgainst: 1,
-      status: 'active'
-    },
-    {
-      id: 'gp-2',
-      title: 'ISRO Starfighter Arcade Community Prize Pool Funding',
-      requestedAmt: 50000,
-      recipient: 'Indie Developers Guild',
-      votesFor: 24,
-      votesAgainst: 0,
-      status: 'approved'
-    }
-  ]);
+  const [inrBalance] = useState<number | null>(null);
+  const [karmaPool] = useState<number | null>(null);
+  const [proposals] = useState<GrantProposal[]>([]);
 
   const handleVote = (id: string, type: 'for' | 'against') => {
     void id;
@@ -85,9 +66,9 @@ export default function ClanTreasury() {
               <IndianRupee className="w-4 h-4 text-emerald-400" /> Liquid INR Guild Reserves
             </span>
             <div className="font-display font-black text-3xl text-emerald-400">
-              ₹{inrBalance.toLocaleString('en-IN')} INR
+              {inrBalance === null ? '—' : `₹${inrBalance.toLocaleString('en-IN')} INR`}
             </div>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Yield Staking Rate: 8.4% APY in Verified Escrow</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">A connected treasury ledger is required before balances or yields can be shown.</p>
           </div>
 
           <div className="surface-1 rounded-3xl p-6 border border-border/40 space-y-2 shadow-xl">
@@ -95,9 +76,9 @@ export default function ClanTreasury() {
               <Sparkles className="w-4 h-4 text-amber-400" /> Clan Karma Reserve Pool
             </span>
             <div className="font-display font-black text-3xl text-amber-400">
-              {karmaPool.toLocaleString()} XP
+              {karmaPool === null ? '—' : `${karmaPool.toLocaleString()} XP`}
             </div>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Available for Super Pass Level Grants & Tournaments</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Karma reserves will appear after a verified guild ledger is connected.</p>
           </div>
         </div>
 
@@ -109,7 +90,12 @@ export default function ClanTreasury() {
           </div>
 
           <div className="space-y-4">
-            {proposals.map((p) => (
+            {proposals.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/50 p-8 text-center">
+                <p className="text-sm font-semibold text-foreground">No verified proposals are available.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Connect an audited treasury ledger before displaying proposals, votes, or payout actions.</p>
+              </div>
+            ) : proposals.map((p) => (
               <div
                 key={p.id}
                 className="p-5 rounded-2xl border border-border/40 space-y-3 bg-muted/20"

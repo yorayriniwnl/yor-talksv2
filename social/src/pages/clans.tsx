@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
+import { toast } from 'sonner';
 
 interface ClanMember {
   id: string;
@@ -20,33 +21,17 @@ interface ClanMember {
   status: 'online' | 'in-game' | 'offline';
 }
 
-const CLAN_ROSTER: ClanMember[] = [
-  { id: '1', name: 'Ayush Roy (Yor)', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', role: 'IGL (Leader)', kd: '6.42', winrate: '74%', status: 'online' },
-  { id: '2', name: 'Rohan Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', role: 'Entry Fragger', kd: '7.15', winrate: '72%', status: 'in-game' },
-  { id: '3', name: 'Anya', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', role: 'Sniper', kd: '5.80', winrate: '69%', status: 'online' },
-  { id: '4', name: 'Aravind Rao', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop', role: 'Entry Fragger', kd: '6.90', winrate: '76%', status: 'online' },
-  { id: '5', name: 'Devansh Deshmukh', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '4.90', winrate: '71%', status: 'offline' },
-  { id: '6', name: 'Renata Silva', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', role: 'Coach', kd: '5.10', winrate: '68%', status: 'online' },
-  { id: '7', name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '5.40', winrate: '70%', status: 'in-game' },
-  { id: '8', name: 'Sakura Miyamoto', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=200&auto=format&fit=crop', role: 'Support', kd: '4.75', winrate: '65%', status: 'online' },
-];
-
 export default function Clans() {
   const [activeTab, setActiveTab] = useState<'roster' | 'scrims' | 'warroom'>('roster');
-  const [roster, setRoster] = useState<ClanMember[]>(CLAN_ROSTER);
-  const [chatMessages, setChatMessages] = useState<{ user: string; text: string; time: string }[]>([
-    { user: 'Ayush Roy', text: 'Scrims booked against Team SouL at 9:00 PM on Erangel!', time: '10m ago' },
-    { user: 'Rohan Verma', text: 'Warm up TDM done. Ready for customs.', time: '5m ago' },
-    { user: 'Anya', text: 'Locking AWM & M416 loadouts 🔥', time: 'Just now' },
-    { user: 'Aravind Rao', text: 'Crosshair placement drills completed. Let us dominate!', time: 'Just now' },
-  ]);
+  const [roster] = useState<ClanMember[]>([]);
+  const [chatMessages] = useState<{ user: string; text: string; time: string }[]>([]);
   const [newMsg, setNewMsg] = useState('');
 
   const handleSendMsg = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMsg.trim()) return;
     sounds.playPop();
-    setChatMessages(prev => [...prev, { user: 'You', text: newMsg.trim(), time: 'Just now' }]);
+    toast.info('Clan chat is not connected yet. Your message was not sent.');
     setNewMsg('');
   };
 
@@ -81,21 +66,21 @@ export default function Clans() {
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="font-display font-black text-2xl text-foreground">Yor Esports Guild [YOR]</h2>
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-[0.65rem] font-bold border border-emerald-500/30">
-                    Tier 1 Verified
+                    Preview only
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground font-mono">Conqueror Squad · 38 Tournament Victories · Mumbai & Bengaluru</p>
+                <p className="text-xs text-muted-foreground font-mono">Connected clan profile, roster, and results will appear here.</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 font-mono text-xs">
               <div className="p-3 rounded-2xl bg-muted/40 border border-border/40 text-center">
                 <span className="text-muted-foreground block text-[0.62rem]">Clan Karma Vault</span>
-                <span className="font-bold text-amber-400">145,000 Pts</span>
+                <span className="font-bold text-amber-400">—</span>
               </div>
               <div className="p-3 rounded-2xl bg-muted/40 border border-border/40 text-center">
                 <span className="text-muted-foreground block text-[0.62rem]">Win Rate</span>
-                <span className="font-bold text-emerald-400">73.5%</span>
+                <span className="font-bold text-emerald-400">—</span>
               </div>
             </div>
           </div>
@@ -109,7 +94,7 @@ export default function Clans() {
             onClick={() => setActiveTab('roster')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'roster' && "bg-primary text-primary-foreground shadow-md")}
           >
-            <Users className="w-3.5 h-3.5 mr-1.5" /> Official Roster ({roster.length})
+            <Users className="w-3.5 h-3.5 mr-1.5" /> Roster preview ({roster.length})
           </Button>
           <Button
             size="sm"
@@ -130,9 +115,9 @@ export default function Clans() {
         </div>
 
         {activeTab === 'roster' && (
-          /* Official Squad Roster Grid */
+          /* Squad roster preview */
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {roster.map((m) => (
+            {roster.length === 0 ? <div className="col-span-full rounded-2xl border border-dashed border-border/50 p-8 text-center text-sm text-muted-foreground">Create or join a connected clan to see its verified roster.</div> : roster.map((m) => (
               <div key={m.id} className="surface-1 rounded-3xl p-5 border border-border/40 flex items-center justify-between shadow-sm hover:border-primary/40 transition-all">
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -188,17 +173,17 @@ export default function Clans() {
         )}
 
         {activeTab === 'warroom' && (
-          /* Tactical War Room Chat */
+          /* Tactical War Room Chat preview */
           <div className="surface-1 rounded-3xl border border-border/40 overflow-hidden shadow-lg">
             <div className="p-4 border-b border-border/40 bg-muted/20 flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-foreground flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Encrypted Tactical Squad Channel
+                <span className="w-2 h-2 rounded-full bg-amber-400" /> Tactical Squad Channel preview
               </span>
               <span className="text-[0.65rem] font-mono text-muted-foreground">End-to-End P2P Channel</span>
             </div>
 
             <div className="p-5 h-64 overflow-y-auto space-y-3">
-              {chatMessages.map((msg, i) => (
+              {chatMessages.length === 0 ? <p className="text-center text-xs text-muted-foreground">Connect a clan to enable its private war room.</p> : chatMessages.map((msg, i) => (
                 <div key={i} className="flex items-start gap-2.5 text-xs font-sans">
                   <span className="font-bold text-primary shrink-0">{msg.user}:</span>
                   <p className="text-foreground/90 flex-1">{msg.text}</p>
@@ -209,12 +194,13 @@ export default function Clans() {
 
             <form onSubmit={handleSendMsg} className="p-3 border-t border-border/40 bg-muted/10 flex items-center gap-2">
               <Input
+                disabled
                 value={newMsg}
                 onChange={(e) => setNewMsg(e.target.value)}
-                placeholder="Type strategy message to squad…"
+                placeholder="Connect a clan to enable chat…"
                 className="rounded-xl bg-background border-border/60 text-xs h-10"
               />
-              <Button type="submit" size="sm" className="rounded-xl h-10 px-4 bg-primary text-primary-foreground font-bold shrink-0">
+              <Button type="submit" size="sm" disabled className="rounded-xl h-10 px-4 bg-muted text-muted-foreground font-bold shrink-0">
                 <Send className="w-4 h-4" />
               </Button>
             </form>
