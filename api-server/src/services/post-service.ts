@@ -509,11 +509,12 @@ export class PostService {
   }
 
   private async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
-    if (!viewerId || authorId === viewerId) return true;
+    if (viewerId && authorId === viewerId) return true;
     const author = await this.userRepository.findById(authorId);
     if (!author) return false;
     const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
-    return visibility === "public" || await this.userRepository.isFollowing(viewerId, authorId);
+    if (visibility === "public") return true;
+    return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
   }
 
   close(): void {

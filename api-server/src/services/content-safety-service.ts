@@ -23,16 +23,16 @@ export class ContentSafetyService {
   }
 
   async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
-    if (!viewerId || authorId === viewerId) return true;
+    if (viewerId && authorId === viewerId) return true;
     const author = await this.userRepository.findById(authorId);
     if (!author) return false;
     const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
-    return visibility === "public" || await this.userRepository.isFollowing(viewerId, authorId);
+    if (visibility === "public") return true;
+    return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
   }
 
   async filterVisibleByAuthor<T extends RatedContent>(items: T[], viewerId: string | undefined, getAuthorId: (item: T) => string): Promise<T[]> {
     const contentVisible = await this.filterVisible(items, viewerId);
-    if (!viewerId) return contentVisible;
     const visible = await Promise.all(contentVisible.map(async (item) => ({
       item,
       allowed: await this.canViewAuthorContent(getAuthorId(item), viewerId),
