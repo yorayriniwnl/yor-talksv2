@@ -525,7 +525,7 @@ export default function Messages() {
                       setCallModalOpen(true);
                     }}
                     className="rounded-full w-9 h-9 text-primary hover:bg-primary/20 cursor-pointer"
-                    title="4K Video Call"
+                    title="Start video call"
                     aria-label="Start video call"
                   >
                     <Video className="w-4 h-4" />

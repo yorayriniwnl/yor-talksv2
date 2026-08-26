@@ -25,6 +25,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const liveStreamRepository = new LiveStreamRepository();
   const onlineUsers = new Map<string, string>();
+  const activeCalls = new Map<string, { callerId: string; recipientId: string; createdAt: number }>();
 
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -200,9 +201,124 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       }
     });
 
+    const callForParticipant = (callId: unknown) => {
+      if (typeof callId !== "string" || !callId || callId.length > 80) return undefined;
+      const call = activeCalls.get(callId);
+      if (!call || (call.callerId !== userId && call.recipientId !== userId)) return undefined;
+      return call;
+    };
+
+    const emitCallError = (error: string) => socket.emit("call:error", { error });
+
+    socket.on("call:invite", async (payload: {
+      callId?: unknown;
+      targetUserId?: unknown;
+      callType?: unknown;
+      offer?: unknown;
+    } = {}) => {
+      const { callId, targetUserId, callType, offer } = payload;
+      if (
+        typeof callId !== "string" || callId.length < 8 || callId.length > 80 ||
+        typeof targetUserId !== "string" || targetUserId === userId ||
+        (callType !== "audio" && callType !== "video") ||
+        !offer || typeof offer !== "object"
+      ) {
+        emitCallError("Invalid call invitation");
+        return;
+      }
+
+      const target = await userRepository.findById(targetUserId);
+      const caller = await userRepository.findById(userId);
+      if (!target || !caller || target.accountStatus === "suspended" || target.accountStatus === "deactivated") {
+        emitCallError("That account is unavailable");
+        return;
+      }
+      if (target.blockedUsers?.includes(userId) || caller.blockedUsers?.includes(targetUserId)) {
+        emitCallError("You cannot call this account");
+        return;
+      }
+      if (target.privacy?.allowDmFromStrangers === false && !(await userRepository.isFollowing(userId, targetUserId))) {
+        emitCallError("This account does not accept calls from strangers");
+        return;
+      }
+      if ([...activeCalls.values()].some((call) => call.callerId === targetUserId || call.recipientId === targetUserId || call.callerId === userId || call.recipientId === userId)) {
+        emitCallError("That account is already on another call");
+        return;
+      }
+      if (!io.sockets.adapter.rooms.get(targetUserId)?.size) {
+        emitCallError("That account is currently offline");
+        return;
+      }
+
+      activeCalls.set(callId, { callerId: userId, recipientId: targetUserId, createdAt: Date.now() });
+      io.to(targetUserId).emit("call:invite", {
+        callId,
+        callType,
+        offer,
+        caller: {
+          id: caller.id,
+          displayName: caller.fullName,
+          username: caller.username,
+          avatarUrl: caller.avatarUrl,
+        },
+      });
+      const timeout = setTimeout(() => {
+        const current = activeCalls.get(callId);
+        if (!current || current.createdAt !== activeCalls.get(callId)?.createdAt) return;
+        activeCalls.delete(callId);
+        io.to(userId).emit("call:ended", { callId });
+        io.to(targetUserId).emit("call:ended", { callId });
+      }, 90_000);
+      timeout.unref?.();
+    });
+
+    socket.on("call:accept", (payload: { callId?: unknown } = {}) => {
+      const call = callForParticipant(payload.callId);
+      if (!call || call.recipientId !== userId) {
+        emitCallError("Call is no longer available");
+        return;
+      }
+      io.to(call.callerId).emit("call:accepted", { callId: payload.callId });
+    });
+
+    socket.on("call:reject", (payload: { callId?: unknown } = {}) => {
+      const call = callForParticipant(payload.callId);
+      if (!call || call.recipientId !== userId) return;
+      activeCalls.delete(payload.callId as string);
+      io.to(call.callerId).emit("call:rejected", { callId: payload.callId });
+    });
+
+    socket.on("call:answer", (payload: { callId?: unknown; answer?: unknown } = {}) => {
+      const call = callForParticipant(payload.callId);
+      if (!call || call.recipientId !== userId || !payload.answer || typeof payload.answer !== "object") return;
+      io.to(call.callerId).emit("call:answer", { callId: payload.callId, answer: payload.answer });
+    });
+
+    socket.on("call:ice", (payload: { callId?: unknown; candidate?: unknown } = {}) => {
+      const call = callForParticipant(payload.callId);
+      if (!call || !payload.candidate || typeof payload.candidate !== "object") return;
+      const peerId = call.callerId === userId ? call.recipientId : call.callerId;
+      io.to(peerId).emit("call:ice", { callId: payload.callId, candidate: payload.candidate });
+    });
+
+    socket.on("call:end", (payload: { callId?: unknown } = {}) => {
+      const call = callForParticipant(payload.callId);
+      if (!call) return;
+      activeCalls.delete(payload.callId as string);
+      const peerId = call.callerId === userId ? call.recipientId : call.callerId;
+      io.to(peerId).emit("call:ended", { callId: payload.callId });
+    });
+
     socket.on("disconnect", () => {
       for (const streamId of joinedStreams) {
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
+      }
+      for (const [callId, call] of activeCalls) {
+        if (call.callerId === userId || call.recipientId === userId) {
+          activeCalls.delete(callId);
+          const peerId = call.callerId === userId ? call.recipientId : call.callerId;
+          io.to(peerId).emit("call:ended", { callId });
+        }
       }
       onlineUsers.delete(userId);
       logger.info({ userId }, "socket disconnected");

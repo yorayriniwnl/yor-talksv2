@@ -119,7 +119,7 @@ export function PushNotificationManager() {
                 Enable Instant Push Alerts <span className="text-[0.62rem] font-mono px-1.5 py-0.2 rounded bg-primary/20 text-primary font-bold">LIVE</span>
               </h4>
               <p className="text-[0.68rem] text-muted-foreground mt-0.5 leading-snug">
-                Get notified on your lockscreen when creators post Stories, send DMs, or start WebRTC 4K video calls.
+            Get notified on your lockscreen when creators post Stories, send DMs, or start WebRTC calls.
               </p>
 
               <div className="flex items-center gap-2 mt-3">
