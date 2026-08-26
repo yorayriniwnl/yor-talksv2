@@ -292,19 +292,29 @@ export default function Auth() {
             Share a seed, find its people, and turn an unfinished thought into something real. Start in one trusted world and grow without borders.
           </p>
 
-          <div className="premium-auth-proof">
-            <div className="premium-auth-proof__item">
-              <Sparkles className="h-4 w-4" />
-              <div><strong>Your Orbit</strong><span>Control what enters your attention instead of serving an endless feed.</span></div>
+          <div className="premium-auth-preview" aria-label="Yor product preview">
+            <div className="premium-auth-preview__topline">
+              <span><i /> Live across worlds</span>
+              <strong>your signal, not a slot machine</strong>
             </div>
-            <div className="premium-auth-proof__item">
-              <Users className="h-4 w-4" />
-              <div><strong>Worlds with gravity</strong><span>People, projects, rituals, and memories held in one living place.</span></div>
+            <div className="premium-auth-preview__stage">
+              <div className="premium-auth-preview__stories" aria-hidden="true">
+                <span className="is-active"><b>Y</b></span>
+                <span><b>+</b></span>
+                <span><b>◎</b></span>
+                <span><b>✦</b></span>
+              </div>
+              <div className="premium-auth-preview__post">
+                <div className="premium-auth-preview__post-head"><span className="premium-auth-preview__avatar">A</span><div><strong>Aria is building</strong><small>@aria · Global world</small></div><Sparkles /></div>
+                <div className="premium-auth-preview__visual"><span>Make room<br />for the idea<br />before it is ready.</span><i>✦</i></div>
+                <div className="premium-auth-preview__post-foot"><span>♡ 2.4k</span><span>◌ 184 replies</span><span>↗ Share</span></div>
+              </div>
+              <div className="premium-auth-preview__rail">
+                <div><Users /><strong>Worlds</strong><span>People with shared gravity.</span></div>
+                <div><Shield /><strong>Trusted by design</strong><span>Audience controls on every post.</span></div>
+              </div>
             </div>
-            <div className="premium-auth-proof__item">
-              <Shield className="h-4 w-4" />
-              <div><strong>Trusted launch world</strong><span>Verified-email access with optional domain controls for every region.</span></div>
-            </div>
+            <div className="premium-auth-preview__footer"><span>Orbit</span><span>Pulse</span><span>Dream</span><span>Live</span><span>Creator Studio</span></div>
           </div>
 
           <p className="premium-auth-footnote">Private beta · email verification required</p>
