@@ -593,6 +593,7 @@ export const ledgerTransactionsTable = pgTable("ledger_transactions", {
   creditIdx: index("ledger_credit_idx").on(t.creditAccountId),
   debitIdx: index("ledger_debit_idx").on(t.debitAccountId),
   refIdx: index("ledger_ref_idx").on(t.referenceId),
+  uniqueReferenceIdx: uniqueIndex("ledger_ref_unique_idx").on(t.referenceId),
 }));
 
 export const subscriptionsTable = pgTable("subscriptions", {
