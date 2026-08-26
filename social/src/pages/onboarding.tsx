@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FloatingParticles } from '@/components/ui/FloatingParticles';
+import { WorldPreferencesForm } from '@/components/worlds/WorldPreferencesForm';
+import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 
 const INTERESTS = [
   "Artificial Intelligence", "Web3", "Startups", "Venture Capital",
@@ -23,7 +25,9 @@ const SUGGESTED_CREATORS = [
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState(1);
+  const updateWorldPreferences = useAppStore((state) => state.updateWorldPreferences);
+  const [step, setStep] = useState(0);
+  const [worldDraft, setWorldDraft] = useState<WorldPreferences>(DEFAULT_WORLD_PREFERENCES);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [followedIds, setFollowedIds] = useState<string[]>([]);
 
@@ -41,6 +45,7 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     try {
+      updateWorldPreferences(worldDraft);
       await api.request('/onboarding/complete', {
         method: 'POST',
         body: JSON.stringify({ interests: selectedInterests, followedCreatorIds: followedIds })
@@ -66,6 +71,25 @@ export default function Onboarding() {
         </div>
 
         <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div
+              key="step0"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2 text-center">
+                <h1 className="text-2xl font-black font-display uppercase tracking-wider">Where should Yor begin?</h1>
+                <p className="text-sm text-muted-foreground">Choose the language, time, and world radius that make the internet feel like yours.</p>
+              </div>
+              <WorldPreferencesForm value={worldDraft} onChange={(patch) => setWorldDraft((current) => ({ ...current, ...patch }))} idPrefix="onboarding-world" compact />
+              <Button onClick={() => setStep(1)} className="h-12 w-full rounded-xl bg-primary font-bold text-black">
+                Tune my signal <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+
           {step === 1 && (
             <motion.div 
               key="step1"

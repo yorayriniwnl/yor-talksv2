@@ -240,7 +240,7 @@ export default function Live() {
       <section className="flex flex-col justify-between gap-4 rounded-3xl border border-border/50 bg-card/40 p-6 sm:flex-row sm:items-end">
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-400"><Radio className="h-4 w-4" /> Live rooms</p>
-          <h1 className="font-display text-3xl font-black tracking-tight">Real-time campus conversations.</h1>
+          <h1 className="font-display text-3xl font-black tracking-tight">Real-time world conversations.</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Join a LiveKit room to watch or listen. Hosts publish from their browser and all payment actions remain server-verified.</p>
         </div>
         {currentUser && <GoLiveDialog onCreated={(stream) => setLocation(`/live/${stream.id}`)} />}
@@ -265,7 +265,7 @@ export default function Live() {
           ))}
         </section>
       )}
-      {!loading && !streams.length && <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground">No live rooms yet. Start the first one for your campus.</div>}
+      {!loading && !streams.length && <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground">No live rooms yet. Start the first one for your current world.</div>}
     </main>
   );
 }

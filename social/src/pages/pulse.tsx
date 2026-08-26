@@ -54,6 +54,7 @@ export default function Pulse() {
   const communities = useAppStore((state) => state.communities);
   const events = useAppStore((state) => state.events);
   const liveStreams = useAppStore((state) => state.liveStreams);
+  const worldPreferences = useAppStore((state) => state.worldPreferences);
   const loadEvents = useAppStore((state) => state.loadEvents);
   const loadStreams = useAppStore((state) => state.loadStreams);
   const [filter, setFilter] = useState<PulseFilter>('everything');
@@ -91,7 +92,7 @@ export default function Pulse() {
           <div className="pulse-heading__status">
             <i />
             <span><strong>{signals.length}</strong> signals in view</span>
-            <small>KIIT · first world</small>
+            <small>{worldPreferences.worldLabel} · {worldPreferences.discoveryRadius} view</small>
           </div>
         </header>
 

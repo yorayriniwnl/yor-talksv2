@@ -25,6 +25,7 @@ import {
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket } from '@/lib/socket-client';
+import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -466,6 +467,7 @@ function mapNotification(n: BackendNotification): Notification {
 
 interface AppState {
   currentUser: User | null;
+  worldPreferences: WorldPreferences;
   tokens: AuthTokens | null;
   isInitializing: boolean;
   hasMoreFeed?: boolean;
@@ -494,6 +496,7 @@ interface AppState {
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   initialize: () => Promise<void>;
+  loadWorldPreferences: () => Promise<void>;
 
   loadStories: () => Promise<void>;
   loadFeed: () => Promise<void>;
@@ -555,6 +558,7 @@ interface AppState {
   updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
   toggleMuteUser: (userId: string) => Promise<void>;
+  updateWorldPreferences: (patch: Partial<WorldPreferences>) => void;
   switchAccount: (userId: string) => void;
 }
 
@@ -568,6 +572,7 @@ function hydrateSessionData(get: () => AppState): void {
     get().loadNotifications(),
     get().loadConversations(),
     get().loadStories(),
+    get().loadWorldPreferences(),
   ]);
 }
 
@@ -605,6 +610,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      worldPreferences: DEFAULT_WORLD_PREFERENCES,
       tokens: null,
       isInitializing: false,
       authError: null,
@@ -741,6 +747,18 @@ export const useAppStore = create<AppState>()(
         setupRealtime(set, get);
         set({ isInitializing: false });
         hydrateSessionData(get);
+      },
+
+      loadWorldPreferences: async () => {
+        try {
+          const items = await api.getCreatorWorkspace();
+          const item = items.find((entry) => entry.kind === 'preference' && entry.itemKey === 'world');
+          if (!item) return;
+          const payload = item.payload as Partial<WorldPreferences>;
+          set((state) => ({ worldPreferences: { ...state.worldPreferences, ...payload } }));
+        } catch {
+          // Local persisted preferences remain the source of truth when offline.
+        }
       },
 
       loadFeed: async () => {
@@ -1460,6 +1478,14 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      updateWorldPreferences: (patch) => {
+        const next = { ...get().worldPreferences, ...patch };
+        set({ worldPreferences: next });
+        void api.saveCreatorWorkspaceItem({ kind: 'preference', itemKey: 'world', payload: next as unknown as Record<string, unknown> }).catch(() => {
+          // Local persistence keeps the preference available when the API is offline.
+        });
+      },
+
       addProfileComment: async (targetUserId, content) => {
         const currentUser = get().currentUser;
         if (!currentUser) return;
@@ -1523,7 +1549,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'yortalks-storage',
-      partialize: (state) => ({ currentUser: state.currentUser }),
+      partialize: (state) => ({ currentUser: state.currentUser, worldPreferences: state.worldPreferences }),
     }
   )
 );

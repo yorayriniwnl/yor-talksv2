@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { WorldSelector } from '@/components/worlds/WorldSelector';
 
 interface AppTopbarProps {
   onCompose: () => void;
@@ -65,6 +66,8 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
         </button>
 
         <div className="premium-topbar__actions">
+          <WorldSelector compact />
+
           <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread messages` : 'Messages'}>
             <MessageCircle className="h-[18px] w-[18px]" />
             {unreadMessages > 0 && <span className="premium-notification-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}

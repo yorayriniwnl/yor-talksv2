@@ -2183,3 +2183,15 @@ html.yor-accessibility-reduced-motion *::after {
   scroll-behavior: auto !important;
   transition-duration: 0.01ms !important;
 }
+
+html.yor-low-bandwidth .app-atmosphere,
+html.yor-low-bandwidth .aurora-bg,
+html.yor-low-bandwidth .particle,
+html.yor-low-bandwidth video[autoplay] {
+  display: none !important;
+}
+
+html.yor-low-bandwidth img,
+html.yor-low-bandwidth video {
+  filter: saturate(0.82);
+}

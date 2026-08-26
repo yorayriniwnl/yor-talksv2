@@ -12,6 +12,7 @@ import {
   Flag,
   FolderHeart,
   Gauge,
+  Globe2,
   Layers3,
   Lightbulb,
   LockKeyhole,
@@ -37,12 +38,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { cn } from '@/lib/utils';
+import { WorldPreferencesForm } from '@/components/worlds/WorldPreferencesForm';
+import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 
-type Panel = 'overview' | 'safety' | 'creator' | 'discovery' | 'trust' | 'accessibility';
+type Panel = 'overview' | 'world' | 'safety' | 'creator' | 'discovery' | 'trust' | 'accessibility';
 type CreatorTab = 'drafts' | 'schedule' | 'collab' | 'analytics';
 
 const PANELS: Array<{ id: Panel; label: string; icon: typeof Gauge }> = [
   { id: 'overview', label: 'Command center', icon: Gauge },
+  { id: 'world', label: 'World layer', icon: Globe2 },
   { id: 'safety', label: 'Content passport', icon: ShieldCheck },
   { id: 'creator', label: 'Creator pipeline', icon: Rocket },
   { id: 'discovery', label: 'Discovery worlds', icon: Compass },
@@ -97,6 +101,8 @@ export default function ControlRoom() {
   const liveStreams = useAppStore((state) => state.liveStreams);
   const communities = useAppStore((state) => state.communities);
   const updateContentFilter = useAppStore((state) => state.updateContentFilter);
+  const worldPreferences = useAppStore((state) => state.worldPreferences);
+  const updateWorldPreferences = useAppStore((state) => state.updateWorldPreferences);
 
   const [panel, setPanel] = useState<Panel>('overview');
   const [creatorTab, setCreatorTab] = useState<CreatorTab>('drafts');
@@ -119,6 +125,7 @@ export default function ControlRoom() {
   const [highContrast, setHighContrast] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [captions, setCaptions] = useState(true);
+  const [worldDraft, setWorldDraft] = useState<WorldPreferences>(worldPreferences ?? DEFAULT_WORLD_PREFERENCES);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +137,7 @@ export default function ControlRoom() {
   }, []);
 
   const preferenceItem = workspace.find((item) => item.kind === 'preference' && item.itemKey === 'accessibility');
+  const worldPreferenceItem = workspace.find((item) => item.kind === 'preference' && item.itemKey === 'world');
   useEffect(() => {
     const payload = itemPayload(preferenceItem);
     setLargeText(payload.largeText === true);
@@ -137,6 +145,13 @@ export default function ControlRoom() {
     setReducedMotion(payload.reducedMotion === true);
     setCaptions(payload.captions !== false);
   }, [preferenceItem]);
+
+  useEffect(() => {
+    if (!worldPreferenceItem) return;
+    const payload = itemPayload(worldPreferenceItem) as Partial<WorldPreferences>;
+    setWorldDraft((current) => ({ ...current, ...payload }));
+    updateWorldPreferences(payload);
+  }, [worldPreferenceItem]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('yor-accessibility-large-text', largeText);
@@ -173,6 +188,12 @@ export default function ControlRoom() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not remove this item');
     }
+  };
+
+  const saveWorldPreferences = async () => {
+    updateWorldPreferences(worldDraft);
+    const saved = await saveItem('preference', 'world', worldDraft as unknown as Record<string, unknown>);
+    if (saved) toast.success(`World settings saved for ${worldDraft.worldLabel}`);
   };
 
   const myPosts = useMemo(() => posts.filter((post) => post.authorId === currentUser?.id), [currentUser?.id, posts]);
@@ -282,9 +303,9 @@ export default function ControlRoom() {
       <div className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-4 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
-            <p className="mb-1 flex items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-primary"><Sparkles className="h-3.5 w-3.5" /> Yor OS · KIIT first world</p>
+            <p className="mb-1 flex items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-primary"><Sparkles className="h-3.5 w-3.5" /> Yor OS · {worldPreferences.worldLabel} world</p>
             <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">Control Room</h1>
-            <p className="mt-1 max-w-2xl text-xs text-muted-foreground sm:text-sm">One cockpit for your audience, identity, content pipeline, discovery signal, and campus impact.</p>
+            <p className="mt-1 max-w-2xl text-xs text-muted-foreground sm:text-sm">One cockpit for your audience, identity, content pipeline, discovery signal, and impact across worlds.</p>
           </div>
           <div className="hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-right sm:block">
             <p className="text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Creator health</p>
@@ -307,7 +328,7 @@ export default function ControlRoom() {
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Metric label="Published signal" value={myPosts.length + myArticles.length + myVideos.length} detail="Posts, articles, and videos" icon={Layers3} />
               <Metric label="Engagement" value={totalEngagement.toLocaleString()} detail="Resonances, replies, views" icon={BarChart3} />
-              <Metric label="Worlds active" value={communities.length} detail="Communities across campus" icon={Compass} />
+              <Metric label="Worlds active" value={communities.length} detail="Communities in your current orbit" icon={Compass} />
               <Metric label="Live rooms" value={myLiveRooms.length} detail="Your scheduled and live rooms" icon={Radio} />
             </section>
 
@@ -327,13 +348,13 @@ export default function ControlRoom() {
               <div className="surface-1 rounded-3xl border border-border/40 p-6">
                 <div className="mb-5 flex items-center justify-between"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Content Passport</p><h2 className="mt-1 font-display text-xl font-black">Your defaults</h2></div><ShieldCheck className="h-5 w-5 text-primary" /></div>
                 <ContentCategoryBadge value={categoryCounts[0]?.value} className="mb-4" />
-                <div className="space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-muted-foreground">Audience shield</span><strong>{CONTENT_RATING_OPTIONS.find((option) => option.value === contentFilter)?.label}</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Identity</span><strong>{currentUser?.emailVerified ? 'KIIT verified' : 'Verification needed'}</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Handle</span><strong>@{currentUser?.username}</strong></div></div>
+                <div className="space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-muted-foreground">Audience shield</span><strong>{CONTENT_RATING_OPTIONS.find((option) => option.value === contentFilter)?.label}</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Identity</span><strong>{currentUser?.emailVerified ? 'Identity verified' : 'Verification needed'}</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Handle</span><strong>@{currentUser?.username}</strong></div></div>
                 <button onClick={() => setPanel('safety')} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-border/40 px-3 py-2.5 text-xs font-bold text-primary transition hover:bg-primary/10">Tune your passport <ChevronRight className="h-4 w-4" /></button>
               </div>
             </section>
 
             <section className="surface-1 rounded-3xl border border-border/40 p-6">
-              <div className="mb-5 flex items-end justify-between gap-3"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Campus quests</p><h2 className="mt-1 font-display text-xl font-black">Turn the product into a streak.</h2></div><Megaphone className="h-5 w-5 text-accent" /></div>
+              <div className="mb-5 flex items-end justify-between gap-3"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">World quests</p><h2 className="mt-1 font-display text-xl font-black">Turn the product into a streak.</h2></div><Megaphone className="h-5 w-5 text-accent" /></div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {QUESTS.map((quest) => {
                   const done = itemPayload(workspace.find((item) => item.kind === 'quest' && item.itemKey === quest.key)).completed === true;
@@ -342,6 +363,30 @@ export default function ControlRoom() {
               </div>
             </section>
           </div>
+        )}
+
+        {panel === 'world' && (
+          <section className="space-y-6">
+            <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.16] via-card to-accent/[0.08] p-6 sm:p-8">
+              <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
+              <div className="relative max-w-2xl">
+                <Globe2 className="mb-5 h-8 w-8 text-primary" />
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-primary">Portable identity layer</p>
+                <h2 className="mt-2 font-display text-3xl font-black tracking-tight">Your world follows you.</h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Set the context once, then move between a city, a campus, an interest, or the whole planet without rebuilding your experience.</p>
+              </div>
+            </div>
+
+            <div className="surface-1 rounded-3xl border border-border/40 p-6">
+              <div className="mb-6 flex items-end justify-between gap-3"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">World settings</p><h2 className="mt-1 font-display text-xl font-black">Choose your context</h2></div><span className="rounded-full bg-primary/10 px-3 py-1 text-[0.65rem] font-bold text-primary">{worldDraft.worldLabel}</span></div>
+              <WorldPreferencesForm value={worldDraft} onChange={(patch) => setWorldDraft((current) => ({ ...current, ...patch }))} idPrefix="control-world" />
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-5"><p className="max-w-xl text-xs leading-relaxed text-muted-foreground">Translation, captions, and low-bandwidth preferences are saved now. Provider-backed translation, dubbing, and multi-currency payouts can plug into this layer without changing your identity model.</p><Button onClick={() => void saveWorldPreferences()} disabled={saving} className="rounded-2xl font-bold">{saving ? 'Saving…' : 'Save world settings'}</Button></div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[['Cross-border', 'Bridge communities across languages and timezones.'], ['Portable trust', 'Keep your handle, safety choices, and creator context consistent.'], ['Local control', 'Choose nearby discovery without giving up the wider world.']].map(([title, description]) => <div key={title} className="surface-1 rounded-2xl border border-border/40 p-4"><h3 className="text-sm font-bold">{title}</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p></div>)}
+            </div>
+          </section>
         )}
 
         {panel === 'safety' && (

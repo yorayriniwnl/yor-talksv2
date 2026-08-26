@@ -69,6 +69,7 @@ export default function Home() {
   const posts = useAppStore((state) => state.posts);
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
+  const worldPreferences = useAppStore((state) => state.worldPreferences);
   const communities = useAppStore((state) => state.communities);
   const followUser = useAppStore((state) => state.followUser);
   const unfollowUser = useAppStore((state) => state.unfollowUser);
@@ -153,7 +154,7 @@ export default function Home() {
       <div className="orbit-wrap">
         <section className="home-feed-heading">
           <div>
-            <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> Home · KIIT first world</span>
+            <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> Home · {worldPreferences.worldLabel} world</span>
             <h1>{greeting()}, {firstName}.</h1>
           </div>
           <Link href="/dream" className="home-dream-link">
@@ -342,7 +343,7 @@ export default function Home() {
               </section>
             )}
 
-            <p className="orbit-meta">Yor · First world online at KIIT · 2026</p>
+            <p className="orbit-meta">Yor · {worldPreferences.worldLabel} world · {worldPreferences.timezone} · 2026</p>
           </aside>
         </div>
       </div>

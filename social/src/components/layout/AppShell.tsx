@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
@@ -24,6 +24,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [location, setLocation] = useLocation();
   const currentUser = useAppStore((state) => state.currentUser);
+  const worldPreferences = useAppStore((state) => state.worldPreferences);
 
   const conversations = useAppStore((state) => state.conversations);
   const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
@@ -31,6 +32,11 @@ export function AppShell({ children }: AppShellProps) {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('yor-low-bandwidth', worldPreferences.lowBandwidth);
+    return () => document.documentElement.classList.remove('yor-low-bandwidth');
+  }, [worldPreferences.lowBandwidth]);
 
   const primaryNavItems = [
     { icon: House, label: 'Home', path: '/' },
@@ -82,7 +88,7 @@ export function AppShell({ children }: AppShellProps) {
             {!sidebarCollapsed && (
               <div className="flex min-w-0 flex-col">
                 <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor</span>
-                <span className="mt-0.5 whitespace-nowrap text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase font-semibold">First world · KIIT</span>
+                <span className="mt-0.5 whitespace-nowrap text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase font-semibold">Current world · {worldPreferences.worldLabel}</span>
               </div>
             )}
           </button>

@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { WorldSelector } from '@/components/worlds/WorldSelector';
 
 const WORLD_FILTERS = ['All worlds', 'Joined', 'Technology', 'Creative', 'Gaming', 'Culture'] as const;
 
@@ -44,6 +45,7 @@ function matchesFilter(name: string, description: string, category: string, filt
 
 export default function Worlds() {
   const communities = useAppStore((state) => state.communities);
+  const worldPreferences = useAppStore((state) => state.worldPreferences);
   const toggleMembership = useAppStore((state) => state.toggleCommunityMembership);
   const createCommunity = useAppStore((state) => state.createCommunity);
   const [query, setQuery] = useState('');
@@ -91,26 +93,27 @@ export default function Worlds() {
             <span className="yor-eyebrow"><Globe2 className="h-3.5 w-3.5" /> Worlds</span>
             <h1>Find a corner of the internet that feels alive.</h1>
             <p>
-              Worlds hold people, rituals, projects, and memories around one shared obsession. KIIT is the first world; the shape is built to travel.
+              Worlds hold people, rituals, projects, and memories around one shared obsession. Start close to home, then let the right ideas travel across every border.
             </p>
             <div className="worlds-hero__actions">
               <Button onClick={() => setShowCreate(true)} className="yor-primary-action">
                 <Plus className="h-4 w-4" /> Create a world
               </Button>
+              <WorldSelector />
               <Link href="/explore" className="yor-secondary-action">
                 Discover people <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
 
-          <div className="worlds-first-card" aria-label="KIIT is Yor's first world">
+          <div className="worlds-first-card" aria-label={`${worldPreferences.worldLabel} is your current world`}>
             <div className="worlds-first-card__orbit" aria-hidden="true">
               <span /><span /><span />
             </div>
             <div className="worlds-first-card__content">
-              <span className="worlds-first-card__status"><i /> First world online</span>
-              <strong>KIIT</strong>
-              <p>A trusted starting point for a much larger universe.</p>
+              <span className="worlds-first-card__status"><i /> Current world online</span>
+              <strong>{worldPreferences.worldLabel}</strong>
+              <p>Your chosen starting point for a much larger universe.</p>
               <div>
                 <span>{communities.length}<small>spaces</small></span>
                 <span>{joinedCount}<small>joined</small></span>

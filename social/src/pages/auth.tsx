@@ -140,7 +140,7 @@ export default function Auth() {
             <div className="premium-brand-mark">Y</div>
             <div>
               <p className="premium-brand-name">Yor</p>
-              <p className="premium-brand-meta">First world · KIIT</p>
+              <p className="premium-brand-meta">Global worlds · KIIT beta</p>
             </div>
           </div>
 
@@ -163,7 +163,7 @@ export default function Auth() {
             </div>
             <div className="premium-auth-proof__item">
               <Shield className="h-4 w-4" />
-              <div><strong>Trusted first world</strong><span>College-only access while the global product earns its shape.</span></div>
+              <div><strong>Trusted launch world</strong><span>College-only access while the global product earns its shape.</span></div>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export default function Auth() {
       <section className="premium-auth-form-shell">
         <div className="premium-auth-mobile-brand">
           <div className="premium-brand-mark">Y</div>
-          <div><p className="premium-brand-name">Yor</p><p className="premium-brand-meta">First world · KIIT</p></div>
+          <div><p className="premium-brand-name">Yor</p><p className="premium-brand-meta">Global worlds · KIIT beta</p></div>
         </div>
 
         <div className="premium-auth-form">
