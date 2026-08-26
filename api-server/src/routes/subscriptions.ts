@@ -44,7 +44,7 @@ router.post("/subscribe", authenticate, validateBody(createSubscriptionOrderSche
 
 router.post("/:id/verify", authenticate, validateParams(subscriptionIdParamSchema), validateBody(verifySubscriptionPaymentSchema), async (req, res) => {
   try {
-    const result = await subscriptionService.verifyPayment({ subscriberId: req.user!.id, ...req.body });
+    const result = await subscriptionService.verifyPayment({ subscriberId: req.user!.id, subscriptionId: paramId(req.params.id), ...req.body });
     return res.status(200).json(createResponse("Membership payment verified", result));
   } catch (error) {
     if (error instanceof PaymentsNotConfiguredError) {

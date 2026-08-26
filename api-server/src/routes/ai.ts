@@ -55,6 +55,9 @@ router.get("/search", authenticate, async (req, res) => {
     }
     
     const query = q.trim().slice(0, 200);
+    if (!query) {
+      return res.status(400).json(createResponse("Query must not be empty", null, {}, ["Query must not be empty"]));
+    }
     const [shielded, filter] = await Promise.all([
       contactShieldService.getShieldedUserIds(req.user!.id),
       contentSafetyService.getViewerFilter(req.user!.id),

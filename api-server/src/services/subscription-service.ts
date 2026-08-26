@@ -150,10 +150,11 @@ export class SubscriptionService {
     };
   }
 
-  async verifyPayment(input: { subscriberId: string; orderId: string; paymentId: string; signature: string }) {
+  async verifyPayment(input: { subscriberId: string; subscriptionId: string; orderId: string; paymentId: string; signature: string }) {
     const [order] = await db.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.providerOrderId, input.orderId));
     if (!order) throw new SubscriptionOrderNotFoundError("Membership payment order not found");
     if (order.subscriberId !== input.subscriberId) throw new SubscriptionOrderForbiddenError("This membership payment is not yours");
+    if (order.subscriptionId !== input.subscriptionId) throw new SubscriptionOrderForbiddenError("This membership payment does not match the subscription");
 
     if (order.status === "paid") {
       const [subscription] = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, order.subscriptionId));

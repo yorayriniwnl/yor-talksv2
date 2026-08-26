@@ -182,26 +182,28 @@ export class PostRepository {
   }
 
   async votePoll(postId: string, optionId: string, userId: string): Promise<boolean> {
-    const [poll] = await db.select({ id: postPollsTable.id })
-      .from(postPollsTable)
-      .where(eq(postPollsTable.postId, postId))
-      .limit(1);
-    if (!poll) return false;
+    return db.transaction(async (tx) => {
+      const [poll] = await tx.select({ id: postPollsTable.id })
+        .from(postPollsTable)
+        .where(eq(postPollsTable.postId, postId))
+        .limit(1);
+      if (!poll) return false;
 
-    const [option] = await db.select({ id: postPollOptionsTable.id })
-      .from(postPollOptionsTable)
-      .where(and(eq(postPollOptionsTable.id, optionId), eq(postPollOptionsTable.pollId, poll.id)))
-      .limit(1);
-    if (!option) return false;
+      const [option] = await tx.select({ id: postPollOptionsTable.id })
+        .from(postPollOptionsTable)
+        .where(and(eq(postPollOptionsTable.id, optionId), eq(postPollOptionsTable.pollId, poll.id)))
+        .limit(1);
+      if (!option) return false;
 
-    const inserted = await db.insert(postPollVotesTable)
-      .values({ pollId: poll.id, optionId, userId })
-      .onConflictDoNothing()
-      .returning({ pollId: postPollVotesTable.pollId });
-    if (inserted.length > 0) {
-      await db.execute(sql`UPDATE post_poll_options SET vote_count = vote_count + 1 WHERE id = ${optionId}`);
-    }
-    return true;
+      const inserted = await tx.insert(postPollVotesTable)
+        .values({ pollId: poll.id, optionId, userId })
+        .onConflictDoNothing()
+        .returning({ pollId: postPollVotesTable.pollId });
+      if (inserted.length > 0) {
+        await tx.execute(sql`UPDATE post_poll_options SET vote_count = vote_count + 1 WHERE id = ${optionId}`);
+      }
+      return true;
+    });
   }
 
   async getPolls(postIds: string[], userId?: string): Promise<Map<string, PostRecord["poll"]>> {

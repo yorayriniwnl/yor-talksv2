@@ -13,7 +13,7 @@ export class SearchService {
 
   async search(query: string, viewerId?: string) {
     const shieldedUserIds = viewerId ? [...await this.contactShieldService.getShieldedUserIds(viewerId)] : [];
-    const normalized = query.toLowerCase();
+    const normalized = query.trim().toLowerCase();
     const contentFilter = await this.contentSafetyService.getViewerFilter(viewerId);
     const [users, candidatePosts] = await Promise.all([
       this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(normalized)),

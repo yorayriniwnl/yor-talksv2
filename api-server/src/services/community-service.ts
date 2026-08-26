@@ -55,12 +55,15 @@ export class CommunityService {
   async joinCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
     const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
-    if (!community.memberIds.includes(userId)) {
-      const memberIds = [...community.memberIds, userId];
-      const [updated] = await db.update(communitiesTable).set({ memberIds, updatedAt: new Date().toISOString() }).where(eq(communitiesTable.id, community.id)).returning();
-      return updated as CommunityRecord;
-    }
-    return community;
+    const [updated] = await db.update(communitiesTable).set({
+      memberIds: sql`CASE
+        WHEN COALESCE(${communitiesTable.memberIds}, '[]'::jsonb) ? ${userId}
+          THEN COALESCE(${communitiesTable.memberIds}, '[]'::jsonb)
+        ELSE COALESCE(${communitiesTable.memberIds}, '[]'::jsonb) || jsonb_build_array(${userId})
+      END`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(communitiesTable.id, community.id)).returning();
+    return (updated as CommunityRecord | undefined) ?? community;
   }
 
   async leaveCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
@@ -69,9 +72,15 @@ export class CommunityService {
     if (community.ownerId === userId) {
       throw new Error("The owner can't leave their own community");
     }
-    const memberIds = community.memberIds.filter((id) => id !== userId);
-    const [updated] = await db.update(communitiesTable).set({ memberIds, updatedAt: new Date().toISOString() }).where(eq(communitiesTable.id, community.id)).returning();
-    return updated as CommunityRecord;
+    const [updated] = await db.update(communitiesTable).set({
+      memberIds: sql`COALESCE((
+        SELECT jsonb_agg(to_jsonb(value))
+        FROM jsonb_array_elements_text(COALESCE(${communitiesTable.memberIds}, '[]'::jsonb)) AS values(value)
+        WHERE value <> ${userId}
+      ), '[]'::jsonb)`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(communitiesTable.id, community.id)).returning();
+    return (updated as CommunityRecord | undefined) ?? community;
   }
 
   async listDiscussions(communityId: string, viewerId?: string): Promise<CommunityDiscussion[]> {
@@ -103,10 +112,14 @@ export class CommunityService {
       createdAt: new Date().toISOString(),
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    const announcements = [...(Array.isArray(community.announcements) ? community.announcements : []), discussion];
-    await db.update(communitiesTable)
-      .set({ announcements, postsCount: sql`${communitiesTable.postsCount} + 1`, updatedAt: new Date().toISOString() })
-      .where(eq(communitiesTable.id, community.id));
+    await db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(communitiesTable).where(eq(communitiesTable.id, community.id)).for("update");
+      if (!locked || !(locked.memberIds as string[]).includes(userId)) throw new Error("Join this community before starting a discussion");
+      const announcements = [...(Array.isArray(locked.announcements) ? locked.announcements : []), discussion];
+      await tx.update(communitiesTable)
+        .set({ announcements, postsCount: sql`${communitiesTable.postsCount} + 1`, updatedAt: new Date().toISOString() })
+        .where(eq(communitiesTable.id, community.id));
+    });
     return discussion;
   }
 
@@ -114,18 +127,22 @@ export class CommunityService {
     const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
     if (!community.memberIds.includes(userId)) throw new Error("Join this community before liking a discussion");
-    const discussions = (Array.isArray(community.announcements) ? community.announcements : []) as CommunityDiscussion[];
-    const index = discussions.findIndex((discussion) => discussion.id === discussionId);
-    if (index < 0) return undefined;
-    const current = discussions[index];
-    if (!current.authorId) return undefined;
-    const likedBy = Array.isArray(current.likedBy) ? current.likedBy : [];
-    if (!likedBy.includes(userId)) {
-      discussions[index] = { ...current, likedBy: [...likedBy, userId], likes: (current.likes ?? 0) + 1 };
-      await db.update(communitiesTable)
-        .set({ announcements: discussions, updatedAt: new Date().toISOString() })
-        .where(eq(communitiesTable.id, community.id));
-    }
-    return discussions[index];
+    return db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(communitiesTable).where(eq(communitiesTable.id, community.id)).for("update");
+      if (!locked || !(locked.memberIds as string[]).includes(userId)) throw new Error("Join this community before liking a discussion");
+      const discussions = (Array.isArray(locked.announcements) ? locked.announcements : []) as CommunityDiscussion[];
+      const index = discussions.findIndex((discussion) => discussion.id === discussionId);
+      if (index < 0) return undefined;
+      const current = discussions[index];
+      if (!current.authorId) return undefined;
+      const likedBy = Array.isArray(current.likedBy) ? current.likedBy : [];
+      if (!likedBy.includes(userId)) {
+        discussions[index] = { ...current, likedBy: [...likedBy, userId], likes: (current.likes ?? 0) + 1 };
+        await tx.update(communitiesTable)
+          .set({ announcements: discussions, updatedAt: new Date().toISOString() })
+          .where(eq(communitiesTable.id, community.id));
+      }
+      return discussions[index];
+    });
   }
 }

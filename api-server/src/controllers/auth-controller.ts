@@ -6,20 +6,22 @@ import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
 
 export class AuthController {
+  private readonly refreshCookieSameSite = env.NODE_ENV === "production" ? "none" : "lax";
+
   constructor(private readonly authService: AuthService) {}
 
   private setRefreshCookie(res: Response, refreshToken: string): void {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: this.refreshCookieSameSite,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
 
   private clearRefreshCookie(res: Response): void {
-    res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+    res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: this.refreshCookieSameSite, path: "/" });
   }
 
   private clientTokens(tokens: { accessToken: string; expiresAt?: string }) {

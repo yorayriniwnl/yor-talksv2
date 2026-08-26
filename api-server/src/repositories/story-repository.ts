@@ -76,24 +76,26 @@ export class StoryRepository {
   }
 
   async votePoll(storyId: string, optionId: string, userId: string): Promise<boolean> {
-    const [poll] = await db.select({ id: storyPollsTable.id })
-      .from(storyPollsTable)
-      .where(eq(storyPollsTable.storyId, storyId))
-      .limit(1);
-    if (!poll) return false;
-    const [option] = await db.select({ id: storyPollOptionsTable.id })
-      .from(storyPollOptionsTable)
-      .where(and(eq(storyPollOptionsTable.id, optionId), eq(storyPollOptionsTable.pollId, poll.id)))
-      .limit(1);
-    if (!option) return false;
-    const inserted = await db.insert(storyPollVotesTable)
-      .values({ pollId: poll.id, optionId, userId })
-      .onConflictDoNothing()
-      .returning({ pollId: storyPollVotesTable.pollId });
-    if (inserted.length > 0) {
-      await db.execute(sql`UPDATE story_poll_options SET vote_count = vote_count + 1 WHERE id = ${optionId}`);
-    }
-    return true;
+    return db.transaction(async (tx) => {
+      const [poll] = await tx.select({ id: storyPollsTable.id })
+        .from(storyPollsTable)
+        .where(eq(storyPollsTable.storyId, storyId))
+        .limit(1);
+      if (!poll) return false;
+      const [option] = await tx.select({ id: storyPollOptionsTable.id })
+        .from(storyPollOptionsTable)
+        .where(and(eq(storyPollOptionsTable.id, optionId), eq(storyPollOptionsTable.pollId, poll.id)))
+        .limit(1);
+      if (!option) return false;
+      const inserted = await tx.insert(storyPollVotesTable)
+        .values({ pollId: poll.id, optionId, userId })
+        .onConflictDoNothing()
+        .returning({ pollId: storyPollVotesTable.pollId });
+      if (inserted.length > 0) {
+        await tx.execute(sql`UPDATE story_poll_options SET vote_count = vote_count + 1 WHERE id = ${optionId}`);
+      }
+      return true;
+    });
   }
 
   async getPolls(storyIds: string[], userId?: string): Promise<Map<string, StoryRecord["poll"]>> {

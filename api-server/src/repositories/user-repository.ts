@@ -15,21 +15,22 @@ export class UserRepository {
   }
 
   async followUser(followerId: string, followingId: string): Promise<boolean> {
-    const inserted = await db.insert(userFollowsTable).values({ followerId, followingId }).onConflictDoNothing().returning({ followerId: userFollowsTable.followerId });
-    if (inserted.length > 0) {
-      await db.execute(sql`UPDATE users SET following_count = following_count + 1 WHERE id = ${followerId}`);
-      await db.execute(sql`UPDATE users SET follower_count = follower_count + 1 WHERE id = ${followingId}`);
+    return db.transaction(async (tx) => {
+      const inserted = await tx.insert(userFollowsTable).values({ followerId, followingId }).onConflictDoNothing().returning({ followerId: userFollowsTable.followerId });
+      if (inserted.length === 0) return false;
+      await tx.execute(sql`UPDATE users SET following_count = following_count + 1 WHERE id = ${followerId}`);
+      await tx.execute(sql`UPDATE users SET follower_count = follower_count + 1 WHERE id = ${followingId}`);
       return true;
-    }
-    return false;
+    });
   }
 
   async unfollowUser(followerId: string, followingId: string): Promise<void> {
-    const deleted = await db.delete(userFollowsTable).where(and(eq(userFollowsTable.followerId, followerId), eq(userFollowsTable.followingId, followingId))).returning();
-    if (deleted.length > 0) {
-      await db.execute(sql`UPDATE users SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}`);
-      await db.execute(sql`UPDATE users SET follower_count = GREATEST(0, follower_count - 1) WHERE id = ${followingId}`);
-    }
+    await db.transaction(async (tx) => {
+      const deleted = await tx.delete(userFollowsTable).where(and(eq(userFollowsTable.followerId, followerId), eq(userFollowsTable.followingId, followingId))).returning();
+      if (deleted.length === 0) return;
+      await tx.execute(sql`UPDATE users SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}`);
+      await tx.execute(sql`UPDATE users SET follower_count = GREATEST(0, follower_count - 1) WHERE id = ${followingId}`);
+    });
   }
 
   async findFollowRequest(requesterId: string, targetId: string): Promise<FollowRequestRecord | undefined> {
