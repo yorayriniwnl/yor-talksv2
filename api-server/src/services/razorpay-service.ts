@@ -55,10 +55,10 @@ async function parseProviderResponse<T>(response: Response): Promise<T> {
     body = undefined;
   }
   if (!response.ok) {
-    const description = typeof body === "object" && body !== null && "error" in body
-      ? String((body as { error?: { description?: string } }).error?.description || "unknown provider error")
-      : "unknown provider error";
-    throw new PaymentProviderError(`Razorpay rejected the request (${response.status}): ${description}`);
+    // Provider descriptions are not stable client contracts and may contain
+    // account-specific data. Log details at the provider boundary if needed,
+    // but return only a safe status-based error to callers.
+    throw new PaymentProviderError(`Razorpay rejected the request (${response.status})`);
   }
   return body as T;
 }

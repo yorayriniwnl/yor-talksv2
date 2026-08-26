@@ -75,7 +75,7 @@ export class AuthController {
       if (error instanceof EmailVerificationRequiredError) {
         return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
       }
-      return res.status(401).json(createResponse("Login failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(401).json(createResponse("Login failed", null, {}, ["Invalid credentials"]));
     }
   };
 
@@ -91,7 +91,7 @@ export class AuthController {
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
       }
-      return res.status(401).json(createResponse("Google sign-in failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(401).json(createResponse("Google sign-in failed", null, {}, ["Google sign-in failed"]));
     }
   };
 
@@ -112,7 +112,7 @@ export class AuthController {
       if (error instanceof EmailDeliveryProviderError) {
         return res.status(502).json(createResponse("Email sign-in delivery failed", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Sign-in code request failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Sign-in code request failed", null, {}, ["Sign-in code request failed"]));
     }
   };
 
@@ -128,7 +128,7 @@ export class AuthController {
       if (error instanceof EmailOtpInvalidError) {
         return res.status(401).json(createResponse("Email sign-in failed", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Email sign-in failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Email sign-in failed", null, {}, ["Email sign-in failed"]));
     }
   };
 
@@ -177,7 +177,7 @@ export class AuthController {
       const challenges = await this.authService.listPendingTwoFactorChallenges(userId);
       return res.status(200).json(createResponse("Pending sign-in approvals", challenges));
     } catch (error) {
-      return res.status(500).json(createResponse("Could not load sign-in approvals", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not load sign-in approvals", null, {}, ["Sign-in approvals are temporarily unavailable"]));
     }
   };
 
@@ -189,7 +189,7 @@ export class AuthController {
       }
       return res.status(200).json(createResponse("Sign-in request status", challenge));
     } catch (error) {
-      return res.status(500).json(createResponse("Could not check sign-in request", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not check sign-in request", null, {}, ["Sign-in request status is temporarily unavailable"]));
     }
   };
 
@@ -205,7 +205,7 @@ export class AuthController {
       }
       return res.status(200).json(createResponse("Sign-in approved", null));
     } catch (error) {
-      return res.status(500).json(createResponse("Could not approve sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not approve sign-in", null, {}, ["Sign-in approval is temporarily unavailable"]));
     }
   };
 
@@ -221,7 +221,7 @@ export class AuthController {
       }
       return res.status(200).json(createResponse("Sign-in denied", null));
     } catch (error) {
-      return res.status(500).json(createResponse("Could not deny sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not deny sign-in", null, {}, ["Sign-in approval is temporarily unavailable"]));
     }
   };
 
@@ -234,7 +234,7 @@ export class AuthController {
       this.setRefreshCookie(res, result.tokens.refreshToken);
       return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
-      return res.status(500).json(createResponse("Could not complete sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not complete sign-in", null, {}, ["Sign-in completion is temporarily unavailable"]));
     }
   };
 
@@ -254,7 +254,7 @@ export class AuthController {
       this.setRefreshCookie(res, tokens.refreshToken);
       return res.status(200).json(createResponse("Token refreshed", this.clientTokens(tokens), { authenticated: true }));
     } catch (error) {
-      return res.status(500).json(createResponse("Token refresh failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Token refresh failed", null, {}, ["Token refresh is temporarily unavailable"]));
     }
   };
 
@@ -281,7 +281,7 @@ export class AuthController {
       if (error instanceof EmailDeliveryProviderError) {
         return res.status(502).json(createResponse("Email verification delivery failed", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Could not send verification email", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Could not send verification email", null, {}, ["Verification email could not be sent"]));
     }
   };
 
@@ -290,7 +290,7 @@ export class AuthController {
       await this.authService.logoutAllDevices(req.user?.id ?? "");
       return res.status(200).json(createResponse("All sessions revoked", null));
     } catch (error) {
-      return res.status(500).json(createResponse("Failed to revoke sessions", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Failed to revoke sessions", null, {}, ["Sessions could not be revoked"]));
     }
   };
 
@@ -310,7 +310,7 @@ export class AuthController {
       if (error instanceof EmailDeliveryProviderError) {
         return res.status(502).json(createResponse("Password reset delivery failed", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Password reset failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Password reset failed", null, {}, ["Password reset is temporarily unavailable"]));
     }
   };
 
@@ -322,7 +322,7 @@ export class AuthController {
       }
       return res.status(200).json(createResponse("Password updated. Please log in again.", null));
     } catch (error) {
-      return res.status(500).json(createResponse("Password reset failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Password reset failed", null, {}, ["Password reset is temporarily unavailable"]));
     }
   };
 
@@ -338,7 +338,7 @@ export class AuthController {
       if (error instanceof EmailDeliveryProviderError) {
         return res.status(502).json(createResponse("Email verification delivery failed", null, {}, [error.message]));
       }
-      return res.status(500).json(createResponse("Failed to send verification email", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Failed to send verification email", null, {}, ["Verification email could not be sent"]));
     }
   };
 
@@ -351,7 +351,7 @@ export class AuthController {
       }
       return res.status(200).json(createResponse("Email verified", { user: toOwnUser(user) }));
     } catch (error) {
-      return res.status(500).json(createResponse("Email verification failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      return res.status(500).json(createResponse("Email verification failed", null, {}, ["Email verification is temporarily unavailable"]));
     }
   };
 }

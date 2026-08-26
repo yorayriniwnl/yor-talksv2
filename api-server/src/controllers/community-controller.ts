@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import { UserRepository } from "../repositories/user-repository.js";
 import { CommunityService } from "../services/community-service.js";
 import { createResponse } from "../utils/response.js";
+import { ContentPolicyViolationError, ModerationUnavailableError } from "../services/content-policy-service.js";
 
 export class CommunityController {
   constructor(private readonly communityService: CommunityService, private readonly userRepository = new UserRepository()) {}
@@ -43,8 +44,19 @@ export class CommunityController {
       const community = await this.communityService.createCommunity({ ...req.body, ownerId });
       return res.status(201).json(createResponse("Community created", this.view(community, ownerId)));
     } catch (error) {
-      // Most likely cause: the slug unique constraint (communities_slug_unique).
-      return res.status(409).json(createResponse("Could not create community", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
+      }
+      if (error instanceof ModerationUnavailableError) {
+        return res.status(503).json(createResponse(error.message, null, {}, ["moderation_unavailable"]));
+      }
+      // Do not expose database/provider details. Preserve the conflict status
+      // only for a database uniqueness violation; outages remain 500s.
+      const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code) : "";
+      if (code === "23505") {
+        return res.status(409).json(createResponse("Could not create community; its name or slug may already be in use", null, {}, ["Community already exists"]));
+      }
+      return res.status(500).json(createResponse("Could not create community", null, {}, ["Internal server error"]));
     }
   };
 
@@ -52,8 +64,8 @@ export class CommunityController {
     try {
       const communities = await this.communityService.listCommunities(req.user?.id);
       return res.status(200).json(createResponse("Communities retrieved", communities.map((community) => this.view(community, req.user?.id))));
-    } catch (error) {
-      return res.status(500).json(createResponse("Failed to list communities", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    } catch {
+      return res.status(500).json(createResponse("Failed to list communities", null, {}, ["Internal server error"]));
     }
   };
 
@@ -65,8 +77,8 @@ export class CommunityController {
         return res.status(404).json(createResponse("Community not found", null, {}, ["Not found"]));
       }
       return res.status(200).json(createResponse("Community retrieved", this.view(community, req.user?.id)));
-    } catch (error) {
-      return res.status(500).json(createResponse("Failed to retrieve community", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    } catch {
+      return res.status(500).json(createResponse("Failed to retrieve community", null, {}, ["Internal server error"]));
     }
   };
 
@@ -96,7 +108,10 @@ export class CommunityController {
       }
       return res.status(200).json(createResponse("Left community", this.view(community, userId)));
     } catch (error) {
-      return res.status(403).json(createResponse("Cannot leave community", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
+      if (error instanceof Error && error.message === "The owner can't leave their own community") {
+        return res.status(403).json(createResponse(error.message, null, {}, ["Owner cannot leave community"]));
+      }
+      return res.status(500).json(createResponse("Cannot leave community", null, {}, ["Internal server error"]));
     }
   };
 
@@ -122,7 +137,16 @@ export class CommunityController {
       if (!discussion) return res.status(404).json(createResponse("Community not found", null, {}, ["Not found"]));
       return res.status(201).json(createResponse("Discussion published", await this.discussionView(discussion, userId)));
     } catch (error) {
-      return res.status(403).json(createResponse("Discussion could not be published", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
+      }
+      if (error instanceof ModerationUnavailableError) {
+        return res.status(503).json(createResponse(error.message, null, {}, ["moderation_unavailable"]));
+      }
+      if (error instanceof Error && error.message.startsWith("Join this community")) {
+        return res.status(403).json(createResponse("Join the community first", null, {}, ["Join this community first"]));
+      }
+      return res.status(500).json(createResponse("Discussion could not be published", null, {}, ["Internal server error"]));
     }
   };
 

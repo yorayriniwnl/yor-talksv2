@@ -70,7 +70,7 @@ export class UserController {
       if (error instanceof Error && error.name === "InvalidFileTypeError") {
         return res.status(415).json(createResponse("Invalid avatar file", null, {}, [error.message]));
       }
-      return res.status(502).json(createResponse("Avatar upload failed", null, {}, [error instanceof Error ? error.message : "Upload provider error"]));
+      return res.status(502).json(createResponse("Avatar upload failed", null, {}, ["Upload provider error"]));
     }
   };
 

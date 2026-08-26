@@ -36,8 +36,8 @@ export class SearchController {
       const safeResults = this.safeResults(results);
       await this.cacheService.set(cacheKey, safeResults, SEARCH_CACHE_TTL_SECONDS);
       return res.status(200).json(createResponse("Search results", safeResults, { cached: false }));
-    } catch (error) {
-      return res.status(500).json(createResponse("Search failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    } catch {
+      return res.status(500).json(createResponse("Search failed", null, {}, ["Internal server error"]));
     }
   };
 }

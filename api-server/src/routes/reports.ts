@@ -23,8 +23,8 @@ router.post("/grievance", validateBody(grievanceSchema), async (req, res) => {
       errors: [],
       meta: {},
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Grievance could not be stored", data: null, errors: [error instanceof Error ? error.message : "Storage failure"], meta: {} });
+  } catch {
+    return res.status(500).json({ success: false, message: "Grievance could not be stored", data: null, errors: ["Storage failure"], meta: {} });
   }
 });
 
@@ -63,8 +63,8 @@ router.get("/queue", authenticate, requireRole("admin", "moderator"), async (_re
   try {
     const reports = await db.select().from(reportsTable).orderBy(desc(reportsTable.createdAt)).limit(200);
     return res.status(200).json({ success: true, message: "Moderation queue loaded", data: reports, errors: [], meta: {} });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Moderation queue could not be loaded", data: null, errors: [error instanceof Error ? error.message : "Queue failure"], meta: {} });
+  } catch {
+    return res.status(500).json({ success: false, message: "Moderation queue could not be loaded", data: null, errors: ["Queue failure"], meta: {} });
   }
 });
 
@@ -76,8 +76,8 @@ router.patch("/:reportId/status", authenticate, requireRole("admin", "moderator"
       .returning();
     if (!report) return res.status(404).json({ success: false, message: "Report not found", data: null, errors: ["Report not found"], meta: {} });
     return res.status(200).json({ success: true, message: "Report status updated", data: report, errors: [], meta: {} });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Report status could not be updated", data: null, errors: [error instanceof Error ? error.message : "Update failure"], meta: {} });
+  } catch {
+    return res.status(500).json({ success: false, message: "Report status could not be updated", data: null, errors: ["Update failure"], meta: {} });
   }
 });
 
