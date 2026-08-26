@@ -160,19 +160,26 @@ export class PostService {
     }
     const normalizedContent = content.trim();
     await enforceTextContentPolicy(normalizedContent, this.aiService, "comment");
-    const [createdComment] = await db.insert(commentsTable).values({
-      id: randomUUID(),
-      postId,
-      authorId,
-      content: normalizedContent,
-      mediaUrl: attachment?.mediaUrl,
-      mediaType: attachment?.mediaType,
-      mediaDuration: attachment?.mediaDuration,
-    }).returning();
-    const updatedPost = await this.postRepository.update(postId, {
-      commentsCount: post.commentsCount + 1,
-      score: this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount + 1 }),
+    const createdComment = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(commentsTable).values({
+        id: randomUUID(),
+        postId,
+        authorId,
+        content: normalizedContent,
+        mediaUrl: attachment?.mediaUrl,
+        mediaType: attachment?.mediaType,
+        mediaDuration: attachment?.mediaDuration,
+      }).returning();
+      await tx.execute(sql`
+        UPDATE posts
+        SET comments_count = comments_count + 1,
+            score = (likes_count * 3) + ((comments_count + 1) * 2) + (share_count * 5),
+            updated_at = NOW()
+        WHERE id = ${postId}
+      `);
+      return created;
     });
+    const updatedPost = await this.postRepository.findById(postId);
     const comment: CommentRecord = {
       id: createdComment.id,
       authorId: createdComment.authorId,
@@ -214,20 +221,27 @@ export class PostService {
     if (!parentComment) {
       return undefined;
     }
-    const [createdReply] = await db.insert(commentsTable).values({
-      id: randomUUID(),
-      postId,
-      authorId,
-      parentId: commentId,
-      content,
-    }).returning();
-    await db.update(commentsTable)
-      .set({ repliesCount: sql`${commentsTable.repliesCount} + 1` })
-      .where(eq(commentsTable.id, commentId));
-    const updatedPost = await this.postRepository.update(postId, {
-      commentsCount: post.commentsCount + 1,
-      score: this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount + 1 }),
+    const createdReply = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(commentsTable).values({
+        id: randomUUID(),
+        postId,
+        authorId,
+        parentId: commentId,
+        content,
+      }).returning();
+      await tx.update(commentsTable)
+        .set({ repliesCount: sql`${commentsTable.repliesCount} + 1` })
+        .where(eq(commentsTable.id, commentId));
+      await tx.execute(sql`
+        UPDATE posts
+        SET comments_count = comments_count + 1,
+            score = (likes_count * 3) + ((comments_count + 1) * 2) + (share_count * 5),
+            updated_at = NOW()
+        WHERE id = ${postId}
+      `);
+      return created;
     });
+    const updatedPost = await this.postRepository.findById(postId);
     const reply: ReplyRecord = {
       id: createdReply.id,
       authorId: createdReply.authorId,
@@ -331,9 +345,13 @@ export class PostService {
     if (!post) {
       return undefined;
     }
-    post.shareCount += 1;
-    post.score = this.calculateScore({ likes: post.likesCount, shares: post.shareCount, comments: post.commentsCount });
-    await this.postRepository.update(postId, { shareCount: post.shareCount, score: post.score });
+    await db.execute(sql`
+      UPDATE posts
+      SET share_count = share_count + 1,
+          score = (likes_count * 3) + (comments_count * 2) + ((share_count + 1) * 5),
+          updated_at = NOW()
+      WHERE id = ${postId}
+    `);
     return this.getPost(postId, userId);
   }
 

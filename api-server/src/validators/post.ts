@@ -23,7 +23,7 @@ export const repostSchema = z.object({
 });
 
 export const editPostSchema = z.object({
-  content: z.string().min(1).max(5000),
+  content: z.string().trim().min(1).max(5000),
   contentCategory: contentCategorySchema.optional(),
   contentRating: contentRatingSchema.optional(),
 });
