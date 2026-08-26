@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 const JERSEY_COLORS = [
@@ -26,9 +25,7 @@ export default function MerchStudio() {
   const [selectedBadge, setSelectedBadge] = useState('🔱');
 
   const handleOrder = () => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success(`🎉 Custom ${jerseyType === 'pro-jersey' ? 'Pro Jersey' : 'Esports Hoodie'} ordered! Order ID: YOR-MERCH-${Date.now()}`);
+    toast.info('Merchandise checkout is not connected yet. No order or payment was created.');
   };
 
   return (
@@ -47,9 +44,9 @@ export default function MerchStudio() {
 
         <Button
           onClick={handleOrder}
-          className="rounded-2xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary shadow-lg"
+          className="rounded-2xl font-bold text-xs bg-muted text-muted-foreground"
         >
-          <IndianRupee className="w-3.5 h-3.5 mr-1" /> Order Custom Jersey (₹1,499)
+          <IndianRupee className="w-3.5 h-3.5 mr-1" /> Checkout unavailable
         </Button>
       </div>
 

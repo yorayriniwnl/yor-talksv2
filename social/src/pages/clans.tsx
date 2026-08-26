@@ -9,8 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
-import { toast } from 'sonner';
 
 interface ClanMember {
   id: string;
@@ -52,12 +50,6 @@ export default function Clans() {
     setNewMsg('');
   };
 
-  const handleBookScrim = () => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success('Custom Scrim Slot Booked! Lobby ID & Password will be sent to the War Room 15 mins before match.');
-  };
-
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
       {/* Sticky Glass Header */}
@@ -68,7 +60,7 @@ export default function Clans() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Clan Wars & Squad Command</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Manage Esports Rosters, Book Scrims & War Room</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Roster and War Room preview · booking service pending</p>
           </div>
         </div>
 
@@ -186,10 +178,10 @@ export default function Clans() {
               </div>
 
               <Button
-                onClick={handleBookScrim}
-                className="rounded-2xl font-bold text-xs h-11 px-6 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary shadow-lg"
+                disabled
+                className="rounded-2xl font-bold text-xs h-11 px-6 bg-muted text-muted-foreground"
               >
-                <Plus className="w-4 h-4 mr-1.5" /> Book Tonight's 9:00 PM Slot
+                <Plus className="w-4 h-4 mr-1.5" /> Booking unavailable
               </Button>
             </div>
           </div>

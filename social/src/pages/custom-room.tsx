@@ -1,14 +1,9 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Key, Lock, Unlock, Users, Shield, Copy, 
-  Sparkles, CheckCircle2, Clock, Swords, Eye 
+  Key, Lock, Users, Shield,
+  CheckCircle2, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
-import { toast } from 'sonner';
 
 interface Slot {
   slotNum: number;
@@ -27,34 +22,7 @@ const INITIAL_SLOTS: Slot[] = [
 ];
 
 export default function CustomRoomLobby() {
-  const [slots, setSlots] = useState<Slot[]>(INITIAL_SLOTS);
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [roomId] = useState('BHARAT-SCRIM-9082');
-  const [roomPass] = useState('CLUTCH2026');
-
-  const handleClaimSlot = (slotNum: number) => {
-    sounds.playPop();
-    triggerConfetti();
-    setSlots(prev => prev.map(s => s.slotNum === slotNum ? {
-      ...s,
-      clanName: 'Your Clan (Verified Captain)',
-      claimedBy: 'You',
-      isLocked: true
-    } : s));
-    toast.success(`🛡️ Slot #${slotNum} locked and reserved for your squad!`);
-  };
-
-  const handleRevealCredentials = () => {
-    sounds.playChime();
-    setIsRevealed(true);
-    toast.success('🔑 Encrypted Custom Room ID & Password unlocked!');
-  };
-
-  const handleCopyCredentials = () => {
-    sounds.playPop();
-    navigator.clipboard.writeText(`Room ID: ${roomId} | Pass: ${roomPass}`);
-    toast.success('📋 Room credentials copied to clipboard!');
-  };
+  const slots = INITIAL_SLOTS;
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
@@ -84,29 +52,11 @@ export default function CustomRoomLobby() {
           </div>
 
           <div className="p-6 rounded-2xl bg-zinc-950 border border-border/40 font-mono text-sm space-y-3">
-            {isRevealed ? (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center bg-zinc-900 p-3 rounded-xl">
-                  <span className="text-muted-foreground">ROOM ID:</span>
-                  <strong className="text-primary font-black text-base">{roomId}</strong>
-                </div>
-                <div className="flex justify-between items-center bg-zinc-900 p-3 rounded-xl">
-                  <span className="text-muted-foreground">PASSWORD:</span>
-                  <strong className="text-emerald-400 font-black text-base">{roomPass}</strong>
-                </div>
-                <Button onClick={handleCopyCredentials} className="w-full rounded-xl mt-2 font-bold text-xs h-10">
-                  <Copy className="w-3.5 h-3.5 mr-1" /> Copy Room Key & Pass
-                </Button>
-              </div>
-            ) : (
-              <div className="py-4 space-y-3">
-                <Lock className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
-                <p className="text-xs text-muted-foreground">Credentials locked to prevent early leaks. Only verified squad captains can reveal.</p>
-                <Button onClick={handleRevealCredentials} className="rounded-2xl font-bold text-xs h-11 px-6 bg-primary text-primary-foreground">
-                  <Eye className="w-4 h-4 mr-1.5" /> Reveal Credentials (Verified Captain)
-                </Button>
-              </div>
-            )}
+            <div className="py-4 space-y-3">
+              <Lock className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
+              <p className="text-xs text-muted-foreground">Room credentials are issued only by the tournament service after a verified captain is assigned to a live match.</p>
+              <span className="mx-auto inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[0.65rem] font-mono font-bold text-amber-300">No active room credentials</span>
+            </div>
           </div>
         </div>
 
@@ -143,10 +93,10 @@ export default function CustomRoomLobby() {
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => handleClaimSlot(s.slotNum)}
-                    className="rounded-xl font-bold text-xs h-9 bg-primary text-primary-foreground"
+                    disabled
+                    className="rounded-xl font-bold text-xs h-9 bg-muted text-muted-foreground"
                   >
-                    Claim Slot
+                    Allocation unavailable
                   </Button>
                 )}
               </div>

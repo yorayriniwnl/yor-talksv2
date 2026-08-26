@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface IndieGame {
@@ -80,17 +79,10 @@ export default function Bazaar() {
     sounds.playPop();
     setWishlisted(prev => ({ ...prev, [id]: !prev[id] }));
     if (!wishlisted[id]) {
-      triggerConfetti();
-      toast.success('Added to your Wishlist & notified on release/discounts!');
+      toast.info('Wishlist preview updated locally. Release notifications are not connected yet.');
     } else {
       toast.info('Removed from wishlist');
     }
-  };
-
-  const handleBuy = (game: IndieGame) => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success(`🎉 Purchased ${game.title}! Digital key and Steam/Yor launcher license added to your Digital Vault.`);
   };
 
   return (
@@ -103,7 +95,7 @@ export default function Bazaar() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Indie Bharat Game Hub</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Showcase of India's Indie Game Studios & Digital Store</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Showcase preview · digital purchases are not connected yet</p>
           </div>
         </div>
 
@@ -166,10 +158,10 @@ export default function Bazaar() {
                 </Button>
 
                 <Button
-                  onClick={() => handleBuy(selectedGame)}
-                  className="rounded-2xl font-bold text-xs h-11 px-6 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary shadow-lg"
+                  disabled
+                  className="rounded-2xl font-bold text-xs h-11 px-6 bg-muted text-muted-foreground"
                 >
-                  <Download className="w-4 h-4 mr-1.5 fill-black" /> Get Game
+                  <Download className="w-4 h-4 mr-1.5" /> Purchases unavailable
                 </Button>
               </div>
             </div>
