@@ -231,7 +231,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary" onClick={() => fileInputRef.current?.click()} aria-label="Add an image">
                 <ImagePlus className="h-[18px] w-[18px]" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground" disabled title="Polls are coming soon" aria-label="Polls are coming soon">
+              <Button type="button" variant="ghost" size="icon" className={cn('h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary', pollOpen ? 'text-primary' : 'text-muted-foreground')} onClick={() => setPollOpen((open) => !open)} title={pollOpen ? 'Remove poll' : 'Add a poll'} aria-label={pollOpen ? 'Remove poll' : 'Add a poll'}>
                 <BarChart2 className="h-[18px] w-[18px]" />
               </Button>
               <Popover>
