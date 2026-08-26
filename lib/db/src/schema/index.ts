@@ -296,6 +296,22 @@ export const videosTable = pgTable("videos", {
   authorIdx: index("video_author_idx").on(table.authorId)
 }));
 
+export const videoCommentsTable = pgTable("video_comments", {
+  id: uuid("id").primaryKey(),
+  videoId: uuid("video_id").references(() => videosTable.id, { onDelete: "cascade" }).notNull(),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
+  mediaDuration: integer("media_duration"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+  likedBy: jsonb("liked_by").notNull().default([]),
+}, (table) => ({
+  videoIdx: index("video_comment_video_idx").on(table.videoId, table.createdAt),
+  authorIdx: index("video_comment_author_idx").on(table.authorId),
+}));
+
 export const liveStreamsTable = pgTable("live_streams", {
   id: uuid("id").primaryKey(),
   hostId: uuid("host_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -905,6 +921,9 @@ export type Article = typeof articlesTable.$inferSelect;
 export const insertVideoSchema = createInsertSchema(videosTable);
 export type InsertVideo = typeof videosTable.$inferInsert;
 export type Video = typeof videosTable.$inferSelect;
+export const insertVideoCommentSchema = createInsertSchema(videoCommentsTable);
+export type InsertVideoComment = typeof videoCommentsTable.$inferInsert;
+export type VideoComment = typeof videoCommentsTable.$inferSelect;
 
 export const insertLiveStreamSchema = createInsertSchema(liveStreamsTable);
 export type InsertLiveStream = typeof liveStreamsTable.$inferInsert;

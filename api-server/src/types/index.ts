@@ -333,6 +333,21 @@ export interface VideoRecord {
   contentRating?: ContentRating;
 }
 
+export interface VideoCommentRecord {
+  id: string;
+  videoId: string;
+  authorId: string;
+  content: string;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "gif" | "audio" | null;
+  mediaDuration?: number | null;
+  createdAt: string;
+  likedBy?: string[];
+  likes?: number;
+  likedByMe?: boolean;
+  author?: { id: string; username: string; fullName: string; avatarUrl: string | null };
+}
+
 export interface LiveStreamRecord {
   id: string;
   hostId: string;

@@ -548,6 +548,10 @@ export const api = {
   createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),
   likeVideo: (id: string) => request<BackendVideo>(`/videos/${id}/like`, { method: 'POST' }),
+  getVideoComments: (id: string) => request<BackendComment[]>(`/videos/${id}/comments`),
+  commentOnVideo: (id: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) =>
+    request<{ video: BackendVideo; comment: BackendComment }>(`/videos/${id}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
+  likeVideoComment: (videoId: string, commentId: string) => request<BackendComment>(`/videos/${videoId}/comments/${commentId}/like`, { method: 'POST' }),
 
   // ---- Live streams ----
   getStreams: () => request<BackendLiveStream[]>('/streams'),

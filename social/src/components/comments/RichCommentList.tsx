@@ -141,15 +141,17 @@ export function RichCommentList({
                     <span>{likeCount}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onReplyComment?.(comment)}
-                    className="flex items-center gap-1 text-[0.68rem] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  >
-                    <Reply className="w-3.5 h-3.5" />
-                    <span>Reply</span>
-                    {Boolean(comment.repliesCount) && <span>({comment.repliesCount})</span>}
-                  </button>
+                  {onReplyComment && (
+                    <button
+                      type="button"
+                      onClick={() => onReplyComment(comment)}
+                      className="flex items-center gap-1 text-[0.68rem] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                      <span>Reply</span>
+                      {Boolean(comment.repliesCount) && <span>({comment.repliesCount})</span>}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

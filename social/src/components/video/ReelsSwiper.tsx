@@ -17,6 +17,7 @@ import { StudioCameraModal } from '@/components/studio/StudioCameraModal';
 import { RichCommentComposer, RichCommentData } from '@/components/comments/RichCommentComposer';
 import { RichCommentList, CommentItem } from '@/components/comments/RichCommentList';
 import { toast } from 'sonner';
+import { api, type BackendComment } from '@/lib/api-client';
 
 interface ReelsSwiperProps {
   videos: Video[];
@@ -24,11 +25,23 @@ interface ReelsSwiperProps {
   onClose: () => void;
 }
 
-const INITIAL_REEL_COMMENTS: CommentItem[] = [
-  { id: '1', authorId: 'u1', authorName: 'Valkyrie_Zero', authorUsername: 'valkyrie', authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', content: 'The motion graphics lighting is incredible! 🤯🔥', createdAt: new Date(Date.now() - 3600000).toISOString(), likes: 42 },
-  { id: '2', authorId: 'u2', authorName: 'Kai_Takahashi', authorUsername: 'kai_t', authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', content: 'Need the tutorial for that camera shader! ✨', gifUrl: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif', createdAt: new Date(Date.now() - 7200000).toISOString(), likes: 18 },
-  { id: '3', authorId: 'u3', authorName: 'Elena_Rostova', authorUsername: 'elena_r', authorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', content: 'Looping this 10 times in a row 🔥', tipAmount: 50, createdAt: new Date(Date.now() - 14400000).toISOString(), likes: 89 },
-];
+function mapVideoComment(comment: BackendComment): CommentItem {
+  return {
+    id: comment.id,
+    authorId: comment.authorId,
+    authorName: comment.author?.fullName,
+    authorUsername: comment.author?.username,
+    authorAvatar: comment.author?.avatarUrl ?? undefined,
+    content: comment.content,
+    imageUrl: comment.mediaType === 'image' ? comment.mediaUrl ?? undefined : undefined,
+    gifUrl: comment.mediaType === 'gif' ? comment.mediaUrl ?? undefined : undefined,
+    voiceNoteUrl: comment.mediaType === 'audio' ? comment.mediaUrl ?? undefined : undefined,
+    voiceDuration: comment.mediaDuration ?? undefined,
+    likes: comment.likes ?? 0,
+    likedByMe: comment.likedByMe ?? false,
+    createdAt: comment.createdAt,
+  };
+}
 
 export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwiperProps) {
   const users = useAppStore((s) => s.users);
@@ -47,7 +60,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
 
   // Comments drawer & share modal
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<CommentItem[]>(INITIAL_REEL_COMMENTS);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Pro Playback & Studio Controls
@@ -106,6 +119,21 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     return () => observer.disconnect();
   }, [videos]);
 
+  useEffect(() => {
+    const video = videos[playingIndex];
+    if (!video) {
+      setComments([]);
+      return;
+    }
+    let active = true;
+    void api.getVideoComments(video.id).then((items) => {
+      if (active) setComments(items.map(mapVideoComment));
+    }).catch(() => {
+      if (active) setComments([]);
+    });
+    return () => { active = false; };
+  }, [playingIndex, videos]);
+
   const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
     const now = Date.now();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -124,23 +152,33 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     lastTapRef.current = now;
   };
 
-  const handleAddRichComment = (data: RichCommentData) => {
+  const handleAddRichComment = async (data: RichCommentData) => {
+    const video = videos[playingIndex];
+    if (!video) return;
     sounds.playPop();
-    const newCommentItem: CommentItem = {
-      id: Date.now().toString(),
-      authorId: currentUser?.id || 'guest',
-      authorName: currentUser?.displayName || currentUser?.username || 'You',
-      authorUsername: currentUser?.username || 'you',
-      authorAvatar: currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200',
-      content: data.text,
-      imageUrl: data.imageUrl,
-      gifUrl: data.gifUrl,
-      voiceNoteUrl: data.voiceNoteUrl,
-      voiceDuration: data.voiceDuration,
-      likes: 0,
-      createdAt: new Date().toISOString(),
-    };
-    setComments((prev) => [newCommentItem, ...prev]);
+    const media = data.voiceNoteUrl
+      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
+      : data.gifUrl
+        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
+        : data.imageUrl
+          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
+          : {};
+    const result = await api.commentOnVideo(video.id, { content: data.text.trim(), ...media });
+    setComments((prev) => [mapVideoComment({ ...result.comment, author: {
+      id: currentUser?.id || result.comment.authorId,
+      username: currentUser?.username || 'you',
+      fullName: currentUser?.displayName || 'You',
+      avatarUrl: currentUser?.avatarUrl || null,
+    }}), ...prev]);
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    const video = videos[playingIndex];
+    if (!video) return;
+    const updated = await api.likeVideoComment(video.id, commentId);
+    const result = { likes: updated.likes ?? 0, likedByMe: updated.likedByMe ?? false };
+    setComments((prev) => prev.map((comment) => comment.id === commentId ? { ...comment, ...result } : comment));
+    return result;
   };
 
   const handleCopyShareLink = () => {
@@ -416,7 +454,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
               </div>
 
               <div className="flex-1 overflow-y-auto py-3 space-y-3 hide-scrollbar">
-                <RichCommentList comments={comments} />
+                <RichCommentList comments={comments} onLikeComment={handleLikeComment} />
               </div>
 
               <div className="pt-2 border-t border-border/40">
