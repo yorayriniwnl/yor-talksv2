@@ -56,7 +56,7 @@ export class AuthController {
         return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
       }
       if (error instanceof TwoFactorRequiredError) {
-        return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
+        return res.status(200).json(createResponse("Two-factor code required", { requiresTwoFactor: true }, { requiresTwoFactor: true }));
       }
       if (error instanceof EmailVerificationRequiredError) {
         return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
@@ -93,7 +93,7 @@ export class AuthController {
       return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TwoFactorRequiredError) {
-        return res.status(200).json(createResponse("Two-factor code required", null, { requiresTwoFactor: true }));
+        return res.status(200).json(createResponse("Two-factor code required", { requiresTwoFactor: true }, { requiresTwoFactor: true }));
       }
       if (error instanceof EmailOtpInvalidError) {
         return res.status(401).json(createResponse("Email sign-in failed", null, {}, [error.message]));

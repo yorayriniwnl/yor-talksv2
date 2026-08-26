@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import type { Request, Response } from "express";
 import { AuthController } from "../controllers/auth-controller.js";
-import { AuthService } from "../services/auth-service.js";
+import { AuthService, TwoFactorRequiredError } from "../services/auth-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
@@ -53,4 +53,18 @@ test("auth controller returns success on register", async () => {
 
   assert.equal(res.statusCode, 201);
   assert.equal((res.body as { success: boolean }).success, true);
+});
+
+test("auth controller returns a machine-readable two-factor challenge", async () => {
+  const controller = new AuthController({
+    login: async () => { throw new TwoFactorRequiredError("Two-factor authentication code required"); },
+  } as unknown as AuthService);
+  const req = { body: { identifier: "twofactor-user", password: "supersecret" } } as Request;
+  const res = makeResponse();
+
+  await controller.login(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual((res.body as { data: unknown }).data, { requiresTwoFactor: true });
+  assert.equal((res.body as { meta: { requiresTwoFactor: boolean } }).meta.requiresTwoFactor, true);
 });

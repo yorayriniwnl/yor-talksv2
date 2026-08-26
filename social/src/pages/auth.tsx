@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,8 @@ export default function Auth() {
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [requestingOtp, setRequestingOtp] = useState(false);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
   const [verificationPending, setVerificationPending] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
 
@@ -51,6 +53,10 @@ export default function Auth() {
       if (!/^\d{6}$/.test(otpCode)) errors.otpCode = 'Enter the six-digit code sent to your email';
     }
 
+    if (mode === 'login' && twoFactorRequired && !/^\d{6}$/.test(twoFactorCode)) {
+      errors.twoFactorCode = 'Enter the six-digit code from your authenticator app';
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -59,8 +65,17 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        if (loginMethod === 'email-code') await loginWithEmailOtp(email, otpCode);
-        else await login(email, password);
+        const requiresTwoFactor = loginMethod === 'email-code'
+          ? await loginWithEmailOtp(email, otpCode, twoFactorRequired ? twoFactorCode : undefined)
+          : await login(email, password, twoFactorRequired ? twoFactorCode : undefined);
+        if (requiresTwoFactor) {
+          setTwoFactorRequired(true);
+          setErrorMsg('');
+          setLoading(false);
+          return;
+        }
+        setTwoFactorRequired(false);
+        setTwoFactorCode('');
       } else {
         await register(username, email, password, fullName);
         setVerificationPending(true);
@@ -80,6 +95,8 @@ export default function Auth() {
     setFieldErrors({});
     setOtpSent(false);
     setOtpCode('');
+    setTwoFactorRequired(false);
+    setTwoFactorCode('');
     setVerificationPending(false);
   };
 
@@ -340,10 +357,10 @@ export default function Auth() {
 
                   {mode === 'login' && (
                     <div className="premium-auth-methods" role="tablist" aria-label="Sign in method">
-                      <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); }}>
+                      <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); setTwoFactorRequired(false); setTwoFactorCode(''); }}>
                         <KeyRound className="h-3.5 w-3.5" /> Password
                       </button>
-                      <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => { setLoginMethod('email-code'); setPassword(''); }}>
+                      <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => { setLoginMethod('email-code'); setPassword(''); setTwoFactorRequired(false); setTwoFactorCode(''); }}>
                         <Mail className="h-3.5 w-3.5" /> Email code
                       </button>
                     </div>
@@ -412,6 +429,17 @@ export default function Auth() {
                       </div>
                     )}
                   </motion.div>}
+
+                  {mode === 'login' && twoFactorRequired && (
+                    <motion.div variants={staggerItem} className="space-y-2 rounded-2xl border border-primary/25 bg-primary/10 p-4">
+                      <div className="flex items-start gap-3">
+                        <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <div><Label htmlFor="twoFactorCode" className="premium-auth-label">Authenticator code</Label><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Open your authenticator app on your phone and enter the current six-digit code to finish signing in.</p></div>
+                      </div>
+                      <Input id="twoFactorCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Six-digit authenticator code" className="premium-auth-input h-11 rounded-xl font-mono text-center text-lg tracking-[0.45em]" autoFocus />
+                      {fieldErrors.twoFactorCode && <p className="text-xs text-destructive">{fieldErrors.twoFactorCode}</p>}
+                    </motion.div>
+                  )}
                 </motion.div>
 
                 <motion.div whileTap={tapScale} className="pt-2">
@@ -423,7 +451,7 @@ export default function Auth() {
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     ) : mode === 'login' ? (
-                      loginMethod === 'email-code' ? 'Verify code & sign in' : 'Sign In'
+                      twoFactorRequired ? 'Verify & sign in' : loginMethod === 'email-code' ? 'Verify code & sign in' : 'Sign In'
                     ) : (
                       'Create Account'
                     )}

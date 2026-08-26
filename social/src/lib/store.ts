@@ -490,8 +490,8 @@ interface AppState {
   profileComments: Record<string, ProfileComment[]>;
   showcases: Record<string, Showcase[]>;
 
-  login: (identifier: string, password: string) => Promise<void>;
-  loginWithEmailOtp: (email: string, code: string, totpCode?: string) => Promise<void>;
+  login: (identifier: string, password: string, totpCode?: string) => Promise<boolean>;
+  loginWithEmailOtp: (email: string, code: string, totpCode?: string) => Promise<boolean>;
   register: (username: string, email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -558,6 +558,7 @@ interface AppState {
   updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
   toggleMuteUser: (userId: string) => Promise<void>;
+  setTwoFactorEnabled: (enabled: boolean) => void;
   updateWorldPreferences: (patch: Partial<WorldPreferences>) => void;
   switchAccount: (userId: string) => void;
 }
@@ -637,15 +638,17 @@ export const useAppStore = create<AppState>()(
       profileComments: {},
       showcases: {},
 
-      login: async (identifier, password) => {
+      login: async (identifier, password, totpCode) => {
         set({ authError: null });
         try {
-          const result = await api.login({ identifier, password });
+          const result = await api.login({ identifier, password, ...(totpCode ? { totpCode } : {}) });
+          if (!result || 'requiresTwoFactor' in result) return true;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
+          return false;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
           throw err;
@@ -656,11 +659,13 @@ export const useAppStore = create<AppState>()(
         set({ authError: null });
         try {
           const result = await api.loginWithEmailOtp({ email, code, ...(totpCode ? { totpCode } : {}) });
+          if (!result || 'requiresTwoFactor' in result) return true;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
+          return false;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
           throw err;
@@ -1476,6 +1481,13 @@ export const useAppStore = create<AppState>()(
         } catch {
           // Local state updated
         }
+      },
+
+      setTwoFactorEnabled: (enabled) => {
+        set((state) => ({
+          currentUser: state.currentUser ? { ...state.currentUser, twoFactorEnabled: enabled } : state.currentUser,
+          users: state.currentUser ? { ...state.users, [state.currentUser.id]: { ...state.users[state.currentUser.id], twoFactorEnabled: enabled } } : state.users,
+        }));
       },
 
       updateWorldPreferences: (patch) => {

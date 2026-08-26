@@ -13,6 +13,9 @@ export interface Tokens {
 
 export type AuthTokens = Tokens;
 
+export type TwoFactorChallenge = { requiresTwoFactor: true };
+export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
+
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
@@ -244,12 +247,12 @@ export const api = {
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
-  login: (payload: { identifier: string; password: string }) =>
-    request<{ user: BackendUser; tokens: AuthTokens }>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  login: (payload: { identifier: string; password: string; totpCode?: string }) =>
+    request<AuthLoginResult>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   requestEmailOtp: (email: string) =>
     request<null>('/auth/email-otp/send', { method: 'POST', body: JSON.stringify({ email }) }),
   loginWithEmailOtp: (payload: { email: string; code: string; totpCode?: string }) =>
-    request<{ user: BackendUser; tokens: AuthTokens }>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
+    request<AuthLoginResult>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
     return request<null>('/auth/logout', { method: 'POST' });

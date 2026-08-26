@@ -9,8 +9,9 @@ import { api, type ContactShield } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { fadeInUp, springGentle } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound } from 'lucide-react';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import QRCode from 'qrcode';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -163,12 +164,14 @@ export default function Settings() {
   const logout = useAppStore((s: any) => s.logout);
   const currentUser = useAppStore((s: any) => s.currentUser);
   const updateContentFilter = useAppStore((s: any) => s.updateContentFilter);
+  const updateTwoFactorEnabled = useAppStore((s: any) => s.setTwoFactorEnabled);
   const privacySettings = useAppStore((s: any) => s.privacySettings || s.privacy || {});
   const updatePrivacySettings = useAppStore((s: any) => s.updatePrivacySettings || s.updatePrivacy);
   const [notificationsEnabled, setNotificationsEnabled] = useState(currentUser?.notificationsEnabled ?? true);
   const [contentFilter, setContentFilter] = useState<ContentRating>(currentUser?.contentFilter ?? DEFAULT_CONTENT_RATING);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
+  const [twoFactorQr, setTwoFactorQr] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorDisableMode, setTwoFactorDisableMode] = useState(false);
   const [twoFactorBusy, setTwoFactorBusy] = useState(false);
@@ -177,6 +180,17 @@ export default function Settings() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setTwoFactorQr('');
+    if (twoFactorSetup?.otpauthUrl) {
+      void QRCode.toDataURL(twoFactorSetup.otpauthUrl, { width: 180, margin: 2, errorCorrectionLevel: 'M' })
+        .then((dataUrl) => { if (active) setTwoFactorQr(dataUrl); })
+        .catch(() => { if (active) setTwoFactorQr(''); });
+    }
+    return () => { active = false; };
+  }, [twoFactorSetup?.otpauthUrl]);
 
   const handlePrivacyChange = (key: string, value: any) => {
     updatePrivacySettings({ ...privacySettings, [key]: value });
@@ -225,6 +239,7 @@ export default function Settings() {
     try {
       await api.confirmTwoFactor(twoFactorCode);
       setTwoFactorEnabled(true);
+      updateTwoFactorEnabled(true);
       setTwoFactorSetup(null);
       setTwoFactorCode('');
       toast.success('Two-factor authentication enabled');
@@ -244,6 +259,7 @@ export default function Settings() {
     try {
       await api.disableTwoFactor(twoFactorCode);
       setTwoFactorEnabled(false);
+      updateTwoFactorEnabled(false);
       setTwoFactorCode('');
       setTwoFactorDisableMode(false);
       toast.success('Two-factor authentication disabled');
@@ -252,6 +268,12 @@ export default function Settings() {
     } finally {
       setTwoFactorBusy(false);
     }
+  };
+
+  const copyTwoFactorUri = async () => {
+    if (!twoFactorSetup?.otpauthUrl || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(twoFactorSetup.otpauthUrl);
+    toast.success('Authenticator setup URI copied');
   };
 
   const exportAccount = async () => {
@@ -411,8 +433,14 @@ export default function Settings() {
             </div>
             {twoFactorSetup && (
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-                <p className="text-xs text-muted-foreground">Add this secret to your authenticator app, then confirm the generated code.</p>
+                <div className="flex items-start gap-3"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p className="text-xs leading-relaxed text-muted-foreground">Add Yor to an authenticator app on your phone. Scan the QR code if your app supports it, or copy the setup URI/secret manually. Then enter the current six-digit code.</p></div>
+                {twoFactorQr && <div className="flex justify-center rounded-2xl bg-white p-4"><img src={twoFactorQr} alt="Scan this QR code with your authenticator app" className="h-44 w-44" /></div>}
                 <code className="block break-all rounded-xl bg-background/70 p-3 text-xs tracking-wider">{twoFactorSetup.secret}</code>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input readOnly value={twoFactorSetup.otpauthUrl} aria-label="Authenticator setup URI" className="rounded-xl font-mono text-[0.68rem]" />
+                  <Button type="button" variant="outline" onClick={() => void copyTwoFactorUri()} className="w-full rounded-xl sm:w-auto"><Copy className="mr-2 h-4 w-4" />Copy URI</Button>
+                </div>
+                <a href={twoFactorSetup.otpauthUrl} className="inline-flex text-xs font-semibold text-primary hover:underline">Open setup URI on this phone</a>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" className="rounded-xl" />
                   <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Confirm</Button>
