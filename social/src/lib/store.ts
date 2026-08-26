@@ -750,14 +750,8 @@ export const useAppStore = create<AppState>()(
         set({ currentUser: null, tokens: null });
       },
 
-      switchAccount: (userId: string) => {
-        const targetUser = get().users[userId];
-        if (targetUser) {
-          set({ currentUser: targetUser });
-          toast.success(`Switched account to @${targetUser.username}`, {
-            description: `Now posting & browsing as ${targetUser.displayName}`
-          });
-        }
+      switchAccount: () => {
+        toast.error('Account switching is disabled. Sign out and authenticate as the other account instead.');
       },
 
       requestPasswordReset: async (email) => {
@@ -1088,22 +1082,9 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      votePoll: (postId, optionId) => set((state) => ({
-        posts: state.posts.map(p => {
-          if (p.id === postId && p.poll && !p.poll.votedOptionId) {
-            return {
-              ...p,
-              poll: {
-                ...p.poll,
-                votedOptionId: optionId,
-                totalVotes: p.poll.totalVotes + 1,
-                options: p.poll.options.map(o => o.id === optionId ? { ...o, votes: o.votes + 1 } : o)
-              }
-            };
-          }
-          return p;
-        })
-      })),
+      votePoll: () => {
+        toast.info('Poll voting is not available until it is connected to the server.');
+      },
 
       loadStories: async () => {
         try {
@@ -1535,64 +1516,26 @@ export const useAppStore = create<AppState>()(
       },
 
       addProfileComment: async (targetUserId, content) => {
-        const currentUser = get().currentUser;
-        if (!currentUser) return;
-        const newComment: ProfileComment = {
-          id: `comment_${Date.now()}`,
-          authorId: currentUser.id,
-          targetUserId,
-          content,
-          createdAt: new Date().toISOString(),
-        };
-        set((state) => {
-          const userComments = state.profileComments[targetUserId] || [];
-          return {
-            profileComments: {
-              ...state.profileComments,
-              [targetUserId]: [newComment, ...userComments]
-            }
-          };
-        });
+        void targetUserId;
+        void content;
+        toast.info('Profile comments are not available until server persistence is enabled.');
       },
 
       deleteProfileComment: async (commentId, targetUserId) => {
-        set((state) => {
-          const userComments = state.profileComments[targetUserId] || [];
-          return {
-            profileComments: {
-              ...state.profileComments,
-              [targetUserId]: userComments.filter(c => c.id !== commentId)
-            }
-          };
-        });
+        void commentId;
+        void targetUserId;
+        toast.info('Profile comments are not available until server persistence is enabled.');
       },
 
       addShowcase: async (showcase) => {
-        const newShowcase: Showcase = {
-          ...showcase,
-          id: `showcase_${Date.now()}`,
-        };
-        set((state) => {
-          const userShowcases = state.showcases[showcase.userId] || [];
-          return {
-            showcases: {
-              ...state.showcases,
-              [showcase.userId]: [...userShowcases, newShowcase]
-            }
-          };
-        });
+        void showcase;
+        toast.info('Profile showcases are not available until server persistence is enabled.');
       },
 
       removeShowcase: async (showcaseId, userId) => {
-        set((state) => {
-          const userShowcases = state.showcases[userId] || [];
-          return {
-            showcases: {
-              ...state.showcases,
-              [userId]: userShowcases.filter(s => s.id !== showcaseId)
-            }
-          };
-        });
+        void showcaseId;
+        void userId;
+        toast.info('Profile showcases are not available until server persistence is enabled.');
       },
     }),
     {
