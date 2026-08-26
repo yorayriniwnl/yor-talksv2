@@ -544,6 +544,7 @@ export const api = {
 
   // ---- Videos ----
   getVideos: () => request<BackendVideo[]>('/videos'),
+  getSavedVideos: () => request<BackendVideo[]>('/videos/saved'),
   getVideo: (id: string) => request<BackendVideo>(`/videos/${id}`),
   createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),

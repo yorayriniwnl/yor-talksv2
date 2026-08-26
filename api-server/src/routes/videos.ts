@@ -11,6 +11,7 @@ const router = Router();
 const videoController = new VideoController(new VideoService(new VideoRepository()));
 
 router.post("/videos", authenticate, validateBody(createVideoSchema), videoController.create);
+router.get("/videos/saved", authenticate, videoController.saved);
 router.get("/videos", optionalAuthenticate, videoController.list);
 router.get("/videos/:id", optionalAuthenticate, videoController.get);
 router.post("/videos/:id/like", authenticate, videoController.toggleLike);

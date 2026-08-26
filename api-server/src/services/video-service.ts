@@ -130,6 +130,12 @@ export class VideoService {
     return { ...video, savedByMe };
   }
 
+  async listBookmarkedVideos(userId: string): Promise<VideoRecord[]> {
+    const bookmarkIds = await this.videoBookmarkRepository.listForUser(userId);
+    const visible = await this.contentSafetyService.filterVisible(await this.videoRepository.listByIds(bookmarkIds), userId);
+    return visible.map((video) => ({ ...video, savedByMe: true }));
+  }
+
   private async presentComment(comment: VideoCommentRecord, viewerId: string): Promise<VideoCommentRecord> {
     const likedBy = Array.isArray(comment.likedBy) ? comment.likedBy : [];
     return {

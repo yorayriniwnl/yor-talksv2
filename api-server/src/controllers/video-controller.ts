@@ -42,6 +42,13 @@ export class VideoController {
     return res.status(200).json(createResponse("Video retrieved", this.view(video, req.user?.id)));
   };
 
+  saved = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    const videos = await this.videoService.listBookmarkedVideos(userId);
+    return res.status(200).json(createResponse("Saved videos retrieved", videos.map((video) => this.view(video, userId))));
+  };
+
   toggleLike = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) {

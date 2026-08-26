@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import { videosTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { VideoRecord } from "../types/index.js";
@@ -16,6 +16,11 @@ export class VideoRepository {
   async findById(id: string): Promise<VideoRecord | undefined> {
     const [video] = await db.select().from(videosTable).where(eq(videosTable.id, id));
     return video as VideoRecord | undefined;
+  }
+
+  async listByIds(ids: string[]): Promise<VideoRecord[]> {
+    if (ids.length === 0) return [];
+    return await db.select().from(videosTable).where(inArray(videosTable.id, ids)) as VideoRecord[];
   }
 
   async incrementViews(id: string): Promise<VideoRecord | undefined> {
