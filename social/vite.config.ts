@@ -52,8 +52,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // React core — changes rarely, cache aggressively
-          'vendor-react': ['react', 'react-dom'],
           // Animation framework
           'vendor-motion': ['framer-motion'],
           // Date utilities
