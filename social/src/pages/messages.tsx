@@ -603,7 +603,7 @@ export default function Messages() {
                     const reactionCount = Object.values(msg.reactions ?? {}).reduce((count, users) => count + users.length, 0);
                     return (
                       <div key={msg.id} className={cn('group relative flex max-w-[88%] flex-col', isMine ? 'ml-auto items-end' : 'mr-auto items-start')}>
-                        <div className="mb-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="mb-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                           <button type="button" onClick={() => void handleReactMessage(msg.id)} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-rose-400" title="React with heart" aria-label="React to message"><Smile className="h-3.5 w-3.5" /></button>
                           <button type="button" onClick={() => void handlePinMessage(msg.id)} className={cn('rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary', msg.pinned && 'text-primary')} title={msg.pinned ? 'Pinned' : 'Pin message'} aria-label={msg.pinned ? 'Message pinned' : 'Pin message'}><Pin className="h-3.5 w-3.5" /></button>
                           {isMine && <button type="button" onClick={() => { setEditingMessageId(msg.id); setEditingText(msg.content); }} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary" title="Edit message" aria-label="Edit message"><Pencil className="h-3.5 w-3.5" /></button>}
