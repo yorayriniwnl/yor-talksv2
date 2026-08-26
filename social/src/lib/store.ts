@@ -135,6 +135,10 @@ export type Message = {
   createdAt: string;
   read: boolean;
   replyToId?: string | null;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  reactions?: Record<string, string[]>;
+  pinned?: boolean;
 };
 
 export type Conversation = {
@@ -399,6 +403,10 @@ function mapMessage(m: BackendMessage): Message {
     createdAt: m.createdAt || new Date().toISOString(),
     read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
     replyToId: m.replyToId ?? null,
+    editedAt: m.editedAt ?? null,
+    deletedAt: m.deletedAt ?? null,
+    reactions: m.reactions ?? {},
+    pinned: Boolean(m.pinned),
   };
 }
 
@@ -615,6 +623,10 @@ interface AppState {
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
   sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
+  editDirectMessage: (messageId: string, content: string) => Promise<void>;
+  deleteDirectMessage: (messageId: string) => Promise<void>;
+  reactToDirectMessage: (messageId: string, reaction: string) => Promise<void>;
+  pinDirectMessage: (messageId: string) => Promise<void>;
 
   loadUserProfile: (userId: string) => Promise<void>;
   followUser: (userId: string) => Promise<void>;
@@ -694,6 +706,7 @@ function setupRealtime(
   const socket = connectSocket();
   if (!socket) return;
   socket.off('message:receive');
+  socket.off('message:update');
   socket.off('notification:new');
   socket.on('message:receive', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
@@ -710,6 +723,24 @@ function setupRealtime(
     if (!get().conversations.some((c) => c.id === mapped.conversationId)) {
       get().loadConversations();
     }
+  });
+  socket.on('message:update', (raw: BackendMessage) => {
+    const mapped = mapMessage(raw);
+    set((state) => {
+      const existing = state.messagesByConversation[mapped.conversationId] ?? [];
+      const messages = mapped.deletedAt
+        ? existing.filter((message) => message.id !== mapped.id)
+        : existing.some((message) => message.id === mapped.id)
+          ? existing.map((message) => message.id === mapped.id ? mapped : message)
+          : [...existing, mapped];
+      const lastMessage = messages[messages.length - 1];
+      return {
+        messagesByConversation: { ...state.messagesByConversation, [mapped.conversationId]: messages },
+        conversations: state.conversations.map((conversation) => conversation.id === mapped.conversationId
+          ? { ...conversation, lastMessage, updatedAt: lastMessage?.createdAt ?? conversation.updatedAt }
+          : conversation),
+      };
+    });
   });
   socket.on('notification:new', (raw: BackendNotification) => {
     const mapped = mapNotification(raw);
@@ -1144,6 +1175,53 @@ export const useAppStore = create<AppState>()(
           toast.error(error instanceof Error ? error.message : 'Could not send the message');
           throw error;
         }
+      },
+
+      editDirectMessage: async (messageId, content) => {
+        const updated = mapMessage(await api.editMessage(messageId, content));
+        set((state) => ({
+          messagesByConversation: {
+            ...state.messagesByConversation,
+            [updated.conversationId]: (state.messagesByConversation[updated.conversationId] ?? []).map((message) => message.id === messageId ? updated : message),
+          },
+          conversations: state.conversations.map((conversation) => conversation.id === updated.conversationId && conversation.lastMessage?.id === messageId
+            ? { ...conversation, lastMessage: updated }
+            : conversation),
+        }));
+      },
+
+      deleteDirectMessage: async (messageId) => {
+        const deleted = mapMessage(await api.deleteMessage(messageId));
+        set((state) => {
+          const messages = (state.messagesByConversation[deleted.conversationId] ?? []).filter((message) => message.id !== messageId);
+          const lastMessage = messages[messages.length - 1];
+          return {
+            messagesByConversation: { ...state.messagesByConversation, [deleted.conversationId]: messages },
+            conversations: state.conversations.map((conversation) => conversation.id === deleted.conversationId
+              ? { ...conversation, lastMessage, updatedAt: lastMessage?.createdAt ?? conversation.updatedAt }
+              : conversation),
+          };
+        });
+      },
+
+      reactToDirectMessage: async (messageId, reaction) => {
+        const updated = mapMessage(await api.reactToMessage(messageId, reaction));
+        set((state) => ({
+          messagesByConversation: {
+            ...state.messagesByConversation,
+            [updated.conversationId]: (state.messagesByConversation[updated.conversationId] ?? []).map((message) => message.id === messageId ? updated : message),
+          },
+        }));
+      },
+
+      pinDirectMessage: async (messageId) => {
+        const updated = mapMessage(await api.pinMessage(messageId));
+        set((state) => ({
+          messagesByConversation: {
+            ...state.messagesByConversation,
+            [updated.conversationId]: (state.messagesByConversation[updated.conversationId] ?? []).map((message) => message.id === messageId ? updated : message),
+          },
+        }));
       },
 
       loadUserProfile: async (userId) => {

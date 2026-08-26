@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Search, Plus, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft, 
-  Sparkles, Reply, X, Video, Phone, Mic, Zap, EyeOff, Shield, Image as ImageIcon 
+  Sparkles, Reply, X, Video, Phone, Mic, Zap, EyeOff, Shield, Image as ImageIcon, Pencil, Trash2, Pin, Smile
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
@@ -260,6 +260,12 @@ export default function Messages() {
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [vanishMode, setVanishMode] = useState(false);
   const [tipModalOpen, setTipModalOpen] = useState(false);
+  const editDirectMessage = useAppStore((s) => s.editDirectMessage);
+  const deleteDirectMessage = useAppStore((s) => s.deleteDirectMessage);
+  const reactToDirectMessage = useAppStore((s) => s.reactToDirectMessage);
+  const pinDirectMessage = useAppStore((s) => s.pinDirectMessage);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -388,6 +394,44 @@ export default function Messages() {
       toast.success('Voice note sent! 🎙️');
     } catch {
       toast.error('Failed to send voice note');
+    }
+  };
+
+  const handleEditMessage = async () => {
+    if (!editingMessageId || !editingText.trim()) return;
+    try {
+      await editDirectMessage(editingMessageId, editingText.trim());
+      setEditingMessageId(null);
+      setEditingText('');
+      toast.success('Message edited');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not edit this message');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteDirectMessage(messageId);
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete this message');
+    }
+  };
+
+  const handleReactMessage = async (messageId: string) => {
+    try {
+      await reactToDirectMessage(messageId, '❤️');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not react to this message');
+    }
+  };
+
+  const handlePinMessage = async (messageId: string) => {
+    try {
+      await pinDirectMessage(messageId);
+      toast.success('Message pinned');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not pin this message');
     }
   };
 
@@ -556,20 +600,34 @@ export default function Messages() {
                 <div className="flex flex-col mt-auto justify-end space-y-2">
                   {activeMessages.map((msg) => {
                     const isMine = msg.senderId === currentUser?.id;
+                    const reactionCount = Object.values(msg.reactions ?? {}).reduce((count, users) => count + users.length, 0);
                     return (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "max-w-[75%] rounded-2xl px-4 py-2.5 text-xs font-sans leading-relaxed shadow-sm",
+                      <div key={msg.id} className={cn('group relative flex max-w-[88%] flex-col', isMine ? 'ml-auto items-end' : 'mr-auto items-start')}>
+                        <div className="mb-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button type="button" onClick={() => void handleReactMessage(msg.id)} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-rose-400" title="React with heart" aria-label="React to message"><Smile className="h-3.5 w-3.5" /></button>
+                          <button type="button" onClick={() => void handlePinMessage(msg.id)} className={cn('rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary', msg.pinned && 'text-primary')} title={msg.pinned ? 'Pinned' : 'Pin message'} aria-label={msg.pinned ? 'Message pinned' : 'Pin message'}><Pin className="h-3.5 w-3.5" /></button>
+                          {isMine && <button type="button" onClick={() => { setEditingMessageId(msg.id); setEditingText(msg.content); }} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary" title="Edit message" aria-label="Edit message"><Pencil className="h-3.5 w-3.5" /></button>}
+                          {isMine && <button type="button" onClick={() => void handleDeleteMessage(msg.id)} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-destructive" title="Delete message" aria-label="Delete message"><Trash2 className="h-3.5 w-3.5" /></button>}
+                        </div>
+                        <div className={cn(
+                          "max-w-full rounded-2xl px-4 py-2.5 text-xs font-sans leading-relaxed shadow-sm",
                           isMine
-                            ? "ml-auto bg-gradient-to-r from-primary to-purple-600 text-white rounded-br-none"
-                            : "mr-auto surface-2 text-foreground rounded-bl-none border border-border/40"
-                        )}
-                      >
-                        <MessageContent content={msg.content} isMine={isMine} />
-                        <span className="text-[0.62rem] font-mono opacity-60 block mt-1 text-right">
-                          {format(new Date(msg.createdAt), 'hh:mm a')}
-                        </span>
+                            ? "bg-gradient-to-r from-primary to-purple-600 text-white rounded-br-none"
+                            : "surface-2 text-foreground rounded-bl-none border border-border/40"
+                        )}>
+                          {editingMessageId === msg.id ? (
+                            <div className="flex min-w-[220px] items-center gap-2">
+                              <Input value={editingText} onChange={(event) => setEditingText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleEditMessage(); if (event.key === 'Escape') setEditingMessageId(null); }} className="h-8 rounded-lg border-white/20 bg-black/10 text-xs text-current" autoFocus aria-label="Edit message" />
+                              <button type="button" onClick={() => void handleEditMessage()} className="text-[0.65rem] font-bold underline">Save</button>
+                            </div>
+                          ) : (
+                            <MessageContent content={msg.content} isMine={isMine} />
+                          )}
+                          <span className="mt-1 block text-right text-[0.62rem] font-mono opacity-60">
+                            {format(new Date(msg.createdAt), 'hh:mm a')}{msg.editedAt ? ' · edited' : ''}
+                          </span>
+                        </div>
+                        {(reactionCount > 0 || msg.pinned) && <div className="mt-1 flex items-center gap-2 text-[0.62rem] text-muted-foreground"><span>{reactionCount > 0 ? `❤️ ${reactionCount}` : ''}</span>{msg.pinned && <span className="flex items-center gap-1"><Pin className="h-3 w-3" /> Pinned</span>}</div>}
                       </div>
                     );
                   })}

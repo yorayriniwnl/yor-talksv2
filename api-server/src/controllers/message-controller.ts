@@ -105,6 +105,7 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
+    getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", message);
     return res.status(200).json(createResponse("Message edited", message));
   };
 
@@ -114,6 +115,7 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
+    getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", message);
     return res.status(200).json(createResponse("Message deleted", message));
   };
 
@@ -121,6 +123,7 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.addReaction(messageId, req.user?.id ?? "", req.body.reaction);
+      if (message) getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", message);
       return res.status(200).json(createResponse("Reaction added", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot react to this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
@@ -131,6 +134,7 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.pinMessage(messageId, req.user?.id ?? "");
+      if (message) getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", message);
       return res.status(200).json(createResponse("Message pinned", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot pin this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));

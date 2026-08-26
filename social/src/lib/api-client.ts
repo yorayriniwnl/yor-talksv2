@@ -490,6 +490,11 @@ export const api = {
   sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
   getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
+  markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
+  editMessage: (messageId: string, content: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'PUT', body: JSON.stringify({ content }) }),
+  deleteMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'DELETE' }),
+  reactToMessage: (messageId: string, reaction: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/reactions`, { method: 'POST', body: JSON.stringify({ reaction }) }),
+  pinMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/pin`, { method: 'POST' }),
 
   // ---- Notifications ----
   getNotifications: () => request<BackendNotification[]>('/notifications'),
@@ -753,6 +758,8 @@ export interface BackendMessage {
   editedAt: string | null;
   deletedAt: string | null;
   replyToId?: string | null;
+  reactions?: Record<string, string[]> | null;
+  pinned?: boolean | null;
 }
 
 export interface BackendNotification {
