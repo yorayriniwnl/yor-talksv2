@@ -2,7 +2,28 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 // @ts-ignore
 import appModule from "../api-server/dist/app.cjs";
-const app = (appModule && (appModule.default || appModule)) || ((_req: any, res: any) => res.end());
+
+type ExpressHandler = (req: any, res: any, next?: (error?: unknown) => void) => unknown;
+
+/**
+ * esbuild's CommonJS output can be imported as either the handler itself or
+ * one or more `{ default: ... }` wrappers depending on the host bundler.
+ * Resolve both forms so Vercel never calls an object as if it were Express.
+ */
+export function resolveExpressHandler(moduleValue: unknown): ExpressHandler {
+  let candidate = moduleValue;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (typeof candidate === "function") return candidate as ExpressHandler;
+    if (candidate && typeof candidate === "object" && "default" in candidate) {
+      candidate = (candidate as { default: unknown }).default;
+      continue;
+    }
+    break;
+  }
+  return ((_req: any, res: any) => res.end()) as ExpressHandler;
+}
+
+const app = resolveExpressHandler(appModule);
 
 export const config = {
   api: {
