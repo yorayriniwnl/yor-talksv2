@@ -2477,3 +2477,61 @@ html.yor-low-bandwidth video {
   .home-feed-toolbar__actions > button:first-child span { display: none; }
   .home-composer-world { max-width: 6rem; }
 }
+
+/* Composer — keep safety choices visible without making every post start feel
+ * like a settings form. */
+.yor-composer__publishing-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.yor-composer__publishing-controls > div {
+  min-width: 0;
+  max-width: none !important;
+  margin-top: 0 !important;
+}
+
+.yor-composer__publishing-controls label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yor-composer__publishing-controls select {
+  min-width: 0;
+  height: 2.45rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+}
+
+.home-composer-card .yor-composer__publishing-controls {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  margin-inline: 0.1rem;
+}
+
+.home-composer-card .yor-composer__publishing-controls select {
+  background: hsl(var(--background) / 0.62);
+}
+
+.yor-post__actions button {
+  min-width: 2.35rem;
+  justify-content: center;
+  border-radius: 0.7rem;
+  transition: background-color 180ms var(--premium-ease), color 180ms var(--premium-ease), transform 180ms var(--premium-ease);
+}
+
+.yor-post__actions button:hover {
+  background: hsl(var(--muted) / 0.72);
+}
+
+.yor-post__actions button:active { transform: scale(0.94); }
+
+.yor-post__caption a { color: hsl(var(--primary)); }
+
+@media (max-width: 560px) {
+  .yor-composer__publishing-controls { grid-template-columns: 1fr; gap: 0.5rem; }
+  .yor-composer__publishing-controls select { height: 2.35rem; }
+}

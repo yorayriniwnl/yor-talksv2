@@ -217,11 +217,8 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
             </div>
           )}
 
-          <div className="mt-3 max-w-xs">
+          <div className="yor-composer__publishing-controls">
             <ContentCategorySelect id="post-content-category" value={contentCategory} onChange={setContentCategory} />
-          </div>
-
-          <div className="mt-3 max-w-xs">
             <ContentRatingSelect id="post-content-rating" value={contentRating} onChange={setContentRating} />
           </div>
 
