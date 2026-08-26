@@ -372,11 +372,11 @@ export default function Explore() {
                       <h3 className="font-display font-bold text-xl mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> People</h3>
                       <div className="grid gap-3 stagger-in">
                         {results.users.map(u => (
-                          <div key={u.id} onClick={() => setLocation(`/profile/${u.id}`)} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/40 hover:border-primary/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
+                          <button type="button" key={u.id} onClick={() => setLocation(`/profile/${u.id}`)} className="w-full text-left flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/40 hover:border-primary/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
                             <Avatar className="w-12 h-12 ring-2 ring-primary/20"><AvatarImage src={u.avatarUrl || ''} /><AvatarFallback>{(u.fullName || u.username).charAt(0)}</AvatarFallback></Avatar>
                             <div className="flex-1"><h4 className="font-bold text-base">{u.fullName || u.username}</h4><p className="text-sm text-muted-foreground font-mono">@{u.username}</p></div>
                             <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </section>
@@ -388,10 +388,10 @@ export default function Explore() {
                         {results.posts.map(p => {
                           const author = users[p.authorId];
                           return (
-                            <div key={p.id} onClick={() => setLocation(`/post/${p.id}`)} className="flex flex-col gap-2 p-4 rounded-2xl bg-card border border-border/40 hover:border-accent/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
+                            <button type="button" key={p.id} onClick={() => setLocation(`/post/${p.id}`)} className="w-full text-left flex flex-col gap-2 p-4 rounded-2xl bg-card border border-border/40 hover:border-accent/40 hover:bg-muted/50 cursor-pointer transition-all hover-lift">
                               <span className="text-sm font-bold text-foreground/80">{author?.displayName || 'Someone'}</span>
                               <p className="text-sm text-muted-foreground line-clamp-2">{p.content}</p>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -409,8 +409,10 @@ export default function Explore() {
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                   {EXPLORE_GENRES.map((g) => (
                     <button
+                      type="button"
                       key={g.id}
                       onClick={() => setSelectedGenre(g.id)}
+                      aria-pressed={selectedGenre === g.id}
                       className={cn(
                         "px-4 py-2 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap border shrink-0",
                         selectedGenre === g.id

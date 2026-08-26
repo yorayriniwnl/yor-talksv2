@@ -182,15 +182,15 @@ export default function Home() {
         </section>
 
         <nav className="home-feed-tabs" aria-label="Choose a feed">
-          <button onClick={() => changeMode('close')} className={cn(mode === 'close' && 'is-active')}>
+          <button type="button" onClick={() => changeMode('close')} aria-pressed={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
             <Users className="h-4 w-4" />
             <span>Following</span>
           </button>
-          <button onClick={() => changeMode('discover')} className={cn(mode === 'discover' && 'is-active')}>
+          <button type="button" onClick={() => changeMode('discover')} aria-pressed={mode === 'discover'} className={cn(mode === 'discover' && 'is-active')}>
             <Compass className="h-4 w-4" />
             <span>For you</span>
           </button>
-          <button onClick={() => changeMode('build')} className={cn(mode === 'build' && 'is-active')}>
+          <button type="button" onClick={() => changeMode('build')} aria-pressed={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
             <Zap className="h-4 w-4" />
             <span>Build</span>
           </button>
