@@ -23,6 +23,7 @@ export const loginSchema = z.object({
   identifier: z.string().min(3),
   password: z.string().min(8),
   totpCode: z.string().length(6).optional(),
+  challengeId: z.string().uuid("Invalid challenge ID format").optional(),
 });
 
 export const emailOtpRequestSchema = z.object({
@@ -33,10 +34,15 @@ export const emailOtpVerifySchema = z.object({
   email: z.string().trim().email().regex(KIIT_EMAIL_PATTERN, "Use your seven-digit KIIT college email"),
   code: z.string().regex(/^\d{6}$/, "Enter the six-digit sign-in code"),
   totpCode: z.string().length(6).optional(),
+  challengeId: z.string().uuid("Invalid challenge ID format").optional(),
 });
 
 export const totpCodeSchema = z.object({
   code: z.string().length(6),
+});
+
+export const twoFactorApprovalSchema = z.object({
+  matchingNumber: z.coerce.number().int().min(1).max(99),
 });
 
 export const resetPasswordSchema = z.object({

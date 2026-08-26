@@ -105,4 +105,38 @@ export class RedisRepository {
   async delStrict(key: string): Promise<void> {
     await this.client.del(key);
   }
+
+  async addToSetStrict(key: string, value: string): Promise<void> {
+    await this.client.sadd(key, value);
+  }
+
+  async removeFromSetStrict(key: string, value: string): Promise<void> {
+    await this.client.srem(key, value);
+  }
+
+  async getSetStrict(key: string): Promise<string[]> {
+    return this.client.smembers(key);
+  }
+
+  /** Atomically consumes a challenge only when its JSON state is approved. */
+  async consumeApprovedStrict(key: string, nowIso: string): Promise<string | null> {
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return false end
+        local state = cjson.decode(raw)
+        if state.status ~= 'approved' then return false end
+        if state.expiresAt <= ARGV[1] then
+          redis.call('DEL', KEYS[1])
+          return false
+        end
+        redis.call('DEL', KEYS[1])
+        return raw
+      `,
+      1,
+      key,
+      nowIso,
+    );
+    return typeof result === "string" ? result : null;
+  }
 }

@@ -68,3 +68,26 @@ test("auth controller returns a machine-readable two-factor challenge", async ()
   assert.deepEqual((res.body as { data: unknown }).data, { requiresTwoFactor: true });
   assert.equal((res.body as { meta: { requiresTwoFactor: boolean } }).meta.requiresTwoFactor, true);
 });
+
+test("auth controller includes the number-matching details", async () => {
+  const controller = new AuthController({
+    login: async () => {
+      throw new TwoFactorRequiredError("Approve this sign-in in your Yor app", {
+        challengeId: "3d6f2f91-32bb-45bc-bf1f-7f0e40a3b8a0",
+        matchingNumber: 42,
+        expiresAt: "2099-01-01T00:00:00.000Z",
+      });
+    },
+  } as unknown as AuthService);
+  const req = { body: { identifier: "twofactor-user", password: "supersecret" } } as Request;
+  const res = makeResponse();
+
+  await controller.login(req, res);
+
+  assert.deepEqual((res.body as { data: unknown }).data, {
+    requiresTwoFactor: true,
+    challengeId: "3d6f2f91-32bb-45bc-bf1f-7f0e40a3b8a0",
+    matchingNumber: 42,
+    expiresAt: "2099-01-01T00:00:00.000Z",
+  });
+});

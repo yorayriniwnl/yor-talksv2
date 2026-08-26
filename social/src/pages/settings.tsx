@@ -426,14 +426,14 @@ export default function Settings() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">Two-factor authentication</p>
-                <p className="text-xs text-muted-foreground">Protect sign-ins with an authenticator app</p>
+                <p className="text-xs text-muted-foreground">Approve new sign-ins from a trusted Yor app</p>
               </div>
               {!twoFactorEnabled && !twoFactorSetup && <Button type="button" variant="outline" onClick={() => void beginTwoFactorSetup()} disabled={twoFactorBusy} className="rounded-xl text-xs font-bold">Set up</Button>}
               {twoFactorEnabled && !twoFactorSetup && <span className="text-xs font-semibold text-emerald-600">Enabled</span>}
             </div>
             {twoFactorSetup && (
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-                <div className="flex items-start gap-3"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p className="text-xs leading-relaxed text-muted-foreground">Add Yor to an authenticator app on your phone. Scan the QR code if your app supports it, or copy the setup URI/secret manually. Then enter the current six-digit code.</p></div>
+                <div className="flex items-start gap-3"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p className="text-xs leading-relaxed text-muted-foreground">Set up an authenticator app on your phone. After this is enabled, new sign-ins show a number on the other device and open an approval prompt here when you open Yor. The six-digit authenticator code remains available as a recovery fallback.</p></div>
                 {twoFactorQr && <div className="flex justify-center rounded-2xl bg-white p-4"><img src={twoFactorQr} alt="Scan this QR code with your authenticator app" className="h-44 w-44" /></div>}
                 <code className="block break-all rounded-xl bg-background/70 p-3 text-xs tracking-wider">{twoFactorSetup.secret}</code>
                 <div className="flex flex-col gap-2 sm:flex-row">

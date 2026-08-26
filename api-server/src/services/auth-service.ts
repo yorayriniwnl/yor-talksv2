@@ -16,7 +16,33 @@ import { isKiitCollegeEmail } from "../validators/auth.js";
 import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 
 export class TooManyAttemptsError extends Error {}
-export class TwoFactorRequiredError extends Error {}
+export type LoginApprovalChallenge = {
+  challengeId: string;
+  matchingNumber: number;
+  expiresAt: string;
+};
+
+type StoredLoginApprovalChallenge = LoginApprovalChallenge & {
+  userId: string;
+  status: "pending" | "approved";
+  attempts: number;
+  createdAt: string;
+  approvedAt?: string;
+  emailOtpKey?: string;
+};
+
+export type LoginApprovalChallengeStatus = {
+  challengeId: string;
+  status: "pending" | "approved" | "expired";
+  expiresAt: string;
+};
+
+export class TwoFactorRequiredError extends Error {
+  constructor(message: string, public readonly challenge?: LoginApprovalChallenge) {
+    super(message);
+    this.name = "TwoFactorRequiredError";
+  }
+}
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
 
@@ -97,7 +123,7 @@ export class AuthService {
     };
   }
 
-  async login(input: { identifier: string; password: string; totpCode?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  async login(input: { identifier: string; password: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
     const normalizedIdentifier = input.identifier.toLowerCase();
     if (this.securityService.detectAbuse(normalizedIdentifier, "login_failure")) {
       throw new TooManyAttemptsError("Too many failed login attempts. Please try again later.");
@@ -128,12 +154,16 @@ export class AuthService {
 
     if (user.totpSecret) {
       if (!input.totpCode) {
-        throw new TwoFactorRequiredError("Two-factor authentication code required");
+        throw new TwoFactorRequiredError(
+          "Approve this sign-in in your Yor app",
+          await this.createLoginApprovalChallenge(user.id),
+        );
       }
       if (!authenticator.check(input.totpCode, user.totpSecret)) {
         this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — wrong 2FA code`);
         throw new Error("Invalid two-factor code");
       }
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
     const deviceId = randomUUID();
@@ -183,7 +213,7 @@ export class AuthService {
     return true;
   }
 
-  async loginWithEmailOtp(input: { email: string; code: string; totpCode?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  async loginWithEmailOtp(input: { email: string; code: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
     const normalizedEmail = input.email.trim().toLowerCase();
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
@@ -218,19 +248,110 @@ export class AuthService {
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
     if (user.totpSecret) {
-      if (!input.totpCode) throw new TwoFactorRequiredError("Two-factor authentication code required");
+      if (!input.totpCode) {
+        throw new TwoFactorRequiredError(
+          "Approve this sign-in in your Yor app",
+          await this.createLoginApprovalChallenge(user.id, key),
+        );
+      }
       if (!authenticator.check(input.totpCode, user.totpSecret)) {
         throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
     await this.redisRepository.delStrict(key);
-    const deviceId = randomUUID();
-    const refreshToken = this.issueRefreshToken(user, deviceId);
-    await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
-    const updatedUser = await this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString(), emailVerified: true });
-    const finalUser = updatedUser ?? user;
-    return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
+    return this.createSession(user, { emailVerified: true });
+  }
+
+  async listPendingTwoFactorChallenges(userId: string): Promise<LoginApprovalChallenge[]> {
+    const indexKey = this.loginApprovalIndexKey(userId);
+    const ids = await this.redisRepository.getSetStrict(indexKey);
+    const now = Date.now();
+    const pending = await Promise.all(ids.map(async (challengeId) => {
+      const challenge = await this.readLoginApprovalChallenge(challengeId);
+      if (!challenge || challenge.userId !== userId) {
+        if (!challenge) await this.redisRepository.removeFromSetStrict(indexKey, challengeId);
+        return null;
+      }
+      if (Date.parse(challenge.expiresAt) <= now || challenge.status !== "pending") {
+        if (Date.parse(challenge.expiresAt) <= now) {
+          await this.removeLoginApprovalChallenge(challenge);
+        }
+        return null;
+      }
+      return this.publicLoginApprovalChallenge(challenge);
+    }));
+
+    return pending
+      .filter((challenge): challenge is LoginApprovalChallenge => Boolean(challenge))
+      .sort((a, b) => Date.parse(a.expiresAt) - Date.parse(b.expiresAt));
+  }
+
+  async getTwoFactorChallengeStatus(challengeId: string): Promise<LoginApprovalChallengeStatus | null> {
+    const challenge = await this.readLoginApprovalChallenge(challengeId);
+    if (!challenge) return null;
+    if (Date.parse(challenge.expiresAt) <= Date.now()) {
+      await this.removeLoginApprovalChallenge(challenge);
+      return { challengeId, status: "expired", expiresAt: challenge.expiresAt };
+    }
+    return { challengeId, status: challenge.status, expiresAt: challenge.expiresAt };
+  }
+
+  async approveTwoFactorChallenge(userId: string, challengeId: string, matchingNumber: number): Promise<boolean> {
+    const challenge = await this.readLoginApprovalChallenge(challengeId);
+    if (!challenge || challenge.userId !== userId || challenge.status !== "pending") return false;
+    if (Date.parse(challenge.expiresAt) <= Date.now()) {
+      await this.removeLoginApprovalChallenge(challenge);
+      return false;
+    }
+    if (challenge.matchingNumber !== matchingNumber) {
+      const attempts = challenge.attempts + 1;
+      if (attempts >= 5) {
+        await this.removeLoginApprovalChallenge(challenge);
+      } else {
+        const ttl = Math.max(1, Math.ceil((Date.parse(challenge.expiresAt) - Date.now()) / 1000));
+        await this.redisRepository.setStrict(
+          this.loginApprovalKey(challengeId),
+          JSON.stringify({ ...challenge, attempts }),
+          ttl,
+        );
+      }
+      return false;
+    }
+
+    const ttl = Math.max(1, Math.ceil((Date.parse(challenge.expiresAt) - Date.now()) / 1000));
+    await this.redisRepository.setStrict(
+      this.loginApprovalKey(challengeId),
+      JSON.stringify({ ...challenge, status: "approved", approvedAt: new Date().toISOString() }),
+      ttl,
+    );
+    return true;
+  }
+
+  async denyTwoFactorChallenge(userId: string, challengeId: string): Promise<boolean> {
+    const challenge = await this.readLoginApprovalChallenge(challengeId);
+    if (!challenge || challenge.userId !== userId || challenge.status !== "pending") return false;
+    await this.removeLoginApprovalChallenge(challenge);
+    return true;
+  }
+
+  async completeTwoFactorLogin(challengeId: string): Promise<{ user: UserRecord; tokens: AuthTokens } | undefined> {
+    const raw = await this.redisRepository.consumeApprovedStrict(this.loginApprovalKey(challengeId), new Date().toISOString());
+    if (!raw) return undefined;
+
+    let challenge: StoredLoginApprovalChallenge;
+    try {
+      challenge = JSON.parse(raw) as StoredLoginApprovalChallenge;
+    } catch {
+      return undefined;
+    }
+    await this.redisRepository.removeFromSetStrict(this.loginApprovalIndexKey(challenge.userId), challengeId);
+    if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
+
+    const user = await this.userRepository.findById(challenge.userId);
+    if (!user?.totpSecret) return undefined;
+    return this.createSession(user, { emailVerified: true });
   }
 
   async logoutAllDevices(userId: string): Promise<void> {
@@ -413,6 +534,75 @@ export class AuthService {
     }
     await this.userRepository.update(userId, { totpSecret: null });
     return true;
+  }
+
+  private async createLoginApprovalChallenge(userId: string, emailOtpKey?: string): Promise<LoginApprovalChallenge> {
+    const challengeId = randomUUID();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const challenge: StoredLoginApprovalChallenge = {
+      challengeId,
+      matchingNumber: randomInt(1, 100),
+      expiresAt,
+      userId,
+      status: "pending",
+      attempts: 0,
+      createdAt: new Date().toISOString(),
+      ...(emailOtpKey ? { emailOtpKey } : {}),
+    };
+    await this.redisRepository.setStrict(this.loginApprovalKey(challengeId), JSON.stringify(challenge), 5 * 60);
+    await this.redisRepository.addToSetStrict(this.loginApprovalIndexKey(userId), challengeId);
+    return this.publicLoginApprovalChallenge(challenge);
+  }
+
+  private async readLoginApprovalChallenge(challengeId: string): Promise<StoredLoginApprovalChallenge | null> {
+    const raw = await this.redisRepository.getStrict(this.loginApprovalKey(challengeId));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as StoredLoginApprovalChallenge;
+    } catch {
+      await this.redisRepository.delStrict(this.loginApprovalKey(challengeId));
+      return null;
+    }
+  }
+
+  private async removeLoginApprovalChallenge(challenge: StoredLoginApprovalChallenge): Promise<void> {
+    await Promise.all([
+      this.redisRepository.delStrict(this.loginApprovalKey(challenge.challengeId)),
+      this.redisRepository.removeFromSetStrict(this.loginApprovalIndexKey(challenge.userId), challenge.challengeId),
+    ]);
+  }
+
+  private async cancelLoginApprovalChallenge(userId: string, challengeId: string): Promise<void> {
+    const challenge = await this.readLoginApprovalChallenge(challengeId);
+    if (challenge?.userId === userId) await this.removeLoginApprovalChallenge(challenge);
+  }
+
+  private publicLoginApprovalChallenge(challenge: StoredLoginApprovalChallenge): LoginApprovalChallenge {
+    return {
+      challengeId: challenge.challengeId,
+      matchingNumber: challenge.matchingNumber,
+      expiresAt: challenge.expiresAt,
+    };
+  }
+
+  private loginApprovalKey(challengeId: string): string {
+    return `login-approval:${challengeId}`;
+  }
+
+  private loginApprovalIndexKey(userId: string): string {
+    return `login-approvals:user:${userId}`;
+  }
+
+  private async createSession(
+    user: UserRecord,
+    updates: Partial<Pick<UserRecord, "emailVerified">> = {},
+  ): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+    const deviceId = randomUUID();
+    const refreshToken = this.issueRefreshToken(user, deviceId);
+    await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
+    const updatedUser = await this.userRepository.update(user.id, { ...updates, lastLoginAt: new Date().toISOString() });
+    const finalUser = updatedUser ?? user;
+    return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
   }
 
   private issueTokens(user: UserRecord, refreshToken: string, deviceId: string): AuthTokens {

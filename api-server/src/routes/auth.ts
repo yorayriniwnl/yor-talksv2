@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/auth-controller.js";
 import { authenticate } from "../middlewares/auth.js";
-import { validateBody } from "../middlewares/validation.js";
+import { validateBody, validateParams } from "../middlewares/validation.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
-import { emailOtpRequestSchema, emailOtpVerifySchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema } from "../validators/auth.js";
+import { emailOtpRequestSchema, emailOtpVerifySchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
+import { challengeIdParamSchema } from "../validators/params.js";
 
 const router = Router();
 const userRepo = new UserRepository();
@@ -38,5 +39,10 @@ router.get("/auth/verify-email/:token", authController.verifyEmail);
 router.post("/auth/2fa/setup", authenticate, authController.beginTwoFactorSetup);
 router.post("/auth/2fa/confirm", authenticate, validateBody(totpCodeSchema), authController.confirmTwoFactorSetup);
 router.post("/auth/2fa/disable", authenticate, validateBody(totpCodeSchema), authController.disableTwoFactor);
+router.get("/auth/2fa/challenges", authenticate, authController.listTwoFactorChallenges);
+router.get("/auth/2fa/challenges/:challengeId", validateParams(challengeIdParamSchema), authController.getTwoFactorChallengeStatus);
+router.post("/auth/2fa/challenges/:challengeId/approve", authenticate, validateParams(challengeIdParamSchema), validateBody(twoFactorApprovalSchema), authController.approveTwoFactorChallenge);
+router.post("/auth/2fa/challenges/:challengeId/deny", authenticate, validateParams(challengeIdParamSchema), authController.denyTwoFactorChallenge);
+router.post("/auth/2fa/challenges/:challengeId/complete", validateParams(challengeIdParamSchema), authController.completeTwoFactorLogin);
 
 export default router;

@@ -16,6 +16,7 @@ import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 import { AppTopbar } from '@/components/layout/AppTopbar';
 import { CreatePost } from '@/components/feed/Post';
+import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 
 interface AppShellProps {
   children: ReactNode;
@@ -288,6 +289,7 @@ export function AppShell({ children }: AppShellProps) {
 
       <GlobalAudioPlayer />
       <PwaInstallPrompt />
+      <DeviceApprovalInbox />
     </div>
   );
 }

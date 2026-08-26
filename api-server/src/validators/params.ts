@@ -35,3 +35,7 @@ export const notificationIdParamSchema = z.object({
 export const reportIdParamSchema = z.object({
   reportId: z.string().uuid("Invalid report ID format"),
 });
+
+export const challengeIdParamSchema = z.object({
+  challengeId: z.string().uuid("Invalid challenge ID format"),
+});

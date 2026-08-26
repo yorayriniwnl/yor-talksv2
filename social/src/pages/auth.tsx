@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { api } from '@/lib/api-client';
+import { api, ApiError, type TwoFactorChallenge } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import { Link } from 'wouter';
 export default function Auth() {
   const login = useAppStore((state) => state.login);
   const loginWithEmailOtp = useAppStore((state) => state.loginWithEmailOtp);
+  const completeTwoFactorLogin = useAppStore((state) => state.completeTwoFactorLogin);
   const register = useAppStore((state) => state.register);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
@@ -28,8 +29,10 @@ export default function Auth() {
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [requestingOtp, setRequestingOtp] = useState(false);
-  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
-  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
+  const [twoFactorFallback, setTwoFactorFallback] = useState(false);
+  const [twoFactorFallbackCode, setTwoFactorFallbackCode] = useState('');
+  const [approvalBusy, setApprovalBusy] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
 
@@ -53,8 +56,8 @@ export default function Auth() {
       if (!/^\d{6}$/.test(otpCode)) errors.otpCode = 'Enter the six-digit code sent to your email';
     }
 
-    if (mode === 'login' && twoFactorRequired && !/^\d{6}$/.test(twoFactorCode)) {
-      errors.twoFactorCode = 'Enter the six-digit code from your authenticator app';
+    if (mode === 'login' && twoFactorChallenge && twoFactorFallback && !/^\d{6}$/.test(twoFactorFallbackCode)) {
+      errors.twoFactorFallbackCode = 'Enter the six-digit code from your authenticator app';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -65,17 +68,21 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        const requiresTwoFactor = loginMethod === 'email-code'
-          ? await loginWithEmailOtp(email, otpCode, twoFactorRequired ? twoFactorCode : undefined)
-          : await login(email, password, twoFactorRequired ? twoFactorCode : undefined);
-        if (requiresTwoFactor) {
-          setTwoFactorRequired(true);
+        const challenge = loginMethod === 'email-code'
+          ? await loginWithEmailOtp(email, otpCode, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined)
+          : await login(email, password, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined);
+        if (challenge) {
+          setTwoFactorChallenge(challenge);
+          setTwoFactorFallback(false);
+          setTwoFactorFallbackCode('');
+          setApprovalBusy(false);
           setErrorMsg('');
           setLoading(false);
           return;
         }
-        setTwoFactorRequired(false);
-        setTwoFactorCode('');
+        setTwoFactorChallenge(null);
+        setTwoFactorFallback(false);
+        setTwoFactorFallbackCode('');
       } else {
         await register(username, email, password, fullName);
         setVerificationPending(true);
@@ -95,10 +102,51 @@ export default function Auth() {
     setFieldErrors({});
     setOtpSent(false);
     setOtpCode('');
-    setTwoFactorRequired(false);
-    setTwoFactorCode('');
+    setTwoFactorChallenge(null);
+    setTwoFactorFallback(false);
+    setTwoFactorFallbackCode('');
     setVerificationPending(false);
   };
+
+  useEffect(() => {
+    if (!twoFactorChallenge || twoFactorFallback || approvalBusy) return;
+    let active = true;
+
+    const checkApproval = async () => {
+      try {
+        const status = await api.getTwoFactorChallengeStatus(twoFactorChallenge.challengeId);
+        if (!active) return;
+        if (status.status === 'approved') {
+          setApprovalBusy(true);
+          try {
+            await completeTwoFactorLogin(twoFactorChallenge.challengeId);
+            toast.success('Sign-in approved on your phone');
+          } catch (error) {
+            if (active) {
+              setApprovalBusy(false);
+              setErrorMsg(error instanceof Error ? error.message : 'Could not complete sign-in');
+            }
+          }
+        } else if (status.status === 'expired') {
+          setTwoFactorChallenge(null);
+          setErrorMsg('This sign-in request expired. Start again.');
+        }
+      } catch (error) {
+        if (active && error instanceof ApiError && error.status === 404) {
+          setTwoFactorChallenge(null);
+          setErrorMsg('This sign-in request was denied or expired. Start again.');
+        }
+        // A brief network failure should not cancel a valid approval request.
+      }
+    };
+
+    void checkApproval();
+    const timer = window.setInterval(() => void checkApproval(), 2000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [approvalBusy, completeTwoFactorLogin, twoFactorChallenge, twoFactorFallback]);
 
   const resendVerification = async () => {
     if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) {
@@ -357,10 +405,10 @@ export default function Auth() {
 
                   {mode === 'login' && (
                     <div className="premium-auth-methods" role="tablist" aria-label="Sign in method">
-                      <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); setTwoFactorRequired(false); setTwoFactorCode(''); }}>
+                      <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode(''); setTwoFactorChallenge(null); setTwoFactorFallback(false); setTwoFactorFallbackCode(''); }}>
                         <KeyRound className="h-3.5 w-3.5" /> Password
                       </button>
-                      <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => { setLoginMethod('email-code'); setPassword(''); setTwoFactorRequired(false); setTwoFactorCode(''); }}>
+                      <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => { setLoginMethod('email-code'); setPassword(''); setTwoFactorChallenge(null); setTwoFactorFallback(false); setTwoFactorFallbackCode(''); }}>
                         <Mail className="h-3.5 w-3.5" /> Email code
                       </button>
                     </div>
@@ -430,14 +478,34 @@ export default function Auth() {
                     )}
                   </motion.div>}
 
-                  {mode === 'login' && twoFactorRequired && (
+                  {mode === 'login' && twoFactorChallenge && !twoFactorFallback && (
+                    <motion.div variants={staggerItem} className="space-y-3 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-center">
+                      <div className="flex items-start gap-3">
+                        <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <div className="text-left"><p className="premium-auth-label">Approve this sign-in in your Yor app</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Open Yor on your trusted phone. A security popup will ask you to enter the exact number shown below.</p></div>
+                      </div>
+                      <div className="rounded-2xl border border-primary/20 bg-background/75 py-4">
+                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Match this number</p>
+                        <p className="mt-1 font-mono text-5xl font-black tracking-[0.15em] text-primary">{twoFactorChallenge.matchingNumber}</p>
+                      </div>
+                      <p className="text-[0.7rem] leading-relaxed text-muted-foreground">This request expires in five minutes. Yor will finish signing in automatically after your phone approves it.</p>
+                      <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => { setTwoFactorFallback(true); setTwoFactorFallbackCode(''); }}>
+                        Can’t access your phone? Use an authenticator code
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {mode === 'login' && twoFactorChallenge && twoFactorFallback && (
                     <motion.div variants={staggerItem} className="space-y-2 rounded-2xl border border-primary/25 bg-primary/10 p-4">
                       <div className="flex items-start gap-3">
                         <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <div><Label htmlFor="twoFactorCode" className="premium-auth-label">Authenticator code</Label><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Open your authenticator app on your phone and enter the current six-digit code to finish signing in.</p></div>
+                        <div><Label htmlFor="twoFactorFallbackCode" className="premium-auth-label">Authenticator fallback code</Label><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Use the six-digit code from the authenticator app you enrolled in Settings.</p></div>
                       </div>
-                      <Input id="twoFactorCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Six-digit authenticator code" className="premium-auth-input h-11 rounded-xl font-mono text-center text-lg tracking-[0.45em]" autoFocus />
-                      {fieldErrors.twoFactorCode && <p className="text-xs text-destructive">{fieldErrors.twoFactorCode}</p>}
+                      <Input id="twoFactorFallbackCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" value={twoFactorFallbackCode} onChange={(event) => setTwoFactorFallbackCode(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Six-digit authenticator fallback code" className="premium-auth-input h-11 rounded-xl font-mono text-center text-lg tracking-[0.45em]" autoFocus />
+                      {fieldErrors.twoFactorFallbackCode && <p className="text-xs text-destructive">{fieldErrors.twoFactorFallbackCode}</p>}
+                      <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => { setTwoFactorFallback(false); setTwoFactorFallbackCode(''); }}>
+                        Use number matching instead
+                      </button>
                     </motion.div>
                   )}
                 </motion.div>
@@ -445,13 +513,13 @@ export default function Auth() {
                 <motion.div whileTap={tapScale} className="pt-2">
                   <Button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || Boolean(twoFactorChallenge && !twoFactorFallback)}
                     className="premium-auth-submit w-full h-11 rounded-xl font-bold text-sm"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     ) : mode === 'login' ? (
-                      twoFactorRequired ? 'Verify & sign in' : loginMethod === 'email-code' ? 'Verify code & sign in' : 'Sign In'
+                      twoFactorChallenge && twoFactorFallback ? 'Verify & sign in' : twoFactorChallenge ? 'Waiting for phone approval…' : loginMethod === 'email-code' ? 'Verify code & sign in' : 'Sign In'
                     ) : (
                       'Create Account'
                     )}

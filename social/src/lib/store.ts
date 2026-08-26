@@ -20,7 +20,8 @@ import {
   type BackendArticle,
   type BackendVideo,
   type BackendLiveStream,
-  type AuthTokens
+  type AuthTokens,
+  type TwoFactorChallenge
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
@@ -490,8 +491,9 @@ interface AppState {
   profileComments: Record<string, ProfileComment[]>;
   showcases: Record<string, Showcase[]>;
 
-  login: (identifier: string, password: string, totpCode?: string) => Promise<boolean>;
-  loginWithEmailOtp: (email: string, code: string, totpCode?: string) => Promise<boolean>;
+  login: (identifier: string, password: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
+  loginWithEmailOtp: (email: string, code: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
+  completeTwoFactorLogin: (challengeId: string) => Promise<void>;
   register: (username: string, email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -638,36 +640,51 @@ export const useAppStore = create<AppState>()(
       profileComments: {},
       showcases: {},
 
-      login: async (identifier, password, totpCode) => {
+      login: async (identifier, password, totpCode, challengeId) => {
         set({ authError: null });
         try {
-          const result = await api.login({ identifier, password, ...(totpCode ? { totpCode } : {}) });
-          if (!result || 'requiresTwoFactor' in result) return true;
+          const result = await api.login({ identifier, password, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
-          return false;
+          return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
           throw err;
         }
       },
 
-      loginWithEmailOtp: async (email, code, totpCode) => {
+      loginWithEmailOtp: async (email, code, totpCode, challengeId) => {
         set({ authError: null });
         try {
-          const result = await api.loginWithEmailOtp({ email, code, ...(totpCode ? { totpCode } : {}) });
-          if (!result || 'requiresTwoFactor' in result) return true;
+          const result = await api.loginWithEmailOtp({ email, code, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
-          return false;
+          return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
+          throw err;
+        }
+      },
+
+      completeTwoFactorLogin: async (challengeId) => {
+        set({ authError: null });
+        try {
+          const result = await api.completeTwoFactorLogin(challengeId);
+          setStoredTokens(result.tokens);
+          const mapped = mapUser(result.user);
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          setupRealtime(set, get);
+          hydrateSessionData(get);
+        } catch (err) {
+          set({ authError: err instanceof ApiError ? err.message : 'Could not complete sign-in' });
           throw err;
         }
       },

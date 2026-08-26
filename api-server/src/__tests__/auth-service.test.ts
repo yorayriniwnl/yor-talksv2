@@ -60,16 +60,30 @@ test("two-factor authentication blocks password login until the authenticator co
   assert.match(setup?.otpauthUrl ?? "", /^otpauth:\/\//);
   assert.equal(await authService.confirmTwoFactorSetup(registered.user.id, authenticator.generate(setup!.secret)), true);
 
+  let challenge: { challengeId: string; matchingNumber: number; expiresAt: string } | undefined;
   await assert.rejects(
     () => authService.login({ identifier: email, password: "supersecret" }),
-    TwoFactorRequiredError,
+    (error: unknown) => {
+      assert.ok(error instanceof TwoFactorRequiredError);
+      challenge = error.challenge;
+      return true;
+    },
   );
+  assert.ok(challenge);
+  const createdChallenge = challenge;
+  assert.ok(createdChallenge.matchingNumber >= 1 && createdChallenge.matchingNumber <= 99);
+  assert.ok(Date.parse(createdChallenge.expiresAt) > Date.now());
 
-  const loggedIn = await authService.login({
-    identifier: email,
-    password: "supersecret",
-    totpCode: authenticator.generate(setup!.secret),
-  });
+  const pending = await authService.listPendingTwoFactorChallenges(registered.user.id);
+  assert.equal(pending.some((item) => item.challengeId === createdChallenge.challengeId), true);
+  const wrongNumber = createdChallenge.matchingNumber === 99 ? 1 : createdChallenge.matchingNumber + 1;
+  assert.equal(await authService.approveTwoFactorChallenge(registered.user.id, createdChallenge.challengeId, wrongNumber), false);
+  assert.equal(await authService.approveTwoFactorChallenge(registered.user.id, createdChallenge.challengeId, createdChallenge.matchingNumber), true);
+  assert.equal((await authService.getTwoFactorChallengeStatus(createdChallenge.challengeId))?.status, "approved");
+
+  const loggedIn = await authService.completeTwoFactorLogin(createdChallenge.challengeId);
+  assert.ok(loggedIn);
   assert.equal(loggedIn.user.id, registered.user.id);
   assert.ok(loggedIn.tokens.accessToken);
+  assert.equal(await authService.completeTwoFactorLogin(createdChallenge.challengeId), undefined);
 });

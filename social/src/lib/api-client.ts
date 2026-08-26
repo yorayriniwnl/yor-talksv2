@@ -13,7 +13,18 @@ export interface Tokens {
 
 export type AuthTokens = Tokens;
 
-export type TwoFactorChallenge = { requiresTwoFactor: true };
+export type TwoFactorChallenge = {
+  requiresTwoFactor: true;
+  challengeId: string;
+  matchingNumber: number;
+  expiresAt: string;
+};
+export type PendingTwoFactorChallenge = Omit<TwoFactorChallenge, 'requiresTwoFactor'>;
+export type TwoFactorChallengeStatus = {
+  challengeId: string;
+  status: 'pending' | 'approved' | 'expired';
+  expiresAt: string;
+};
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
@@ -247,11 +258,11 @@ export const api = {
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
-  login: (payload: { identifier: string; password: string; totpCode?: string }) =>
+  login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>
     request<AuthLoginResult>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   requestEmailOtp: (email: string) =>
     request<null>('/auth/email-otp/send', { method: 'POST', body: JSON.stringify({ email }) }),
-  loginWithEmailOtp: (payload: { email: string; code: string; totpCode?: string }) =>
+  loginWithEmailOtp: (payload: { email: string; code: string; totpCode?: string; challengeId?: string }) =>
     request<AuthLoginResult>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
@@ -267,6 +278,18 @@ export const api = {
   setupTwoFactor: () => request<{ secret: string; otpauthUrl: string }>('/auth/2fa/setup', { method: 'POST' }),
   confirmTwoFactor: (code: string) => request<null>('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
   disableTwoFactor: (code: string) => request<null>('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
+  listTwoFactorChallenges: () => request<PendingTwoFactorChallenge[]>('/auth/2fa/challenges'),
+  getTwoFactorChallengeStatus: (challengeId: string) =>
+    request<TwoFactorChallengeStatus>(`/auth/2fa/challenges/${encodeURIComponent(challengeId)}`),
+  approveTwoFactorChallenge: (challengeId: string, matchingNumber: number) =>
+    request<null>(`/auth/2fa/challenges/${encodeURIComponent(challengeId)}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ matchingNumber }),
+    }),
+  denyTwoFactorChallenge: (challengeId: string) =>
+    request<null>(`/auth/2fa/challenges/${encodeURIComponent(challengeId)}/deny`, { method: 'POST' }),
+  completeTwoFactorLogin: (challengeId: string) =>
+    request<{ user: BackendUser; tokens: AuthTokens }>(`/auth/2fa/challenges/${encodeURIComponent(challengeId)}/complete`, { method: 'POST' }),
 
   resendVerificationEmail: () => request<{ devVerificationToken?: string } | null>('/auth/verify-email/resend', { method: 'POST' }),
   resendPublicVerificationEmail: (email: string) => request<null>('/auth/verify-email/resend-public', { method: 'POST', body: JSON.stringify({ email }) }),

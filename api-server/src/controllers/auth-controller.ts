@@ -26,6 +26,14 @@ export class AuthController {
     return { accessToken: tokens.accessToken, expiresAt: tokens.expiresAt };
   }
 
+  private twoFactorChallengeData(error: TwoFactorRequiredError) {
+    return { requiresTwoFactor: true as const, ...(error.challenge ?? {}) };
+  }
+
+  private challengeId(req: Request): string {
+    return Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
+  }
+
   register = async (req: Request, res: Response) => {
     try {
       const result = await this.authService.register(req.body);
@@ -56,7 +64,7 @@ export class AuthController {
         return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
       }
       if (error instanceof TwoFactorRequiredError) {
-        return res.status(200).json(createResponse("Two-factor code required", { requiresTwoFactor: true }, { requiresTwoFactor: true }));
+        return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
       }
       if (error instanceof EmailVerificationRequiredError) {
         return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
@@ -93,7 +101,7 @@ export class AuthController {
       return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TwoFactorRequiredError) {
-        return res.status(200).json(createResponse("Two-factor code required", { requiresTwoFactor: true }, { requiresTwoFactor: true }));
+        return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
       }
       if (error instanceof EmailOtpInvalidError) {
         return res.status(401).json(createResponse("Email sign-in failed", null, {}, [error.message]));
@@ -136,6 +144,76 @@ export class AuthController {
       return res.status(400).json(createResponse("Invalid code", null, {}, ["Invalid code"]));
     }
     return res.status(200).json(createResponse("Two-factor authentication disabled", null));
+  };
+
+  listTwoFactorChallenges = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    }
+    try {
+      const challenges = await this.authService.listPendingTwoFactorChallenges(userId);
+      return res.status(200).json(createResponse("Pending sign-in approvals", challenges));
+    } catch (error) {
+      return res.status(500).json(createResponse("Could not load sign-in approvals", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  getTwoFactorChallengeStatus = async (req: Request, res: Response) => {
+    try {
+      const challenge = await this.authService.getTwoFactorChallengeStatus(this.challengeId(req));
+      if (!challenge) {
+        return res.status(404).json(createResponse("Sign-in request not found", null, {}, ["Challenge not found"]));
+      }
+      return res.status(200).json(createResponse("Sign-in request status", challenge));
+    } catch (error) {
+      return res.status(500).json(createResponse("Could not check sign-in request", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  approveTwoFactorChallenge = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    }
+    try {
+      const approved = await this.authService.approveTwoFactorChallenge(userId, this.challengeId(req), req.body.matchingNumber);
+      if (!approved) {
+        return res.status(400).json(createResponse("The number did not match or the request expired", null, {}, ["Approval failed"]));
+      }
+      return res.status(200).json(createResponse("Sign-in approved", null));
+    } catch (error) {
+      return res.status(500).json(createResponse("Could not approve sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  denyTwoFactorChallenge = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    }
+    try {
+      const denied = await this.authService.denyTwoFactorChallenge(userId, this.challengeId(req));
+      if (!denied) {
+        return res.status(400).json(createResponse("Sign-in request is no longer pending", null, {}, ["Request cannot be denied"]));
+      }
+      return res.status(200).json(createResponse("Sign-in denied", null));
+    } catch (error) {
+      return res.status(500).json(createResponse("Could not deny sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
+  completeTwoFactorLogin = async (req: Request, res: Response) => {
+    try {
+      const result = await this.authService.completeTwoFactorLogin(this.challengeId(req));
+      if (!result) {
+        return res.status(401).json(createResponse("Sign-in approval is missing or expired", null, {}, ["Approval required"]));
+      }
+      this.setRefreshCookie(res, result.tokens.refreshToken);
+      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+    } catch (error) {
+      return res.status(500).json(createResponse("Could not complete sign-in", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
   };
 
   refresh = async (req: Request, res: Response) => {
