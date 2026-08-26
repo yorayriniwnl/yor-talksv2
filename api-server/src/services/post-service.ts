@@ -510,8 +510,12 @@ export class PostService {
 
   private async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
     if (viewerId && authorId === viewerId) return true;
-    const author = await this.userRepository.findById(authorId);
+    const [author, viewer] = await Promise.all([
+      this.userRepository.findById(authorId),
+      viewerId ? this.userRepository.findById(viewerId) : Promise.resolve(undefined),
+    ]);
     if (!author) return false;
+    if (viewerId && (author.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(authorId))) return false;
     const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
     if (visibility === "public") return true;
     return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));

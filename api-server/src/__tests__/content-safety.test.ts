@@ -32,3 +32,23 @@ test("author visibility is enforced consistently for public and private content"
   assert.equal(await service.isVisible(content, "follower", "owner"), true);
   assert.equal(await service.isVisible(content, "owner", "owner"), true);
 });
+
+test("author visibility denies content across a mutual block", async () => {
+  const author = {
+    id: "owner",
+    privacy: { profileVisibility: "public" },
+    blockedUsers: ["viewer"],
+  };
+  const viewer = {
+    id: "viewer",
+    privacy: { profileVisibility: "public" },
+    blockedUsers: [],
+  };
+  const repository = {
+    findById: async (id: string) => id === author.id ? author : id === viewer.id ? viewer : undefined,
+    isFollowing: async () => true,
+  } as any;
+  const service = new ContentSafetyService(repository);
+
+  assert.equal(await service.isVisible({ contentRating: "regular" }, viewer.id, author.id), false);
+});
