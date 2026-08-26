@@ -29,8 +29,8 @@ export class MessageController {
       const io = getIo();
       if (io) {
         const room = `conversation:${actualConversationId}`;
-        io.in(message.senderId).socketsJoin(room);
-        if (message.recipientId) io.in(message.recipientId).socketsJoin(room);
+        const memberIds = await this.messageService.getConversationMemberIds(actualConversationId, message.senderId);
+        for (const memberId of memberIds) io.in(memberId).socketsJoin(room);
         io.to(room).emit("message:receive", message);
       }
       

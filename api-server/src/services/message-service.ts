@@ -134,6 +134,12 @@ export class MessageService {
     return messages.filter((message: MessageRecord) => !message.deletedAt);
   }
 
+  async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
+    const members = await this.conversationRepository.getMembers(conversationId);
+    if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
+    return members;
+  }
+
   async getConversationsForUser(userId: string): Promise<{ conversation: ConversationRecord; lastMessage: MessageRecord | undefined }[]> {
     const conversations = await this.conversationRepository.listForUser(userId);
     return Promise.all(

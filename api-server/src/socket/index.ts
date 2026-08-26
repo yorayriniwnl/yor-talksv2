@@ -278,6 +278,10 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         emitCallError("That account is already on another call");
         return;
       }
+      if (activeCalls.has(callId)) {
+        emitCallError("That call identifier is already in use");
+        return;
+      }
       if (!io.sockets.adapter.rooms.get(targetUserId)?.size) {
         emitCallError("That account is currently offline");
         return;
