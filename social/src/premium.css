@@ -1096,7 +1096,7 @@ body {
     min-height: 100dvh;
     width: 100%;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: clip;
   }
 
   .premium-auth-hero {
