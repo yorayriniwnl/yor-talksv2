@@ -34,11 +34,11 @@ export function DeviceApprovalInbox() {
       try {
         const pending = await api.listTwoFactorChallenges();
         if (!active) return;
-        const next = pending[0] ?? null;
+        const next = pending.find((item) => item.challengeId !== dismissedChallengeId) ?? null;
         setChallenge((previous) => {
           if (!next) return null;
           if (previous?.challengeId === next.challengeId) return previous;
-          return next.challengeId === dismissedChallengeId ? null : next;
+          return next;
         });
       } catch {
         // The inbox is secondary UI. A transient API failure should not

@@ -182,6 +182,13 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
+    if (!currentUser) return;
+    setNotificationsEnabled(currentUser.notificationsEnabled ?? true);
+    setContentFilter(currentUser.contentFilter ?? DEFAULT_CONTENT_RATING);
+    setTwoFactorEnabled(Boolean(currentUser.twoFactorEnabled));
+  }, [currentUser?.id, currentUser?.notificationsEnabled, currentUser?.contentFilter, currentUser?.twoFactorEnabled]);
+
+  useEffect(() => {
     let active = true;
     setTwoFactorQr('');
     if (twoFactorSetup?.otpauthUrl) {
