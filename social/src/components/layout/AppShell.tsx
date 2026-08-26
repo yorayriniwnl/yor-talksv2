@@ -131,6 +131,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Primary create action */}
         <button
+          type="button"
           onClick={() => setIsComposing(true)}
           className={cn(
             "premium-create-button w-full justify-center mb-5",
@@ -153,6 +154,7 @@ export function AppShell({ children }: AppShellProps) {
 
               return (
                 <button
+                  type="button"
                   key={item.label}
                   onClick={() => setLocation(item.path)}
                   className={cn(
@@ -186,6 +188,7 @@ export function AppShell({ children }: AppShellProps) {
 
             return (
               <button
+                type="button"
                 key={item.label}
                 onClick={() => setLocation(item.path)}
                 className={cn(
@@ -239,6 +242,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
       <nav aria-label="Primary navigation" className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 md:hidden">
         <button
+          type="button"
           aria-label="Home"
           onClick={() => {
             if (location === '/') {
@@ -254,21 +258,21 @@ export function AppShell({ children }: AppShellProps) {
           <span>Home</span>
           {location === '/' && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setLocation('/explore')} aria-label="Explore" aria-current={location.startsWith('/explore') ? 'page' : undefined} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/explore') && "text-primary")}>
+        <button type="button" onClick={() => setLocation('/explore')} aria-label="Explore" aria-current={location.startsWith('/explore') ? 'page' : undefined} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/explore') && "text-primary")}>
           <Compass className="w-6 h-6" />
           <span>Explore</span>
           {location.startsWith('/explore') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button onClick={() => setIsComposing(true)} aria-label="Create post" className="mobile-nav-item mobile-nav-item--create p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
+        <button type="button" onClick={() => setIsComposing(true)} aria-label="Create post" className="mobile-nav-item mobile-nav-item--create p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
             <PlusSquare className="w-6 h-6" />
             <span>Create</span>
         </button>
-        <button onClick={() => setLocation('/videos')} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/videos') && "text-primary")} aria-label="Reels" aria-current={location.startsWith('/videos') ? 'page' : undefined}>
+        <button type="button" onClick={() => setLocation('/videos')} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/videos') && "text-primary")} aria-label="Reels" aria-current={location.startsWith('/videos') ? 'page' : undefined}>
           <Film className="w-6 h-6" />
           <span>Reels</span>
           {location.startsWith('/videos') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button aria-label="Profile" aria-current={location.startsWith('/profile') ? 'page' : undefined} onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
+        <button type="button" aria-label="Profile" aria-current={location.startsWith('/profile') ? 'page' : undefined} onClick={() => currentUser && setLocation(`/profile/${currentUser.id}`)} className={cn("mobile-nav-item p-2 text-muted-foreground relative", location.startsWith('/profile') && "text-primary")}>
           <UserRound className="w-6 h-6" />
           <span>Profile</span>
           {location.startsWith('/profile') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}

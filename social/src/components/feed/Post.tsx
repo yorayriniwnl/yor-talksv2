@@ -475,8 +475,16 @@ export function PostCard({ post }: { post: PostType }) {
         variants={fadeInUp}
         initial="initial"
         animate="animate"
+        tabIndex={0}
         className="yor-post group cursor-pointer border-b border-border/20 px-5 py-5 transition-all hover:bg-muted/20 card-shine sm:px-6"
         onClick={handleOpen}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleOpen();
+          }
+        }}
       >
       <div className="yor-post__body flex gap-3.5">
         <MiniProfileCard user={author}>
