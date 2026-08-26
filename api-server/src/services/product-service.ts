@@ -18,6 +18,7 @@ export class ProductService {
       id: randomUUID(),
       ...input,
       savedBy: [],
+      availability: "active",
       createdAt: new Date().toISOString(),
     };
     return this.productRepository.create(product);
@@ -42,7 +43,7 @@ export class ProductService {
 
   async deleteProduct(id: string, userId: string): Promise<boolean> {
     const product = await this.productRepository.findById(id);
-    if (!product || product.sellerId !== userId) {
+    if (!product || product.sellerId !== userId || product.availability !== "active") {
       return false;
     }
     return this.productRepository.delete(id);

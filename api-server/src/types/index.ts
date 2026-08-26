@@ -255,6 +255,27 @@ export interface ProductRecord {
   condition: string;
   createdAt: string;
   savedBy: string[];
+  availability?: "active" | "reserved" | "sold";
+}
+
+export interface MarketplaceOrderRecord {
+  id: string;
+  productId: string;
+  buyerId: string;
+  sellerId: string;
+  provider: string;
+  providerOrderId: string;
+  providerPaymentId?: string | null;
+  providerSignature?: string | null;
+  amountMinor: number;
+  currency: string;
+  status: "provider_pending" | "created" | "paid" | "cancelled" | "failed";
+  shippingName: string;
+  shippingAddress: string;
+  shippingPhone?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
 }
 
 export interface ArticleRecord {

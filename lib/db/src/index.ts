@@ -34,6 +34,7 @@ export {
   communitiesTable,
   eventsTable,
   productsTable,
+  marketplaceOrdersTable,
   articlesTable,
   videosTable,
   liveStreamsTable,

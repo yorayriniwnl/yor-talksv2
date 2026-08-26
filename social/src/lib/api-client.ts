@@ -492,6 +492,12 @@ export const api = {
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
   saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
+  createMarketplaceOrder: (productId: string, payload: { shippingName: string; shippingAddress: string; shippingPhone?: string }) =>
+    request<{ orderId: string; providerOrderId: string; amountMinor: number; currency: string; keyId: string }>(`/products/${encodeURIComponent(productId)}/order`, { method: 'POST', body: JSON.stringify(payload) }),
+  verifyMarketplacePayment: (providerOrderId: string, payload: { paymentId: string; signature: string }) =>
+    request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(providerOrderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+  getMarketplaceOrders: () => request<BackendMarketplaceOrder[]>('/products/orders'),
+  cancelMarketplaceOrder: (orderId: string) => request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST' }),
 
   // ---- Articles ----
   getArticles: () => request<BackendArticle[]>('/articles'),
@@ -632,6 +638,24 @@ export interface BackendProduct {
   condition: string;
   createdAt: string;
   savedByMe?: boolean;
+  availability?: 'active' | 'reserved' | 'sold';
+}
+
+export interface BackendMarketplaceOrder {
+  id: string;
+  productId: string;
+  buyerId: string;
+  sellerId: string;
+  providerOrderId: string;
+  amountMinor: number;
+  currency: string;
+  status: 'provider_pending' | 'created' | 'paid' | 'cancelled' | 'failed';
+  shippingName: string;
+  shippingAddress: string;
+  shippingPhone?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
 }
 
 export interface BackendArticle {

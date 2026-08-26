@@ -235,6 +235,7 @@ export type Product = {
   condition: 'new' | 'like-new' | 'used';
   savedByMe?: boolean;
   createdAt: string;
+  availability?: 'active' | 'reserved' | 'sold';
 };
 
 export type Achievement = {
@@ -416,6 +417,7 @@ function mapProduct(p: BackendProduct): Product {
     condition: (p.condition as Product['condition']) || 'new',
     savedByMe: Boolean(p.savedByMe),
     createdAt: p.createdAt || new Date().toISOString(),
+    availability: p.availability ?? 'active',
   };
 }
 

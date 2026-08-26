@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Heart, ShoppingBag, Plus, Tag, ArrowLeftRight, Sparkles, Shield, Check } from 'lucide-react';
+import { Search, Heart, ShoppingBag, Plus, Tag, ArrowLeftRight, Sparkles, Shield, Check, Loader2, PackageCheck, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeModal';
 import { sounds } from '@/lib/sound';
+import { api } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 const PRODUCT_CATEGORIES = [
   'Hardware & Silicon',
@@ -83,7 +85,7 @@ function CreateListingDialog() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="product-price" className="text-xs font-mono uppercase text-muted-foreground">Price (USD)</Label>
+              <Label htmlFor="product-price" className="text-xs font-mono uppercase text-muted-foreground">Price (INR)</Label>
               <Input id="product-price" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="45.00" className="rounded-xl" />
             </div>
             <div className="space-y-1.5">
@@ -110,18 +112,107 @@ function CreateListingDialog() {
   );
 }
 
+type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
+
+function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
+  const existing = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
+  if (existing) return Promise.resolve(existing);
+  return new Promise((resolve, reject) => {
+    const current = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
+    const finish = () => {
+      const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
+      checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
+    };
+    if (current) {
+      current.addEventListener('load', finish, { once: true });
+      current.addEventListener('error', () => reject(new Error('Razorpay Checkout could not load')), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.dataset.razorpayCheckout = 'true';
+    script.onload = finish;
+    script.onerror = () => reject(new Error('Razorpay Checkout could not load'));
+    document.body.appendChild(script);
+  });
+}
+
+function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [shippingName, setShippingName] = useState('');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingPhone, setShippingPhone] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState('');
+
+  const startPurchase = async () => {
+    setPaying(true);
+    setError('');
+    try {
+      const order = await api.createMarketplaceOrder(product.id, { shippingName, shippingAddress, ...(shippingPhone.trim() ? { shippingPhone: shippingPhone.trim() } : {}) });
+      const Razorpay = await loadRazorpayCheckout();
+      const checkout = new Razorpay({
+        key: order.keyId,
+        amount: order.amountMinor,
+        currency: order.currency,
+        name: 'Yor Talks Marketplace',
+        description: product.title,
+        order_id: order.providerOrderId,
+        theme: { color: '#8b5cf6' },
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            await api.verifyMarketplacePayment(response.razorpay_order_id, { paymentId: response.razorpay_payment_id, signature: response.razorpay_signature });
+            toast.success('Payment verified. The listing is now marked sold.');
+            setOpen(false);
+            onCompleted();
+          } catch (verificationError) {
+            const message = verificationError instanceof Error ? verificationError.message : 'Payment verification failed';
+            setError(message);
+            toast.error(message);
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: { ondismiss: () => setPaying(false) },
+      });
+      checkout.open();
+    } catch (purchaseError) {
+      const message = purchaseError instanceof Error ? purchaseError.message : 'Purchase could not be started';
+      setError(message);
+      toast.error(message);
+      setPaying(false);
+    }
+  };
+
+  return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="sm" disabled={product.availability && product.availability !== 'active'} className="rounded-xl font-bold text-xs bg-primary">{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}</Button></DialogTrigger><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Buy {product.title}</DialogTitle></DialogHeader><div className="space-y-4"><p className="text-sm text-muted-foreground">Your payment is verified server-side before the listing is marked sold. Shipping details are shared with the seller for fulfillment.</p><div className="space-y-1.5"><Label htmlFor={`shipping-name-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Recipient name</Label><Input id={`shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} className="rounded-xl" maxLength={100} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-address-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Shipping / pickup details</Label><Textarea id={`shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} className="rounded-xl resize-none" maxLength={1000} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-phone-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Phone (optional)</Label><Input id={`shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} className="rounded-xl" maxLength={24} /></div>{error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}<Button onClick={() => void startPurchase()} disabled={paying || shippingName.trim().length < 2 || shippingAddress.trim().length < 5} className="w-full rounded-2xl font-bold h-11">{paying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : <>Pay ₹{Number(product.price).toLocaleString('en-IN')}</>}</Button></div></DialogContent></Dialog>;
+}
+
+function OrderHistoryDialog({ orders, products, open, onOpenChange }: { orders: any[]; products: any[]; open: boolean; onOpenChange: (open: boolean) => void }) {
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60 max-w-xl"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Marketplace orders</DialogTitle></DialogHeader><div className="max-h-[60vh] overflow-y-auto space-y-3">{orders.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">Your purchases and sales will appear here.</p> : orders.map((order) => { const product = products.find((item) => item.id === order.productId); return <div key={order.id} className="rounded-2xl border border-border/40 p-4 flex items-center justify-between gap-4"><div className="min-w-0"><p className="font-bold text-sm truncate">{product?.title ?? 'Marketplace item'}</p><p className="text-xs text-muted-foreground font-mono">{order.status} · {new Date(order.createdAt).toLocaleDateString()}</p><p className="text-xs text-muted-foreground">Verified buyer / seller transaction</p></div><span className="font-display font-bold shrink-0">₹{(Number(order.amountMinor) / 100).toLocaleString('en-IN')}</span></div>; })}</div></DialogContent></Dialog>;
+}
+
 export default function Marketplace() {
   const products = useAppStore((s: any) => s.products || []);
   const users = useAppStore((s: any) => s.users || {});
   const loadProducts = useAppStore((s: any) => s.loadProducts);
   const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
   const toggleSaveProduct = useAppStore((s: any) => s.toggleSaveProduct);
+  const currentUser = useAppStore((s: any) => s.currentUser);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersOpen, setOrdersOpen] = useState(false);
 
   const [mode, setMode] = useState<'store' | 'inventory'>('store');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
+
+  const refreshOrders = () => {
+    if (!currentUser) return;
+    void api.getMarketplaceOrders().then(setOrders).catch(() => setOrders([]));
+  };
+  useEffect(() => { refreshOrders(); }, [currentUser?.id]);
 
   useEffect(() => {
     for (const product of products) {
@@ -145,10 +236,13 @@ export default function Marketplace() {
         </div>
 
         <div className="flex items-center gap-2">
+          {currentUser && <Button variant="outline" onClick={() => { refreshOrders(); setOrdersOpen(true); }} className="rounded-2xl font-bold text-xs"><ClipboardList className="w-4 h-4 mr-1.5" /> Orders</Button>}
           <SteamTradeModal />
           <CreateListingDialog />
         </div>
       </div>
+
+      <OrderHistoryDialog orders={orders} products={products} open={ordersOpen} onOpenChange={setOrdersOpen} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
         {/* Main Section Mode Tabs */}
@@ -297,7 +391,7 @@ export default function Marketplace() {
                         <Heart className={cn("w-4 h-4", isSaved && "fill-current text-rose-500")} />
                       </button>
                       <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white font-display font-bold text-sm px-2.5 py-1 rounded-lg">
-                        ${product.price.toLocaleString()}
+                        ₹{Number(product.price).toLocaleString('en-IN')}
                       </div>
                     </div>
                     <div className="p-4 flex flex-col flex-1 justify-between">
@@ -311,9 +405,7 @@ export default function Marketplace() {
                           </Avatar>
                           <span className="text-xs text-muted-foreground font-mono truncate max-w-[100px]">{seller?.displayName ?? 'Unknown'}</span>
                         </div>
-                        <span className="text-[0.62rem] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full font-mono">
-                          {product.condition.replace('-', ' ')}
-                        </span>
+                        <div className="flex items-center gap-2"><span className="text-[0.62rem] uppercase font-bold tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full font-mono">{product.condition.replace('-', ' ')}</span>{currentUser?.id !== product.sellerId && <PurchaseProductDialog product={product} onCompleted={() => { void loadProducts(); refreshOrders(); }} />}</div>
                       </div>
                     </div>
                   </motion.div>

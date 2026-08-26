@@ -232,6 +232,7 @@ export const productsTable = pgTable("products", {
   condition: text("condition").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   savedBy: jsonb("saved_by").notNull().default([]),
+  availability: text("availability").notNull().default("active"),
 }, (table) => ({
   sellerIdx: index("product_seller_idx").on(table.sellerId)
 }));
@@ -283,6 +284,31 @@ export const liveStreamsTable = pgTable("live_streams", {
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   hostIdx: index("livestream_host_idx").on(table.hostId)
+}));
+
+export const marketplaceOrdersTable = pgTable("marketplace_orders", {
+  id: uuid("id").primaryKey(),
+  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "restrict" }).notNull(),
+  buyerId: uuid("buyer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  provider: text("provider").notNull().default("razorpay"),
+  providerOrderId: text("provider_order_id").notNull().unique(),
+  providerPaymentId: text("provider_payment_id"),
+  providerSignature: text("provider_signature"),
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull().default("INR"),
+  status: text("status").notNull().default("provider_pending"),
+  shippingName: text("shipping_name").notNull(),
+  shippingAddress: text("shipping_address").notNull(),
+  shippingPhone: text("shipping_phone"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { mode: "string" }),
+  fulfilledAt: timestamp("fulfilled_at", { mode: "string" }),
+  reservationExpiresAt: timestamp("reservation_expires_at", { mode: "string" }),
+}, (t) => ({
+  productIdx: index("marketplace_order_product_idx").on(t.productId),
+  buyerIdx: index("marketplace_order_buyer_idx").on(t.buyerId, t.createdAt),
+  sellerIdx: index("marketplace_order_seller_idx").on(t.sellerId, t.createdAt),
 }));
 
 export const pushSubscriptionsTable = pgTable("push_subscriptions", {
