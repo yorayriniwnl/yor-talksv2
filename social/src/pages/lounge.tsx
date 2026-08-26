@@ -141,7 +141,7 @@ export default function Lounge() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <h3 className="font-display font-bold text-sm text-foreground">Spatial Audio Room: Bharat Tech & Chill</h3>
+              <h3 className="font-display font-bold text-sm text-foreground">Spatial Audio Room: Tech & Chill</h3>
             </div>
             <p className="text-xs font-mono text-muted-foreground hidden sm:block">Click anywhere on the floor plan to move your spatial avatar</p>
           </div>

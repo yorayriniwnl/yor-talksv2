@@ -79,7 +79,7 @@ export default function SquadCommsRoom() {
             <Radio className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Squad Voice Comms & Spatial Matrix</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Squad Voice Comms & Spatial Matrix</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Ultra-Low Latency Opus Voice Comms for Clan Scrims</p>
           </div>
         </div>

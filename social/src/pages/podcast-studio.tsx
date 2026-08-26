@@ -103,7 +103,7 @@ export default function PodcastStudio() {
             <Radio className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Live Audio Stage & Podcast</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Live Audio Stage & Podcast</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Audio stage preview · live panel transport is not connected yet</p>
           </div>
         </div>

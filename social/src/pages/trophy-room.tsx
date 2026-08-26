@@ -47,7 +47,7 @@ const CLAN_TROPHIES: ClanTrophy[] = [
   },
   {
     id: 'tr-3',
-    name: 'Bharat Grandmaster Blitz Shield 🛡️',
+    name: 'Global Grandmaster Blitz Shield 🛡️',
     tournament: 'National Cyber Chess Masters',
     year: '2026',
     icon: '🛡️',

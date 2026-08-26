@@ -161,7 +161,7 @@ export default function Bounties() {
             <IndianRupee className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Creator Grants & Bounties</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Creator Grants & Bounties</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Grant directory preview · sponsor verification and submissions are not connected yet</p>
           </div>
         </div>

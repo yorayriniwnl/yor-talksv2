@@ -30,14 +30,14 @@ interface StudioCameraModalProps {
 const CINEMATIC_FILTERS = [
   { id: 'normal', name: 'Original', css: '', icon: '✨' },
   { id: 'cyberpunk', name: 'Cyber Neon', css: 'contrast(125%) saturate(150%) hue-rotate(330deg) brightness(105%)', icon: '🌆' },
-  { id: 'bharat_gold', name: 'Bharat Gold', css: 'sepia(35%) saturate(140%) contrast(110%) brightness(108%)', icon: '🌅' },
+  { id: 'sunset_gold', name: 'Sunset Gold', css: 'sepia(35%) saturate(140%) contrast(110%) brightness(108%)', icon: '🌅' },
   { id: 'film_35mm', name: '35mm Analog', css: 'contrast(115%) brightness(95%) saturate(85%) sepia(20%)', icon: '🎞️' },
   { id: 'emerald_noir', name: 'Emerald Noir', css: 'contrast(140%) saturate(130%) hue-rotate(90deg) brightness(95%)', icon: '💎' },
   { id: 'prism_dream', name: 'Prism Bloom', css: 'brightness(115%) saturate(160%) contrast(105%)', icon: '🌈' },
 ];
 
 const MUSIC_PRESETS = [
-  { id: 'm1', title: 'Bharat Cyberpunk Anthem', artist: 'Yor Music AI', duration: '0:30', bpm: 128 },
+  { id: 'm1', title: 'Cyberpunk Anthem', artist: 'Yor Music AI', duration: '0:30', bpm: 128 },
   { id: 'm2', title: 'Mumbai Sunset Lo-Fi', artist: 'Rooftop Beats', duration: '0:45', bpm: 84 },
   { id: 'm3', title: 'Tabla & Modular Synth Fusion', artist: 'Vedic Pulse', duration: '0:30', bpm: 135 },
   { id: 'm4', title: 'High-Octane Drift Telemetry', artist: 'Apex Sound', duration: '0:15', bpm: 140 },
@@ -47,8 +47,8 @@ const STICKER_TYPES = [
   { id: 'poll', label: '📊 Interactive Poll', desc: 'Ask viewers to vote' },
   { id: 'question', label: '❓ Ask Me Anything', desc: 'Anonymous Q&A sticker' },
   { id: 'countdown', label: '⏳ Live Countdown', desc: 'Build launch hype' },
-  { id: 'location', label: '📍 Bharat Pin', desc: 'Tag your city/region' },
-  { id: 'badge', label: '🇮🇳 Bharat Pride', desc: '#BharatMultiverse tag' },
+  { id: 'location', label: '📍 World Pin', desc: 'Tag your city or region' },
+  { id: 'badge', label: '✨ Yor Signature', desc: '#YorOriginal tag' },
 ];
 
 export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', initialAudioTrack }: StudioCameraModalProps) {
@@ -204,7 +204,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     if (typeId === 'question') data = { prompt: qaPrompt };
     if (typeId === 'location') data = { location: locationTag };
     if (typeId === 'countdown') data = { title: 'Multiverse Launch', time: '24h 00m' };
-    if (typeId === 'badge') data = { tag: '#BharatCreators' };
+    if (typeId === 'badge') data = { tag: '#YorOriginal' };
 
     setActiveStickers((prev) => [
       ...prev,
@@ -239,7 +239,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           contentCategory,
           contentRating,
         });
-        toast.success('🎬 Reel published to the Bharat Reel Swiper!');
+      toast.success('🎬 Reel published to Yor');
       } else if (mode === 'story') {
         await addStory({
           type: 'video',
@@ -343,7 +343,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                     Cinematic 4K Simulator Ready
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-sm mt-1 relative z-10 font-sans">
-                    Live camera stream will render with real-time WebGL shaders, beats sync, and interactive Bharat stickers.
+                    Live camera stream will render with real-time WebGL shaders, beat sync, and interactive Yor stickers.
                   </p>
                 </div>
               )}
@@ -517,7 +517,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder={`Write a description for this ${mode}… #BharatMultiverse #YorTalks`}
+                  placeholder={`Write a description for this ${mode}… #YorOriginal #YorTalks`}
                   className="w-full h-20 rounded-xl surface-2 border border-border/40 p-2.5 text-xs outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground resize-none font-sans"
                 />
               </div>

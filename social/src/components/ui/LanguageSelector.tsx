@@ -10,35 +10,37 @@ import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
 
-export const BHARAT_LANGUAGES = [
+export const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English', native: 'English', flag: '🌐' },
   { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸' },
+  { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷' },
+  { code: 'pt', name: 'Portuguese', native: 'Português', flag: '🇧🇷' },
+  { code: 'ar', name: 'Arabic', native: 'العربية', flag: '🌍' },
+  { code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
+  { code: 'sw', name: 'Swahili', native: 'Kiswahili', flag: '🌍' },
   { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
-  { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
   { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
-  { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
-  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
-  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
-  { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳' },
-  { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
-];
+] as const;
+
+type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export function LanguageSelector() {
-  const [selectedLang, setSelectedLang] = useState(BHARAT_LANGUAGES[0]);
+  const [selectedLang, setSelectedLang] = useState<SupportedLanguage>(SUPPORTED_LANGUAGES[0]);
 
   useEffect(() => {
     const saved = localStorage.getItem('yortalks-lang');
     if (saved) {
-      const found = BHARAT_LANGUAGES.find((l) => l.code === saved);
+      const found = SUPPORTED_LANGUAGES.find((l) => l.code === saved);
       if (found) setSelectedLang(found);
     }
   }, []);
 
-  const handleSelectLanguage = (lang: typeof BHARAT_LANGUAGES[0]) => {
+  const handleSelectLanguage = (lang: SupportedLanguage) => {
     sounds.playPop();
     setSelectedLang(lang);
     localStorage.setItem('yortalks-lang', lang.code);
-    toast.success(`Language switched to ${lang.native} (${lang.name}) 🇮🇳`);
+    toast.success(`Language switched to ${lang.native} (${lang.name})`);
   };
 
   return (
@@ -55,9 +57,9 @@ export function LanguageSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 rounded-2xl glass-heavy border border-border/50 p-1.5 font-sans">
         <div className="px-2 py-1.5 text-[0.68rem] font-mono font-bold uppercase text-muted-foreground">
-          Bharat Multiverse 🇮🇳
+          Yor languages · global by design
         </div>
-        {BHARAT_LANGUAGES.map((lang) => (
+        {SUPPORTED_LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
             onClick={() => handleSelectLanguage(lang)}

@@ -33,7 +33,7 @@ export default function CustomRoomLobby() {
             <Key className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Custom Scrims Room & Slot Matchmaker</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Custom Scrims Room & Slot Matchmaker</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Automated Slot Allocation & Anti-Leak Room Key Distribution</p>
           </div>
         </div>

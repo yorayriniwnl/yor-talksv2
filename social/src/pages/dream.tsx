@@ -32,7 +32,7 @@ type DreamBlueprint = {
 
 const DREAM_STARTERS = [
   'Shoot a strange five-minute film with people I meet here',
-  'Build a tiny product that fixes one annoying student problem',
+  'Build a tiny product that fixes one annoying everyday problem',
   'Create a night where musicians and visual artists improvise together',
   'Start a research circle around an idea nobody is discussing yet',
 ];

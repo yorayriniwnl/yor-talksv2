@@ -1294,7 +1294,7 @@ export const useAppStore = create<AppState>()(
             } : state.currentUser,
           }));
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not follow this student');
+          toast.error(error instanceof Error ? error.message : 'Could not follow this person');
         }
       },
 
@@ -1314,7 +1314,7 @@ export const useAppStore = create<AppState>()(
             } : state.currentUser,
           }));
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not unfollow this student');
+          toast.error(error instanceof Error ? error.message : 'Could not unfollow this person');
         }
       },
 

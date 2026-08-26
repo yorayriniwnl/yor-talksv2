@@ -32,7 +32,7 @@ export const WORLD_OPTIONS = [
   { id: 'global', label: 'Global', description: 'Meet people and ideas across borders.' },
   { id: 'country', label: 'India', description: 'Tune discovery to your country.' },
   { id: 'city', label: 'Bhubaneswar', description: 'Find nearby people, places, and events.' },
-  { id: 'campus', label: 'KIIT', description: 'Your first world, still fully alive.' },
+  { id: 'campus', label: 'Campus', description: 'A focused world for your local community.' },
   { id: 'interest', label: 'Tech & AI', description: 'Follow a shared obsession anywhere.' },
   { id: 'private', label: 'Private Circle', description: 'A smaller space for people you trust.' },
 ] as const;

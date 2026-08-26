@@ -282,7 +282,7 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
                 disabled={loading || otpDigits.some((d) => !d)}
                 className="w-full rounded-2xl font-display font-extrabold text-xs h-12 bg-gradient-to-r from-emerald-500 via-teal-500 to-primary text-black glow-neon-primary shadow-xl cursor-pointer"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify & Enter Bharat Feed 🚀</>}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify & enter Yor 🚀</>}
               </Button>
             </motion.div>
           )}

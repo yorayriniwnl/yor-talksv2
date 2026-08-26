@@ -21,7 +21,7 @@ const TRENDING_GIFS: GifItem[] = [
   },
   {
     id: 'g2',
-    title: 'Bharat Celebrations / Dance',
+    title: 'Global Celebrations / Dance',
     url: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
     previewUrl: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
   },
@@ -63,7 +63,7 @@ const TRENDING_GIFS: GifItem[] = [
   },
 ];
 
-const CATEGORIES = ['Trending 🔥', 'Reactions 😲', 'Bharat 🇮🇳', 'Gaming 🎮', 'Anime ✨', 'Love ❤️'];
+const CATEGORIES = ['Trending 🔥', 'Reactions 😲', 'Global ✨', 'Gaming 🎮', 'Anime ✨', 'Love ❤️'];
 
 export function GifPickerModal({
   isOpen,

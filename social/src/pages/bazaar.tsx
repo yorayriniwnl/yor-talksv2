@@ -94,7 +94,7 @@ export default function Bazaar() {
             <Gamepad2 className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Indie Bharat Game Hub</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Indie Game Hub</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Showcase preview · digital purchases are not connected yet</p>
           </div>
         </div>
@@ -168,7 +168,7 @@ export default function Bazaar() {
           </div>
         </div>
 
-        {/* All Indie Bharat Games Grid */}
+        {/* All indie games grid */}
         <div className="space-y-4">
           <div className="showcase-section-title">
             <Flame className="w-4 h-4 text-amber-400" />

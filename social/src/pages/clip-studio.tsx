@@ -91,7 +91,7 @@ export default function ClipStudio() {
             <Scissors className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Esports Clip & Highlight Cutter</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Creator Clip & Highlight Cutter</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Convert Stream VODs into Viral 9:16 Reels & Shorts</p>
           </div>
         </div>

@@ -60,7 +60,7 @@ export default function MerchStudio() {
             )}>
               {/* Collar Detail */}
               <div className="w-24 h-8 bg-zinc-900/60 rounded-b-2xl border border-white/20 flex items-center justify-center text-[0.6rem] font-mono text-white">
-                BHARAT PRO
+                YOR PRO
               </div>
 
               {/* Clan Badge Hologram */}

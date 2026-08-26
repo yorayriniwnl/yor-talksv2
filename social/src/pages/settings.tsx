@@ -111,7 +111,7 @@ function ContactShieldPanel() {
               value={emailInput}
               onChange={(event) => setEmailInput(event.target.value)}
               onKeyDown={(event) => { if (event.key === 'Enter') handleManualAdd(); }}
-              placeholder="Paste a KIIT email or email from contacts"
+              placeholder="Paste an email from your contacts"
               aria-label="Email to shield"
               className="h-11 rounded-2xl border-primary/15 bg-background/60"
             />
@@ -486,7 +486,7 @@ export default function Settings() {
             />
           </div>
 
-          <p className="text-xs leading-5 text-muted-foreground">Browser push permission is managed by your device. Email digests are not enabled in the college beta.</p>
+          <p className="text-xs leading-5 text-muted-foreground">Browser push permission is managed by your device. Email digests are not enabled in this beta.</p>
         </section>
 
         {/* Account Management */}

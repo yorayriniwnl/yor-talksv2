@@ -38,8 +38,8 @@ const documents: Record<string, LegalDocument> = {
   },
   '/community-guidelines': {
     title: 'Community Guidelines',
-    eyebrow: 'Make campus feel safer, not smaller',
-    intro: 'Yor is built for expressive campus life. These rules set the baseline for participation and are enforced with context, consistency and an appeal path.',
+    eyebrow: 'Make every world feel safer, not smaller',
+    intro: 'Yor is built for expressive communities everywhere. These rules set the baseline for participation and are enforced with context, consistency and an appeal path.',
     sections: [
       { heading: 'Protect people', body: 'No threats, harassment, stalking, bullying, hate, targeted humiliation, doxxing, blackmail or encouragement of self-harm. Critique ideas without attacking a person’s identity or safety.' },
       { heading: 'Consent matters', body: 'Do not share private information, intimate imagery, recordings or identifying material without consent. Never sexualize or exploit minors.' },

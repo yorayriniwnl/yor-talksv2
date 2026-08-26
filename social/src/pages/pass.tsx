@@ -25,7 +25,7 @@ const PASS_TIERS: PassTier[] = [
   { tier: 4, freeReward: { title: 'Bronze Creator Crest', icon: '🛡️', type: 'Badge' }, premiumReward: { title: 'BGMI Glacier M416 Sticker Pack', icon: '🔫', type: 'Gear' }, claimed: false, unlocked: true },
   { tier: 5, freeReward: { title: '300 Karma Points', icon: '💎', type: 'Points' }, premiumReward: { title: 'Mythic Golden Peacock Hologram Frame', icon: '🦚', type: 'Cosmetic', isMythic: true }, claimed: false, unlocked: false },
   { tier: 6, freeReward: { title: 'Sitar Melody Riff Pack', icon: '🪕', type: 'Audio' }, premiumReward: { title: 'Supernova Fire Animated Background', icon: '🔥', type: 'Theme' }, claimed: false, unlocked: false },
-  { tier: 7, freeReward: { title: '500 Karma Points', icon: '💎', type: 'Points' }, premiumReward: { title: 'Apex Predator Verified Bharat Badge', icon: '👑', type: 'Badge', isMythic: true }, claimed: false, unlocked: false },
+  { tier: 7, freeReward: { title: '500 Karma Points', icon: '💎', type: 'Points' }, premiumReward: { title: 'Apex Predator Verified Yor Badge', icon: '👑', type: 'Badge', isMythic: true }, claimed: false, unlocked: false },
 ];
 
 export default function SuperPass() {
@@ -50,7 +50,7 @@ export default function SuperPass() {
             <Crown className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Super Pass (Season 1)</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Yor Super Pass (Season 1)</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Reward track preview — purchases and claims are not available yet</p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function SuperPass() {
         <div className="surface-1 rounded-3xl p-6 sm:p-8 border border-border/40 relative overflow-hidden shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <span className="text-xs font-mono uppercase text-primary font-bold">Season 1: Bharat Digital Renaissance</span>
+              <span className="text-xs font-mono uppercase text-primary font-bold">Season 1: The Digital Renaissance</span>
               <h2 className="font-display font-black text-2xl sm:text-3xl text-foreground">Pass Level {currentTier} / 100</h2>
               <p className="text-xs text-muted-foreground font-mono mt-0.5">380 / 500 XP to Tier {currentTier + 1}</p>
             </div>

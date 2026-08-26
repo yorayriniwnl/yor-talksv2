@@ -58,7 +58,7 @@ const TOURNAMENTS: Tournament[] = [
     startDate: 'Live Now — Grand Finals',
     tier: 'Major',
     status: 'live',
-    organizer: 'YOR Esports Bharat & Krafton',
+    organizer: 'Yor Esports & Krafton',
     description: 'The premier national championship featuring India’s top 16 squads competing for ₹25 Lakhs and the coveted Conqueror Trophy.'
   },
   {
@@ -97,7 +97,7 @@ const TOURNAMENTS: Tournament[] = [
     startDate: 'Starts Sep 5, 2026',
     tier: 'Community Cup',
     status: 'registering',
-    organizer: 'Arcade Guild Tokyo & Bharat',
+    organizer: 'Arcade Guild Tokyo & Yor',
     description: 'Double elimination fighting game bracket streamed live in 4K 60FPS on low-latency WebRTC.'
   },
   {
@@ -123,7 +123,7 @@ const TOURNAMENTS: Tournament[] = [
     startDate: 'Starts Sep 20, 2026',
     tier: 'Community Cup',
     status: 'registering',
-    organizer: 'ShaderToy Bharat Community',
+    organizer: 'ShaderToy Global Community',
     description: 'Live 25-minute speed shading battle writing real-time ray marchers and GLSL vertex shaders directly in browser.'
   }
 ];
@@ -190,7 +190,7 @@ export default function Tournaments() {
             <Trophy className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Esports Arena</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Yor Esports Arena</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Tournament preview — registrations and rewards are not available yet</p>
           </div>
         </div>

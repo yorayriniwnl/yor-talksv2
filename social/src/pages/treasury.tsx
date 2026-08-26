@@ -67,7 +67,7 @@ export default function ClanTreasury() {
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Guild Multi-Sig Treasury</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Guild Multi-Sig Treasury</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Treasury preview — balances, voting, and payouts are not connected yet</p>
           </div>
         </div>

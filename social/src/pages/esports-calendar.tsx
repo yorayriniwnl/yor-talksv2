@@ -135,7 +135,7 @@ export default function EsportsCalendar() {
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Esports Schedule & Match Calendar</h1>
+            <h1 className="text-xl font-bold font-display text-foreground">Esports Schedule & Match Calendar</h1>
             <p className="text-[0.68rem] text-muted-foreground font-mono">Live timetable and downloadable calendar reminders</p>
           </div>
         </div>
