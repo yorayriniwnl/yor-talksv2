@@ -3,9 +3,19 @@ import { eq, sql } from "drizzle-orm";
 import { communitiesTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { CommunityDiscussion, CommunityRecord } from "../types/index.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { ContentSafetyService } from "./content-safety-service.js";
+import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 
 export class CommunityService {
-  async createCommunity(input: { name: string; slug: string; description: string; ownerId: string }): Promise<CommunityRecord> {
+  constructor(
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly aiService: AIService = new AIService(),
+  ) {}
+
+  async createCommunity(input: { name: string; slug: string; description: string; ownerId: string; contentRating?: CommunityRecord["contentRating"] }): Promise<CommunityRecord> {
+    await enforceTextContentPolicy(`${input.name}\n${input.description}`, this.aiService, "community");
     const community: CommunityRecord = {
       id: randomUUID(),
       name: input.name,
@@ -22,22 +32,24 @@ export class CommunityService {
       announcements: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     
     const [created] = await db.insert(communitiesTable).values(community).returning();
     return created as CommunityRecord;
   }
 
-  async listCommunities(): Promise<CommunityRecord[]> {
-    return (await db.select().from(communitiesTable).limit(100)) as CommunityRecord[];
+  async listCommunities(viewerId?: string): Promise<CommunityRecord[]> {
+    return this.contentSafetyService.filterVisible((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[], viewerId);
   }
 
-  async getCommunity(idOrSlug: string): Promise<CommunityRecord | undefined> {
+  async getCommunity(idOrSlug: string, viewerId?: string): Promise<CommunityRecord | undefined> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idOrSlug);
     const [community] = await db.select().from(communitiesTable).where(
       isUuid ? eq(communitiesTable.id, idOrSlug) : eq(communitiesTable.slug, idOrSlug.trim().toLowerCase()),
     );
-    return community as CommunityRecord | undefined;
+    const typedCommunity = community as CommunityRecord | undefined;
+    return await this.contentSafetyService.isVisible(typedCommunity, viewerId) ? typedCommunity : undefined;
   }
 
   async joinCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
@@ -62,20 +74,22 @@ export class CommunityService {
     return updated as CommunityRecord;
   }
 
-  async listDiscussions(communityId: string): Promise<CommunityDiscussion[]> {
-    const community = await this.getCommunity(communityId);
+  async listDiscussions(communityId: string, viewerId?: string): Promise<CommunityDiscussion[]> {
+    const community = await this.getCommunity(communityId, viewerId);
     if (!community) return [];
-    return (Array.isArray(community.announcements) ? community.announcements : [])
+    const discussions = (Array.isArray(community.announcements) ? community.announcements : [])
       .filter((item): item is CommunityDiscussion => Boolean(
         item && typeof item === "object" &&
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String((item as any).authorId ?? "")),
       )) as CommunityDiscussion[];
+    return this.contentSafetyService.filterVisible(discussions, viewerId);
   }
 
-  async createDiscussion(communityId: string, userId: string, input: { title: string; content?: string; tag: string }): Promise<CommunityDiscussion | undefined> {
+  async createDiscussion(communityId: string, userId: string, input: { title: string; content?: string; tag: string; contentRating?: CommunityDiscussion["contentRating"] }): Promise<CommunityDiscussion | undefined> {
     const community = await this.getCommunity(communityId);
     if (!community) return undefined;
     if (!community.memberIds.includes(userId)) throw new Error("Join this community before starting a discussion");
+    await enforceTextContentPolicy(`${input.title}\n${input.content ?? ""}`, this.aiService, "discussion");
 
     const discussion: CommunityDiscussion = {
       id: randomUUID(),
@@ -87,6 +101,7 @@ export class CommunityService {
       likes: 0,
       likedBy: [],
       createdAt: new Date().toISOString(),
+      contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     const announcements = [...(Array.isArray(community.announcements) ? community.announcements : []), discussion];
     await db.update(communitiesTable)

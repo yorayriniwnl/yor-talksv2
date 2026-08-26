@@ -4,10 +4,10 @@ import { contentCategorySchema } from "../utils/content-category.js";
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
 export const createPostSchema = z.object({
-  content: z.string().min(1).max(5000),
+  content: z.string().trim().min(1).max(5000),
   images: z.array(z.string().url()).optional().default([]),
   contentCategory: contentCategorySchema,
-  contentRating: contentRatingSchema.default("regular"),
+  contentRating: contentRatingSchema,
   poll: z.object({
     question: z.string().trim().min(1).max(240),
     options: z.array(z.object({ text: z.string().trim().min(1).max(80) })).min(2).max(4),

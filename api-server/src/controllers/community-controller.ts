@@ -50,7 +50,7 @@ export class CommunityController {
 
   list = async (req: Request, res: Response) => {
     try {
-      const communities = await this.communityService.listCommunities();
+      const communities = await this.communityService.listCommunities(req.user?.id);
       return res.status(200).json(createResponse("Communities retrieved", communities.map((community) => this.view(community, req.user?.id))));
     } catch (error) {
       return res.status(500).json(createResponse("Failed to list communities", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
@@ -60,7 +60,7 @@ export class CommunityController {
   getBySlugOrId = async (req: Request, res: Response) => {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const community = await this.communityService.getCommunity(id);
+      const community = await this.communityService.getCommunity(id, req.user?.id);
       if (!community) {
         return res.status(404).json(createResponse("Community not found", null, {}, ["Not found"]));
       }
@@ -103,9 +103,9 @@ export class CommunityController {
   listDiscussions = async (req: Request, res: Response) => {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const community = await this.communityService.getCommunity(id);
+      const community = await this.communityService.getCommunity(id, req.user?.id);
       if (!community) return res.status(404).json(createResponse("Community not found", null, {}, ["Not found"]));
-      const discussions = await this.communityService.listDiscussions(id);
+      const discussions = await this.communityService.listDiscussions(id, req.user?.id);
       const visible = await Promise.all(discussions.map((discussion) => this.discussionView(discussion, req.user?.id)));
       return res.status(200).json(createResponse("Discussions loaded", visible));
     } catch {

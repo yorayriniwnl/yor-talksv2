@@ -19,6 +19,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { WorldSelector } from '@/components/worlds/WorldSelector';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 const WORLD_FILTERS = ['All worlds', 'Joined', 'Technology', 'Creative', 'Gaming', 'Culture'] as const;
 
@@ -53,6 +55,7 @@ export default function Worlds() {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [creating, setCreating] = useState(false);
 
   const visibleWorlds = useMemo(() => {
@@ -75,9 +78,10 @@ export default function Worlds() {
     }
     setCreating(true);
     try {
-      await createCommunity(trimmedName, slugify(trimmedName), description.trim());
+      await createCommunity(trimmedName, slugify(trimmedName), description.trim(), contentRating);
       setName('');
       setDescription('');
+      setContentRating(DEFAULT_CONTENT_RATING);
       setShowCreate(false);
       toast.success('Your world is live.');
     } finally {
@@ -213,6 +217,7 @@ export default function Worlds() {
                 maxLength={500}
               />
             </label>
+            <ContentRatingSelect id="world-content-rating" value={contentRating} onChange={setContentRating} />
             <div className="yor-dialog-note">
               <Sparkles className="h-4 w-4" />
               <p><strong>Start specific.</strong> The strongest worlds form around a clear reason to return.</p>

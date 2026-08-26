@@ -205,6 +205,7 @@ export const communitiesTable = pgTable("communities", {
   eventsCount: integer("events_count").default(0),
   activityScore: integer("activity_score").default(0),
   trendingScore: integer("trending_score").default(0),
+  contentRating: text("content_rating").notNull().default("regular"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
@@ -243,6 +244,7 @@ export const eventsTable = pgTable("events", {
   attendeeIds: jsonb("attendee_ids").notNull().default([]),
   interestedIds: jsonb("interested_ids").notNull().default([]),
   rsvpStatus: text("rsvp_status"),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   hostIdx: index("event_host_idx").on(table.hostId)
 }));
@@ -259,6 +261,7 @@ export const productsTable = pgTable("products", {
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   savedBy: jsonb("saved_by").notNull().default([]),
   availability: text("availability").notNull().default("active"),
+  contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   sellerIdx: index("product_seller_idx").on(table.sellerId)
 }));

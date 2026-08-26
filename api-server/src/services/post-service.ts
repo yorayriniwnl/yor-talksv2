@@ -16,7 +16,10 @@ import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { logger } from "../lib/logger.js";
+
+export { ContentPolicyViolationError } from "./content-policy-service.js";
 
 export class PostService {
 
@@ -55,9 +58,6 @@ export class PostService {
     private readonly userRepository: UserRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly queueService?: QueueService,
-    // Heuristic-only for now (see ai-service.ts) — flagged content is logged
-    // for review, not auto-rejected, since the heuristics are too crude to
-    // safely block real posts on.
     private readonly aiService: AIService = new AIService(),
     private readonly securityService: SecurityService = new SecurityService(),
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
@@ -108,10 +108,11 @@ export class PostService {
       contentCategory,
       contentRating,
     };
-    const moderation = await this.aiService.moderate(content);
-    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      throw new ContentPolicyViolationError("This post was blocked by the safety filter", moderation);
-    }
+    await enforceTextContentPolicy([
+      content,
+      poll?.question ?? "",
+      ...(poll?.options ?? []).map((option) => option.text),
+    ].join("\n"), this.aiService, "post");
     const normalizedPoll = poll ? {
       id: randomUUID(),
       question: poll.question.trim(),
@@ -130,10 +131,7 @@ export class PostService {
   async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"]): Promise<PostRecord | undefined> {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return undefined;
-    const moderation = await this.aiService.moderate(content);
-    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      throw new ContentPolicyViolationError("This post was blocked by the safety filter", moderation);
-    }
+    await enforceTextContentPolicy(content, this.aiService, "post");
     return this.postRepository.update(postId, { content, ...(contentRating ? { contentRating } : {}), updatedAt: new Date().toISOString() });
   }
 
@@ -161,10 +159,7 @@ export class PostService {
       return undefined;
     }
     const normalizedContent = content.trim();
-    const moderation = normalizedContent ? await this.aiService.moderate(normalizedContent) : { spam: false, toxicity: false, nsfw: false };
-    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      throw new ContentPolicyViolationError("This comment was blocked by the safety filter", moderation);
-    }
+    await enforceTextContentPolicy(normalizedContent, this.aiService, "comment");
     const [createdComment] = await db.insert(commentsTable).values({
       id: randomUUID(),
       postId,
@@ -211,10 +206,7 @@ export class PostService {
     if (!post) {
       return undefined;
     }
-    const moderation = await this.aiService.moderate(content);
-    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      throw new ContentPolicyViolationError("This reply was blocked by the safety filter", moderation);
-    }
+    await enforceTextContentPolicy(content, this.aiService, "reply");
     const [parentComment] = await db.select().from(commentsTable).where(and(
       eq(commentsTable.id, commentId),
       eq(commentsTable.postId, postId),
@@ -476,12 +468,4 @@ export class PostService {
     return input.likes * 3 + input.shares * 5 + input.comments * 2;
   }
 
-  
-}
-
-export class ContentPolicyViolationError extends Error {
-  constructor(message: string, public readonly flags: { spam: boolean; toxicity: boolean; nsfw: boolean }) {
-    super(message);
-    this.name = "ContentPolicyViolationError";
-  }
 }

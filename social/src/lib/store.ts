@@ -158,6 +158,7 @@ export type Community = {
   visibility: 'public' | 'private' | 'invite-only';
   category: string;
   trending?: boolean;
+  contentRating: ContentRating;
 };
 
 export type Article = {
@@ -230,6 +231,7 @@ export type EventItem = {
   attendeeIds: string[];
   interestedIds: string[];
   rsvpStatus?: 'going' | 'interested' | null;
+  contentRating: ContentRating;
 };
 
 export type Product = {
@@ -244,6 +246,7 @@ export type Product = {
   savedByMe?: boolean;
   createdAt: string;
   availability?: 'active' | 'reserved' | 'sold';
+  contentRating: ContentRating;
 };
 
 export type Achievement = {
@@ -393,6 +396,7 @@ function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
     isMember: c.isMember ?? Boolean(currentUserId && memberIds.includes(currentUserId)),
     visibility: 'public',
     category: 'General',
+    contentRating: c.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
 
@@ -434,6 +438,7 @@ function mapProduct(p: BackendProduct): Product {
     savedByMe: Boolean(p.savedByMe),
     createdAt: p.createdAt || new Date().toISOString(),
     availability: p.availability ?? 'active',
+    contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
 
@@ -506,6 +511,7 @@ function mapEvent(e: BackendEvent, currentUserId?: string): EventItem {
     attendeeIds: attendeeIds.length > 0 ? attendeeIds : Array.from({ length: e.attendeeCount ?? 0 }, () => ''),
     interestedIds: interestedIds.length > 0 ? interestedIds : Array.from({ length: e.interestedCount ?? 0 }, () => ''),
     rsvpStatus: currentUserId && attendeeIds.includes(currentUserId) ? 'going' : currentUserId && interestedIds.includes(currentUserId) ? 'interested' : null,
+    contentRating: e.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
 
@@ -611,7 +617,7 @@ interface AppState {
   toggleRepost: (postId: string) => Promise<void>;
 
   loadCommunities: () => Promise<void>;
-  createCommunity: (name: string, slug: string, description: string) => Promise<void>;
+  createCommunity: (name: string, slug: string, description: string, contentRating: ContentRating) => Promise<void>;
   toggleCommunityMembership: (communityId: string) => Promise<void>;
 
   loadNotifications: () => Promise<void>;
@@ -641,11 +647,11 @@ interface AppState {
 
   votePoll: (postId: string, optionId: string) => Promise<void>;
   loadEvents: () => Promise<void>;
-  createEvent: (input: { title: string; description: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline: boolean }) => Promise<void>;
+  createEvent: (input: { title: string; description: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline: boolean; contentRating: ContentRating }) => Promise<void>;
   toggleEventRsvp: (eventId: string, status: 'going' | 'interested') => Promise<void>;
 
   loadProducts: () => Promise<void>;
-  createProduct: (input: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used' }) => Promise<void>;
+  createProduct: (input: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used'; contentRating: ContentRating }) => Promise<void>;
 
   loadArticles: () => Promise<void>;
   createArticle: (input: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
@@ -1118,10 +1124,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      createCommunity: async (name, slug, description) => {
+      createCommunity: async (name, slug, description, contentRating) => {
         const currentUserId = get().currentUser?.id || 'user-roy';
         try {
-          const created = await api.createCommunity({ name, slug, description });
+          const created = await api.createCommunity({ name, slug, description, contentRating });
           set((state) => ({ communities: [mapCommunity(created, currentUserId), ...state.communities] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not create the community');

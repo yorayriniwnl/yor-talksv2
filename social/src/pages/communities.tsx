@@ -17,6 +17,8 @@ import { Link, useLocation, useRoute } from 'wouter';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 interface ForumThread {
   id: string;
@@ -115,6 +117,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
   const [threadTitle, setThreadTitle] = useState('');
   const [threadContent, setThreadContent] = useState('');
   const [threadTag, setThreadTag] = useState('General');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
   useEffect(() => {
     let active = true;
@@ -142,13 +145,14 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
     if (!threadTitle.trim()) return;
 
     try {
-      const created = await api.createCommunityDiscussion(communityId, { title: threadTitle.trim(), content: threadContent.trim(), tag: threadTag });
+      const created = await api.createCommunityDiscussion(communityId, { title: threadTitle.trim(), content: threadContent.trim(), tag: threadTag, contentRating });
       sounds.playChime();
       triggerConfetti();
       setThreads(prev => [mapDiscussion(created), ...prev]);
       setNewThreadOpen(false);
       setThreadTitle('');
       setThreadContent('');
+      setContentRating(DEFAULT_CONTENT_RATING);
       toast.success('Discussion thread published to Community Hub!');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not publish discussion');
@@ -290,6 +294,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
                     <option value="Trading">Trading & Marketplace</option>
                   </select>
                 </div>
+                <ContentRatingSelect id="discussion-content-rating" value={contentRating} onChange={setContentRating} />
                 <DialogFooter>
                   <Button type="submit" className="rounded-xl font-bold text-xs px-6">Publish Thread</Button>
                 </DialogFooter>

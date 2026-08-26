@@ -11,7 +11,7 @@ export const createStorySchema = z.object({
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
   contentCategory: contentCategorySchema,
-  contentRating: contentRatingSchema.default("regular"),
+  contentRating: contentRatingSchema,
   poll: z.object({
     question: z.string().trim().min(1).max(240),
     options: z.array(z.object({ text: z.string().trim().min(1).max(80) })).min(2).max(4),

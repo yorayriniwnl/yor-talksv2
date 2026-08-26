@@ -24,12 +24,12 @@ export class ProductController {
   };
 
   list = async (req: Request, res: Response) => {
-    const products = await this.productService.listProducts();
+    const products = await this.productService.listProducts(req.user?.id);
     return res.status(200).json(createResponse("Products retrieved", products.map((product) => this.view(product, req.user?.id))));
   };
 
   get = async (req: Request, res: Response) => {
-    const product = await this.productService.getProduct(paramId(req));
+    const product = await this.productService.getProduct(paramId(req), req.user?.id);
     if (!product) {
       return res.status(404).json(createResponse("Product not found", null, {}, ["Not found"]));
     }

@@ -211,6 +211,7 @@ export interface CommunityDiscussion extends CommunityAnnouncement {
   repliesCount: number;
   likes: number;
   likedBy?: string[];
+  contentRating?: ContentRating;
 }
 
 export interface CommunityRecord {
@@ -227,6 +228,7 @@ export interface CommunityRecord {
   announcements?: CommunityAnnouncement[];
   createdAt: string;
   updatedAt: string;
+  contentRating?: ContentRating;
 }
 
 export interface EventRecord {
@@ -241,6 +243,7 @@ export interface EventRecord {
   isOnline: boolean;
   attendeeIds: string[];
   interestedIds: string[];
+  contentRating?: ContentRating;
   // Not usable as-is: this is a single column on the event row, so it can't
   // represent different RSVP status per viewer. attendeeIds/interestedIds
   // are the real per-user source of truth — a viewer's status is derived by
@@ -260,6 +263,7 @@ export interface ProductRecord {
   createdAt: string;
   savedBy: string[];
   availability?: "active" | "reserved" | "sold";
+  contentRating?: ContentRating;
 }
 
 export interface MarketplaceOrderRecord {
@@ -289,6 +293,7 @@ export interface ProfileCommentRecord {
   content: string;
   createdAt: string;
   updatedAt: string;
+  contentRating?: ContentRating;
 }
 
 export interface ProfileShowcaseRecord {

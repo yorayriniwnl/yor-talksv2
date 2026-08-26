@@ -33,6 +33,7 @@ const envSchema = z.object({
   LIVEKIT_API_KEY: z.string().default(process.env.LIVEKIT_API_KEY || ""),
   LIVEKIT_API_SECRET: z.string().default(process.env.LIVEKIT_API_SECRET || ""),
   OPENAI_API_KEY: z.string().optional().default(process.env.OPENAI_API_KEY || ""),
+  GEMINI_API_KEY: z.string().optional().default(process.env.GEMINI_API_KEY || ""),
   CONTACT_SHIELD_SECRET: z.string().default(process.env.CONTACT_SHIELD_SECRET || "contact-shield-development-secret-change-me"),
 });
 
@@ -65,6 +66,19 @@ if (parsedEnv.NODE_ENV === "production") {
     throw new Error("[Config Error] Production requires a unique CONTACT_SHIELD_SECRET of at least 32 characters");
   }
 
+  const requiredProductionConfig = [
+    ["DATABASE_URL", parsedEnv.DATABASE_URL],
+    ["REDIS_URL", parsedEnv.REDIS_URL],
+    ["CORS_ORIGINS", parsedEnv.CORS_ORIGINS],
+    ["CLIENT_ORIGIN", parsedEnv.CLIENT_ORIGIN],
+  ] as const;
+  const missingProductionConfig = requiredProductionConfig
+    .filter(([, value]) => !value || /localhost|127\.0\.0\.1/i.test(value))
+    .map(([field]) => field);
+  if (missingProductionConfig.length) {
+    throw new Error(`[Config Error] Production requires deployed values for: ${missingProductionConfig.join(", ")}`);
+  }
+
   const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);
   if (missingCloudinaryConfig.length) {
     console.warn(`[Config Warning] Missing Cloudinary keys: ${missingCloudinaryConfig.join(", ")}. Image uploads will be disabled.`);
@@ -84,6 +98,9 @@ if (parsedEnv.NODE_ENV === "production") {
   }
   if (!parsedEnv.LIVEKIT_URL || !parsedEnv.LIVEKIT_API_KEY || !parsedEnv.LIVEKIT_API_SECRET) {
     console.warn("[Config Warning] LiveKit is not fully configured. Live rooms will be disabled.");
+  }
+  if (!parsedEnv.OPENAI_API_KEY && !parsedEnv.GEMINI_API_KEY) {
+    console.warn("[Config Warning] No AI moderation provider is configured. User-authored text publication will be unavailable.");
   }
 
   if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {

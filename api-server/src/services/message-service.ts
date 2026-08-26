@@ -5,6 +5,8 @@ import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { db } from "@workspace/db";
 import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -15,6 +17,7 @@ export class MessageService {
     private readonly conversationRepository: ConversationRepository,
     private readonly messageRepository: MessageRepository,
     private readonly userRepository?: UserRepository,
+    private readonly aiService: AIService = new AIService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
@@ -72,6 +75,7 @@ export class MessageService {
     if (!conversation) {
       throw new UnauthorizedError("Conversation not found");
     }
+    await enforceTextContentPolicy(content, this.aiService, "message");
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(senderId)) {
       throw new UnauthorizedError("You are not a member of this conversation");
@@ -159,6 +163,7 @@ export class MessageService {
     if (!message || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
+    await enforceTextContentPolicy(content, this.aiService, "message");
     message.content = content;
     message.editedAt = new Date().toISOString();
     return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt });

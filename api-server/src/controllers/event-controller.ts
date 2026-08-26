@@ -32,12 +32,12 @@ export class EventController {
   };
 
   list = async (req: Request, res: Response) => {
-    const events = await this.eventService.listEvents();
+    const events = await this.eventService.listEvents(req.user?.id);
     return res.status(200).json(createResponse("Events retrieved", events.map((event) => this.view(event, req.user?.id))));
   };
 
   get = async (req: Request, res: Response) => {
-    const event = await this.eventService.getEvent(paramId(req));
+    const event = await this.eventService.getEvent(paramId(req), req.user?.id);
     if (!event) {
       return res.status(404).json(createResponse("Event not found", null, {}, ["Not found"]));
     }

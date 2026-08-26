@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Calendar, MapPin, Users, Globe, Plus, Sparkles, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 const EVENT_CATEGORIES = [
   'AI & Neural Tech',
@@ -73,6 +75,7 @@ function CreateEventDialog() {
   const [startsAt, setStartsAt] = useState('');
   const [location, setLocationField] = useState('');
   const [isOnline, setIsOnline] = useState(false);
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -89,9 +92,10 @@ function CreateEventDialog() {
         startsAt: new Date(startsAt).toISOString(),
         location: location.trim(),
         isOnline,
+        contentRating,
       });
       setOpen(false);
-      setTitle(''); setDescription(''); setStartsAt(''); setLocationField(''); setIsOnline(false);
+      setTitle(''); setDescription(''); setStartsAt(''); setLocationField(''); setIsOnline(false); setContentRating(DEFAULT_CONTENT_RATING);
     } catch (err: any) {
       setError(err.message || 'Failed to create event');
     }
@@ -135,6 +139,7 @@ function CreateEventDialog() {
             <Label htmlFor="event-location" className="text-xs font-mono uppercase text-muted-foreground">{isOnline ? 'Link or Platform' : 'Location'}</Label>
             <Input id="event-location" value={location} onChange={(e) => setLocationField(e.target.value)} required placeholder={isOnline ? 'zoom.us/...' : '123 Main St'} className="rounded-xl" />
           </div>
+          <ContentRatingSelect id="event-content-rating" value={contentRating} onChange={setContentRating} />
           <DialogFooter>
             <Button type="submit" disabled={loading || title.trim().length < 2 || !startsAt || !location.trim()} className="rounded-xl font-bold text-xs px-6">
               {loading ? 'Creating…' : 'Publish Event'}

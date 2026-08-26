@@ -1,13 +1,19 @@
 import { AIService } from "./ai-service.js";
+import { ModerationUnavailableError } from "./ai-service.js";
 
 export type ContentModerationResult = { spam: boolean; toxicity: boolean; nsfw: boolean };
 
 export class ContentPolicyViolationError extends Error {
+  public readonly flags: ContentModerationResult;
+
   constructor(message: string, public readonly moderation: ContentModerationResult) {
     super(message);
     this.name = "ContentPolicyViolationError";
+    this.flags = moderation;
   }
 }
+
+export { ModerationUnavailableError };
 
 /**
  * Applies one publication gate to every user-authored text surface. The AI

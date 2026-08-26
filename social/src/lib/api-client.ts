@@ -445,12 +445,12 @@ export const api = {
   // ---- Communities ----
   getCommunities: () => request<BackendCommunity[]>('/communities'),
   getCommunity: (idOrSlug: string) => request<BackendCommunity>(`/communities/${idOrSlug}`),
-  createCommunity: (payload: { name: string; slug: string; description?: string }) =>
+  createCommunity: (payload: { name: string; slug: string; description?: string; contentRating: ContentRating }) =>
     request<BackendCommunity>('/communities', { method: 'POST', body: JSON.stringify(payload) }),
   joinCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/join`, { method: 'POST' }),
   leaveCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/leave`, { method: 'POST' }),
   getCommunityDiscussions: (id: string) => request<BackendCommunityDiscussion[]>(`/communities/${encodeURIComponent(id)}/discussions`),
-  createCommunityDiscussion: (id: string, payload: { title: string; content?: string; tag: string }) =>
+  createCommunityDiscussion: (id: string, payload: { title: string; content?: string; tag: string; contentRating: ContentRating }) =>
     request<BackendCommunityDiscussion>(`/communities/${encodeURIComponent(id)}/discussions`, { method: 'POST', body: JSON.stringify(payload) }),
   likeCommunityDiscussion: (communityId: string, discussionId: string) =>
     request<BackendCommunityDiscussion>(`/communities/${encodeURIComponent(communityId)}/discussions/${encodeURIComponent(discussionId)}/like`, { method: 'POST' }),
@@ -514,7 +514,7 @@ export const api = {
   // ---- Events ----
   getEvents: () => request<BackendEvent[]>('/events'),
   getEvent: (id: string) => request<BackendEvent>(`/events/${id}`),
-  createEvent: (payload: { title: string; description?: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline?: boolean }) =>
+  createEvent: (payload: { title: string; description?: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline?: boolean; contentRating: ContentRating }) =>
     request<BackendEvent>('/events', { method: 'POST', body: JSON.stringify(payload) }),
   rsvpEvent: (id: string, status: 'going' | 'interested' | null) =>
     request<BackendEvent>(`/events/${id}/rsvp`, { method: 'POST', body: JSON.stringify({ status }) }),
@@ -523,7 +523,7 @@ export const api = {
   // ---- Products ----
   getProducts: () => request<BackendProduct[]>('/products'),
   getProduct: (id: string) => request<BackendProduct>(`/products/${id}`),
-  createProduct: (payload: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used' }) =>
+  createProduct: (payload: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used'; contentRating: ContentRating }) =>
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
   saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
@@ -644,6 +644,7 @@ export interface BackendCommunity {
   memberCount?: number;
   isMember?: boolean;
   createdAt: string;
+  contentRating?: ContentRating;
 }
 
 export interface BackendCommunityDiscussion {
@@ -656,6 +657,7 @@ export interface BackendCommunityDiscussion {
   createdAt: string;
   likedByMe?: boolean;
   author: { id: string; username: string; fullName: string; avatarUrl: string | null };
+  contentRating?: ContentRating;
 }
 
 export interface BackendEvent {
@@ -672,6 +674,7 @@ export interface BackendEvent {
   interestedIds: string[];
   attendeeCount?: number;
   interestedCount?: number;
+  contentRating?: ContentRating;
 }
 
 export interface BackendProduct {
@@ -686,6 +689,7 @@ export interface BackendProduct {
   createdAt: string;
   savedByMe?: boolean;
   availability?: 'active' | 'reserved' | 'sold';
+  contentRating?: ContentRating;
 }
 
 export interface BackendMarketplaceOrder {

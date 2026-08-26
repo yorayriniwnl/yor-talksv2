@@ -14,6 +14,8 @@ import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeMo
 import { sounds } from '@/lib/sound';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 const PRODUCT_CATEGORIES = [
   'Hardware & Silicon',
@@ -38,6 +40,7 @@ function CreateListingDialog() {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
   const [condition, setCondition] = useState<typeof PRODUCT_CONDITIONS[number]>('used');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,9 +58,10 @@ function CreateListingDialog() {
         images: [`https://picsum.photos/seed/${encodeURIComponent(title)}/500/500`],
         category,
         condition,
+        contentRating,
       });
       setOpen(false);
-      setTitle(''); setDescription(''); setPrice('');
+      setTitle(''); setDescription(''); setPrice(''); setContentRating(DEFAULT_CONTENT_RATING);
     } catch (err: any) {
       setError(err.message || 'Failed to create listing');
     }
@@ -101,6 +105,7 @@ function CreateListingDialog() {
               {PRODUCT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <ContentRatingSelect id="product-content-rating" value={contentRating} onChange={setContentRating} />
           <DialogFooter>
             <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price} className="rounded-xl font-bold text-xs px-6 bg-primary">
               {loading ? 'Listing…' : 'Post Listing'}
