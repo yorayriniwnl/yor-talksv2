@@ -75,7 +75,6 @@ export class MessageService {
     if (!conversation) {
       throw new UnauthorizedError("Conversation not found");
     }
-    await enforceTextContentPolicy(content, this.aiService, "message");
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(senderId)) {
       throw new UnauthorizedError("You are not a member of this conversation");
@@ -93,6 +92,11 @@ export class MessageService {
         throw new MessageBlockedError("This user does not accept messages from strangers");
       }
     }
+
+    // Authorize the conversation and its participants before invoking the
+    // moderation provider. This prevents unauthorized requests from spending
+    // moderation quota on arbitrary conversations.
+    await enforceTextContentPolicy(content, this.aiService, "message");
 
     const replyToId = options?.replyToId ?? null;
     if (replyToId) {
@@ -142,7 +146,7 @@ export class MessageService {
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message) return undefined;
+    if (!message || message.deletedAt) return undefined;
     
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
@@ -169,7 +173,7 @@ export class MessageService {
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.senderId !== userId) {
+    if (!message || message.deletedAt || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
     await enforceTextContentPolicy(content, this.aiService, "message");
@@ -189,7 +193,7 @@ export class MessageService {
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message) {
+    if (!message || message.deletedAt) {
       throw new Error("Message not found");
     }
     const members = await this.conversationRepository.getMembers(message.conversationId);

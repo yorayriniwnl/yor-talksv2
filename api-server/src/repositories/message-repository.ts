@@ -51,22 +51,24 @@ export class ConversationRepository {
   }
 
   async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
-    const [created] = await db.insert(conversationsTable).values({
-      id: randomUUID(),
-      participantA: creatorId, // Legacy column
-      participantB: creatorId, // Legacy column
-      participantIds: [creatorId, ...memberIds],
-      isGroup: true,
-      title,
-    }).returning();
-    
-    const members = [creatorId, ...memberIds].map(id => ({
-      conversationId: created.id,
-      userId: id,
-      role: id === creatorId ? "admin" : "member"
-    }));
-    await db.insert(conversationMembersTable).values(members);
-    return created as ConversationRecord;
+    return db.transaction(async (tx) => {
+      const [created] = await tx.insert(conversationsTable).values({
+        id: randomUUID(),
+        participantA: creatorId, // Legacy column
+        participantB: creatorId, // Legacy column
+        participantIds: [creatorId, ...memberIds],
+        isGroup: true,
+        title,
+      }).returning();
+
+      const members = [creatorId, ...memberIds].map(id => ({
+        conversationId: created.id,
+        userId: id,
+        role: id === creatorId ? "admin" : "member"
+      }));
+      await tx.insert(conversationMembersTable).values(members);
+      return created as ConversationRecord;
+    });
   }
 
   async findBetween(participantA: string, participantB: string): Promise<ConversationRecord | undefined> {
