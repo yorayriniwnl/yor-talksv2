@@ -2395,6 +2395,32 @@ html.yor-low-bandwidth video {
   transform: translateX(50%);
 }
 
+.home-feed-tabs button { position: relative; }
+
+@media (min-width: 768px) {
+  .app-shell-nav-item[data-active="true"] {
+    position: relative;
+    overflow: hidden;
+    border-color: hsl(var(--primary) / 0.22) !important;
+    background: linear-gradient(100deg, hsl(var(--primary) / 0.13), hsl(var(--primary) / 0.035)) !important;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  .app-shell-nav-item[data-active="true"]::before {
+    content: '';
+    position: absolute;
+    top: 0.65rem;
+    bottom: 0.65rem;
+    left: 0;
+    width: 0.16rem;
+    border-radius: 999px;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 14px hsl(var(--primary) / 0.7);
+  }
+
+  .app-shell-nav-item[data-active="true"] svg { filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.3)); }
+}
+
 .home-feed-toolbar__actions > button {
   display: inline-flex;
   min-height: 2rem;

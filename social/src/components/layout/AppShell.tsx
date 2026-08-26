@@ -158,10 +158,12 @@ export function AppShell({ children }: AppShellProps) {
                   key={item.label}
                   onClick={() => setLocation(item.path)}
                   className={cn(
-                    "flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    "app-shell-nav-item flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
                     isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
                   )}
+                  data-active={isActive ? 'true' : 'false'}
+                  data-nav-tier="primary"
                   aria-current={isActive ? 'page' : undefined}
                   aria-label={sidebarCollapsed ? item.label : undefined}
                   title={sidebarCollapsed ? item.label : undefined}
@@ -192,10 +194,12 @@ export function AppShell({ children }: AppShellProps) {
                 key={item.label}
                 onClick={() => setLocation(item.path)}
                 className={cn(
-                  "flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  "app-shell-nav-item flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
                   isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
                 )}
+                data-active={isActive ? 'true' : 'false'}
+                data-nav-tier="secondary"
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={sidebarCollapsed ? item.label : undefined}
                 title={sidebarCollapsed ? item.label : undefined}
