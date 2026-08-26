@@ -31,6 +31,8 @@ export {
   conversationsTable,
   messagesTable,
   notificationsTable,
+  profileCommentsTable,
+  profileShowcasesTable,
   communitiesTable,
   eventsTable,
   productsTable,

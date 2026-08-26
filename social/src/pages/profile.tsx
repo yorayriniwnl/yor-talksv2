@@ -324,6 +324,7 @@ export default function Profile() {
   const profileComments = useAppStore(s => s.profileComments);
   const addProfileComment = useAppStore(s => s.addProfileComment);
   const deleteProfileComment = useAppStore(s => s.deleteProfileComment);
+  const loadProfileInteractions = useAppStore(s => s.loadProfileInteractions);
 
   const [newComment, setNewComment] = useState('');
   const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'liked'>('grid');
@@ -357,8 +358,11 @@ export default function Profile() {
   }, [profileLookup, profile, loadUserProfile]);
 
   useEffect(() => {
-    if (profile?.id) loadUserFeed(profile.id);
-  }, [profile?.id, loadUserFeed]);
+    if (profile?.id) {
+      loadUserFeed(profile.id);
+      loadProfileInteractions(profile.id);
+    }
+  }, [profile?.id, loadUserFeed, loadProfileInteractions]);
 
   // Scroll to top on profile change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileLookup]);

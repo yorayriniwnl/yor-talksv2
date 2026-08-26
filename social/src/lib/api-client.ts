@@ -236,6 +236,26 @@ export interface BackendSubscription {
   expiresAt: string | null;
 }
 
+export interface BackendProfileComment {
+  id: string;
+  targetUserId: string;
+  author: BackendUser;
+  content: string;
+  createdAt: string;
+}
+
+export interface BackendShowcase {
+  id: string;
+  userId: string;
+  type: 'achievement' | 'post' | 'custom';
+  title: string;
+  contentId?: string | null;
+  customText?: string | null;
+  customImageUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
 
 export interface CreatorWorkspaceItem {
@@ -356,6 +376,12 @@ export const api = {
   getFollowRequests: () => request<BackendFollowRequest[]>('/users/me/follow-requests'),
   acceptFollowRequest: (requestId: string) => request<{ request: BackendFollowRequest; follower: BackendUser; target: BackendUser }>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/accept`, { method: 'POST' }),
   rejectFollowRequest: (requestId: string) => request<BackendFollowRequest>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/reject`, { method: 'POST' }),
+  getProfileComments: (userId: string) => request<BackendProfileComment[]>(`/users/${encodeURIComponent(userId)}/profile-comments`),
+  createProfileComment: (userId: string, content: string) => request<BackendProfileComment>(`/users/${encodeURIComponent(userId)}/profile-comments`, { method: 'POST', body: JSON.stringify({ content }) }),
+  deleteProfileComment: (userId: string, commentId: string) => request<null>(`/users/${encodeURIComponent(userId)}/profile-comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' }),
+  getProfileShowcases: (userId: string) => request<BackendShowcase[]>(`/users/${encodeURIComponent(userId)}/showcases`),
+  createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageUrl?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
+  deleteProfileShowcase: (userId: string, showcaseId: string) => request<null>(`/users/${encodeURIComponent(userId)}/showcases/${encodeURIComponent(showcaseId)}`, { method: 'DELETE' }),
   updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
     request<BackendUser>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>

@@ -10,6 +10,8 @@ import {
   setStoredTokens,
   type BackendUser,
   type BackendFollowRequest,
+  type BackendProfileComment,
+  type BackendShowcase,
   type BackendStory,
   type BackendEvent,
   type BackendPost,
@@ -515,6 +517,28 @@ function mapFollowRequest(request: BackendFollowRequest): FollowRequest {
   };
 }
 
+function mapProfileComment(comment: BackendProfileComment): ProfileComment {
+  return {
+    id: comment.id,
+    authorId: comment.author.id,
+    targetUserId: comment.targetUserId,
+    content: comment.content,
+    createdAt: comment.createdAt,
+  };
+}
+
+function mapShowcase(showcase: BackendShowcase): Showcase {
+  return {
+    id: showcase.id,
+    userId: showcase.userId,
+    type: showcase.type,
+    title: showcase.title,
+    contentId: showcase.contentId ?? undefined,
+    customText: showcase.customText ?? undefined,
+    customImageUrl: showcase.customImageUrl ?? undefined,
+  };
+}
+
 
 
 
@@ -581,6 +605,7 @@ interface AppState {
   deleteProfileComment: (commentId: string, targetUserId: string) => Promise<void>;
   addShowcase: (showcase: Omit<Showcase, 'id'>) => Promise<void>;
   removeShowcase: (showcaseId: string, userId: string) => Promise<void>;
+  loadProfileInteractions: (userId: string) => Promise<void>;
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
@@ -1654,27 +1679,66 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      loadProfileInteractions: async (userId) => {
+        try {
+          const [comments, showcases] = await Promise.all([api.getProfileComments(userId), api.getProfileShowcases(userId)]);
+          const authors = comments.reduce<Record<string, User>>((result, comment) => {
+            result[comment.author.id] = mapUser(comment.author);
+            return result;
+          }, {});
+          set((state) => ({
+            profileComments: { ...state.profileComments, [userId]: comments.map(mapProfileComment) },
+            showcases: { ...state.showcases, [userId]: showcases.map(mapShowcase) },
+            users: { ...state.users, ...authors },
+          }));
+        } catch {
+          // Profile APIs can correctly reject private profiles; the main profile view handles that state.
+        }
+      },
+
       addProfileComment: async (targetUserId, content) => {
-        void targetUserId;
-        void content;
-        toast.info('Profile comments are not available until server persistence is enabled.');
+        try {
+          const created = await api.createProfileComment(targetUserId, content);
+          const mapped = mapProfileComment(created);
+          set((state) => ({
+            profileComments: { ...state.profileComments, [targetUserId]: [...(state.profileComments[targetUserId] ?? []), mapped] },
+            users: { ...state.users, [created.author.id]: mapUser(created.author) },
+          }));
+          toast.success('Comment posted');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not post the profile comment');
+        }
       },
 
       deleteProfileComment: async (commentId, targetUserId) => {
-        void commentId;
-        void targetUserId;
-        toast.info('Profile comments are not available until server persistence is enabled.');
+        try {
+          await api.deleteProfileComment(targetUserId, commentId);
+          set((state) => ({ profileComments: { ...state.profileComments, [targetUserId]: (state.profileComments[targetUserId] ?? []).filter((comment) => comment.id !== commentId) } }));
+          toast.success('Comment deleted');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not delete the profile comment');
+        }
       },
 
       addShowcase: async (showcase) => {
-        void showcase;
-        toast.info('Profile showcases are not available until server persistence is enabled.');
+        try {
+          const created = await api.createProfileShowcase(showcase.userId, showcase);
+          const mapped = mapShowcase(created);
+          set((state) => ({ showcases: { ...state.showcases, [showcase.userId]: [...(state.showcases[showcase.userId] ?? []), mapped] } }));
+          toast.success('Showcase added');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not add the showcase');
+        }
       },
 
       removeShowcase: async (showcaseId, userId) => {
-        void showcaseId;
-        void userId;
-        toast.info('Profile showcases are not available until server persistence is enabled.');
+        try {
+          await api.deleteProfileShowcase(userId, showcaseId);
+          set((state) => ({ showcases: { ...state.showcases, [userId]: (state.showcases[userId] ?? []).filter((showcase) => showcase.id !== showcaseId) } }));
+          toast.success('Showcase removed');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not remove the showcase');
+        }
       },
     }),
     {

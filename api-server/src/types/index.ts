@@ -278,6 +278,27 @@ export interface MarketplaceOrderRecord {
   fulfilledAt?: string | null;
 }
 
+export interface ProfileCommentRecord {
+  id: string;
+  profileId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileShowcaseRecord {
+  id: string;
+  userId: string;
+  type: "achievement" | "post" | "custom";
+  title: string;
+  contentId?: string | null;
+  customText?: string | null;
+  customImageUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ArticleRecord {
   id: string;
   authorId: string;

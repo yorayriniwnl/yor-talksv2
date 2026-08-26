@@ -100,6 +100,32 @@ export const commentsTable = pgTable("comments", {
   parentIdx: index("comment_parent_idx").on(table.parentId)
 }));
 
+export const profileCommentsTable = pgTable("profile_comments", {
+  id: uuid("id").primaryKey(),
+  profileId: uuid("profile_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  profileIdx: index("profile_comments_profile_idx").on(t.profileId, t.createdAt),
+  authorIdx: index("profile_comments_author_idx").on(t.authorId),
+}));
+
+export const profileShowcasesTable = pgTable("profile_showcases", {
+  id: uuid("id").primaryKey(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  type: text("type").notNull().default("custom"),
+  title: text("title").notNull(),
+  contentId: uuid("content_id"),
+  customText: text("custom_text"),
+  customImageUrl: text("custom_image_url"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("profile_showcases_user_idx").on(t.userId, t.createdAt),
+}));
+
 export const conversationsTable = pgTable("conversations", {
   id: uuid("id").primaryKey(),
   participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
