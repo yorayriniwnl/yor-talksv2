@@ -13,7 +13,10 @@ export const followRequestIdParamSchema = z.object({
 });
 
 export const usernameParamSchema = z.object({
-  username: z.string().regex(/^[a-zA-Z0-9_]{3,24}$/, "Invalid username format"),
+  // Keep public handle lookup aligned with registration: hyphens are valid
+  // after the first character and must not make an otherwise valid account
+  // unreachable at /@username.
+  username: z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$/, "Invalid username format"),
 });
 
 export const postIdParamSchema = z.object({
