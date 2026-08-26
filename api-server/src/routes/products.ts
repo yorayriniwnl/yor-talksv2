@@ -9,6 +9,7 @@ import { createResponse } from "../utils/response.js";
 import { MarketplaceOrderForbiddenError, MarketplaceOrderNotFoundError, MarketplaceRequestError, MarketplaceService } from "../services/marketplace-service.js";
 import { PaymentsNotConfiguredError, PaymentProviderError } from "../services/razorpay-service.js";
 import { createMarketplaceOrderSchema, marketplaceOrderIdParamSchema, marketplaceProviderOrderIdParamSchema, verifyMarketplacePaymentSchema } from "../validators/marketplace.js";
+import { uuidParamSchema } from "../validators/params.js";
 
 const router = Router();
 const productController = new ProductController(new ProductService(new ProductRepository()));
@@ -26,7 +27,7 @@ router.get("/products/orders", authenticate, async (req, res) => {
     return res.status(500).json(createResponse("Marketplace orders could not be loaded", null, {}, ["Internal server error"]));
   }
 });
-router.post("/products/:id/order", authenticate, validateBody(createMarketplaceOrderSchema), async (req, res) => {
+router.post("/products/:id/order", authenticate, validateParams(uuidParamSchema), validateBody(createMarketplaceOrderSchema), async (req, res) => {
   try {
     const order = await marketplaceService.createOrder({ buyerId: req.user!.id, productId: paramId(req.params.id), ...req.body });
     return res.status(201).json(createResponse("Marketplace payment order created", order));
@@ -72,8 +73,8 @@ router.post("/products/orders/:orderId/fulfill", authenticate, validateParams(ma
     return res.status(500).json(createResponse("Marketplace order could not be fulfilled", null, {}, ["Internal server error"]));
   }
 });
-router.get("/products/:id", optionalAuthenticate, productController.get);
-router.post("/products/:id/save", authenticate, productController.toggleSave);
-router.delete("/products/:id", authenticate, productController.remove);
+router.get("/products/:id", optionalAuthenticate, validateParams(uuidParamSchema), productController.get);
+router.post("/products/:id/save", authenticate, validateParams(uuidParamSchema), productController.toggleSave);
+router.delete("/products/:id", authenticate, validateParams(uuidParamSchema), productController.remove);
 
 export default router;

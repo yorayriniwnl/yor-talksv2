@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   SendHorizontal, Image as ImageIcon, Film, Smile, 
@@ -50,6 +50,15 @@ export function RichCommentComposer({
   const [sending, setSending] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedImageRef = useRef<string | null>(null);
+
+  const releaseSelectedImage = () => {
+    const url = selectedImageRef.current;
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+    selectedImageRef.current = null;
+  };
+
+  useEffect(() => () => releaseSelectedImage(), []);
 
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,7 +67,9 @@ export function RichCommentComposer({
         toast.error('Image must be smaller than 8MB');
         return;
       }
+      releaseSelectedImage();
       const url = URL.createObjectURL(file);
+      selectedImageRef.current = url;
       setSelectedImage(url);
       setSelectedImageFile(file);
       setSelectedGif(null);
@@ -88,6 +99,7 @@ export function RichCommentComposer({
         voiceDuration: voiceNote?.duration || undefined,
       });
       setText('');
+      releaseSelectedImage();
       setSelectedImage(null);
       setSelectedImageFile(null);
       setSelectedGif(null);
@@ -151,7 +163,7 @@ export function RichCommentComposer({
                     <img src={selectedImage} alt="Attachment" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => { setSelectedImage(null); setSelectedImageFile(null); }}
+                      onClick={() => { releaseSelectedImage(); setSelectedImage(null); setSelectedImageFile(null); }}
                       className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />

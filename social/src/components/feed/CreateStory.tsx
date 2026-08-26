@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -34,11 +34,22 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [publishing, setPublishing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imagePreviewRef = useRef<string | null>(null);
+
+  const releaseImagePreview = () => {
+    const url = imagePreviewRef.current;
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+    imagePreviewRef.current = null;
+  };
+
+  useEffect(() => () => releaseImagePreview(), []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      releaseImagePreview();
       const url = URL.createObjectURL(file);
+      imagePreviewRef.current = url;
       setImagePreview(url);
       setImageFile(file);
     }
@@ -70,6 +81,7 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
       }
     
       setText('');
+      releaseImagePreview();
       setImagePreview(null);
       setImageFile(null);
       setContentCategory('');
@@ -114,7 +126,7 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
                     <>
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setImagePreview(null); setImageFile(null); }}
+                        onClick={(e) => { e.stopPropagation(); releaseImagePreview(); setImagePreview(null); setImageFile(null); }}
                         className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full backdrop-blur-md"
                       >
                         <X className="w-4 h-4" />

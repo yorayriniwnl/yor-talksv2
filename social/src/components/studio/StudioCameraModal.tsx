@@ -90,6 +90,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  useEffect(() => () => {
+    if (recordedPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(recordedPreviewUrl);
+  }, [recordedPreviewUrl]);
+
   // Initialize camera stream
   useEffect(() => {
     if (!isOpen) {
