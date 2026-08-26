@@ -138,6 +138,22 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     return () => { active = false; };
   }, [playingIndex, videos]);
 
+  useEffect(() => {
+    const players = containerRef.current?.querySelectorAll('video');
+    if (!players) return;
+    players.forEach((player, index) => {
+      player.muted = isMuted;
+      if (index === playingIndex) {
+        void player.play().catch(() => {
+          // Autoplay can be blocked until the viewer interacts with the page.
+        });
+      } else {
+        player.pause();
+        player.currentTime = 0;
+      }
+    });
+  }, [playingIndex, isMuted, videos]);
+
   const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
     const now = Date.now();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -277,7 +293,16 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
               >
                 {/* Video / Visual Asset */}
                 <div className="relative w-full h-full">
-                  <img src={video.thumbnailUrl} className="w-full h-full object-cover opacity-90" alt={video.title} />
+                  <video
+                    src={video.videoUrl}
+                    poster={video.thumbnailUrl}
+                    className="w-full h-full object-cover opacity-90"
+                    muted={isMuted}
+                    loop
+                    playsInline
+                    preload={isPlaying ? 'auto' : 'metadata'}
+                    aria-label={video.title}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40" />
                 </div>
 
