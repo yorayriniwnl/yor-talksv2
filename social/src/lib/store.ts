@@ -195,6 +195,8 @@ export type Video = {
   title: string;
   views: number;
   likes: number;
+  likedByMe?: boolean;
+  savedByMe?: boolean;
   createdAt: string;
   type: 'short' | 'standard';
   contentCategory: string;
@@ -462,6 +464,8 @@ function mapVideo(v: BackendVideo): Video {
     title: v.title || 'Untitled Video',
     views: v.views ?? 0,
     likes: Array.isArray((v as any).likedBy) ? (v as any).likedBy.length : (v.likes ?? 0),
+    likedByMe: Boolean(v.likedByMe),
+    savedByMe: Boolean(v.savedByMe),
     createdAt: v.createdAt || new Date().toISOString(),
     type: (v.type as Video['type']) || 'standard',
     contentCategory: v.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
@@ -650,6 +654,7 @@ interface AppState {
   loadVideos: () => Promise<void>;
   createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   likeVideo: (videoId: string) => Promise<void>;
+  toggleVideoBookmark: (videoId: string) => Promise<void>;
 
   addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
@@ -1618,6 +1623,17 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
           toast.error(error instanceof Error ? error.message : 'Could not update the video like');
+        }
+      },
+
+      toggleVideoBookmark: async (videoId) => {
+        const previous = get().videos.find((video) => video.id === videoId);
+        try {
+          const updated = await api.bookmarkVideo(videoId);
+          set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
+        } catch (error) {
+          if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
+          toast.error(error instanceof Error ? error.message : 'Could not update video bookmarks');
         }
       },
 

@@ -40,6 +40,7 @@ export {
   articlesTable,
   videosTable,
   videoCommentsTable,
+  videoBookmarksTable,
   liveStreamsTable,
   storiesTable,
   postRepostsTable,

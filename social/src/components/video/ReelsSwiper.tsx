@@ -47,12 +47,16 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
   const likeVideo = useAppStore((s) => s.likeVideo);
+  const toggleVideoBookmark = useAppStore((s) => s.toggleVideoBookmark);
+  const followUser = useAppStore((s) => s.followUser);
+  const unfollowUser = useAppStore((s) => s.unfollowUser);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [playingIndex, setPlayingIndex] = useState(initialIndex);
   const [isMuted, setIsMuted] = useState(false);
   const [likedVideos, setLikedVideos] = useState<Record<string, boolean>>({});
   const [savedVideos, setSavedVideos] = useState<Record<string, boolean>>({});
+  const [followedAuthors, setFollowedAuthors] = useState<Record<string, boolean>>({});
   
   // Double-tap heart burst effect
   const [heartBurst, setHeartBurst] = useState<{ visible: boolean; x: number; y: number }>({ visible: false, x: 0, y: 0 });
@@ -143,8 +147,12 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     if (now - lastTapRef.current < 350) {
       // Double tap recognized!
       sounds.playLike();
-      setLikedVideos((prev) => ({ ...prev, [videoId]: true }));
-      likeVideo(videoId);
+      const target = videos.find((video) => video.id === videoId);
+      const alreadyLiked = likedVideos[videoId] ?? target?.likedByMe ?? false;
+      if (!alreadyLiked) {
+        setLikedVideos((prev) => ({ ...prev, [videoId]: true }));
+        void likeVideo(videoId);
+      }
 
       setHeartBurst({ visible: true, x, y });
       setTimeout(() => setHeartBurst({ visible: false, x: 0, y: 0 }), 1000);
@@ -256,8 +264,9 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
           {videos.map((video, idx) => {
             const author = users[video.authorId];
             const isPlaying = playingIndex === idx;
-            const isLiked = likedVideos[video.id];
-            const isSaved = savedVideos[video.id];
+            const isLiked = likedVideos[video.id] ?? Boolean(video.likedByMe);
+            const isSaved = savedVideos[video.id] ?? Boolean(video.savedByMe);
+            const isFollowing = followedAuthors[video.authorId] ?? Boolean(currentUser?.followingIds?.includes(video.authorId));
 
             return (
               <div 
@@ -356,6 +365,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                         e.stopPropagation();
                         sounds.playPop();
                         setSavedVideos(prev => ({ ...prev, [video.id]: !isSaved }));
+                        void toggleVideoBookmark(video.id);
                         toast.success(isSaved ? 'Removed from bookmarks' : 'Saved to Bookmarks Collection');
                       }}
                       className={cn(
@@ -407,9 +417,18 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                       <AvatarFallback>{author?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                     <span className="text-white font-bold text-sm drop-shadow-md">{author?.displayName || 'Creator'}</span>
-                    <button className="px-3 py-1 bg-white text-black rounded-full text-xs font-bold hover:bg-zinc-200 transition-colors shadow-sm">
-                      Follow
-                    </button>
+                    {author && author.id !== currentUser?.id && (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setFollowedAuthors((prev) => ({ ...prev, [author.id]: !isFollowing }));
+                          void (isFollowing ? unfollowUser(author.id) : followUser(author.id));
+                        }}
+                        className="px-3 py-1 bg-white text-black rounded-full text-xs font-bold hover:bg-zinc-200 transition-colors shadow-sm"
+                      >
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </button>
+                    )}
                   </div>
 
                   <p className="text-white text-sm line-clamp-2 drop-shadow-md font-medium mb-3 leading-relaxed">

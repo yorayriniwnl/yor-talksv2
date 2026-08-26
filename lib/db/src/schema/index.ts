@@ -312,6 +312,16 @@ export const videoCommentsTable = pgTable("video_comments", {
   authorIdx: index("video_comment_author_idx").on(table.authorId),
 }));
 
+export const videoBookmarksTable = pgTable("video_bookmarks", {
+  videoId: uuid("video_id").references(() => videosTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.videoId, table.userId] }),
+  userIdx: index("video_bookmark_user_idx").on(table.userId, table.createdAt),
+  videoIdx: index("video_bookmark_video_idx").on(table.videoId),
+}));
+
 export const liveStreamsTable = pgTable("live_streams", {
   id: uuid("id").primaryKey(),
   hostId: uuid("host_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),

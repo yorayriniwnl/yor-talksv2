@@ -54,6 +54,14 @@ export class VideoController {
     return res.status(200).json(createResponse("Like toggled", this.view(video, userId)));
   };
 
+  toggleBookmark = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    const video = await this.videoService.toggleBookmark(paramId(req), userId);
+    if (!video) return res.status(404).json(createResponse("Video not found", null, {}, ["Not found"]));
+    return res.status(200).json(createResponse("Video bookmark toggled", this.view(video, userId)));
+  };
+
   comments = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));

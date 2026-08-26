@@ -14,6 +14,7 @@ router.post("/videos", authenticate, validateBody(createVideoSchema), videoContr
 router.get("/videos", optionalAuthenticate, videoController.list);
 router.get("/videos/:id", optionalAuthenticate, videoController.get);
 router.post("/videos/:id/like", authenticate, videoController.toggleLike);
+router.post("/videos/:id/bookmark", authenticate, videoController.toggleBookmark);
 router.get("/videos/:id/comments", authenticate, videoController.comments);
 router.post("/videos/:id/comments", authenticate, validateBody(commentSchema), videoController.comment);
 router.post("/videos/:id/comments/:commentId/like", authenticate, videoController.commentLike);

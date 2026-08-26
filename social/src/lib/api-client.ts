@@ -548,6 +548,7 @@ export const api = {
   createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),
   likeVideo: (id: string) => request<BackendVideo>(`/videos/${id}/like`, { method: 'POST' }),
+  bookmarkVideo: (id: string) => request<BackendVideo>(`/videos/${id}/bookmark`, { method: 'POST' }),
   getVideoComments: (id: string) => request<BackendComment[]>(`/videos/${id}/comments`),
   commentOnVideo: (id: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) =>
     request<{ video: BackendVideo; comment: BackendComment }>(`/videos/${id}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
@@ -727,6 +728,7 @@ export interface BackendVideo {
   views: number;
   likes: number;
   likedByMe?: boolean;
+  savedByMe?: boolean;
   createdAt: string;
   type: string;
   contentCategory?: ContentCategory;

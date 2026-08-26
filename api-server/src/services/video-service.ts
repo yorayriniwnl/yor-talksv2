@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { VideoRepository } from "../repositories/video-repository.js";
 import { VideoCommentRepository } from "../repositories/video-comment-repository.js";
+import { VideoBookmarkRepository } from "../repositories/video-bookmark-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { VideoCommentRecord, VideoRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
@@ -14,6 +15,7 @@ export class VideoService {
   constructor(
     private readonly videoRepository: VideoRepository,
     private readonly videoCommentRepository: VideoCommentRepository = new VideoCommentRepository(),
+    private readonly videoBookmarkRepository: VideoBookmarkRepository = new VideoBookmarkRepository(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
     private readonly aiService: AIService = new AIService(),
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
@@ -43,7 +45,10 @@ export class VideoService {
   }
 
   async listVideos(viewerId?: string): Promise<VideoRecord[]> {
-    return this.contentSafetyService.filterVisible(await this.videoRepository.list(), viewerId);
+    const visible = await this.contentSafetyService.filterVisible(await this.videoRepository.list(), viewerId);
+    if (!viewerId) return visible;
+    const savedIds = new Set(await this.videoBookmarkRepository.listForUser(viewerId));
+    return visible.map((video) => ({ ...video, savedByMe: savedIds.has(video.id) }));
   }
 
   async getVideo(id: string, viewerId?: string, countView = true): Promise<VideoRecord | undefined> {
@@ -116,6 +121,13 @@ export class VideoService {
     if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))) return undefined;
     const updated = await this.videoCommentRepository.toggleLike(videoId, commentId, userId);
     return updated ? this.presentComment(updated, userId) : undefined;
+  }
+
+  async toggleBookmark(videoId: string, userId: string): Promise<VideoRecord | undefined> {
+    const video = await this.getVideo(videoId, userId, false);
+    if (!video) return undefined;
+    const savedByMe = await this.videoBookmarkRepository.toggle(videoId, userId);
+    return { ...video, savedByMe };
   }
 
   private async presentComment(comment: VideoCommentRecord, viewerId: string): Promise<VideoCommentRecord> {

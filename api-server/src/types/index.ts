@@ -327,6 +327,8 @@ export interface VideoRecord {
   views: number;
   likesCount?: number;
   likedBy?: string[];
+  likedByMe?: boolean;
+  savedByMe?: boolean;
   createdAt: string;
   type: string;
   contentCategory?: string;
