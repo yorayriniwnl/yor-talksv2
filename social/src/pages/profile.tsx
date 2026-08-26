@@ -347,6 +347,7 @@ export default function Profile() {
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
   const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(profileId ?? '');
   const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
+  const loadLikedPosts = useAppStore((s) => s.loadLikedPosts);
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
@@ -358,8 +359,9 @@ export default function Profile() {
     if (profile?.id) {
       loadUserFeed(profile.id);
       loadProfileInteractions(profile.id);
+      if (isOwnProfile) loadLikedPosts();
     }
-  }, [profile?.id, loadUserFeed, loadProfileInteractions]);
+  }, [profile?.id, isOwnProfile, loadUserFeed, loadProfileInteractions, loadLikedPosts]);
 
   // Scroll to top on profile change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileLookup]);
@@ -756,15 +758,14 @@ export default function Profile() {
             {/* ── Reels Tab (Instagram/TikTok style Reels Grid) ──────────────────────── */}
             {activeTab === 'reels' && (
               <motion.div key="reels" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                {userVideos.length > 0 ? (
+                {userReels.length > 0 ? (
                   <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
-                    {userVideos.map((video, idx) => (
+                    {userReels.map((video, idx) => (
                       <motion.div
                         key={video.id}
                         variants={staggerItem}
                         onClick={() => {
-                          const reelIdx = userReels.length ? userReels.findIndex(r => r.id === video.id) : idx;
-                          setActiveReelIndex(reelIdx !== -1 ? reelIdx : 0);
+                          setActiveReelIndex(idx);
                         }}
                         className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none"
                       >
@@ -941,7 +942,7 @@ export default function Profile() {
 
       {activeReelIndex !== null && (
         <ReelsSwiper
-          videos={userReels.length > 0 ? userReels : userVideos}
+          videos={userReels}
           initialIndex={activeReelIndex}
           onClose={() => setActiveReelIndex(null)}
         />

@@ -167,7 +167,9 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
       const alreadyLiked = likedVideos[videoId] ?? target?.likedByMe ?? false;
       if (!alreadyLiked) {
         setLikedVideos((prev) => ({ ...prev, [videoId]: true }));
-        void likeVideo(videoId);
+        void likeVideo(videoId).then((success) => {
+          if (!success) setLikedVideos((prev) => ({ ...prev, [videoId]: alreadyLiked }));
+        });
       }
 
       setHeartBurst({ visible: true, x, y });
@@ -205,12 +207,30 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     return result;
   };
 
-  const handleCopyShareLink = () => {
+  const handleCopyShareLink = async () => {
     sounds.playPop();
-    triggerConfetti();
-    navigator.clipboard.writeText(window.location.href);
-    toast.success('Reel link copied to clipboard!');
-    setShowShareModal(false);
+    try {
+      const shareUrl = window.location.href;
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.setAttribute('readonly', 'true');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        if (!copied) throw new Error('Clipboard access is unavailable');
+      }
+      triggerConfetti();
+      toast.success('Reel link copied to clipboard!');
+      setShowShareModal(false);
+    } catch {
+      toast.error('Could not copy the reel link. Please copy it from the address bar.');
+    }
   };
 
   return (
@@ -282,6 +302,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
             const isPlaying = playingIndex === idx;
             const isLiked = likedVideos[video.id] ?? Boolean(video.likedByMe);
             const isSaved = savedVideos[video.id] ?? Boolean(video.savedByMe);
+            const serverLiked = Boolean(video.likedByMe);
+            const displayedLikes = Math.max(0, video.likes + (isLiked === serverLiked ? 0 : isLiked ? 1 : -1));
             const isFollowing = followedAuthors[video.authorId] ?? Boolean(currentUser?.followingIds?.includes(video.authorId));
 
             return (
@@ -330,8 +352,11 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                       onClick={(e) => {
                         e.stopPropagation();
                         sounds.playLike();
-                        setLikedVideos(prev => ({ ...prev, [video.id]: !isLiked }));
-                        likeVideo(video.id);
+                        const nextLiked = !isLiked;
+                        setLikedVideos(prev => ({ ...prev, [video.id]: nextLiked }));
+                        void likeVideo(video.id).then((success) => {
+                          if (!success) setLikedVideos(prev => ({ ...prev, [video.id]: isLiked }));
+                        });
                       }}
                       className={cn(
                         "p-3.5 rounded-full backdrop-blur-md transition-all active:scale-75 shadow-lg border border-white/10",
@@ -341,7 +366,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                       <Heart className={cn("w-7 h-7", isLiked && "fill-white")} />
                     </button>
                     <span className="text-white text-xs font-mono font-bold drop-shadow-md">
-                      {(video.likes + (isLiked ? 1 : 0)).toLocaleString()}
+                      {displayedLikes.toLocaleString()}
                     </span>
                   </div>
                   
@@ -389,9 +414,12 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                       onClick={(e) => {
                         e.stopPropagation();
                         sounds.playPop();
-                        setSavedVideos(prev => ({ ...prev, [video.id]: !isSaved }));
-                        void toggleVideoBookmark(video.id);
-                        toast.success(isSaved ? 'Removed from bookmarks' : 'Saved to Bookmarks Collection');
+                        const nextSaved = !isSaved;
+                        setSavedVideos(prev => ({ ...prev, [video.id]: nextSaved }));
+                        void toggleVideoBookmark(video.id).then((success) => {
+                          if (success) toast.success(nextSaved ? 'Saved to Bookmarks Collection' : 'Removed from bookmarks');
+                          else setSavedVideos(prev => ({ ...prev, [video.id]: isSaved }));
+                        });
                       }}
                       className={cn(
                         "p-3.5 rounded-full backdrop-blur-md transition-all shadow-lg border border-white/10",

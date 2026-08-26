@@ -409,8 +409,8 @@ function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
     coverUrl: `https://picsum.photos/seed/${c.id}/600/300`,
     members: c.memberCount ?? memberIds.length,
     isMember: c.isMember ?? Boolean(currentUserId && memberIds.includes(currentUserId)),
-    visibility: 'public',
-    category: 'General',
+    visibility: c.visibility ?? 'public',
+    category: c.genre?.trim() || 'General',
     contentRating: c.contentRating ?? DEFAULT_CONTENT_RATING,
   };
 }
@@ -621,6 +621,7 @@ interface AppState {
   loadFeed: () => Promise<void>;
   loadMoreFeed: () => Promise<void>;
   loadSavedPosts: () => Promise<void>;
+  loadLikedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
   syncPostFromBackend: (post: BackendPost) => void;
@@ -674,8 +675,8 @@ interface AppState {
 
   loadVideos: () => Promise<void>;
   createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
-  likeVideo: (videoId: string) => Promise<void>;
-  toggleVideoBookmark: (videoId: string) => Promise<void>;
+  likeVideo: (videoId: string) => Promise<boolean>;
+  toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
   addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
@@ -1030,6 +1031,18 @@ export const useAppStore = create<AppState>()(
           set((state) => ({ posts: [...savedPosts, ...state.posts.filter((post) => !savedIds.has(post.id))] }));
         } catch {
           // Keep the existing feed snapshot if saved posts are temporarily unavailable.
+        }
+      },
+
+      loadLikedPosts: async () => {
+        try {
+          const result = await api.getLikedPosts();
+          const currentUserId = get().currentUser?.id;
+          const likedPosts = result.data.map((post) => mapPost(post, currentUserId));
+          const likedIds = new Set(likedPosts.map((post) => post.id));
+          set((state) => ({ posts: [...likedPosts, ...state.posts.filter((post) => !likedIds.has(post.id))] }));
+        } catch {
+          // Keep the existing profile snapshot during a transient outage.
         }
       },
 
@@ -1670,23 +1683,29 @@ export const useAppStore = create<AppState>()(
 
       likeVideo: async (videoId) => {
         const previous = get().videos.find((video) => video.id === videoId);
+        if (!previous) return false;
         try {
           const updated = await api.likeVideo(videoId);
           set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
+          return true;
         } catch (error) {
           if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
           toast.error(error instanceof Error ? error.message : 'Could not update the video like');
+          return false;
         }
       },
 
       toggleVideoBookmark: async (videoId) => {
         const previous = get().videos.find((video) => video.id === videoId);
+        if (!previous) return false;
         try {
           const updated = await api.bookmarkVideo(videoId);
           set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
+          return true;
         } catch (error) {
           if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
           toast.error(error instanceof Error ? error.message : 'Could not update video bookmarks');
+          return false;
         }
       },
 

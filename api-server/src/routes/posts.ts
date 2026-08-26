@@ -18,6 +18,7 @@ const postController = new PostController(postService);
 router.post("/posts/upload-image", authenticate, upload.single("image"), postController.uploadImage);
 router.post("/posts", authenticate, validateBody(createPostSchema), postController.createPost);
 router.get("/posts/saved", authenticate, postController.saved);
+router.get("/posts/liked", authenticate, postController.liked);
 router.get("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.getPost);
 router.delete("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.deletePost);
 router.put("/posts/:postId", authenticate, validateParams(postIdParamSchema), validateBody(editPostSchema), postController.editPost);

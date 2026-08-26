@@ -212,6 +212,12 @@ export class PostController {
     return res.status(200).json(createResponse("Saved posts loaded", items, { nextCursor: null, hasMore: false, limit }));
   };
 
+  liked = async (req: Request, res: Response) => {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const items = await this.postService.getLikedPosts(req.user?.id ?? "", limit);
+    return res.status(200).json(createResponse("Liked posts loaded", items, { nextCursor: null, hasMore: false, limit }));
+  };
+
   
   feed = async (req: Request, res: Response) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));

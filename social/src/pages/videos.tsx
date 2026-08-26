@@ -36,6 +36,15 @@ function UploadVideoDialog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const releaseObjectUrl = () => {
+    const url = objectUrlRef.current;
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+    objectUrlRef.current = null;
+  };
+
+  useEffect(() => () => releaseObjectUrl(), []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,7 +59,9 @@ function UploadVideoDialog() {
       return;
     }
 
+    releaseObjectUrl();
     const objectUrl = URL.createObjectURL(file);
+    objectUrlRef.current = objectUrl;
     setSelectedFile(file);
     setVideoUrl(objectUrl);
     setPreviewUrl(objectUrl);
@@ -117,6 +128,7 @@ function UploadVideoDialog() {
       setFileName('');
       setPreviewUrl('');
       setSelectedFile(null);
+      releaseObjectUrl();
       setType('short');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
