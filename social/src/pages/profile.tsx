@@ -959,6 +959,8 @@ export default function Profile() {
 
 function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boolean; onOpenChange: (open: boolean) => void; mode: 'followers' | 'following'; userId: string }) {
   const currentUser = useAppStore((state) => state.currentUser);
+  const followUser = useAppStore((state) => state.followUser);
+  const unfollowUser = useAppStore((state) => state.unfollowUser);
   const [displayUsers, setDisplayUsers] = useState<BackendUser[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -998,8 +1000,18 @@ function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boo
                   <p className="text-xs text-muted-foreground font-mono truncate">@{user.username}</p>
                 </div>
                 {user.id !== currentUser?.id && (
-                  <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold h-8 shrink-0">
-                    Follow
+                  <Button
+                    variant={currentUser?.followingIds?.includes(user.id) ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="rounded-xl text-xs font-bold h-8 shrink-0"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (currentUser?.followingIds?.includes(user.id)) void unfollowUser(user.id);
+                      else void followUser(user.id);
+                    }}
+                  >
+                    {currentUser?.followingIds?.includes(user.id) ? 'Following' : currentUser?.pendingFollowIds?.includes(user.id) ? 'Requested' : 'Follow'}
                   </Button>
                 )}
               </div>
