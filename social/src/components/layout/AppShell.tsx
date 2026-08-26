@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
-  UserRound, Settings, Camera, Radio, WandSparkles
+  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -46,6 +46,7 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Film, label: 'Reels', path: '/videos' },
     { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
     { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifications > 0 ? unreadNotifications : null },
+    { icon: Bookmark, label: 'Saved', path: '/saved' },
   ];
 
   const secondaryNavItems = [

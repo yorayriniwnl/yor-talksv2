@@ -102,6 +102,20 @@ export class PostRepository {
     return true;
   }
 
+  async listBookmarked(userId: string, limit = 100, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
+    const filters: any[] = [eq(postBookmarksTable.userId, userId)];
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
+    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    const rows = await db.select({ post: postsTable })
+      .from(postBookmarksTable)
+      .innerJoin(postsTable, eq(postBookmarksTable.postId, postsTable.id))
+      .where(and(...filters))
+      .orderBy(desc(postBookmarksTable.createdAt), desc(postsTable.createdAt))
+      .limit(Math.min(100, Math.max(1, limit)));
+    return rows.map(({ post }) => post as PostRecord);
+  }
+
   async create(post: PostRecord, poll?: { id: string; question: string; options: Array<{ id: string; text: string; position: number }> }): Promise<PostRecord> {
     const { likedBy: _likedBy, bookmarkedBy: _bookmarkedBy, comments: _comments, poll: _poll, ...persistedPost } = post;
     const [created] = await db.transaction(async (tx) => {

@@ -161,7 +161,7 @@ async function requestPaginated<T>(path: string, options: RequestInit = {}, isRe
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (tokens) headers['Authorization'] = `Bearer ${tokens.accessToken}`;
 
-  const res = await fetch(`/api${path}`, { ...options, headers, credentials: 'include' });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: 'include' });
   if (res.status === 401 && !isRetry) {
     const refreshed = await tryRefresh();
     if (refreshed) {
@@ -413,6 +413,7 @@ export const api = {
 
   // ---- Posts / feed ----
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
+  getSavedPosts: (limit = 50) => requestPaginated<BackendPost[]>(`/posts/saved?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
   createPost: (payload: { content: string; images?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),

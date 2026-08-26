@@ -17,6 +17,7 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
   { match: '/videos', title: 'Reels', kicker: 'Short-form highlights' },
   { match: '/messages', title: 'Messages', kicker: 'Stay close to your people' },
   { match: '/notifications', title: 'Activity', kicker: 'What you missed' },
+  { match: '/saved', title: 'Saved', kicker: 'Keep what matters close' },
   { match: '/profile', title: 'Your world', kicker: 'Identity in full color' },
   { match: '/communities', title: 'Communities', kicker: 'Gather around what matters' },
   { match: '/events', title: 'Events', kicker: 'Make plans together' },

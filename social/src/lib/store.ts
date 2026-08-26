@@ -372,6 +372,10 @@ function mapPost(p: BackendPost, currentUserId?: string): Post {
   };
 }
 
+export function mapBackendPost(p: BackendPost, currentUserId?: string): Post {
+  return mapPost(p, currentUserId);
+}
+
 function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
   const memberIds = Array.isArray(c.memberIds) ? c.memberIds : [];
   return {
@@ -581,6 +585,7 @@ interface AppState {
 
   loadStories: () => Promise<void>;
   loadFeed: () => Promise<void>;
+  loadSavedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
   likePost: (postId: string) => Promise<void>;
@@ -915,6 +920,18 @@ export const useAppStore = create<AppState>()(
           return;
         } catch {
           // Keep the last successful snapshot during a transient outage.
+        }
+      },
+
+      loadSavedPosts: async () => {
+        try {
+          const result = await api.getSavedPosts();
+          const currentUserId = get().currentUser?.id;
+          const savedPosts = result.data.map((post) => mapPost(post, currentUserId));
+          const savedIds = new Set(savedPosts.map((post) => post.id));
+          set((state) => ({ posts: [...savedPosts, ...state.posts.filter((post) => !savedIds.has(post.id))] }));
+        } catch {
+          // Keep the existing feed snapshot if saved posts are temporarily unavailable.
         }
       },
 

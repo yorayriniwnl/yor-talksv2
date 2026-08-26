@@ -383,6 +383,13 @@ export class PostService {
     return this.attachInteractions(await this.filterVisiblePosts(posts, currentUserId), currentUserId);
   }
 
+  async getSavedPosts(userId: string, limit = 100): Promise<any[]> {
+    const excludedAuthorIds = [...await this.contactShieldService.getShieldedUserIds(userId)];
+    const contentFilter = await this.contentSafetyService.getViewerFilter(userId);
+    const posts = await this.postRepository.listBookmarked(userId, limit, excludedAuthorIds, contentFilter);
+    return this.attachInteractions(await this.filterVisiblePosts(posts, userId), userId);
+  }
+
   private async filterVisiblePosts(posts: PostRecord[], viewerId?: string): Promise<PostRecord[]> {
     if (posts.length === 0 || !viewerId) return posts;
     const visible = await Promise.all(posts.map(async (post) => ({
