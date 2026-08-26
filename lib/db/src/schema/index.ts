@@ -537,7 +537,7 @@ export const creatorAnalyticsDailyTable = pgTable("creator_analytics_daily", {
   totalEngagement: integer("total_engagement").notNull().default(0),
   estimatedEarnings: integer("estimated_earnings").notNull().default(0), // in minor units
 }, (t) => ({
-  creatorDateIdx: uniqueIndex("analytics_creator_date_idx").on(t.creatorId, t.date),
+  creatorDateIdx: uniqueIndex("analytics_creator_date_unique_idx").on(t.creatorId, t.date),
 }));
 
 export const creatorProfileViewEventsTable = pgTable("creator_profile_view_events", {
