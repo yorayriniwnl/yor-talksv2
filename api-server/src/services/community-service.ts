@@ -40,7 +40,7 @@ export class CommunityService {
   }
 
   async listCommunities(viewerId?: string): Promise<CommunityRecord[]> {
-    return this.contentSafetyService.filterVisible((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[], viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[], viewerId, (community) => community.ownerId);
   }
 
   async getCommunity(idOrSlug: string, viewerId?: string): Promise<CommunityRecord | undefined> {
@@ -49,11 +49,11 @@ export class CommunityService {
       isUuid ? eq(communitiesTable.id, idOrSlug) : eq(communitiesTable.slug, idOrSlug.trim().toLowerCase()),
     );
     const typedCommunity = community as CommunityRecord | undefined;
-    return await this.contentSafetyService.isVisible(typedCommunity, viewerId) ? typedCommunity : undefined;
+    return await this.contentSafetyService.isVisible(typedCommunity, viewerId, typedCommunity?.ownerId) ? typedCommunity : undefined;
   }
 
   async joinCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
-    const community = await this.getCommunity(communityId);
+    const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
     if (!community.memberIds.includes(userId)) {
       const memberIds = [...community.memberIds, userId];
@@ -64,7 +64,7 @@ export class CommunityService {
   }
 
   async leaveCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
-    const community = await this.getCommunity(communityId);
+    const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
     if (community.ownerId === userId) {
       throw new Error("The owner can't leave their own community");
@@ -86,7 +86,7 @@ export class CommunityService {
   }
 
   async createDiscussion(communityId: string, userId: string, input: { title: string; content?: string; tag: string; contentRating?: CommunityDiscussion["contentRating"] }): Promise<CommunityDiscussion | undefined> {
-    const community = await this.getCommunity(communityId);
+    const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
     if (!community.memberIds.includes(userId)) throw new Error("Join this community before starting a discussion");
     await enforceTextContentPolicy(`${input.title}\n${input.content ?? ""}`, this.aiService, "discussion");
@@ -111,7 +111,7 @@ export class CommunityService {
   }
 
   async likeDiscussion(communityId: string, discussionId: string, userId: string): Promise<CommunityDiscussion | undefined> {
-    const community = await this.getCommunity(communityId);
+    const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
     if (!community.memberIds.includes(userId)) throw new Error("Join this community before liking a discussion");
     const discussions = (Array.isArray(community.announcements) ? community.announcements : []) as CommunityDiscussion[];

@@ -128,11 +128,18 @@ export class PostService {
     return this.postRepository.delete(postId);
   }
 
-  async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"]): Promise<PostRecord | undefined> {
+  async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"], contentCategory?: PostRecord["contentCategory"]): Promise<PostRecord | undefined> {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return undefined;
     await enforceTextContentPolicy(content, this.aiService, "post");
-    return this.postRepository.update(postId, { content, ...(contentRating ? { contentRating } : {}), updatedAt: new Date().toISOString() });
+    return this.postRepository.update(postId, {
+      content,
+      tags: this.extractHashtags(content),
+      mentions: this.extractMentions(content),
+      ...(contentRating ? { contentRating } : {}),
+      ...(contentCategory ? { contentCategory } : {}),
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   
@@ -393,8 +400,17 @@ export class PostService {
   async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    const posts = await this.postRepository.list(cursor, limit, excludedAuthorIds, contentFilter);
-    return this.attachInteractions(await this.filterVisiblePosts(posts, currentUserId), currentUserId);
+    const visible: PostRecord[] = [];
+    let nextCursor = cursor;
+    const pageSize = Math.min(100, Math.max(20, limit * 2));
+    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
+      const candidates = await this.postRepository.list(nextCursor, pageSize, excludedAuthorIds, contentFilter);
+      if (candidates.length === 0) break;
+      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length < pageSize) break;
+      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
+    }
+    return this.attachInteractions(visible.slice(0, limit), currentUserId);
   }
 
     private redis = new Redis(env.REDIS_URL);
@@ -402,7 +418,8 @@ export class PostService {
   async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    const cacheKey = `feed:trending:${cursor || "first"}:${limit}`;
+    const pageSize = Math.min(100, Math.max(20, limit * 2));
+    const cacheKey = `feed:trending:${cursor || "first"}:${pageSize}`;
     
     // Redis is an optimization, never a requirement for a healthy feed.
     let cached: string | null = null;
@@ -414,35 +431,58 @@ export class PostService {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        const visible = parsed.filter((post: PostRecord) =>
-          !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
-        );
-        return this.attachInteractions(await this.filterVisiblePosts(visible, currentUserId), currentUserId);
-      } catch (e) { /* ignore parse error */ }
+        cached = JSON.stringify(parsed);
+      } catch (e) {
+        cached = null;
+      }
     }
 
     // Cache the unfiltered candidate set. Contact Shield visibility is per
     // viewer, so storing one user's filtered list would hide those posts from
     // every other viewer sharing the cache key.
-    const posts = await this.postRepository.listTrending(cursor, limit);
-    
-    // Cache for 60 seconds
-    try {
-      await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
-    } catch (error) {
-      logger.warn({ err: error }, "Trending feed cache write failed");
+    const visible: PostRecord[] = [];
+    let nextCursor = cursor;
+    let firstPage = true;
+    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
+      let posts: PostRecord[];
+      if (firstPage && cached) {
+        posts = JSON.parse(cached) as PostRecord[];
+      } else {
+        posts = await this.postRepository.listTrending(nextCursor, pageSize);
+        if (firstPage) {
+          try {
+            await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
+          } catch (error) {
+            logger.warn({ err: error }, "Trending feed cache write failed");
+          }
+        }
+      }
+      firstPage = false;
+      if (posts.length === 0) break;
+      const contentVisible = posts.filter((post) =>
+        !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
+      );
+      visible.push(...await this.filterVisiblePosts(contentVisible, currentUserId));
+      if (posts.length < pageSize) break;
+      nextCursor = encodeTrendingCursor(posts[posts.length - 1]);
     }
-    const visible = posts.filter((post) =>
-      !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
-    );
-    return this.attachInteractions(await this.filterVisiblePosts(visible, currentUserId), currentUserId);
+    return this.attachInteractions(visible.slice(0, limit), currentUserId);
   }
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    const posts = await this.postRepository.listByUser(userId, cursor, limit, excludedAuthorIds, contentFilter);
-    return this.attachInteractions(await this.filterVisiblePosts(posts, currentUserId), currentUserId);
+    const visible: PostRecord[] = [];
+    let nextCursor = cursor;
+    const pageSize = Math.min(100, Math.max(20, limit * 2));
+    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
+      const candidates = await this.postRepository.listByUser(userId, nextCursor, pageSize, excludedAuthorIds, contentFilter);
+      if (candidates.length === 0) break;
+      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length < pageSize) break;
+      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
+    }
+    return this.attachInteractions(visible.slice(0, limit), currentUserId);
   }
 
   async getSavedPosts(userId: string, limit = 100): Promise<any[]> {

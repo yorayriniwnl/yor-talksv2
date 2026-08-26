@@ -1,29 +1,33 @@
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { ledgerTransactionsTable, marketplaceOrdersTable, productsTable, usersTable } from "@workspace/db/schema";
 import type { MarketplaceOrderRecord } from "../types/index.js";
 import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
+import { ContentSafetyService } from "./content-safety-service.js";
 
 export class MarketplaceRequestError extends Error {}
 export class MarketplaceOrderNotFoundError extends Error {}
 export class MarketplaceOrderForbiddenError extends Error {}
 
 export class MarketplaceService {
-  constructor(private readonly razorpay = new RazorpayService()) {}
+  constructor(
+    private readonly razorpay = new RazorpayService(),
+    private readonly contentSafetyService = new ContentSafetyService(),
+  ) {}
 
   private async releaseExpiredReservations(): Promise<void> {
     const now = new Date().toISOString();
     const expired = await db.select({ id: marketplaceOrdersTable.id, productId: marketplaceOrdersTable.productId })
       .from(marketplaceOrdersTable)
-      .where(and(eq(marketplaceOrdersTable.status, "created"), lt(marketplaceOrdersTable.reservationExpiresAt, now)));
+      .where(and(inArray(marketplaceOrdersTable.status, ["created", "provider_pending"]), lt(marketplaceOrdersTable.reservationExpiresAt, now)));
     if (expired.length === 0) return;
     await db.transaction(async (tx) => {
       for (const order of expired) {
         const [cancelled] = await tx.update(marketplaceOrdersTable).set({ status: "cancelled" }).where(and(
           eq(marketplaceOrdersTable.id, order.id),
-          eq(marketplaceOrdersTable.status, "created"),
+          inArray(marketplaceOrdersTable.status, ["created", "provider_pending"]),
         )).returning({ id: marketplaceOrdersTable.id });
         if (cancelled) {
           await tx.update(productsTable).set({ availability: "active" }).where(and(
@@ -45,6 +49,9 @@ export class MarketplaceService {
     await this.releaseExpiredReservations();
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, input.productId));
     if (!product) throw new MarketplaceRequestError("Product not found");
+    if (!(await this.contentSafetyService.isVisible(product, input.buyerId, product.sellerId))) {
+      throw new MarketplaceRequestError("This listing is not available for your account");
+    }
     if (product.availability !== "active") throw new MarketplaceRequestError("This listing is no longer available");
     if (product.sellerId === input.buyerId) throw new MarketplaceRequestError("You cannot purchase your own listing");
 

@@ -15,10 +15,11 @@ export class SearchService {
     const shieldedUserIds = viewerId ? [...await this.contactShieldService.getShieldedUserIds(viewerId)] : [];
     const normalized = query.toLowerCase();
     const contentFilter = await this.contentSafetyService.getViewerFilter(viewerId);
-    const [users, posts] = await Promise.all([
+    const [users, candidatePosts] = await Promise.all([
       this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(normalized)),
       this.postRepository.search(normalized, 50, shieldedUserIds, contentFilter),
     ]);
+    const posts = await this.contentSafetyService.filterVisibleByAuthor(candidatePosts, viewerId, (post) => post.authorId);
     return { users, posts };
   }
 }

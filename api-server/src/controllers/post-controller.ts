@@ -73,7 +73,7 @@ export class PostController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     let post;
     try {
-      post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating);
+      post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating, req.body.contentCategory);
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));

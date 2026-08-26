@@ -59,7 +59,8 @@ router.get("/search", authenticate, async (req, res) => {
       contactShieldService.getShieldedUserIds(req.user!.id),
       contentSafetyService.getViewerFilter(req.user!.id),
     ]);
-    const posts = await postRepository.search(query, 50, [...shielded], filter);
+    const candidates = await postRepository.search(query, 50, [...shielded], filter);
+    const posts = await contentSafetyService.filterVisibleByAuthor(candidates, req.user!.id, (post) => post.authorId);
     const results = posts.map((post) => ({ id: post.id, authorId: post.authorId, content: post.content, createdAt: post.createdAt, score: post.score ?? 0 }));
 
     res.json(createResponse("Search completed", { results, searchMode: "keyword" }));
