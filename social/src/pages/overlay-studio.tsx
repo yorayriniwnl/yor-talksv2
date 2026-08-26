@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Video, Copy, CheckCircle2, Sparkles, Sliders, 
-  Flame, Monitor, Layers, Eye, Download 
+  Video, Sparkles, Sliders, Monitor, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 export default function OverlayStudio() {
@@ -18,11 +15,23 @@ export default function OverlayStudio() {
   const [showDonationAlert, setShowDonationAlert] = useState(true);
   const [showGoalBar, setShowGoalBar] = useState(true);
 
-  const copyOBSLink = () => {
+  const exportOverlayPreset = () => {
+    const preset = {
+      version: 1,
+      streamerName: streamerName.trim() || 'YOUR_CHANNEL_TAG',
+      accentColor,
+      showDonationAlert,
+      showGoalBar,
+    };
+    const blob = new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${(preset.streamerName || 'yor-overlay').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-overlay.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
     sounds.playChime();
-    triggerConfetti();
-    navigator.clipboard.writeText(`https://yor.social/live-hud/${streamerName}?color=${encodeURIComponent(accentColor)}`);
-    toast.success('🎉 OBS Browser Source URL copied to clipboard!');
+    toast.success('Overlay preset downloaded');
   };
 
   return (
@@ -34,16 +43,16 @@ export default function OverlayStudio() {
             <Monitor className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Bharat Streamer OBS Overlay & HUD Studio</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Real-time Broadcast Widgets for YouTube, Twitch & Kick</p>
+            <h1 className="text-xl font-bold font-display text-foreground">Yor Overlay Studio</h1>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Design a broadcast preset for OBS, Twitch, YouTube, or Kick</p>
           </div>
         </div>
 
         <Button
-          onClick={copyOBSLink}
+          onClick={exportOverlayPreset}
           className="rounded-2xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary shadow-lg"
         >
-          <Copy className="w-3.5 h-3.5 mr-1" /> Copy OBS Browser Source
+          <Download className="w-3.5 h-3.5 mr-1" /> Export preset
         </Button>
       </div>
 
@@ -51,7 +60,7 @@ export default function OverlayStudio() {
         {/* OBS Stream Preview Frame */}
         <div className="surface-1 rounded-3xl border border-border/40 overflow-hidden shadow-2xl p-6 relative">
           <div className="relative w-full aspect-video rounded-2xl bg-zinc-950 overflow-hidden border-2 border-zinc-800 flex items-center justify-center">
-            {/* Stream Background Mock */}
+            {/* Local preview canvas */}
             <img 
               src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop" 
               alt="" 
@@ -66,10 +75,10 @@ export default function OverlayStudio() {
               <span className="text-[0.65rem] font-mono text-zinc-400">CAMERA HUD FEED</span>
             </div>
 
-            {/* Live Chai & Superchat Alert Banner */}
+            {/* Donation alert preview */}
             {showDonationAlert && (
               <div className="absolute top-6 right-6 p-3 rounded-2xl bg-gradient-to-r from-amber-500/90 to-orange-600/90 text-black font-display font-bold text-xs shadow-2xl flex items-center gap-2 animate-bounce">
-                <Sparkles className="w-4 h-4" /> ₹500 Superchat from Rohan: &quot;GG Clutch Brother! 🇮🇳&quot;
+                <Sparkles className="w-4 h-4" /> Donation alert preview · provider not connected
               </div>
             )}
 
@@ -81,7 +90,7 @@ export default function OverlayStudio() {
                   <strong className="text-white">{streamerName}</strong>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-zinc-400">Monthly Sub Goal: 840 / 1,000</span>
+                  <span className="text-zinc-400">Sample goal · connect a provider for live progress</span>
                   <div className="w-32 h-2 rounded-full bg-zinc-800 overflow-hidden">
                     <div style={{ backgroundColor: accentColor }} className="w-[84%] h-full rounded-full" />
                   </div>
@@ -105,6 +114,7 @@ export default function OverlayStudio() {
               placeholder="YOUR_CHANNEL_TAG"
               className="rounded-xl font-mono text-xs font-bold uppercase h-11"
             />
+            <p className="text-[0.68rem] leading-relaxed text-muted-foreground">This name is embedded into the exported preset. Live events remain disabled until a streaming provider is connected.</p>
           </div>
 
           <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-4 shadow-sm">
@@ -137,6 +147,24 @@ export default function OverlayStudio() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="surface-1 rounded-3xl border border-border/40 p-6 shadow-sm">
+          <div className="showcase-section-title">
+            <Monitor className="w-4 h-4 text-primary" />
+            <h3>Preview layers</h3>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/40 bg-muted/30 px-4 py-3 text-xs font-semibold transition-colors hover:bg-muted/60">
+              <span><strong className="block">Donation alert</strong><small className="mt-1 block font-normal text-muted-foreground">Show the provider-ready preview layer</small></span>
+              <input type="checkbox" checked={showDonationAlert} onChange={(event) => setShowDonationAlert(event.target.checked)} className="h-4 w-4 accent-primary" />
+            </label>
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/40 bg-muted/30 px-4 py-3 text-xs font-semibold transition-colors hover:bg-muted/60">
+              <span><strong className="block">Goal bar</strong><small className="mt-1 block font-normal text-muted-foreground">Show the sample progress layer</small></span>
+              <input type="checkbox" checked={showGoalBar} onChange={(event) => setShowGoalBar(event.target.checked)} className="h-4 w-4 accent-primary" />
+            </label>
+          </div>
+          <p className="mt-4 text-[0.68rem] leading-relaxed text-muted-foreground">Exporting saves the selected layers and colors as a portable preset. It does not publish a live browser source or transmit account data.</p>
         </div>
       </div>
     </div>
