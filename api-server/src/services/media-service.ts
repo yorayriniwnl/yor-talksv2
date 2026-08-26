@@ -37,10 +37,13 @@ export class MediaService {
   ): Promise<MediaUploadResult> {
     const id = randomUUID();
     const isVideo = mimeType.startsWith("video/");
+    const isAudio = mimeType.startsWith("audio/");
     
     const url = isVideo
       ? await this.storageService.uploadVideo(buffer, filename)
-      : await this.storageService.uploadImage(buffer, filename);
+      : isAudio
+        ? await this.storageService.uploadAudio(buffer, filename)
+        : await this.storageService.uploadImage(buffer, filename);
 
     return {
       id,

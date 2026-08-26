@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Play, Pause, Trash2, Send, Volume2 } from 'lucide-react';
+import { Mic, Square, Play, Pause, Trash2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
-import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 interface VoiceNoteRecorderProps {
-  onSendVoiceNote: (audioUrl: string, durationSeconds: number) => void;
+  onSendVoiceNote: (audioUrl: string, durationSeconds: number) => void | Promise<void>;
   onCancel?: () => void;
 }
 
@@ -16,12 +16,21 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioBlobRef = useRef<Blob | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => () => {
+    if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    audioPlayerRef.current?.pause();
+    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+  }, [audioBlobUrl]);
 
   // Timer while recording
   useEffect(() => {
@@ -37,6 +46,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
   const startRecording = async () => {
     sounds.playPop();
     setAudioBlobUrl(null);
+    audioBlobRef.current = null;
     setRecordingDuration(0);
     audioChunksRef.current = [];
 
@@ -51,7 +61,8 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
         };
 
         recorder.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          audioBlobRef.current = blob;
           const url = URL.createObjectURL(blob);
           setAudioBlobUrl(url);
           stream.getTracks().forEach((track) => track.stop());
@@ -61,12 +72,10 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
         setIsRecording(true);
         startCanvasVisualizer();
       } else {
-        // Fallback simulated recording
-        setIsRecording(true);
+        toast.error('Voice recording is not supported by this browser');
       }
     } catch {
-      // Permission denied / fallback
-      setIsRecording(true);
+      toast.error('Microphone permission is required to record a voice note');
     }
   };
 
@@ -76,8 +85,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-      // Mock sample audio URL
-      setAudioBlobUrl('https://actions.google.com/sounds/v1/water/rain_heavy.ogg');
+      toast.error('No recording was captured');
     }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -108,10 +116,21 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
     draw();
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    if (!audioBlobRef.current || uploading) return;
+    setUploading(true);
     sounds.playChime();
-    const finalUrl = audioBlobUrl || 'https://actions.google.com/sounds/v1/water/rain_heavy.ogg';
-    onSendVoiceNote(finalUrl, Math.max(1, recordingDuration));
+    try {
+      const file = new File([audioBlobRef.current], `voice-note-${Date.now()}.webm`, {
+        type: audioBlobRef.current.type || 'audio/webm',
+      });
+      const uploaded = await api.uploadMedia(file);
+      await onSendVoiceNote(uploaded.url, Math.max(1, recordingDuration));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Voice note upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const togglePlayback = () => {
@@ -178,7 +197,9 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
               size="icon"
               variant="ghost"
               onClick={() => {
+                if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
                 setAudioBlobUrl(null);
+                audioBlobRef.current = null;
                 setRecordingDuration(0);
                 if (onCancel) onCancel();
               }}
@@ -189,10 +210,11 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
 
             <Button
               size="sm"
-              onClick={handleSend}
+              onClick={() => void handleSend()}
+              disabled={uploading}
               className="rounded-xl bg-primary text-primary-foreground font-bold text-xs h-8 px-3 glow-neon-primary"
             >
-              <Send className="w-3.5 h-3.5 mr-1" /> Send
+              <Send className="w-3.5 h-3.5 mr-1" /> {uploading ? 'Uploading…' : 'Send'}
             </Button>
           </div>
         </div>

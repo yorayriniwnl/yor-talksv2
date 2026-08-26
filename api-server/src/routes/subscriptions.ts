@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 router.post("/subscribe", authenticate, async (req, res) => {
-  res.status(501).json(createResponse("Subscriptions are disabled for the college beta until a payment provider is configured", null, {}, ["payments_not_configured"]));
+  res.status(501).json(createResponse("Subscriptions are not enabled until a billing provider and refund policy are configured", null, {}, ["payments_not_configured"]));
 });
 
 router.get("/my-subscriptions", authenticate, async (req, res) => {

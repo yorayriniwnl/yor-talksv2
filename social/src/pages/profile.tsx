@@ -28,6 +28,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { staggerContainer, staggerItem, tapScale, springGentle, springBouncy, layoutIds } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { api, type BackendUser } from '@/lib/api-client';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -209,7 +210,7 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
   onDelete: () => void;
 }) {
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 8));
+  const [likeCount, setLikeCount] = useState(0);
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={springGentle} className="comment-card relative group">
@@ -931,16 +932,24 @@ export default function Profile() {
 }
 
 function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boolean; onOpenChange: (open: boolean) => void; mode: 'followers' | 'following'; userId: string }) {
-  const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
-  const allUsers = Object.values(users);
-  
-  // Mock: show a subset of users as followers/following
-  const displayUsers = useMemo(() => {
-    return allUsers
-      .filter(u => u.id !== userId)
-      .slice(0, 20);
-  }, [allUsers, userId]);
+  const [displayUsers, setDisplayUsers] = useState<BackendUser[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+    let active = true;
+    setLoading(true);
+    const load = mode === 'followers' ? api.getFollowers(userId) : api.getFollowing(userId);
+    void load.then((items) => {
+      if (active) setDisplayUsers(items);
+    }).catch(() => {
+      if (active) setDisplayUsers([]);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [isOpen, mode, userId]);
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -949,15 +958,17 @@ function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boo
           <DialogTitle className="font-display font-bold text-base text-center capitalize">{mode}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {displayUsers.map((user) => (
+          {loading && <p className="py-8 text-center text-xs text-muted-foreground">Loading {mode}…</p>}
+          {!loading && displayUsers.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">No {mode} to show.</p>}
+          {!loading && displayUsers.map((user) => (
             <Link key={user.id} href={`/profile/${user.id}`} onClick={() => onOpenChange(false)}>
               <div className="flex items-center gap-3 hover:bg-muted/40 rounded-xl p-2 transition-colors cursor-pointer">
                 <Avatar className="w-10 h-10 border border-border/50">
                   <AvatarImage src={user.avatarUrl} />
-                  <AvatarFallback className="font-bold text-xs">{(user.displayName || user.username || 'U').charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="font-bold text-xs">{(user.fullName || user.username || 'U').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-bold text-sm truncate">{user.displayName}</h4>
+                  <h4 className="font-bold text-sm truncate">{user.fullName || user.username}</h4>
                   <p className="text-xs text-muted-foreground font-mono truncate">@{user.username}</p>
                 </div>
                 {user.id !== currentUser?.id && (

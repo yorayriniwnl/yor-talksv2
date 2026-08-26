@@ -9,18 +9,23 @@ function paramId(req: Request): string {
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
+  private view(product: any, viewerId?: string) {
+    const { savedBy = [], ...publicProduct } = product;
+    return { ...publicProduct, savedByMe: Boolean(viewerId && savedBy.includes(viewerId)) };
+  }
+
   create = async (req: Request, res: Response) => {
     const sellerId = req.user?.id;
     if (!sellerId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
     const product = await this.productService.createProduct({ ...req.body, sellerId });
-    return res.status(201).json(createResponse("Product listed", product));
+    return res.status(201).json(createResponse("Product listed", this.view(product, sellerId)));
   };
 
-  list = async (_req: Request, res: Response) => {
+  list = async (req: Request, res: Response) => {
     const products = await this.productService.listProducts();
-    return res.status(200).json(createResponse("Products retrieved", products));
+    return res.status(200).json(createResponse("Products retrieved", products.map((product) => this.view(product, req.user?.id))));
   };
 
   get = async (req: Request, res: Response) => {
@@ -28,7 +33,7 @@ export class ProductController {
     if (!product) {
       return res.status(404).json(createResponse("Product not found", null, {}, ["Not found"]));
     }
-    return res.status(200).json(createResponse("Product retrieved", product));
+    return res.status(200).json(createResponse("Product retrieved", this.view(product, req.user?.id)));
   };
 
   remove = async (req: Request, res: Response) => {
@@ -52,6 +57,6 @@ export class ProductController {
     if (!product) {
       return res.status(404).json(createResponse("Product not found", null, {}, ["Not found"]));
     }
-    return res.status(200).json(createResponse("Saved state updated", product));
+    return res.status(200).json(createResponse("Saved state updated", this.view(product, userId)));
   };
 }

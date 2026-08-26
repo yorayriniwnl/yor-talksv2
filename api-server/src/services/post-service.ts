@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
-import { PostRepository } from "../repositories/post-repository.js";
+import { encodePostCursor, encodeTrendingCursor, PostRepository } from "../repositories/post-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
@@ -9,15 +9,20 @@ import { SecurityService } from "./security-service.js";
 import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from "../types/index.js";
 import { db } from "@workspace/db";
 import { commentsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { logger } from "../lib/logger.js";
 
 export class PostService {
+
+  async moderateContent(content: string): Promise<{ spam: boolean; toxicity: boolean; nsfw: boolean }> {
+    return this.aiService.moderate(content);
+  }
 
   private async attachInteractions(posts: PostRecord[], userId?: string) {
     if (!userId || posts.length === 0) return posts;
@@ -89,19 +94,11 @@ export class PostService {
       contentCategory,
       contentRating,
     };
-    const created = await this.postRepository.create(post);
-
-    // Heuristic-only moderation (see ai-service.ts) — logged for review, not
-    // auto-rejected, since keyword matching is too crude to safely block
-    // real posts on.
     const moderation = await this.aiService.moderate(content);
     if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      this.securityService.createAuditEvent(
-        "content_flagged",
-        `post ${created.id} by ${authorId} flagged: ${JSON.stringify(moderation)}`,
-      );
+      throw new ContentPolicyViolationError("This post was blocked by the safety filter", moderation);
     }
-
+    const created = await this.postRepository.create(post);
     return created;
   }
 
@@ -114,6 +111,10 @@ export class PostService {
   async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"]): Promise<PostRecord | undefined> {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return undefined;
+    const moderation = await this.aiService.moderate(content);
+    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
+      throw new ContentPolicyViolationError("This post was blocked by the safety filter", moderation);
+    }
     return this.postRepository.update(postId, { content, ...(contentRating ? { contentRating } : {}), updatedAt: new Date().toISOString() });
   }
 
@@ -130,16 +131,29 @@ export class PostService {
     return this.getPost(postId, userId);
   }
 
-  async commentOnPost(postId: string, authorId: string, content: string): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
+  async commentOnPost(
+    postId: string,
+    authorId: string,
+    content: string,
+    attachment?: { mediaUrl?: string; mediaType?: "image" | "gif" | "audio"; mediaDuration?: number },
+  ): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
     const post = await this.getPost(postId, authorId);
     if (!post) {
       return undefined;
+    }
+    const normalizedContent = content.trim();
+    const moderation = normalizedContent ? await this.aiService.moderate(normalizedContent) : { spam: false, toxicity: false, nsfw: false };
+    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
+      throw new ContentPolicyViolationError("This comment was blocked by the safety filter", moderation);
     }
     const [createdComment] = await db.insert(commentsTable).values({
       id: randomUUID(),
       postId,
       authorId,
-      content,
+      content: normalizedContent,
+      mediaUrl: attachment?.mediaUrl,
+      mediaType: attachment?.mediaType,
+      mediaDuration: attachment?.mediaDuration,
     }).returning();
     const updatedPost = await this.postRepository.update(postId, {
       commentsCount: post.commentsCount + 1,
@@ -149,6 +163,9 @@ export class PostService {
       id: createdComment.id,
       authorId: createdComment.authorId,
       content: createdComment.content,
+      mediaUrl: createdComment.mediaUrl,
+      mediaType: createdComment.mediaType as CommentRecord["mediaType"],
+      mediaDuration: createdComment.mediaDuration,
       createdAt: createdComment.createdAt,
       replies: [],
       reactions: (createdComment.reactions ?? {}) as Record<string, string[]>,
@@ -174,6 +191,10 @@ export class PostService {
     const post = await this.getPost(postId, authorId);
     if (!post) {
       return undefined;
+    }
+    const moderation = await this.aiService.moderate(content);
+    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
+      throw new ContentPolicyViolationError("This reply was blocked by the safety filter", moderation);
     }
     const [parentComment] = await db.select().from(commentsTable).where(and(
       eq(commentsTable.id, commentId),
@@ -204,6 +225,35 @@ export class PostService {
       reactions: (createdReply.reactions ?? {}) as Record<string, string[]>,
     };
     return { post: updatedPost ?? post, reply };
+  }
+
+  async listComments(postId: string, viewerId: string): Promise<Array<CommentRecord & { author: { id: string; username: string; fullName: string; avatarUrl: string | null } }>> {
+    const post = await this.getPost(postId, viewerId);
+    if (!post) return [];
+    const excludedAuthorIds = viewerId ? await this.contactShieldService.getShieldedUserIds(viewerId) : new Set<string>();
+    const rows = await db.select().from(commentsTable)
+      .where(eq(commentsTable.postId, postId))
+      .orderBy(asc(commentsTable.createdAt));
+    return Promise.all(rows.filter((row) => !excludedAuthorIds.has(row.authorId)).map(async (row) => {
+      const author = await this.userRepository.findById(row.authorId);
+      return {
+        id: row.id,
+        authorId: row.authorId,
+        content: row.content,
+        mediaUrl: row.mediaUrl,
+        mediaType: row.mediaType as CommentRecord["mediaType"],
+        mediaDuration: row.mediaDuration,
+        createdAt: row.createdAt,
+        replies: [],
+        reactions: (row.reactions ?? {}) as Record<string, string[]>,
+        author: {
+          id: row.authorId,
+          username: author?.username ?? "user",
+          fullName: author?.fullName ?? "User",
+          avatarUrl: author?.avatarUrl ?? null,
+        },
+      };
+    }));
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {
@@ -249,13 +299,18 @@ export class PostService {
 
     private redis = new Redis(env.REDIS_URL);
 
-  async getTrendingFeed(cursor?: number, limit: number = 20, currentUserId?: string): Promise<any[]> {
+  async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    const cacheKey = `feed:trending:${cursor || 0}:${limit}`;
+    const cacheKey = `feed:trending:${cursor || "first"}:${limit}`;
     
-    // Try Redis cache first (Phase 5 Caching Architecture)
-    const cached = await this.redis.get(cacheKey);
+    // Redis is an optimization, never a requirement for a healthy feed.
+    let cached: string | null = null;
+    try {
+      cached = await this.redis.get(cacheKey);
+    } catch (error) {
+      logger.warn({ err: error }, "Trending feed cache read failed");
+    }
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -272,7 +327,11 @@ export class PostService {
     const posts = await this.postRepository.listTrending(cursor, limit);
     
     // Cache for 60 seconds
-    await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
+    try {
+      await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
+    } catch (error) {
+      logger.warn({ err: error }, "Trending feed cache write failed");
+    }
     const visible = posts.filter((post) =>
       !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
     );
@@ -303,4 +362,11 @@ export class PostService {
   }
 
   
+}
+
+export class ContentPolicyViolationError extends Error {
+  constructor(message: string, public readonly flags: { spam: boolean; toxicity: boolean; nsfw: boolean }) {
+    super(message);
+    this.name = "ContentPolicyViolationError";
+  }
 }

@@ -24,6 +24,7 @@ import { PageTransition } from '@/components/ui/PageTransition';
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
 const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
+const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
   const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
 const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
@@ -155,6 +156,7 @@ function ProtectedRoutes() {
 
                 {/* Social Features */}
                 <Route path="/dashboard" component={Dashboard} />
+                <Route path="/business" component={BusinessDashboard} />
                 <Route path="/ai" component={AIAssistant} />
                 <Route path="/lounge/:id?" component={Lounge} />
                 <Route path="/fanclub" component={FanClub} />
@@ -178,7 +180,13 @@ function ProtectedRoutes() {
 //  ROUTER — Auth gating & redirect preservation
 // ═══════════════════════════════════════════════════════════════
 
-const AuthRedirect = () => <Redirect to="/" />;
+function AuthRedirect() {
+  const [location] = useLocation();
+  const params = new URLSearchParams(location.split('?')[1] ?? '');
+  const redirect = params.get('redirect');
+  const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/';
+  return <Redirect to={safeRedirect} />;
+}
 
 function Router() {
   const currentUser = useAppStore((s) => s.currentUser);
@@ -204,6 +212,7 @@ function Router() {
           <>
             <Route path="/auth" component={Auth} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
+            <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding" component={Onboarding} />
             <Route path="/grievance" component={Grievance} />
             <Route>
@@ -215,6 +224,7 @@ function Router() {
           <>
             <Route path="/auth" component={AuthRedirect} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
+            <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding" component={Onboarding} />
             <Route>
               <ProtectedRoutes />

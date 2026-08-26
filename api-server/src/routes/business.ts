@@ -4,49 +4,46 @@ import { db } from "@workspace/db";
 import { businessProfilesTable, businessMembersTable, usersTable, ledgerTransactionsTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { eq, or } from "drizzle-orm";
+import { createResponse } from "../utils/response.js";
+import { validateBody } from "../middlewares/validation.js";
+import { createBusinessSchema } from "../validators/business.js";
 
 const router = Router();
 
 // Create a Business Profile
-router.post("/", authenticate, async (req, res) => {
+router.post("/", authenticate, validateBody(createBusinessSchema), async (req, res) => {
   try {
     const { name, industry, website, contactEmail } = req.body;
     const businessId = randomUUID();
     
-    await db.insert(businessProfilesTable).values({
-      id: businessId,
-      ownerId: req.user!.id,
-      name,
-      industry: industry || "General",
-      website,
-      contactEmail,
-      isVerified: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    
-    // Auto-add owner as admin
-    await db.insert(businessMembersTable).values({
-      businessId,
-      userId: req.user!.id,
-      role: "admin",
-      joinedAt: new Date().toISOString(),
-    });
-    
-    // Ensure user has 'business' in accountTypes
-    const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, req.user!.id) });
-    if (user) {
-      const accountTypes = Array.isArray(user.accountTypes) ? user.accountTypes : ["user"];
-      const types = new Set<string>(accountTypes);
-      types.add("business");
-      await db.update(usersTable)
-        .set({ accountTypes: Array.from(types) })
+    await db.transaction(async (tx) => {
+      await tx.insert(businessProfilesTable).values({
+        id: businessId,
+        ownerId: req.user!.id,
+        name,
+        industry: industry || "General",
+        website,
+        contactEmail,
+        isVerified: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      await tx.insert(businessMembersTable).values({
+        businessId,
+        userId: req.user!.id,
+        role: "admin",
+        joinedAt: new Date().toISOString(),
+      });
+      const [user] = await tx.select({ accountTypes: usersTable.accountTypes }).from(usersTable).where(eq(usersTable.id, req.user!.id));
+      const accountTypes = Array.isArray(user?.accountTypes) ? user.accountTypes : ["user"];
+      await tx.update(usersTable)
+        .set({ accountTypes: [...new Set([...accountTypes.map(String), "business"])] })
         .where(eq(usersTable.id, req.user!.id));
-    }
+    });
 
-    res.status(201).json({ success: true, businessId });
+    res.status(201).json(createResponse("Business profile created", { businessId }));
   } catch (err) {
-    res.status(500).json({ error: "Failed to create business profile" });
+    res.status(500).json(createResponse("Failed to create business profile", null, {}, ["Internal server error"]));
   }
 });
 
@@ -65,9 +62,9 @@ router.get("/", authenticate, async (req, res) => {
       .innerJoin(businessProfilesTable, eq(businessMembersTable.businessId, businessProfilesTable.id))
       .where(eq(businessMembersTable.userId, req.user!.id));
       
-    res.json({ success: true, businesses });
+    res.json(createResponse("Businesses loaded", { businesses }));
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch businesses" });
+    res.status(500).json(createResponse("Failed to fetch businesses", null, {}, ["Internal server error"]));
   }
 });
 

@@ -45,15 +45,12 @@ export class MessageController {
 
   createGroupChat = async (req: Request, res: Response) => {
     try {
-      // requires access to ConversationRepository, but we can add createGroupChat to MessageService instead
-      // Let's implement it inside MessageService for cleaner architecture
-      const title = req.body.title || "Group Chat";
+      const title = typeof req.body.title === "string" ? req.body.title : "Group Chat";
       const memberIds = req.body.memberIds || [];
       if (!Array.isArray(memberIds) || memberIds.length === 0) {
         return res.status(400).json(createResponse("Missing memberIds", null, {}, ["Bad Request"]));
       }
-      // @ts-ignore
-      const group = await this.messageService.conversationRepository.createGroupChat(req.user?.id ?? "", memberIds, title);
+      const group = await this.messageService.createGroupChat(req.user?.id ?? "", memberIds, title);
       
       const io = getIo();
       if (io) {

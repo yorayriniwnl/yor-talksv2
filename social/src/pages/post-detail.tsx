@@ -1,6 +1,7 @@
 import { useParams, Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
 import { ArrowLeft, MessageCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,31 +18,32 @@ export default function PostDetail() {
   
   const post = posts.find((p) => p.id === id);
 
-  // Initial demo comments
-  const [commentList, setCommentList] = useState<CommentItem[]>([
-    {
-      id: 'c1',
-      authorId: 'u_aarav',
-      authorName: 'Aarav Patel',
-      authorUsername: 'aarav_p',
-      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200',
-      content: 'This Bharat creator update is revolutionary! The UPI tip jar is instant. 🇮🇳',
-      tipAmount: 100,
-      likes: 14,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 'c2',
-      authorId: 'u_sneha',
-      authorName: 'Sneha Sharma',
-      authorUsername: 'sneha_creates',
-      authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200',
-      content: 'Loving the Cyberpunk and Bharat Gold filters on the 4K studio camera!',
-      gifUrl: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
-      likes: 8,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ]);
+  const [commentList, setCommentList] = useState<CommentItem[]>([]);
+
+  useEffect(() => {
+    if (!post) return;
+    let active = true;
+    void api.getPostComments(post.id).then((comments) => {
+      if (!active) return;
+      setCommentList(comments.map((comment) => ({
+        id: comment.id,
+        authorId: comment.authorId,
+        authorName: comment.author?.fullName,
+        authorUsername: comment.author?.username,
+        authorAvatar: comment.author?.avatarUrl ?? undefined,
+        content: comment.content,
+        imageUrl: comment.mediaType === 'image' ? comment.mediaUrl ?? undefined : undefined,
+        gifUrl: comment.mediaType === 'gif' ? comment.mediaUrl ?? undefined : undefined,
+        voiceNoteUrl: comment.mediaType === 'audio' ? comment.mediaUrl ?? undefined : undefined,
+        voiceDuration: comment.mediaDuration ?? undefined,
+        likes: 0,
+        createdAt: comment.createdAt,
+      })));
+    }).catch(() => {
+      if (active) setCommentList([]);
+    });
+    return () => { active = false; };
+  }, [post?.id]);
 
   if (!post) {
     return (
@@ -57,24 +59,32 @@ export default function PostDetail() {
   // Related posts
   const relatedPosts = posts.filter(p => p.id !== id).slice(0, 2);
 
-  const handleAddComment = (data: RichCommentData) => {
+  const handleAddComment = async (data: RichCommentData) => {
+    if (!post) return;
+    if (!data.text.trim() && !data.imageUrl && !data.gifUrl && !data.voiceNoteUrl) return;
+    const media = data.voiceNoteUrl
+      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
+      : data.gifUrl
+        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
+        : data.imageUrl
+          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
+          : {};
+    const result = await api.commentOnPost(post.id, { content: data.text.trim(), ...media });
     const newComment: CommentItem = {
-      id: `c_${Date.now()}`,
+      id: result.comment.id,
       authorId: currentUser?.id || 'guest',
       authorName: currentUser?.displayName || currentUser?.username || 'You',
       authorUsername: currentUser?.username || 'you',
       authorAvatar: currentUser?.avatarUrl,
-      content: data.text,
-      imageUrl: data.imageUrl,
-      gifUrl: data.gifUrl,
-      voiceNoteUrl: data.voiceNoteUrl,
-      voiceDuration: data.voiceDuration,
-      tipAmount: data.tipAmount,
+      content: result.comment.content,
+      imageUrl: result.comment.mediaType === 'image' ? result.comment.mediaUrl ?? undefined : undefined,
+      gifUrl: result.comment.mediaType === 'gif' ? result.comment.mediaUrl ?? undefined : undefined,
+      voiceNoteUrl: result.comment.mediaType === 'audio' ? result.comment.mediaUrl ?? undefined : undefined,
+      voiceDuration: result.comment.mediaDuration ?? undefined,
       likes: 0,
-      createdAt: new Date().toISOString(),
+      createdAt: result.comment.createdAt,
     };
-
-    setCommentList((prev) => [newComment, ...prev]);
+    setCommentList((prev) => [...prev, newComment]);
   };
 
   return (

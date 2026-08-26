@@ -137,7 +137,6 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
       gifUrl: data.gifUrl,
       voiceNoteUrl: data.voiceNoteUrl,
       voiceDuration: data.voiceDuration,
-      tipAmount: data.tipAmount,
       likes: 0,
       createdAt: new Date().toISOString(),
     };

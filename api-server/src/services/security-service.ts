@@ -19,6 +19,7 @@ export class SecurityService {
       createdAt: new Date().toISOString(),
     };
     this.auditLog.push(event);
+    if (this.auditLog.length > 5000) this.auditLog.splice(0, this.auditLog.length - 5000);
     logger.warn({ eventId: event.id, type, message }, "Security audit event");
     return event;
   }

@@ -8,7 +8,11 @@ const router = Router();
 const redis = new Redis(env.REDIS_URL);
 
 // Phase 7: Platform Reliability & Operations
-const healthHandler = async (req: Request, res: Response) => {
+const liveHandler = (_req: Request, res: Response) => {
+  res.status(200).json({ status: "live", timestamp: new Date().toISOString(), uptime: process.uptime() });
+};
+
+const healthHandler = async (_req: Request, res: Response) => {
   try {
     // Check DB
     await db.execute(sql`SELECT 1`);
@@ -30,7 +34,7 @@ const healthHandler = async (req: Request, res: Response) => {
     res.status(503).json({
       status: "unhealthy",
       timestamp: new Date().toISOString(),
-      error: (error as Error).message
+      error: "One or more dependencies are unavailable"
     });
   }
 };
@@ -38,6 +42,7 @@ const healthHandler = async (req: Request, res: Response) => {
 router.get("/", healthHandler);
 router.get("/healthz", healthHandler);
 router.get("/readyz", healthHandler);
+router.get("/livez", liveHandler);
 
 export const healthRoutes = router;
 export default router;

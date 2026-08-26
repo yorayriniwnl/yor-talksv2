@@ -16,10 +16,27 @@ export const editPostSchema = z.object({
   contentRating: contentRatingSchema.optional(),
 });
 
+const commentAttachmentSchema = z.object({
+  mediaUrl: z.string().url().max(2000).optional(),
+  mediaType: z.enum(["image", "gif", "audio"]).optional(),
+  mediaDuration: z.number().int().min(1).max(600).optional(),
+});
+
 export const commentSchema = z.object({
-  content: z.string().min(1).max(2000),
+  content: z.string().trim().max(2000).default(""),
+  ...commentAttachmentSchema.shape,
+}).superRefine((value, ctx) => {
+  if (!value.content && !value.mediaUrl) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["content"], message: "Comment text or an attachment is required" });
+  }
+  if (value.mediaUrl && !value.mediaType) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mediaType"], message: "Attachment type is required" });
+  }
+  if (!value.mediaUrl && (value.mediaType || value.mediaDuration)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mediaUrl"], message: "Attachment URL is required" });
+  }
 });
 
 export const replySchema = z.object({
-  content: z.string().min(1).max(2000),
+  content: z.string().trim().min(1).max(2000),
 });

@@ -12,6 +12,10 @@ import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
+import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { type ContentCategory } from '@/lib/content-category';
 
 export default function ClipStudio() {
   const addPost = useAppStore((s) => s.addPost);
@@ -19,6 +23,9 @@ export default function ClipStudio() {
   const [captionText, setCaptionText] = useState('WHAT A CLUTCH 1v4 ACE BY GODLIKE! 🔥');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
   const [selectedSFX, setSelectedSFX] = useState<string | null>(null);
+  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
+  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
+  const [publishing, setPublishing] = useState(false);
 
   const handleExportReel = () => {
     sounds.playChime();
@@ -26,13 +33,24 @@ export default function ClipStudio() {
     toast.success('🎬 Vertical 9:16 Esports Highlight Reel exported in 1080p 60fps!');
   };
 
-  const handlePostToReels = () => {
+  const handlePostToReels = async () => {
+    if (!contentCategory) {
+      toast.error('Choose a category before publishing this highlight.');
+      return;
+    }
+    setPublishing(true);
     sounds.playChime();
-    triggerConfetti();
-    addPost(`🎬 Clutched with Yor Clip Studio:\n\n"${captionText}"`, [
-      'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop'
-    ]);
-    toast.success('🎉 Published Highlight directly to Yor Reels Feed!');
+    try {
+      await addPost(`🎬 Clutched with Yor Clip Studio:\n\n"${captionText.trim()}"`, [
+        'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop'
+      ], undefined, contentRating, contentCategory);
+      triggerConfetti();
+      toast.success('🎉 Published highlight to your feed!');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not publish this highlight');
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -52,7 +70,8 @@ export default function ClipStudio() {
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            onClick={handlePostToReels}
+            onClick={() => void handlePostToReels()}
+            disabled={publishing}
             className="rounded-2xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary"
           >
             <Share2 className="w-3.5 h-3.5 mr-1" /> Post to Reels
@@ -110,6 +129,12 @@ export default function ClipStudio() {
                 placeholder="TYPE VIRAL STREAM HIGHLIGHT CAPTION..."
                 className="rounded-xl font-bold font-display text-sm uppercase h-11"
               />
+            </div>
+
+            <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-3 shadow-sm">
+              <ContentCategorySelect id="clip-content-category" value={contentCategory} onChange={setContentCategory} />
+              <ContentRatingSelect id="clip-content-rating" value={contentRating} onChange={setContentRating} />
+              <p className="text-xs leading-relaxed text-muted-foreground">Choose how this highlight is classified before it becomes visible in the global feed.</p>
             </div>
 
             {/* Audio SFX Insert */}

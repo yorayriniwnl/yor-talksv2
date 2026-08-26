@@ -64,6 +64,26 @@ paths:
                   data:
                     $ref: "#/components/schemas/User"
 
+  /auth/google:
+    post:
+      operationId: loginWithGoogle
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                credential: { type: string }
+                totpCode: { type: string, minLength: 6, maxLength: 6 }
+              required: [credential]
+      responses:
+        "200":
+          description: Success or two-factor challenge
+        "401":
+          description: Invalid Google credential or account
+
   /auth/logout:
     post:
       operationId: logout

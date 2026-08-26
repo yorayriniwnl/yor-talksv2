@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useState, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
   
   // Photo state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,37 +40,45 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
     if (file) {
       const url = URL.createObjectURL(file);
       setImagePreview(url);
+      setImageFile(file);
     }
   };
 
-  const publish = () => {
+  const publish = async () => {
     if (!contentCategory) return;
-    if (activeTab === 'text') {
-      if (!text.trim()) return;
-      addStory({ 
+    setPublishing(true);
+    try {
+      if (activeTab === 'text') {
+        if (!text.trim()) return;
+        await addStory({
         type: 'text', 
-        mediaUrl: '', 
+        mediaUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
         textContent: text.trim(), 
         backgroundGradient: gradient,
         contentCategory,
-      });
-    } else if (activeTab === 'photo') {
-      // In a real app we'd upload the file to a server here.
-      // For now we use the preview URL or a placeholder if none selected.
-      addStory({ 
+        });
+      } else if (activeTab === 'photo') {
+        if (!imageFile) return;
+        const uploaded = await api.uploadMedia(imageFile);
+        await addStory({
         type: 'image', 
-        mediaUrl: imagePreview || `https://picsum.photos/seed/story_${Date.now()}/400/700`,
+        mediaUrl: uploaded.url,
         contentCategory,
-      });
-    } else if (activeTab === 'voice') {
-      addStory({ type: 'voice', mediaUrl: '', contentCategory });
-    }
+        });
+      } else {
+        return;
+      }
     
-    // Reset state
-    setText('');
-    setImagePreview(null);
-    setContentCategory('');
-    setOpen(false);
+      setText('');
+      setImagePreview(null);
+      setImageFile(null);
+      setContentCategory('');
+      setOpen(false);
+    } catch {
+      // The store/API surfaces the failure to the user.
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -97,13 +108,13 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
               <div className="w-full h-full flex flex-col p-4 gap-4">
                 <div 
                   className="flex-1 bg-muted/30 border-2 border-dashed border-border/60 rounded-xl overflow-hidden flex flex-col items-center justify-center relative"
-                  onClick={() => !imagePreview && fileInputRef.current?.click()}
+                  onClick={() => !imagePreview && !publishing && fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
                     <>
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setImagePreview(null); }}
+                        onClick={(e) => { e.stopPropagation(); setImagePreview(null); setImageFile(null); }}
                         className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full backdrop-blur-md"
                       >
                         <X className="w-4 h-4" />
@@ -131,7 +142,8 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
                 <Button 
                   className="w-full rounded-full" 
                   size="lg" 
-                  onClick={publish}
+                  onClick={() => void publish()}
+                  disabled={publishing}
                 >
                   Share moment
                 </Button>
@@ -164,8 +176,8 @@ export function CreateStory({ children }: { children: React.ReactNode }) {
                   <span className="text-xs text-muted-foreground">{text.length}/200</span>
                   <Button 
                     className="rounded-full px-8" 
-                    onClick={publish}
-                    disabled={!text.trim()}
+                    onClick={() => void publish()}
+                    disabled={!text.trim() || publishing}
                   >
                     Share moment
                   </Button>

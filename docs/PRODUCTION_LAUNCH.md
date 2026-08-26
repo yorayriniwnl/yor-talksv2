@@ -1,6 +1,6 @@
 # Yor Talks production launch runbook
 
-This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain, legal approval and campus authorization listed below. Do not use the development `docker-compose.yml` for public traffic.
+This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
 ## 1. Prepare the host and secrets
 
@@ -14,7 +14,7 @@ Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.pro
 - Verify the Resend sender domain and set `EMAIL_FROM`. Registration is fail-closed when production email delivery is unavailable.
 - Configure Cloudinary for image/video uploads and test file-size, moderation and deletion behavior.
 - Configure LiveKit and test a room from the intended campus network. Keep Razorpay disabled until a legal entity, settlement account, webhook verification and refund process exist.
-- Obtain written KIIT approval for the name/branding, `@kiit.ac.in` access policy and campus beta distribution.
+- Decide whether this deployment is open globally or a closed beta. For a closed beta, set `ALLOWED_EMAIL_DOMAINS` and document the approved domains.
 - Publish reviewed Privacy, Terms, Community Guidelines, copyright/takedown process, retention schedule, support address and the appointed grievance officer’s name/contact. The in-app pages intentionally identify the legal fields that are still unconfigured.
 
 ## 3. Deploy
@@ -48,7 +48,8 @@ Backups must be encrypted, access-controlled and have a documented retention per
 
 ## 5. Launch checks
 
-- Register a real KIIT test account, confirm the email link, sign in, refresh the browser, log out, and verify the refresh cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
+- Register a real test account from an allowed domain, confirm the email link, sign in, refresh the browser, log out, and verify the refresh cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
+- Configure the Google Web OAuth client ID in both `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID`, then test an allowed Google account and a disallowed account when a domain allow-list is enabled.
 - Upload media, create/report/block content, export data, delete a disposable test account, and verify the deleted account cannot be found.
 - Submit and track a grievance from a fresh browser and confirm it survives an API restart.
 - Verify backups, alerting, error logs, rate limits, CORS, TLS renewal, domain ownership and the incident escalation roster.

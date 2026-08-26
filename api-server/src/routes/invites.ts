@@ -4,13 +4,17 @@ import { db } from "@workspace/db";
 import { invitesTable, usersTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
+import { and, isNull } from "drizzle-orm";
+import { createResponse } from "../utils/response.js";
+import { z } from "zod";
+import { validateBody } from "../middlewares/validation.js";
 
 const router = Router();
 
 // Generate an invite code
 router.post("/generate", authenticate, async (req, res) => {
   try {
-    const code = randomUUID().substring(0, 8).toUpperCase();
+    const code = randomUUID().replaceAll("-", "").substring(0, 16).toUpperCase();
     await db.insert(invitesTable).values({
       id: randomUUID(),
       inviterId: req.user!.id,
@@ -19,40 +23,42 @@ router.post("/generate", authenticate, async (req, res) => {
       createdAt: new Date().toISOString()
     });
     
-    res.status(201).json({ success: true, code });
+    res.status(201).json(createResponse("Invite generated", { code }));
   } catch (err) {
-    res.status(500).json({ error: "Failed to generate invite code" });
+    res.status(500).json(createResponse("Failed to generate invite code", null, {}, ["Internal server error"]));
   }
 });
 
 // Claim an invite code
-router.post("/claim", authenticate, async (req, res) => {
+router.post("/claim", authenticate, validateBody(z.object({ code: z.string().trim().min(8).max(32) })), async (req, res) => {
   try {
-    const { code } = req.body;
-    
-    const invite = await db.query.invitesTable.findFirst({
-      where: eq(invitesTable.code, code)
-    });
-    
-    if (!invite || invite.status !== "active") {
-      return res.status(400).json({ error: "Invalid or expired invite code" });
+    const code = req.body.code.toUpperCase();
+    const [invite] = await db.select({ id: invitesTable.id, inviterId: invitesTable.inviterId })
+      .from(invitesTable)
+      .where(and(eq(invitesTable.code, code), eq(invitesTable.status, "active"), isNull(invitesTable.inviteeId)))
+      .limit(1);
+    if (!invite || invite.inviterId === req.user!.id) {
+      return res.status(400).json(createResponse("Invalid or expired invite code", null, {}, ["Invalid invite"]));
     }
-    
-    // Mark claimed
-    await db.update(invitesTable)
+
+    const claimed = await db.update(invitesTable)
       .set({ 
         status: "claimed",
         inviteeId: req.user!.id,
         claimedAt: new Date().toISOString()
       })
-      .where(eq(invitesTable.id, invite.id));
+      .where(and(eq(invitesTable.id, invite.id), eq(invitesTable.status, "active"), isNull(invitesTable.inviteeId)))
+      .returning({ id: invitesTable.id });
+    if (claimed.length === 0) {
+      return res.status(409).json(createResponse("Invite has already been claimed", null, {}, ["Invite unavailable"]));
+    }
       
     // Credit inviter (example of referral reward logic)
     // Could add points to wallet here
 
-    res.json({ success: true, message: "Invite claimed successfully" });
+    res.json(createResponse("Invite claimed successfully", null));
   } catch (err) {
-    res.status(500).json({ error: "Failed to claim invite code" });
+    res.status(500).json(createResponse("Failed to claim invite code", null, {}, ["Internal server error"]));
   }
 });
 

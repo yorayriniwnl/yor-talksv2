@@ -108,6 +108,12 @@ async function tryRefresh(): Promise<Tokens | null> {
   return refreshInFlight;
 }
 
+async function refreshSession(): Promise<Tokens | null> {
+  const refreshed = await tryRefresh();
+  if (refreshed) setStoredTokens(refreshed);
+  return refreshed;
+}
+
 async function request<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
   const tokens = getStoredTokens();
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
@@ -148,31 +154,31 @@ export interface PaginatedResult<T> {
   hasMore?: boolean;
 }
 
-async function requestPaginated<T>(path: string, options: RequestInit = {}): Promise<PaginatedResult<T>> {
+async function requestPaginated<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<PaginatedResult<T>> {
   const tokens = getStoredTokens();
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
-  if (tokens) {
-    headers['Authorization'] = `Bearer ${tokens.accessToken}`;
-  }
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  if (tokens) headers['Authorization'] = `Bearer ${tokens.accessToken}`;
 
   const res = await fetch(`/api${path}`, { ...options, headers, credentials: 'include' });
-  let json: any = null;
-  try {
-    json = await res.json();
-  } catch {
-    // no body
+  if (res.status === 401 && !isRetry) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      setStoredTokens(refreshed);
+      return requestPaginated<T>(path, options, true);
+    }
+    setStoredTokens(null);
   }
 
+  let json: any = null;
+  try { json = await res.json(); } catch { /* no body */ }
   if (!res.ok || !json?.success) {
     throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
   }
 
   const data = (Array.isArray(json.data) ? json.data : json.data?.items ?? json.data ?? []) as T;
-  const nextCursor = json.meta?.nextCursor ?? json.data?.nextCursor;
-  const hasMore = Boolean(json.meta?.hasMore ?? json.data?.hasMore ?? (Array.isArray(data) && (data as any[]).length > 0));
+  const nextCursor = json.meta?.nextCursor ?? json.data?.nextCursor ?? null;
+  const hasMore = Boolean(json.meta?.hasMore ?? json.data?.hasMore ?? nextCursor);
 
   return { data, nextCursor, hasMore };
 }
@@ -255,11 +261,14 @@ export interface BackendProject {
 
 export const api = {
   request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
+  refreshSession,
   register: (payload: { username: string; email: string; password: string; fullName: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>
     request<AuthLoginResult>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  loginWithGoogle: (payload: { credential: string; totpCode?: string; challengeId?: string }) =>
+    request<AuthLoginResult>('/auth/google', { method: 'POST', body: JSON.stringify(payload) }),
   requestEmailOtp: (email: string) =>
     request<null>('/auth/email-otp/send', { method: 'POST', body: JSON.stringify({ email }) }),
   loginWithEmailOtp: (payload: { email: string; code: string; totpCode?: string; challengeId?: string }) =>
@@ -343,8 +352,8 @@ export const api = {
 
   // ---- Posts / feed ----
   getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
-  getTrendingFeed: (page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?page=${page}&pageSize=${pageSize}`),
-  getUserFeed: (userId: string, page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?page=${page}&pageSize=${pageSize}`),
+  getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
+  getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
   createPost: (payload: { content: string; images?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content }) }),
@@ -353,11 +362,17 @@ export const api = {
   unlikePost: (postId: string) => request<BackendPost>(`/posts/${postId}/unlike`, { method: 'POST' }),
   bookmarkPost: (postId: string) => request<BackendPost>(`/posts/${postId}/bookmark`, { method: 'POST' }),
   sharePost: (postId: string) => request<BackendPost>(`/posts/${postId}/share`, { method: 'POST' }),
-  commentOnPost: (postId: string, content: string) => request<BackendPost>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
+  commentOnPost: (postId: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) => request<{ post: BackendPost; comment: BackendComment }>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
+  getPostComments: (postId: string) => request<BackendComment[]>(`/posts/${postId}/comments`),
   uploadPostImage: (file: File) => {
     const form = new FormData();
     form.append('image', file);
     return request<{ url: string }>('/posts/upload-image', { method: 'POST', body: form });
+  },
+  uploadMedia: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<{ id: string; url: string; thumbnailUrl: string; mimeType: string; size: number }>('/media/upload', { method: 'POST', body: form });
   },
 
   // ---- Communities ----
@@ -367,6 +382,11 @@ export const api = {
     request<BackendCommunity>('/communities', { method: 'POST', body: JSON.stringify(payload) }),
   joinCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/join`, { method: 'POST' }),
   leaveCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/leave`, { method: 'POST' }),
+  getCommunityDiscussions: (id: string) => request<BackendCommunityDiscussion[]>(`/communities/${encodeURIComponent(id)}/discussions`),
+  createCommunityDiscussion: (id: string, payload: { title: string; content?: string; tag: string }) =>
+    request<BackendCommunityDiscussion>(`/communities/${encodeURIComponent(id)}/discussions`, { method: 'POST', body: JSON.stringify(payload) }),
+  likeCommunityDiscussion: (communityId: string, discussionId: string) =>
+    request<BackendCommunityDiscussion>(`/communities/${encodeURIComponent(communityId)}/discussions/${encodeURIComponent(discussionId)}/like`, { method: 'POST' }),
 
   // ---- Projects / dreams ----
   getProjects: () => request<{ projects: BackendProject[] }>('/projects').then((result) => result.projects),
@@ -399,6 +419,7 @@ export const api = {
   // ---- Notifications ----
   getNotifications: () => request<BackendNotification[]>('/notifications'),
   markNotificationRead: (notificationId: string) => request<BackendNotification>(`/notifications/${notificationId}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () => request<null>('/notifications/read-all', { method: 'POST' }),
 
   // ---- Search ----
   search: (q: string) => request<{ users: BackendUser[]; posts: BackendPost[] }>(`/search?q=${encodeURIComponent(q)}`),
@@ -417,6 +438,7 @@ export const api = {
   getProduct: (id: string) => request<BackendProduct>(`/products/${id}`),
   createProduct: (payload: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used' }) =>
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
+  saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
 
   // ---- Articles ----
@@ -479,6 +501,17 @@ export interface BackendPost {
   contentRating?: ContentRating;
 }
 
+export interface BackendComment {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'gif' | 'audio' | null;
+  mediaDuration?: number | null;
+  author?: { id: string; username: string; fullName: string; avatarUrl: string | null };
+}
+
 export interface BackendCommunity {
   id: string;
   name: string;
@@ -487,7 +520,21 @@ export interface BackendCommunity {
   ownerId: string;
   moderators: string[];
   memberIds: string[];
+  memberCount?: number;
+  isMember?: boolean;
   createdAt: string;
+}
+
+export interface BackendCommunityDiscussion {
+  id: string;
+  title: string;
+  content: string;
+  tag: string;
+  repliesCount: number;
+  likes: number;
+  createdAt: string;
+  likedByMe?: boolean;
+  author: { id: string; username: string; fullName: string; avatarUrl: string | null };
 }
 
 export interface BackendEvent {
@@ -502,6 +549,8 @@ export interface BackendEvent {
   isOnline: boolean;
   attendeeIds: string[];
   interestedIds: string[];
+  attendeeCount?: number;
+  interestedCount?: number;
 }
 
 export interface BackendProduct {
@@ -514,6 +563,7 @@ export interface BackendProduct {
   category: string;
   condition: string;
   createdAt: string;
+  savedByMe?: boolean;
 }
 
 export interface BackendArticle {
@@ -539,6 +589,7 @@ export interface BackendVideo {
   title: string;
   views: number;
   likes: number;
+  likedByMe?: boolean;
   createdAt: string;
   type: string;
   contentCategory?: ContentCategory;

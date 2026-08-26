@@ -337,8 +337,8 @@ function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
     name: c.name || 'Community',
     description: c.description || '',
     coverUrl: `https://picsum.photos/seed/${c.id}/600/300`,
-    members: memberIds.length,
-    isMember: currentUserId ? memberIds.includes(currentUserId) : false,
+    members: c.memberCount ?? memberIds.length,
+    isMember: c.isMember ?? Boolean(currentUserId && memberIds.includes(currentUserId)),
     visibility: 'public',
     category: 'General',
   };
@@ -375,6 +375,7 @@ function mapProduct(p: BackendProduct): Product {
     images: Array.isArray(p.images) ? p.images : [],
     category: p.category || 'General',
     condition: (p.condition as Product['condition']) || 'new',
+    savedByMe: Boolean(p.savedByMe),
     createdAt: p.createdAt || new Date().toISOString(),
   };
 }
@@ -405,7 +406,7 @@ function mapVideo(v: BackendVideo): Video {
     thumbnailUrl: v.thumbnailUrl || '',
     title: v.title || 'Untitled Video',
     views: v.views ?? 0,
-    likes: v.likes ?? 0,
+    likes: Array.isArray((v as any).likedBy) ? (v as any).likedBy.length : (v.likes ?? 0),
     createdAt: v.createdAt || new Date().toISOString(),
     type: (v.type as Video['type']) || 'standard',
     contentCategory: v.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
@@ -443,8 +444,8 @@ function mapEvent(e: BackendEvent, currentUserId?: string): EventItem {
     startsAt: e.startsAt || new Date().toISOString(),
     location: e.location || 'Online',
     isOnline: Boolean(e.isOnline),
-    attendeeIds,
-    interestedIds,
+    attendeeIds: attendeeIds.length > 0 ? attendeeIds : Array.from({ length: e.attendeeCount ?? 0 }, () => ''),
+    interestedIds: interestedIds.length > 0 ? interestedIds : Array.from({ length: e.interestedCount ?? 0 }, () => ''),
     rsvpStatus: currentUserId && attendeeIds.includes(currentUserId) ? 'going' : currentUserId && interestedIds.includes(currentUserId) ? 'interested' : null,
   };
 }
@@ -492,6 +493,7 @@ interface AppState {
   showcases: Record<string, Showcase[]>;
 
   login: (identifier: string, password: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
+  loginWithGoogle: (credential: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   loginWithEmailOtp: (email: string, code: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   completeTwoFactorLogin: (challengeId: string) => Promise<void>;
   register: (username: string, email: string, password: string, fullName: string) => Promise<void>;
@@ -555,7 +557,7 @@ interface AppState {
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
-  toggleSaveProduct: (productId: string) => void;
+  toggleSaveProduct: (productId: string) => Promise<void>;
   sendAIMessage: (content: string) => Promise<void>;
   updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
@@ -583,6 +585,13 @@ function setupRealtime(
   set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
   get: () => AppState,
 ) {
+  if (typeof window !== 'undefined' && !(setupRealtime as any).pollingTimer) {
+    (setupRealtime as any).pollingTimer = window.setInterval(() => {
+      if (!get().currentUser) return;
+      void get().loadNotifications();
+      void get().loadConversations();
+    }, 15_000);
+  }
   const socket = connectSocket();
   if (!socket) return;
   socket.off('message:receive');
@@ -657,6 +666,23 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      loginWithGoogle: async (credential, totpCode, challengeId) => {
+        set({ authError: null });
+        try {
+          const result = await api.loginWithGoogle({ credential, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if ('requiresTwoFactor' in result) return result;
+          setStoredTokens(result.tokens);
+          const mapped = mapUser(result.user);
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          setupRealtime(set, get);
+          hydrateSessionData(get);
+          return null;
+        } catch (err) {
+          set({ authError: err instanceof ApiError ? err.message : 'Google sign-in failed' });
+          throw err;
+        }
+      },
+
       loginWithEmailOtp: async (email, code, totpCode, challengeId) => {
         set({ authError: null });
         try {
@@ -694,7 +720,7 @@ export const useAppStore = create<AppState>()(
         try {
           await api.register({ username, email, password, fullName });
           // Registration is intentionally not an authenticated session. The
-          // account must prove ownership of the KIIT mailbox first.
+          // account must prove ownership of its email address first.
           setStoredTokens(null);
           set({ currentUser: null, tokens: null });
         } catch (err) {
@@ -730,9 +756,16 @@ export const useAppStore = create<AppState>()(
 
       initialize: async () => {
         set({ isInitializing: true });
+        // The access token is intentionally memory-only. Never trust a
+        // persisted profile as an authenticated session after a reload.
+        set({ currentUser: null, tokens: null });
 
-        // Try to restore session from stored tokens first
-        const tokens = getStoredTokens();
+        // Restore a live session from the short-lived access token, or rotate
+        // the HttpOnly refresh cookie after a normal browser reload.
+        let tokens = getStoredTokens();
+        if (!tokens) {
+          tokens = await api.refreshSession();
+        }
         if (tokens) {
           try {
             const meResponse = await api.getCurrentUser();
@@ -746,12 +779,12 @@ export const useAppStore = create<AppState>()(
               setupRealtime(set, get);
             }
           } catch {
-            // Token expired or invalid — fall back to mock user for demo
+            // Token expired or invalid — remain signed out.
             setStoredTokens(null);
           }
         }
 
-        // If still no user after token check, use mock user for demo mode
+        // If still no user after token check, remain signed out.
         const currentUser = get().currentUser;
         set((state) => ({
           currentUser,
@@ -853,7 +886,7 @@ export const useAppStore = create<AppState>()(
       addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY) => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
-          toast.error('Sign in with your KIIT email before posting');
+          toast.error('Verify your email before posting');
           return;
         }
         if (poll) {
@@ -910,21 +943,12 @@ export const useAppStore = create<AppState>()(
 
       createCommunity: async (name, slug, description) => {
         const currentUserId = get().currentUser?.id || 'user-roy';
-        const newCommunity: Community = {
-          id: `comm-${Date.now()}`,
-          name,
-          description,
-          coverUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=800&auto=format&fit=crop',
-          members: 1,
-          isMember: true,
-          visibility: 'public',
-          category: 'General',
-        };
-        set((state) => ({ communities: [newCommunity, ...state.communities] }));
         try {
-          await api.createCommunity({ name, slug, description });
-        } catch {
-          // Local community retained
+          const created = await api.createCommunity({ name, slug, description });
+          set((state) => ({ communities: [mapCommunity(created, currentUserId), ...state.communities] }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not create the community');
+          throw error;
         }
       },
 
@@ -950,22 +974,26 @@ export const useAppStore = create<AppState>()(
             return;
           }
         } catch {
-          // fallback
+          // Keep the last successful notification snapshot during a transient outage.
         }
-        set({ notifications: [] });
       },
 
       markNotificationRead: async (id) => {
-        set((state) => ({ notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
         try {
           await api.markNotificationRead(id);
-        } catch {
-          // Local state updated
+          set((state) => ({ notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not mark notification as read');
         }
       },
 
       markAllNotificationsRead: async () => {
-        set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
+        try {
+          await api.markAllNotificationsRead();
+          set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not mark notifications as read');
+        }
       },
 
       loadConversations: async () => {
@@ -997,32 +1025,20 @@ export const useAppStore = create<AppState>()(
       },
 
       sendDirectMessage: async (recipientId, content, replyToId) => {
-        const currentUserId = get().currentUser?.id || 'user-roy';
-        const conversationId = `conv-${recipientId.replace('user-', '')}`;
-        const newMsg: Message = {
-          id: `msg-${Date.now()}`,
-          conversationId,
-          senderId: currentUserId,
-          content,
-          createdAt: new Date().toISOString(),
-          read: true,
-          replyToId,
-        };
-        set((state) => {
-          const existing = state.messagesByConversation[conversationId] ?? [];
-          const alreadyHasConversation = state.conversations.some((c) => c.id === conversationId);
-          const conversations = alreadyHasConversation
-            ? state.conversations.map((c) => (c.id === conversationId ? { ...c, lastMessage: newMsg, updatedAt: newMsg.createdAt } : c))
-            : [{ id: conversationId, participantIds: [currentUserId, recipientId], lastMessage: newMsg, updatedAt: newMsg.createdAt }, ...state.conversations];
-          return {
-            messagesByConversation: { ...state.messagesByConversation, [conversationId]: [...existing, newMsg] },
-            conversations,
-          };
-        });
         try {
-          await api.sendMessage(recipientId, content, replyToId);
-        } catch {
-          // Local message retained
+          const created = await api.sendMessage(recipientId, content, replyToId);
+          const newMsg = mapMessage(created);
+          set((state) => {
+            const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
+            const existingConversation = state.conversations.some((conversation) => conversation.id === newMsg.conversationId);
+            const conversations = existingConversation
+              ? state.conversations.map((conversation) => conversation.id === newMsg.conversationId ? { ...conversation, lastMessage: newMsg, updatedAt: newMsg.createdAt } : conversation)
+              : [{ id: newMsg.conversationId, participantIds: [get().currentUser?.id ?? '', recipientId], lastMessage: newMsg, updatedAt: newMsg.createdAt }, ...state.conversations];
+            return { messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: [...existing, newMsg] }, conversations };
+          });
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not send the message');
+          throw error;
         }
       },
 
@@ -1106,6 +1122,7 @@ export const useAppStore = create<AppState>()(
 
       viewStory: async (storyId) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const previous = get().stories.find((story) => story.id === storyId);
         set((state) => ({
           stories: state.stories.map(s =>
             s.id === storyId
@@ -1114,14 +1131,16 @@ export const useAppStore = create<AppState>()(
           )
         }));
         try {
-          await api.viewStory(storyId);
+          const updated = await api.viewStory(storyId);
+          set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
         } catch {
-          // Local state updated
+          if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
         }
       },
 
       reactToStory: async (storyId, emoji) => {
         const uid = get().currentUser?.id || 'user-roy';
+        const previous = get().stories.find((story) => story.id === storyId);
         set((state) => ({
           stories: state.stories.map(s =>
             s.id === storyId
@@ -1130,9 +1149,10 @@ export const useAppStore = create<AppState>()(
           )
         }));
         try {
-          await api.reactToStory(storyId, emoji);
+          const updated = await api.reactToStory(storyId, emoji);
+          set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
         } catch {
-          // Local state updated
+          if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
         }
       },
 
@@ -1161,6 +1181,7 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           set((state) => ({ stories: state.stories.filter((item) => item.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not publish the story');
+          throw error;
         }
       },
 
@@ -1180,19 +1201,12 @@ export const useAppStore = create<AppState>()(
 
       createEvent: async (input) => {
         const uid = get().currentUser?.id || 'user-roy';
-        const newEvent: EventItem = {
-          ...input,
-          id: `event-${Date.now()}`,
-          hostId: uid,
-          attendeeIds: [uid],
-          interestedIds: [],
-          rsvpStatus: 'going',
-        };
-        set((state) => ({ events: [newEvent, ...state.events] }));
         try {
-          await api.createEvent(input);
-        } catch {
-          // Local state updated
+          const created = await api.createEvent(input);
+          set((state) => ({ events: [mapEvent(created, uid), ...state.events] }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not create the event');
+          throw error;
         }
       },
 
@@ -1214,9 +1228,11 @@ export const useAppStore = create<AppState>()(
           })
         }));
         try {
-          await api.rsvpEvent(eventId, newStatus);
-        } catch {
-          // Local state updated
+          const updated = await api.rsvpEvent(eventId, newStatus);
+          set((state) => ({ events: state.events.map((item) => item.id === eventId ? mapEvent(updated, uid) : item) }));
+        } catch (error) {
+          set((state) => ({ events: state.events.map((item) => item.id === eventId ? event : item) }));
+          toast.error(error instanceof Error ? error.message : 'Could not update the RSVP');
         }
       },
 
@@ -1234,19 +1250,12 @@ export const useAppStore = create<AppState>()(
       },
 
       createProduct: async (input) => {
-        const uid = get().currentUser?.id || 'user-roy';
-        const newProduct: Product = {
-          ...input,
-          id: `prod-${Date.now()}`,
-          sellerId: uid,
-          createdAt: new Date().toISOString(),
-          savedByMe: false,
-        };
-        set((state) => ({ products: [newProduct, ...state.products] }));
         try {
-          await api.createProduct(input);
-        } catch {
-          // Local state updated
+          const created = await api.createProduct(input);
+          set((state) => ({ products: [mapProduct(created), ...state.products] }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not list the product');
+          throw error;
         }
       },
 
@@ -1289,13 +1298,16 @@ export const useAppStore = create<AppState>()(
       },
 
       clapArticle: async (articleId) => {
+        const previous = get().articles.find((article) => article.id === articleId);
         set((state) => ({
           articles: state.articles.map(a => a.id === articleId ? { ...a, claps: a.claps + 1 } : a)
         }));
         try {
-          await api.clapArticle(articleId);
-        } catch {
-          // Local state updated
+          const updated = await api.clapArticle(articleId);
+          set((state) => ({ articles: state.articles.map((article) => article.id === articleId ? mapArticle(updated) : article) }));
+        } catch (error) {
+          if (previous) set((state) => ({ articles: state.articles.map((article) => article.id === articleId ? previous : article) }));
+          toast.error(error instanceof Error ? error.message : 'Could not clap for this article');
         }
       },
 
@@ -1337,13 +1349,13 @@ export const useAppStore = create<AppState>()(
       },
 
       likeVideo: async (videoId) => {
-        set((state) => ({
-          videos: state.videos.map(v => v.id === videoId ? { ...v, likes: v.likes + 1 } : v)
-        }));
+        const previous = get().videos.find((video) => video.id === videoId);
         try {
-          await api.likeVideo(videoId);
-        } catch {
-          // Local state updated
+          const updated = await api.likeVideo(videoId);
+          set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
+        } catch (error) {
+          if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
+          toast.error(error instanceof Error ? error.message : 'Could not update the video like');
         }
       },
 
@@ -1383,13 +1395,16 @@ export const useAppStore = create<AppState>()(
       },
 
       setStreamStatus: async (streamId, status) => {
+        const previous = get().liveStreams.find((stream) => stream.id === streamId);
         set((state) => ({
           liveStreams: state.liveStreams.map((s) => (s.id === streamId ? { ...s, status } : s))
         }));
         try {
-          await api.setStreamStatus(streamId, status);
-        } catch {
-          // Local state updated
+          const updated = await api.setStreamStatus(streamId, status);
+          set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === streamId ? mapLiveStream(updated) : stream) }));
+        } catch (error) {
+          if (previous) set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === streamId ? previous : stream) }));
+          toast.error(error instanceof Error ? error.message : 'Could not update the live room');
         }
       },
 
@@ -1407,9 +1422,16 @@ export const useAppStore = create<AppState>()(
         ]);
       },
 
-      toggleSaveProduct: (productId) => set((state) => ({
-        products: state.products.map(p => p.id === productId ? { ...p, savedByMe: !p.savedByMe } : p)
-      })),
+      toggleSaveProduct: async (productId) => {
+        const product = get().products.find((item) => item.id === productId);
+        if (!product) return;
+        try {
+          const updated = await api.saveProduct(productId);
+          set((state) => ({ products: state.products.map((item) => item.id === productId ? mapProduct(updated) : item) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not update saved products');
+        }
+      },
 
       
       sendAIMessage: async (content) => {
@@ -1442,13 +1464,15 @@ export const useAppStore = create<AppState>()(
 
       updatePrivacy: async (patch) => {
         const { twoFactorEnabled, ...backendPatch } = patch;
+        const previous = get().privacy;
         set((state) => ({ privacy: { ...state.privacy, ...patch } }));
         if (Object.keys(backendPatch).length === 0) return;
         try {
           const updated = await api.updatePrivacy(backendPatch);
           set((state) => ({ privacy: { ...state.privacy, ...updated } }));
-        } catch {
-          // Local state updated
+        } catch (error) {
+          set({ privacy: previous });
+          toast.error(error instanceof Error ? error.message : 'Could not update privacy settings');
         }
       },
 
@@ -1495,8 +1519,15 @@ export const useAppStore = create<AppState>()(
           } else {
             await api.muteUser(userId);
           }
-        } catch {
-          // Local state updated
+        } catch (error) {
+          set((state) => {
+            if (!state.currentUser) return state;
+            const mutedUserIds = isMuted
+              ? [...(state.currentUser.mutedUserIds || []), userId]
+              : (state.currentUser.mutedUserIds || []).filter(id => id !== userId);
+            return { currentUser: { ...state.currentUser, mutedUserIds } };
+          });
+          toast.error(error instanceof Error ? error.message : 'Could not update muted users');
         }
       },
 
@@ -1578,7 +1609,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'yortalks-storage',
-      partialize: (state) => ({ currentUser: state.currentUser, worldPreferences: state.worldPreferences }),
+      partialize: (state) => ({ worldPreferences: state.worldPreferences }),
     }
   )
 );

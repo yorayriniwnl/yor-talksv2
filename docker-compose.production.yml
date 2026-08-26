@@ -35,11 +35,12 @@ services:
     build:
       context: .
       dockerfile: api-server/Dockerfile
-    command: ["pnpm", "--filter", "@workspace/db", "migrate:beta"]
+    command: ["pnpm", "--filter", "@workspace/db", "migrate:production"]
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
+      DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,16 +60,21 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.production}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
+      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+      DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set CLIENT_ORIGIN in .env.production}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:?Set CLOUDINARY_CLOUD_NAME in .env.production}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:?Set CLOUDINARY_API_KEY in .env.production}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:?Set CLOUDINARY_API_SECRET in .env.production}
-      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY in .env.production}
-      EMAIL_FROM: ${EMAIL_FROM:?Set EMAIL_FROM in .env.production}
-      LIVEKIT_URL: ${LIVEKIT_URL:?Set LIVEKIT_URL in .env.production}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY in .env.production}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET in .env.production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     expose:
@@ -82,7 +88,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:4000/api/healthz >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:4000/api/livez >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10

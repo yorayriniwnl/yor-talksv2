@@ -9,18 +9,23 @@ function paramId(req: Request): string {
 export class VideoController {
   constructor(private readonly videoService: VideoService) {}
 
+  private view(video: any, viewerId?: string) {
+    const { likedBy = [], ...publicVideo } = video;
+    return { ...publicVideo, likes: likedBy.length, likedByMe: Boolean(viewerId && likedBy.includes(viewerId)) };
+  }
+
   create = async (req: Request, res: Response) => {
     const authorId = req.user?.id;
     if (!authorId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
     const video = await this.videoService.createVideo({ ...req.body, authorId });
-    return res.status(201).json(createResponse("Video uploaded", video));
+    return res.status(201).json(createResponse("Video uploaded", this.view(video, authorId)));
   };
 
   list = async (req: Request, res: Response) => {
     const videos = await this.videoService.listVideos(req.user?.id);
-    return res.status(200).json(createResponse("Videos retrieved", videos));
+    return res.status(200).json(createResponse("Videos retrieved", videos.map((video) => this.view(video, req.user?.id))));
   };
 
   get = async (req: Request, res: Response) => {
@@ -28,7 +33,7 @@ export class VideoController {
     if (!video) {
       return res.status(404).json(createResponse("Video not found", null, {}, ["Not found"]));
     }
-    return res.status(200).json(createResponse("Video retrieved", video));
+    return res.status(200).json(createResponse("Video retrieved", this.view(video, req.user?.id)));
   };
 
   toggleLike = async (req: Request, res: Response) => {
@@ -40,7 +45,7 @@ export class VideoController {
     if (!video) {
       return res.status(404).json(createResponse("Video not found", null, {}, ["Not found"]));
     }
-    return res.status(200).json(createResponse("Like toggled", video));
+    return res.status(200).json(createResponse("Like toggled", this.view(video, userId)));
   };
 
   remove = async (req: Request, res: Response) => {

@@ -5,7 +5,7 @@ import { validateBody, validateParams } from "../middlewares/validation.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
-import { emailOtpRequestSchema, emailOtpVerifySchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
+import { emailOtpRequestSchema, emailOtpVerifySchema, googleLoginSchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
 import { challengeIdParamSchema } from "../validators/params.js";
 
 const router = Router();
@@ -17,15 +17,16 @@ const authController = new AuthController(authService);
 // Phone/WhatsApp OTP is intentionally unavailable in the college beta: the
 // project has no verified SMS provider and must not expose test OTP codes.
 router.post("/auth/otp/send", async (req, res): Promise<void> => {
-  res.status(410).json({ success: false, message: "Phone OTP is not enabled for the KIIT college beta", errors: ["otp_not_configured"] });
+  res.status(410).json({ success: false, message: "Phone OTP is not enabled in this deployment", errors: ["otp_not_configured"] });
 });
 
 router.post("/auth/otp/verify", async (req, res): Promise<void> => {
-  res.status(410).json({ success: false, message: "Phone OTP is not enabled for the KIIT college beta", errors: ["otp_not_configured"] });
+  res.status(410).json({ success: false, message: "Phone OTP is not enabled in this deployment", errors: ["otp_not_configured"] });
 });
 
 router.post("/auth/register", validateBody(registerSchema), authController.register);
 router.post("/auth/login", validateBody(loginSchema), authController.login);
+router.post("/auth/google", validateBody(googleLoginSchema), authController.googleLogin);
 router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
 router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
 router.post("/auth/refresh", authController.refresh);

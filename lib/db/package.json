@@ -11,7 +11,8 @@
     "build": "tsc -b",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "migrate:beta": "node ./scripts/migrate-beta.mjs"
+    "migrate:beta": "node ./scripts/migrate-beta.mjs",
+    "migrate:production": "node ./scripts/migrate-production.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

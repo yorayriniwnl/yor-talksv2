@@ -16,15 +16,15 @@ export class UserService {
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
     const user = await this.userRepository.findById(userId);
-    if (!user || !(await this.contactShieldService.canView(viewerId ?? userId, userId))) {
+    if (!user || !(await this.canViewProfile(user, viewerId))) {
       return undefined;
     }
     return user;
   }
 
   async getProfileByUsername(username: string, viewerId?: string): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findByUsername(username);
-    if (!user || !(await this.contactShieldService.canView(viewerId ?? user.id, user.id))) {
+    const user = await this.userRepository.findByUsername(username.trim().toLowerCase());
+    if (!user || !(await this.canViewProfile(user, viewerId))) {
       return undefined;
     }
     return user;
@@ -51,7 +51,7 @@ export class UserService {
     if (!follower || !target) {
       return undefined;
     }
-    if (!(await this.contactShieldService.canView(userId, targetId))) {
+    if (!(await this.canViewProfile(target, userId))) {
       return undefined;
     }
     const created = await this.userRepository.followUser(userId, targetId);
@@ -92,15 +92,21 @@ export class UserService {
   }
 
   async getFollowers(userId: string, viewerId?: string): Promise<UserRecord[]> {
+    const owner = await this.userRepository.findById(userId);
+    if (!owner || !(await this.canViewProfile(owner, viewerId))) return [];
     return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.listFollowers(userId));
   }
 
   async getFollowing(userId: string, viewerId?: string): Promise<UserRecord[]> {
+    const owner = await this.userRepository.findById(userId);
+    if (!owner || !(await this.canViewProfile(owner, viewerId))) return [];
     return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.listFollowing(userId));
   }
 
   async updateSettings(userId: string, settings: UserSettings): Promise<UserRecord | undefined> {
-    return this.userRepository.update(userId, { settings });
+    const user = await this.userRepository.findById(userId);
+    if (!user) return undefined;
+    return this.userRepository.update(userId, { settings: { ...(user.settings ?? {}), ...settings } });
   }
 
   async blockUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
@@ -141,5 +147,15 @@ export class UserService {
     if (!user) return undefined;
     const mutedUsers = (user.mutedUsers ?? []).filter((id) => id !== targetId);
     return this.userRepository.update(userId, { mutedUsers });
+  }
+
+  private async canViewProfile(user: UserRecord, viewerId?: string): Promise<boolean> {
+    const viewer = viewerId ?? user.id;
+    if (!(await this.contactShieldService.canView(viewer, user.id))) return false;
+    if (viewer === user.id) return true;
+    const visibility = user.privacy?.profileVisibility ?? "public";
+    if (visibility === "private") return false;
+    if (visibility === "followers") return this.userRepository.isFollowing(viewer, user.id);
+    return true;
   }
 }

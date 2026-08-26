@@ -19,7 +19,11 @@ export class NotificationService {
     return this.notificationRepository.listForUser(userId);
   }
 
-  async markRead(id: string): Promise<NotificationRecord | undefined> {
-    return this.notificationRepository.markRead(id);
+  async markRead(id: string, recipientId: string): Promise<NotificationRecord | undefined> {
+    return this.notificationRepository.markRead(id, recipientId);
+  }
+
+  async markAllRead(recipientId: string): Promise<void> {
+    return this.notificationRepository.markAllRead(recipientId);
   }
 }

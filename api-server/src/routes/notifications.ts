@@ -13,5 +13,6 @@ const notificationController = new NotificationController(notificationService);
 
 router.get("/notifications", authenticate, notificationController.listNotifications);
 router.post("/notifications/:notificationId/read", authenticate, validateParams(notificationIdParamSchema), notificationController.markRead);
+router.post("/notifications/read-all", authenticate, notificationController.markAllRead);
 
 export default router;

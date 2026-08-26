@@ -8,7 +8,7 @@ export default function VerifyEmail() {
   const [location] = useLocation();
   const token = location.startsWith('/verify-email/') ? decodeURIComponent(location.slice('/verify-email/'.length)) : undefined;
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Verifying your KIIT email…');
+  const [message, setMessage] = useState('Verifying your email…');
 
   useEffect(() => {
     if (!token) {
@@ -36,7 +36,7 @@ export default function VerifyEmail() {
           {state === 'success' && <CheckCircle2 className="h-7 w-7" />}
           {state === 'error' && <ShieldAlert className="h-7 w-7" />}
         </div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Yor · KIIT beta</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Yor · verified access</p>
         <h1 className="mb-3 text-2xl font-black tracking-tight">{state === 'success' ? 'You’re verified' : state === 'error' ? 'Verification failed' : 'Confirming your email'}</h1>
         <p className="mb-8 text-sm leading-6 text-muted-foreground">{message}</p>
         <Link href="/auth">

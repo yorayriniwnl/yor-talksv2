@@ -1,14 +1,18 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authenticate } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
-import { projectsTable, projectCollaboratorsTable } from "@workspace/db/schema";
+import { projectsTable, projectCollaboratorsTable, usersTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { createResponse } from "../utils/response.js";
+import { validateBody, validateParams } from "../middlewares/validation.js";
+import { createProjectSchema, inviteProjectCollaboratorSchema } from "../validators/project.js";
+import { uuidParamSchema } from "../validators/params.js";
 
 const router = Router();
 
-router.post("/", authenticate, async (req, res) => {
+router.post("/", authenticate, validateBody(createProjectSchema), async (req, res) => {
   try {
     const { title, description, visibility, lookingForCollaborators } = req.body;
     const normalizedTitle = typeof title === "string" ? title.trim() : "";
@@ -28,13 +32,7 @@ router.post("/", authenticate, async (req, res) => {
     }).returning();
     
     // Owner is admin
-    await db.insert(projectCollaboratorsTable).values({
-      projectId,
-      userId: req.user!.id,
-      role: "admin",
-      status: "accepted",
-      joinedAt: new Date().toISOString()
-    });
+    await db.insert(projectCollaboratorsTable).values({ projectId, userId: req.user!.id, role: "admin", status: "accepted", joinedAt: new Date().toISOString() });
 
     return res.status(201).json(createResponse("Project created", project));
   } catch (err) {
@@ -44,29 +42,36 @@ router.post("/", authenticate, async (req, res) => {
 
 router.get("/", authenticate, async (req, res) => {
   try {
-    // Return user's projects
-    const projects = await db.select().from(projectsTable).where(eq(projectsTable.ownerId, req.user!.id));
+    const memberships = await db.select({ projectId: projectCollaboratorsTable.projectId })
+      .from(projectCollaboratorsTable)
+      .where(eq(projectCollaboratorsTable.userId, req.user!.id));
+    const projectIds = memberships.map((membership) => membership.projectId);
+    const projects = projectIds.length
+      ? await db.select().from(projectsTable).where(inArray(projectsTable.id, projectIds))
+      : await db.select().from(projectsTable).where(eq(projectsTable.ownerId, req.user!.id));
     return res.status(200).json(createResponse("Projects retrieved", { projects }));
   } catch (err) {
     return res.status(500).json(createResponse("Failed to fetch projects", null, {}, [err instanceof Error ? err.message : "Unknown error"]));
   }
 });
 
-router.post("/:projectId/collaborators", authenticate, async (req, res) => {
+router.post("/:projectId/collaborators", authenticate, validateParams(z.object({ projectId: z.string().uuid() })), validateBody(inviteProjectCollaboratorSchema), async (req, res) => {
   try {
     const projectId = typeof req.params.projectId === "string" ? req.params.projectId : "";
     if (!projectId) {
       return res.status(400).json(createResponse("Project id is required", null, {}, ["Project id is required"]));
     }
     const { userId, role } = req.body;
-    if (typeof userId !== "string" || !userId) {
-      return res.status(400).json(createResponse("A collaborator is required", null, {}, ["User id is required"]));
-    }
+    const [project] = await db.select({ ownerId: projectsTable.ownerId }).from(projectsTable).where(eq(projectsTable.id, projectId));
+    if (!project) return res.status(404).json(createResponse("Project not found", null, {}, ["Project not found"]));
+    if (project.ownerId !== req.user!.id) return res.status(403).json(createResponse("Only the project owner can invite collaborators", null, {}, ["Forbidden"]));
+    const [target] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userId));
+    if (!target) return res.status(404).json(createResponse("Collaborator not found", null, {}, ["User not found"]));
     
     await db.insert(projectCollaboratorsTable).values({
       projectId,
       userId,
-      role: role || "collaborator",
+      role,
       status: "pending"
     });
     

@@ -31,7 +31,6 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(30);
   const [loading, setLoading] = useState(false);
-  const [debugOtp, setDebugOtp] = useState<string | null>(null);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -55,14 +54,10 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
     sounds.playPop();
 
     try {
-      const res = await api.request<any>('/auth/otp/send', {
+      await api.request<any>('/auth/otp/send', {
         method: 'POST',
         body: JSON.stringify({ phoneNumber: `+91${raw}`, channel }),
       });
-
-      if (res && res.data) {
-        setDebugOtp(res.data.debugCode || null);
-      }
 
       setStep('otp');
       setCountdown(30);
@@ -157,7 +152,7 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
           <p className="text-xs text-muted-foreground">
             {step === 'phone' 
               ? 'Instant passwordless sign-in for Indian mobile numbers 🇮🇳'
-              : `We sent an OTP to +91 ${phoneNumber}. ${debugOtp ? `(Test Code: ${debugOtp})` : ''}`}
+              : `We sent an OTP to +91 ${phoneNumber}.`}
           </p>
         </DialogHeader>
 
@@ -258,14 +253,6 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
                   />
                 ))}
               </div>
-
-              {debugOtp && (
-                <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/30 text-center">
-                  <span className="text-[0.7rem] font-mono text-primary font-bold">
-                    ⚡ Quick Test Code: <span className="underline cursor-pointer" onClick={() => handleVerifyOtp(debugOtp)}>{debugOtp}</span> (Click to autofill)
-                  </span>
-                </div>
-              )}
 
               {/* Resend & Change Phone Row */}
               <div className="flex items-center justify-between text-xs font-mono">

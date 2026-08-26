@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
+import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
@@ -42,7 +42,7 @@ export class AuthController {
         verificationRequired: true,
         ...(result.verificationToken && env.NODE_ENV !== "production" ? { devVerificationToken: result.verificationToken } : {}),
       };
-      return res.status(201).json(createResponse("Check your KIIT email to verify your account", data, { authenticated: false }));
+      return res.status(201).json(createResponse("Check your email to verify your account", data, { authenticated: false }));
     } catch (error) {
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Registration is temporarily unavailable", null, {}, [error.message]));
@@ -73,10 +73,26 @@ export class AuthController {
     }
   };
 
+  googleLogin = async (req: Request, res: Response) => {
+    try {
+      const result = await this.authService.loginWithGoogle(req.body);
+      this.setRefreshCookie(res, result.tokens.refreshToken);
+      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+    } catch (error) {
+      if (error instanceof GoogleSignInNotConfiguredError) {
+        return res.status(503).json(createResponse("Google sign-in is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof TwoFactorRequiredError) {
+        return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
+      }
+      return res.status(401).json(createResponse("Google sign-in failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+    }
+  };
+
   requestEmailOtp = async (req: Request, res: Response) => {
     try {
       await this.authService.requestEmailOtp(req.body.email);
-      return res.status(202).json(createResponse("If that KIIT email is registered, a sign-in code has been sent", null));
+      return res.status(202).json(createResponse("If that email is registered, a sign-in code has been sent", null));
     } catch (error) {
       if (error instanceof EmailOtpInvalidError) {
         return res.status(400).json(createResponse("Sign-in code request failed", null, {}, [error.message]));

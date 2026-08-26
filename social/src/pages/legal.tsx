@@ -12,11 +12,11 @@ type LegalDocument = {
 const documents: Record<string, LegalDocument> = {
   '/privacy': {
     title: 'Privacy Policy',
-    eyebrow: 'Yor Talks · KIIT beta',
-    intro: 'This draft explains the data Yor Talks uses to operate the college beta. It must be reviewed, approved and dated by the product owner and legal adviser before production launch.',
+    eyebrow: 'Yor Talks · global trust center',
+    intro: 'This draft explains the data Yor Talks uses to operate a global social platform. It must be reviewed, approved and dated by the product owner and legal adviser before production launch.',
     sections: [
-      { heading: 'What we collect', body: 'We collect your seven-digit @kiit.ac.in email, account credentials, profile details, content you publish, follows, messages, reports and safety settings. Passwords are stored as one-way hashes. We do not store your raw address book for IRL Shield; selected contact identifiers are normalized into keyed match digests.' },
-      { heading: 'Why we use it', body: 'We use this information to authenticate KIIT members, provide social features, prevent abuse, enforce campus safety, respond to reports, maintain security logs and improve the beta. We do not sell personal data.' },
+      { heading: 'What we collect', body: 'We collect your verified email, account credentials, profile details, content you publish, follows, messages, reports and safety settings. Passwords are stored as one-way hashes. We do not store your raw address book for IRL Shield; selected contact identifiers are normalized into keyed match digests.' },
+      { heading: 'Why we use it', body: 'We use this information to authenticate accounts, provide social features, prevent abuse, apply audience safety controls, respond to reports, maintain security logs and improve the service. We do not sell personal data.' },
       { heading: 'Sharing and providers', body: 'Content and account data may be processed by infrastructure and service providers required to run the product, such as Postgres, Redis, media storage, email delivery, realtime rooms and error/operational tooling. Production provider contracts, regions and subprocessor notices must be confirmed before launch.' },
       { heading: 'Your controls', body: 'You can change privacy settings, block users, manage IRL Shield entries, export your account data and permanently delete your account after password confirmation. Legal retention may apply to de-identified financial or safety records.' },
       { heading: 'Security and retention', body: 'Sessions use short-lived access tokens and an HttpOnly refresh cookie. We retain account and safety data only as long as needed for the stated purposes or a documented legal obligation. The production retention schedule, incident contact and deletion timelines must be approved before launch.' },
@@ -25,10 +25,10 @@ const documents: Record<string, LegalDocument> = {
   },
   '/terms': {
     title: 'Terms of Use',
-    eyebrow: 'Yor Talks · beta terms draft',
-    intro: 'These draft terms govern use of Yor Talks inside the KIIT beta. They require owner acceptance, an effective date and legal review before production launch.',
+    eyebrow: 'Yor Talks · terms draft',
+    intro: 'These draft terms govern use of Yor Talks. They require owner acceptance, an effective date and legal review before production launch.',
     sections: [
-      { heading: 'Eligibility and account security', body: 'Access is limited to people who control a valid seven-digit @kiit.ac.in mailbox during this beta. Keep your password and authenticator codes private. Do not create accounts for other people or evade a safety restriction.' },
+      { heading: 'Eligibility and account security', body: 'Access is available to people who control a verified email accepted by this deployment’s registration policy. Keep your password and authenticator codes private. Do not create accounts for other people or evade a safety restriction.' },
       { heading: 'Your content', body: 'You retain ownership of content you submit, and grant Yor Talks the limited permission needed to host, display, transmit and moderate it for the service. Do not upload content you do not have the right to use.' },
       { heading: 'Prohibited use', body: 'Do not harass, threaten, impersonate, dox, exploit, scam, spam, distribute non-consensual intimate material, target minors, infringe copyright, disrupt the service or attempt unauthorized access.' },
       { heading: 'Moderation and reports', body: 'Yor Talks may restrict, remove or preserve content, suspend accounts and cooperate with lawful requests when necessary to protect people or the service. Reports and grievances should include enough detail for review.' },

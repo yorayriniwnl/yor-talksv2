@@ -23,14 +23,14 @@ export default async function handler(req: IncomingMessage | any, res: ServerRes
       });
     });
   } catch (err: any) {
-    console.error("[Vercel Handler Error]:", err);
+    console.error("[Vercel Handler Error]:", err instanceof Error ? err.message : "unknown error");
     if (!res.headersSent) {
       if (typeof res.status === "function" && typeof res.json === "function") {
         return res.status(500).json({
           success: false,
           message: "Serverless function initialization error",
           data: null,
-          errors: [err?.message || "Internal server error"],
+          errors: ["Internal server error"],
         });
       }
       res.statusCode = 500;
@@ -40,7 +40,7 @@ export default async function handler(req: IncomingMessage | any, res: ServerRes
           success: false,
           message: "Serverless function initialization error",
           data: null,
-          errors: [err?.message || "Internal server error"],
+          errors: ["Internal server error"],
         })
       );
     }

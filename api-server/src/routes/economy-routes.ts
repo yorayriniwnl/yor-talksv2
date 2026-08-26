@@ -22,10 +22,10 @@ const paymentService = new PaymentService();
 router.get("/wallet", authenticate, async (req, res) => {
   try {
     const wallet = await economyService.getCreatorWallet(req.user!.id);
-    res.json(wallet);
+    res.json(createResponse("Wallet loaded", wallet));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Failed to fetch wallet" });
+    res.status(500).json(createResponse("Failed to fetch wallet", null, {}, ["Internal server error"]));
   }
 });
 
@@ -37,9 +37,9 @@ router.get("/analytics", authenticate, async (req, res) => {
       .where(eq(creatorAnalyticsDailyTable.creatorId, req.user!.id))
       .orderBy(desc(creatorAnalyticsDailyTable.date))
       .limit(30);
-    res.json({ success: true, data });
+    res.json(createResponse("Analytics loaded", data));
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch analytics" });
+    res.status(500).json(createResponse("Failed to fetch analytics", null, {}, ["Internal server error"]));
   }
 });
 

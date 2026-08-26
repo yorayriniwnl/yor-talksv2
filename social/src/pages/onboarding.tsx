@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Network, ArrowRight, UserPlus, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { api } from '@/lib/api-client';
+import { api, type BackendUser } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
@@ -17,19 +17,26 @@ const INTERESTS = [
   "Investing", "Crypto", "SaaS", "Creator Economy"
 ];
 
-const SUGGESTED_CREATORS = [
-  { id: '1', name: 'Alex Xu', role: 'System Design', avatar: 'https://ui-avatars.com/api/?name=Alex+Xu' },
-  { id: '2', name: 'Lex Fridman', role: 'AI Podcast', avatar: 'https://ui-avatars.com/api/?name=Lex+Fridman' },
-  { id: '3', name: 'Vitalik', role: 'Ethereum', avatar: 'https://ui-avatars.com/api/?name=Vitalik' },
-];
-
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const updateWorldPreferences = useAppStore((state) => state.updateWorldPreferences);
+  const currentUser = useAppStore((state) => state.currentUser);
   const [step, setStep] = useState(0);
   const [worldDraft, setWorldDraft] = useState<WorldPreferences>(DEFAULT_WORLD_PREFERENCES);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [followedIds, setFollowedIds] = useState<string[]>([]);
+  const [suggestedCreators, setSuggestedCreators] = useState<BackendUser[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void api.searchUsers('').then((users) => {
+      if (!active) return;
+      setSuggestedCreators(users.filter((user) => user.id !== currentUser?.id).slice(0, 3));
+    }).catch(() => {
+      if (active) setSuggestedCreators([]);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests(prev => 
@@ -142,15 +149,15 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-3 text-left py-4">
-                {SUGGESTED_CREATORS.map(creator => {
+                {suggestedCreators.map(creator => {
                   const isFollowed = followedIds.includes(creator.id);
                   return (
                     <div key={creator.id} className="flex items-center justify-between p-3 rounded-2xl border border-border/40 bg-zinc-900/50">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10"><AvatarImage src={creator.avatar} /></Avatar>
+                        <Avatar className="w-10 h-10"><AvatarImage src={creator.avatarUrl ?? undefined} /><AvatarFallback>{(creator.fullName || creator.username).charAt(0)}</AvatarFallback></Avatar>
                         <div>
-                          <div className="font-bold text-sm">{creator.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{creator.role}</div>
+                          <div className="font-bold text-sm">{creator.fullName || creator.username}</div>
+                          <div className="text-[10px] text-muted-foreground">@{creator.username}</div>
                         </div>
                       </div>
                       <Button
@@ -166,6 +173,8 @@ export default function Onboarding() {
                   );
                 })}
               </div>
+
+              {suggestedCreators.length === 0 && <p className="text-xs text-muted-foreground">No creator suggestions are available yet. You can continue and discover people from the feed.</p>}
 
               <Button 
                 onClick={handleFinish} 

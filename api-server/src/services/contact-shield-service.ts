@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { contactShieldsTable, db, usersTable } from "@workspace/db";
 import type { UserRecord } from "../types/index.js";
 import {
@@ -81,7 +81,7 @@ export class ContactShieldService {
 
   async getShieldedUserIds(viewerId: string): Promise<Set<string>> {
     const viewer = await db
-      .select({ id: usersTable.id, email: usersTable.email, contactIdentityDigest: usersTable.contactIdentityDigest })
+      .select({ id: usersTable.id, email: usersTable.email, contactIdentityDigest: usersTable.contactIdentityDigest, blockedUsers: usersTable.blockedUsers })
       .from(usersTable)
       .where(eq(usersTable.id, viewerId));
     if (!viewer[0]) return new Set();
@@ -103,10 +103,16 @@ export class ContactShieldService {
       .select({ ownerId: contactShieldsTable.ownerId })
       .from(contactShieldsTable)
       .where(and(eq(contactShieldsTable.identifierType, "email"), eq(contactShieldsTable.identifierDigest, viewerEmailDigest)));
+    const blockedByAccount = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(sql`${usersTable.blockedUsers} @> ${JSON.stringify([viewerId])}::jsonb`);
 
     return new Set([
       ...blockedByViewer.map(({ id }) => id),
       ...blockedViewer.map(({ ownerId }) => ownerId),
+      ...blockedByAccount.map(({ id }) => id),
+      ...(Array.isArray(viewer[0].blockedUsers) ? viewer[0].blockedUsers.filter((id): id is string => typeof id === "string") : []),
     ].filter((id) => id !== viewerId));
   }
 

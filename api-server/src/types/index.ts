@@ -5,6 +5,7 @@ export interface UserRecord {
   id: string;
   username: string;
   email: string;
+  googleSubject?: string | null;
   passwordHash: string;
   fullName: string;
   bio: string;
@@ -29,6 +30,11 @@ export interface UserRecord {
   privacy?: PrivacySettings;
   totpSecret?: string | null;
   contactIdentityDigest?: string | null;
+  accountStatus?: string | null;
+  activityStatus?: string | null;
+  lastActiveTimestamp?: string | null;
+  reputationScore?: number | null;
+  engagementScore?: number | null;
 }
 
 export interface UserSettings {
@@ -73,6 +79,9 @@ export interface CommentRecord {
   id: string;
   authorId: string;
   content: string;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "gif" | "audio" | null;
+  mediaDuration?: number | null;
   createdAt: string;
   replies: ReplyRecord[];
   reactions?: Record<string, string[]>;
@@ -153,6 +162,14 @@ export interface CommunityAnnouncement {
   title: string;
   content: string;
   createdAt: string;
+}
+
+export interface CommunityDiscussion extends CommunityAnnouncement {
+  authorId: string;
+  tag: string;
+  repliesCount: number;
+  likes: number;
+  likedBy?: string[];
 }
 
 export interface CommunityRecord {

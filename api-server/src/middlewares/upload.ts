@@ -1,7 +1,7 @@
 import multer from "multer";
 
 export class InvalidFileTypeError extends Error {
-  constructor(message = "Only image and video files are allowed") {
+  constructor(message = "Only image, video, and audio files are allowed") {
     super(message);
     this.name = "InvalidFileTypeError";
   }
@@ -18,7 +18,11 @@ export const upload = multerFactory({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/") ||
+      file.mimetype.startsWith("audio/")
+    ) {
       cb(null, true);
     } else {
       cb(new InvalidFileTypeError());

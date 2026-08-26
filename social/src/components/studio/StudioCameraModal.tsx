@@ -18,6 +18,7 @@ import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
+import { api } from '@/lib/api-client';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -73,6 +74,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [recordedFile, setRecordedFile] = useState<File | null>(null);
   const [recordedPreviewUrl, setRecordedPreviewUrl] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [cameraActive, setCameraActive] = useState(false);
@@ -117,7 +119,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         setCameraActive(true);
       }
     } catch {
-      // Camera permission denied or unsupported — smooth fallback preview mode
+      // Camera permission denied or unsupported. Publishing remains disabled until a real recording exists.
       setCameraActive(false);
     }
   };
@@ -156,23 +158,32 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     setRecordedPreviewUrl(null);
     setRecordingSeconds(0);
 
-    if (streamRef.current) {
-      try {
-        const recorder = new MediaRecorder(streamRef.current);
-        mediaRecorderRef.current = recorder;
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
-        };
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          setRecordedPreviewUrl(url);
-        };
-        recorder.start();
-      } catch {
-        // Mock fallback
-      }
+    if (!streamRef.current || typeof MediaRecorder === 'undefined') {
+      toast.error('Camera recording is not available on this device.');
+      return;
+    }
+
+    try {
+      const recorder = new MediaRecorder(streamRef.current);
+      mediaRecorderRef.current = recorder;
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        if (chunks.length === 0) {
+          toast.error('No recording was captured. Try again.');
+          return;
+        }
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setRecordedPreviewUrl(url);
+        setRecordedFile(new File([blob], `yor-studio-${Date.now()}.webm`, { type: blob.type }));
+      };
+      recorder.start();
+    } catch {
+      toast.error('This browser cannot record video in the selected format.');
+      return;
     }
 
     setIsRecording(true);
@@ -183,10 +194,6 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     setIsRecording(false);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-    }
-    // Set fallback sample URL if camera was not available
-    if (!recordedPreviewUrl) {
-      setRecordedPreviewUrl('https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=1200&auto=format&fit=crop');
     }
   };
 
@@ -217,12 +224,16 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     triggerConfetti();
 
     try {
-      const mediaUrl = recordedPreviewUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop';
+      if ((mode === 'reel' || mode === 'story') && !recordedFile) {
+        throw new Error('Record a clip before publishing this format.');
+      }
+      const uploaded = recordedFile ? await api.uploadMedia(recordedFile) : null;
+      const mediaUrl = uploaded?.url;
 
       if (mode === 'reel') {
         await createVideo({
           title: caption.trim() || 'New Cinematic Reel ✨',
-          videoUrl: mediaUrl,
+          videoUrl: mediaUrl!,
           thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
           type: 'short',
           contentCategory,
@@ -230,9 +241,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         });
         toast.success('🎬 Reel published to the Bharat Reel Swiper!');
       } else if (mode === 'story') {
-        addStory({
+        await addStory({
           type: 'video',
-          mediaUrl,
+          mediaUrl: mediaUrl!,
           textContent: caption.trim() || undefined,
           backgroundGradient: 'from-purple-900 via-indigo-900 to-black',
           contentCategory,
@@ -240,13 +251,14 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         });
         toast.success('✨ Story added to your 24h highlights!');
       } else {
-        addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [mediaUrl], undefined, contentRating, contentCategory);
+        await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', mediaUrl ? [mediaUrl] : undefined, undefined, contentRating, contentCategory);
         toast.success('🚀 Published to the global feed!');
       }
 
       onOpenChange(false);
       // Reset
       setRecordedPreviewUrl(null);
+      setRecordedFile(null);
       setCaption('');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);

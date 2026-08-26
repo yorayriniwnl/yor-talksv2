@@ -23,7 +23,9 @@ declare global {
 }
 
 import { RedisRepository } from "../repositories/redis-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
+const userRepository = new UserRepository();
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
@@ -43,6 +45,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
     if (!activeSession) {
       return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
+    }
+    const user = await userRepository.findById(decoded.sub);
+    if (!user || user.accountStatus === "suspended" || user.accountStatus === "deactivated") {
+      return res.status(401).json(createResponse("Account is unavailable", null, {}, ["Unauthorized"]));
     }
 
     req.user = {
@@ -64,7 +70,8 @@ export const optionalAuthenticate = async (req: Request, _res: Response, next: N
   try {
     const decoded = jwt.verify(header.split(" ")[1], env.JWT_SECRET) as JwtPayload;
     const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
-    if (activeSession) {
+    const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
+    if (activeSession && user && user.accountStatus !== "suspended" && user.accountStatus !== "deactivated") {
       req.user = { id: decoded.sub, role: decoded.role, permissions: decoded.permissions ?? [] };
     }
   } catch {

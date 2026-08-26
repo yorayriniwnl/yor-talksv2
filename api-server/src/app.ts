@@ -14,6 +14,9 @@ import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 
 const app: Express = express();
+// The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
+// rate limiting and secure-cookie decisions use the real client address.
+app.set("trust proxy", 1);
 const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void)({
   logger,
   serializers: {

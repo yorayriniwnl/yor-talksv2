@@ -14,6 +14,7 @@ import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { api } from '@/lib/api-client';
 
 const QUICK_EMOJIS = ['🔥', '❤️', '😂', '🚀', '💎', '👏', '🙏', '✨'];
 
@@ -23,7 +24,6 @@ export interface RichCommentData {
   gifUrl?: string;
   voiceNoteUrl?: string;
   voiceDuration?: number;
-  tipAmount?: number;
 }
 
 export function RichCommentComposer({
@@ -34,19 +34,20 @@ export function RichCommentComposer({
 }: {
   postId: string;
   placeholder?: string;
-  onCommentSubmit: (data: RichCommentData) => void;
+  onCommentSubmit: (data: RichCommentData) => void | Promise<void>;
   creatorUser?: { id: string; displayName: string; username: string; avatarUrl?: string };
 }) {
   const currentUser = useAppStore((state) => state.currentUser);
   
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedGif, setSelectedGif] = useState<GifItem | null>(null);
   const [gifModalOpen, setGifModalOpen] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [voiceNote, setVoiceNote] = useState<{ url: string; duration: number } | null>(null);
-  const [tipAmount, setTipAmount] = useState<number | null>(null);
   const [tipModalOpen, setTipModalOpen] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,34 +60,44 @@ export function RichCommentComposer({
       }
       const url = URL.createObjectURL(file);
       setSelectedImage(url);
+      setSelectedImageFile(file);
       setSelectedGif(null);
       sounds.playPop();
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!text.trim() && !selectedImage && !selectedGif && !voiceNote) return;
 
     sounds.playPop();
-    if (tipAmount || selectedGif || selectedImage) {
+    if (selectedGif || selectedImage) {
       triggerConfetti();
     }
 
-    onCommentSubmit({
-      text: text.trim(),
-      imageUrl: selectedImage || undefined,
-      gifUrl: selectedGif?.url || undefined,
-      voiceNoteUrl: voiceNote?.url || undefined,
-      voiceDuration: voiceNote?.duration || undefined,
-      tipAmount: tipAmount || undefined,
-    });
-
-    setText('');
-    setSelectedImage(null);
-    setSelectedGif(null);
-    setVoiceNote(null);
-    setTipAmount(null);
-    toast.success('Comment posted!');
+    setSending(true);
+    try {
+      let imageUrl = selectedImage || undefined;
+      if (selectedImageFile) {
+        imageUrl = (await api.uploadMedia(selectedImageFile)).url;
+      }
+      await onCommentSubmit({
+        text: text.trim(),
+        imageUrl,
+        gifUrl: selectedGif?.url || undefined,
+        voiceNoteUrl: voiceNote?.url || undefined,
+        voiceDuration: voiceNote?.duration || undefined,
+      });
+      setText('');
+      setSelectedImage(null);
+      setSelectedImageFile(null);
+      setSelectedGif(null);
+      setVoiceNote(null);
+      toast.success('Comment posted!');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not post this comment');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -120,7 +131,7 @@ export function RichCommentComposer({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSend();
+                    void handleSend();
                   }
                 }}
                 placeholder={placeholder}
@@ -140,7 +151,7 @@ export function RichCommentComposer({
                     <img src={selectedImage} alt="Attachment" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => setSelectedImage(null)}
+                      onClick={() => { setSelectedImage(null); setSelectedImageFile(null); }}
                       className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -187,23 +198,6 @@ export function RichCommentComposer({
                   </motion.div>
                 )}
 
-                {tipAmount && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-1.5 mt-2 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span>Super Comment Tip: ₹{tipAmount} 🇮🇳</span>
-                    <button
-                      type="button"
-                      onClick={() => setTipAmount(null)}
-                      className="text-amber-400/80 hover:text-white ml-auto"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                )}
               </AnimatePresence>
             </div>
           </div>
@@ -271,24 +265,24 @@ export function RichCommentComposer({
                 <button
                   type="button"
                   onClick={() => {
-                    setTipAmount(tipAmount ? null : 100);
+                    setTipModalOpen(true);
                     sounds.playChime();
                   }}
                   className={cn(
                     "p-1.5 rounded-xl transition-colors cursor-pointer",
-                    tipAmount ? "bg-amber-500/30 text-amber-300" : "hover:bg-amber-500/10 text-muted-foreground hover:text-amber-400"
+                    tipModalOpen ? "bg-amber-500/30 text-amber-300" : "hover:bg-amber-500/10 text-muted-foreground hover:text-amber-400"
                   )}
                   title="Golden Super Comment (UPI Tip)"
                 >
-                  <Zap className={cn("w-4 h-4", tipAmount && "fill-amber-400 text-amber-400")} />
+                  <Zap className={cn("w-4 h-4", tipModalOpen && "fill-amber-400 text-amber-400")} />
                 </button>
               )}
 
               {/* Send Button */}
               <Button
                 size="sm"
-                onClick={handleSend}
-                disabled={!text.trim() && !selectedImage && !selectedGif && !voiceNote}
+                onClick={() => void handleSend()}
+                disabled={sending || (!text.trim() && !selectedImage && !selectedGif && !voiceNote)}
                 className={cn(
                   "rounded-xl h-8 px-3 text-xs font-bold ml-1 transition-all cursor-pointer",
                   text.trim() || selectedImage || selectedGif || voiceNote
@@ -310,8 +304,16 @@ export function RichCommentComposer({
         onSelectGif={(gif) => {
           setSelectedGif(gif);
           setSelectedImage(null);
+          setSelectedImageFile(null);
         }}
       />
+      {creatorUser && (
+        <UpiTipJarModal
+          creator={creatorUser}
+          isOpen={tipModalOpen}
+          onOpenChange={setTipModalOpen}
+        />
+      )}
     </div>
   );
 }

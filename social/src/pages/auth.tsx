@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Users, Shield, User, Lock, Mail, Loader2, AtSign, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
@@ -10,8 +10,11 @@ import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion'
 import { toast } from 'sonner';
 import { Link } from 'wouter';
 
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
 export default function Auth() {
   const login = useAppStore((state) => state.login);
+  const loginWithGoogle = useAppStore((state) => state.loginWithGoogle);
   const loginWithEmailOtp = useAppStore((state) => state.loginWithEmailOtp);
   const completeTwoFactorLogin = useAppStore((state) => state.completeTwoFactorLogin);
   const register = useAppStore((state) => state.register);
@@ -35,6 +38,72 @@ export default function Auth() {
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleCredentialRef = useRef<string | null>(null);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+
+  useEffect(() => {
+    if (mode !== 'login' || !googleClientId || !googleButtonRef.current) return;
+
+    let cancelled = false;
+    const renderGoogleButton = () => {
+      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) return;
+      googleButtonRef.current.replaceChildren();
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        ux_mode: 'popup',
+        use_fedcm_for_prompt: true,
+        callback: (response) => {
+          googleCredentialRef.current = response.credential;
+          setErrorMsg('');
+          setFieldErrors({});
+          setLoading(true);
+          void loginWithGoogle(response.credential)
+            .then((challenge) => {
+              if (cancelled) return;
+              if (challenge) {
+                setTwoFactorChallenge(challenge);
+                setTwoFactorFallback(false);
+                setTwoFactorFallbackCode('');
+                setApprovalBusy(false);
+              } else {
+                googleCredentialRef.current = null;
+              }
+            })
+            .catch((error) => {
+              if (!cancelled) setErrorMsg(error instanceof Error ? error.message : 'Google sign-in failed');
+            })
+            .finally(() => {
+              if (!cancelled) setLoading(false);
+            });
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: 360,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+    } else {
+      const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+      const script = existingScript ?? document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', renderGoogleButton, { once: true });
+      if (!existingScript) document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      googleButtonRef.current?.replaceChildren();
+    };
+  }, [googleClientId, loginWithGoogle, mode]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -43,16 +112,18 @@ export default function Auth() {
     setVerificationPending(false);
 
     const errors: Record<string, string> = {};
-    if (mode === 'register') {
+      if (mode === 'register') {
       if (fullName.length < 2) errors.fullName = 'Full name must be at least 2 characters';
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) errors.username = 'Username must be 3-20 characters, alphanumeric and underscores only';
-      if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) errors.email = 'Use your 7-digit KIIT college email, for example 2329027@kiit.ac.in';
+      if (!isValidEmail(email)) errors.email = 'Enter a valid email address';
       if (password.length < 8) errors.password = 'Password must be at least 8 characters';
-    } else if (loginMethod === 'password') {
+      } else if (googleCredentialRef.current) {
+        if (twoFactorFallback && !/^\d{6}$/.test(twoFactorFallbackCode)) errors.twoFactorFallbackCode = 'Enter the six-digit code from your authenticator app';
+      } else if (loginMethod === 'password') {
       if (!email) errors.email = 'Email/Username is required';
       if (!password) errors.password = 'Password is required';
     } else {
-      if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) errors.email = 'Use your 7-digit KIIT college email';
+      if (!isValidEmail(email)) errors.email = 'Enter a valid email address';
       if (!/^\d{6}$/.test(otpCode)) errors.otpCode = 'Enter the six-digit code sent to your email';
     }
 
@@ -68,8 +139,10 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        const challenge = loginMethod === 'email-code'
-          ? await loginWithEmailOtp(email, otpCode, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined)
+        const challenge = googleCredentialRef.current
+          ? await loginWithGoogle(googleCredentialRef.current, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined)
+          : loginMethod === 'email-code'
+            ? await loginWithEmailOtp(email, otpCode, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined)
           : await login(email, password, twoFactorFallback ? twoFactorFallbackCode : undefined, twoFactorFallback ? twoFactorChallenge?.challengeId : undefined);
         if (challenge) {
           setTwoFactorChallenge(challenge);
@@ -83,12 +156,13 @@ export default function Auth() {
         setTwoFactorChallenge(null);
         setTwoFactorFallback(false);
         setTwoFactorFallbackCode('');
+        googleCredentialRef.current = null;
       } else {
         await register(username, email, password, fullName);
         setVerificationPending(true);
         setMode('login');
         setLoginMethod('password');
-        toast.success('Account created — verify your KIIT email before signing in.');
+        toast.success('Account created — verify your email before signing in.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong');
@@ -106,6 +180,7 @@ export default function Auth() {
     setTwoFactorFallback(false);
     setTwoFactorFallbackCode('');
     setVerificationPending(false);
+    googleCredentialRef.current = null;
   };
 
   useEffect(() => {
@@ -149,8 +224,8 @@ export default function Auth() {
   }, [approvalBusy, completeTwoFactorLogin, twoFactorChallenge, twoFactorFallback]);
 
   const resendVerification = async () => {
-    if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) {
-      setFieldErrors({ email: 'Enter your seven-digit KIIT email first' });
+    if (!isValidEmail(email)) {
+      setFieldErrors({ email: 'Enter your email address first' });
       return;
     }
     setResendingVerification(true);
@@ -165,8 +240,8 @@ export default function Auth() {
   };
 
   const requestEmailCode = async () => {
-    if (!/^\d{7}@kiit\.ac\.in$/i.test(email.trim())) {
-      setFieldErrors({ email: 'Use your 7-digit KIIT college email' });
+    if (!isValidEmail(email)) {
+      setFieldErrors({ email: 'Enter a valid email address' });
       return;
     }
     setRequestingOtp(true);
@@ -183,7 +258,7 @@ export default function Auth() {
 
   const requestPasswordReset = async () => {
     if (!email.trim()) {
-      setFieldErrors({ email: 'Enter your KIIT email first' });
+      setFieldErrors({ email: 'Enter your email address first' });
       return;
     }
     try {
@@ -205,7 +280,7 @@ export default function Auth() {
             <div className="premium-brand-mark">Y</div>
             <div>
               <p className="premium-brand-name">Yor</p>
-              <p className="premium-brand-meta">Global worlds · KIIT beta</p>
+              <p className="premium-brand-meta">Global worlds · private beta</p>
             </div>
           </div>
 
@@ -214,7 +289,7 @@ export default function Auth() {
             Don’t just post.<br /><span>Make things happen.</span>
           </h1>
           <p className="premium-auth-description">
-            Share a seed, find its people, and turn an unfinished thought into something real. KIIT is Yor’s first trusted world—not its final boundary.
+            Share a seed, find its people, and turn an unfinished thought into something real. Start in one trusted world and grow without borders.
           </p>
 
           <div className="premium-auth-proof">
@@ -228,18 +303,18 @@ export default function Auth() {
             </div>
             <div className="premium-auth-proof__item">
               <Shield className="h-4 w-4" />
-              <div><strong>Trusted launch world</strong><span>College-only access while the global product earns its shape.</span></div>
+              <div><strong>Trusted launch world</strong><span>Verified-email access with optional domain controls for every region.</span></div>
             </div>
           </div>
 
-          <p className="premium-auth-footnote">Private beta · Seven-digit @kiit.ac.in email required</p>
+          <p className="premium-auth-footnote">Private beta · email verification required</p>
         </div>
       </section>
 
       <section className="premium-auth-form-shell">
         <div className="premium-auth-mobile-brand">
           <div className="premium-brand-mark">Y</div>
-          <div><p className="premium-brand-name">Yor</p><p className="premium-brand-meta">Global worlds · KIIT beta</p></div>
+          <div><p className="premium-brand-name">Yor</p><p className="premium-brand-meta">Global worlds · private beta</p></div>
         </div>
 
         <div className="premium-auth-form">
@@ -291,14 +366,29 @@ export default function Auth() {
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
                 <p>
-                  {mode === 'login' ? 'Sign in to your campus space.' : 'Create your place in the campus conversation.'}
+                  {mode === 'login' ? 'Sign in to your world.' : 'Create your place in the global conversation.'}
                 </p>
               </div>
 
-              <div className="premium-auth-beta-note">
+                <div className="premium-auth-beta-note">
                 <Shield className="h-4 w-4 shrink-0" />
-                <div><strong>KIIT beta access</strong><span>Use your seven-digit college email to get started.</span></div>
+                <div><strong>Verified access</strong><span>Use an email address you can verify to get started.</span></div>
               </div>
+
+              {mode === 'login' && (
+                <div className="my-5 space-y-3">
+                  {googleClientId ? (
+                    <div ref={googleButtonRef} className="flex min-h-10 justify-center" aria-label="Sign in with Google" />
+                  ) : (
+                    <p className="text-center text-[0.68rem] text-muted-foreground">Google sign-in will appear here once it is configured.</p>
+                  )}
+                  <div className="flex items-center gap-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+                    <span className="h-px flex-1 bg-border" />
+                    <span>or continue with</span>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {errorMsg && (
@@ -309,7 +399,7 @@ export default function Auth() {
 
                 {verificationPending && (
                   <div className="p-4 text-xs text-foreground bg-primary/10 rounded-xl border border-primary/20 space-y-3">
-                    <div><strong>One last step:</strong> open the verification link in your KIIT inbox, then sign in here.</div>
+                    <div><strong>One last step:</strong> open the verification link in your inbox, then sign in here.</div>
                     <button type="button" onClick={resendVerification} disabled={resendingVerification} className="text-primary font-semibold hover:underline disabled:opacity-60">
                       {resendingVerification ? 'Sending…' : 'Resend verification email'}
                     </button>
@@ -360,7 +450,7 @@ export default function Auth() {
                       </motion.div>
                       
                       <motion.div variants={staggerItem} className="space-y-1">
-                        <Label htmlFor="email" className="premium-auth-label">College email</Label>
+                        <Label htmlFor="email" className="premium-auth-label">Email</Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -383,7 +473,7 @@ export default function Auth() {
 
                   {mode === 'login' && (
                     <motion.div variants={staggerItem} className="space-y-1">
-                      <Label htmlFor="loginUsername" className="premium-auth-label">{loginMethod === 'password' ? 'Username or email' : 'College email'}</Label>
+                      <Label htmlFor="loginUsername" className="premium-auth-label">{loginMethod === 'password' ? 'Username or email' : 'Email'}</Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                           {loginMethod === 'password' ? <User className="h-4 w-4 text-muted-foreground" /> : <Mail className="h-4 w-4 text-muted-foreground" />}
@@ -391,7 +481,7 @@ export default function Auth() {
                         <Input
                           id="loginUsername"
                           type={loginMethod === 'password' ? 'text' : 'email'}
-                          placeholder={loginMethod === 'password' ? 'Username or email' : 'KIIT email address'}
+                          placeholder={loginMethod === 'password' ? 'Username or email' : 'Email address'}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           autoComplete={loginMethod === 'password' ? 'username' : 'email'}
@@ -527,7 +617,7 @@ export default function Auth() {
                 </motion.div>
 
                 <p className="premium-auth-legal">
-                  By continuing, you agree to keep Yor Talks respectful and campus-safe. <span>Beta access is limited to seven-digit @kiit.ac.in emails.</span>
+                  By continuing, you agree to keep Yor Talks respectful and safe. <span>Beta access requires email verification.</span>
                   <span><Link href="/terms" className="hover:underline">Terms</Link> · <Link href="/privacy" className="hover:underline">Privacy</Link> · <Link href="/community-guidelines" className="hover:underline">Guidelines</Link></span>
                 </p>
               </form>

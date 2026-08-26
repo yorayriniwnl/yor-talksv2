@@ -5,10 +5,17 @@ import type { UserRecord } from "../types/index.js";
 
 export class UserRepository {
 
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const [relationship] = await db.select({ followerId: userFollowsTable.followerId })
+      .from(userFollowsTable)
+      .where(and(eq(userFollowsTable.followerId, followerId), eq(userFollowsTable.followingId, followingId)))
+      .limit(1);
+    return Boolean(relationship);
+  }
+
   async followUser(followerId: string, followingId: string): Promise<boolean> {
-    const existing = await db.select().from(userFollowsTable).where(and(eq(userFollowsTable.followerId, followerId), eq(userFollowsTable.followingId, followingId)));
-    if (existing.length === 0) {
-      await db.insert(userFollowsTable).values({ followerId, followingId });
+    const inserted = await db.insert(userFollowsTable).values({ followerId, followingId }).onConflictDoNothing().returning({ followerId: userFollowsTable.followerId });
+    if (inserted.length > 0) {
       await db.execute(sql`UPDATE users SET following_count = following_count + 1 WHERE id = ${followerId}`);
       await db.execute(sql`UPDATE users SET follower_count = follower_count + 1 WHERE id = ${followingId}`);
       return true;
@@ -32,6 +39,11 @@ export class UserRepository {
 
   async findByEmail(email: string): Promise<UserRecord | undefined> {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    return user as UserRecord | undefined;
+  }
+
+  async findByGoogleSubject(googleSubject: string): Promise<UserRecord | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSubject, googleSubject));
     return user as UserRecord | undefined;
   }
 

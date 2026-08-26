@@ -4,10 +4,17 @@ import { db } from "@workspace/db";
 import { usersTable, userTopicsTable, topicsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { validateBody } from "../middlewares/validation.js";
+import { createResponse } from "../utils/response.js";
 
 const router = Router();
+const onboardingSchema = z.object({
+  interests: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  followedCreatorIds: z.array(z.string().uuid()).max(50).default([]),
+});
 
-router.post("/complete", authenticate, async (req, res) => {
+router.post("/complete", authenticate, validateBody(onboardingSchema), async (req, res) => {
   try {
     const { interests, followedCreatorIds } = req.body;
     
@@ -42,7 +49,7 @@ router.post("/complete", authenticate, async (req, res) => {
       const { UserRepository } = await import("../repositories/user-repository.js");
       const userRepository = new UserRepository();
       for (const targetId of followedCreatorIds) {
-        if (typeof targetId === "string" && targetId !== req.user!.id) {
+        if (typeof targetId === "string" && targetId !== req.user!.id && await userRepository.findById(targetId)) {
           await userRepository.followUser(req.user!.id, targetId);
         }
       }
@@ -56,9 +63,9 @@ router.post("/complete", authenticate, async (req, res) => {
       .set({ settings: { ...settings, onboardingCompleted: true } })
       .where(eq(usersTable.id, req.user!.id));
 
-    res.json({ success: true, message: "Onboarding completed" });
+    res.json(createResponse("Onboarding completed", null));
   } catch (err) {
-    res.status(500).json({ error: "Failed to complete onboarding" });
+    res.status(500).json(createResponse("Failed to complete onboarding", null, {}, ["Onboarding could not be saved"]));
   }
 });
 

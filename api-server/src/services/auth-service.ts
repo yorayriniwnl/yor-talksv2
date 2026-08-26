@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 import { authenticator } from "otplib";
 import { randomUUID, randomBytes, randomInt } from "node:crypto";
 import { env } from "../config/env.js";
@@ -12,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
-import { isKiitCollegeEmail } from "../validators/auth.js";
+import { isAllowedEmail } from "../validators/auth.js";
 import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 
 export class TooManyAttemptsError extends Error {}
@@ -45,6 +46,7 @@ export class TwoFactorRequiredError extends Error {
 }
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
+export class GoogleSignInNotConfiguredError extends Error {}
 
 export class AuthService {
   constructor(
@@ -61,12 +63,13 @@ export class AuthService {
     fullName: string;
   }): Promise<{ user: UserRecord; verificationToken?: string }> {
     const email = input.email.trim().toLowerCase();
-    if (!isKiitCollegeEmail(email)) {
-      throw new Error("Only seven-digit @kiit.ac.in college emails can join this beta");
+    if (!isAllowedEmail(email)) {
+      throw new Error("This email domain is not allowed for this deployment");
     }
 
     const existingEmail = await this.userRepository.findByEmail(email);
-    const existingUsername = await this.userRepository.findByUsername(input.username);
+    const normalizedUsername = input.username.trim().toLowerCase();
+    const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
     const existing = existingEmail ?? existingUsername;
     
     if (existing) {
@@ -76,7 +79,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(input.password, 10);
     const user: UserRecord = {
       id: randomUUID(),
-      username: input.username,
+      username: normalizedUsername,
       email,
       passwordHash,
       fullName: input.fullName,
@@ -124,20 +127,20 @@ export class AuthService {
   }
 
   async login(input: { identifier: string; password: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
-    const normalizedIdentifier = input.identifier.toLowerCase();
+    const normalizedIdentifier = input.identifier.trim().toLowerCase();
     if (this.securityService.detectAbuse(normalizedIdentifier, "login_failure")) {
       throw new TooManyAttemptsError("Too many failed login attempts. Please try again later.");
     }
 
-    const byEmail = await this.userRepository.findByEmail(input.identifier);
-    const user = byEmail ?? await this.userRepository.findByUsername(input.identifier);
+    const byEmail = await this.userRepository.findByEmail(normalizedIdentifier);
+    const user = byEmail ?? await this.userRepository.findByUsername(normalizedIdentifier);
     if (!user) {
       this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — unknown identifier`);
       throw new Error("Invalid credentials");
     }
 
-    if (!isKiitCollegeEmail(user.email)) {
-      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — non-KIIT account`);
+    if (!isAllowedEmail(user.email)) {
+      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — disallowed account`);
       throw new Error("Invalid credentials");
     }
 
@@ -149,7 +152,7 @@ export class AuthService {
 
     if (!user.emailVerified) {
       this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — email not verified`);
-      throw new EmailVerificationRequiredError("Verify your KIIT email before signing in");
+        throw new EmailVerificationRequiredError("Verify your email before signing in");
     }
 
     if (user.totpSecret) {
@@ -166,20 +169,67 @@ export class AuthService {
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
-    const deviceId = randomUUID();
-    const refreshToken = this.issueRefreshToken(user, deviceId);
-    await this.redisRepository.set(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
-    const updatedUser = await this.userRepository.update(user.id, { lastLoginAt: new Date().toISOString() });
-    return {
-      user: updatedUser ?? user,
-      tokens: this.issueTokens(updatedUser ?? user, refreshToken, deviceId),
-    };
+    return this.createSession(user);
+  }
+
+  async loginWithGoogle(input: { credential: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+    if (!env.GOOGLE_CLIENT_ID) {
+      throw new GoogleSignInNotConfiguredError("Google sign-in is not configured");
+    }
+
+    const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: input.credential,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new Error("The Google credential is invalid or expired");
+    }
+
+    const googleSubject = payload?.sub;
+    const googleEmail = payload?.email?.trim().toLowerCase();
+    if (!googleSubject || !googleEmail || payload?.email_verified !== true || !isAllowedEmail(googleEmail)) {
+      throw new Error("Use a verified Google account from an allowed email domain");
+    }
+
+    const linkedUser = await this.userRepository.findByGoogleSubject(googleSubject);
+    const user = linkedUser ?? await this.userRepository.findByEmail(googleEmail);
+    if (!user) {
+      throw new Error("No Yor account exists for this Google email. Create an account first.");
+    }
+    if (user.googleSubject && user.googleSubject !== googleSubject) {
+      throw new Error("This Google account is not linked to the Yor account for that email");
+    }
+
+    const linked = user.googleSubject ? user : await this.userRepository.update(user.id, {
+      googleSubject,
+      emailVerified: true,
+    });
+    const finalUser = linked ?? user;
+
+    if (finalUser.totpSecret) {
+      if (!input.totpCode) {
+        throw new TwoFactorRequiredError(
+          "Approve this sign-in in your Yor app",
+          await this.createLoginApprovalChallenge(finalUser.id),
+        );
+      }
+      if (!authenticator.check(input.totpCode, finalUser.totpSecret)) {
+        throw new Error("Invalid two-factor code");
+      }
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(finalUser.id, input.challengeId);
+    }
+
+    return this.createSession(finalUser, { emailVerified: true });
   }
 
   async requestEmailOtp(email: string): Promise<boolean> {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!isKiitCollegeEmail(normalizedEmail)) {
-      throw new EmailOtpInvalidError("Only seven-digit KIIT college emails can request a sign-in code");
+    if (!isAllowedEmail(normalizedEmail)) {
+      throw new EmailOtpInvalidError("This email domain is not allowed for this deployment");
     }
     const user = await this.userRepository.findByEmail(normalizedEmail);
     if (!user) {
@@ -243,7 +293,7 @@ export class AuthService {
     }
 
     const user = await this.userRepository.findById(state.userId);
-    if (!user || user.email !== normalizedEmail || !isKiitCollegeEmail(user.email)) {
+    if (!user || user.email !== normalizedEmail || !isAllowedEmail(user.email)) {
       await this.redisRepository.delStrict(key);
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
@@ -395,7 +445,9 @@ export class AuthService {
       if (!storedToken || storedToken !== refreshToken) {
         return undefined;
       }
-      return this.issueTokens(user, refreshToken, deviceId);
+      const nextRefreshToken = this.issueRefreshToken(user, deviceId);
+      await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, nextRefreshToken, 7 * 24 * 60 * 60);
+      return this.issueTokens(user, nextRefreshToken, deviceId);
     } catch {
       return undefined;
     }
@@ -403,10 +455,11 @@ export class AuthService {
 
   /** Generates a single-use, expiring reset token and dispatches it by email. */
   async requestPasswordReset(email: string): Promise<string | undefined> {
-    if (!isKiitCollegeEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isAllowedEmail(normalizedEmail)) {
       return undefined;
     }
-    const user = await this.userRepository.findByEmail(email);
+    const user = await this.userRepository.findByEmail(normalizedEmail);
     if (!user) {
       // Don't reveal whether this email is registered.
       return undefined;
@@ -463,7 +516,7 @@ export class AuthService {
 
   async requestEmailVerificationByEmail(email: string): Promise<string | undefined> {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!isKiitCollegeEmail(normalizedEmail)) {
+    if (!isAllowedEmail(normalizedEmail)) {
       return undefined;
     }
     const user = await this.userRepository.findByEmail(normalizedEmail);

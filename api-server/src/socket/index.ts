@@ -7,6 +7,7 @@ import { setIo } from "../lib/realtime.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { MessageBlockedError, MessageService } from "../services/message-service.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
 
 export const attachSocketServer = (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
@@ -19,16 +20,25 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
   const conversationRepository = new ConversationRepository();
   const userRepository = new UserRepository();
+  const redisRepository = new RedisRepository();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const onlineUsers = new Map<string, string>();
 
-  io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth?.token;
     if (!token) {
       return next(new Error("Authentication error"));
     }
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as { sub: string };
+      const decoded = jwt.verify(token, env.JWT_SECRET) as { sub?: string; deviceId?: string };
+      if (!decoded.sub || !decoded.deviceId) return next(new Error("Authentication error"));
+      const [session, user] = await Promise.all([
+        redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`),
+        userRepository.findById(decoded.sub),
+      ]);
+      if (!session || !user || user.accountStatus === "suspended" || user.accountStatus === "deactivated") {
+        return next(new Error("Session revoked"));
+      }
       socket.data.userId = decoded.sub;
       next();
     } catch {
@@ -76,7 +86,8 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     // Modified to support group chats via conversationId
-    socket.on("message:send", async ({ recipientId, conversationId, content }) => {
+    socket.on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown } = {}) => {
+      const { recipientId, conversationId, content } = payload;
       if (typeof content !== "string" || !content.trim()) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
@@ -85,9 +96,9 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         let message;
         let actualConversationId = conversationId;
 
-        if (conversationId) {
+        if (typeof conversationId === "string" && conversationId) {
           message = await messageService.sendMessageToConversation(userId, conversationId, content);
-        } else if (recipientId) {
+        } else if (typeof recipientId === "string" && recipientId) {
           message = await messageService.sendMessage(userId, recipientId, content);
           actualConversationId = message.conversationId;
           
@@ -111,7 +122,8 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       }
     });
 
-    socket.on("message:seen", async ({ messageId }) => {
+    socket.on("message:seen", async (payload: { messageId?: unknown } = {}) => {
+      const { messageId } = payload;
       if (typeof messageId !== "string") return;
       try {
         const updated = await messageService.markSeen(messageId, userId);
@@ -125,34 +137,39 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     // WebRTC Live Stream Signaling
-    socket.on("stream:join", ({ streamId }) => {
+    socket.on("stream:join", async (payload: { streamId?: unknown } = {}) => {
+      const { streamId } = payload;
       if (typeof streamId === "string") {
         socket.join(`stream:${streamId}`);
         socket.to(`stream:${streamId}`).emit("stream:peer-joined", { userId, socketId: socket.id });
       }
     });
 
-    socket.on("stream:leave", ({ streamId }) => {
+    socket.on("stream:leave", (payload: { streamId?: unknown } = {}) => {
+      const { streamId } = payload;
       if (typeof streamId === "string") {
         socket.leave(`stream:${streamId}`);
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
       }
     });
 
-    socket.on("webrtc:offer", ({ targetSocketId, offer, streamId }) => {
-      if (targetSocketId) {
+    socket.on("webrtc:offer", (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
+      const { targetSocketId, offer, streamId } = payload;
+      if (typeof targetSocketId === "string" && offer && typeof streamId === "string") {
         io.to(targetSocketId).emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
       }
     });
 
-    socket.on("webrtc:answer", ({ targetSocketId, answer, streamId }) => {
-      if (targetSocketId) {
+    socket.on("webrtc:answer", (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
+      const { targetSocketId, answer, streamId } = payload;
+      if (typeof targetSocketId === "string" && answer && typeof streamId === "string") {
         io.to(targetSocketId).emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
       }
     });
 
-    socket.on("webrtc:ice-candidate", ({ targetSocketId, candidate, streamId }) => {
-      if (targetSocketId) {
+    socket.on("webrtc:ice-candidate", (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
+      const { targetSocketId, candidate, streamId } = payload;
+      if (typeof targetSocketId === "string" && candidate && typeof streamId === "string") {
         io.to(targetSocketId).emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
       }
     });

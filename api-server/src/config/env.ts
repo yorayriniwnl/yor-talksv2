@@ -17,6 +17,11 @@ const envSchema = z.object({
   // anyway (see social/vite.config.ts), so this default is rarely exercised.
   CORS_ORIGINS: z.string().default(process.env.CORS_ORIGINS || "http://localhost:5173"),
   CLIENT_ORIGIN: z.string().default(process.env.CLIENT_ORIGIN || "http://localhost:5173"),
+  // Empty means open registration for a global launch. Closed-beta
+  // deployments can set a comma-separated allow-list such as
+  // "kiit.ac.in,example.edu".
+  ALLOWED_EMAIL_DOMAINS: z.string().default(process.env.ALLOWED_EMAIL_DOMAINS || ""),
+  GOOGLE_CLIENT_ID: z.string().default(process.env.GOOGLE_CLIENT_ID || ""),
   RESEND_API_KEY: z.string().default(process.env.RESEND_API_KEY || ""),
   EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
   RAZORPAY_KEY_ID: z.string().default(process.env.RAZORPAY_KEY_ID || ""),
@@ -65,6 +70,9 @@ if (parsedEnv.NODE_ENV === "production") {
   if (!parsedEnv.RESEND_API_KEY || !parsedEnv.EMAIL_FROM) {
     console.warn("[Config Warning] Resend is not fully configured. Password reset, verification, and email OTP delivery will be disabled.");
   }
+  if (!parsedEnv.GOOGLE_CLIENT_ID) {
+    console.warn("[Config Warning] GOOGLE_CLIENT_ID is not configured. Google sign-in will be disabled.");
+  }
   if (!parsedEnv.RAZORPAY_KEY_ID || !parsedEnv.RAZORPAY_KEY_SECRET) {
     console.warn("[Config Warning] Razorpay is not configured. Tip orders and payment settlement will be disabled.");
   }
@@ -79,3 +87,7 @@ if (parsedEnv.NODE_ENV === "production") {
 
 export const env = parsedEnv;
 export const corsOrigins: string[] = parsedEnv.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean);
+export const allowedEmailDomains: string[] = parsedEnv.ALLOWED_EMAIL_DOMAINS
+  .split(",")
+  .map((domain) => domain.trim().toLowerCase().replace(/^@/, ""))
+  .filter(Boolean);

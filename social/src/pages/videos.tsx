@@ -18,6 +18,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { api } from '@/lib/api-client';
 
 function UploadVideoDialog() {
   const createVideo = useAppStore((s: any) => s.createVideo);
@@ -31,6 +32,7 @@ function UploadVideoDialog() {
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [fileName, setFileName] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,8 +45,13 @@ function UploadVideoDialog() {
       setError('Please select a valid video file (.mp4, .webm, .mov, etc.)');
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Video files must be 10 MB or smaller.');
+      return;
+    }
 
     const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
     setVideoUrl(objectUrl);
     setPreviewUrl(objectUrl);
     setFileName(file.name);
@@ -85,13 +92,18 @@ function UploadVideoDialog() {
       setError('Choose a category before publishing this video.');
       return;
     }
+    if (title.trim().length < 2) {
+      setError('Add a title with at least 2 characters.');
+      return;
+    }
 
     setLoading(true);
     try {
+      const uploaded = mode === 'file' && selectedFile ? await api.uploadMedia(selectedFile) : null;
       await createVideo({ 
         title: title.trim(), 
-        videoUrl: finalVideoUrl, 
-        thumbnailUrl: finalThumb, 
+        videoUrl: uploaded?.url || finalVideoUrl,
+        thumbnailUrl: uploaded?.thumbnailUrl?.startsWith('data:image/') ? uploaded.thumbnailUrl : finalThumb,
         type,
         contentCategory,
         contentRating,
@@ -104,6 +116,7 @@ function UploadVideoDialog() {
       setThumbnailUrl(''); 
       setFileName('');
       setPreviewUrl('');
+      setSelectedFile(null);
       setType('short');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);

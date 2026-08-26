@@ -37,29 +37,31 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
 
-  const handlePublishStory = () => {
+  const handlePublishStory = async () => {
     if (storyType === 'text' && !textContent.trim()) return;
     if (storyType === 'image' && !imageUrl.trim()) return;
     if (!contentCategory) return;
 
-    sounds.playChime();
-    triggerConfetti();
-
-    addStory({
-      type: storyType,
-      textContent: storyType === 'text' ? textContent.trim() : undefined,
-      mediaUrl: storyType === 'image' ? imageUrl.trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
-      backgroundGradient: selectedGradient.css,
-      contentCategory,
-      contentRating,
-    });
-
-    toast.success('Story published to your highlights! ✨');
-    setTextContent('');
-    setImageUrl('');
-    setContentCategory('');
-    setContentRating(DEFAULT_CONTENT_RATING);
-    onOpenChange(false);
+    try {
+      await addStory({
+        type: storyType,
+        textContent: storyType === 'text' ? textContent.trim() : undefined,
+        mediaUrl: storyType === 'image' ? imageUrl.trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+        backgroundGradient: selectedGradient.css,
+        contentCategory,
+        contentRating,
+      });
+      sounds.playChime();
+      triggerConfetti();
+      toast.success('Story published to your highlights! ✨');
+      setTextContent('');
+      setImageUrl('');
+      setContentCategory('');
+      setContentRating(DEFAULT_CONTENT_RATING);
+      onOpenChange(false);
+    } catch {
+      // The store has already removed the optimistic story and reported the API error.
+    }
   };
 
   return (

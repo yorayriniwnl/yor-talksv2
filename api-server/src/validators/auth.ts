@@ -1,14 +1,25 @@
 import { z } from "zod";
+import { allowedEmailDomains } from "../config/env.js";
 
 export const KIIT_EMAIL_PATTERN = /^\d{7}@kiit\.ac\.in$/i;
 
 export function isKiitCollegeEmail(email: string): boolean {
-  return KIIT_EMAIL_PATTERN.test(email.trim());
+  return isAllowedEmail(email);
 }
 
+export function isAllowedEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  if (!z.string().email().safeParse(normalized).success) return false;
+  if (allowedEmailDomains.length === 0) return true;
+  const domain = normalized.split("@")[1] ?? "";
+  return allowedEmailDomains.includes(domain);
+}
+
+const allowedEmailSchema = z.string().trim().email().refine(isAllowedEmail, "This email domain is not allowed for this deployment");
+
 export const registerSchema = z.object({
-  username: z.string().min(3).max(24),
-  email: z.string().trim().email().regex(KIIT_EMAIL_PATTERN, "Use your seven-digit KIIT college email (for example, 2329027@kiit.ac.in)"),
+  username: z.string().trim().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$/, "Username must be 3-24 characters using letters, numbers, underscores, or hyphens"),
+  email: allowedEmailSchema,
   password: z
     .string()
     .min(8)
@@ -20,8 +31,14 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  identifier: z.string().min(3),
+  identifier: z.string().trim().min(3),
   password: z.string().min(8),
+  totpCode: z.string().length(6).optional(),
+  challengeId: z.string().uuid("Invalid challenge ID format").optional(),
+});
+
+export const googleLoginSchema = z.object({
+  credential: z.string().min(1).max(8192),
   totpCode: z.string().length(6).optional(),
   challengeId: z.string().uuid("Invalid challenge ID format").optional(),
 });
@@ -31,7 +48,7 @@ export const emailOtpRequestSchema = z.object({
 });
 
 export const emailOtpVerifySchema = z.object({
-  email: z.string().trim().email().regex(KIIT_EMAIL_PATTERN, "Use your seven-digit KIIT college email"),
+  email: allowedEmailSchema,
   code: z.string().regex(/^\d{6}$/, "Enter the six-digit sign-in code"),
   totpCode: z.string().length(6).optional(),
   challengeId: z.string().uuid("Invalid challenge ID format").optional(),
@@ -46,7 +63,7 @@ export const twoFactorApprovalSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  email: z.string().email(),
+  email: allowedEmailSchema,
 });
 
 const passwordRule = z

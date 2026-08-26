@@ -35,12 +35,28 @@ export class MessageService {
     return this.conversationRepository.create(conversation);
   }
 
+  async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
+    const uniqueMemberIds = [...new Set(memberIds.filter((id) => id && id !== creatorId))];
+    if (uniqueMemberIds.length === 0 || uniqueMemberIds.length > 99) {
+      throw new Error("A group must contain between 2 and 100 people");
+    }
+    if (this.userRepository) {
+      const members = await Promise.all([creatorId, ...uniqueMemberIds].map((id) => this.userRepository!.findById(id)));
+      if (members.some((member) => !member)) throw new Error("One or more group members do not exist");
+    }
+    return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat");
+  }
+
   // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
-      if (recipient?.blockedUsers?.includes(senderId)) {
+      const sender = await this.userRepository.findById(senderId);
+      if (!recipient || !sender || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipientId)) {
         throw new MessageBlockedError("You can't message this user");
+      }
+      if (recipient.privacy?.allowDmFromStrangers === false && !(await this.userRepository.isFollowing(senderId, recipientId))) {
+        throw new MessageBlockedError("This user does not accept messages from strangers");
       }
     }
     const conversation = await this.createConversation(senderId, recipientId);
@@ -64,8 +80,8 @@ export class MessageService {
       id: randomUUID(),
       conversationId,
       senderId,
-      recipientId: senderId, // Dummy value since schema expects it for now, but not used for group logic
-      content,
+      recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
+      content: content.trim(),
       createdAt: new Date().toISOString(),
       seenAt: null,
       replyToId,

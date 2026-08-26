@@ -6,6 +6,7 @@ export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
+  googleSubject: text("google_subject").unique(),
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
   bio: text("bio").notNull().default(""),
@@ -83,6 +84,9 @@ export const commentsTable = pgTable("comments", {
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   parentId: uuid("parent_id"), // Self-referencing for nested replies
   content: text("content").notNull(),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
+  mediaDuration: integer("media_duration"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
   likedBy: jsonb("liked_by").notNull().default([]),

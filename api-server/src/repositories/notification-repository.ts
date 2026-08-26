@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { notificationsTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { NotificationRecord } from "../types/index.js";
@@ -23,11 +23,17 @@ export class NotificationRepository {
     return notification as NotificationRecord | undefined;
   }
 
-  async markRead(id: string): Promise<NotificationRecord | undefined> {
+  async markRead(id: string, recipientId: string): Promise<NotificationRecord | undefined> {
     const [updated] = await db.update(notificationsTable)
       .set({ readAt: new Date().toISOString() })
-      .where(eq(notificationsTable.id, id))
+      .where(and(eq(notificationsTable.id, id), eq(notificationsTable.recipientId, recipientId)))
       .returning();
     return updated as NotificationRecord | undefined;
+  }
+
+  async markAllRead(recipientId: string): Promise<void> {
+    await db.update(notificationsTable)
+      .set({ readAt: new Date().toISOString() })
+      .where(and(eq(notificationsTable.recipientId, recipientId), isNull(notificationsTable.readAt)));
   }
 }

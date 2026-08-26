@@ -1,20 +1,49 @@
-import { eq, desc, ilike, lt, and, notInArray, inArray } from "drizzle-orm";
+import { eq, desc, ilike, lt, and, notInArray, inArray, or } from "drizzle-orm";
 import { postsTable, postLikesTable, postBookmarksTable } from "@workspace/db/schema";
 import { db, pool } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
 
 import { sql } from "drizzle-orm";
 import type { ContentRating } from "../utils/content-safety.js";
+
+type PostCursor = { createdAt: string; id: string };
+type TrendingCursor = { score: number; createdAt: string; id: string };
+
+export function encodePostCursor(post: Pick<PostRecord, "id" | "createdAt">): string {
+  return Buffer.from(JSON.stringify({ createdAt: post.createdAt, id: post.id }), "utf8").toString("base64url");
+}
+
+export function encodeTrendingCursor(post: Pick<PostRecord, "id" | "createdAt"> & { score?: number }): string {
+  return Buffer.from(JSON.stringify({ score: post.score ?? 0, createdAt: post.createdAt, id: post.id }), "utf8").toString("base64url");
+}
+
+function decodeCursor(value: string | undefined): PostCursor | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<PostCursor>;
+    if (typeof parsed.createdAt === "string" && typeof parsed.id === "string") return { createdAt: parsed.createdAt, id: parsed.id };
+  } catch { /* malformed cursors are treated as the first page */ }
+  return undefined;
+}
+
+function decodeTrendingCursor(value: string | undefined): TrendingCursor | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<TrendingCursor>;
+    if (typeof parsed.score === "number" && typeof parsed.createdAt === "string" && typeof parsed.id === "string") return parsed as TrendingCursor;
+  } catch { /* malformed cursors are treated as the first page */ }
+  return undefined;
+}
+
 export class PostRepository {
 
   async likePost(postId: string, userId: string): Promise<void> {
-    const existing = await db.select().from(postLikesTable).where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, userId)));
-    if (existing.length === 0) {
-      await db.insert(postLikesTable).values({ postId, userId });
+    const inserted = await db.insert(postLikesTable).values({ postId, userId }).onConflictDoNothing().returning({ postId: postLikesTable.postId });
+    if (inserted.length > 0) {
       await db.execute(sql`
         UPDATE posts
         SET likes_count = likes_count + 1,
-            score = ((likes_count + 1) * 2) + (comments_count * 3) + (share_count * 5),
+            score = ((likes_count + 1) * 3) + (comments_count * 2) + (share_count * 5),
             updated_at = NOW()
         WHERE id = ${postId}
       `);
@@ -27,7 +56,7 @@ export class PostRepository {
       await db.execute(sql`
         UPDATE posts
         SET likes_count = GREATEST(0, likes_count - 1),
-            score = (GREATEST(0, likes_count - 1) * 2) + (comments_count * 3) + (share_count * 5),
+            score = (GREATEST(0, likes_count - 1) * 3) + (comments_count * 2) + (share_count * 5),
             updated_at = NOW()
         WHERE id = ${postId}
       `);
@@ -35,9 +64,11 @@ export class PostRepository {
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<void> {
-    const existing = await db.select().from(postBookmarksTable).where(and(eq(postBookmarksTable.postId, postId), eq(postBookmarksTable.userId, userId)));
-    if (existing.length === 0) {
-      await db.insert(postBookmarksTable).values({ postId, userId });
+    const inserted = await db.insert(postBookmarksTable)
+      .values({ postId, userId })
+      .onConflictDoNothing()
+      .returning({ postId: postBookmarksTable.postId });
+    if (inserted.length > 0) {
       await db.execute(sql`UPDATE posts SET bookmarks_count = bookmarks_count + 1 WHERE id = ${postId}`);
     }
   }
@@ -79,7 +110,11 @@ export class PostRepository {
 
   async listByUser(userId: string, cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters = [eq(postsTable.authorId, userId)];
-    if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    const parsedCursor = decodeCursor(cursor);
+    if (parsedCursor) {
+      const cursorFilter = or(lt(postsTable.createdAt, parsedCursor.createdAt), and(eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id)));
+      if (cursorFilter) filters.push(cursorFilter);
+    }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
@@ -88,7 +123,8 @@ export class PostRepository {
 
   async list(cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters: any[] = [];
-    if (cursor) filters.push(lt(postsTable.createdAt, cursor));
+    const parsedCursor = decodeCursor(cursor);
+    if (parsedCursor) filters.push(or(lt(postsTable.createdAt, parsedCursor.createdAt), and(eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id))));
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
@@ -97,9 +133,16 @@ export class PostRepository {
     return (await q.orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
-  async listTrending(cursor?: number, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
+  async listTrending(cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters: any[] = [];
-    if (cursor) filters.push(lt(postsTable.score, cursor));
+    const parsedCursor = decodeTrendingCursor(cursor);
+    if (parsedCursor) {
+      filters.push(or(
+        lt(postsTable.score, parsedCursor.score),
+        and(eq(postsTable.score, parsedCursor.score), lt(postsTable.createdAt, parsedCursor.createdAt)),
+        and(eq(postsTable.score, parsedCursor.score), eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id)),
+      ));
+    }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));

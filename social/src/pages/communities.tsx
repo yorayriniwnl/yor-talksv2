@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api, type BackendCommunityDiscussion } from '@/lib/api-client';
 import { useAppStore, type Community } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { toast } from 'sonner';
 interface ForumThread {
   id: string;
   title: string;
+  content?: string;
   author: string;
   authorAvatar: string;
   isPinned?: boolean;
@@ -31,6 +33,22 @@ interface ForumThread {
   awards: { icon: string; count: number; name: string }[];
 }
 
+function mapDiscussion(discussion: BackendCommunityDiscussion): ForumThread {
+  return {
+    id: discussion.id,
+    title: discussion.title,
+    content: discussion.content,
+    author: discussion.author.fullName || discussion.author.username,
+    authorAvatar: discussion.author.avatarUrl || '',
+    repliesCount: discussion.repliesCount,
+    likes: discussion.likes,
+    timestamp: new Date(discussion.createdAt).toLocaleString(),
+    tag: discussion.tag,
+    awards: [],
+  };
+}
+
+/* Legacy fixture retained only for reference; live discussions are API-backed.
 const FORUM_THREADS: Record<string, ForumThread[]> = {
   default: [
     {
@@ -81,6 +99,7 @@ const FORUM_THREADS: Record<string, ForumThread[]> = {
     }
   ]
 };
+*/
 
 // Interactive Steam Community Hub Detail Page
 function CommunityHubDetail({ communityId }: { communityId: string }) {
@@ -90,11 +109,22 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
 
   const community = communities.find((c) => c.id === communityId) || communities[0];
   const [activeTab, setActiveTab] = useState<'discussions' | 'announcements' | 'members'>('discussions');
-  const [threads, setThreads] = useState<ForumThread[]>(FORUM_THREADS[communityId] || FORUM_THREADS.default);
+  const [threads, setThreads] = useState<ForumThread[]>([]);
+  const [loadingThreads, setLoadingThreads] = useState(true);
   const [newThreadOpen, setNewThreadOpen] = useState(false);
   const [threadTitle, setThreadTitle] = useState('');
   const [threadContent, setThreadContent] = useState('');
   const [threadTag, setThreadTag] = useState('General');
+
+  useEffect(() => {
+    let active = true;
+    setLoadingThreads(true);
+    api.getCommunityDiscussions(communityId)
+      .then((items) => { if (active) setThreads(items.map(mapDiscussion)); })
+      .catch((error) => { if (active) toast.error(error instanceof Error ? error.message : 'Could not load discussions'); })
+      .finally(() => { if (active) setLoadingThreads(false); });
+    return () => { active = false; };
+  }, [communityId]);
 
   if (!community) {
     return (
@@ -107,48 +137,35 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
     );
   }
 
-  const handleCreateThread = (e: React.FormEvent) => {
+  const handleCreateThread = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!threadTitle.trim()) return;
 
-    sounds.playChime();
-    triggerConfetti();
-    const newThread: ForumThread = {
-      id: `thread-${Date.now()}`,
-      title: threadTitle.trim(),
-      author: 'You',
-      authorAvatar: 'https://picsum.photos/seed/you/200/200',
-      repliesCount: 0,
-      likes: 1,
-      timestamp: 'Just now',
-      tag: threadTag,
-      awards: []
-    };
-
-    setThreads(prev => [newThread, ...prev]);
-    setNewThreadOpen(false);
-    setThreadTitle('');
-    setThreadContent('');
-    toast.success('Discussion thread published to Community Hub!');
+    try {
+      const created = await api.createCommunityDiscussion(communityId, { title: threadTitle.trim(), content: threadContent.trim(), tag: threadTag });
+      sounds.playChime();
+      triggerConfetti();
+      setThreads(prev => [mapDiscussion(created), ...prev]);
+      setNewThreadOpen(false);
+      setThreadTitle('');
+      setThreadContent('');
+      toast.success('Discussion thread published to Community Hub!');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not publish discussion');
+    }
   };
 
-  const handleGiveAward = (threadId: string, e: React.MouseEvent) => {
+  const handleGiveAward = async (threadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    sounds.playPop();
-    triggerConfetti();
-    setThreads(prev =>
-      prev.map(t => {
-        if (t.id === threadId) {
-          return {
-            ...t,
-            likes: t.likes + 1,
-            awards: [...t.awards, { icon: '💎', count: 1, name: 'Take My Points' }]
-          };
-        }
-        return t;
-      })
-    );
-    toast.success('Awarded Take My Points (💎) to author!');
+    try {
+      const liked = await api.likeCommunityDiscussion(communityId, threadId);
+      sounds.playPop();
+      triggerConfetti();
+      setThreads(prev => prev.map(thread => thread.id === threadId ? mapDiscussion(liked) : thread));
+      toast.success('Discussion liked');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not like discussion');
+    }
   };
 
   return (
@@ -234,7 +251,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
 
           <Dialog open={newThreadOpen} onOpenChange={setNewThreadOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="rounded-xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary">
+              <Button size="sm" disabled={!community.isMember} className="rounded-xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary">
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Start Discussion
               </Button>
             </DialogTrigger>
@@ -282,8 +299,10 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
         </div>
 
         {/* Discussion Threads List */}
-        <div className="space-y-3">
-          {threads.map((thread) => (
+        {activeTab === 'discussions' && <div className="space-y-3">
+          {loadingThreads && <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">Loading discussions…</div>}
+          {!loadingThreads && !threads.length && <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">No discussions yet. Start the first conversation for this world.</div>}
+          {!loadingThreads && threads.map((thread) => (
             <motion.div
               layout
               key={thread.id}
@@ -320,6 +339,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
                   <h3 className="font-display font-bold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">
                     {thread.title}
                   </h3>
+                  {thread.content && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{thread.content}</p>}
 
                   <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground mt-1">
                     <span>By <strong className="text-foreground">{thread.author}</strong></span>
@@ -354,12 +374,32 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
                   onClick={(e) => handleGiveAward(thread.id, e)}
                   className="rounded-xl font-bold text-xs h-8 px-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
                 >
-                  <Award className="w-3.5 h-3.5 mr-1" /> Award
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1" /> Like
                 </Button>
               </div>
             </motion.div>
           ))}
-        </div>
+        </div>}
+        {activeTab === 'announcements' && (
+          <div className="space-y-3">
+            {threads.filter((thread) => thread.tag === 'Announcements').length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">No official announcements have been posted in this world.</div>
+            ) : threads.filter((thread) => thread.tag === 'Announcements').map((thread) => (
+              <article key={thread.id} className="surface-1 rounded-2xl border border-border/40 p-5">
+                <p className="text-[0.65rem] font-mono uppercase tracking-wider text-primary">{thread.timestamp}</p>
+                <h3 className="mt-2 font-display text-lg font-bold">{thread.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Published by {thread.author}.</p>
+              </article>
+            ))}
+          </div>
+        )}
+        {activeTab === 'members' && (
+          <div className="surface-1 rounded-2xl border border-border/40 p-8 text-center">
+            <Users className="mx-auto h-8 w-8 text-primary" />
+            <h3 className="mt-3 font-display text-lg font-bold">{community.members.toLocaleString()} members</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Member identities are protected by the world’s privacy rules. Join the circle to participate in its discussions.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,16 @@
 # Yor Talks
 
-Yor Talks is a college-only social platform beta for KIIT students. The
-repository contains an Express + Socket.IO API, a React + Vite frontend, and
-shared Postgres/Drizzle packages.
+Yor Talks is a global social platform for creators, communities, conversations,
+events, stories and commerce. The repository contains an Express + Socket.IO
+API, a React + Vite frontend, and shared Postgres/Drizzle packages.
 
-## Beta scope
+## Launch scope
 
-The launch path is ready for a controlled KIIT beta:
+The launch path supports a global deployment or a closed beta:
 
-- Registration and login require exactly seven digits followed by
-  `@kiit.ac.in` (for example, `2329027@kiit.ac.in`).
+- Registration and login accept any verified email when
+  `ALLOWED_EMAIL_DOMAINS` is empty. Set that variable to a comma-separated
+  domain allow-list for a closed beta.
 - Core profiles, posts, feed interactions, communities, messages, events,
   stories, products, projects and reports use the backend API.
 - Postgres and Redis are included in Docker Compose.
@@ -52,7 +53,7 @@ For a production-like container run, set `NODE_ENV=production` in `.env`, use
 unique random JWT secrets of at least 32 characters, and set
 `CORS_ORIGINS`/`CLIENT_ORIGIN` to the real frontend origin. Do not commit `.env`.
 
-## Provider setup for the college beta
+## Provider setup for a global deployment
 
 The application code is ready, but provider accounts and secrets must be
 created outside this repository. Add these values to the root `.env` used by
@@ -65,11 +66,18 @@ Docker, then rebuild the API:
   `RAZORPAY_KEY_SECRET`, and test Checkout with a Razorpay test UPI method.
   The API fetches and verifies the captured payment before crediting the
   creator wallet. Bank withdrawals/payouts are intentionally not enabled for
-  this college beta because they require a separately verified RazorpayX/KYC
+  this deployment because they require a separately verified RazorpayX/KYC
   settlement setup.
 - LiveKit Cloud: create a project and set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
   `LIVEKIT_API_SECRET`. The server issues short-lived room tokens; the secret
   is never sent to the frontend.
+- Google Identity Services: create a Web OAuth client ID in Google Cloud,
+  add the local/deployed frontend origins as authorized JavaScript origins,
+  then set the same client ID in both `GOOGLE_CLIENT_ID` and
+  `VITE_GOOGLE_CLIENT_ID`. The API verifies Google ID tokens, applies the same
+  optional `ALLOWED_EMAIL_DOMAINS` policy, and links them to an existing Yor
+  account by Google’s stable subject ID. Users must create a Yor account with
+  the existing registration flow before using Google sign-in.
 
 After changing provider variables:
 
@@ -135,11 +143,12 @@ pnpm --filter @workspace/api-server test
   frontend origin and test camera/microphone permissions on campus Wi-Fi.
 - Keep the Docker API and frontend on the same origin so cookies and Socket.IO
   behave consistently.
-- Invite only approved KIIT addresses and monitor the health endpoint/logs.
+- If `ALLOWED_EMAIL_DOMAINS` is configured, invite only approved addresses;
+  otherwise monitor abuse controls and the health endpoint/logs.
 
 ## Known limitations
 
-Creator bank withdrawals/payouts are not part of this controlled beta; the
+Creator bank withdrawals/payouts are not part of this launch; the
 wallet ledger records verified Razorpay tips so a verified RazorpayX settlement
 workflow can be added later. Stored video uploads use Cloudinary, while
 adaptive HLS transcoding is not enabled. Live rooms use LiveKit and are

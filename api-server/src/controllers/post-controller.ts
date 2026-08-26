@@ -1,6 +1,6 @@
-import { ai } from '../services/ai/AIGateway.js';
 import { type Request, type Response } from "express";
-import { PostService } from "../services/post-service.js";
+import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-repository.js";
+import { ContentPolicyViolationError, PostService } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
 import { StorageService } from "../services/storage-service.js";
 import { createResponse } from "../utils/response.js";
@@ -42,22 +42,16 @@ export class PostController {
   createPost = async (req: Request, res: Response) => {
     
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    
-    // AI Moderation check
-    if (content) {
-      try {
-        const modResult = await ai.moderateContent(content);
-        if (modResult.isToxic) {
-          return res.status(400).json({ success: false, error: "Content violated community guidelines", flags: modResult.flags });
-        }
-      } catch (e) {
-        console.error("Moderation check failed (soft fail):", e);
-      }
-    }
-
     const images = Array.isArray(req.body.images) ? req.body.images : [];
-    const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating);
-    return res.status(201).json(createResponse("Post created", post));
+    try {
+      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating);
+      return res.status(201).json(createResponse("Post created", post));
+    } catch (error) {
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      throw error;
+    }
   };
 
   deletePost = async (req: Request, res: Response) => {
@@ -72,7 +66,15 @@ export class PostController {
   editPost = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating);
+    let post;
+    try {
+      post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating);
+    } catch (error) {
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      throw error;
+    }
     if (!post) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }
@@ -100,7 +102,19 @@ export class PostController {
   comment = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const result = await this.postService.commentOnPost(postId, req.user?.id ?? "", content);
+    let result;
+    try {
+      result = await this.postService.commentOnPost(postId, req.user?.id ?? "", content, {
+        mediaUrl: req.body.mediaUrl,
+        mediaType: req.body.mediaType,
+        mediaDuration: req.body.mediaDuration,
+      });
+    } catch (error) {
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      throw error;
+    }
     if (!result) {
       return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
     }
@@ -111,11 +125,25 @@ export class PostController {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const commentId = typeof req.params.commentId === "string" ? req.params.commentId : "";
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const result = await this.postService.replyToComment(postId, commentId, req.user?.id ?? "", content);
+    let result;
+    try {
+      result = await this.postService.replyToComment(postId, commentId, req.user?.id ?? "", content);
+    } catch (error) {
+      if (error instanceof ContentPolicyViolationError) {
+        return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      throw error;
+    }
     if (!result) {
       return res.status(404).json(createResponse("Comment not found", null, {}, ["Comment not found"]));
     }
     return res.status(201).json(createResponse("Reply created", result));
+  };
+
+  comments = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const comments = await this.postService.listComments(postId, req.user?.id ?? "");
+    return res.status(200).json(createResponse("Comments loaded", comments));
   };
 
   bookmark = async (req: Request, res: Response) => {
@@ -140,27 +168,32 @@ export class PostController {
   feed = async (req: Request, res: Response) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const cursor = req.query.cursor as string | undefined;
-    const items = await this.postService.getFeed(cursor, limit, req.user?.id);
-    const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
-    return res.status(200).json(createResponse("Feed loaded", items, { nextCursor, limit }));
+    const items = await this.postService.getFeed(cursor, limit + 1, req.user?.id);
+    const hasMore = items.length > limit;
+    const visibleItems = items.slice(0, limit);
+    const nextCursor = hasMore && visibleItems.length ? encodePostCursor(visibleItems[visibleItems.length - 1]) : null;
+    return res.status(200).json(createResponse("Feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 
   trendingFeed = async (req: Request, res: Response) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
-    const cursorStr = req.query.cursor as string | undefined;
-    const cursor = cursorStr ? Number(cursorStr) : undefined;
-    const items = await this.postService.getTrendingFeed(cursor, limit, req.user?.id);
-    const nextCursor = items.length === limit ? items[items.length - 1].score : null;
-    return res.status(200).json(createResponse("Trending feed loaded", items, { nextCursor, limit }));
+    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+    const items = await this.postService.getTrendingFeed(cursor, limit + 1, req.user?.id);
+    const hasMore = items.length > limit;
+    const visibleItems = items.slice(0, limit);
+    const nextCursor = hasMore && visibleItems.length ? encodeTrendingCursor(visibleItems[visibleItems.length - 1]) : null;
+    return res.status(200).json(createResponse("Trending feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 
   userFeed = async (req: Request, res: Response) => {
     const userId = typeof req.params.userId === "string" ? req.params.userId : "";
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const cursor = req.query.cursor as string | undefined;
-    const items = await this.postService.getUserFeed(userId, cursor, limit, req.user?.id);
-    const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
-    return res.status(200).json(createResponse("User feed loaded", items, { nextCursor, limit }));
+    const items = await this.postService.getUserFeed(userId, cursor, limit + 1, req.user?.id);
+    const hasMore = items.length > limit;
+    const visibleItems = items.slice(0, limit);
+    const nextCursor = hasMore && visibleItems.length ? encodePostCursor(visibleItems[visibleItems.length - 1]) : null;
+    return res.status(200).json(createResponse("User feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 
 }
