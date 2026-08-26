@@ -188,8 +188,8 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
   return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="sm" disabled={product.availability && product.availability !== 'active'} className="rounded-xl font-bold text-xs bg-primary">{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}</Button></DialogTrigger><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Buy {product.title}</DialogTitle></DialogHeader><div className="space-y-4"><p className="text-sm text-muted-foreground">Your payment is verified server-side before the listing is marked sold. Shipping details are shared with the seller for fulfillment.</p><div className="space-y-1.5"><Label htmlFor={`shipping-name-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Recipient name</Label><Input id={`shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} className="rounded-xl" maxLength={100} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-address-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Shipping / pickup details</Label><Textarea id={`shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} className="rounded-xl resize-none" maxLength={1000} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-phone-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Phone (optional)</Label><Input id={`shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} className="rounded-xl" maxLength={24} /></div>{error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}<Button onClick={() => void startPurchase()} disabled={paying || shippingName.trim().length < 2 || shippingAddress.trim().length < 5} className="w-full rounded-2xl font-bold h-11">{paying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : <>Pay ₹{Number(product.price).toLocaleString('en-IN')}</>}</Button></div></DialogContent></Dialog>;
 }
 
-function OrderHistoryDialog({ orders, products, open, onOpenChange }: { orders: any[]; products: any[]; open: boolean; onOpenChange: (open: boolean) => void }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60 max-w-xl"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Marketplace orders</DialogTitle></DialogHeader><div className="max-h-[60vh] overflow-y-auto space-y-3">{orders.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">Your purchases and sales will appear here.</p> : orders.map((order) => { const product = products.find((item) => item.id === order.productId); return <div key={order.id} className="rounded-2xl border border-border/40 p-4 flex items-center justify-between gap-4"><div className="min-w-0"><p className="font-bold text-sm truncate">{product?.title ?? 'Marketplace item'}</p><p className="text-xs text-muted-foreground font-mono">{order.status} · {new Date(order.createdAt).toLocaleDateString()}</p><p className="text-xs text-muted-foreground">Verified buyer / seller transaction</p></div><span className="font-display font-bold shrink-0">₹{(Number(order.amountMinor) / 100).toLocaleString('en-IN')}</span></div>; })}</div></DialogContent></Dialog>;
+function OrderHistoryDialog({ orders, products, open, onOpenChange, currentUserId, onFulfilled }: { orders: any[]; products: any[]; open: boolean; onOpenChange: (open: boolean) => void; currentUserId?: string; onFulfilled: (orderId: string) => Promise<void> }) {
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60 max-w-xl"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Marketplace orders</DialogTitle></DialogHeader><div className="max-h-[60vh] overflow-y-auto space-y-3">{orders.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">Your purchases and sales will appear here.</p> : orders.map((order) => { const product = products.find((item) => item.id === order.productId); const isSeller = order.sellerId === currentUserId; return <div key={order.id} className="rounded-2xl border border-border/40 p-4 flex items-center justify-between gap-4"><div className="min-w-0"><p className="font-bold text-sm truncate">{product?.title ?? 'Marketplace item'}</p><p className="text-xs text-muted-foreground font-mono">{order.status} · {new Date(order.createdAt).toLocaleDateString()}</p><p className="text-xs text-muted-foreground">{isSeller ? 'Seller order · shipping details available to you' : 'Verified buyer transaction'}</p></div><div className="flex shrink-0 items-center gap-3"><span className="font-display font-bold">₹{(Number(order.amountMinor) / 100).toLocaleString('en-IN')}</span>{isSeller && order.status === 'paid' && <Button size="sm" variant="outline" onClick={() => void onFulfilled(order.id)} className="rounded-xl text-xs font-bold"><PackageCheck className="mr-1 h-3.5 w-3.5" />Fulfill</Button>}</div></div>; })}</div></DialogContent></Dialog>;
 }
 
 export default function Marketplace() {
@@ -211,6 +211,15 @@ export default function Marketplace() {
   const refreshOrders = () => {
     if (!currentUser) return;
     void api.getMarketplaceOrders().then(setOrders).catch(() => setOrders([]));
+  };
+  const fulfillOrder = async (orderId: string) => {
+    try {
+      await api.fulfillMarketplaceOrder(orderId);
+      toast.success('Order marked fulfilled');
+      refreshOrders();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update order');
+    }
   };
   useEffect(() => { refreshOrders(); }, [currentUser?.id]);
 
@@ -242,7 +251,7 @@ export default function Marketplace() {
         </div>
       </div>
 
-      <OrderHistoryDialog orders={orders} products={products} open={ordersOpen} onOpenChange={setOrdersOpen} />
+      <OrderHistoryDialog orders={orders} products={products} open={ordersOpen} onOpenChange={setOrdersOpen} currentUserId={currentUser?.id} onFulfilled={fulfillOrder} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
         {/* Main Section Mode Tabs */}

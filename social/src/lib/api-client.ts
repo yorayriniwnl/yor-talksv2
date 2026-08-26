@@ -524,6 +524,7 @@ export const api = {
     request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(providerOrderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   getMarketplaceOrders: () => request<BackendMarketplaceOrder[]>('/products/orders'),
   cancelMarketplaceOrder: (orderId: string) => request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST' }),
+  fulfillMarketplaceOrder: (orderId: string) => request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(orderId)}/fulfill`, { method: 'POST' }),
 
   // ---- Articles ----
   getArticles: () => request<BackendArticle[]>('/articles'),
@@ -675,7 +676,7 @@ export interface BackendMarketplaceOrder {
   providerOrderId: string;
   amountMinor: number;
   currency: string;
-  status: 'provider_pending' | 'created' | 'paid' | 'cancelled' | 'failed';
+  status: 'provider_pending' | 'created' | 'paid' | 'fulfilled' | 'cancelled' | 'failed';
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

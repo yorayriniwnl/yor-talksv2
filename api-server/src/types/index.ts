@@ -269,7 +269,7 @@ export interface MarketplaceOrderRecord {
   providerSignature?: string | null;
   amountMinor: number;
   currency: string;
-  status: "provider_pending" | "created" | "paid" | "cancelled" | "failed";
+  status: "provider_pending" | "created" | "paid" | "fulfilled" | "cancelled" | "failed";
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

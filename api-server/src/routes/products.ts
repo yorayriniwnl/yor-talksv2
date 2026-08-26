@@ -62,6 +62,16 @@ router.post("/products/orders/:orderId/cancel", authenticate, validateParams(mar
     return res.status(500).json(createResponse("Marketplace order could not be cancelled", null, {}, ["Internal server error"]));
   }
 });
+router.post("/products/orders/:orderId/fulfill", authenticate, validateParams(marketplaceOrderIdParamSchema), async (req, res) => {
+  try {
+    const order = await marketplaceService.fulfillOrder(paramId(req.params.orderId), req.user!.id);
+    return res.status(200).json(createResponse("Marketplace order marked fulfilled", order));
+  } catch (error) {
+    if (error instanceof MarketplaceRequestError) return res.status(400).json(createResponse("Marketplace order could not be fulfilled", null, {}, [error.message]));
+    console.error(error);
+    return res.status(500).json(createResponse("Marketplace order could not be fulfilled", null, {}, ["Internal server error"]));
+  }
+});
 router.get("/products/:id", optionalAuthenticate, productController.get);
 router.post("/products/:id/save", authenticate, productController.toggleSave);
 router.delete("/products/:id", authenticate, productController.remove);

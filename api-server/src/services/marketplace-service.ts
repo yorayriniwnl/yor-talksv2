@@ -183,4 +183,17 @@ export class MarketplaceService {
     await db.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, order.productId), eq(productsTable.availability, "reserved")));
     return order as MarketplaceOrderRecord;
   }
+
+  async fulfillOrder(orderId: string, sellerId: string) {
+    const [order] = await db.update(marketplaceOrdersTable).set({
+      status: "fulfilled",
+      fulfilledAt: new Date().toISOString(),
+    }).where(and(
+      eq(marketplaceOrdersTable.id, orderId),
+      eq(marketplaceOrdersTable.sellerId, sellerId),
+      eq(marketplaceOrdersTable.status, "paid"),
+    )).returning();
+    if (!order) throw new MarketplaceRequestError("Only a paid order belonging to you can be fulfilled");
+    return order as MarketplaceOrderRecord;
+  }
 }
