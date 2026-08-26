@@ -8,8 +8,10 @@ import {
   Globe2,
   Loader2,
   Orbit as OrbitIcon,
+  Radio,
   RefreshCw,
   Sparkles,
+  SlidersHorizontal,
   TrendingUp,
   Users,
   WandSparkles,
@@ -71,6 +73,7 @@ export default function Home() {
   const currentUser = useAppStore((state) => state.currentUser);
   const worldPreferences = useAppStore((state) => state.worldPreferences);
   const communities = useAppStore((state) => state.communities);
+  const liveStreams = useAppStore((state) => state.liveStreams);
   const followUser = useAppStore((state) => state.followUser);
   const unfollowUser = useAppStore((state) => state.unfollowUser);
   const loadFeed = useAppStore((state) => state.loadFeed);
@@ -84,6 +87,7 @@ export default function Home() {
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const displayName = currentUser?.displayName || currentUser?.username || 'there';
   const firstName = displayName.split(/\s+/)[0];
@@ -126,6 +130,7 @@ export default function Home() {
   const hasMore = visibleCount < filteredPosts.length || hasMoreFeed;
   const strongestSignals = [...posts].sort((a, b) => postStrength(b) - postStrength(a)).slice(0, 3);
   const activeWorlds = [...communities].sort((a, b) => Number(b.isMember) - Number(a.isMember) || b.members - a.members).slice(0, 3);
+  const activeLiveStreams = liveStreams.filter((stream) => stream.status === 'live').slice(0, 2);
 
   const changeMode = (nextMode: OrbitMode) => {
     setMode(nextMode);
@@ -171,26 +176,39 @@ export default function Home() {
     <div className="orbit-page">
       <div className="orbit-wrap">
         <section className="home-feed-heading">
-          <div>
-            <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> Home · {worldPreferences.worldLabel} world</span>
-            <h1>{greeting()}, {firstName}.</h1>
+          <div className="home-identity">
+            {currentUser && (
+              <Avatar className="home-identity__avatar">
+                <AvatarImage src={currentUser.avatarUrl} alt="" />
+                <AvatarFallback>{firstName.charAt(0)}</AvatarFallback>
+              </Avatar>
+            )}
+            <div>
+              <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> {worldPreferences.worldLabel} world</span>
+              <h1>{greeting()}, {firstName}.</h1>
+            </div>
           </div>
-          <Link href="/dream" className="home-dream-link">
-            <WandSparkles className="h-4 w-4" />
-            <span>Dream</span>
-          </Link>
+          <div className="home-heading-actions">
+            {activeLiveStreams.length > 0 && (
+              <Link href="/live" className="home-live-link"><span className="home-live-link__dot" />{activeLiveStreams.length} live</Link>
+            )}
+            <Link href="/dream" className="home-dream-link">
+              <WandSparkles className="h-4 w-4" />
+              <span>Dream</span>
+            </Link>
+          </div>
         </section>
 
-        <nav className="home-feed-tabs" aria-label="Choose a feed">
-          <button type="button" onClick={() => changeMode('close')} aria-pressed={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
+        <nav className="home-feed-tabs" aria-label="Choose a feed" role="tablist">
+          <button type="button" role="tab" onClick={() => changeMode('close')} aria-selected={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
             <Users className="h-4 w-4" />
             <span>Following</span>
           </button>
-          <button type="button" onClick={() => changeMode('discover')} aria-pressed={mode === 'discover'} className={cn(mode === 'discover' && 'is-active')}>
+          <button type="button" role="tab" onClick={() => changeMode('discover')} aria-selected={mode === 'discover'} className={cn(mode === 'discover' && 'is-active')}>
             <Compass className="h-4 w-4" />
             <span>For you</span>
           </button>
-          <button type="button" onClick={() => changeMode('build')} aria-pressed={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
+          <button type="button" role="tab" onClick={() => changeMode('build')} aria-selected={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
             <Zap className="h-4 w-4" />
             <span>Build</span>
           </button>
@@ -200,7 +218,7 @@ export default function Home() {
           <main className="orbit-stream">
             <section className="orbit-now-card home-stories-card">
               <div className="home-section-heading">
-                <h2>Stories</h2>
+                <div><span>Fresh from your people</span><h2>Stories</h2></div>
                 <Link href="/pulse">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
               <StoriesRow />
@@ -208,20 +226,27 @@ export default function Home() {
 
             <section className="orbit-composer-card home-composer-card">
               <div className="home-section-heading">
-                <h2>Create post</h2>
+                <div><span>Make something visible</span><h2>Share a moment</h2></div>
+                <span className="home-composer-world">{worldPreferences.worldLabel} world</span>
               </div>
               <CreatePost />
             </section>
 
             <div className="home-feed-toolbar">
               <div>
-                <span>Latest posts</span>
+                <span>Your signal, tuned</span>
                 <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : 'Build'}</strong>
               </div>
-              <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
-                <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-                <span>{isRefreshing ? 'Refreshing' : 'Refresh'}</span>
-              </button>
+              <div className="home-feed-toolbar__actions">
+                <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="home-feed-filters">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>{filtersOpen ? 'Hide filters' : 'Tune'}</span>
+                </button>
+                <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
+                  <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
+                  <span>{isRefreshing ? 'Refreshing' : 'Refresh'}</span>
+                </button>
+              </div>
             </div>
 
             {mode === 'discover' && (
@@ -234,27 +259,32 @@ export default function Home() {
               </div>
             )}
 
-            <div className="orbit-topic-row" aria-label="Filter by content category">
-              <button
-                type="button"
-                onClick={() => { setContentCategory('all'); setVisibleCount(8); }}
-                aria-pressed={contentCategory === 'all'}
-                className={cn(contentCategory === 'all' && 'is-active')}
-              >
-                ✨ All categories
-              </button>
-              {CONTENT_CATEGORIES.map((category) => (
-                <button
-                  type="button"
-                  key={category.value}
-                  onClick={() => { setContentCategory(category.value); setVisibleCount(8); }}
-                  aria-pressed={contentCategory === category.value}
-                  className={cn(contentCategory === category.value && 'is-active')}
-                >
-                  {category.emoji} {category.label}
-                </button>
-              ))}
-            </div>
+            {(filtersOpen || contentCategory !== 'all') && (
+              <div id="home-feed-filters" className="home-filter-stack">
+                <span>Filter by content category</span>
+                <div className="orbit-topic-row" aria-label="Filter by content category">
+                  <button
+                    type="button"
+                    onClick={() => { setContentCategory('all'); setVisibleCount(8); }}
+                    aria-pressed={contentCategory === 'all'}
+                    className={cn(contentCategory === 'all' && 'is-active')}
+                  >
+                    ✨ All categories
+                  </button>
+                  {CONTENT_CATEGORIES.map((category) => (
+                    <button
+                      type="button"
+                      key={category.value}
+                      onClick={() => { setContentCategory(category.value); setVisibleCount(8); }}
+                      aria-pressed={contentCategory === category.value}
+                      className={cn(contentCategory === category.value && 'is-active')}
+                    >
+                      {category.emoji} {category.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {isInitializing ? (
               <FeedSkeleton count={3} />
@@ -304,6 +334,25 @@ export default function Home() {
                   <div><strong>{displayName}</strong><span>@{currentUser.username}</span></div>
                 </Link>
                 <small>{followingIds.length} chosen connections</small>
+              </section>
+            )}
+
+            {activeLiveStreams.length > 0 && (
+              <section className="orbit-rail-card orbit-live-card">
+                <div className="orbit-section-heading">
+                  <div><span>Happening now</span><h2>Live in your orbit</h2></div>
+                  <Radio className="h-4 w-4" />
+                </div>
+                <div className="orbit-live-list">
+                  {activeLiveStreams.map((stream) => (
+                    <Link href="/live" key={stream.id}>
+                      <span className="orbit-live-list__cover">{stream.coverUrl ? <img src={stream.coverUrl} alt="" /> : <Radio className="h-4 w-4" />}</span>
+                      <div><strong>{stream.title}</strong><small><span className="home-live-link__dot" /> {stream.viewers.toLocaleString()} watching</small></div>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ))}
+                </div>
+                <Link href="/live" className="orbit-rail-link">Open live room <ArrowRight className="h-3.5 w-3.5" /></Link>
               </section>
             )}
 
@@ -358,7 +407,7 @@ export default function Home() {
                         <Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl} alt="" /><AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback></Avatar>
                         <span><strong>{user.displayName}</strong><small>@{user.username}</small></span>
                       </Link>
-                      <button onClick={() => toggleFollow(user.id)}>Follow</button>
+                      <button onClick={() => toggleFollow(user.id)} aria-label={`Follow ${user.displayName}`}>Follow</button>
                     </div>
                   ))}
                 </div>
