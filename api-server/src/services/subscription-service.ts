@@ -85,7 +85,7 @@ export class SubscriptionService {
     if (active) {
       throw new SubscriptionRequestError("You already have an active membership for this creator");
     }
-    const pending = existing.find((subscription) => subscription.status === "pending");
+    const pending = existing.find((subscription) => subscription.status === "pending" && subscription.tier === tier.id);
     if (pending) {
       const pendingOrder = await db.select().from(subscriptionOrdersTable).where(and(
         eq(subscriptionOrdersTable.subscriptionId, pending.id),
