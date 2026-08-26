@@ -43,7 +43,7 @@ export default function Studio() {
 
     setTimeout(() => {
       setGeneratedHooks([
-        `🔥 "If you're building tech in India in 2026, you cannot ignore this spatial UI trend..."`,
+        `🔥 "If you're building tech in 2026, you cannot ignore this spatial UI trend..."`,
         `🚀 "How we scaled our gaming squad to Rank #1 Conqueror in South Asia with 0 latency."`,
         `💡 "The secret shader math behind high-performance WebGL reels you see on Yor Talks."`,
       ]);
@@ -224,7 +224,7 @@ export default function Studio() {
                 <Sparkles className="w-4 h-4 text-primary" />
                 <h3>Cinematic Shader Presets for Reels & Live Video</h3>
               </div>
-              <p className="text-xs text-muted-foreground font-mono mb-6">Select real-time hardware accelerated GPU filters designed for Indian lighting and creator aesthetics.</p>
+              <p className="text-xs text-muted-foreground font-mono mb-6">Select real-time hardware accelerated GPU filters designed for diverse lighting and creator aesthetics.</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {SHADER_FILTERS.map((f) => (
@@ -278,7 +278,7 @@ export default function Studio() {
                 <Input
                   value={aiTopic}
                   onChange={(e) => setAiTopic(e.target.value)}
-                  placeholder="e.g. 5 essential WebGL shaders for Indian UI designers or BGMI 1v4 clutch tips"
+                  placeholder="e.g. 5 essential WebGL shaders for global UI designers or a 1v4 clutch breakdown"
                   className="rounded-2xl h-12 text-sm"
                 />
               </div>

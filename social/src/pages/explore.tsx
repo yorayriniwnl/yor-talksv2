@@ -457,7 +457,7 @@ export default function Explore() {
               <section>
                 <div className="flex items-center justify-between mb-4 px-1">
                   <h3 className="font-display font-bold text-xl flex items-center gap-2">Explore Feed</h3>
-                  <Button variant="ghost" className="text-primary font-bold text-sm h-8 px-3 rounded-full">See All <ArrowUpRight className="w-4 h-4 ml-1" /></Button>
+                  <Button type="button" variant="ghost" onClick={() => { setSelectedGenre('all'); setQuery(''); }} className="text-primary font-bold text-sm h-8 px-3 rounded-full">See All <ArrowUpRight className="w-4 h-4 ml-1" /></Button>
                 </div>
                 
                 {visualPosts.length > 0 ? (

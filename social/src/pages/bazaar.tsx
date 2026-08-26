@@ -100,7 +100,7 @@ export default function Bazaar() {
         </div>
 
         <div className="level-badge shadow-sm">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Indian Studios
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Creator Studios
         </div>
       </div>
 

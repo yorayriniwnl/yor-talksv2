@@ -12,11 +12,11 @@ interface BadgeShowcaseModalProps {
 }
 
 const SOCIAL_BADGES = [
-  { id: 'b1', title: 'Yor Pioneer (भारत)', description: 'Early founding member of India’s next-gen social network', xp: 500, icon: Sparkles, color: 'from-purple-500 to-indigo-600', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b2', title: '100 Social Waves', description: 'Liked and reacted to 100 community posts across India', xp: 350, icon: Heart, color: 'from-rose-500 to-pink-600', unlocked: true, date: 'Unlocked Aug 2026' },
+  { id: 'b1', title: 'Yor Pioneer', description: 'Early founding member of Yor’s next-generation social network', xp: 500, icon: Sparkles, color: 'from-purple-500 to-indigo-600', unlocked: true, date: 'Unlocked Aug 2026' },
+  { id: 'b2', title: '100 Social Waves', description: 'Liked and reacted to 100 community posts across the world', xp: 350, icon: Heart, color: 'from-rose-500 to-pink-600', unlocked: true, date: 'Unlocked Aug 2026' },
   { id: 'b3', title: 'Master Storyteller', description: 'Published 10 high-resolution stories', xp: 450, icon: Flame, color: 'from-amber-400 to-orange-500', unlocked: true, date: 'Unlocked Aug 2026' },
   { id: 'b4', title: 'Top Supporter', description: 'Awarded 5 Creator Awards (Koh-i-Noor 💎 & Diya ✨)', xp: 600, icon: Trophy, color: 'from-emerald-400 to-teal-600', unlocked: false, date: 'Locked (3/5 Progress)' },
-  { id: 'b5', title: 'Community Architect', description: 'Joined 5 specialized tech & gaming circles in India', xp: 800, icon: Shield, color: 'from-cyan-400 to-blue-600', unlocked: false, date: 'Locked (2/5 Progress)' },
+  { id: 'b5', title: 'Community Architect', description: 'Joined 5 specialized tech and gaming circles worldwide', xp: 800, icon: Shield, color: 'from-cyan-400 to-blue-600', unlocked: false, date: 'Locked (2/5 Progress)' },
 ];
 
 export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalProps) {

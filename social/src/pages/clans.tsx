@@ -174,7 +174,7 @@ export default function Clans() {
                 <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
                   <Swords className="w-5 h-5 text-emerald-400" /> Tier-1 Daily Practice Scrims
                 </h3>
-                <p className="text-xs text-muted-foreground font-mono mt-1">Book official practice customs hosted by verified Indian esports leagues.</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">Book official practice customs hosted by verified esports leagues.</p>
               </div>
 
               <Button
