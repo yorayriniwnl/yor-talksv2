@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Briefcase, IndianRupee, Sparkles, Trophy, Calendar, 
   ExternalLink, CheckCircle2, Send, Github, Video, ShieldCheck, Clock 
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface BountyItem {
@@ -121,14 +120,32 @@ export default function Bounties() {
   const categories = ['All', ...Array.from(new Set(BOUNTIES.map(b => b.category)))];
   const filteredBounties = bounties.filter(b => selectedCategory === 'All' || b.category === selectedCategory);
 
-  const handleSubmitApplication = () => {
+  const handleSaveApplicationDraft = () => {
     if (!githubUrl.trim()) {
       toast.error('Please provide a GitHub Repository link');
       return;
     }
+    let github: URL;
+    try {
+      github = new URL(githubUrl.trim());
+    } catch {
+      toast.error('Enter a valid GitHub Repository URL');
+      return;
+    }
+    if (github.protocol !== 'https:' || github.hostname.toLowerCase() !== 'github.com') {
+      toast.error('Use an https://github.com/... repository URL');
+      return;
+    }
+    if (!selectedBounty) return;
+    localStorage.setItem(`yor-bounty-draft:${selectedBounty.id}`, JSON.stringify({
+      bountyId: selectedBounty.id,
+      githubUrl: github.toString(),
+      demoUrl: demoUrl.trim(),
+      pitchText: pitchText.trim(),
+      savedAt: new Date().toISOString(),
+    }));
     sounds.playChime();
-    triggerConfetti();
-    toast.success(`🎉 Proposal submitted for "${selectedBounty?.title}"! Grant committee review takes 48 hours.`);
+    toast.info(`Proposal draft saved on this device for "${selectedBounty.title}". It was not submitted to a grant committee.`);
     setIsSubmitOpen(false);
     setGithubUrl('');
     setDemoUrl('');
@@ -145,12 +162,12 @@ export default function Bounties() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Creator Grants & Bounties</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">₹17,50,000 in Active Grants for Indian Engineers & Creators</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Grant directory preview · sponsor verification and submissions are not connected yet</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> 100% Escrow Verified Grants
+          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Grant listings are unverified
         </div>
       </div>
 
@@ -249,7 +266,7 @@ export default function Bounties() {
             <div className="p-3 rounded-2xl bg-muted/40 border border-border/40 text-xs font-mono">
               <span className="text-muted-foreground block text-[0.65rem] uppercase">Target Grant</span>
               <strong className="text-foreground">{selectedBounty?.title}</strong>
-              <div className="text-emerald-400 font-bold mt-1">₹{selectedBounty?.grantAmountINR.toLocaleString()} INR Total Escrow Fund</div>
+              <div className="text-amber-400 font-bold mt-1">₹{selectedBounty?.grantAmountINR.toLocaleString()} INR · verify with the sponsor before applying</div>
             </div>
 
             <div className="space-y-2">
@@ -289,10 +306,10 @@ export default function Bounties() {
 
           <DialogFooter>
             <Button
-              onClick={handleSubmitApplication}
+              onClick={handleSaveApplicationDraft}
               className="w-full rounded-2xl font-bold text-xs h-11 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary"
             >
-              <CheckCircle2 className="w-4 h-4 mr-1.5" /> Submit Grant Application
+              <CheckCircle2 className="w-4 h-4 mr-1.5" /> Save Proposal Draft
             </Button>
           </DialogFooter>
         </DialogContent>

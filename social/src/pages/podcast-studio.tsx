@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Radio, Mic, MicOff, Hand, MessageSquare, 
   Sparkles, Users, Flame, Volume2, ShieldCheck, Heart 
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface Speaker {
@@ -84,16 +83,15 @@ export default function PodcastStudio() {
     sounds.playChime();
     setIsHandRaised(!isHandRaised);
     if (!isHandRaised) {
-      toast.success('✋ Hand raised! Host has been notified to bring you onto the stage.');
+      toast.info('✋ Hand marked in this stage preview. No host notification was sent.');
     } else {
-      toast.info('Hand lowered.');
+      toast.info('Hand lowered in this stage preview.');
     }
   };
 
   const handleReact = (emoji: string) => {
     sounds.playPop();
-    triggerConfetti();
-    toast.success(`Sent live reaction ${emoji}!`);
+    toast.info(`Reaction ${emoji} recorded in this stage preview. No live event was sent.`);
   };
 
   return (
@@ -106,7 +104,7 @@ export default function PodcastStudio() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Bharat Live Audio Stage & Podcast</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Live Voice Panels, Esports Debates & Interactive Audience</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Audio stage preview · live panel transport is not connected yet</p>
           </div>
         </div>
 
@@ -117,7 +115,7 @@ export default function PodcastStudio() {
             onClick={handleRaiseHand}
             className={cn("rounded-2xl font-bold text-xs", isHandRaised && "bg-amber-500 text-black glow-neon-primary")}
           >
-            <Hand className="w-3.5 h-3.5 mr-1" /> {isHandRaised ? 'Hand Raised ✋' : 'Raise Hand'}
+            <Hand className="w-3.5 h-3.5 mr-1" /> {isHandRaised ? 'Hand Marked ✋' : 'Mark Hand (Preview)'}
           </Button>
         </div>
       </div>

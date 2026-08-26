@@ -195,7 +195,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
             <div className="flex items-center gap-4 text-xs font-mono text-zinc-300 mt-2">
               <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-primary" /> {community.members.toLocaleString()} Members</span>
               <span>·</span>
-              <span className="flex items-center gap-1.5 text-emerald-400 font-bold"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> 842 Online In-Game</span>
+              <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-2 h-2 rounded-full bg-muted-foreground" /> Live presence appears when members connect</span>
             </div>
           </div>
 
