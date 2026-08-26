@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  Trophy, TrendingUp, Shield, Star, Sparkles, 
-  Flame, Swords, CheckCircle2, ArrowUpRight, Award 
+  Trophy, TrendingUp, Shield, Star, Sparkles,
+  Flame, Swords, CheckCircle2, ArrowUpRight, Award
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface ClanRank {
@@ -83,13 +82,22 @@ const CLAN_RANKINGS: ClanRank[] = [
 
 export default function PowerRankings() {
   const [selectedTier, setSelectedTier] = useState<'all' | 'tier1' | 'tier2'>('all');
+  const [votedClan, setVotedClan] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem('yor-power-rankings-preview-vote');
+  });
 
   const filtered = CLAN_RANKINGS.filter(c => selectedTier === 'all' || c.tier === selectedTier);
 
   const handleVoteMVP = (clanName: string) => {
+    if (votedClan) {
+      toast.info(`Your preview vote is already saved for ${votedClan} on this device.`);
+      return;
+    }
     sounds.playChime();
-    triggerConfetti();
-    toast.success(`🎉 Fan MVP Vote cast for ${clanName}! +50 Fan Karma awarded.`);
+    window.localStorage.setItem('yor-power-rankings-preview-vote', clanName);
+    setVotedClan(clanName);
+    toast.info(`Preview vote saved for ${clanName}. No national ranking or Karma ledger was updated.`);
   };
 
   return (
@@ -102,12 +110,12 @@ export default function PowerRankings() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">National Clan Elo & Power Rankings</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Official Indian Esports League Matrix & Tier Divisions</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Rankings snapshot & tier divisions · league voting is not connected yet</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <Award className="w-3.5 h-3.5 fill-amber-400" /> Season 1 National Matrix
+          <Award className="w-3.5 h-3.5 fill-amber-400" /> Season 1 Snapshot
         </div>
       </div>
 
@@ -183,9 +191,10 @@ export default function PowerRankings() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleVoteMVP(c.name)}
+                    disabled={Boolean(votedClan)}
                     className="rounded-xl font-bold text-xs h-9"
                   >
-                    <Star className="w-3.5 h-3.5 mr-1 text-amber-400 fill-amber-400" /> Vote MVP
+                    <Star className="w-3.5 h-3.5 mr-1 text-amber-400 fill-amber-400" /> {votedClan === c.name ? 'Voted on this device' : 'Vote (Preview)'}
                   </Button>
                 </div>
               </div>

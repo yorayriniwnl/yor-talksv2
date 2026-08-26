@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  Film, Scissors, Play, Pause, Download, Share2, 
-  Sparkles, Sliders, Flame, Type, Music, CheckCircle2 
+  Film, Scissors, Play, Pause, Download, Share2,
+  Sparkles, Sliders, Flame, Type, Music
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
@@ -18,7 +18,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { type ContentCategory } from '@/lib/content-category';
 
 export default function ClipStudio() {
-  const addPost = useAppStore((s) => s.addPost);
+  const createVideo = useAppStore((s) => s.createVideo);
   const [isPlaying, setIsPlaying] = useState(false);
   const [captionText, setCaptionText] = useState('WHAT A CLUTCH 1v4 ACE BY GODLIKE! 🔥');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
@@ -26,11 +26,30 @@ export default function ClipStudio() {
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [publishing, setPublishing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl('');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedFile]);
 
   const handleExportReel = () => {
+    if (!selectedFile || !previewUrl) {
+      toast.info('Choose a source video first. Export is unavailable without creator media.');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = previewUrl;
+    link.download = `yor-clip-source-${Date.now()}${selectedFile.name.slice(selectedFile.name.lastIndexOf('.')) || '.webm'}`;
+    link.click();
     sounds.playChime();
-    triggerConfetti();
-    toast.success('🎬 Vertical 9:16 Esports Highlight Reel exported in 1080p 60fps!');
+    toast.info('Source clip downloaded. Timeline rendering, SFX mixing, and 9:16 transcoding remain preview-only.');
   };
 
   const handlePostToReels = async () => {
@@ -38,14 +57,24 @@ export default function ClipStudio() {
       toast.error('Choose a category before publishing this highlight.');
       return;
     }
+    if (!selectedFile) {
+      toast.error('Choose a source video before publishing this highlight.');
+      return;
+    }
     setPublishing(true);
     sounds.playChime();
     try {
-      await addPost(`🎬 Clutched with Yor Clip Studio:\n\n"${captionText.trim()}"`, [
-        'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop'
-      ], undefined, contentRating, contentCategory);
-      triggerConfetti();
-      toast.success('🎉 Published highlight to your feed!');
+      const uploaded = await api.uploadMedia(selectedFile);
+      await createVideo({
+        title: captionText.trim() || 'Yor Clip Studio highlight',
+        videoUrl: uploaded.url,
+        thumbnailUrl: uploaded.thumbnailUrl,
+        type: 'short',
+        contentCategory,
+        contentRating,
+      });
+      toast.success('Highlight uploaded and published to Reels.');
+      setSelectedFile(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not publish this highlight');
     } finally {
@@ -85,11 +114,13 @@ export default function ClipStudio() {
           <div className="lg:col-span-6 flex justify-center">
             <div className="surface-1 rounded-3xl p-4 border border-border/40 shadow-2xl overflow-hidden w-full max-w-[320px] relative">
               <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-black relative flex flex-col justify-between p-4">
-                <img
-                  src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop"
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover opacity-80"
-                />
+                {previewUrl ? (
+                  <video src={previewUrl} aria-label="Selected clip preview" className="absolute inset-0 w-full h-full object-cover opacity-80" controls muted playsInline />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-900 via-indigo-950 to-black px-8 text-center text-xs font-mono text-zinc-400">
+                    Select a source video to preview your clip.
+                  </div>
+                )}
 
                 {/* Top Badge */}
                 <div className="relative z-10 flex justify-between items-center">
@@ -129,6 +160,14 @@ export default function ClipStudio() {
                 placeholder="TYPE VIRAL STREAM HIGHLIGHT CAPTION..."
                 className="rounded-xl font-bold font-display text-sm uppercase h-11"
               />
+            </div>
+
+            <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-3 shadow-sm">
+              <Label htmlFor="clip-source-video" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Source video</Label>
+              <Input id="clip-source-video" type="file" accept="video/*" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} className="rounded-xl" />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {selectedFile ? `${selectedFile.name} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : 'Upload the clip you own. The file is sent to secure media storage when you publish.'}
+              </p>
             </div>
 
             <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-3 shadow-sm">

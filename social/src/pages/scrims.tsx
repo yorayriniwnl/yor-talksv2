@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Shield, Swords, CheckCircle2, XCircle, Key, 
-  Copy, Trophy, Sparkles, MapPin, Radio, Lock 
+import {
+  Shield, Swords, CheckCircle2, XCircle, Key,
+  Copy, Trophy, Sparkles, MapPin, Radio, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
 interface MapItem {
@@ -34,14 +33,13 @@ export default function Scrims() {
   const [maps, setMaps] = useState<MapItem[]>(ESPORTS_MAPS);
   const [currentTurn, setCurrentTurn] = useState<'Team A' | 'Team B'>('Team A');
   const [vetoStep, setVetoStep] = useState(1);
-  const [roomKeyRevealed, setRoomKeyRevealed] = useState(false);
 
   const handleBanMap = (mapId: string) => {
     sounds.playPop();
     setMaps(prev => prev.map(m => m.id === mapId ? { ...m, bannedBy: currentTurn } : m));
     setCurrentTurn(t => t === 'Team A' ? 'Team B' : 'Team A');
     setVetoStep(s => s + 1);
-    toast.success(`Map banned by ${currentTurn}!`);
+    toast.info(`Map ban saved in this browser for ${currentTurn}. This practice veto is not a live tournament result.`);
   };
 
   const handlePickMap = (mapId: string) => {
@@ -49,8 +47,7 @@ export default function Scrims() {
     setMaps(prev => prev.map(m => m.id === mapId ? { ...m, pickedBy: currentTurn } : m));
     setCurrentTurn(t => t === 'Team A' ? 'Team B' : 'Team A');
     setVetoStep(s => s + 1);
-    triggerConfetti();
-    toast.success(`🎉 Official Match Map Locked by ${currentTurn}!`);
+    toast.info(`Map pick saved in this browser for ${currentTurn}. This practice veto is not a live tournament result.`);
   };
 
   return (
@@ -63,12 +60,12 @@ export default function Scrims() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Esports Scrims & Map Veto Hub</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Live Tournament Room Keys & Map Pick/Ban Phase</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Practice map pick/ban phase · live credentials require a tournament session</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> Live Scrim Lobby
+          <Radio className="w-3.5 h-3.5 text-amber-400" /> Practice Lobby
         </div>
       </div>
 
@@ -110,27 +107,15 @@ export default function Scrims() {
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-display font-bold text-sm text-foreground">Custom Lobby Key (Anti-Cheat Protected)</h4>
-              <p className="text-xs font-mono text-muted-foreground">Encrypted server credentials for official match entry</p>
+              <h4 className="font-display font-bold text-sm text-foreground">Custom Lobby Credentials</h4>
+              <p className="text-xs font-mono text-muted-foreground">Credentials appear only after a verified tournament service assigns a live match</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {roomKeyRevealed ? (
-              <span className="px-4 py-2 rounded-xl bg-muted font-mono font-bold text-xs text-emerald-400 border border-emerald-500/30">
-                ROOM-ID: 849204 · PASS: YOR2026
-              </span>
-            ) : (
-              <Button
-                onClick={() => {
-                  sounds.playPop();
-                  setRoomKeyRevealed(true);
-                }}
-                className="rounded-2xl font-bold text-xs h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black glow-neon-primary"
-              >
-                <Lock className="w-3.5 h-3.5 mr-1" /> Reveal Match Room Key
-              </Button>
-            )}
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs font-bold text-amber-300">
+              <Info className="h-3.5 w-3.5" /> No active credentials
+            </span>
           </div>
         </div>
 
@@ -138,7 +123,7 @@ export default function Scrims() {
         <div className="space-y-4">
           <div className="showcase-section-title">
             <MapPin className="w-4 h-4 text-primary" />
-            <h3>Map Pool & Interactive Veto</h3>
+            <h3>Map Pool & Practice Veto</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
