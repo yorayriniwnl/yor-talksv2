@@ -8,6 +8,7 @@ import { ConversationRepository, MessageRepository } from "../repositories/messa
 import { UserRepository } from "../repositories/user-repository.js";
 import { MessageBlockedError, MessageService } from "../services/message-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
+import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 
 export const attachSocketServer = (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
@@ -22,6 +23,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
   const userRepository = new UserRepository();
   const redisRepository = new RedisRepository();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
+  const liveStreamRepository = new LiveStreamRepository();
   const onlineUsers = new Map<string, string>();
 
   io.use(async (socket, next) => {
@@ -48,6 +50,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
   io.on("connection", async (socket) => {
     const userId = socket.data.userId as string;
+    const joinedStreams = new Set<string>();
     onlineUsers.set(userId, socket.id);
     socket.join(userId);
     logger.info({ userId }, "socket connected");
@@ -139,15 +142,29 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     // WebRTC Live Stream Signaling
     socket.on("stream:join", async (payload: { streamId?: unknown } = {}) => {
       const { streamId } = payload;
-      if (typeof streamId === "string") {
-        socket.join(`stream:${streamId}`);
-        socket.to(`stream:${streamId}`).emit("stream:peer-joined", { userId, socketId: socket.id });
+      if (typeof streamId !== "string" || !streamId) return;
+
+      let stream;
+      try {
+        stream = await liveStreamRepository.findById(streamId);
+      } catch (error) {
+        logger.warn({ error, userId, streamId }, "Failed to authorize stream room join");
+        socket.emit("stream:error", { streamId, error: "Stream is temporarily unavailable" });
+        return;
       }
+      if (!stream || (stream.status !== "live" && stream.hostId !== userId)) {
+        socket.emit("stream:error", { streamId, error: "Stream is unavailable" });
+        return;
+      }
+
+      joinedStreams.add(streamId);
+      socket.join(`stream:${streamId}`);
+      socket.to(`stream:${streamId}`).emit("stream:peer-joined", { userId, socketId: socket.id });
     });
 
     socket.on("stream:leave", (payload: { streamId?: unknown } = {}) => {
       const { streamId } = payload;
-      if (typeof streamId === "string") {
+      if (typeof streamId === "string" && joinedStreams.delete(streamId)) {
         socket.leave(`stream:${streamId}`);
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
       }
@@ -155,26 +172,38 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
     socket.on("webrtc:offer", (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
       const { targetSocketId, offer, streamId } = payload;
-      if (typeof targetSocketId === "string" && offer && typeof streamId === "string") {
-        io.to(targetSocketId).emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
+      if (typeof targetSocketId === "string" && offer && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const target = io.sockets.sockets.get(targetSocketId);
+        if (target?.rooms.has(`stream:${streamId}`)) {
+          target.emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
+        }
       }
     });
 
     socket.on("webrtc:answer", (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
       const { targetSocketId, answer, streamId } = payload;
-      if (typeof targetSocketId === "string" && answer && typeof streamId === "string") {
-        io.to(targetSocketId).emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
+      if (typeof targetSocketId === "string" && answer && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const target = io.sockets.sockets.get(targetSocketId);
+        if (target?.rooms.has(`stream:${streamId}`)) {
+          target.emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
+        }
       }
     });
 
     socket.on("webrtc:ice-candidate", (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
       const { targetSocketId, candidate, streamId } = payload;
-      if (typeof targetSocketId === "string" && candidate && typeof streamId === "string") {
-        io.to(targetSocketId).emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
+      if (typeof targetSocketId === "string" && candidate && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const target = io.sockets.sockets.get(targetSocketId);
+        if (target?.rooms.has(`stream:${streamId}`)) {
+          target.emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
+        }
       }
     });
 
     socket.on("disconnect", () => {
+      for (const streamId of joinedStreams) {
+        socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
+      }
       onlineUsers.delete(userId);
       logger.info({ userId }, "socket disconnected");
     });
