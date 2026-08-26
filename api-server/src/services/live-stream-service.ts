@@ -7,6 +7,8 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 const VALID_STATUSES = ["scheduled", "live", "ended"] as const;
 type StreamStatus = (typeof VALID_STATUSES)[number];
@@ -19,6 +21,7 @@ export class LiveStreamService {
     private readonly liveStreamRepository: LiveStreamRepository,
     private readonly liveKitService: LiveKitService = new LiveKitService(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly aiService: AIService = new AIService(),
   ) {}
 
   async createStream(input: {
@@ -30,6 +33,7 @@ export class LiveStreamService {
     category: string;
     contentRating?: LiveStreamRecord["contentRating"];
   }): Promise<LiveStreamRecord> {
+    await enforceTextContentPolicy(input.title, this.aiService, "live stream title");
     const stream: LiveStreamRecord = {
       id: randomUUID(),
       ...input,

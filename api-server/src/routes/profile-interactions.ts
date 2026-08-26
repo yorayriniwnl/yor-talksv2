@@ -5,7 +5,8 @@ import { toPublicUser } from "../utils/user-view.js";
 import { createResponse } from "../utils/response.js";
 import { userIdParamSchema } from "../validators/params.js";
 import { profileCommentIdParamSchema, profileCommentSchema, profileShowcaseIdParamSchema, profileShowcaseSchema } from "../validators/profile.js";
-import { ProfileContentPolicyViolationError, ProfileInteractionForbiddenError, ProfileInteractionRequestError, ProfileInteractionService } from "../services/profile-interaction-service.js";
+import { ContentPolicyViolationError } from "../services/content-policy-service.js";
+import { ProfileInteractionForbiddenError, ProfileInteractionRequestError, ProfileInteractionService } from "../services/profile-interaction-service.js";
 
 const router = Router();
 const service = new ProfileInteractionService();
@@ -41,7 +42,7 @@ router.post("/users/:userId/profile-comments", authenticate, validateParams(user
       createdAt: result.comment.createdAt,
     }));
   } catch (error) {
-    if (error instanceof ProfileContentPolicyViolationError) return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
+    if (error instanceof ContentPolicyViolationError) return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
     if (error instanceof ProfileInteractionForbiddenError) return res.status(403).json(createResponse("Profile comment could not be created", null, {}, [error.message]));
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile not found", null, {}, [error.message]));
     console.error(error);

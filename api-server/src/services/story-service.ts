@@ -4,11 +4,14 @@ import type { StoryRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 export class StoryService {
   constructor(
     private readonly storyRepository: StoryRepository,
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly aiService: AIService = new AIService(),
   ) {}
 
   async createStory(input: {
@@ -23,6 +26,11 @@ export class StoryService {
     contentRating?: StoryRecord["contentRating"];
     poll?: { question: string; options: Array<{ text: string }> };
   }): Promise<StoryRecord> {
+    await enforceTextContentPolicy([
+      input.textContent ?? "",
+      input.poll?.question ?? "",
+      ...(input.poll?.options ?? []).map((option) => option.text),
+    ].join("\n"), this.aiService, "story");
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 

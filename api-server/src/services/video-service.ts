@@ -4,11 +4,14 @@ import type { VideoRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 export class VideoService {
   constructor(
     private readonly videoRepository: VideoRepository,
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly aiService: AIService = new AIService(),
   ) {}
 
   async createVideo(input: {
@@ -20,6 +23,7 @@ export class VideoService {
     contentCategory?: VideoRecord["contentCategory"];
     contentRating?: VideoRecord["contentRating"];
   }): Promise<VideoRecord> {
+    await enforceTextContentPolicy(input.title, this.aiService, "video");
     const video: VideoRecord = {
       id: randomUUID(),
       ...input,

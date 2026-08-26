@@ -3,23 +3,13 @@ import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { profileCommentsTable, profileShowcasesTable } from "@workspace/db/schema";
 import { UserRepository } from "../repositories/user-repository.js";
-import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 import type { ProfileCommentRecord, ProfileShowcaseRecord, UserRecord } from "../types/index.js";
 
 export class ProfileInteractionRequestError extends Error {}
 export class ProfileInteractionForbiddenError extends Error {}
-export class ProfileContentPolicyViolationError extends Error {
-  constructor(message: string, public readonly moderation: { spam: boolean; toxicity: boolean; nsfw: boolean }) {
-    super(message);
-    this.name = "ProfileContentPolicyViolationError";
-  }
-}
-
 export class ProfileInteractionService {
-  constructor(
-    private readonly userRepository = new UserRepository(),
-    private readonly aiService = new AIService(),
-  ) {}
+  constructor(private readonly userRepository = new UserRepository()) {}
 
   private async assertVisible(profileId: string, viewerId: string): Promise<UserRecord> {
     const profile = await this.userRepository.findById(profileId);
@@ -46,10 +36,7 @@ export class ProfileInteractionService {
     const author = await this.userRepository.findById(authorId);
     if (!author || profile.blockedUsers?.includes(authorId) || author.blockedUsers?.includes(profileId)) throw new ProfileInteractionForbiddenError("You cannot comment on this profile");
     const normalizedContent = content.trim();
-    const moderation = normalizedContent ? await this.aiService.moderate(normalizedContent) : { spam: false, toxicity: false, nsfw: false };
-    if (moderation.spam || moderation.toxicity || moderation.nsfw) {
-      throw new ProfileContentPolicyViolationError("This profile comment was blocked by the safety filter", moderation);
-    }
+    await enforceTextContentPolicy(normalizedContent, undefined, "profile comment");
     const [created] = await db.insert(profileCommentsTable).values({
       id: randomUUID(),
       profileId,

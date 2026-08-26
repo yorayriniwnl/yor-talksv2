@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { ProductRepository } from "../repositories/product-repository.js";
 import type { ProductRecord } from "../types/index.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 export class ProductService {
-  constructor(private readonly productRepository: ProductRepository) {}
+  constructor(
+    private readonly productRepository: ProductRepository,
+    private readonly aiService: AIService = new AIService(),
+  ) {}
 
   async createProduct(input: {
     sellerId: string;
@@ -14,6 +19,7 @@ export class ProductService {
     category: string;
     condition: string;
   }): Promise<ProductRecord> {
+    await enforceTextContentPolicy(`${input.title}\n${input.description}`, this.aiService, "marketplace listing");
     const product: ProductRecord = {
       id: randomUUID(),
       ...input,

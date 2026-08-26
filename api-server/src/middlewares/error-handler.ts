@@ -4,6 +4,7 @@ import { logger } from "../lib/logger.js";
 import { createResponse } from "../utils/response.js";
 import { env } from "../config/env.js";
 import { InvalidFileTypeError } from "./upload.js";
+import { ContentPolicyViolationError } from "../services/content-policy-service.js";
 
 export const errorHandler = (err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (res.headersSent) {
@@ -11,6 +12,9 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, next: N
   }
   if (err instanceof multer.MulterError || err instanceof InvalidFileTypeError) {
     return res.status(400).json(createResponse("Invalid file upload", null, {}, [err.message]));
+  }
+  if (err instanceof ContentPolicyViolationError) {
+    return res.status(422).json(createResponse(err.message, null, {}, ["content_policy_violation"]));
   }
   logger.error({ err }, "Unhandled error");
   const isProd = env.NODE_ENV === "production";

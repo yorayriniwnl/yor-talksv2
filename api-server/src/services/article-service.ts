@@ -4,6 +4,8 @@ import type { ArticleRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { AIService } from "./ai-service.js";
+import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 // Claps are an increment-only counter on the row (matching the schema, and
 // the same pattern Medium itself uses) — there's no per-user "have I already
@@ -14,6 +16,7 @@ export class ArticleService {
   constructor(
     private readonly articleRepository: ArticleRepository,
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly aiService: AIService = new AIService(),
   ) {}
 
   async createArticle(input: {
@@ -27,6 +30,7 @@ export class ArticleService {
     contentCategory?: ArticleRecord["contentCategory"];
     contentRating?: ArticleRecord["contentRating"];
   }): Promise<ArticleRecord> {
+    await enforceTextContentPolicy(`${input.title}\n${input.excerpt}\n${input.content}`, this.aiService, "article");
     const article: ArticleRecord = {
       id: randomUUID(),
       ...input,
