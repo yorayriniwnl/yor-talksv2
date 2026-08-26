@@ -375,13 +375,9 @@ export default function Auth() {
                 <div><strong>Verified access</strong><span>Use an email address you can verify to get started.</span></div>
               </div>
 
-              {mode === 'login' && (
+              {mode === 'login' && googleClientId && (
                 <div className="my-5 space-y-3">
-                  {googleClientId ? (
-                    <div ref={googleButtonRef} className="flex min-h-10 justify-center" aria-label="Sign in with Google" />
-                  ) : (
-                    <p className="text-center text-[0.68rem] text-muted-foreground">Google sign-in will appear here once it is configured.</p>
-                  )}
+                  <div ref={googleButtonRef} className="flex min-h-10 justify-center" aria-label="Sign in with Google" />
                   <div className="flex items-center gap-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
                     <span className="h-px flex-1 bg-border" />
                     <span>or continue with</span>
