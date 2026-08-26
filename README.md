@@ -16,6 +16,9 @@ The launch path supports a global deployment or a closed beta:
 - Postgres and Redis are included in Docker Compose.
 - Resend email delivery supports password reset, verification, and email-code
   login when configured.
+- GitHub-style number matching protects accounts with an authenticated Yor
+  device approval flow, with TOTP as an explicit fallback.
+- Browser Web Push delivers notification events when VAPID keys are configured.
 - Cloudinary handles avatar, image, and stored video uploads when configured.
 - Razorpay Checkout supports UPI/card tip orders with server-side capture
   verification and wallet ledger settlement when configured.
@@ -71,6 +74,13 @@ Docker, then rebuild the API:
 - LiveKit Cloud: create a project and set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
   `LIVEKIT_API_SECRET`. The server issues short-lived room tokens; the secret
   is never sent to the frontend.
+- Web Push: generate VAPID keys and set `WEB_PUSH_VAPID_PUBLIC_KEY`,
+  `WEB_PUSH_VAPID_PRIVATE_KEY`, and a verified `WEB_PUSH_VAPID_SUBJECT`.
+- WebRTC calls: set `VITE_RTC_ICE_SERVERS` to a JSON array containing a
+  production TURN server (STUN alone is not reliable across carrier NATs).
+  If the frontend is on Vercel and the API is elsewhere, set
+  `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter must point to a
+  long-lived Socket.IO process.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
   then set the same client ID in both `GOOGLE_CLIENT_ID` and
@@ -141,6 +151,10 @@ pnpm --filter @workspace/api-server test
   a duplicate callback before switching to live keys.
 - Confirm the browser can reach the LiveKit WebSocket URL from the deployed
   frontend origin and test camera/microphone permissions on campus Wi-Fi.
+- Confirm `VITE_API_BASE_URL` supports credentialed CORS and that
+  `VITE_REALTIME_URL` accepts Socket.IO WebSocket upgrades. Vercel can host the
+  static frontend and HTTP serverless API, but the Socket.IO process, workers,
+  and durable realtime calls should run on a long-lived service.
 - Keep the Docker API and frontend on the same origin so cookies and Socket.IO
   behave consistently.
 - If `ALLOWED_EMAIL_DOMAINS` is configured, invite only approved addresses;

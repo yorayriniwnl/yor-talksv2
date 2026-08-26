@@ -1,8 +1,8 @@
 // Real API client for the backend built in api-server/. Every function here
 // hits an endpoint that's actually implemented and verified end-to-end.
-// Vite's dev server proxies /api to the backend (see social/vite.config.ts),
-// so these are same-origin relative calls in both dev and any deployment
-// that serves the built frontend behind the same reverse proxy as the API.
+// Vite's dev server proxies /api to the backend (see social/vite.config.ts).
+// A Vercel frontend can point at a separately hosted API with
+// VITE_API_BASE_URL without changing application code.
 
 export interface Tokens {
   accessToken: string;
@@ -32,6 +32,7 @@ export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
 let memoryAccessToken: string | null = null;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export function getStoredTokens(): Tokens | null {
   if (memoryAccessToken) return { accessToken: memoryAccessToken };
@@ -90,7 +91,7 @@ async function tryRefresh(): Promise<Tokens | null> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       try {
-        const res = await fetch('/api/auth/refresh', {
+        const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -124,7 +125,7 @@ async function request<T>(path: string, options: RequestInit = {}, isRetry = fal
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const res = await fetch(`/api${path}`, { ...options, headers, credentials: 'include' });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: 'include' });
 
   if (res.status === 401 && !isRetry) {
     const refreshed = await tryRefresh();

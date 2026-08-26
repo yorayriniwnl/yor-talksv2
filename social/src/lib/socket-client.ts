@@ -9,7 +9,8 @@ export function connectSocket(): Socket | null {
   if (!tokens) return null;
   if (socket?.connected) return socket;
 
-  socket = io({
+  const realtimeUrl = (import.meta.env.VITE_REALTIME_URL as string | undefined)?.trim() || undefined;
+  socket = io(realtimeUrl, {
     auth: { token: tokens.accessToken },
     path: '/socket.io',
     reconnection: true,
