@@ -560,7 +560,8 @@ interface AppState {
   worldPreferences: WorldPreferences;
   tokens: AuthTokens | null;
   isInitializing: boolean;
-  hasMoreFeed?: boolean;
+  feedCursor: string | null;
+  hasMoreFeed: boolean;
   authError: string | null;
   users: Record<string, User>;
   posts: Post[];
@@ -593,6 +594,7 @@ interface AppState {
 
   loadStories: () => Promise<void>;
   loadFeed: () => Promise<void>;
+  loadMoreFeed: () => Promise<void>;
   loadSavedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
@@ -756,6 +758,8 @@ export const useAppStore = create<AppState>()(
       tokens: null,
       isInitializing: false,
       authError: null,
+      feedCursor: null,
+      hasMoreFeed: false,
       users: {},
       posts: [],
       stories: [],
@@ -947,10 +951,28 @@ export const useAppStore = create<AppState>()(
           const res = await api.getFeed();
           const backendPosts = res.data;
           const currentUserId = get().currentUser?.id;
-          set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)) });
+          set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)), feedCursor: res.nextCursor ?? null, hasMoreFeed: Boolean(res.hasMore) });
           return;
         } catch {
           // Keep the last successful snapshot during a transient outage.
+        }
+      },
+
+      loadMoreFeed: async () => {
+        const state = get();
+        if (!state.hasMoreFeed || !state.feedCursor) return;
+        try {
+          const res = await api.getFeed(state.feedCursor);
+          const currentUserId = get().currentUser?.id;
+          const nextPosts = res.data.map((post) => mapPost(post, currentUserId));
+          const seenIds = new Set(get().posts.map((post) => post.id));
+          set((current) => ({
+            posts: [...current.posts, ...nextPosts.filter((post) => !seenIds.has(post.id))],
+            feedCursor: res.nextCursor ?? null,
+            hasMoreFeed: Boolean(res.hasMore),
+          }));
+        } catch {
+          // Preserve the visible feed when a subsequent page is temporarily unavailable.
         }
       },
 

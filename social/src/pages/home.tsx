@@ -74,6 +74,8 @@ export default function Home() {
   const followUser = useAppStore((state) => state.followUser);
   const unfollowUser = useAppStore((state) => state.unfollowUser);
   const loadFeed = useAppStore((state) => state.loadFeed);
+  const loadMoreFeed = useAppStore((state) => state.loadMoreFeed);
+  const hasMoreFeed = useAppStore((state) => state.hasMoreFeed);
   const isInitializing = useAppStore((state) => state.isInitializing);
 
   const [mode, setMode] = useState<OrbitMode>('close');
@@ -81,6 +83,7 @@ export default function Home() {
   const [contentCategory, setContentCategory] = useState<ContentCategory | 'all'>('all');
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const displayName = currentUser?.displayName || currentUser?.username || 'there';
   const firstName = displayName.split(/\s+/)[0];
@@ -120,7 +123,7 @@ export default function Home() {
   }, [contentCategory, currentUser?.id, followingIds, mode, posts, topic, users]);
 
   const visiblePosts = filteredPosts.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredPosts.length;
+  const hasMore = visibleCount < filteredPosts.length || hasMoreFeed;
   const strongestSignals = [...posts].sort((a, b) => postStrength(b) - postStrength(a)).slice(0, 3);
   const activeWorlds = [...communities].sort((a, b) => Number(b.isMember) - Number(a.isMember) || b.members - a.members).slice(0, 3);
 
@@ -140,6 +143,21 @@ export default function Home() {
       setIsRefreshing(false);
     }
   }, [loadFeed]);
+
+  const openNextChapter = useCallback(async () => {
+    if (visibleCount < filteredPosts.length) {
+      setVisibleCount((count) => count + 8);
+      return;
+    }
+    if (!hasMoreFeed || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      await loadMoreFeed();
+      setVisibleCount((count) => count + 8);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [filteredPosts.length, hasMoreFeed, isLoadingMore, loadMoreFeed, visibleCount]);
 
   const toggleFollow = (userId: string) => {
     if (followingIds.includes(userId)) unfollowUser(userId);
@@ -263,7 +281,7 @@ export default function Home() {
                   <p>Yor pauses on purpose. Your attention belongs to you.</p>
                 </div>
                 {hasMore ? (
-                  <Button variant="outline" onClick={() => setVisibleCount((count) => count + 8)}>Open next chapter</Button>
+                  <Button variant="outline" onClick={() => void openNextChapter()} disabled={isLoadingMore}>{isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isLoadingMore ? 'Loading…' : 'Open next chapter'}</Button>
                 ) : (
                   <Link href="/pulse">See what is moving <ArrowRight className="h-3.5 w-3.5" /></Link>
                 )}
