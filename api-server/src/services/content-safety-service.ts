@@ -22,8 +22,27 @@ export class ContentSafetyService {
     return items.filter((item) => canViewContent(item.contentRating, viewerFilter));
   }
 
-  async isVisible(item: RatedContent | undefined, viewerId?: string): Promise<boolean> {
+  async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
+    if (!viewerId || authorId === viewerId) return true;
+    const author = await this.userRepository.findById(authorId);
+    if (!author) return false;
+    const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
+    return visibility === "public" || await this.userRepository.isFollowing(viewerId, authorId);
+  }
+
+  async filterVisibleByAuthor<T extends RatedContent>(items: T[], viewerId: string | undefined, getAuthorId: (item: T) => string): Promise<T[]> {
+    const contentVisible = await this.filterVisible(items, viewerId);
+    if (!viewerId) return contentVisible;
+    const visible = await Promise.all(contentVisible.map(async (item) => ({
+      item,
+      allowed: await this.canViewAuthorContent(getAuthorId(item), viewerId),
+    })));
+    return visible.filter(({ allowed }) => allowed).map(({ item }) => item);
+  }
+
+  async isVisible(item: RatedContent | undefined, viewerId?: string, authorId?: string): Promise<boolean> {
     if (!item) return false;
-    return canViewContent(item.contentRating, await this.getViewerFilter(viewerId));
+    if (!canViewContent(item.contentRating, await this.getViewerFilter(viewerId))) return false;
+    return authorId ? this.canViewAuthorContent(authorId, viewerId) : true;
   }
 }

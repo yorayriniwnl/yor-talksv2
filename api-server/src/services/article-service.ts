@@ -43,17 +43,17 @@ export class ArticleService {
   }
 
   async listArticles(viewerId?: string): Promise<ArticleRecord[]> {
-    return this.contentSafetyService.filterVisible(await this.articleRepository.list(), viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor(await this.articleRepository.list(), viewerId, (article) => article.authorId);
   }
 
   async getArticle(id: string, viewerId?: string): Promise<ArticleRecord | undefined> {
     const article = await this.articleRepository.findById(id);
-    return await this.contentSafetyService.isVisible(article, viewerId) ? article : undefined;
+    return await this.contentSafetyService.isVisible(article, viewerId, article?.authorId) ? article : undefined;
   }
 
   async clap(id: string, count: number, viewerId?: string): Promise<ArticleRecord | undefined> {
     const article = await this.articleRepository.findById(id);
-    if (!(await this.contentSafetyService.isVisible(article, viewerId))) return undefined;
+    if (!(await this.contentSafetyService.isVisible(article, viewerId, article?.authorId))) return undefined;
     const safeCount = Math.min(Math.max(1, count), MAX_CLAPS_PER_REQUEST);
     return this.articleRepository.incrementClaps(id, safeCount);
   }

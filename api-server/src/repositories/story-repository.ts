@@ -37,6 +37,14 @@ export class StoryRepository {
     return story as StoryRecord | undefined;
   }
 
+  async findActiveById(id: string): Promise<StoryRecord | undefined> {
+    const [story] = await db.select().from(storiesTable).where(and(
+      eq(storiesTable.id, id),
+      or(eq(storiesTable.isHighlight, true), gt(storiesTable.expiresAt, new Date().toISOString())),
+    ));
+    return story as StoryRecord | undefined;
+  }
+
   async update(id: string, updates: Partial<StoryRecord>): Promise<StoryRecord | undefined> {
     const { poll: _poll, ...persistedUpdates } = updates;
     const [updated] = await db.update(storiesTable).set(persistedUpdates).where(eq(storiesTable.id, id)).returning();

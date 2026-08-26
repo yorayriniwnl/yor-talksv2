@@ -45,7 +45,7 @@ export class VideoService {
   }
 
   async listVideos(viewerId?: string): Promise<VideoRecord[]> {
-    const visible = await this.contentSafetyService.filterVisible(await this.videoRepository.list(), viewerId);
+    const visible = await this.contentSafetyService.filterVisibleByAuthor(await this.videoRepository.list(), viewerId, (video) => video.authorId);
     if (!viewerId) return visible;
     const savedIds = new Set(await this.videoBookmarkRepository.listForUser(viewerId));
     return visible.map((video) => ({ ...video, savedByMe: savedIds.has(video.id) }));
@@ -53,7 +53,7 @@ export class VideoService {
 
   async getVideo(id: string, viewerId?: string, countView = true): Promise<VideoRecord | undefined> {
     const existing = await this.videoRepository.findById(id);
-    if (!(await this.contentSafetyService.isVisible(existing, viewerId))) return undefined;
+    if (!(await this.contentSafetyService.isVisible(existing, viewerId, existing?.authorId))) return undefined;
     if (countView) {
       const updated = await this.videoRepository.incrementViews(id);
       if (updated) return updated;
@@ -63,7 +63,7 @@ export class VideoService {
 
   async toggleLike(videoId: string, userId: string): Promise<VideoRecord | undefined> {
     const video = await this.videoRepository.findById(videoId);
-    if (!video || !(await this.contentSafetyService.isVisible(video, userId))) return undefined;
+    if (!video || !(await this.contentSafetyService.isVisible(video, userId, video.authorId))) return undefined;
     return this.videoRepository.toggleLike(videoId, userId);
   }
 
@@ -128,7 +128,7 @@ export class VideoService {
 
   async listBookmarkedVideos(userId: string): Promise<VideoRecord[]> {
     const bookmarkIds = await this.videoBookmarkRepository.listForUser(userId);
-    const visible = await this.contentSafetyService.filterVisible(await this.videoRepository.listByIds(bookmarkIds), userId);
+    const visible = await this.contentSafetyService.filterVisibleByAuthor(await this.videoRepository.listByIds(bookmarkIds), userId, (video) => video.authorId);
     return visible.map((video) => ({ ...video, savedByMe: true }));
   }
 

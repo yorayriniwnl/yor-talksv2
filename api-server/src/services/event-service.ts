@@ -43,12 +43,12 @@ export class EventService {
   }
 
   async listEvents(viewerId?: string): Promise<EventRecord[]> {
-    return this.contentSafetyService.filterVisible(await this.eventRepository.list(), viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor(await this.eventRepository.list(), viewerId, (event) => event.hostId);
   }
 
   async getEvent(id: string, viewerId?: string): Promise<EventRecord | undefined> {
     const event = await this.eventRepository.findById(id);
-    return await this.contentSafetyService.isVisible(event, viewerId) ? event : undefined;
+    return await this.contentSafetyService.isVisible(event, viewerId, event?.hostId) ? event : undefined;
   }
 
   async deleteEvent(id: string, userId: string): Promise<boolean> {
@@ -62,7 +62,7 @@ export class EventService {
   /** status: 'going' | 'interested' | null (null clears any existing RSVP) */
   async setRsvp(eventId: string, userId: string, status: "going" | "interested" | null): Promise<EventRecord | undefined> {
     const event = await this.eventRepository.findById(eventId);
-    if (!event) return undefined;
+    if (!event || !(await this.contentSafetyService.isVisible(event, userId, event.hostId))) return undefined;
 
     return this.eventRepository.setRsvp(eventId, userId, status);
   }

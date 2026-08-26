@@ -60,30 +60,30 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await this.contentSafetyService.filterVisible(await this.storyRepository.listActive(), viewerId);
+    const stories = await this.contentSafetyService.filterVisibleByAuthor(await this.storyRepository.listActive(), viewerId, (story) => story.authorId);
     const polls = await this.storyRepository.getPolls(stories.map((story) => story.id), viewerId);
     return stories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
   }
 
   async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
+    const story = await this.storyRepository.findActiveById(storyId);
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
 
     const updated = await this.storyRepository.addView(storyId, userId);
     return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
+    const story = await this.storyRepository.findActiveById(storyId);
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
 
     const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32));
     return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 
   async votePoll(storyId: string, optionId: string, userId: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
+    const story = await this.storyRepository.findActiveById(storyId);
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
     if (!(await this.storyRepository.votePoll(storyId, optionId, userId))) return undefined;
     return this.hydrateStory(story, userId);
   }

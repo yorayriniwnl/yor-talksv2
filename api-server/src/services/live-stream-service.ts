@@ -46,12 +46,12 @@ export class LiveStreamService {
   }
 
   async listStreams(viewerId?: string): Promise<LiveStreamRecord[]> {
-    return this.contentSafetyService.filterVisible(await this.liveStreamRepository.list(), viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor(await this.liveStreamRepository.list(), viewerId, (stream) => stream.hostId);
   }
 
   async getStream(id: string, viewerId?: string): Promise<LiveStreamRecord | undefined> {
     const stream = await this.liveStreamRepository.findById(id);
-    return await this.contentSafetyService.isVisible(stream, viewerId) ? stream : undefined;
+    return await this.contentSafetyService.isVisible(stream, viewerId, stream?.hostId) ? stream : undefined;
   }
 
   async setStatus(id: string, hostId: string, status: StreamStatus): Promise<LiveStreamRecord | undefined> {
@@ -70,7 +70,7 @@ export class LiveStreamService {
     if (!stream) {
       throw new LiveStreamNotFoundError("Stream not found");
     }
-    if (!(await this.contentSafetyService.isVisible(stream, userId))) {
+    if (!(await this.contentSafetyService.isVisible(stream, userId, stream.hostId))) {
       throw new LiveStreamNotFoundError("Stream not found");
     }
     const isHost = stream.hostId === userId;
