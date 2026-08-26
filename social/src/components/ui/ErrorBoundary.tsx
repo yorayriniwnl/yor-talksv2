@@ -71,7 +71,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             </button>
           </div>
 
-          {this.state.error && (
+          {this.state.error && !import.meta.env.PROD && (
             <div className="mt-4 max-w-lg w-full text-left">
               <button
                 type="button"
