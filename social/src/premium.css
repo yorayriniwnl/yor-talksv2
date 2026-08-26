@@ -1091,8 +1091,10 @@ body {
 @media (max-width: 1023px) {
   .premium-auth-shell {
     display: block;
+    grid-template-columns: 1fr;
     height: auto;
     min-height: 100dvh;
+    width: 100%;
     overflow-x: hidden;
     overflow-y: visible;
   }
