@@ -13,7 +13,7 @@ import {
   ArrowLeft, MessageCircle, Trophy, Trash2, Plus, Sparkles, MoreHorizontal,
   Grid3X3, Heart, Bookmark, Star, Award, Pin, ThumbsUp, Share2, Film,
   Image as ImageIcon, Link as LinkIcon, MapPin, Calendar, Shield, ExternalLink,
-  UserPlus, Zap, Eye, Play, ChevronRight, Copy, Check, UserRound
+  UserPlus, Zap, Eye, Play, ChevronRight, Copy, Check, UserRound, Crown
 } from 'lucide-react';
 
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
@@ -537,6 +537,9 @@ export default function Profile() {
                 </motion.div>
                 <motion.div whileTap={{ scale: 0.95 }}>
                   <Button variant="outline" className="rounded-xl h-9 font-bold text-[0.78rem] px-5" onClick={() => setLocation(`/messages/${profile.id}`)}>Message</Button>
+                </motion.div>
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  <Button variant="outline" className="rounded-xl h-9 font-bold text-[0.78rem] px-4 border-amber-400/40 text-amber-500" onClick={() => setLocation(`/fanclub?creatorId=${encodeURIComponent(profile.id)}`)}><Crown className="w-3.5 h-3.5 mr-1.5" /> Fan Club</Button>
                 </motion.div>
                 <Popover>
                   <PopoverTrigger asChild><Button variant="outline" size="icon" className="rounded-xl h-9 w-9" aria-label="More profile actions"><MoreHorizontal className="w-4 h-4" /></Button></PopoverTrigger>

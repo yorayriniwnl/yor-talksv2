@@ -215,6 +215,27 @@ export interface BackendFollowRequest {
   requester: BackendUser;
 }
 
+export interface BackendSubscriptionTier {
+  id: 'chai' | 'elite' | 'vip';
+  name: string;
+  priceMinor: number;
+  currency: 'INR';
+  badge: string;
+  perks: string[];
+}
+
+export interface BackendSubscription {
+  id: string;
+  subscriberId: string;
+  creatorId: string;
+  tier: string;
+  status: 'pending' | 'active' | 'expired' | 'cancelled';
+  priceMinor: number;
+  currency: string;
+  startedAt: string;
+  expiresAt: string | null;
+}
+
 export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
 
 export interface CreatorWorkspaceItem {
@@ -427,6 +448,15 @@ export const api = {
     request<{ transactionId: string; status: 'paid' }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   sendSuperchat: (payload: { streamId: string; creatorId: string; amountMinor: number; message: string }) =>
     request<{ transactionId: string }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // ---- Creator memberships ----
+  getSubscriptionTiers: (creatorId: string) => request<BackendSubscriptionTier[]>(`/subscriptions/tiers/${encodeURIComponent(creatorId)}`),
+  createSubscriptionOrder: (payload: { creatorId: string; tier: BackendSubscriptionTier['id'] }) =>
+    request<{ subscriptionId: string; orderId: string; amountMinor: number; currency: string; keyId: string; tier: string }>('/subscriptions/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
+  verifySubscriptionPayment: (subscriptionId: string, payload: { orderId: string; paymentId: string; signature: string }) =>
+    request<{ subscriptionId: string; status: 'active'; expiresAt: string }>(`/subscriptions/${encodeURIComponent(subscriptionId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+  getMySubscriptions: () => request<BackendSubscription[]>('/subscriptions/my-subscriptions'),
+  cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
   // ---- Messages ----
   sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),

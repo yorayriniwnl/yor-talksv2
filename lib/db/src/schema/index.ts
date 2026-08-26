@@ -530,6 +530,28 @@ export const entitlementsTable = pgTable("entitlements", {
   userEntityIdx: index("entitlement_user_entity_idx").on(t.userId, t.entityType, t.entityId),
 }));
 
+/** A provider order is kept separate from the membership itself so an
+ * unverified checkout can never grant access and retries remain idempotent. */
+export const subscriptionOrdersTable = pgTable("subscription_orders", {
+  id: uuid("id").primaryKey(),
+  subscriptionId: uuid("subscription_id").references(() => subscriptionsTable.id, { onDelete: "cascade" }).notNull(),
+  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  provider: text("provider").notNull().default("razorpay"),
+  providerOrderId: text("provider_order_id").notNull().unique(),
+  providerPaymentId: text("provider_payment_id"),
+  providerSignature: text("provider_signature"),
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull().default("INR"),
+  status: text("status").notNull().default("created"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { mode: "string" }),
+}, (t) => ({
+  subscriptionIdx: index("subscription_order_subscription_idx").on(t.subscriptionId),
+  subscriberIdx: index("subscription_order_subscriber_idx").on(t.subscriberId),
+  creatorIdx: index("subscription_order_creator_idx").on(t.creatorId),
+}));
+
 
 // ==================== PHASE 6: DISTINCTIVE YOR IDENTITY & PROJECTS ====================
 
