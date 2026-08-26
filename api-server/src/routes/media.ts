@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { MediaService } from "../services/media-service.js";
-import { upload } from "../middlewares/upload.js";
+import { detectMimeType, mimeMatches, upload } from "../middlewares/upload.js";
 import { authenticate } from "../middlewares/auth.js";
 import { createResponse } from "../utils/response.js";
 
@@ -16,6 +16,12 @@ router.post(
     try {
       if (!req.file) {
         res.status(400).json(createResponse("No file provided", null, {}, ["file_required"]));
+        return;
+      }
+
+      const detectedMimeType = detectMimeType(req.file.buffer);
+      if (!detectedMimeType || !mimeMatches(req.file.mimetype, detectedMimeType)) {
+        res.status(415).json(createResponse("The uploaded file does not match its declared media type", null, {}, ["media_type_mismatch"]));
         return;
       }
 
