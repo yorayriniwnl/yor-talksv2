@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, ArrowRight, Briefcase, HandCoins, Activity, Users, Store } from 'lucide-react';
+import { Building2, ExternalLink, HandCoins, PackageCheck, Plus, ShoppingBag, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
@@ -17,7 +16,10 @@ interface Business {
 }
 
 export default function BusinessDashboard() {
+  const currentUser = useAppStore((state) => state.currentUser);
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [products, setProducts] = useState<Array<{ sellerId: string; availability?: string }>>([]);
+  const [orders, setOrders] = useState<Array<{ sellerId: string; status: string; amountMinor: number }>>([]);
   const [loading, setLoading] = useState(true);
   
   const [isCreating, setIsCreating] = useState(false);
@@ -25,17 +27,21 @@ export default function BusinessDashboard() {
   const [industry, setIndustry] = useState('');
 
   useEffect(() => {
-    fetchBusinesses();
-  }, []);
+    void fetchDashboard();
+  }, [currentUser?.id]);
 
-  const fetchBusinesses = async () => {
+  const fetchDashboard = async () => {
     try {
-      const res = await api.request<any>('/business');
-      if (res && res.businesses) {
-        setBusinesses(res.businesses);
-      }
+      const [businessResponse, productResponse, orderResponse] = await Promise.all([
+        api.request<{ businesses: Business[] }>('/business'),
+        api.getProducts(),
+        api.getMarketplaceOrders(),
+      ]);
+      setBusinesses(businessResponse?.businesses ?? []);
+      setProducts(productResponse.map((product) => ({ sellerId: product.sellerId, availability: product.availability })));
+      setOrders(orderResponse.map((order) => ({ sellerId: order.sellerId, status: order.status, amountMinor: order.amountMinor })));
     } catch (e) {
-      toast.error('Failed to load business profiles');
+      toast.error('Failed to load business workspace');
     } finally {
       setLoading(false);
     }
@@ -51,7 +57,7 @@ export default function BusinessDashboard() {
       setIsCreating(false);
       setName('');
       setIndustry('');
-      fetchBusinesses();
+      void fetchDashboard();
     } catch (e) {
       toast.error('Failed to create business profile');
     }
@@ -115,22 +121,32 @@ export default function BusinessDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mt-8">
+              {(() => {
+                const ownedProducts = products.filter((product) => product.sellerId === currentUser?.id);
+                const ownedOrders = orders.filter((order) => order.sellerId === currentUser?.id && ['paid', 'fulfilled'].includes(order.status));
+                const revenueMinor = ownedOrders.reduce((total, order) => total + Number(order.amountMinor || 0), 0);
+                return <div className="mt-8 grid grid-cols-3 gap-4">
                 <div className="bg-background rounded-xl p-3 border border-border/40">
                   <HandCoins className="w-4 h-4 text-emerald-400 mb-2" />
-                  <div className="text-lg font-bold font-mono">0<span className="text-[10px] text-muted-foreground"> ytc</span></div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Revenue</div>
+                  <div className="text-lg font-bold font-mono">₹{(revenueMinor / 100).toLocaleString('en-IN')}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Settled revenue</div>
                 </div>
                 <div className="bg-background rounded-xl p-3 border border-border/40">
                   <Store className="w-4 h-4 text-purple-400 mb-2" />
-                  <div className="text-lg font-bold font-mono">0</div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Products</div>
+                  <div className="text-lg font-bold font-mono">{ownedProducts.length}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Live listings</div>
                 </div>
                 <div className="bg-background rounded-xl p-3 border border-border/40">
-                  <Activity className="w-4 h-4 text-blue-400 mb-2" />
-                  <div className="text-lg font-bold font-mono">+0%</div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Growth</div>
+                  <PackageCheck className="w-4 h-4 text-blue-400 mb-2" />
+                  <div className="text-lg font-bold font-mono">{ownedOrders.length}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Paid orders</div>
                 </div>
+              </div>;
+              })()}
+
+              <div className="mt-6 flex flex-wrap gap-2 border-t border-border/30 pt-5">
+                <a href="/marketplace"><Button size="sm" variant="outline" className="rounded-xl text-xs font-bold"><ShoppingBag className="mr-1.5 h-3.5 w-3.5" />Publish listing</Button></a>
+                <a href="/store"><Button size="sm" variant="outline" className="rounded-xl text-xs font-bold"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />View storefront</Button></a>
               </div>
             </div>
           ))}
