@@ -295,6 +295,21 @@ export interface StoryReaction {
   emoji: string;
 }
 
+export interface StoryPollOption {
+  id: string;
+  text: string;
+  position: number;
+  votes: number;
+}
+
+export interface StoryPoll {
+  id: string;
+  question: string;
+  options: StoryPollOption[];
+  totalVotes: number;
+  votedOptionId?: string;
+}
+
 export interface StoryRecord {
   id: string;
   authorId: string;
@@ -310,4 +325,5 @@ export interface StoryRecord {
   highlightTitle?: string | null;
   contentCategory?: string;
   contentRating?: ContentRating;
+  poll?: StoryPoll;
 }

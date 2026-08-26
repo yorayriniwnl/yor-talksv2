@@ -21,6 +21,7 @@ export class StoryService {
     highlightTitle?: string;
     contentCategory?: StoryRecord["contentCategory"];
     contentRating?: StoryRecord["contentRating"];
+    poll?: { question: string; options: Array<{ text: string }> };
   }): Promise<StoryRecord> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
@@ -41,11 +42,19 @@ export class StoryService {
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.storyRepository.create(story);
+    const normalizedPoll = input.poll ? {
+      id: randomUUID(),
+      question: input.poll.question.trim(),
+      options: input.poll.options.map((option, position) => ({ id: randomUUID(), text: option.text.trim(), position })),
+    } : undefined;
+    const created = await this.storyRepository.create(story, normalizedPoll);
+    return this.hydrateStory(created, input.authorId);
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    return this.contentSafetyService.filterVisible(await this.storyRepository.listActive(), viewerId);
+    const stories = await this.contentSafetyService.filterVisible(await this.storyRepository.listActive(), viewerId);
+    const polls = await this.storyRepository.getPolls(stories.map((story) => story.id), viewerId);
+    return stories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
   }
 
   async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
@@ -54,9 +63,10 @@ export class StoryService {
 
     if (!story.viewerIds.includes(userId)) {
       const viewerIds = [...story.viewerIds, userId];
-      return this.storyRepository.update(storyId, { viewerIds });
+      const updated = await this.storyRepository.update(storyId, { viewerIds });
+      return updated ? this.hydrateStory(updated, userId) : undefined;
     }
-    return story;
+    return this.hydrateStory(story, userId);
   }
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
@@ -65,6 +75,19 @@ export class StoryService {
 
     const filteredReactions = story.reactions.filter(r => r.userId !== userId);
     const reactions = [...filteredReactions, { userId, emoji }];
-    return this.storyRepository.update(storyId, { reactions });
+    const updated = await this.storyRepository.update(storyId, { reactions });
+    return updated ? this.hydrateStory(updated, userId) : undefined;
+  }
+
+  async votePoll(storyId: string, optionId: string, userId: string): Promise<StoryRecord | undefined> {
+    const story = await this.storyRepository.findById(storyId);
+    if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
+    if (!(await this.storyRepository.votePoll(storyId, optionId, userId))) return undefined;
+    return this.hydrateStory(story, userId);
+  }
+
+  private async hydrateStory(story: StoryRecord, viewerId?: string): Promise<StoryRecord> {
+    const poll = (await this.storyRepository.getPolls([story.id], viewerId)).get(story.id);
+    return poll ? { ...story, poll } : story;
   }
 }

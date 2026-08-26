@@ -413,10 +413,11 @@ export const api = {
 
   // ---- Stories ----
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  voteStoryPoll: (id: string, optionId: string) => request<BackendStory>(`/stories/${id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
 
   // ---- Economy ----
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
@@ -496,6 +497,13 @@ export interface BackendStory {
   highlightTitle: string | null;
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
+  poll?: {
+    id: string;
+    question: string;
+    options: { id: string; text: string; position: number; votes: number }[];
+    totalVotes: number;
+    votedOptionId?: string;
+  };
 }
 
 export interface BackendPost {

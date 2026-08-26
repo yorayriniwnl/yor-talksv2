@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Image as ImageIcon, Type, Palette, Send, X } from 'lucide-react';
+import { BarChart2, Sparkles, Image as ImageIcon, Type, Palette, Send, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
@@ -36,11 +36,16 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
   const [storyType, setStoryType] = useState<'text' | 'image'>('text');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
 
   const handlePublishStory = async () => {
     if (storyType === 'text' && !textContent.trim()) return;
     if (storyType === 'image' && !imageUrl.trim()) return;
     if (!contentCategory) return;
+    const normalizedPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
+    if (pollOpen && (!pollQuestion.trim() || normalizedPollOptions.length < 2)) return;
 
     try {
       await addStory({
@@ -50,6 +55,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
         backgroundGradient: selectedGradient.css,
         contentCategory,
         contentRating,
+        ...(pollOpen ? { poll: { question: pollQuestion.trim(), options: normalizedPollOptions.map((text) => ({ text })) } } : {}),
       });
       sounds.playChime();
       triggerConfetti();
@@ -58,6 +64,9 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
       setImageUrl('');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
+      setPollOpen(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
       onOpenChange(false);
     } catch {
       // The store has already removed the optimistic story and reported the API error.
@@ -138,6 +147,21 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           <ContentCategorySelect id="story-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="story-content-rating" value={contentRating} onChange={setContentRating} />
 
+          <div className="rounded-2xl border border-border/40 bg-background/30 p-3">
+            <button type="button" onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">
+              <BarChart2 className="h-3.5 w-3.5 text-primary" /> Add a poll
+              <span className="ml-auto text-[0.65rem] font-mono text-muted-foreground">{pollOpen ? 'On' : 'Off'}</span>
+            </button>
+            {pollOpen && (
+              <div className="mt-3 space-y-2">
+                <input value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} placeholder="Ask your audience a question" maxLength={240} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+                {pollOptions.map((option, index) => (
+                  <input key={index} value={option} onChange={(event) => setPollOptions((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder={`Option ${index + 1}`} maxLength={80} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+                ))}
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground mb-2 block">
               Canvas Background Style
@@ -164,7 +188,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange }: StoryBuilderModalPro
           <DialogFooter>
             <Button
               onClick={handlePublishStory}
-              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim()) || !contentCategory}
+              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim()) || !contentCategory || (pollOpen && (!pollQuestion.trim() || pollOptions.filter((option) => option.trim()).length < 2))}
               className="w-full rounded-xl font-bold text-xs h-11 glow-neon-primary bg-primary text-primary-foreground"
             >
               <Send className="w-3.5 h-3.5 mr-1.5" /> Share Story Live

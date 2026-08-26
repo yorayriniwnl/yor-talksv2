@@ -285,6 +285,36 @@ export const liveStreamsTable = pgTable("live_streams", {
   hostIdx: index("livestream_host_idx").on(table.hostId)
 }));
 
+export const storyPollsTable = pgTable("story_polls", {
+  id: uuid("id").primaryKey(),
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  question: text("question").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  storyIdx: uniqueIndex("story_polls_story_idx").on(t.storyId),
+}));
+
+export const storyPollOptionsTable = pgTable("story_poll_options", {
+  id: uuid("id").primaryKey(),
+  pollId: uuid("poll_id").references(() => storyPollsTable.id, { onDelete: "cascade" }).notNull(),
+  text: text("text").notNull(),
+  position: integer("position").notNull(),
+  voteCount: integer("vote_count").notNull().default(0),
+}, (t) => ({
+  pollPositionIdx: uniqueIndex("story_poll_options_poll_position_idx").on(t.pollId, t.position),
+  pollIdx: index("story_poll_options_poll_idx").on(t.pollId),
+}));
+
+export const storyPollVotesTable = pgTable("story_poll_votes", {
+  pollId: uuid("poll_id").references(() => storyPollsTable.id, { onDelete: "cascade" }).notNull(),
+  optionId: uuid("option_id").references(() => storyPollOptionsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.pollId, t.userId] }),
+  optionIdx: index("story_poll_votes_option_idx").on(t.optionId),
+}));
+
 export const paymentOrdersTable = pgTable("payment_orders", {
   id: uuid("id").primaryKey(),
   payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),

@@ -56,4 +56,16 @@ export class StoryController {
     }
     return res.status(200).json(createResponse("Story reacted", viewStory(story, userId)));
   };
+
+  votePoll = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    }
+    const story = await this.storyService.votePoll(paramId(req), req.body.optionId, userId);
+    if (!story) {
+      return res.status(404).json(createResponse("Story poll or option not found", null, {}, ["Story poll or option not found"]));
+    }
+    return res.status(200).json(createResponse("Story poll vote recorded", viewStory(story, userId)));
+  };
 }

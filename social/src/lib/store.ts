@@ -108,10 +108,21 @@ export type Story = {
   expiresAt: string;
   viewerIds: string[];
   reactions: { userId: string; emoji: string }[];
+  poll?: {
+    question: string;
+    options: { id: string; text: string; votes: number }[];
+    totalVotes: number;
+    votedOptionId?: string;
+  };
   isHighlight?: boolean;
   highlightTitle?: string;
   contentCategory: string;
   contentRating: ContentRating;
+};
+
+type StoryPollInput = {
+  question: string;
+  options: { text: string }[];
 };
 
 export type Message = {
@@ -298,6 +309,12 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     expiresAt: s.expiresAt || new Date(Date.now() + 86400000).toISOString(),
     viewerIds,
     reactions: Array.isArray(s.reactions) ? s.reactions : [],
+    poll: s.poll ? {
+      question: s.poll.question,
+      options: s.poll.options.map((option) => ({ id: option.id, text: option.text, votes: option.votes })),
+      totalVotes: s.poll.totalVotes,
+      votedOptionId: s.poll.votedOptionId,
+    } : undefined,
     isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
     contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
@@ -587,9 +604,10 @@ interface AppState {
   createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   likeVideo: (videoId: string) => Promise<void>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string) => Promise<void>;
+  voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
 
   loadStreams: () => Promise<void>;
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
@@ -1237,6 +1255,16 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      voteStoryPoll: async (storyId, optionId) => {
+        try {
+          const updated = await api.voteStoryPoll(storyId, optionId);
+          const uid = get().currentUser?.id;
+          set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not record story poll vote');
+        }
+      },
+
       addStory: async (story) => {
         const uid = get().currentUser?.id || 'user-roy';
         const optimisticId = `story-${Date.now()}`;
@@ -1252,12 +1280,20 @@ export const useAppStore = create<AppState>()(
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
           viewerIds: [],
           reactions: [],
+          poll: story.poll ? {
+            question: story.poll.question,
+            options: story.poll.options.map((option, index) => ({ id: `optimistic-story-poll-${index}`, ...option, votes: 0 })),
+            totalVotes: 0,
+          } : undefined,
           contentCategory: story.contentCategory,
           contentRating: story.contentRating ?? DEFAULT_CONTENT_RATING,
         };
         set((state) => ({ stories: [newStory, ...state.stories] }));
         try {
-          const created = await api.createStory(story);
+          const created = await api.createStory({
+            ...story,
+            ...(story.poll ? { poll: { question: story.poll.question, options: story.poll.options.map(({ text }) => ({ text })) } } : {}),
+          });
           set((state) => ({ stories: state.stories.map((item) => item.id === optimisticId ? mapStory(created, uid) : item) }));
         } catch (error) {
           set((state) => ({ stories: state.stories.filter((item) => item.id !== optimisticId) }));

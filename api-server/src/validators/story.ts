@@ -12,6 +12,10 @@ export const createStorySchema = z.object({
   highlightTitle: z.string().optional(),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema.default("regular"),
+  poll: z.object({
+    question: z.string().trim().min(1).max(240),
+    options: z.array(z.object({ text: z.string().trim().min(1).max(80) })).min(2).max(4),
+  }).optional(),
 }).superRefine((value, context) => {
   if ((value.type === "image" || value.type === "video") && !value.mediaUrl) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["mediaUrl"], message: "Media URL is required for image and video stories" });
@@ -23,4 +27,8 @@ export const createStorySchema = z.object({
 
 export const reactStorySchema = z.object({
   emoji: z.string().min(1).max(10), // A simple string for emojis
+});
+
+export const storyPollVoteSchema = z.object({
+  optionId: z.string().uuid("Invalid story poll option ID"),
 });

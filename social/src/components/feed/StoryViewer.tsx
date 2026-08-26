@@ -7,7 +7,6 @@ import { X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2 } from 'luc
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { toast } from 'sonner';
 
@@ -26,6 +25,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const currentUser = useAppStore((s) => s.currentUser);
   const viewStory = useAppStore((s) => s.viewStory);
   const reactToStory = useAppStore((s) => s.reactToStory);
+  const voteStoryPoll = useAppStore((s) => s.voteStoryPoll);
 
   const [authorIndex, setAuthorIndex] = useState(authors.indexOf(initialAuthorId) >= 0 ? authors.indexOf(initialAuthorId) : 0);
   const [storyIndex, setStoryIndex] = useState(0);
@@ -33,10 +33,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const [isPaused, setIsPaused] = useState(false);
   const [reactionText, setReactionText] = useState('');
   
-  // Interactive Poll state for stories
-  const [pollVotedOption, setPollVotedOption] = useState<number | null>(null);
-  const [pollVotes, setPollVotes] = useState<[number, number]>([68, 32]);
-
   // Floating reaction particle stream
   const [floatingParticles, setFloatingParticles] = useState<{ id: string; emoji: string; x: number }[]>([]);
   
@@ -76,7 +72,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
   const handleNext = () => {
     setProgress(0);
-    setPollVotedOption(null);
     if (storyIndex < currentStories.length - 1) {
       setStoryIndex((i) => i + 1);
     } else if (authorIndex < authors.length - 1) {
@@ -89,7 +84,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
   const handlePrev = () => {
     setProgress(0);
-    setPollVotedOption(null);
     if (storyIndex > 0) {
       setStoryIndex((i) => i - 1);
     } else if (authorIndex > 0) {
@@ -139,26 +133,11 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     }
   };
 
-  const handleVotePoll = (optIdx: number) => {
-    sounds.playPop();
-    triggerConfetti();
-    setPollVotedOption(optIdx);
-    setPollVotes((prev) => {
-      const copy: [number, number] = [...prev];
-      copy[optIdx] = copy[optIdx] + 1;
-      return copy;
-    });
-  };
-
   if (!currentStory) return null;
 
   const author = users[currentAuthorId];
   const displayName = author?.displayName || author?.username || 'Creator';
   const initialLetter = (displayName || 'U').charAt(0);
-
-  const totalPollVotes = pollVotes[0] + pollVotes[1];
-  const opt1Pct = Math.round((pollVotes[0] / totalPollVotes) * 100);
-  const opt2Pct = 100 - opt1Pct;
 
   return (
     <AnimatePresence>
@@ -268,53 +247,31 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               </div>
             )}
 
-            {/* Interactive Story Poll Widget Overlay */}
-            <div className="absolute z-20 w-4/5 max-w-[280px] story-controls pointer-events-auto">
-              <div className="surface-1/90 backdrop-blur-xl p-4 rounded-3xl border-2 border-primary/50 shadow-2xl text-center">
-                <span className="text-[0.62rem] font-mono font-bold uppercase text-primary tracking-wider flex items-center justify-center gap-1 mb-1">
-                  <BarChart2 className="w-3 h-3" /> LIVE BHARAT POLL
-                </span>
-                <h4 className="font-display font-black text-xs text-foreground mb-3 leading-snug">
-                  {currentStory.textContent || 'Which aesthetic wins today? 🇮🇳'}
-                </h4>
-
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleVotePoll(0)}
-                    className="relative w-full overflow-hidden p-2.5 rounded-2xl border border-primary/40 text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer"
-                  >
-                    {pollVotedOption !== null && (
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${opt1Pct}%` }}
-                        className="absolute inset-y-0 left-0 bg-primary/30 z-0"
-                      />
-                    )}
-                    <span className="relative z-10 text-foreground">Cyberpunk Glow 🤖</span>
-                    {pollVotedOption !== null && (
-                      <span className="relative z-10 font-mono text-primary font-extrabold">{opt1Pct}%</span>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => handleVotePoll(1)}
-                    className="relative w-full overflow-hidden p-2.5 rounded-2xl border border-border/50 text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer"
-                  >
-                    {pollVotedOption !== null && (
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${opt2Pct}%` }}
-                        className="absolute inset-y-0 left-0 bg-accent/30 z-0"
-                      />
-                    )}
-                    <span className="relative z-10 text-foreground">Vedic Synth 🪷</span>
-                    {pollVotedOption !== null && (
-                      <span className="relative z-10 font-mono text-accent font-extrabold">{opt2Pct}%</span>
-                    )}
-                  </button>
+            {currentStory.poll && (
+              <div className="absolute z-20 w-4/5 max-w-[280px] story-controls pointer-events-auto">
+                <div className="surface-1/90 backdrop-blur-xl p-4 rounded-3xl border-2 border-primary/50 shadow-2xl text-center">
+                  <span className="text-[0.62rem] font-mono font-bold uppercase text-primary tracking-wider flex items-center justify-center gap-1 mb-1">
+                    <BarChart2 className="w-3 h-3" /> Audience poll
+                  </span>
+                  <h4 className="font-display font-black text-xs text-foreground mb-3 leading-snug">{currentStory.poll.question}</h4>
+                  <div className="space-y-2">
+                    {currentStory.poll.options.map((option) => {
+                      const percentage = currentStory.poll!.totalVotes > 0 ? Math.round((option.votes / currentStory.poll!.totalVotes) * 100) : 0;
+                      const hasVoted = Boolean(currentStory.poll!.votedOptionId);
+                      const isVoted = currentStory.poll!.votedOptionId === option.id;
+                      return (
+                        <button key={option.id} type="button" disabled={hasVoted} onClick={() => { sounds.playPop(); void voteStoryPoll(currentStory.id, option.id); }} className="relative w-full overflow-hidden p-2.5 rounded-2xl border border-primary/40 text-xs font-bold transition-all text-left flex items-center justify-between disabled:cursor-default">
+                          {hasVoted && <motion.div initial={{ width: 0 }} animate={{ width: `${percentage}%` }} className={cn('absolute inset-y-0 left-0 z-0', isVoted ? 'bg-primary/30' : 'bg-accent/20')} />}
+                          <span className="relative z-10 text-foreground">{option.text}</span>
+                          {hasVoted && <span className="relative z-10 font-mono text-primary font-extrabold">{percentage}%</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-[0.62rem] text-muted-foreground">{currentStory.poll.totalVotes.toLocaleString()} votes</p>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Bottom Fast Reaction Bar & Reply Box */}
