@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { ArrowUpRight, Compass, Search, Sparkles, Users, Heart, MessageCircle, Play, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Compass, Search, Sparkles, Users, Heart, MessageCircle, Play, Loader2, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,22 +42,35 @@ function collectTopics(contents: string[]) {
 //  COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════
 
+function isVideoMedia(url: string) {
+  const normalized = url.toLowerCase().split('?')[0];
+  return normalized.startsWith('data:video/')
+    || normalized.includes('/video/upload/')
+    || /\.(mp4|m4v|mov|webm|ogv)$/i.test(normalized);
+}
+
 function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: boolean; onClick: () => void }) {
   const firstMedia = (post.media && post.media.length > 0) ? post.media[0] : null;
   const hasMultiple = post.media && post.media.length > 1;
-  const isVideo = firstMedia?.includes('video') || false; // Mocking video detection for UI purposes
+  const isVideo = firstMedia ? isVideoMedia(firstMedia) : false;
 
   return (
-    <motion.div 
+    <motion.button
+      type="button"
       variants={staggerItem}
       onClick={onClick}
+      aria-label="Open post"
       className={cn(
-        "relative group cursor-pointer overflow-hidden rounded-xl bg-muted border border-border/40 hover-lift",
+        "relative group block w-full cursor-pointer overflow-hidden rounded-xl border border-border/40 bg-muted p-0 text-left hover-lift",
         isLarge ? "col-span-2 row-span-2 card-shine" : "col-span-1 row-span-1"
       )}
     >
       {firstMedia ? (
-        <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+        isVideo ? (
+          <video src={firstMedia} aria-label="Video post" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" muted loop playsInline autoPlay preload="metadata" />
+        ) : (
+          <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+        )
       ) : (
         <div className="w-full h-full flex items-center justify-center p-4 bg-gradient-to-br from-primary/10 to-accent/10">
           <p className={cn("text-muted-foreground font-serif leading-relaxed line-clamp-4", isLarge ? "text-lg" : "text-xs")}>{post.content}</p>
@@ -80,7 +93,7 @@ function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: bool
           <span className="flex items-center gap-2 text-white font-bold text-lg drop-shadow-lg"><MessageCircle className="w-6 h-6 fill-white" /> {formatCount(post.comments || 0)}</span>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
 
@@ -322,12 +335,13 @@ export default function Explore() {
                   if (e.relatedTarget && e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) return;
                   setIsFocused(false);
                 }}
+                aria-label="Search people, topics, or communities"
                 placeholder="Search @usernames, #hashtags, or communities..."
                 className="flex-1 bg-transparent border-0 outline-none px-4 py-3 text-base sm:text-lg font-medium placeholder:text-muted-foreground/50"
               />
               {query && (
-                <button onClick={() => setQuery('')} className="mr-3 p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors">
-                  <ArrowUpRight className="w-5 h-5" />
+                <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="mr-3 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                  <X className="w-5 h-5" />
                 </button>
               )}
             </div>
