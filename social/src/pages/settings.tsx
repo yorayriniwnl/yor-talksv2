@@ -200,7 +200,7 @@ export default function Settings() {
   }, [twoFactorSetup?.otpauthUrl]);
 
   const handlePrivacyChange = (key: string, value: any) => {
-    updatePrivacySettings({ ...privacySettings, [key]: value });
+    updatePrivacySettings({ [key]: value });
   };
 
   const handleNotificationChange = async (value: boolean) => {

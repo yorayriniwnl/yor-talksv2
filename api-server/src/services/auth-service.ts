@@ -47,6 +47,8 @@ export class TwoFactorRequiredError extends Error {
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
 export class GoogleSignInNotConfiguredError extends Error {}
+export class RegistrationNotAllowedError extends Error {}
+export class UserAlreadyExistsError extends Error {}
 
 export class AuthService {
   constructor(
@@ -64,7 +66,7 @@ export class AuthService {
   }): Promise<{ user: UserRecord; verificationToken?: string }> {
     const email = input.email.trim().toLowerCase();
     if (!isAllowedEmail(email)) {
-      throw new Error("This email domain is not allowed for this deployment");
+      throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
     }
 
     const existingEmail = await this.userRepository.findByEmail(email);
@@ -73,7 +75,7 @@ export class AuthService {
     const existing = existingEmail ?? existingUsername;
     
     if (existing) {
-      throw new Error("User already exists");
+      throw new UserAlreadyExistsError("An account already exists for that email or username");
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
@@ -154,6 +156,7 @@ export class AuthService {
       this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — email not verified`, normalizedIdentifier);
         throw new EmailVerificationRequiredError("Verify your email before signing in");
     }
+    this.assertAccountActive(user);
 
     if (user.totpSecret) {
       if (!input.totpCode) {
@@ -209,6 +212,7 @@ export class AuthService {
       emailVerified: true,
     });
     const finalUser = linked ?? user;
+    this.assertAccountActive(finalUser);
 
     if (finalUser.totpSecret) {
       if (!input.totpCode) {
@@ -297,6 +301,7 @@ export class AuthService {
       await this.redisRepository.delStrict(key);
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
+    this.assertAccountActive(user);
     if (user.totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
@@ -400,7 +405,7 @@ export class AuthService {
     if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
 
     const user = await this.userRepository.findById(challenge.userId);
-    if (!user?.totpSecret) return undefined;
+    if (!user?.totpSecret || !this.isAccountActive(user)) return undefined;
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -408,14 +413,14 @@ export class AuthService {
     // We would need a way to list and delete all keys, but for now we can rely on standard del if redis supports pattern matching or we can just leave it as is if redis doesn't.
     // Wait, with multiple devices we can't just del `session:${userId}`. 
     // We can fetch all keys `session:${userId}:*` and delete them.
-    const keys = await this.redisRepository.keys(`session:${userId}:*`);
+    const keys = await this.redisRepository.scanStrict(`session:${userId}:*`);
     if (keys.length > 0) {
-      await Promise.all(keys.map(key => this.redisRepository.del(key)));
+      await Promise.all(keys.map(key => this.redisRepository.delStrict(key)));
     }
   }
 
   async logout(userId: string, deviceId: string): Promise<void> {
-    await this.redisRepository.del(`session:${userId}:${deviceId}`);
+    await this.redisRepository.delStrict(`session:${userId}:${deviceId}`);
   }
 
   async logoutByToken(refreshToken: string): Promise<void> {
@@ -438,15 +443,21 @@ export class AuthService {
         return undefined;
       }
       const user = await this.userRepository.findById(userId);
-      if (!user) {
+      if (!user || !this.isAccountActive(user)) {
         return undefined;
       }
-      const storedToken = await this.redisRepository.get(`session:${user.id}:${deviceId}`);
+      const storedToken = await this.redisRepository.getStrict(`session:${user.id}:${deviceId}`);
       if (!storedToken || storedToken !== refreshToken) {
         return undefined;
       }
       const nextRefreshToken = this.issueRefreshToken(user, deviceId);
-      await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, nextRefreshToken, 7 * 24 * 60 * 60);
+      const rotated = await this.redisRepository.rotateValueStrict(
+        `session:${user.id}:${deviceId}`,
+        refreshToken,
+        nextRefreshToken,
+        7 * 24 * 60 * 60,
+      );
+      if (!rotated) return undefined;
       return this.issueTokens(user, nextRefreshToken, deviceId);
     } catch {
       return undefined;
@@ -553,7 +564,16 @@ export class AuthService {
   }
 
   async updatePrivacy(userId: string, privacy: UserRecord["privacy"]): Promise<UserRecord | undefined> {
-    return this.userRepository.update(userId, { privacy });
+    const user = await this.userRepository.findById(userId);
+    if (!user) return undefined;
+    const current = user.privacy ?? { profileVisibility: "public" as const, messageRequests: true, allowDmFromStrangers: true };
+    return this.userRepository.update(userId, {
+      privacy: {
+        profileVisibility: privacy?.profileVisibility ?? current.profileVisibility,
+        messageRequests: privacy?.messageRequests ?? current.messageRequests,
+        allowDmFromStrangers: privacy?.allowDmFromStrangers ?? current.allowDmFromStrangers,
+      },
+    });
   }
 
   /**
@@ -650,6 +670,7 @@ export class AuthService {
     user: UserRecord,
     updates: Partial<Pick<UserRecord, "emailVerified">> = {},
   ): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+    this.assertAccountActive(user);
     const deviceId = randomUUID();
     const refreshToken = this.issueRefreshToken(user, deviceId);
     await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
@@ -669,5 +690,13 @@ export class AuthService {
     return jwt.sign({ sub: user.id, type: "refresh", deviceId }, env.JWT_REFRESH_SECRET, {
       expiresIn: "7d",
     });
+  }
+
+  private isAccountActive(user: UserRecord): boolean {
+    return user.accountStatus !== "suspended" && user.accountStatus !== "deactivated";
+  }
+
+  private assertAccountActive(user: UserRecord): void {
+    if (!this.isAccountActive(user)) throw new Error("Account is unavailable");
   }
 }

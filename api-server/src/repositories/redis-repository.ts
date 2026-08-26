@@ -53,7 +53,7 @@ export class RedisRepository {
 
   async keys(pattern: string): Promise<string[]> {
     try {
-      return await this.client.keys(pattern);
+      return await this.scan(pattern);
     } catch {
       return [];
     }
@@ -116,6 +116,38 @@ export class RedisRepository {
 
   async getSetStrict(key: string): Promise<string[]> {
     return this.client.smembers(key);
+  }
+
+  async scan(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = "0";
+    do {
+      const [nextCursor, batch] = await this.client.scan(cursor, "MATCH", pattern, "COUNT", 200);
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== "0");
+    return keys;
+  }
+
+  async scanStrict(pattern: string): Promise<string[]> {
+    return this.scan(pattern);
+  }
+
+  /** Atomically rotates a refresh token only when the caller still owns the current value. */
+  async rotateValueStrict(key: string, expected: string, replacement: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.client.eval(
+      `
+        if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+        redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+        return 1
+      `,
+      1,
+      key,
+      expected,
+      replacement,
+      ttlSeconds,
+    );
+    return result === 1;
   }
 
   /** Atomically consumes a challenge only when its JSON state is approved. */

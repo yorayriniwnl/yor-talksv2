@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, TooManyAttemptsError, TwoFactorRequiredError } from "../services/auth-service.js";
+import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
@@ -50,7 +50,13 @@ export class AuthController {
       if (error instanceof EmailDeliveryProviderError) {
         return res.status(502).json(createResponse("Registration email could not be delivered", null, {}, [error.message]));
       }
-      return res.status(409).json(createResponse("Registration failed", null, {}, [error instanceof Error ? error.message : "Unknown error"]));
+      if (error instanceof RegistrationNotAllowedError) {
+        return res.status(400).json(createResponse("Registration is not available for this email domain", null, {}, [error.message]));
+      }
+      if (error instanceof UserAlreadyExistsError) {
+        return res.status(409).json(createResponse("An account already exists for that email or username", null, {}, [error.message]));
+      }
+      return res.status(503).json(createResponse("Registration is temporarily unavailable", null, {}, ["Please try again shortly"]));
     }
   };
 

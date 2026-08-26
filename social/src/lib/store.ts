@@ -274,6 +274,13 @@ export type PrivacySettings = {
   twoFactorEnabled: boolean;
 };
 
+const DEFAULT_PRIVACY_SETTINGS: PrivacySettings = {
+  profileVisibility: 'public',
+  allowDmFromStrangers: true,
+  messageRequests: true,
+  twoFactorEnabled: false,
+};
+
 export type FollowRequest = {
   id: string;
   requesterId: string;
@@ -304,6 +311,14 @@ function mapUser(u: BackendUser): User {
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
     notificationsEnabled: u.settings?.notificationsEnabled !== false,
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
+  };
+}
+
+function mapPrivacy(user: BackendUser): PrivacySettings {
+  return {
+    ...DEFAULT_PRIVACY_SETTINGS,
+    ...(user.privacy ?? {}),
+    twoFactorEnabled: Boolean(user.twoFactorEnabled),
   };
 }
 
@@ -803,7 +818,7 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -820,7 +835,7 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -837,7 +852,7 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -853,7 +868,7 @@ export const useAppStore = create<AppState>()(
           const result = await api.completeTwoFactorLogin(challengeId);
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, users: { ...state.users, [mapped.id]: mapped } }));
+          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
           setupRealtime(set, get);
           hydrateSessionData(get);
         } catch (err) {
@@ -916,9 +931,9 @@ export const useAppStore = create<AppState>()(
               set((state) => ({
                 currentUser: mapped,
                 tokens,
+                privacy: mapPrivacy(meResponse),
                 users: { ...state.users, [mapped.id]: mapped },
               }));
-              setupRealtime(set, get);
             }
           } catch {
             // Token expired or invalid — remain signed out.
@@ -1050,13 +1065,17 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateProfile: (updates) => {
+      updateProfile: async (updates) => {
+        const updated = await api.updateProfile({
+          ...(updates.displayName !== undefined ? { fullName: updates.displayName } : {}),
+          ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
+          ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+        });
+        const mapped = mapUser(updated);
         set((state) => ({
-          currentUser: state.currentUser ? { ...state.currentUser, ...updates } : state.currentUser,
-          users: state.currentUser ? {
-            ...state.users,
-            [state.currentUser.id]: { ...state.users[state.currentUser.id], ...updates }
-          } : state.users
+          currentUser: mapped,
+          privacy: mapPrivacy(updated),
+          users: { ...state.users, [mapped.id]: mapped },
         }));
       },
       addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY) => {
@@ -1268,7 +1287,8 @@ export const useAppStore = create<AppState>()(
       loadUserProfile: async (userId) => {
         if (get().users[userId]) return;
         try {
-          const user = await api.getProfile(userId);
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+          const user = isUuid ? await api.getProfile(userId) : await api.getProfileByUsername(userId.replace(/^@/, ""));
           const mapped = mapUser(user);
           set((state) => ({ users: { ...state.users, [mapped.id]: mapped } }));
         } catch {}
@@ -1751,7 +1771,7 @@ export const useAppStore = create<AppState>()(
         if (Object.keys(backendPatch).length === 0) return;
         try {
           const updated = await api.updatePrivacy(backendPatch);
-          set((state) => ({ privacy: { ...state.privacy, ...updated } }));
+        set((state) => ({ privacy: { ...state.privacy, ...updated } }));
         } catch (error) {
           set({ privacy: previous });
           toast.error(error instanceof Error ? error.message : 'Could not update privacy settings');
@@ -1815,6 +1835,7 @@ export const useAppStore = create<AppState>()(
 
       setTwoFactorEnabled: (enabled) => {
         set((state) => ({
+          privacy: { ...state.privacy, twoFactorEnabled: enabled },
           currentUser: state.currentUser ? { ...state.currentUser, twoFactorEnabled: enabled } : state.currentUser,
           users: state.currentUser ? { ...state.users, [state.currentUser.id]: { ...state.users[state.currentUser.id], twoFactorEnabled: enabled } } : state.users,
         }));

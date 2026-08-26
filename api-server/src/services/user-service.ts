@@ -239,7 +239,7 @@ export class UserService {
     const viewer = viewerId ?? user.id;
     if (!(await this.contactShieldService.canView(viewer, user.id))) return false;
     if (viewer === user.id) return true;
-    const visibility = user.privacy?.profileVisibility ?? "public";
+    const visibility = user.privacy?.profileVisibility ?? (user.settings?.privateAccount ? "private" : "public");
     if (visibility === "private") return false;
     if (visibility === "followers") return this.userRepository.isFollowing(viewer, user.id);
     return true;
