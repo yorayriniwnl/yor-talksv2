@@ -8,11 +8,14 @@ import { createResponse } from "../utils/response.js";
 import { PostRepository } from "../repositories/post-repository.js";
 import { ContactShieldService } from "../services/contact-shield-service.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
+import { aiRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const postRepository = new PostRepository();
 const contactShieldService = new ContactShieldService();
 const contentSafetyService = new ContentSafetyService();
+
+router.use(aiRateLimiter);
 
 // Copilot Ideation Chat
 router.post("/chat", authenticate, async (req, res) => {

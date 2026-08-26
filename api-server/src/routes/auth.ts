@@ -7,12 +7,15 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
 import { emailOtpRequestSchema, emailOtpVerifySchema, googleLoginSchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
 import { challengeIdParamSchema } from "../validators/params.js";
+import { authRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const userRepo = new UserRepository();
 const redisRepo = new RedisRepository();
 const authService = new AuthService(userRepo, redisRepo);
 const authController = new AuthController(authService);
+
+router.use(authRateLimiter);
 
 // Phone/WhatsApp OTP is intentionally unavailable in the college beta: the
 // project has no verified SMS provider and must not expose test OTP codes.

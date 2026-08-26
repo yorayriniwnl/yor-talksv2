@@ -3,15 +3,13 @@ import compression from "compression";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
-import RedisStore from "rate-limit-redis";
-import Redis from "ioredis";
 import pinoHttpFactory from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
 import { env, corsOrigins } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
+import { apiRateLimiter } from "./middlewares/rate-limit.js";
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -38,19 +36,6 @@ const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, un
 
 const createHelmetMiddleware = helmet as unknown as (options?: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void;
 
-// Initialize Redis Client for Rate Limiting
-const redisClient = new Redis(env.REDIS_URL);
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as any,
-  }),
-});
-
 app.disable("x-powered-by");
 app.use(requestContext);
 app.use(requestLogger);
@@ -65,11 +50,12 @@ app.use(
   }),
 );
 
-// Apply Redis-backed rate limiting to all requests
-app.use(limiter);
+// Apply Redis-backed rate limiting to all requests. Sensitive route groups add
+// stricter limiters in their own routers.
+app.use(apiRateLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 }));
 app.use(cookieParser());
 
 app.use("/api", router);
