@@ -91,7 +91,7 @@ export class CommunityService {
         item && typeof item === "object" &&
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String((item as any).authorId ?? "")),
       )) as CommunityDiscussion[];
-    return this.contentSafetyService.filterVisible(discussions, viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor(discussions, viewerId, (discussion) => discussion.authorId);
   }
 
   async createDiscussion(communityId: string, userId: string, input: { title: string; content?: string; tag: string; contentRating?: CommunityDiscussion["contentRating"] }): Promise<CommunityDiscussion | undefined> {

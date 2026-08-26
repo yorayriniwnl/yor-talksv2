@@ -9,6 +9,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { MessageBlockedError, MessageService } from "../services/message-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
+import { ContentSafetyService } from "../services/content-safety-service.js";
 
 export const attachSocketServer = (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
@@ -24,6 +25,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
   const redisRepository = new RedisRepository();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const liveStreamRepository = new LiveStreamRepository();
+  const contentSafetyService = new ContentSafetyService(userRepository);
   const onlineUsers = new Map<string, string>();
   const activeCalls = new Map<string, { callerId: string; recipientId: string; createdAt: number }>();
 
@@ -186,7 +188,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         socket.emit("stream:error", { streamId, error: "Stream is temporarily unavailable" });
         return;
       }
-      if (!stream || (stream.status !== "live" && stream.hostId !== userId)) {
+      if (!stream || !(await contentSafetyService.isVisible(stream, userId, stream.hostId)) || (stream.status !== "live" && stream.hostId !== userId)) {
         socket.emit("stream:error", { streamId, error: "Stream is unavailable" });
         return;
       }
