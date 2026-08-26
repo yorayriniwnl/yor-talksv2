@@ -25,6 +25,7 @@ router.post("/posts/:postId/like", authenticate, validateParams(postIdParamSchem
 router.post("/posts/:postId/unlike", authenticate, validateParams(postIdParamSchema), postController.unlike);
 router.post("/posts/:postId/comments", authenticate, validateParams(postIdParamSchema), validateBody(commentSchema), postController.comment);
 router.get("/posts/:postId/comments", authenticate, validateParams(postIdParamSchema), postController.comments);
+router.post("/posts/:postId/comments/:commentId/like", authenticate, validateParams(postIdParamSchema.merge(commentIdParamSchema)), postController.commentLike);
 router.post("/posts/:postId/comments/:commentId/replies", authenticate, validateParams(postIdParamSchema.merge(commentIdParamSchema)), validateBody(replySchema), postController.reply);
 router.post("/posts/:postId/bookmark", authenticate, validateParams(postIdParamSchema), postController.bookmark);
 router.post("/posts/:postId/share", authenticate, validateParams(postIdParamSchema), postController.share);

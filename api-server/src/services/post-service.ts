@@ -246,6 +246,45 @@ export class PostService {
     return { post: updatedPost ?? post, reply };
   }
 
+  async toggleCommentLike(postId: string, commentId: string, userId: string): Promise<CommentRecord | undefined> {
+    const post = await this.getPost(postId, userId);
+    if (!post) return undefined;
+
+    const [comment] = await db.select().from(commentsTable).where(and(
+      eq(commentsTable.id, commentId),
+      eq(commentsTable.postId, postId),
+    ));
+    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))) return undefined;
+
+    // Toggle the JSONB membership atomically so two devices cannot overwrite
+    // each other's likes with a stale client-side array.
+    const [updated] = await db.update(commentsTable).set({
+      likedBy: sql`CASE WHEN ${commentsTable.likedBy} ? ${userId} THEN ${commentsTable.likedBy} - ${userId} ELSE ${commentsTable.likedBy} || jsonb_build_array(${userId}) END`,
+      updatedAt: new Date().toISOString(),
+    }).where(and(
+      eq(commentsTable.id, commentId),
+      eq(commentsTable.postId, postId),
+    )).returning();
+    if (!updated) return undefined;
+
+    const likedBy = Array.isArray(updated.likedBy) ? updated.likedBy.filter((value): value is string => typeof value === "string") : [];
+    return {
+      id: updated.id,
+      authorId: updated.authorId,
+      content: updated.content,
+      mediaUrl: updated.mediaUrl,
+      mediaType: updated.mediaType as CommentRecord["mediaType"],
+      mediaDuration: updated.mediaDuration,
+      createdAt: updated.createdAt,
+      replies: [],
+      reactions: (updated.reactions ?? {}) as Record<string, string[]>,
+      likes: likedBy.length,
+      likedByMe: likedBy.includes(userId),
+      repliesCount: updated.repliesCount ?? 0,
+      parentId: updated.parentId,
+    };
+  }
+
   async listComments(postId: string, viewerId: string): Promise<Array<CommentRecord & { author: { id: string; username: string; fullName: string; avatarUrl: string | null } }>> {
     const post = await this.getPost(postId, viewerId);
     if (!post) return [];
@@ -253,8 +292,17 @@ export class PostService {
     const rows = await db.select().from(commentsTable)
       .where(eq(commentsTable.postId, postId))
       .orderBy(asc(commentsTable.createdAt));
-    return Promise.all(rows.filter((row) => !excludedAuthorIds.has(row.authorId)).map(async (row) => {
+    const visibleRows = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
+    return Promise.all(visibleRows.filter((row) => !row.parentId).map(async (row) => {
       const author = await this.userRepository.findById(row.authorId);
+      const likedBy = Array.isArray(row.likedBy) ? row.likedBy.filter((value): value is string => typeof value === "string") : [];
+      const replies = visibleRows.filter((reply) => reply.parentId === row.id).map((reply) => ({
+        id: reply.id,
+        authorId: reply.authorId,
+        content: reply.content,
+        createdAt: reply.createdAt,
+        reactions: (reply.reactions ?? {}) as Record<string, string[]>,
+      }));
       return {
         id: row.id,
         authorId: row.authorId,
@@ -263,8 +311,12 @@ export class PostService {
         mediaType: row.mediaType as CommentRecord["mediaType"],
         mediaDuration: row.mediaDuration,
         createdAt: row.createdAt,
-        replies: [],
+        replies,
         reactions: (row.reactions ?? {}) as Record<string, string[]>,
+        likes: likedBy.length,
+        likedByMe: likedBy.includes(viewerId),
+        repliesCount: row.repliesCount ?? replies.length,
+        parentId: row.parentId,
         author: {
           id: row.authorId,
           username: author?.username ?? "user",

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api-client';
 import { PostCardMemo as PostCard } from '@/components/feed/Post';
-import { ArrowLeft, MessageCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/motion';
@@ -15,10 +15,12 @@ export default function PostDetail() {
   const posts = useAppStore((s) => s.posts);
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
+  const syncPostFromBackend = useAppStore((s) => s.syncPostFromBackend);
   
   const post = posts.find((p) => p.id === id);
 
   const [commentList, setCommentList] = useState<CommentItem[]>([]);
+  const [replyingTo, setReplyingTo] = useState<CommentItem | null>(null);
 
   useEffect(() => {
     if (!post) return;
@@ -36,7 +38,9 @@ export default function PostDetail() {
         gifUrl: comment.mediaType === 'gif' ? comment.mediaUrl ?? undefined : undefined,
         voiceNoteUrl: comment.mediaType === 'audio' ? comment.mediaUrl ?? undefined : undefined,
         voiceDuration: comment.mediaDuration ?? undefined,
-        likes: 0,
+        likes: comment.likes ?? 0,
+        likedByMe: comment.likedByMe ?? false,
+        repliesCount: comment.repliesCount ?? comment.replies?.length ?? 0,
         createdAt: comment.createdAt,
       })));
     }).catch(() => {
@@ -62,6 +66,19 @@ export default function PostDetail() {
   const handleAddComment = async (data: RichCommentData) => {
     if (!post) return;
     if (!data.text.trim() && !data.imageUrl && !data.gifUrl && !data.voiceNoteUrl) return;
+    if (replyingTo) {
+      if (data.imageUrl || data.gifUrl || data.voiceNoteUrl) {
+        throw new Error('Text replies are required for nested replies. Add media as a top-level comment instead.');
+      }
+      const result = await api.replyToPostComment(post.id, replyingTo.id, data.text.trim());
+      syncPostFromBackend(result.post);
+      setCommentList((prev) => prev.map((comment) => comment.id === replyingTo.id
+        ? { ...comment, repliesCount: (comment.repliesCount ?? 0) + 1 }
+        : comment));
+      setReplyingTo(null);
+      return;
+    }
+
     const media = data.voiceNoteUrl
       ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
       : data.gifUrl
@@ -84,7 +101,16 @@ export default function PostDetail() {
       likes: 0,
       createdAt: result.comment.createdAt,
     };
+    syncPostFromBackend(result.post);
     setCommentList((prev) => [...prev, newComment]);
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    const updated = await api.likePostComment(post.id, commentId);
+    setCommentList((prev) => prev.map((comment) => comment.id === commentId
+      ? { ...comment, likes: updated.likes ?? 0, likedByMe: updated.likedByMe ?? false }
+      : comment));
+    return { likes: updated.likes ?? 0, likedByMe: updated.likedByMe ?? false };
   };
 
   return (
@@ -122,15 +148,23 @@ export default function PostDetail() {
           </div>
           
           {/* Rich Composer */}
+          {replyingTo && (
+            <div className="flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+              <span className="truncate text-muted-foreground">Replying to <strong className="text-foreground">@{replyingTo.authorUsername || 'user'}</strong></span>
+              <button type="button" onClick={() => setReplyingTo(null)} className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Cancel reply">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           <RichCommentComposer
             postId={post.id}
             creatorUser={users[post.authorId]}
-            placeholder="Add a reply, photo, GIF, voice note or tip..."
+            placeholder={replyingTo ? 'Write a text reply...' : 'Add a reply, photo, GIF, voice note or tip...'}
             onCommentSubmit={handleAddComment}
           />
 
           {/* Comments List */}
-          <RichCommentList comments={commentList} />
+          <RichCommentList comments={commentList} onLikeComment={handleLikeComment} onReplyComment={setReplyingTo} />
         </div>
 
         {/* Related Posts */}

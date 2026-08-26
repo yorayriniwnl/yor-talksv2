@@ -429,6 +429,8 @@ export const api = {
   votePostPoll: (postId: string, optionId: string) => request<BackendPost>(`/posts/${postId}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
   commentOnPost: (postId: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) => request<{ post: BackendPost; comment: BackendComment }>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
   getPostComments: (postId: string) => request<BackendComment[]>(`/posts/${postId}/comments`),
+  likePostComment: (postId: string, commentId: string) => request<BackendComment>(`/posts/${postId}/comments/${commentId}/like`, { method: 'POST' }),
+  replyToPostComment: (postId: string, commentId: string, content: string) => request<{ post: BackendPost; reply: BackendComment }>(`/posts/${postId}/comments/${commentId}/replies`, { method: 'POST', body: JSON.stringify({ content }) }),
   uploadPostImage: (file: File) => {
     const form = new FormData();
     form.append('image', file);
@@ -617,6 +619,11 @@ export interface BackendComment {
   mediaUrl?: string | null;
   mediaType?: 'image' | 'gif' | 'audio' | null;
   mediaDuration?: number | null;
+  likes?: number;
+  likedByMe?: boolean;
+  repliesCount?: number;
+  parentId?: string | null;
+  replies?: Array<{ id: string; authorId: string; content: string; createdAt: string }>;
   author?: { id: string; username: string; fullName: string; avatarUrl: string | null };
 }
 

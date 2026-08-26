@@ -140,6 +140,16 @@ export class PostController {
     return res.status(201).json(createResponse("Reply created", result));
   };
 
+  commentLike = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const commentId = typeof req.params.commentId === "string" ? req.params.commentId : "";
+    const comment = await this.postService.toggleCommentLike(postId, commentId, req.user?.id ?? "");
+    if (!comment) {
+      return res.status(404).json(createResponse("Comment not found", null, {}, ["Comment not found"]));
+    }
+    return res.status(200).json(createResponse("Comment like updated", comment));
+  };
+
   comments = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const comments = await this.postService.listComments(postId, req.user?.id ?? "");

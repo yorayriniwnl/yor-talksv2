@@ -111,6 +111,10 @@ export interface CommentRecord {
   createdAt: string;
   replies: ReplyRecord[];
   reactions?: Record<string, string[]>;
+  likes?: number;
+  likedByMe?: boolean;
+  repliesCount?: number;
+  parentId?: string | null;
 }
 
 export interface ReplyRecord {

@@ -22,7 +22,7 @@ import { sounds } from '@/lib/sound';
 import { TiltCard } from '@/components/ui/TiltCard';
 import { RippleEffect } from '@/components/ui/RippleEffect';
 import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
-import { RichCommentComposer } from '@/components/comments/RichCommentComposer';
+import { RichCommentComposer, type RichCommentData } from '@/components/comments/RichCommentComposer';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
@@ -280,6 +280,7 @@ export function PostCard({ post }: { post: PostType }) {
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
+  const syncPostFromBackend = useAppStore((state) => state.syncPostFromBackend);
   const toggleRepost = useAppStore((state) => state.toggleRepost);
   const toggleBlockUser = useAppStore((state) => state.toggleBlockUser);
   const [, setLocation] = useLocation();
@@ -312,6 +313,20 @@ export function PostCard({ post }: { post: PostType }) {
     event.stopPropagation();
     await toggleBlockUser(author.id);
     toast({ title: 'User blocked', description: 'You will no longer see this user’s content.' });
+  };
+
+  const handleInlineComment = async (data: RichCommentData) => {
+    const media = data.voiceNoteUrl
+      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
+      : data.gifUrl
+        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
+        : data.imageUrl
+          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
+          : {};
+    const result = await api.commentOnPost(post.id, { content: data.text.trim(), ...media });
+    syncPostFromBackend(result.post);
+    setShowCommentInput(false);
+    toast({ title: 'Comment published', description: 'Your reply is now part of the conversation.' });
   };
 
   const getTextSizeClass = (length: number) => {
@@ -704,10 +719,7 @@ export function PostCard({ post }: { post: PostType }) {
           <RichCommentComposer
             postId={post.id}
             creatorUser={author}
-            onCommentSubmit={(data) => {
-              toast({ title: 'Rich comment published! 💬' });
-              setShowCommentInput(false);
-            }}
+            onCommentSubmit={handleInlineComment}
           />
         </div>
       )}

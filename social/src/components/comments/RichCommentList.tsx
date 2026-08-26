@@ -20,8 +20,11 @@ export interface CommentItem {
   tipAmount?: number;
   likes?: number;
   likedByMe?: boolean;
+  repliesCount?: number;
   createdAt: string;
 }
+
+type CommentLikeResult = { likes: number; likedByMe: boolean };
 
 export function RichCommentList({
   comments,
@@ -29,21 +32,29 @@ export function RichCommentList({
   onReplyComment,
 }: {
   comments: CommentItem[];
-  onLikeComment?: (id: string) => void;
+  onLikeComment?: (id: string) => void | Promise<CommentLikeResult | void>;
   onReplyComment?: (comment: CommentItem) => void;
 }) {
-  const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+  const [likeState, setLikeState] = useState<Record<string, CommentLikeResult>>({});
 
-  const handleLike = (id: string) => {
+  const handleLike = async (id: string, currentLikes: number, currentLikedByMe: boolean) => {
     sounds.playPop();
-    setLikedMap((prev) => ({ ...prev, [id]: !prev[id] }));
-    onLikeComment?.(id);
+    const optimistic = { likes: Math.max(0, currentLikes + (currentLikedByMe ? -1 : 1)), likedByMe: !currentLikedByMe };
+    setLikeState((prev) => ({ ...prev, [id]: optimistic }));
+    try {
+      const result = await onLikeComment?.(id);
+      if (result) setLikeState((prev) => ({ ...prev, [id]: result }));
+    } catch {
+      setLikeState((prev) => ({ ...prev, [id]: { likes: currentLikes, likedByMe: currentLikedByMe } }));
+    }
   };
 
   return (
     <div className="space-y-3 font-sans">
       {comments.map((comment) => {
-        const isLiked = likedMap[comment.id] || comment.likedByMe;
+        const currentLikeState = likeState[comment.id];
+        const isLiked = currentLikeState?.likedByMe ?? Boolean(comment.likedByMe);
+        const likeCount = currentLikeState?.likes ?? comment.likes ?? 0;
         const isSuperComment = Boolean(comment.tipAmount);
 
         return (
@@ -120,14 +131,14 @@ export function RichCommentList({
                 <div className="flex items-center gap-4 mt-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => handleLike(comment.id)}
+                    onClick={() => void handleLike(comment.id, likeCount, isLiked)}
                     className={cn(
                       "flex items-center gap-1 text-[0.68rem] font-medium transition-colors cursor-pointer",
                       isLiked ? "text-rose-500 font-bold" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <Heart className={cn("w-3.5 h-3.5", isLiked && "fill-rose-500")} />
-                    <span>{(comment.likes || 0) + (isLiked ? 1 : 0)}</span>
+                    <span>{likeCount}</span>
                   </button>
 
                   <button
@@ -137,6 +148,7 @@ export function RichCommentList({
                   >
                     <Reply className="w-3.5 h-3.5" />
                     <span>Reply</span>
+                    {Boolean(comment.repliesCount) && <span>({comment.repliesCount})</span>}
                   </button>
                 </div>
               </div>

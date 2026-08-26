@@ -598,6 +598,7 @@ interface AppState {
   loadSavedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
+  syncPostFromBackend: (post: BackendPost) => void;
   likePost: (postId: string) => Promise<void>;
   addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory) => Promise<void>;
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
@@ -1011,6 +1012,13 @@ export const useAppStore = create<AppState>()(
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: [...state.posts, mapPost(post, currentUserId)] }));
         } catch {}
+      },
+
+      syncPostFromBackend: (post) => {
+        const currentUserId = get().currentUser?.id;
+        set((state) => ({
+          posts: state.posts.map((item) => item.id === post.id ? mapPost(post, currentUserId) : item),
+        }));
       },
 
       likePost: async (postId) => {
