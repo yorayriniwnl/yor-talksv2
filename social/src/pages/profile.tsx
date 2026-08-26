@@ -269,7 +269,7 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
   const hasMultiple = post.media && post.media.length > 1;
 
   return (
-    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift" onClick={onClick}>
+    <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="w-full aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift text-left" onClick={onClick}>
       {firstMedia ? (
         <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
@@ -292,7 +292,7 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
           <MessageCircle className="w-5 h-5 fill-white" /> {formatCount(post.comments)}
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 

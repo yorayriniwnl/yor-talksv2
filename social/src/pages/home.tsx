@@ -218,7 +218,7 @@ export default function Home() {
                 <span>Latest posts</span>
                 <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : 'Build'}</strong>
               </div>
-              <button onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
+              <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
                 <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
                 <span>{isRefreshing ? 'Refreshing' : 'Refresh'}</span>
               </button>
@@ -227,7 +227,7 @@ export default function Home() {
             {mode === 'discover' && (
               <div className="orbit-topic-row" aria-label="Discovery topics">
                 {TOPICS.map((item) => (
-                  <button key={item.id} onClick={() => { setTopic(item.id); setVisibleCount(8); }} className={cn(topic === item.id && 'is-active')}>
+                  <button type="button" key={item.id} onClick={() => { setTopic(item.id); setVisibleCount(8); }} aria-pressed={topic === item.id} className={cn(topic === item.id && 'is-active')}>
                     {item.label}
                   </button>
                 ))}
@@ -236,15 +236,19 @@ export default function Home() {
 
             <div className="orbit-topic-row" aria-label="Filter by content category">
               <button
+                type="button"
                 onClick={() => { setContentCategory('all'); setVisibleCount(8); }}
+                aria-pressed={contentCategory === 'all'}
                 className={cn(contentCategory === 'all' && 'is-active')}
               >
                 ✨ All categories
               </button>
               {CONTENT_CATEGORIES.map((category) => (
                 <button
+                  type="button"
                   key={category.value}
                   onClick={() => { setContentCategory(category.value); setVisibleCount(8); }}
+                  aria-pressed={contentCategory === category.value}
                   className={cn(contentCategory === category.value && 'is-active')}
                 >
                   {category.emoji} {category.label}

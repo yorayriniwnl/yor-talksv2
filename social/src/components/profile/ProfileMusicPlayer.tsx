@@ -36,6 +36,7 @@ export function ProfileMusicPlayer() {
     <div className="surface-1 rounded-2xl p-3 border border-primary/30 flex items-center justify-between gap-3 shadow-md my-4 font-sans backdrop-blur-md">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <button
+          type="button"
           onClick={toggleMusic}
           className={cn(
             "w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0 transition-transform active:scale-95 shadow-md",
@@ -44,12 +45,12 @@ export function ProfileMusicPlayer() {
         >
           {isPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
         </button>
-        <div className="min-w-0 cursor-pointer" onClick={nextTrack} title="Click to cycle genre soundtracks">
+        <button type="button" className="min-w-0 cursor-pointer text-left" onClick={nextTrack} title="Click to cycle genre soundtracks" aria-label="Switch profile soundtrack">
           <h5 className="font-bold text-xs truncate flex items-center gap-1">
             <Music className="w-3 h-3 text-primary shrink-0" /> Profile Soundtrack <span className="text-[0.6rem] font-mono text-primary font-normal">(Tap to switch)</span>
           </h5>
           <p className="text-[0.62rem] text-muted-foreground font-mono truncate">{activeTrack}</p>
-        </div>
+        </button>
       </div>
 
       {/* Frequency Equalizer Visualizer */}

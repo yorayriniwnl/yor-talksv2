@@ -191,7 +191,7 @@ export default function Projects() {
               />
             </div>
             
-            <div className="p-3 border border-border/40 rounded-xl bg-zinc-950/50 flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLooking(!looking)}>
+            <button type="button" aria-pressed={looking} className="w-full text-left p-3 border border-border/40 rounded-xl bg-zinc-950/50 flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLooking(!looking)}>
               <div>
                 <div className="text-sm font-bold text-foreground">Looking for Collaborators</div>
                 <div className="text-[10px] text-muted-foreground">Allow others to apply to join via Creator DNA.</div>
@@ -199,7 +199,7 @@ export default function Projects() {
               <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${looking ? 'bg-primary border-primary text-black' : 'border-muted-foreground'}`}>
                 {looking && <CheckCircle2 className="w-4 h-4" />}
               </div>
-            </div>
+            </button>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowCreate(false)} className="rounded-xl">Cancel</Button>
