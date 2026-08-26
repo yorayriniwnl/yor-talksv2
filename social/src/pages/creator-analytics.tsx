@@ -37,14 +37,17 @@ export default function CreatorAnalytics() {
 
   useEffect(() => { void load(); }, []);
 
-  const totals = useMemo(() => rows.reduce((sum, row) => ({
-    profileViews: sum.profileViews + (row.profileViews || 0),
-    newFollowers: sum.newFollowers + (row.newFollowers || 0),
-    postViews: sum.postViews + (row.totalPostViews || 0),
-    reelViews: sum.reelViews + (row.totalReelViews || 0),
-    engagement: sum.engagement + (row.totalEngagement || 0),
-    earnings: sum.earnings + (row.estimatedEarnings || 0),
-  }), { profileViews: 0, newFollowers: 0, postViews: 0, reelViews: 0, engagement: 0, earnings: 0 }), [rows]);
+  const latest = rows[0];
+  const totals = useMemo(() => ({
+    profileViews: rows.reduce((sum, row) => sum + (row.profileViews || 0), 0),
+    newFollowers: rows.reduce((sum, row) => sum + (row.newFollowers || 0), 0),
+    // These are cumulative snapshots, so only the latest row is reportable as
+    // a total. Summing every row would count the same content repeatedly.
+    postViews: latest?.totalPostViews || 0,
+    reelViews: latest?.totalReelViews || 0,
+    engagement: latest?.totalEngagement || 0,
+    earnings: rows.reduce((sum, row) => sum + (row.estimatedEarnings || 0), 0),
+  }), [latest, rows]);
 
   const localPosts = posts.filter((post) => post.authorId === currentUser?.id);
   const localVideos = videos.filter((video) => video.authorId === currentUser?.id);
@@ -64,13 +67,13 @@ export default function CreatorAnalytics() {
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Profile views" value={totals.profileViews.toLocaleString()} detail={isServerConnected ? 'Last 30 recorded days' : 'Awaiting server rollup'} icon={Eye} />
           <Metric label="Content reach" value={(totals.postViews + totals.reelViews).toLocaleString()} detail={`${localPosts.length + localVideos.length} live content items`} icon={BarChart3} />
-          <Metric label="Engagement" value={totals.engagement.toLocaleString()} detail={isServerConnected ? 'Server-counted actions' : 'Telemetry will backfill'} icon={Heart} />
+          <Metric label="Engagement" value={totals.engagement.toLocaleString()} detail={isServerConnected ? 'Current server-counted total' : 'Telemetry will backfill'} icon={Heart} />
           <Metric label="New followers" value={totals.newFollowers.toLocaleString()} detail={`${currentUser?.followers ?? 0} current followers`} icon={Users} />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="surface-1 rounded-3xl border border-border/40 p-6">
-            <div className="mb-5 flex items-center justify-between"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Daily pulse</p><h2 className="mt-1 font-display text-xl font-black">What your signal is doing.</h2></div><Clock3 className="h-5 w-5 text-primary" /></div>
+            <div className="mb-5 flex items-center justify-between"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Reach snapshots</p><h2 className="mt-1 font-display text-xl font-black">How your signal has grown.</h2></div><Clock3 className="h-5 w-5 text-primary" /></div>
             {rows.length > 0 ? <div className="space-y-3">{rows.slice(0, 14).map((row) => { const reach = row.totalPostViews + row.totalReelViews; const maxReach = Math.max(...rows.map((item) => item.totalPostViews + item.totalReelViews), 1); return <div key={row.id} className="grid grid-cols-[5.5rem_1fr_4rem] items-center gap-3 text-xs"><span className="text-muted-foreground">{new Date(row.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${Math.max(3, Math.round((reach / maxReach) * 100))}%` }} /></div><span className="text-right font-bold">{reach.toLocaleString()}</span></div>; })}</div> : <div className="rounded-2xl border border-dashed border-border/50 p-8 text-center"><BarChart3 className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">Telemetry is ready for your first daily rollup.</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Publish content and the server can aggregate profile views, reel watch time, engagement, and follower changes here.</p></div>}
           </div>
           <div className="space-y-6">
