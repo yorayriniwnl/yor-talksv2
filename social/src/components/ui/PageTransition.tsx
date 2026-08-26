@@ -1,4 +1,5 @@
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import type { ReactNode } from 'react';
 
@@ -34,6 +35,10 @@ const pageVariants: Variants = {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location]);
 
   return (
     <AnimatePresence mode="wait">
