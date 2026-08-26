@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { emitToUser, getIo } from "../lib/realtime.js";
+import { getIo } from "../lib/realtime.js";
 import { InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
@@ -28,7 +28,10 @@ export class MessageController {
       // Multicast to group room via Socket.io
       const io = getIo();
       if (io) {
-        io.to(`conversation:${actualConversationId}`).emit("message:receive", message);
+        const room = `conversation:${actualConversationId}`;
+        io.in(message.senderId).socketsJoin(room);
+        if (message.recipientId) io.in(message.recipientId).socketsJoin(room);
+        io.to(room).emit("message:receive", message);
       }
       
       return res.status(201).json(createResponse("Message sent", message));
@@ -56,6 +59,7 @@ export class MessageController {
       if (io) {
         // Invite members to room
         for (const id of [req.user?.id, ...memberIds]) {
+          io.in(id!).socketsJoin(`conversation:${group.id}`);
           io.to(id!).emit("conversation:created", group);
         }
       }

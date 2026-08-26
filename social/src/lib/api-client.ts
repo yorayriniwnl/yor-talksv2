@@ -33,6 +33,7 @@ export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
 let memoryAccessToken: string | null = null;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+let tokenChangeListener: ((token: string | null) => void) | null = null;
 
 export function getStoredTokens(): Tokens | null {
   if (memoryAccessToken) return { accessToken: memoryAccessToken };
@@ -58,6 +59,14 @@ export function setStoredTokens(tokens: Tokens | null): void {
     memoryAccessToken = null;
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
+  tokenChangeListener?.(memoryAccessToken);
+}
+
+export function onStoredTokensChange(listener: (token: string | null) => void): () => void {
+  tokenChangeListener = listener;
+  return () => {
+    if (tokenChangeListener === listener) tokenChangeListener = null;
+  };
 }
 
 export interface PaginatedResponse<T> {

@@ -43,6 +43,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         return next(new Error("Session revoked"));
       }
       socket.data.userId = decoded.sub;
+      socket.data.deviceId = decoded.deviceId;
       next();
     } catch {
       next(new Error("Authentication error"));
@@ -51,11 +52,43 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
   io.on("connection", async (socket) => {
     const userId = socket.data.userId as string;
+    const deviceId = socket.data.deviceId as string;
     const joinedStreams = new Set<string>();
     onlineUsers.set(userId, socket.id);
     socket.join(userId);
     logger.info({ userId }, "socket connected");
     socket.emit("presence:update", { online: true, userId });
+
+    const sessionIsActive = async (): Promise<boolean> => {
+      try {
+        const [session, user] = await Promise.all([
+          redisRepository.getStrict(`session:${userId}:${deviceId}`),
+          userRepository.findById(userId),
+        ]);
+        if (session && user && user.accountStatus !== "suspended" && user.accountStatus !== "deactivated") return true;
+      } catch (error) {
+        logger.warn({ error, userId }, "Could not validate socket session");
+      }
+      socket.disconnect(true);
+      return false;
+    };
+
+    socket.use(async (_packet, next) => {
+      if (await sessionIsActive()) return next();
+      return next(new Error("Session revoked"));
+    });
+    socket.on("error", (error) => logger.warn({ error, userId }, "Socket event rejected"));
+
+    socket.on("conversation:join", async (payload: { conversationId?: unknown } = {}) => {
+      const conversationId = payload.conversationId;
+      if (typeof conversationId !== "string" || !/^[0-9a-f-]{36}$/i.test(conversationId)) return;
+      const members = await conversationRepository.getMembers(conversationId);
+      if (members.includes(userId)) socket.join(`conversation:${conversationId}`);
+    });
+
+    socket.on("conversation:leave", (payload: { conversationId?: unknown } = {}) => {
+      if (typeof payload.conversationId === "string") socket.leave(`conversation:${payload.conversationId}`);
+    });
 
     // Join all conversations the user is part of for group multicasting
     try {

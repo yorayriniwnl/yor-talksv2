@@ -5,7 +5,7 @@
   "outputDirectory": "social/dist/public",
   "functions": {
     "api/index.ts": {
-      "maxDuration": 15
+      "maxDuration": 60
     }
   },
   "headers": [

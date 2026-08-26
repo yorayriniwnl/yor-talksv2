@@ -1,13 +1,33 @@
 import { io, type Socket } from 'socket.io-client';
-import { getStoredTokens } from './api-client';
+import { getStoredTokens, onStoredTokensChange } from './api-client';
 
 let socket: Socket | null = null;
+
+onStoredTokensChange((accessToken) => {
+  if (!socket) return;
+  if (!accessToken) {
+    socket.disconnect();
+    socket = null;
+    return;
+  }
+  socket.auth = { token: accessToken };
+  if (socket.connected) {
+    socket.disconnect();
+    socket.connect();
+  }
+});
 
 /** Connects (or returns the existing connection) using the current access token. */
 export function connectSocket(): Socket | null {
   const tokens = getStoredTokens();
   if (!tokens) return null;
   if (socket?.connected) return socket;
+
+  if (socket) {
+    socket.auth = { token: tokens.accessToken };
+    socket.connect();
+    return socket;
+  }
 
   const realtimeUrl = (import.meta.env.VITE_REALTIME_URL as string | undefined)?.trim() || undefined;
   socket = io(realtimeUrl, {
@@ -21,8 +41,8 @@ export function connectSocket(): Socket | null {
     transports: ['websocket', 'polling'],
   });
 
-  socket.on('connect_error', () => {
-    // Suppress noisy console logs when running on serverless hosts without persistent WebSocket listener
+  socket.on('connect_error', (error) => {
+    console.warn('[Yor] Realtime connection unavailable:', error.message);
   });
 
   return socket;

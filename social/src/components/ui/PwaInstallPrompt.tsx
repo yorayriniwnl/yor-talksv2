@@ -11,16 +11,20 @@ export function PwaInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
+    let promptTimer: number | undefined;
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
       // Show prompt after 3 seconds on site
-      setTimeout(() => setShowPrompt(true), 3000);
+      promptTimer = window.setTimeout(() => setShowPrompt(true), 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      if (promptTimer !== undefined) window.clearTimeout(promptTimer);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -60,7 +64,7 @@ export function PwaInstallPrompt() {
                 <span className="text-[0.6rem] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">FAST PWA</span>
               </div>
               <p className="text-[0.68rem] text-muted-foreground mt-0.5 leading-snug">
-                Experience ultra-fast 120fps Reels, offline feed & instant push notifications on your device.
+                Get fast access to Yor Talks and keep notifications close at hand.
               </p>
             </div>
 

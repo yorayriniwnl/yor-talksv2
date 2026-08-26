@@ -16,6 +16,14 @@ COPY lib/shared/package.json lib/shared/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+ARG VITE_API_BASE_URL=/api
+ARG VITE_REALTIME_URL=
+ARG VITE_GOOGLE_CLIENT_ID=
+ARG VITE_RTC_ICE_SERVERS=[{"urls":"stun:stun.l.google.com:19302"}]
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_REALTIME_URL=$VITE_REALTIME_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_RTC_ICE_SERVERS=$VITE_RTC_ICE_SERVERS
 RUN pnpm --filter @workspace/social build
 
 FROM nginx:1.27-alpine

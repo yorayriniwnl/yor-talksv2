@@ -4,7 +4,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico',
+  '/favicon.svg',
 ];
 
 // Install: Cache critical static assets
@@ -58,8 +58,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Yor Talks 🇮🇳',
     body: 'You have a new update from a creator you follow!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
     data: { url: '/' },
   };
 
@@ -73,8 +73,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/favicon.ico',
-    badge: data.badge || '/favicon.ico',
+    icon: data.icon || '/favicon.svg',
+    badge: data.badge || '/favicon.svg',
     vibrate: [200, 100, 200],
     data: data.data || { url: '/' },
     actions: [

@@ -28,7 +28,7 @@ import {
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
-import { connectSocket, disconnectSocket } from '@/lib/socket-client';
+import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -736,22 +736,40 @@ function setupRealtime(
   if (!socket) return;
   socket.off('message:receive');
   socket.off('message:update');
+  socket.off('message:seen:update');
+  socket.off('conversation:created');
   socket.off('notification:new');
   socket.on('message:receive', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
     set((state) => {
       const existing = state.messagesByConversation[mapped.conversationId] ?? [];
+      const messages = existing.some((message) => message.id === mapped.id)
+        ? existing.map((message) => message.id === mapped.id ? mapped : message)
+        : [...existing, mapped];
       const conversations = state.conversations.some((c) => c.id === mapped.conversationId)
         ? state.conversations.map((c) => (c.id === mapped.conversationId ? { ...c, lastMessage: mapped, updatedAt: mapped.createdAt } : c))
         : state.conversations;
       return {
-        messagesByConversation: { ...state.messagesByConversation, [mapped.conversationId]: [...existing, mapped] },
+        messagesByConversation: { ...state.messagesByConversation, [mapped.conversationId]: messages },
         conversations,
       };
     });
     if (!get().conversations.some((c) => c.id === mapped.conversationId)) {
       get().loadConversations();
     }
+  });
+  socket.on('message:seen:update', ({ messageId, seenAt }: { messageId?: string; seenAt?: string | null }) => {
+    if (!messageId) return;
+    set((state) => {
+      const nextMessages = Object.fromEntries(Object.entries(state.messagesByConversation).map(([conversationId, messages]) => [
+        conversationId,
+        messages.map((message) => message.id === messageId ? { ...message, read: Boolean(seenAt) } : message),
+      ]));
+      return { messagesByConversation: nextMessages };
+    });
+  });
+  socket.on('conversation:created', () => {
+    void get().loadConversations();
   });
   socket.on('message:update', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
@@ -1211,6 +1229,7 @@ export const useAppStore = create<AppState>()(
 
       loadConversationMessages: async (conversationId) => {
         try {
+          getSocket()?.emit('conversation:join', { conversationId });
           const messages = await api.getConversationMessages(conversationId);
           set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
           return;

@@ -1,0 +1,19 @@
+{
+  "name": "Yor Talks",
+  "short_name": "Yor",
+  "description": "A living internet for turning ideas, people, and shared worlds into real momentum.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0b12",
+  "theme_color": "#6c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
