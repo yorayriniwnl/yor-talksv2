@@ -64,11 +64,7 @@ export class VideoService {
   async toggleLike(videoId: string, userId: string): Promise<VideoRecord | undefined> {
     const video = await this.videoRepository.findById(videoId);
     if (!video || !(await this.contentSafetyService.isVisible(video, userId))) return undefined;
-    const currentLikes = video.likedBy ?? [];
-    const likedBy = currentLikes.includes(userId)
-      ? currentLikes.filter((id) => id !== userId)
-      : [...currentLikes, userId];
-    return this.videoRepository.update(videoId, { likedBy });
+    return this.videoRepository.toggleLike(videoId, userId);
   }
 
   async listComments(videoId: string, viewerId: string): Promise<VideoCommentRecord[]> {

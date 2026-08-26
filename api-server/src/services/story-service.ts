@@ -69,21 +69,15 @@ export class StoryService {
     const story = await this.storyRepository.findById(storyId);
     if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
 
-    if (!story.viewerIds.includes(userId)) {
-      const viewerIds = [...story.viewerIds, userId];
-      const updated = await this.storyRepository.update(storyId, { viewerIds });
-      return updated ? this.hydrateStory(updated, userId) : undefined;
-    }
-    return this.hydrateStory(story, userId);
+    const updated = await this.storyRepository.addView(storyId, userId);
+    return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findById(storyId);
     if (!story || !(await this.contentSafetyService.isVisible(story, userId))) return undefined;
 
-    const filteredReactions = story.reactions.filter(r => r.userId !== userId);
-    const reactions = [...filteredReactions, { userId, emoji }];
-    const updated = await this.storyRepository.update(storyId, { reactions });
+    const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32));
     return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 

@@ -42,7 +42,7 @@ export class MediaService {
     const url = isVideo
       ? await this.storageService.uploadVideo(buffer, filename)
       : isAudio
-        ? await this.storageService.uploadAudio(buffer, filename)
+        ? await this.storageService.uploadAudio(buffer, filename, mimeType)
         : await this.storageService.uploadImage(buffer, filename);
 
     return {

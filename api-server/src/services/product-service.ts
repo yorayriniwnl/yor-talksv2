@@ -38,10 +38,7 @@ export class ProductService {
   async toggleSave(productId: string, userId: string): Promise<ProductRecord | undefined> {
     const product = await this.productRepository.findById(productId);
     if (!product) return undefined;
-    const savedBy = product.savedBy.includes(userId)
-      ? product.savedBy.filter((id) => id !== userId)
-      : [...product.savedBy, userId];
-    return this.productRepository.update(productId, { savedBy });
+    return this.productRepository.toggleSaved(productId, userId);
   }
 
   async listProducts(viewerId?: string): Promise<ProductRecord[]> {

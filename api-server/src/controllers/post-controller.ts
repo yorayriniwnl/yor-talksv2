@@ -3,6 +3,7 @@ import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-rep
 import { ContentPolicyViolationError, PostService } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
 import { StorageService } from "../services/storage-service.js";
+import { assertValidUploadedFile } from "../middlewares/upload.js";
 import { createResponse } from "../utils/response.js";
 
 function parsePagination(req: Request): { page: number; pageSize: number } {
@@ -32,9 +33,13 @@ export class PostController {
       return res.status(400).json(createResponse("No image file provided", null, {}, ["Expected a multipart file field named 'image'"]));
     }
     try {
+      assertValidUploadedFile(file, "image");
       const url = await this.storageService.uploadImage(file.buffer, file.originalname);
       return res.status(201).json(createResponse("Image uploaded", { url }));
     } catch (error) {
+      if (error instanceof Error && error.name === "InvalidFileTypeError") {
+        return res.status(415).json(createResponse("Invalid image file", null, {}, [error.message]));
+      }
       return res.status(502).json(createResponse("Image upload failed", null, {}, [error instanceof Error ? error.message : "Upload provider error"]));
     }
   };

@@ -148,14 +148,23 @@ export class MessageService {
     if (!members.includes(userId)) return undefined;
 
     // Track read receipt
+    const readAt = new Date().toISOString();
     await db.insert(messageReadsTable).values({
       messageId,
       userId,
-      readAt: new Date().toISOString(),
-    }).onConflictDoNothing();
+      readAt,
+    }).onConflictDoUpdate({
+      target: [messageReadsTable.messageId, messageReadsTable.userId],
+      set: { readAt },
+    });
 
-    message.seenAt = new Date().toISOString();
-    return this.messageRepository.update(messageId, { seenAt: message.seenAt });
+    const conversation = await this.conversationRepository.findById(message.conversationId);
+    // `seen_at` is a legacy single-recipient field. In a group it would tell
+    // every member that everyone has read the message, so keep group read
+    // receipts in message_reads and only update the legacy field for DMs.
+    if (conversation?.isGroup) return { ...message, seenAt: readAt };
+    message.seenAt = readAt;
+    return this.messageRepository.update(messageId, { seenAt: readAt });
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {

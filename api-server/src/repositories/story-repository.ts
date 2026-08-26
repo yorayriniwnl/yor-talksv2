@@ -43,6 +43,30 @@ export class StoryRepository {
     return updated as StoryRecord | undefined;
   }
 
+  async addView(id: string, userId: string): Promise<StoryRecord | undefined> {
+    const [updated] = await db.update(storiesTable).set({
+      viewerIds: sql`CASE
+        WHEN EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(${storiesTable.viewerIds}, '[]'::jsonb)) AS values(value)
+          WHERE value = ${userId}
+        ) THEN COALESCE(${storiesTable.viewerIds}, '[]'::jsonb)
+        ELSE COALESCE(${storiesTable.viewerIds}, '[]'::jsonb) || jsonb_build_array(${userId})
+      END`,
+    }).where(eq(storiesTable.id, id)).returning();
+    return updated as StoryRecord | undefined;
+  }
+
+  async react(id: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
+    const [updated] = await db.update(storiesTable).set({
+      reactions: sql`COALESCE((
+        SELECT jsonb_agg(value)
+        FROM jsonb_array_elements(COALESCE(${storiesTable.reactions}, '[]'::jsonb)) AS values(value)
+        WHERE value->>'userId' <> ${userId}
+      ), '[]'::jsonb) || jsonb_build_array(jsonb_build_object('userId', ${userId}, 'emoji', ${emoji}))`,
+    }).where(eq(storiesTable.id, id)).returning();
+    return updated as StoryRecord | undefined;
+  }
+
   async votePoll(storyId: string, optionId: string, userId: string): Promise<boolean> {
     const [poll] = await db.select({ id: storyPollsTable.id })
       .from(storyPollsTable)

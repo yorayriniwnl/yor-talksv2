@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { productsTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ProductRecord } from "../types/index.js";
@@ -20,6 +20,17 @@ export class ProductRepository {
 
   async update(id: string, updates: Partial<ProductRecord>): Promise<ProductRecord | undefined> {
     const [updated] = await db.update(productsTable).set(updates).where(eq(productsTable.id, id)).returning();
+    return updated as ProductRecord | undefined;
+  }
+
+  async toggleSaved(id: string, userId: string): Promise<ProductRecord | undefined> {
+    const [updated] = await db.update(productsTable).set({
+      savedBy: sql`CASE
+        WHEN COALESCE(${productsTable.savedBy}, '[]'::jsonb) ? ${userId}
+          THEN COALESCE(${productsTable.savedBy}, '[]'::jsonb) - ${userId}
+        ELSE COALESCE(${productsTable.savedBy}, '[]'::jsonb) || jsonb_build_array(${userId})
+      END`,
+    }).where(eq(productsTable.id, id)).returning();
     return updated as ProductRecord | undefined;
   }
 

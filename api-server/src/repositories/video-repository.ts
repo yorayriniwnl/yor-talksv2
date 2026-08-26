@@ -37,6 +37,17 @@ export class VideoRepository {
     return updated as VideoRecord | undefined;
   }
 
+  async toggleLike(id: string, userId: string): Promise<VideoRecord | undefined> {
+    const [updated] = await db.update(videosTable).set({
+      likedBy: sql`CASE
+        WHEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) ? ${userId}
+          THEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) - ${userId}
+        ELSE COALESCE(${videosTable.likedBy}, '[]'::jsonb) || jsonb_build_array(${userId})
+      END`,
+    }).where(eq(videosTable.id, id)).returning();
+    return updated as VideoRecord | undefined;
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await db.delete(videosTable).where(eq(videosTable.id, id)).returning();
     return result.length > 0;

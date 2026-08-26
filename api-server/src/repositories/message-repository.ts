@@ -1,4 +1,4 @@
-import { eq, or, and, desc, inArray } from "drizzle-orm";
+import { eq, or, and, desc, inArray, isNull } from "drizzle-orm";
 import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
@@ -14,7 +14,7 @@ export class MessageRepository {
     const messages = await db
       .select()
       .from(messagesTable)
-      .where(eq(messagesTable.conversationId, conversationId))
+      .where(and(eq(messagesTable.conversationId, conversationId), isNull(messagesTable.deletedAt)))
       .orderBy(desc(messagesTable.createdAt))
       .limit(200);
     return messages.reverse() as MessageRecord[];
@@ -24,7 +24,7 @@ export class MessageRepository {
     const [message] = await db
       .select()
       .from(messagesTable)
-      .where(eq(messagesTable.conversationId, conversationId))
+      .where(and(eq(messagesTable.conversationId, conversationId), isNull(messagesTable.deletedAt)))
       .orderBy(desc(messagesTable.createdAt))
       .limit(1);
     return message as MessageRecord | undefined;

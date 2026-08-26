@@ -29,10 +29,10 @@ export class StorageService {
     return this.uploadBuffer(buffer, "video", "posts", originalName);
   }
 
-  async uploadAudio(buffer: Buffer, originalName: string): Promise<string> {
+  async uploadAudio(buffer: Buffer, originalName: string, mimeType = "audio/webm"): Promise<string> {
     // Cloudinary serves audio through its video resource type. Keeping a
     // separate folder makes retention and moderation policies easier to apply.
-    return this.uploadBuffer(buffer, "video", "audio", originalName, "audio/webm");
+    return this.uploadBuffer(buffer, "video", "audio", originalName, mimeType);
   }
 
   private async uploadBuffer(

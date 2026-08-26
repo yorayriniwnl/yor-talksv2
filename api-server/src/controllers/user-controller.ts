@@ -7,6 +7,7 @@ import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
 import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
 import { AccountService, InvalidAccountPasswordError } from "../services/account-service.js";
 import { env } from "../config/env.js";
+import { assertValidUploadedFile } from "../middlewares/upload.js";
 
 export class UserController {
   private readonly storageService = new StorageService();
@@ -58,6 +59,7 @@ export class UserController {
       return res.status(400).json(createResponse("No image file provided", null, {}, ["Expected a multipart file field named 'avatar'"]));
     }
     try {
+      assertValidUploadedFile(file, "image");
       const avatarUrl = await this.storageService.uploadAvatar(file.buffer, file.originalname);
       const user = await this.userService.uploadAvatar(req.user?.id ?? "", avatarUrl);
       if (!user) {
@@ -65,6 +67,9 @@ export class UserController {
       }
       return res.status(200).json(createResponse("Avatar uploaded", toOwnUser(user)));
     } catch (error) {
+      if (error instanceof Error && error.name === "InvalidFileTypeError") {
+        return res.status(415).json(createResponse("Invalid avatar file", null, {}, [error.message]));
+      }
       return res.status(502).json(createResponse("Avatar upload failed", null, {}, [error instanceof Error ? error.message : "Upload provider error"]));
     }
   };

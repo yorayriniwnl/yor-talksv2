@@ -64,11 +64,6 @@ export class EventService {
     const event = await this.eventRepository.findById(eventId);
     if (!event) return undefined;
 
-    const attendeeIds = event.attendeeIds.filter((id) => id !== userId);
-    const interestedIds = event.interestedIds.filter((id) => id !== userId);
-    if (status === "going") attendeeIds.push(userId);
-    if (status === "interested") interestedIds.push(userId);
-
-    return this.eventRepository.update(eventId, { attendeeIds, interestedIds });
+    return this.eventRepository.setRsvp(eventId, userId, status);
   }
 }
