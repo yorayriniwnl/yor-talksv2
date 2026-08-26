@@ -1,9 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { EconomyService } from "../services/economy-service.js";
 import { authenticate } from "../middlewares/auth.js";
-import { db } from "@workspace/db";
-import { creatorAnalyticsDailyTable } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { validateBody } from "../middlewares/validation.js";
 import { createTipOrderSchema, verifyTipPaymentSchema } from "../validators/economy.js";
 import {
@@ -14,10 +11,12 @@ import {
 } from "../services/payment-service.js";
 import { PaymentsNotConfiguredError, PaymentProviderError } from "../services/razorpay-service.js";
 import { createResponse } from "../utils/response.js";
+import { CreatorAnalyticsService } from "../services/creator-analytics-service.js";
 
 const router = Router();
 const economyService = new EconomyService();
 const paymentService = new PaymentService();
+const creatorAnalyticsService = new CreatorAnalyticsService();
 
 router.get("/wallet", authenticate, async (req, res) => {
   try {
@@ -31,12 +30,7 @@ router.get("/wallet", authenticate, async (req, res) => {
 
 router.get("/analytics", authenticate, async (req, res) => {
   try {
-    const data = await db
-      .select()
-      .from(creatorAnalyticsDailyTable)
-      .where(eq(creatorAnalyticsDailyTable.creatorId, req.user!.id))
-      .orderBy(desc(creatorAnalyticsDailyTable.date))
-      .limit(30);
+    const data = await creatorAnalyticsService.getRecent(req.user!.id);
     res.json(createResponse("Analytics loaded", data));
   } catch (error) {
     res.status(500).json(createResponse("Failed to fetch analytics", null, {}, ["Internal server error"]));

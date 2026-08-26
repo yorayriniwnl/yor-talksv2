@@ -53,6 +53,8 @@ export {
   subscriptionsTable,
   entitlementsTable,
   subscriptionOrdersTable,
+  creatorAnalyticsDailyTable,
+  creatorProfileViewEventsTable,
   insertUserSchema,
   insertPostSchema,
   insertConversationSchema,

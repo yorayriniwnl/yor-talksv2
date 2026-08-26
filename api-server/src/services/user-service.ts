@@ -5,6 +5,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { QueueService } from "./queue-service.js";
 import type { FollowRequestRecord, UserRecord, UserSettings } from "../types/index.js";
 import { ContactShieldService } from "./contact-shield-service.js";
+import { CreatorAnalyticsService } from "./creator-analytics-service.js";
 
 export class UserService {
   constructor(
@@ -12,6 +13,7 @@ export class UserService {
     private readonly notificationRepository?: NotificationRepository,
     private readonly queueService?: QueueService,
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
+    private readonly creatorAnalyticsService: CreatorAnalyticsService = new CreatorAnalyticsService(),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
@@ -19,6 +21,7 @@ export class UserService {
     if (!user || !(await this.canViewProfile(user, viewerId))) {
       return undefined;
     }
+    if (viewerId && viewerId !== userId) void this.creatorAnalyticsService.recordProfileView(userId, viewerId);
     return user;
   }
 
@@ -27,6 +30,7 @@ export class UserService {
     if (!user || !(await this.canViewProfile(user, viewerId))) {
       return undefined;
     }
+    if (viewerId && viewerId !== user.id) void this.creatorAnalyticsService.recordProfileView(user.id, viewerId);
     return user;
   }
 

@@ -537,7 +537,18 @@ export const creatorAnalyticsDailyTable = pgTable("creator_analytics_daily", {
   totalEngagement: integer("total_engagement").notNull().default(0),
   estimatedEarnings: integer("estimated_earnings").notNull().default(0), // in minor units
 }, (t) => ({
-  creatorDateIdx: index("analytics_creator_date_idx").on(t.creatorId, t.date),
+  creatorDateIdx: uniqueIndex("analytics_creator_date_idx").on(t.creatorId, t.date),
+}));
+
+export const creatorProfileViewEventsTable = pgTable("creator_profile_view_events", {
+  id: uuid("id").primaryKey(),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  viewerId: uuid("viewer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  viewDate: timestamp("view_date", { mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  creatorDateIdx: index("profile_view_creator_date_idx").on(t.creatorId, t.viewDate),
+  uniqueViewerDay: uniqueIndex("profile_view_creator_viewer_day_idx").on(t.creatorId, t.viewerId, t.viewDate),
 }));
 
 export const ledgerTransactionsTable = pgTable("ledger_transactions", {
