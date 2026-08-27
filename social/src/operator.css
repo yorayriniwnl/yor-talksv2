@@ -1,0 +1,256 @@
+/*
+ * Operator Social
+ * Shared visual primitives for the identity-first Yor Talks redesign.
+ * Page-specific rules live beside their owning surface below this foundation.
+ */
+
+:root {
+  --operator-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --operator-fast: 160ms;
+  --operator-normal: 220ms;
+  --operator-shadow: 0 18px 55px hsl(225 35% 2% / 0.12);
+  --operator-shadow-dark: 0 20px 70px hsl(225 50% 1% / 0.42);
+}
+
+.operator-ui {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 78% -10%, hsl(var(--signal) / 0.08), transparent 30rem),
+    hsl(var(--background));
+}
+
+.operator-ui::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  opacity: 0.24;
+  background-image:
+    linear-gradient(hsl(var(--operator-grid) / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--operator-grid) / 0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.operator-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--operator-line));
+  border-radius: 1.1rem;
+  background: hsl(var(--operator-surface) / 0.94);
+  box-shadow: var(--operator-shadow);
+}
+
+.dark .operator-panel {
+  box-shadow: var(--operator-shadow-dark);
+}
+
+.operator-panel--raised {
+  background: hsl(var(--operator-surface-raised) / 0.96);
+}
+
+.operator-panel--interactive {
+  transition:
+    border-color var(--operator-fast) ease,
+    transform var(--operator-normal) var(--operator-ease),
+    box-shadow var(--operator-normal) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .operator-panel--interactive:hover {
+    border-color: hsl(var(--signal) / 0.42);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 70px hsl(225 35% 2% / 0.18);
+  }
+}
+
+.operator-signal-label {
+  display: inline-flex;
+  min-height: 1.65rem;
+  align-items: center;
+  gap: 0.42rem;
+  width: fit-content;
+  color: hsl(var(--signal));
+  font-family: var(--app-font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.operator-signal-label::before {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px hsl(var(--signal) / 0.1);
+  content: '';
+}
+
+.operator-signal-label[data-tone='online'] { color: hsl(var(--online)); }
+.operator-signal-label[data-tone='muted'] { color: hsl(var(--muted-foreground)); }
+.operator-signal-label[data-tone='ember'] { color: hsl(var(--ember)); }
+
+.operator-section-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.operator-section-header__copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.28rem;
+}
+
+.operator-section-header h1,
+.operator-section-header h2,
+.operator-section-header h3 {
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-serif);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+.operator-section-header p {
+  max-width: 44rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.operator-section-header__action {
+  flex: 0 0 auto;
+}
+
+.operator-status-badge {
+  display: inline-flex;
+  min-height: 1.7rem;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.28rem 0.58rem;
+  border: 1px solid hsl(var(--operator-line));
+  border-radius: 999px;
+  background: hsl(var(--operator-surface-raised) / 0.9);
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.operator-status-badge::before {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: '';
+}
+
+.operator-status-badge[data-status='online'] { color: hsl(var(--online)); }
+.operator-status-badge[data-status='busy'] { color: hsl(var(--signal)); }
+.operator-status-badge[data-status='away'] { color: hsl(var(--ember)); }
+
+.operator-level-badge {
+  display: inline-grid;
+  width: 2.55rem;
+  height: 2.55rem;
+  place-items: center;
+  border: 1px solid hsl(var(--signal) / 0.7);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, hsl(var(--operator-surface-raised)) 54%, transparent 56%),
+    conic-gradient(hsl(var(--signal)), hsl(var(--ember)), hsl(var(--signal)));
+  color: hsl(var(--foreground));
+  box-shadow: 0 0 24px hsl(var(--signal) / 0.13);
+  font-family: var(--app-font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.operator-level-badge[data-size='small'] {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.6rem;
+}
+
+.operator-metric {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.operator-metric strong {
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-mono);
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+
+.operator-metric span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.operator-media-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--operator-line));
+  border-radius: 0.9rem;
+  background: hsl(var(--muted));
+}
+
+.operator-media-frame::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px hsl(0 0% 100% / 0.04);
+  content: '';
+}
+
+.operator-empty-state {
+  display: grid;
+  min-height: 15rem;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.operator-empty-state > div {
+  display: grid;
+  max-width: 28rem;
+  justify-items: center;
+  gap: 0.55rem;
+}
+
+.operator-empty-state h2,
+.operator-empty-state h3 {
+  font-family: var(--app-font-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.operator-empty-state p {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .operator-panel { border-radius: 0.9rem; }
+  .operator-section-header { align-items: start; }
+  .operator-section-header p { font-size: 0.76rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operator-panel--interactive { transition: none; }
+  .operator-panel--interactive:hover { transform: none; }
+}

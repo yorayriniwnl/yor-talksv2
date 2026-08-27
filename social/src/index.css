@@ -6,7 +6,7 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    YOR TALKS — DESIGN SYSTEM
-   "Ambient Social" — Presence, Resonance, Space
+   "Operator Social" — Identity, Signal, Proof
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
@@ -111,14 +111,14 @@
   --sidebar: 240 10% 97%;
   --sidebar-foreground: 240 18% 10%;
   --sidebar-border: 240 8% 90%;
-  --sidebar-primary: 252 65% 52%;
+  --sidebar-primary: 352 78% 52%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 252 40% 95%;
-  --sidebar-accent-foreground: 252 65% 42%;
-  --sidebar-ring: 252 65% 52%;
+  --sidebar-accent: 352 56% 95%;
+  --sidebar-accent-foreground: 352 72% 42%;
+  --sidebar-ring: 352 78% 52%;
 
   /* Brand */
-  --primary: 252 65% 52%;
+  --primary: 352 78% 52%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 240 8% 94%;
@@ -127,8 +127,8 @@
   --muted: 240 8% 95%;
   --muted-foreground: 240 6% 45%;
 
-  --accent: 38 92% 55%;
-  --accent-foreground: 38 92% 28%;
+  --accent: 24 94% 56%;
+  --accent-foreground: 24 88% 25%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
@@ -139,7 +139,17 @@
   --warning-foreground: 38 80% 16%;
 
   --input: 240 8% 88%;
-  --ring: 252 65% 52%;
+  --ring: 352 78% 52%;
+
+  /* Operator Social */
+  --signal: 352 78% 52%;
+  --signal-soft: 352 72% 95%;
+  --ember: 24 94% 56%;
+  --online: 151 64% 39%;
+  --operator-surface: 0 0% 100%;
+  --operator-surface-raised: 225 18% 97%;
+  --operator-line: 225 12% 88%;
+  --operator-grid: 225 20% 12%;
 
   /* Fonts */
   --app-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -165,38 +175,38 @@
   --elevate-3: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
   --elevate-glow: 0 0 48px -8px hsl(var(--primary) / 0.3);
 
-  --background: 240 12% 5%;
-  --foreground: 240 10% 93%;
-  --border: 240 8% 14%;
+  --background: 225 20% 4%;
+  --foreground: 210 20% 96%;
+  --border: 220 12% 16%;
 
-  --card: 240 10% 8%;
-  --card-foreground: 240 10% 93%;
-  --card-border: 240 8% 14%;
+  --card: 225 18% 7%;
+  --card-foreground: 210 20% 96%;
+  --card-border: 220 12% 16%;
 
-  --popover: 240 10% 9%;
-  --popover-foreground: 240 10% 93%;
-  --popover-border: 240 8% 16%;
+  --popover: 225 18% 8%;
+  --popover-foreground: 210 20% 96%;
+  --popover-border: 220 12% 18%;
 
-  --sidebar: 240 12% 6%;
-  --sidebar-foreground: 240 10% 93%;
-  --sidebar-border: 240 8% 14%;
-  --sidebar-primary: 252 80% 68%;
+  --sidebar: 225 20% 5%;
+  --sidebar-foreground: 210 20% 96%;
+  --sidebar-border: 220 12% 16%;
+  --sidebar-primary: 352 88% 62%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 252 30% 14%;
-  --sidebar-accent-foreground: 252 80% 78%;
-  --sidebar-ring: 252 80% 68%;
+  --sidebar-accent: 352 36% 13%;
+  --sidebar-accent-foreground: 352 90% 76%;
+  --sidebar-ring: 352 88% 62%;
 
-  --primary: 252 80% 68%;
+  --primary: 352 88% 62%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 240 8% 14%;
-  --secondary-foreground: 240 10% 93%;
+  --secondary: 222 12% 14%;
+  --secondary-foreground: 210 20% 96%;
 
-  --muted: 240 8% 13%;
-  --muted-foreground: 240 6% 55%;
+  --muted: 222 12% 13%;
+  --muted-foreground: 218 9% 62%;
 
-  --accent: 38 90% 58%;
-  --accent-foreground: 38 90% 78%;
+  --accent: 24 96% 62%;
+  --accent-foreground: 24 100% 84%;
 
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
@@ -206,8 +216,18 @@
   --warning: 38 90% 54%;
   --warning-foreground: 38 80% 12%;
 
-  --input: 240 8% 18%;
-  --ring: 252 80% 68%;
+  --input: 220 12% 19%;
+  --ring: 352 88% 62%;
+
+  /* Operator Social */
+  --signal: 352 88% 62%;
+  --signal-soft: 352 36% 13%;
+  --ember: 24 96% 62%;
+  --online: 151 66% 49%;
+  --operator-surface: 225 18% 7%;
+  --operator-surface-raised: 222 15% 10%;
+  --operator-line: 220 12% 16%;
+  --operator-grid: 210 20% 96%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

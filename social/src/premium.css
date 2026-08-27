@@ -1,5 +1,5 @@
 /*
- * Premium product layer
+ * Legacy product layer
  *
  * The app already has a generous feature set. This layer intentionally makes
  * those features feel quieter and more confident: fewer competing glows,
@@ -7,12 +7,12 @@
  */
 
 :root {
-  --premium-canvas: 224 32% 97%;
-  --premium-canvas-deep: 228 27% 8%;
+  --premium-canvas: 225 24% 97%;
+  --premium-canvas-deep: 225 20% 4%;
   --premium-surface: 0 0% 100%;
-  --premium-surface-deep: 226 24% 11%;
+  --premium-surface-deep: 225 18% 7%;
   --premium-border: 224 22% 90%;
-  --premium-border-deep: 226 17% 19%;
+  --premium-border-deep: 220 12% 16%;
   --premium-shadow: 224 28% 24%;
   --premium-shadow-deep: 230 42% 3%;
   --premium-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -30,8 +30,8 @@
   --muted-foreground: 220 13% 64%;
   --secondary: 225 18% 16%;
   --input: 225 18% 16%;
-  --primary: 258 86% 69%;
-  --accent: 35 93% 61%;
+  --primary: 352 88% 62%;
+  --accent: 24 96% 62%;
 }
 
 :root:not(.dark) {
@@ -46,8 +46,8 @@
   --muted-foreground: 222 12% 45%;
   --secondary: 224 28% 94%;
   --input: 224 28% 94%;
-  --primary: 253 70% 56%;
-  --accent: 34 91% 50%;
+  --primary: 352 78% 52%;
+  --accent: 24 94% 56%;
 }
 
 html {
