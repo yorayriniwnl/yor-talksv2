@@ -347,6 +347,8 @@ export default function Profile() {
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
   const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(profileId ?? '');
   const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
+  const isFavorite = !isOwnProfile && !!currentUser?.favoriteCreatorIds?.includes(profileId ?? '');
+  const toggleFavoriteCreator = useAppStore((s) => s.toggleFavoriteCreator);
   const loadLikedPosts = useAppStore((s) => s.loadLikedPosts);
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
@@ -405,6 +407,11 @@ export default function Profile() {
     if (!currentUser) return;
     currentUser.followingIds?.includes(targetId) || currentUser.pendingFollowIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
   }, [currentUser, followUser, unfollowUser]);
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (!profile || isOwnProfile) return;
+    await toggleFavoriteCreator(profile.id);
+  }, [isOwnProfile, profile, toggleFavoriteCreator]);
 
   const handleCopyLink = useCallback(() => {
     navigator.clipboard?.writeText(window.location.href);
@@ -556,6 +563,17 @@ export default function Profile() {
                     {isFollowing ? 'Following' : isFollowPending ? 'Requested' : (<><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Follow</>)}
                   </Button>
                 </motion.div>
+                <Tooltip><TooltipTrigger asChild>
+                  <Button
+                    variant={isFavorite ? 'default' : 'outline'}
+                    size="icon"
+                    className={cn('rounded-xl h-9 w-9', isFavorite && 'bg-amber-400 text-amber-950 hover:bg-amber-300')}
+                    onClick={() => void handleToggleFavorite()}
+                    aria-label={isFavorite ? `Remove ${profile.displayName} from Favorites` : `Add ${profile.displayName} to Favorites`}
+                  >
+                    <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+                  </Button>
+                </TooltipTrigger><TooltipContent>{isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}</TooltipContent></Tooltip>
                 <motion.div whileTap={{ scale: 0.95 }}>
                   <Button variant="outline" className="rounded-xl h-9 font-bold text-[0.78rem] px-5" onClick={() => setLocation(`/messages/${profile.id}`)}>Message</Button>
                 </motion.div>

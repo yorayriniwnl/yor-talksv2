@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Sparkles,
   SlidersHorizontal,
+  Star,
   TrendingUp,
   Users,
   WandSparkles,
@@ -29,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { FeedSkeleton } from '@/components/ui/Skeletons';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 
-type OrbitMode = 'close' | 'discover' | 'build';
+type OrbitMode = 'close' | 'discover' | 'favorites' | 'build';
 type Topic = 'all' | 'ideas' | 'tech' | 'creative' | 'culture' | 'play';
 
 const TOPICS: Array<{ id: Topic; label: string }> = [
@@ -78,6 +79,7 @@ export default function Home() {
   const unfollowUser = useAppStore((state) => state.unfollowUser);
   const loadFeed = useAppStore((state) => state.loadFeed);
   const loadMoreFeed = useAppStore((state) => state.loadMoreFeed);
+  const favoriteCreatorIds = useAppStore((state) => state.favoriteCreatorIds);
   const hasMoreFeed = useAppStore((state) => state.hasMoreFeed);
   const isInitializing = useAppStore((state) => state.isInitializing);
 
@@ -132,22 +134,29 @@ export default function Home() {
   const activeWorlds = [...communities].sort((a, b) => Number(b.isMember) - Number(a.isMember) || b.members - a.members).slice(0, 3);
   const activeLiveStreams = liveStreams.filter((stream) => stream.status === 'live').slice(0, 2);
 
+  const modeToFeed = (nextMode: OrbitMode) => nextMode === 'discover' || nextMode === 'build'
+    ? 'for_you' as const
+    : nextMode === 'favorites'
+      ? 'favorites' as const
+      : 'following' as const;
+
   const changeMode = (nextMode: OrbitMode) => {
     setMode(nextMode);
     setTopic('all');
     setContentCategory('all');
     setVisibleCount(8);
+    void loadFeed(modeToFeed(nextMode));
   };
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await loadFeed();
+      await loadFeed(modeToFeed(mode));
       setVisibleCount(8);
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadFeed]);
+  }, [loadFeed, mode]);
 
   const openNextChapter = useCallback(async () => {
     if (visibleCount < filteredPosts.length) {
@@ -208,6 +217,11 @@ export default function Home() {
             <Compass className="h-4 w-4" />
             <span>For you</span>
           </button>
+          <button type="button" role="tab" onClick={() => changeMode('favorites')} aria-selected={mode === 'favorites'} className={cn(mode === 'favorites' && 'is-active')}>
+            <Star className="h-4 w-4" />
+            <span>Favorites</span>
+            {favoriteCreatorIds.length > 0 && <small>{favoriteCreatorIds.length}</small>}
+          </button>
           <button type="button" role="tab" onClick={() => changeMode('build')} aria-selected={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
             <Zap className="h-4 w-4" />
             <span>Build</span>
@@ -235,7 +249,7 @@ export default function Home() {
             <div className="home-feed-toolbar">
               <div>
                 <span>Your signal, tuned</span>
-                <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : 'Build'}</strong>
+                <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : mode === 'favorites' ? 'Favorites' : 'Build'}</strong>
               </div>
               <div className="home-feed-toolbar__actions">
                 <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="home-feed-filters">
@@ -298,11 +312,11 @@ export default function Home() {
               </motion.div>
             ) : (
               <section className="orbit-empty">
-                {mode === 'build' ? <Zap className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
-                <h2>{mode === 'build' ? 'No builder signals in this orbit yet.' : 'This orbit is quiet.'}</h2>
-                <p>{mode === 'build' ? 'Activate a dream and invite the people who can change its outcome.' : 'Follow someone new or discover beyond the people you already know.'}</p>
-                <Link href={mode === 'build' ? '/dream' : '/explore'} className="yor-primary-action">
-                  {mode === 'build' ? 'Activate a dream' : 'Find people'} <ArrowRight className="h-4 w-4" />
+                {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
+                <h2>{mode === 'build' ? 'No builder signals in this orbit yet.' : mode === 'favorites' ? 'Your Favorites orbit is quiet.' : 'This orbit is quiet.'}</h2>
+                <p>{mode === 'build' ? 'Activate a dream and invite the people who can change its outcome.' : mode === 'favorites' ? 'Favorite creators from their profiles to keep their newest work close.' : 'Follow someone new or discover beyond the people you already know.'}</p>
+                <Link href={mode === 'build' || mode === 'favorites' ? (mode === 'build' ? '/dream' : '/explore') : '/explore'} className="yor-primary-action">
+                  {mode === 'build' ? 'Activate a dream' : mode === 'favorites' ? 'Discover creators' : 'Find people'} <ArrowRight className="h-4 w-4" />
                 </Link>
               </section>
             )}

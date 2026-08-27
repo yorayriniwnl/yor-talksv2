@@ -267,6 +267,22 @@ export class PostRepository {
     return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
+  async listByAuthors(authorIds: string[], cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
+    if (authorIds.length === 0) return [];
+    const filters: any[] = [inArray(postsTable.authorId, authorIds)];
+    const parsedCursor = decodeCursor(cursor);
+    if (parsedCursor) {
+      filters.push(or(
+        lt(postsTable.createdAt, parsedCursor.createdAt),
+        and(eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id)),
+      ));
+    }
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
+    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
+  }
+
   async list(cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters: any[] = [];
     const parsedCursor = decodeCursor(cursor);

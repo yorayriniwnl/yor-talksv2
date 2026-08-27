@@ -44,6 +44,7 @@ export {
   liveStreamsTable,
   storiesTable,
   postRepostsTable,
+  userFavoriteCreatorsTable,
   postPollsTable,
   postPollOptionsTable,
   postPollVotesTable,

@@ -185,6 +185,28 @@ export class UserService {
     return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.listFollowing(userId));
   }
 
+  async listFavoriteCreatorIds(userId: string): Promise<string[]> {
+    return this.userRepository.listFavoriteCreatorIds(userId);
+  }
+
+  async setFavoriteCreator(userId: string, creatorId: string, favorite: boolean): Promise<{ creatorId: string; favorite: boolean } | undefined> {
+    if (userId === creatorId) {
+      throw new Error("Cannot favorite yourself");
+    }
+    const [viewer, creator] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.userRepository.findById(creatorId),
+    ]);
+    if (!viewer || !creator || !(await this.contactShieldService.canView(userId, creatorId))) return undefined;
+
+    if (favorite) {
+      await this.userRepository.addFavoriteCreator(userId, creatorId);
+    } else {
+      await this.userRepository.removeFavoriteCreator(userId, creatorId);
+    }
+    return { creatorId, favorite };
+  }
+
   async updateSettings(userId: string, settings: UserSettings): Promise<UserRecord | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;

@@ -24,7 +24,8 @@ import {
   type BackendVideo,
   type BackendLiveStream,
   type AuthTokens,
-  type TwoFactorChallenge
+  type TwoFactorChallenge,
+  type FeedMode
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
@@ -49,6 +50,7 @@ export type User = {
   pendingFollowIds?: string[];
   blockedUserIds?: string[];
   mutedUserIds?: string[];
+  favoriteCreatorIds?: string[];
   twoFactorEnabled?: boolean;
   notificationsEnabled?: boolean;
   contentFilter?: ContentRating;
@@ -305,6 +307,7 @@ function mapUser(u: BackendUser): User {
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),
     following: Array.isArray(u.following) ? u.following.length : (u.followingCount ?? 0),
     followingIds: Array.isArray(u.following) ? u.following : [],
+    favoriteCreatorIds: [],
     pendingFollowIds: [],
     blockedUserIds: Array.isArray(u.blockedUsers) ? u.blockedUsers : [],
     mutedUserIds: Array.isArray(u.mutedUsers) ? u.mutedUsers : [],
@@ -587,6 +590,8 @@ interface AppState {
   isInitializing: boolean;
   feedCursor: string | null;
   hasMoreFeed: boolean;
+  feedMode: FeedMode;
+  favoriteCreatorIds: string[];
   authError: string | null;
   users: Record<string, User>;
   posts: Post[];
@@ -618,8 +623,9 @@ interface AppState {
   loadWorldPreferences: () => Promise<void>;
 
   loadStories: () => Promise<void>;
-  loadFeed: () => Promise<void>;
+  loadFeed: (mode?: FeedMode) => Promise<void>;
   loadMoreFeed: () => Promise<void>;
+  loadFavoriteCreators: () => Promise<void>;
   loadSavedPosts: () => Promise<void>;
   loadLikedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
@@ -660,6 +666,7 @@ interface AppState {
   loadUserProfile: (userId: string) => Promise<void>;
   followUser: (userId: string) => Promise<void>;
   unfollowUser: (userId: string) => Promise<void>;
+  toggleFavoriteCreator: (userId: string) => Promise<void>;
 
   votePoll: (postId: string, optionId: string) => Promise<void>;
   loadEvents: () => Promise<void>;
@@ -703,6 +710,7 @@ function hydrateSessionData(get: () => AppState): void {
   // slow optional service must never hold every route behind a skeleton.
   void Promise.allSettled([
     get().loadFeed(),
+    get().loadFavoriteCreators(),
     get().loadCommunities(),
     get().loadNotifications(),
     get().loadFollowRequests(),
@@ -713,6 +721,7 @@ function hydrateSessionData(get: () => AppState): void {
 }
 
 let realtimePollingTimer: number | null = null;
+let feedRequestSequence = 0;
 
 function stopRealtime(): void {
   disconnectSocket();
@@ -806,6 +815,8 @@ export const useAppStore = create<AppState>()(
       authError: null,
       feedCursor: null,
       hasMoreFeed: false,
+      feedMode: 'following',
+      favoriteCreatorIds: [],
       users: {},
       posts: [],
       stories: [],
@@ -992,9 +1003,12 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      loadFeed: async () => {
+      loadFeed: async (mode = get().feedMode) => {
+        const requestSequence = ++feedRequestSequence;
+        set({ feedMode: mode, feedCursor: null, hasMoreFeed: false });
         try {
-          const res = await api.getFeed();
+          const res = await api.getFeed(mode);
+          if (requestSequence !== feedRequestSequence || get().feedMode !== mode) return;
           const backendPosts = res.data;
           const currentUserId = get().currentUser?.id;
           set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)), feedCursor: res.nextCursor ?? null, hasMoreFeed: Boolean(res.hasMore) });
@@ -1007,8 +1021,11 @@ export const useAppStore = create<AppState>()(
       loadMoreFeed: async () => {
         const state = get();
         if (!state.hasMoreFeed || !state.feedCursor) return;
+        const requestSequence = feedRequestSequence;
+        const requestedMode = state.feedMode;
         try {
-          const res = await api.getFeed(state.feedCursor);
+          const res = await api.getFeed(requestedMode, state.feedCursor);
+          if (requestSequence !== feedRequestSequence || get().feedMode !== requestedMode) return;
           const currentUserId = get().currentUser?.id;
           const nextPosts = res.data.map((post) => mapPost(post, currentUserId));
           const seenIds = new Set(get().posts.map((post) => post.id));
@@ -1019,6 +1036,19 @@ export const useAppStore = create<AppState>()(
           }));
         } catch {
           // Preserve the visible feed when a subsequent page is temporarily unavailable.
+        }
+      },
+
+      loadFavoriteCreators: async () => {
+        try {
+          const favoriteCreatorIds = await api.getFavoriteCreatorIds();
+          set((state) => ({
+            favoriteCreatorIds,
+            currentUser: state.currentUser ? { ...state.currentUser, favoriteCreatorIds } : state.currentUser,
+            users: state.currentUser ? { ...state.users, [state.currentUser.id]: { ...state.users[state.currentUser.id], favoriteCreatorIds } } : state.users,
+          }));
+        } catch {
+          // Favorites are an enhancement; keep the last local snapshot offline.
         }
       },
 
@@ -1374,6 +1404,36 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not unfollow this person');
+        }
+      },
+
+      toggleFavoriteCreator: async (userId) => {
+        const currentUser = get().currentUser;
+        if (!currentUser || currentUser.id === userId) return;
+        const wasFavorite = get().favoriteCreatorIds.includes(userId);
+        const nextFavorites = wasFavorite
+          ? get().favoriteCreatorIds.filter((id) => id !== userId)
+          : [...get().favoriteCreatorIds, userId];
+        set((state) => ({
+          favoriteCreatorIds: nextFavorites,
+          currentUser: state.currentUser ? { ...state.currentUser, favoriteCreatorIds: nextFavorites } : state.currentUser,
+          users: state.currentUser
+            ? { ...state.users, [state.currentUser.id]: { ...state.users[state.currentUser.id], favoriteCreatorIds: nextFavorites } }
+            : state.users,
+        }));
+        try {
+          if (wasFavorite) await api.unfavoriteCreator(userId);
+          else await api.favoriteCreator(userId);
+        } catch (error) {
+          set((state) => ({
+            favoriteCreatorIds: wasFavorite ? [...nextFavorites, userId] : nextFavorites.filter((id) => id !== userId),
+            currentUser: state.currentUser ? {
+              ...state.currentUser,
+              favoriteCreatorIds: wasFavorite ? [...nextFavorites, userId] : nextFavorites.filter((id) => id !== userId),
+            } : state.currentUser,
+          }));
+          toast.error(error instanceof Error ? error.message : 'Could not update Favorites');
+          throw error;
         }
       },
 

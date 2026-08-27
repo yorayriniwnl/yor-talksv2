@@ -222,10 +222,16 @@ export class PostController {
   feed = async (req: Request, res: Response) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const cursor = req.query.cursor as string | undefined;
-    const items = await this.postService.getFeed(cursor, limit + 1, req.user?.id);
+    const requestedMode = typeof req.query.mode === "string" ? req.query.mode : "recent";
+    const mode = requestedMode === "following" || requestedMode === "favorites" || requestedMode === "for_you" ? requestedMode : "recent";
+    const items = await this.postService.getFeed(cursor, limit + 1, req.user?.id, mode);
     const hasMore = items.length > limit;
     const visibleItems = items.slice(0, limit);
-    const nextCursor = hasMore && visibleItems.length ? encodePostCursor(visibleItems[visibleItems.length - 1]) : null;
+    const nextCursor = hasMore && visibleItems.length
+      ? mode === "for_you"
+        ? encodeTrendingCursor(visibleItems[visibleItems.length - 1])
+        : encodePostCursor(visibleItems[visibleItems.length - 1])
+      : null;
     return res.status(200).json(createResponse("Feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 

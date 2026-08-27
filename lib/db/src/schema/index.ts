@@ -505,6 +505,20 @@ export const userFollowsTable = pgTable("user_follows", {
   followingIdx: index("user_follows_following_idx").on(t.followingId)
 }));
 
+/** Accounts a viewer explicitly wants to prioritize in the Instagram-style
+ * Favorites feed. This relationship is deliberately separate from following:
+ * a user can follow someone without wanting every followed account prioritized.
+ */
+export const userFavoriteCreatorsTable = pgTable("user_favorite_creators", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.creatorId] }),
+  creatorIdx: index("user_favorite_creators_creator_idx").on(t.creatorId),
+  userIdx: index("user_favorite_creators_user_idx").on(t.userId, t.createdAt),
+}));
+
 export const followRequestsTable = pgTable("follow_requests", {
   id: uuid("id").primaryKey(),
   requesterId: uuid("requester_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),

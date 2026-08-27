@@ -32,6 +32,9 @@ router.post("/users/:userId/follow", authenticate, validateParams(userIdParamSch
 router.post("/users/:userId/unfollow", authenticate, validateParams(userIdParamSchema), userController.unfollowUser);
 router.get("/users/:userId/followers", authenticate, validateParams(userIdParamSchema), userController.followers);
 router.get("/users/:userId/following", authenticate, validateParams(userIdParamSchema), userController.following);
+router.get("/users/me/favorites/creators", authenticate, userController.listFavoriteCreators);
+router.post("/users/:userId/favorite", authenticate, validateParams(userIdParamSchema), userController.favoriteCreator);
+router.delete("/users/:userId/favorite", authenticate, validateParams(userIdParamSchema), userController.unfavoriteCreator);
 router.get("/users/me/follow-requests", authenticate, userController.listFollowRequests);
 router.post("/users/me/follow-requests/:requestId/accept", authenticate, validateParams(followRequestIdParamSchema), userController.acceptFollowRequest);
 router.post("/users/me/follow-requests/:requestId/reject", authenticate, validateParams(followRequestIdParamSchema), userController.rejectFollowRequest);

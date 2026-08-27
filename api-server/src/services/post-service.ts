@@ -21,6 +21,8 @@ import { logger } from "../lib/logger.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
 
+export type FeedMode = "for_you" | "following" | "favorites";
+
 export class PostService {
 
   async moderateContent(content: string): Promise<{ spam: boolean; toxicity: boolean; nsfw: boolean }> {
@@ -397,7 +399,39 @@ export class PostService {
   }
 
   
-  async getFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+  async getFeed(cursor?: string, limit: number = 20, currentUserId?: string, mode: FeedMode | "recent" = "recent"): Promise<any[]> {
+    if (mode === "for_you") {
+      return this.getTrendingFeed(cursor, limit, currentUserId);
+    }
+
+    if (mode === "recent") {
+      return this.getRecentFeed(cursor, limit, currentUserId);
+    }
+
+    if (!currentUserId) return [];
+    const authorIds = mode === "favorites"
+      ? await this.userRepository.listFavoriteCreatorIds(currentUserId)
+      : (await this.userRepository.listFollowing(currentUserId)).map((user) => user.id);
+    // A person's own posts remain visible in their relationship feed, matching
+    // the behavior users expect from Following and Favorites views.
+    authorIds.push(currentUserId);
+    const uniqueAuthorIds = [...new Set(authorIds)];
+    const excludedAuthorIds = [...await this.contactShieldService.getShieldedUserIds(currentUserId)];
+    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
+    const visible: PostRecord[] = [];
+    let nextCursor = cursor;
+    const pageSize = Math.min(100, Math.max(20, limit * 2));
+    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
+      const candidates = await this.postRepository.listByAuthors(uniqueAuthorIds, nextCursor, pageSize, excludedAuthorIds, contentFilter);
+      if (candidates.length === 0) break;
+      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length < pageSize) break;
+      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
+    }
+    return this.attachInteractions(visible.slice(0, limit), currentUserId);
+  }
+
+  async getRecentFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const visible: PostRecord[] = [];

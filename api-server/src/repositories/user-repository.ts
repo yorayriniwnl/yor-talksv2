@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { followRequestsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
+import { followRequestsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { FollowRequestRecord, UserRecord } from "../types/index.js";
 
@@ -163,5 +163,42 @@ export class UserRepository {
       .where(eq(userFollowsTable.followerId, userId))
       .orderBy(userFollowsTable.createdAt))
       .map(({ user }) => user as UserRecord);
+  }
+
+  async listFavoriteCreatorIds(userId: string): Promise<string[]> {
+    const rows = await db.select({ creatorId: userFavoriteCreatorsTable.creatorId })
+      .from(userFavoriteCreatorsTable)
+      .where(eq(userFavoriteCreatorsTable.userId, userId))
+      .orderBy(desc(userFavoriteCreatorsTable.createdAt));
+    return rows.map(({ creatorId }) => creatorId);
+  }
+
+  async isFavoriteCreator(userId: string, creatorId: string): Promise<boolean> {
+    const [favorite] = await db.select({ creatorId: userFavoriteCreatorsTable.creatorId })
+      .from(userFavoriteCreatorsTable)
+      .where(and(
+        eq(userFavoriteCreatorsTable.userId, userId),
+        eq(userFavoriteCreatorsTable.creatorId, creatorId),
+      ))
+      .limit(1);
+    return Boolean(favorite);
+  }
+
+  async addFavoriteCreator(userId: string, creatorId: string): Promise<boolean> {
+    const inserted = await db.insert(userFavoriteCreatorsTable)
+      .values({ userId, creatorId })
+      .onConflictDoNothing()
+      .returning({ creatorId: userFavoriteCreatorsTable.creatorId });
+    return inserted.length > 0;
+  }
+
+  async removeFavoriteCreator(userId: string, creatorId: string): Promise<boolean> {
+    const deleted = await db.delete(userFavoriteCreatorsTable)
+      .where(and(
+        eq(userFavoriteCreatorsTable.userId, userId),
+        eq(userFavoriteCreatorsTable.creatorId, creatorId),
+      ))
+      .returning({ creatorId: userFavoriteCreatorsTable.creatorId });
+    return deleted.length > 0;
   }
 }

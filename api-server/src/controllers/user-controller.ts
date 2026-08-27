@@ -109,6 +109,33 @@ export class UserController {
     return res.status(200).json(createResponse("Following loaded", toPublicUsers(following)));
   };
 
+  listFavoriteCreators = async (req: Request, res: Response) => {
+    const creatorIds = await this.userService.listFavoriteCreatorIds(req.user?.id ?? "");
+    return res.status(200).json(createResponse("Favorite creators loaded", creatorIds));
+  };
+
+  favoriteCreator = async (req: Request, res: Response) => {
+    const creatorId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const result = await this.userService.setFavoriteCreator(req.user?.id ?? "", creatorId, true);
+      if (!result) return res.status(404).json(createResponse("Creator not found", null, {}, ["Creator not found"]));
+      return res.status(200).json(createResponse("Creator added to Favorites", result));
+    } catch (error) {
+      return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
+  unfavoriteCreator = async (req: Request, res: Response) => {
+    const creatorId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const result = await this.userService.setFavoriteCreator(req.user?.id ?? "", creatorId, false);
+      if (!result) return res.status(404).json(createResponse("Creator not found", null, {}, ["Creator not found"]));
+      return res.status(200).json(createResponse("Creator removed from Favorites", result));
+    } catch (error) {
+      return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
   listFollowRequests = async (req: Request, res: Response) => {
     const requests = await this.userService.listFollowRequests(req.user?.id ?? "");
     return res.status(200).json(createResponse("Follow requests loaded", requests.map(({ request, requester }) => ({

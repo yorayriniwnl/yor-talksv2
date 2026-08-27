@@ -12,6 +12,7 @@ export interface Tokens {
 }
 
 export type AuthTokens = Tokens;
+export type FeedMode = 'for_you' | 'following' | 'favorites';
 
 export type TwoFactorChallenge = {
   requiresTwoFactor: true;
@@ -383,6 +384,9 @@ export const api = {
   unfollowUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser }>(`/users/${userId}/unfollow`, { method: 'POST' }),
   getFollowers: (userId: string) => request<BackendUser[]>(`/users/${userId}/followers`),
   getFollowing: (userId: string) => request<BackendUser[]>(`/users/${userId}/following`),
+  getFavoriteCreatorIds: () => request<string[]>('/users/me/favorites/creators'),
+  favoriteCreator: (userId: string) => request<{ creatorId: string; favorite: true }>(`/users/${encodeURIComponent(userId)}/favorite`, { method: 'POST' }),
+  unfavoriteCreator: (userId: string) => request<{ creatorId: string; favorite: false }>(`/users/${encodeURIComponent(userId)}/favorite`, { method: 'DELETE' }),
   getFollowRequests: () => request<BackendFollowRequest[]>('/users/me/follow-requests'),
   acceptFollowRequest: (requestId: string) => request<{ request: BackendFollowRequest; follower: BackendUser; target: BackendUser }>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/accept`, { method: 'POST' }),
   rejectFollowRequest: (requestId: string) => request<BackendFollowRequest>(`/users/me/follow-requests/${encodeURIComponent(requestId)}/reject`, { method: 'POST' }),
@@ -421,7 +425,7 @@ export const api = {
     request<ModerationReport>(`/reports/${encodeURIComponent(reportId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   // ---- Posts / feed ----
-  getFeed: (cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
+  getFeed: (mode?: FeedMode, cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${mode ? `&mode=${mode}` : ''}${cursor ? `&cursor=${cursor}` : ''}`),
   getSavedPosts: (limit = 50) => requestPaginated<BackendPost[]>(`/posts/saved?limit=${limit}`),
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
