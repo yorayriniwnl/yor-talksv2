@@ -101,6 +101,19 @@ export default function BroadcastChannels() {
     }
   };
 
+  const handleToggleNotifications = async () => {
+    if (!selectedChannel || !selectedChannel.isMember || saving) return;
+    setSaving(true);
+    try {
+      const updated = await api.setBroadcastChannelNotifications(selectedChannel.id, !selectedChannel.notificationsEnabled);
+      setChannels((current) => replaceChannel(current, updated));
+    } catch (notificationError) {
+      setMessageError(notificationError instanceof Error ? notificationError.message : 'Could not update channel notifications');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!channelName.trim() || saving) return;
     setSaving(true);
@@ -199,7 +212,7 @@ export default function BroadcastChannels() {
               <div className="flex items-start justify-between gap-3 border-b border-border/40 p-5">
                 <div className="flex min-w-0 items-center gap-3"><div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-primary/80 to-accent/80 text-xl font-black text-white">{selectedChannel.name.charAt(0).toUpperCase()}</div><div className="min-w-0"><h2 className="truncate font-display text-lg font-black">{selectedChannel.name}</h2><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{selectedChannel.description || 'A direct line from this creator to the people who care.'}</p></div></div>
                 <div className="flex shrink-0 items-center gap-1">
-                  {selectedChannel.isMember && <span className="hidden items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[0.62rem] font-bold text-primary sm:inline-flex"><Bell className="h-3 w-3" /> Live signal</span>}
+                  {selectedChannel.isMember && <Button type="button" variant="ghost" onClick={() => void handleToggleNotifications()} disabled={saving} className="rounded-xl text-xs text-muted-foreground" title={selectedChannel.notificationsEnabled ? 'Mute channel notifications' : 'Unmute channel notifications'}>{selectedChannel.notificationsEnabled ? <BellOff className="mr-1.5 h-3.5 w-3.5" /> : <Bell className="mr-1.5 h-3.5 w-3.5" />}{selectedChannel.notificationsEnabled ? 'Mute' : 'Unmute'}</Button>}
                   {!selectedChannel.isOwner && selectedChannel.isMember && <Button type="button" variant="ghost" onClick={() => void handleLeave()} disabled={saving} className="rounded-xl text-xs text-muted-foreground"><LogOut className="mr-1.5 h-3.5 w-3.5" /> Leave</Button>}
                 </div>
               </div>

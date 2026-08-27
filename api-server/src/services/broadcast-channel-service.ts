@@ -64,6 +64,13 @@ export class BroadcastChannelService {
     return this.repository.findById(channelId, userId);
   }
 
+  async setNotifications(channelId: string, userId: string, enabled: boolean): Promise<BroadcastChannelRecord | undefined> {
+    const channel = await this.repository.findById(channelId, userId);
+    if (!channel || !channel.isMember) return undefined;
+    await this.repository.setNotifications(channelId, userId, enabled);
+    return this.repository.findById(channelId, userId);
+  }
+
   async listMessages(channelId: string, userId: string): Promise<BroadcastChannelMessageRecord[] | undefined> {
     const messages = await this.repository.listMessages(channelId, userId);
     if (!messages) return undefined;

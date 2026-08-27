@@ -493,6 +493,7 @@ export const api = {
     request<BackendBroadcastChannel>('/broadcast-channels', { method: 'POST', body: JSON.stringify(payload) }),
   joinBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'POST' }),
   leaveBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'DELETE' }),
+  setBroadcastChannelNotifications: (id: string, enabled: boolean) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/notifications`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
   getBroadcastChannelMessages: (id: string) => request<BackendBroadcastChannelMessage[]>(`/broadcast-channels/${encodeURIComponent(id)}/messages`),
   publishBroadcastChannelMessage: (id: string, payload: { content: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendBroadcastChannelMessage>(`/broadcast-channels/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
@@ -648,6 +649,7 @@ export interface BackendBroadcastChannel {
   memberCount: number;
   isMember: boolean;
   isOwner: boolean;
+  notificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

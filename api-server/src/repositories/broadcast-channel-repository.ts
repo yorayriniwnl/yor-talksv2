@@ -9,7 +9,7 @@ import type { BroadcastChannelMessageRecord, BroadcastChannelRecord } from "../t
 
 type ChannelRow = typeof broadcastChannelsTable.$inferSelect;
 
-function toChannelRecord(channel: ChannelRow, memberCount: number, isMember: boolean, viewerId: string): BroadcastChannelRecord {
+function toChannelRecord(channel: ChannelRow, memberCount: number, isMember: boolean, notificationsEnabled: boolean, viewerId: string): BroadcastChannelRecord {
   return {
     id: channel.id,
     ownerId: channel.ownerId,
@@ -21,6 +21,7 @@ function toChannelRecord(channel: ChannelRow, memberCount: number, isMember: boo
     memberCount,
     isMember,
     isOwner: channel.ownerId === viewerId,
+    notificationsEnabled,
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
   };
@@ -33,25 +34,27 @@ export class BroadcastChannelRepository {
       .limit(100);
     if (channels.length === 0) return [];
 
-    const memberships = await db.select({ channelId: broadcastChannelMembersTable.channelId, userId: broadcastChannelMembersTable.userId })
+    const memberships = await db.select({ channelId: broadcastChannelMembersTable.channelId, userId: broadcastChannelMembersTable.userId, notificationsEnabled: broadcastChannelMembersTable.notificationsEnabled })
       .from(broadcastChannelMembersTable)
       .where(inArray(broadcastChannelMembersTable.channelId, channels.map((channel) => channel.id)));
     const counts = new Map<string, number>();
     const viewerMemberships = new Set<string>();
+    const viewerNotificationSettings = new Map<string, boolean>();
     for (const membership of memberships) {
       counts.set(membership.channelId, (counts.get(membership.channelId) ?? 0) + 1);
       if (membership.userId === viewerId) viewerMemberships.add(membership.channelId);
+      if (membership.userId === viewerId) viewerNotificationSettings.set(membership.channelId, membership.notificationsEnabled);
     }
-    return channels.map((channel) => toChannelRecord(channel, counts.get(channel.id) ?? 0, viewerMemberships.has(channel.id), viewerId));
+    return channels.map((channel) => toChannelRecord(channel, counts.get(channel.id) ?? 0, viewerMemberships.has(channel.id), viewerNotificationSettings.get(channel.id) ?? true, viewerId));
   }
 
   async findById(id: string, viewerId: string): Promise<BroadcastChannelRecord | undefined> {
     const [channel] = await db.select().from(broadcastChannelsTable).where(eq(broadcastChannelsTable.id, id)).limit(1);
     if (!channel) return undefined;
-    const members = await db.select({ userId: broadcastChannelMembersTable.userId })
+    const members = await db.select({ userId: broadcastChannelMembersTable.userId, notificationsEnabled: broadcastChannelMembersTable.notificationsEnabled })
       .from(broadcastChannelMembersTable)
       .where(eq(broadcastChannelMembersTable.channelId, id));
-    return toChannelRecord(channel, members.length, members.some((member) => member.userId === viewerId), viewerId);
+    return toChannelRecord(channel, members.length, members.some((member) => member.userId === viewerId), members.find((member) => member.userId === viewerId)?.notificationsEnabled ?? true, viewerId);
   }
 
   async create(input: {
@@ -73,7 +76,7 @@ export class BroadcastChannelRepository {
       await tx.insert(broadcastChannelMembersTable).values({ channelId: created.id, userId: input.ownerId, role: "owner" });
       return [created];
     });
-    return toChannelRecord(channel, 1, true, input.ownerId);
+    return toChannelRecord(channel, 1, true, true, input.ownerId);
   }
 
   async join(channelId: string, userId: string): Promise<boolean> {
@@ -112,6 +115,14 @@ export class BroadcastChannelRepository {
         eq(broadcastChannelMembersTable.notificationsEnabled, true),
       ));
     return members.map((member) => member.userId);
+  }
+
+  async setNotifications(channelId: string, userId: string, enabled: boolean): Promise<boolean> {
+    const updated = await db.update(broadcastChannelMembersTable)
+      .set({ notificationsEnabled: enabled })
+      .where(and(eq(broadcastChannelMembersTable.channelId, channelId), eq(broadcastChannelMembersTable.userId, userId)))
+      .returning({ channelId: broadcastChannelMembersTable.channelId });
+    return updated.length > 0;
   }
 
   async listMessages(channelId: string, userId: string, limit = 100): Promise<BroadcastChannelMessageRecord[] | undefined> {

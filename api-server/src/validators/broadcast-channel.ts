@@ -16,3 +16,7 @@ export const createBroadcastChannelMessageSchema = z.object({
   contentCategory: contentCategorySchema.optional().default("other"),
   contentRating: contentRatingSchema.optional().default("regular"),
 });
+
+export const updateBroadcastChannelNotificationsSchema = z.object({
+  enabled: z.boolean(),
+});

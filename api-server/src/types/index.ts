@@ -438,6 +438,7 @@ export interface BroadcastChannelRecord {
   memberCount: number;
   isMember: boolean;
   isOwner: boolean;
+  notificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

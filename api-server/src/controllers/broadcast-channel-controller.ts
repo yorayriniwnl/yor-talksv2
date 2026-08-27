@@ -46,6 +46,14 @@ export class BroadcastChannelController {
     return res.status(200).json(createResponse("Unsubscribed from broadcast channel", channel));
   };
 
+  notifications = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    const channel = await this.service.setNotifications(paramId(req), userId, req.body.enabled);
+    if (!channel) return res.status(404).json(createResponse("Broadcast channel subscription not found", null, {}, ["Subscription not found"]));
+    return res.status(200).json(createResponse(channel.notificationsEnabled ? "Channel notifications enabled" : "Channel notifications muted", channel));
+  };
+
   messages = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
