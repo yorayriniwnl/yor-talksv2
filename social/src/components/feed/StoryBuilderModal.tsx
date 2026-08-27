@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart2, Sparkles, Image as ImageIcon, Type, Palette, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart2, Image as ImageIcon, Type, Palette, Send, X, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
+import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
@@ -35,6 +35,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [textContent, setTextContent] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [storyType, setStoryType] = useState<'text' | 'image'>('text');
   const [highlightTitle, setHighlightTitle] = useState('');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
@@ -43,6 +45,19 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [pollOpen, setPollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
+  const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  }, [imagePreviewUrl]);
+
+  const handleImageFile = (file: File | undefined) => {
+    if (!file) return;
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageFile(file);
+    setImageUrl('');
+    setImagePreviewUrl(URL.createObjectURL(file));
+  };
 
   const handlePublishStory = async () => {
     if (storyType === 'text' && !textContent.trim()) return;
@@ -51,11 +66,17 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
     const normalizedPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
     if (pollOpen && (!pollQuestion.trim() || normalizedPollOptions.length < 2)) return;
 
+    setPublishing(true);
     try {
+      let mediaUrl = imageUrl.trim();
+      if (storyType === 'image' && imageFile) {
+        const uploaded = await api.uploadMedia(imageFile);
+        mediaUrl = uploaded.url;
+      }
       await addStory({
         type: storyType,
         textContent: storyType === 'text' ? textContent.trim() : undefined,
-        mediaUrl: storyType === 'image' ? imageUrl.trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+        mediaUrl: storyType === 'image' ? mediaUrl : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
         backgroundGradient: selectedGradient.css,
         contentCategory,
         contentRating,
@@ -69,6 +90,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       toast.success(isHighlight ? 'Story added to your highlights! ✨' : 'Story published for 24 hours! ✨');
       setTextContent('');
       setImageUrl('');
+      setImageFile(null);
+      setImagePreviewUrl('');
       setHighlightTitle('');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
@@ -77,8 +100,10 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setPollQuestion('');
       setPollOptions(['', '']);
       onOpenChange(false);
-    } catch {
-      // The store has already removed the optimistic story and reported the API error.
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not publish this Story');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -105,8 +130,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               <p className="text-white text-2xl md:text-3xl font-display font-extrabold drop-shadow-md leading-tight">
                 {textContent || "Type your story caption..."}
               </p>
-            ) : imageUrl.trim() ? (
-              <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
+            ) : (imagePreviewUrl || imageUrl.trim()) ? (
+              <img src={imagePreviewUrl || imageUrl} alt="Story preview" className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
             ) : (
               <p className="text-white/70 text-sm font-mono">Enter image URL below...</p>
             )}
@@ -143,13 +168,19 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               className="w-full h-24 rounded-2xl surface-2 border border-border/40 p-3 text-sm outline-none resize-none placeholder:text-muted-foreground font-serif"
             />
           ) : (
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/photo-..."
-              className="w-full h-10 rounded-xl surface-2 border border-border/40 px-3 text-xs outline-none focus:border-primary/50 font-mono"
-            />
+            <div className="space-y-2">
+              <label htmlFor="story-image-file" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+                <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Upload a photo'}
+              </label>
+              <input id="story-image-file" type="file" accept="image/*" onChange={(event) => handleImageFile(event.target.files?.[0])} className="sr-only" />
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => { setImageUrl(e.target.value); setImageFile(null); setImagePreviewUrl(''); }}
+                placeholder="Or paste an image URL…"
+                className="w-full h-10 rounded-xl surface-2 border border-border/40 px-3 text-xs outline-none focus:border-primary/50 font-mono"
+              />
+            </div>
           )}
 
           {/* Gradient Palette Picker */}
@@ -218,10 +249,10 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           <DialogFooter>
             <Button
               onClick={handlePublishStory}
-              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim()) || !contentCategory || (pollOpen && (!pollQuestion.trim() || pollOptions.filter((option) => option.trim()).length < 2))}
+              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim() && !imageFile) || !contentCategory || publishing || (pollOpen && (!pollQuestion.trim() || pollOptions.filter((option) => option.trim()).length < 2))}
               className="w-full rounded-xl font-bold text-xs h-11 glow-neon-primary bg-primary text-primary-foreground"
             >
-              <Send className="w-3.5 h-3.5 mr-1.5" /> Share Story Live
+              <Send className="w-3.5 h-3.5 mr-1.5" /> {publishing ? 'Publishing…' : 'Share Story Live'}
             </Button>
           </DialogFooter>
         </div>
