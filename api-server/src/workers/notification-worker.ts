@@ -1,43 +1,13 @@
-import { Redis } from "ioredis";
 import { Worker, type Job } from "bullmq";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import type { NotificationRecord } from "../types/index.js";
 
-function isRedisCompatibleVersion(redisVersion: string): boolean {
-  const [major = 0, minor = 0, patch = 0] = redisVersion.split(".").map((value) => Number(value));
-  if (major !== 5) {
-    return major > 5;
-  }
-  if (minor !== 0) {
-    return minor > 0;
-  }
-  return patch >= 0;
-}
-
 async function canStartNotificationWorker(): Promise<boolean> {
-  const client = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
-
-  try {
-    await client.connect();
-    const info = await client.info("server");
-    const versionLine = info
-      .split("\n")
-      .find((line) => line.startsWith("redis_version:"));
-    const redisVersion = versionLine?.split(":")[1]?.trim();
-
-    if (!redisVersion) {
-      return false;
-    }
-
-    return isRedisCompatibleVersion(redisVersion);
-  } catch {
-    return false;
-  } finally {
-    client.disconnect();
-  }
+  return (await inspectRedisCompatibility(env.REDIS_URL)).compatible;
 }
 
 export async function startNotificationWorker(): Promise<Worker | null> {

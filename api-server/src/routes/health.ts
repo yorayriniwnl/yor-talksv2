@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
+import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 
 const router = Router();
-const redis = new Redis(env.REDIS_URL);
 
 // Phase 7: Platform Reliability & Operations
 const liveHandler = (_req: Request, res: Response) => {
@@ -17,15 +17,19 @@ const healthHandler = async (_req: Request, res: Response) => {
     // Check DB
     await db.execute(sql`SELECT 1`);
     
-    // Check Redis
-    await redis.ping();
+    // Redis is also the session store and queue backend. A reachable but too
+    // old Redis must not be reported ready because BullMQ will be disabled.
+    const redis = await inspectRedisCompatibility(env.REDIS_URL);
+    if (!redis.compatible) {
+      throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
+    }
 
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
       services: {
         database: "up",
-        redis: "up",
+        redis: `up (${redis.version})`,
         api: "up"
       },
       uptime: process.uptime()

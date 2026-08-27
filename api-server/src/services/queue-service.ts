@@ -1,46 +1,33 @@
-import { Redis } from "ioredis";
 import { Queue, Job } from "bullmq";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
-
-function isRedisCompatibleVersion(redisVersion: string): boolean {
-  const [major = 0, minor = 0, patch = 0] = redisVersion.split(".").map((value) => Number(value));
-  if (major !== 5) {
-    return major > 5;
-  }
-  if (minor !== 0) {
-    return minor > 0;
-  }
-  return patch >= 0;
-}
+import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 
 export class QueueService {
   private queue: Queue | null = null;
   private initialization: Promise<Queue | null> | null = null;
-  private disabled = false;
+  private nextRetryAt = 0;
+  private readonly retryDelayMs = 30_000;
 
   private async initializeQueue(): Promise<Queue | null> {
     if (this.queue) {
       return this.queue;
     }
 
-    if (this.disabled) {
+    if (Date.now() < this.nextRetryAt) {
       return null;
     }
 
     if (!this.initialization) {
       this.initialization = (async () => {
-        const client = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
-
         try {
-          await client.connect();
-          const info = await client.info("server");
-          const versionLine = info.split("\n").find((line) => line.startsWith("redis_version:"));
-          const redisVersion = versionLine?.split(":")[1]?.trim();
-
-          if (!redisVersion || !isRedisCompatibleVersion(redisVersion)) {
-            this.disabled = true;
-            logger.warn({ redisUrl: env.REDIS_URL, redisVersion }, "BullMQ queue disabled because Redis is older than BullMQ supports");
+          const compatibility = await inspectRedisCompatibility(env.REDIS_URL);
+          if (!compatibility.compatible) {
+            this.nextRetryAt = Date.now() + this.retryDelayMs;
+            logger.warn(
+              { redisUrl: env.REDIS_URL, redisVersion: compatibility.version, reason: compatibility.reason },
+              "BullMQ queue temporarily unavailable",
+            );
             return null;
           }
 
@@ -51,16 +38,18 @@ export class QueueService {
           });
           return this.queue;
         } catch (error) {
-          this.disabled = true;
+          this.nextRetryAt = Date.now() + this.retryDelayMs;
           logger.warn({ error, redisUrl: env.REDIS_URL }, "BullMQ queue disabled because Redis could not be initialized");
           return null;
-        } finally {
-          client.disconnect();
         }
       })();
     }
 
-    return this.initialization;
+    try {
+      return await this.initialization;
+    } finally {
+      this.initialization = null;
+    }
   }
 
   async enqueue(type: string, payload: unknown): Promise<Job | undefined> {
@@ -106,5 +95,6 @@ export class QueueService {
       await this.queue.close();
       this.queue = null;
     }
+    this.nextRetryAt = 0;
   }
 }
