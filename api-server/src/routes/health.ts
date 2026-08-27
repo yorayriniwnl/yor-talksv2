@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
-import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 
@@ -29,7 +28,7 @@ const healthHandler = async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       services: {
         database: "up",
-        redis: `up (${redis.version})`,
+        redis: "up",
         api: "up"
       },
       uptime: process.uptime()
