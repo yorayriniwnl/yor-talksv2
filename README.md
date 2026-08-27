@@ -25,6 +25,10 @@ The launch path supports a global deployment or a closed beta:
   Close Friends list managed from Settings. Group conversations
   support member selection, read receipts, reactions, pins, and persisted
   read-triggered Vanish Mode with a 24-hour safety expiry.
+- Creator Broadcast Channels provide one-way, moderated announcements with
+  persisted subscriptions, archive access, subscriber counts, and the same
+  child-safe/regular/mature content filter. Owners are the only publishers, so
+  channel updates never pollute direct-message threads.
 - Browser Web Push delivers notification events when VAPID keys are configured.
 - Cloudinary handles avatar, image, and stored video uploads when configured.
 - Razorpay Checkout supports UPI/card tip orders with server-side capture

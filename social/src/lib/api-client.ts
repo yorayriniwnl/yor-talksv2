@@ -487,6 +487,16 @@ export const api = {
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
   voteStoryPoll: (id: string, optionId: string) => request<BackendStory>(`/stories/${id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
 
+  // ---- Broadcast channels ----
+  getBroadcastChannels: () => request<BackendBroadcastChannel[]>('/broadcast-channels'),
+  createBroadcastChannel: (payload: { name: string; description?: string; coverUrl?: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
+    request<BackendBroadcastChannel>('/broadcast-channels', { method: 'POST', body: JSON.stringify(payload) }),
+  joinBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'POST' }),
+  leaveBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'DELETE' }),
+  getBroadcastChannelMessages: (id: string) => request<BackendBroadcastChannelMessage[]>(`/broadcast-channels/${encodeURIComponent(id)}/messages`),
+  publishBroadcastChannelMessage: (id: string, payload: { content: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
+    request<BackendBroadcastChannelMessage>(`/broadcast-channels/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
+
   // ---- Ephemeral Notes ----
   getNotes: () => request<BackendNote[]>('/notes'),
   createNote: (payload: { content: string; audience: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating: ContentRating }) =>
@@ -625,6 +635,31 @@ export interface BackendNote {
   contentRating?: ContentRating;
   createdAt: string;
   expiresAt: string;
+}
+
+export interface BackendBroadcastChannel {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  coverUrl?: string | null;
+  contentCategory: ContentCategory;
+  contentRating: ContentRating;
+  memberCount: number;
+  isMember: boolean;
+  isOwner: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackendBroadcastChannelMessage {
+  id: string;
+  channelId: string;
+  authorId: string;
+  content: string;
+  contentCategory: ContentCategory;
+  contentRating: ContentRating;
+  createdAt: string;
 }
 
 export interface BackendPost {

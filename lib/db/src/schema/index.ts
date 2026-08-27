@@ -215,6 +215,45 @@ export const communitiesTable = pgTable("communities", {
   ownerIdx: index("community_owner_idx").on(table.ownerId)
 }));
 
+export const broadcastChannelsTable = pgTable("broadcast_channels", {
+  id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  coverUrl: text("cover_url"),
+  contentCategory: text("content_category").notNull().default("other"),
+  contentRating: text("content_rating").notNull().default("regular"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ownerIdx: index("broadcast_channel_owner_idx").on(table.ownerId),
+  createdAtIdx: index("broadcast_channel_created_at_idx").on(table.createdAt),
+}));
+
+export const broadcastChannelMembersTable = pgTable("broadcast_channel_members", {
+  channelId: uuid("channel_id").references(() => broadcastChannelsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  role: text("role").notNull().default("subscriber"),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.channelId, table.userId] }),
+  userIdx: index("broadcast_channel_member_user_idx").on(table.userId, table.createdAt),
+}));
+
+export const broadcastChannelMessagesTable = pgTable("broadcast_channel_messages", {
+  id: uuid("id").primaryKey(),
+  channelId: uuid("channel_id").references(() => broadcastChannelsTable.id, { onDelete: "cascade" }).notNull(),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  contentCategory: text("content_category").notNull().default("other"),
+  contentRating: text("content_rating").notNull().default("regular"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  channelIdx: index("broadcast_channel_message_channel_idx").on(table.channelId, table.createdAt),
+  authorIdx: index("broadcast_channel_message_author_idx").on(table.authorId),
+}));
+
 export const storiesTable = pgTable("stories", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -966,6 +1005,18 @@ export type Notification = typeof notificationsTable.$inferSelect;
 export const insertCommunitySchema = createInsertSchema(communitiesTable);
 export type InsertCommunity = typeof communitiesTable.$inferInsert;
 export type Community = typeof communitiesTable.$inferSelect;
+
+export const insertBroadcastChannelSchema = createInsertSchema(broadcastChannelsTable);
+export type InsertBroadcastChannel = typeof broadcastChannelsTable.$inferInsert;
+export type BroadcastChannel = typeof broadcastChannelsTable.$inferSelect;
+
+export const insertBroadcastChannelMemberSchema = createInsertSchema(broadcastChannelMembersTable);
+export type InsertBroadcastChannelMember = typeof broadcastChannelMembersTable.$inferInsert;
+export type BroadcastChannelMember = typeof broadcastChannelMembersTable.$inferSelect;
+
+export const insertBroadcastChannelMessageSchema = createInsertSchema(broadcastChannelMessagesTable);
+export type InsertBroadcastChannelMessage = typeof broadcastChannelMessagesTable.$inferInsert;
+export type BroadcastChannelMessage = typeof broadcastChannelMessagesTable.$inferSelect;
 
 export const insertStorySchema = createInsertSchema(storiesTable);
 export type InsertStory = typeof storiesTable.$inferInsert;

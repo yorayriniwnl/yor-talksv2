@@ -426,3 +426,28 @@ export interface NoteRecord {
   createdAt: string;
   expiresAt: string;
 }
+
+export interface BroadcastChannelRecord {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  coverUrl?: string | null;
+  contentCategory: string;
+  contentRating: ContentRating;
+  memberCount: number;
+  isMember: boolean;
+  isOwner: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BroadcastChannelMessageRecord {
+  id: string;
+  channelId: string;
+  authorId: string;
+  content: string;
+  contentCategory: string;
+  contentRating: ContentRating;
+  createdAt: string;
+}

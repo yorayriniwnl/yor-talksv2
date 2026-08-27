@@ -22,6 +22,7 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
   { match: '/communities', title: 'Communities', kicker: 'Gather around what matters' },
   { match: '/events', title: 'Events', kicker: 'Make plans together' },
   { match: '/live', title: 'Live now', kicker: 'See what is happening' },
+  { match: '/channels', title: 'Broadcast Channels', kicker: 'Follow the signals that matter' },
   { match: '/settings', title: 'Settings', kicker: 'Make Yor yours' },
 ];
 

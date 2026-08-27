@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
-  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark
+  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -54,6 +54,7 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Activity, label: 'Pulse', path: '/pulse' },
     { icon: WandSparkles, label: 'Dream', path: '/dream' },
     { icon: Radio, label: 'Live', path: '/live' },
+    { icon: Megaphone, label: 'Channels', path: '/channels' },
     { icon: Camera, label: 'Creator Studio', path: '/studio' },
     { icon: Gauge, label: 'Control Room', path: '/control-room' },
     { icon: Settings, label: 'Settings', path: '/settings' },

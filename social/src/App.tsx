@@ -39,6 +39,7 @@ const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
 const Messages = lazyWithRetry(() => import('@/pages/messages'));
 const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
 const Saved = lazyWithRetry(() => import('@/pages/saved'));
+const BroadcastChannels = lazyWithRetry(() => import('@/pages/broadcast-channels'));
 const Settings = lazyWithRetry(() => import('@/pages/settings'));
 
 // Content & Discovery
@@ -117,6 +118,7 @@ function ProtectedRoutes() {
                 <Route path="/messages/:id?" component={Messages} />
                 <Route path="/notifications" component={Notifications} />
                 <Route path="/saved" component={Saved} />
+                <Route path="/channels" component={BroadcastChannels} />
                 <Route path="/settings" component={Settings} />
 
                 {/* Content & Discovery */}

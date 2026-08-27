@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, X,
   Activity, Compass, Film, Globe2, MessageCircle, Bell, User, Users, FileText, Orbit, WandSparkles,
-  Video, Radio, Scissors,
+  Video, Radio, Megaphone, Scissors,
   Trophy, Swords, Gamepad2, Target, Award, Medal, Calendar,
   BarChart3, Store, ShoppingCart, Briefcase, Shirt, Layers,
   ShoppingBag, Coins, Ticket, Shield, Building2, HandCoins,
@@ -98,6 +98,7 @@ export function CommandPalette() {
         { icon: Users, label: 'Legacy Communities', path: '/communities' },
         { icon: FileText, label: 'Articles', path: '/articles' },
         { icon: Radio, label: 'Live', path: '/live' },
+        { icon: Megaphone, label: 'Broadcast Channels', path: '/channels' },
         { icon: Calendar, label: 'Events', path: '/events' },
       ]
     },
