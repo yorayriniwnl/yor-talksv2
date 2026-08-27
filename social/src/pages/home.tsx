@@ -234,7 +234,7 @@ export default function Home() {
             <NotesTray />
             <section className="orbit-now-card home-stories-card">
               <div className="home-section-heading">
-                <div><span>Fresh from your people</span><h2>Stories</h2></div>
+                <div><span>From the people you follow</span><h2>Stories</h2></div>
                 <Link href="/pulse">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
               <StoriesRow />
@@ -242,7 +242,7 @@ export default function Home() {
 
             <section className="orbit-composer-card home-composer-card">
               <div className="home-section-heading">
-                <div><span>Make something visible</span><h2>Share a moment</h2></div>
+                <div><span>Start the conversation</span><h2>Share something</h2></div>
                 <span className="home-composer-world">{worldPreferences.worldLabel} world</span>
               </div>
               <CreatePost />
@@ -250,7 +250,7 @@ export default function Home() {
 
             <div className="home-feed-toolbar">
               <div>
-                <span>Your signal, tuned</span>
+                <span>Fresh from your network</span>
                 <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : mode === 'favorites' ? 'Favorites' : 'Build'}</strong>
               </div>
               <div className="home-feed-toolbar__actions">

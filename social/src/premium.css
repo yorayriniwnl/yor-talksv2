@@ -2701,6 +2701,167 @@ html.yor-low-bandwidth video {
 
 .yor-post__caption a { color: hsl(var(--primary)); }
 
+/* Signature feed pass — make the daily loop feel immediate, image-led, and
+ * effortless while keeping Yor’s own visual language. */
+.premium-topbar[data-home="true"] {
+  box-shadow: 0 1px 0 hsl(var(--border) / 0.28), 0 12px 28px hsl(var(--premium-shadow-deep) / 0.04);
+}
+
+.orbit-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% -8rem, hsl(var(--primary) / 0.085), transparent 30rem),
+    hsl(var(--background));
+}
+
+.orbit-page::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, hsl(var(--background) / 0), hsl(var(--background) / 0.72) 45%, hsl(var(--background)) 100%);
+  content: '';
+  pointer-events: none;
+}
+
+.orbit-wrap {
+  width: min(100%, 68rem);
+  padding-inline: clamp(0.85rem, 2.3vw, 1.6rem);
+}
+
+.home-feed-tabs {
+  position: sticky;
+  top: 4.25rem;
+  z-index: 20;
+  margin-inline: -0.35rem;
+  padding-inline: 0.35rem;
+  background: hsl(var(--background) / 0.82);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+}
+
+.home-feed-tabs button {
+  min-height: 3rem;
+  padding-inline: 0.55rem;
+  border-bottom-width: 2px;
+}
+
+.home-feed-tabs button.is-active {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--foreground));
+}
+
+.home-stories-card,
+.home-composer-card {
+  box-shadow: 0 1px 2px hsl(var(--premium-shadow-deep) / 0.06), 0 18px 46px hsl(var(--premium-shadow-deep) / 0.055);
+}
+
+.home-section-heading {
+  padding-bottom: 0.7rem;
+}
+
+.home-section-heading > div > span {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-story-row {
+  gap: 0.85rem !important;
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+}
+
+.home-story-row > button {
+  width: 4.5rem;
+  gap: 0.5rem;
+  transition: transform 180ms var(--premium-ease), filter 180ms var(--premium-ease);
+}
+
+.home-story-row > button:hover,
+.home-story-row > button:focus-visible {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+}
+
+.home-story-row > button > div {
+  width: 4rem;
+  height: 4rem;
+}
+
+.home-story-row > button > div > .avatar {
+  width: 3.7rem;
+  height: 3.7rem;
+}
+
+.home-story-row > button > span {
+  color: hsl(var(--foreground) / 0.84);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.home-composer-card:focus-within {
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.07), 0 18px 46px hsl(var(--premium-shadow-deep) / 0.07);
+}
+
+.home-composer-card .yor-composer__publishing-controls select {
+  border-color: hsl(var(--border) / 0.9);
+  border-radius: 0.75rem;
+  background: hsl(var(--background) / 0.7);
+}
+
+.home-feed-toolbar {
+  margin-top: 1.3rem;
+  margin-bottom: 0.7rem;
+  padding-inline: 0.2rem;
+}
+
+.home-feed-toolbar strong {
+  font-size: 0.96rem;
+  letter-spacing: -0.02em;
+}
+
+.orbit-post-list {
+  gap: 1rem;
+}
+
+.orbit-post-card {
+  border-radius: 1.15rem;
+  box-shadow: 0 1px 2px hsl(var(--premium-shadow-deep) / 0.06), 0 14px 36px hsl(var(--premium-shadow-deep) / 0.045);
+}
+
+.orbit-post-card article {
+  padding: 1.1rem 1.15rem 1rem;
+}
+
+.yor-post-media {
+  border-radius: 1rem !important;
+}
+
+.yor-post__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid hsl(var(--border) / 0.55);
+}
+
+.yor-post__actions button {
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  border-radius: 0.8rem;
+}
+
+.orbit-rail-card,
+.orbit-profile-card {
+  box-shadow: 0 1px 2px hsl(var(--premium-shadow-deep) / 0.05), 0 12px 30px hsl(var(--premium-shadow-deep) / 0.035);
+}
+
 @media (max-width: 560px) {
   .yor-composer__publishing-controls { grid-template-columns: 1fr; gap: 0.5rem; }
   .yor-composer__publishing-controls select { height: 2.35rem; }
@@ -2745,6 +2906,25 @@ html.yor-low-bandwidth video {
 }
 
 @media (max-width: 680px) {
+  .orbit-wrap { padding-inline: 0; }
+  .home-feed-tabs {
+    top: 3.85rem;
+    margin-inline: 0;
+    padding-inline: 1rem;
+  }
+  .home-feed-tabs button {
+    flex: 1 1 0;
+    justify-content: center;
+    padding-inline: 0.2rem;
+  }
+  .home-stories-card,
+  .home-composer-card,
+  .orbit-post-card {
+    box-shadow: 0 1px 0 hsl(var(--border) / 0.52);
+  }
+  .home-story-row { gap: 0.8rem !important; }
+  .orbit-post-card article { padding: 0.95rem 1rem 0.85rem; }
+  .yor-post__actions button { min-width: 2.75rem; min-height: 2.75rem; }
   .yor-offline-banner {
     top: 4.35rem;
     right: 0.75rem;

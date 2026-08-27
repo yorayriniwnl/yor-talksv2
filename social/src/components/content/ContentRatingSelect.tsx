@@ -8,7 +8,7 @@ interface ContentRatingSelectProps {
   label?: string;
 }
 
-export function ContentRatingSelect({ id, value, onChange, label = 'Audience' }: ContentRatingSelectProps) {
+export function ContentRatingSelect({ id, value, onChange, label = 'Safety rating' }: ContentRatingSelectProps) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs font-mono uppercase text-muted-foreground">{label}</Label>

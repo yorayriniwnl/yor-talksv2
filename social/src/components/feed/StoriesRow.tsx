@@ -54,7 +54,9 @@ export default function StoriesRow() {
         {/* Add Story Button */}
         {currentUser && (
           <button
+            type="button"
             onClick={() => setBuilderOpen(true)}
+            aria-label="Add a story"
             className="flex flex-col items-center gap-2 shrink-0 w-[72px] group hover-lift"
           >
             <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-primary/50 flex items-center justify-center surface-1 group-hover:border-primary transition-all group-hover:scale-105 shadow-sm">
@@ -82,7 +84,9 @@ export default function StoriesRow() {
           return (
             <button
               key={authorId}
+              type="button"
               onClick={() => setActiveAuthorId(authorId)}
+              aria-label={`Open ${authorId === currentUser?.id ? 'your story' : `${authorDisplayName}'s story`}`}
               className="flex flex-col items-center gap-2 shrink-0 w-[72px] snap-start transition-transform duration-200 hover:scale-105"
             >
               <div
