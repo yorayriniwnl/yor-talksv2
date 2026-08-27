@@ -43,6 +43,7 @@ export {
   videoBookmarksTable,
   liveStreamsTable,
   storiesTable,
+  userNotesTable,
   postRepostsTable,
   userFavoriteCreatorsTable,
   postPollsTable,
@@ -71,6 +72,7 @@ export {
   insertVideoCommentSchema,
   insertLiveStreamSchema,
   insertStorySchema,
+  insertUserNoteSchema,
   creatorWorkspaceItemsTable,
   insertCreatorWorkspaceItemSchema,
 } from "./schema";

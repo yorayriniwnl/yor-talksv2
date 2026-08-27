@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAppStore, type Post } from '@/lib/store';
 import StoriesRow from '@/components/feed/StoriesRow';
+import NotesTray from '@/components/feed/NotesTray';
 import { CreatePost, PostCardMemo as PostCard } from '@/components/feed/Post';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -230,6 +231,7 @@ export default function Home() {
 
         <div className="orbit-layout">
           <main className="orbit-stream">
+            <NotesTray />
             <section className="orbit-now-card home-stories-card">
               <div className="home-section-heading">
                 <div><span>Fresh from your people</span><h2>Stories</h2></div>

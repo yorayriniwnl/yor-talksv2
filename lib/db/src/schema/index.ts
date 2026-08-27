@@ -231,6 +231,23 @@ export const storiesTable = pgTable("stories", {
   authorIdx: index("story_author_idx").on(table.authorId)
 }));
 
+/** Short-lived profile statuses shown above the main feed. A note is replaced
+ * when the author publishes another one and expires automatically after 24h. */
+export const userNotesTable = pgTable("user_notes", {
+  id: uuid("id").primaryKey(),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  audience: text("audience").notNull().default("followers"),
+  contentCategory: text("content_category").notNull().default("other"),
+  contentRating: text("content_rating").notNull().default("regular"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
+}, (table) => ({
+  authorIdx: index("user_notes_author_idx").on(table.authorId, table.createdAt),
+  expiryIdx: index("user_notes_expiry_idx").on(table.expiresAt),
+  authorUniqueIdx: uniqueIndex("user_notes_author_unique_idx").on(table.authorId),
+}));
+
 export const eventsTable = pgTable("events", {
   id: uuid("id").primaryKey(),
   hostId: uuid("host_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -854,6 +871,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   articles: many(articlesTable),
   videos: many(videosTable),
   stories: many(storiesTable),
+  notes: many(userNotesTable),
   liveStreams: many(liveStreamsTable),
   notifications: many(notificationsTable)
 }));
@@ -898,6 +916,10 @@ export const storiesRelations = relations(storiesTable, ({ one }) => ({
   author: one(usersTable, { fields: [storiesTable.authorId], references: [usersTable.id] })
 }));
 
+export const userNotesRelations = relations(userNotesTable, ({ one }) => ({
+  author: one(usersTable, { fields: [userNotesTable.authorId], references: [usersTable.id] })
+}));
+
 export const liveStreamsRelations = relations(liveStreamsTable, ({ one }) => ({
   host: one(usersTable, { fields: [liveStreamsTable.hostId], references: [usersTable.id] })
 }));
@@ -933,6 +955,10 @@ export type Community = typeof communitiesTable.$inferSelect;
 export const insertStorySchema = createInsertSchema(storiesTable);
 export type InsertStory = typeof storiesTable.$inferInsert;
 export type Story = typeof storiesTable.$inferSelect;
+
+export const insertUserNoteSchema = createInsertSchema(userNotesTable);
+export type InsertUserNote = typeof userNotesTable.$inferInsert;
+export type UserNote = typeof userNotesTable.$inferSelect;
 
 export const insertEventSchema = createInsertSchema(eventsTable);
 export type InsertEvent = typeof eventsTable.$inferInsert;

@@ -2232,6 +2232,25 @@ a.yor-secondary-action:hover {
 }
 
 .home-stories-card { padding: 0.9rem 0 0.55rem; }
+.home-notes-card { padding: 0.9rem 0 0.8rem; }
+.home-notes-compose { display: inline-flex; align-items: center; gap: 0.3rem; color: hsl(var(--primary)); font-size: 0.72rem; font-weight: 800; }
+.home-notes-compose:hover { color: hsl(var(--foreground)); }
+.home-notes-row { display: flex; gap: 0.7rem; overflow-x: auto; padding: 0.25rem 1rem 0.1rem; scrollbar-width: none; }
+.home-notes-row::-webkit-scrollbar { display: none; }
+.home-note-card { width: min(18rem, calc(100vw - 4rem)); flex: 0 0 min(18rem, calc(100vw - 4rem)); border: 1px solid hsl(var(--border) / 0.55); border-radius: 1.2rem; background: hsl(var(--background) / 0.5); padding: 0.75rem; }
+.home-note-card.is-mine { border-color: hsl(var(--primary) / 0.35); background: linear-gradient(145deg, hsl(var(--primary) / 0.09), hsl(var(--card) / 0.7)); }
+.home-note-card__head { display: flex; align-items: center; gap: 0.55rem; }
+.home-note-card__head strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; }
+.home-note-card__head small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: 0.61rem; }
+.home-note-card__delete { margin-left: auto; border-radius: 999px; padding: 0.35rem; color: hsl(var(--muted-foreground)); }
+.home-note-card__delete:hover { background: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive)); }
+.home-note-card p { min-height: 2.7rem; margin: 0.8rem 0 0.7rem; color: hsl(var(--foreground) / 0.9); font-size: 0.78rem; line-height: 1.45; }
+.home-note-card__meta { display: flex; align-items: center; gap: 0.65rem; color: hsl(var(--muted-foreground)); font-size: 0.6rem; font-weight: 700; }
+.home-note-card__meta span { display: inline-flex; align-items: center; gap: 0.22rem; }
+.home-note-empty { display: flex; width: min(32rem, 100%); align-items: center; gap: 0.7rem; border: 1px dashed hsl(var(--primary) / 0.32); border-radius: 1.15rem; background: hsl(var(--primary) / 0.05); padding: 0.75rem 0.9rem; text-align: left; color: hsl(var(--primary)); }
+.home-note-empty > span { display: grid; gap: 0.16rem; }
+.home-note-empty strong { color: hsl(var(--foreground)); font-size: 0.75rem; }
+.home-note-empty small { color: hsl(var(--muted-foreground)); font-size: 0.65rem; }
 .home-section-heading {
   display: flex;
   align-items: center;

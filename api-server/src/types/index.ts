@@ -406,3 +406,16 @@ export interface StoryRecord {
   contentRating?: ContentRating;
   poll?: StoryPoll;
 }
+
+export type NoteAudience = "followers" | "public";
+
+export interface NoteRecord {
+  id: string;
+  authorId: string;
+  content: string;
+  audience: NoteAudience;
+  contentCategory?: string;
+  contentRating?: ContentRating;
+  createdAt: string;
+  expiresAt: string;
+}

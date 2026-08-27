@@ -484,6 +484,12 @@ export const api = {
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
   voteStoryPoll: (id: string, optionId: string) => request<BackendStory>(`/stories/${id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
 
+  // ---- Ephemeral Notes ----
+  getNotes: () => request<BackendNote[]>('/notes'),
+  createNote: (payload: { content: string; audience: 'followers' | 'public'; contentCategory: ContentCategory; contentRating: ContentRating }) =>
+    request<BackendNote>('/notes', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteNote: (id: string) => request<null>(`/notes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
   // ---- Economy ----
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
   createTipOrder: (payload: { creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
@@ -601,6 +607,17 @@ export interface BackendStory {
     totalVotes: number;
     votedOptionId?: string;
   };
+}
+
+export interface BackendNote {
+  id: string;
+  authorId: string;
+  content: string;
+  audience: 'followers' | 'public';
+  contentCategory?: ContentCategory;
+  contentRating?: ContentRating;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface BackendPost {

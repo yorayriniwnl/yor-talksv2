@@ -13,6 +13,7 @@ import {
   type BackendProfileComment,
   type BackendShowcase,
   type BackendStory,
+  type BackendNote,
   type BackendEvent,
   type BackendPost,
   type BackendCommunity,
@@ -122,6 +123,17 @@ export type Story = {
   highlightTitle?: string;
   contentCategory: string;
   contentRating: ContentRating;
+};
+
+export type Note = {
+  id: string;
+  authorId: string;
+  content: string;
+  audience: 'followers' | 'public';
+  contentCategory: ContentCategory;
+  contentRating: ContentRating;
+  createdAt: string;
+  expiresAt: string;
 };
 
 type StoryPollInput = {
@@ -349,6 +361,19 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     highlightTitle: s.highlightTitle ?? undefined,
     contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: s.contentRating ?? DEFAULT_CONTENT_RATING,
+  };
+}
+
+function mapNote(note: BackendNote): Note {
+  return {
+    id: note.id,
+    authorId: note.authorId,
+    content: note.content || '',
+    audience: note.audience === 'public' ? 'public' : 'followers',
+    contentCategory: note.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
+    contentRating: note.contentRating ?? DEFAULT_CONTENT_RATING,
+    createdAt: note.createdAt || new Date().toISOString(),
+    expiresAt: note.expiresAt || new Date(Date.now() + 86400000).toISOString(),
   };
 }
 
@@ -596,6 +621,7 @@ interface AppState {
   users: Record<string, User>;
   posts: Post[];
   stories: Story[];
+  notes: Note[];
   communities: Community[];
   liveStreams: LiveStream[];
   events: EventItem[];
@@ -623,6 +649,9 @@ interface AppState {
   loadWorldPreferences: () => Promise<void>;
 
   loadStories: () => Promise<void>;
+  loadNotes: () => Promise<void>;
+  createNote: (input: { content: string; audience: Note['audience']; contentCategory?: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
   loadFeed: (mode?: FeedMode) => Promise<void>;
   loadMoreFeed: () => Promise<void>;
   loadFavoriteCreators: () => Promise<void>;
@@ -716,6 +745,7 @@ function hydrateSessionData(get: () => AppState): void {
     get().loadFollowRequests(),
     get().loadConversations(),
     get().loadStories(),
+    get().loadNotes(),
     get().loadWorldPreferences(),
   ]);
 }
@@ -820,6 +850,7 @@ export const useAppStore = create<AppState>()(
       users: {},
       posts: [],
       stories: [],
+      notes: [],
       communities: [],
       liveStreams: [],
       events: [],
@@ -1493,6 +1524,59 @@ export const useAppStore = create<AppState>()(
           // fallback
         }
         set({ stories: [] });
+      },
+
+      loadNotes: async () => {
+        try {
+          const backendNotes = await api.getNotes();
+          set({ notes: backendNotes.map(mapNote) });
+        } catch {
+          // Keep the last successful snapshot during a transient outage.
+        }
+      },
+
+      createNote: async (input) => {
+        const uid = get().currentUser?.id;
+        if (!uid) return;
+        const content = input.content.trim();
+        if (!content) return;
+        const optimisticId = `note-${Date.now()}`;
+        const now = new Date();
+        const optimisticNote: Note = {
+          id: optimisticId,
+          authorId: uid,
+          content,
+          audience: input.audience,
+          contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
+          contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
+          createdAt: now.toISOString(),
+          expiresAt: new Date(now.getTime() + 86400000).toISOString(),
+        };
+        set((state) => ({ notes: [optimisticNote, ...state.notes.filter((note) => note.authorId !== uid)] }));
+        try {
+          const created = await api.createNote({
+            content,
+            audience: input.audience,
+            contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
+            contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
+          });
+          set((state) => ({ notes: [mapNote(created), ...state.notes.filter((note) => note.id !== optimisticId && note.authorId !== uid)] }));
+        } catch (error) {
+          set((state) => ({ notes: state.notes.filter((note) => note.id !== optimisticId) }));
+          toast.error(error instanceof Error ? error.message : 'Could not publish your Note');
+          throw error;
+        }
+      },
+
+      deleteNote: async (noteId) => {
+        const previous = get().notes;
+        set((state) => ({ notes: state.notes.filter((note) => note.id !== noteId) }));
+        try {
+          await api.deleteNote(noteId);
+        } catch (error) {
+          set({ notes: previous });
+          toast.error(error instanceof Error ? error.message : 'Could not remove your Note');
+        }
       },
 
       viewStory: async (storyId) => {
