@@ -89,9 +89,9 @@ Docker, then rebuild the API:
   `WEB_PUSH_VAPID_PRIVATE_KEY`, and a verified `WEB_PUSH_VAPID_SUBJECT`.
 - WebRTC calls: set `VITE_RTC_ICE_SERVERS` to a JSON array containing a
   production TURN server (STUN alone is not reliable across carrier NATs).
-  If the frontend is on Vercel and the API is elsewhere, set
-  `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter must point to a
-  long-lived Socket.IO process.
+  If the frontend is on Vercel and the API is elsewhere, set `NODE_ENV=production`
+  on the API and set `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter
+  must point to a long-lived Socket.IO process.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
   then set the same client ID in both `GOOGLE_CLIENT_ID` and
@@ -156,6 +156,9 @@ pnpm --filter @workspace/api-server test
 - Use a separate beta database and take a Postgres backup before launch.
 - Replace all local JWT secrets and restrict `CORS_ORIGINS` to the deployed
   frontend.
+- Set `NODE_ENV=production` on every deployed API, including an API hosted
+  outside the included Docker stack. Vercel is detected as production by
+  default, but explicitly setting it prevents platform-specific surprises.
 - Configure and test Resend, Cloudinary, Razorpay test mode, and LiveKit Cloud
   before inviting students.
 - Verify the Razorpay flow with a successful test order, a failed payment, and

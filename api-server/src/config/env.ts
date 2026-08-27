@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+const defaultNodeEnvironment = process.env.NODE_ENV || (process.env.VERCEL ? "production" : "development");
+
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z.enum(["development", "test", "production"]).default(defaultNodeEnvironment as "development" | "test" | "production"),
   PORT: z.string().default(process.env.PORT || process.env.API_PORT || "4000"),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || "change-me-access"),
   JWT_REFRESH_SECRET: z.string().default(process.env.JWT_REFRESH_SECRET || "change-me-refresh"),

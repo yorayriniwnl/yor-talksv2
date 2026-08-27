@@ -20,10 +20,10 @@ for (const header of ["x-content-type-options", "x-frame-options", "referrer-pol
   }
 }
 
-const health = await check("/api/healthz", undefined, 200);
-const healthBody = await health.json();
-if (healthBody.status !== "healthy") {
-  throw new Error(`health endpoint did not report healthy: ${JSON.stringify(healthBody)}`);
+const readiness = await check("/api/readyz", undefined, 200);
+const readinessBody = await readiness.json();
+if (readinessBody.status !== "healthy" || readinessBody.services?.database !== "up" || readinessBody.services?.redis !== "up") {
+  throw new Error(`readiness endpoint did not report healthy dependencies: ${JSON.stringify(readinessBody)}`);
 }
 
 await check("/api/auth/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, 401);
