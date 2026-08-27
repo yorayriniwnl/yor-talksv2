@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { ContentPolicyViolationError } from "../services/content-policy-service.js";
 import { BroadcastChannelService } from "../services/broadcast-channel-service.js";
 import { createResponse } from "../utils/response.js";
+import type { BroadcastChannelMessageRecord } from "../types/index.js";
 
 function paramId(req: Request): string {
   return Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -9,6 +10,13 @@ function paramId(req: Request): string {
 
 function messageParamId(req: Request): string {
   return Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
+}
+
+function viewMessage(message: BroadcastChannelMessageRecord) {
+  return {
+    ...message,
+    reactions: Object.fromEntries(Object.entries(message.reactions ?? {}).map(([reaction, users]) => [reaction, users.length])),
+  };
 }
 
 export class BroadcastChannelController {
@@ -63,7 +71,7 @@ export class BroadcastChannelController {
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     const messages = await this.service.listMessages(paramId(req), userId);
     if (!messages) return res.status(403).json(createResponse("Subscribe to this channel to view its messages", null, {}, ["channel_subscription_required"]));
-    return res.status(200).json(createResponse("Broadcast channel messages retrieved", messages));
+    return res.status(200).json(createResponse("Broadcast channel messages retrieved", messages.map(viewMessage)));
   };
 
   createMessage = async (req: Request, res: Response) => {
@@ -72,7 +80,7 @@ export class BroadcastChannelController {
     try {
       const message = await this.service.createMessage({ ...req.body, channelId: paramId(req), authorId });
       if (!message) return res.status(403).json(createResponse("Only the channel owner can publish channel messages", null, {}, ["channel_owner_required"]));
-      return res.status(201).json(createResponse("Broadcast message published", message));
+      return res.status(201).json(createResponse("Broadcast message published", viewMessage(message)));
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
@@ -86,6 +94,6 @@ export class BroadcastChannelController {
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     const message = await this.service.reactToMessage(paramId(req), messageParamId(req), userId, req.body.reaction);
     if (!message) return res.status(403).json(createResponse("Subscribe to this channel to react", null, {}, ["channel_subscription_required"]));
-    return res.status(200).json(createResponse("Broadcast reaction updated", message));
+    return res.status(200).json(createResponse("Broadcast reaction updated", viewMessage(message)));
   };
 }

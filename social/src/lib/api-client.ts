@@ -663,7 +663,7 @@ export interface BackendBroadcastChannelMessage {
   content: string;
   contentCategory: ContentCategory;
   contentRating: ContentRating;
-  reactions?: Record<string, string[]>;
+  reactions?: Record<string, number>;
   createdAt: string;
 }
 
