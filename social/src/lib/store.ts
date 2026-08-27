@@ -160,6 +160,8 @@ export type Conversation = {
   participantIds: string[];
   lastMessage?: Message;
   updatedAt: string;
+  isGroup?: boolean;
+  title?: string | null;
 };
 
 export type Community = {
@@ -465,6 +467,8 @@ function mapConversation(c: BackendConversation, lastMessage: BackendMessage | n
     participantIds: Array.isArray(c.participantIds) ? c.participantIds : [c.participantA, c.participantB].filter(Boolean),
     lastMessage: lastMessage ? mapMessage(lastMessage) : undefined,
     updatedAt: c.updatedAt || new Date().toISOString(),
+    isGroup: Boolean(c.isGroup),
+    title: c.title ?? null,
   };
 }
 
@@ -687,6 +691,8 @@ interface AppState {
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
   sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
+  createGroupChat: (memberIds: string[], title: string) => Promise<string>;
   editDirectMessage: (messageId: string, content: string) => Promise<void>;
   deleteDirectMessage: (messageId: string) => Promise<void>;
   reactToDirectMessage: (messageId: string, reaction: string) => Promise<void>;
@@ -1329,6 +1335,32 @@ export const useAppStore = create<AppState>()(
           toast.error(error instanceof Error ? error.message : 'Could not send the message');
           throw error;
         }
+      },
+
+      sendMessageToConversation: async (conversationId, content, replyToId) => {
+        try {
+          const created = await api.sendMessageToConversation(conversationId, content, replyToId);
+          const newMsg = mapMessage(created);
+          set((state) => {
+            const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
+            return {
+              messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: [...existing, newMsg] },
+              conversations: state.conversations.map((conversation) => conversation.id === newMsg.conversationId
+                ? { ...conversation, lastMessage: newMsg, updatedAt: newMsg.createdAt }
+                : conversation),
+            };
+          });
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not send the message');
+          throw error;
+        }
+      },
+
+      createGroupChat: async (memberIds, title) => {
+        const created = await api.createGroupChat({ memberIds, title });
+        const conversation = mapConversation(created, null);
+        set((state) => ({ conversations: [conversation, ...state.conversations.filter((item) => item.id !== conversation.id)] }));
+        return conversation.id;
       },
 
       editDirectMessage: async (messageId, content) => {

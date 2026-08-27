@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Search, Plus, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft, 
+  Search, Plus, UsersRound, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft,
   Sparkles, Reply, X, Video, Phone, Mic, Zap, EyeOff, Shield, Image as ImageIcon, Pencil, Trash2, Pin, Smile
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -189,6 +189,90 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   );
 }
 
+function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const [, setLocation] = useLocation();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const createGroupChat = useAppStore((s) => s.createGroupChat);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<BackendUser[]>([]);
+  const [selected, setSelected] = useState<BackendUser[]>([]);
+  const [title, setTitle] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    let active = true;
+    const handle = setTimeout(async () => {
+      try {
+        const users = await api.searchUsers(query.trim());
+        if (active) setResults(users.filter((user) => user.id !== currentUser?.id));
+      } catch { /* ignore transient search errors */ }
+    }, 250);
+    return () => { active = false; clearTimeout(handle); };
+  }, [query, currentUser?.id]);
+
+  const toggleMember = (user: BackendUser) => {
+    setSelected((members) => members.some((member) => member.id === user.id)
+      ? members.filter((member) => member.id !== user.id)
+      : members.length < 99 ? [...members, user] : members);
+  };
+
+  const handleCreate = async () => {
+    if (selected.length === 0 || !title.trim() || creating) return;
+    setCreating(true);
+    try {
+      const conversationId = await createGroupChat(selected.map((user) => user.id), title.trim());
+      onOpenChange(false);
+      setLocation(`/messages/${conversationId}`);
+      setSelected([]);
+      setTitle('');
+      setQuery('');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create the group');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="surface-2 rounded-2xl border-none shadow-xl">
+        <DialogHeader><DialogTitle className="font-display">Create a group chat</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <Input value={title} onChange={(event) => setTitle(event.target.value.slice(0, 120))} placeholder="Group name" className="rounded-xl" autoFocus />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Add people" value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9 surface-1 border-none rounded-xl" />
+          </div>
+          {selected.length > 0 && (
+            <div className="flex flex-wrap gap-2" aria-label="Selected group members">
+              {selected.map((user) => (
+                <button type="button" key={user.id} onClick={() => toggleMember(user)} className="flex items-center gap-1.5 rounded-full bg-primary/12 px-2.5 py-1 text-xs font-semibold text-primary">
+                  <span>{user.fullName || user.username}</span><X className="h-3 w-3" />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="max-h-56 overflow-y-auto space-y-1 thin-scrollbar">
+            {results.map((user) => {
+              const isSelected = selected.some((member) => member.id === user.id);
+              return (
+                <button type="button" key={user.id} onClick={() => toggleMember(user)} className={cn('w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors', isSelected ? 'bg-primary/12' : 'hover:bg-muted/50')}>
+                  <Avatar className="w-9 h-9"><AvatarImage src={user.avatarUrl ?? undefined} /><AvatarFallback>{(user.fullName || user.username).charAt(0)}</AvatarFallback></Avatar>
+                  <div className="min-w-0"><p className="text-sm font-medium truncate">{user.fullName || user.username}</p><p className="text-xs text-muted-foreground truncate">@{user.username}</p></div>
+                  <span className={cn('ml-auto text-xs font-bold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{isSelected ? 'Added' : 'Add'}</span>
+                </button>
+              );
+            })}
+            {query.length >= 2 && results.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No people found.</p>}
+          </div>
+          <Button onClick={() => void handleCreate()} disabled={selected.length === 0 || !title.trim() || creating} className="w-full rounded-xl py-5">{creating ? 'Creating…' : `Create group · ${selected.length + 1} people`}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ConversationItem({
   entry,
   active,
@@ -243,11 +327,13 @@ export default function Messages() {
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
+  const sendMessageToConversation = useAppStore((s) => s.sendMessageToConversation);
   
   const [message, setMessage] = useState('');
   const [imageAttachment, setImageAttachment] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -321,7 +407,23 @@ export default function Messages() {
   const conversationList = useMemo(() => {
     return conversations
       .map((conv) => {
-        const otherId = conv.participantIds.find((p) => p !== currentUser?.id) || '';
+        const otherIds = conv.participantIds.filter((participantId) => participantId !== currentUser?.id);
+        const otherId = otherIds[0] || '';
+        if (conv.isGroup) {
+          const firstMember = users[otherId];
+          const memberCount = conv.participantIds.length || otherIds.length + 1;
+          const groupUser = {
+            id: conv.id,
+            username: `${memberCount} members`,
+            displayName: conv.title || `${memberCount} people`,
+            avatarUrl: firstMember?.avatarUrl || '',
+            followers: 0,
+            following: 0,
+          };
+          const msgs = messagesByConversation[conv.id] || [];
+          const lastMsg = msgs[msgs.length - 1];
+          return { conv, user: groupUser, lastMsg };
+        }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
           loadUserProfile(otherId);
@@ -372,7 +474,8 @@ export default function Messages() {
     sounds.playPop();
 
     try {
-      await sendDirectMessage(activeConv.user.id, toSend);
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, toSend);
+      else await sendDirectMessage(activeConv.user.id, toSend);
       setMessage('');
       setImageAttachment('');
       setShowImageInput(false);
@@ -389,7 +492,9 @@ export default function Messages() {
   const handleSendVoiceNote = async (audioUrl: string, durationSeconds: number) => {
     if (!activeConv) return;
     try {
-      await sendDirectMessage(activeConv.user.id, `[Voice Note] ${audioUrl} (${durationSeconds}s)`);
+      const content = `[Voice Note] ${audioUrl} (${durationSeconds}s)`;
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, content);
+      else await sendDirectMessage(activeConv.user.id, content);
       setShowVoiceRecorder(false);
       toast.success('Voice note sent! 🎙️');
     } catch {
@@ -447,14 +552,14 @@ export default function Messages() {
           <div className="p-4 flex flex-col gap-4 border-b border-border/30">
             <div className="flex items-center justify-between">
               <h2 className="font-display font-black text-2xl tracking-tight text-foreground">Direct Chats</h2>
-              <Button 
-                size="icon" 
-                className="rounded-full w-9 h-9 glow-neon-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-md cursor-pointer" 
-                onClick={() => setNewMessageOpen(true)}
-                aria-label="Start a new conversation"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button size="icon" variant="outline" className="rounded-full w-9 h-9 cursor-pointer" onClick={() => setNewGroupOpen(true)} aria-label="Create a group chat" title="Create a group chat">
+                  <UsersRound className="w-4 h-4" />
+                </Button>
+                <Button size="icon" className="rounded-full w-9 h-9 glow-neon-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-md cursor-pointer" onClick={() => setNewMessageOpen(true)} aria-label="Start a new conversation" title="Start a new conversation">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="relative group/search rounded-xl transition-all focus-within:ring-2 focus-within:ring-primary/40 focus-within:glow-neon-primary">
@@ -509,7 +614,7 @@ export default function Messages() {
                   <div className="flex flex-col">
                     <h3 className="font-display font-bold text-sm leading-tight text-foreground">{activeConv.user.displayName}</h3>
                     <span className={cn('text-xs font-mono leading-tight', isPeerTyping ? 'text-primary' : 'text-muted-foreground')}>
-                      {isPeerTyping ? 'Typing…' : `@${activeConv.user.username}`}
+                      {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : `@${activeConv.user.username}`}
                     </span>
                   </div>
                 </div>
@@ -533,52 +638,24 @@ export default function Messages() {
                     <EyeOff className="w-4 h-4" />
                   </Button>
 
-                  {/* Instant Tip UPI */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setTipModalOpen(true)}
-                    className="rounded-full w-9 h-9 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 cursor-pointer"
-                    title="Tip via UPI"
-                    aria-label="Tip via UPI"
-                  >
-                    <Zap className="w-4 h-4 fill-amber-400" />
-                  </Button>
+                  {!activeConv.conv.isGroup && <>
+                    {/* Instant Tip UPI */}
+                    <Button variant="ghost" size="icon" onClick={() => setTipModalOpen(true)} className="rounded-full w-9 h-9 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 cursor-pointer" title="Tip via UPI" aria-label="Tip via UPI">
+                      <Zap className="w-4 h-4 fill-amber-400" />
+                    </Button>
 
-                  {/* Audio Call */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setCallType('audio');
-                      setCallModalOpen(true);
-                    }}
-                    className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer"
-                    title="Voice Call"
-                    aria-label="Start voice call"
-                  >
-                    <Phone className="w-4 h-4" />
-                  </Button>
+                    {/* Audio Call */}
+                    <Button variant="ghost" size="icon" onClick={() => { setCallType('audio'); setCallModalOpen(true); }} className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer" title="Voice Call" aria-label="Start voice call">
+                      <Phone className="w-4 h-4" />
+                    </Button>
 
-                  {/* Video Call */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setCallType('video');
-                      setCallModalOpen(true);
-                    }}
-                    className="rounded-full w-9 h-9 text-primary hover:bg-primary/20 cursor-pointer"
-                    title="Start video call"
-                    aria-label="Start video call"
-                  >
-                    <Video className="w-4 h-4" />
-                  </Button>
+                    {/* Video Call */}
+                    <Button variant="ghost" size="icon" onClick={() => { setCallType('video'); setCallModalOpen(true); }} className="rounded-full w-9 h-9 text-primary hover:bg-primary/20 cursor-pointer" title="Start video call" aria-label="Start video call">
+                      <Video className="w-4 h-4" />
+                    </Button>
 
-                  <SteamTradeModal
-                    partnerName={activeConv.user.displayName}
-                    partnerAvatar={activeConv.user.avatarUrl}
-                  />
+                    <SteamTradeModal partnerName={activeConv.user.displayName} partnerAvatar={activeConv.user.avatarUrl} />
+                  </>}
                   <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50" aria-label="More conversation options">
                     <MoreVertical className="w-5 h-5" />
                   </Button>
@@ -766,6 +843,7 @@ export default function Messages() {
         </div>
 
         <NewMessageDialog open={newMessageOpen} onOpenChange={setNewMessageOpen} />
+        <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} />
       </div>
     </div>
   );
