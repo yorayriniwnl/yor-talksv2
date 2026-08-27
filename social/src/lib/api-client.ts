@@ -194,6 +194,91 @@ async function requestPaginated<T>(path: string, options: RequestInit = {}, isRe
   return { data, nextCursor, hasMore };
 }
 
+interface DirectUploadSignature {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: 'posts' | 'audio' | 'avatars';
+  signature: string;
+  resourceType: 'image' | 'video';
+  maxFileSize: number;
+}
+
+interface UploadedMedia {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  mimeType: string;
+  size: number;
+}
+
+type DirectUploadPurpose = 'post' | 'media' | 'avatar';
+
+async function uploadDirectToCloudinary(file: File, purpose: DirectUploadPurpose): Promise<UploadedMedia | null> {
+  const signature = await request<DirectUploadSignature>('/media/presign', {
+    method: 'POST',
+    body: JSON.stringify({ filename: file.name, mimeType: file.type, purpose }),
+  }).catch((error: unknown) => {
+    // Local development intentionally falls back to the existing multipart path
+    // when Cloudinary is not configured. Production must fail closed instead of
+    // sending a large body through a serverless function.
+    if (error instanceof ApiError && error.status === 503 && !import.meta.env.PROD) return null;
+    throw error;
+  });
+
+  if (!signature) return null;
+  if (file.size > signature.maxFileSize) {
+    throw new ApiError(`File is larger than the ${Math.floor(signature.maxFileSize / (1024 * 1024))} MB limit`, 413);
+  }
+
+  const form = new FormData();
+  form.append('file', file);
+  form.append('api_key', signature.apiKey);
+  form.append('timestamp', String(signature.timestamp));
+  form.append('folder', signature.folder);
+  form.append('signature', signature.signature);
+
+  const cloudinaryResponse = await fetch(
+    `https://api.cloudinary.com/v1_1/${encodeURIComponent(signature.cloudName)}/${signature.resourceType}/upload`,
+    { method: 'POST', body: form },
+  );
+  let payload: { asset_id?: string; public_id?: string; secure_url?: string; bytes?: number; error?: { message?: string } } | null = null;
+  try {
+    payload = await cloudinaryResponse.json();
+  } catch {
+    // Keep the provider failure below actionable even when it returns no JSON.
+  }
+  if (!cloudinaryResponse.ok || !payload?.secure_url) {
+    throw new ApiError(payload?.error?.message || 'Media provider rejected the upload', cloudinaryResponse.status || 502);
+  }
+
+  return {
+    id: payload.asset_id || payload.public_id || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    url: payload.secure_url,
+    thumbnailUrl: payload.secure_url,
+    mimeType: file.type,
+    size: payload.bytes || file.size,
+  };
+}
+
+async function uploadMediaFile(file: File, purpose: DirectUploadPurpose = 'media'): Promise<UploadedMedia> {
+  const directUpload = await uploadDirectToCloudinary(file, purpose);
+  if (directUpload) return directUpload;
+
+  const form = new FormData();
+  form.append('file', file);
+  return request<UploadedMedia>('/media/upload', { method: 'POST', body: form });
+}
+
+async function uploadPostImageFile(file: File): Promise<{ url: string }> {
+  const directUpload = await uploadDirectToCloudinary(file, 'post');
+  if (directUpload) return { url: directUpload.url };
+
+  const form = new FormData();
+  form.append('image', file);
+  return request<{ url: string }>('/posts/upload-image', { method: 'POST', body: form });
+}
+
 // ---- Auth ----
 export interface BackendUser {
   id: string;
@@ -374,7 +459,15 @@ export const api = {
   getProfileByUsername: (username: string) => request<BackendUser>(`/users/by-username/${encodeURIComponent(username)}`),
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
-  uploadAvatar: (file: File) => {
+  uploadAvatar: async (file: File) => {
+    const directUpload = await uploadDirectToCloudinary(file, 'avatar');
+    if (directUpload) {
+      return request<BackendUser>('/users/me', {
+        method: 'PUT',
+        body: JSON.stringify({ avatarUrl: directUpload.url }),
+      });
+    }
+
     const form = new FormData();
     form.append('avatar', file);
     return request<BackendUser>('/users/me/avatar', { method: 'POST', body: form });
@@ -448,16 +541,8 @@ export const api = {
   getPostComments: (postId: string) => request<BackendComment[]>(`/posts/${postId}/comments`),
   likePostComment: (postId: string, commentId: string) => request<BackendComment>(`/posts/${postId}/comments/${commentId}/like`, { method: 'POST' }),
   replyToPostComment: (postId: string, commentId: string, content: string) => request<{ post: BackendPost; reply: BackendComment }>(`/posts/${postId}/comments/${commentId}/replies`, { method: 'POST', body: JSON.stringify({ content }) }),
-  uploadPostImage: (file: File) => {
-    const form = new FormData();
-    form.append('image', file);
-    return request<{ url: string }>('/posts/upload-image', { method: 'POST', body: form });
-  },
-  uploadMedia: (file: File) => {
-    const form = new FormData();
-    form.append('file', file);
-    return request<{ id: string; url: string; thumbnailUrl: string; mimeType: string; size: number }>('/media/upload', { method: 'POST', body: form });
-  },
+  uploadPostImage: (file: File) => uploadPostImageFile(file),
+  uploadMedia: (file: File) => uploadMediaFile(file),
 
   // ---- Communities ----
   getCommunities: () => request<BackendCommunity[]>('/communities'),

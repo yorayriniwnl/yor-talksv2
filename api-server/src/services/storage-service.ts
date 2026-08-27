@@ -16,7 +16,49 @@ export class MediaProviderNotConfiguredError extends Error {
   }
 }
 
+export type DirectUploadResourceType = "image" | "video";
+export type DirectUploadFolder = "posts" | "audio" | "avatars";
+
+export interface DirectUploadSignature {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: DirectUploadFolder;
+  signature: string;
+  resourceType: DirectUploadResourceType;
+  maxFileSize: number;
+}
+
 export class StorageService {
+  createDirectUploadSignature(
+    resourceType: DirectUploadResourceType,
+    folder: DirectUploadFolder,
+  ): DirectUploadSignature {
+    const cloudinaryConfigured = Boolean(
+      env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
+    );
+
+    if (!cloudinaryConfigured) {
+      throw new MediaProviderNotConfiguredError();
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
+      { folder, timestamp },
+      env.CLOUDINARY_API_SECRET,
+    );
+
+    return {
+      cloudName: env.CLOUDINARY_CLOUD_NAME,
+      apiKey: env.CLOUDINARY_API_KEY,
+      timestamp,
+      folder,
+      signature,
+      resourceType,
+      maxFileSize: 10 * 1024 * 1024,
+    };
+  }
+
   async uploadAvatar(buffer: Buffer, originalName: string): Promise<string> {
     return this.uploadBuffer(buffer, "image", "avatars", originalName);
   }

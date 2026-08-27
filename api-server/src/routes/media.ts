@@ -1,11 +1,13 @@
 import { Router, Request, Response } from "express";
 import { MediaService } from "../services/media-service.js";
+import { MediaProviderNotConfiguredError, StorageService } from "../services/storage-service.js";
 import { assertValidUploadedFile, upload } from "../middlewares/upload.js";
 import { authenticate } from "../middlewares/auth.js";
 import { createResponse } from "../utils/response.js";
 
 const router = Router();
 const mediaService = new MediaService();
+const storageService = new StorageService();
 
 // Direct multipart upload endpoint
 router.post(
@@ -35,20 +37,44 @@ router.post(
   }
 );
 
-// Presigned upload URL generator for direct S3 / R2 uploads
+// Signed Cloudinary upload parameters keep large media off serverless request bodies.
 router.post(
   "/media/presign",
   authenticate,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { filename, mimeType } = req.body;
-      if (!filename || !mimeType) {
+      const filename = typeof req.body?.filename === "string" ? req.body.filename.trim() : "";
+      const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType.toLowerCase() : "";
+      if (!filename || filename.length > 255 || !mimeType) {
         res.status(400).json(createResponse("Filename and mimeType required", null, {}, ["invalid_input"]));
         return;
       }
 
-      res.status(501).json(createResponse("Direct uploads are not enabled in this deployment. Use multipart upload.", null, {}, ["presign_not_configured"]));
+      const purpose = req.body?.purpose === "avatar" || req.body?.purpose === "post" || req.body?.purpose === "media"
+        ? req.body.purpose
+        : "media";
+      const isImage = mimeType.startsWith("image/");
+      const isVideo = mimeType.startsWith("video/");
+      const isAudio = mimeType.startsWith("audio/");
+      if (!isImage && !isVideo && !isAudio) {
+        res.status(415).json(createResponse("Unsupported media type", null, {}, ["unsupported_media_type"]));
+        return;
+      }
+      if (purpose === "avatar" && !isImage) {
+        res.status(415).json(createResponse("Avatars must be image files", null, {}, ["avatar_image_required"]));
+        return;
+      }
+
+      const signature = storageService.createDirectUploadSignature(
+        isImage ? "image" : "video",
+        purpose === "avatar" ? "avatars" : isAudio ? "audio" : "posts",
+      );
+      res.status(200).json(createResponse("Direct upload prepared", signature));
     } catch (err: any) {
+      if (err instanceof MediaProviderNotConfiguredError) {
+        res.status(503).json(createResponse("Media uploads are temporarily unavailable", null, {}, ["media_provider_not_configured"]));
+        return;
+      }
       res.status(500).json(createResponse("Could not prepare media upload", null, {}, ["media_upload_error"]));
     }
   }
