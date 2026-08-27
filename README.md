@@ -16,7 +16,8 @@ The launch path supports a global deployment or a closed beta:
   projects and reports use the backend API.
 - Postgres and Redis are included in Docker Compose.
 - Resend email delivery supports password reset, verification, and email-code
-  login when configured.
+  login. Resend and Cloudinary credentials are required in production because
+  account verification and media uploads are core launch paths.
 - GitHub-style number matching protects accounts with an authenticated Yor
   device approval flow, with TOTP as an explicit fallback.
 - Notes expire after 24 hours with follower/Close Friends/public audience
@@ -30,12 +31,16 @@ The launch path supports a global deployment or a closed beta:
   child-safe/regular/mature content filter. Owners are the only publishers, so
   channel updates never pollute direct-message threads.
 - Browser Web Push delivers notification events when VAPID keys are configured.
-- Cloudinary handles avatar, image, and stored video uploads when configured.
+- Cloudinary handles avatar, image, audio, and stored video uploads through
+  signed direct browser uploads, keeping large files out of serverless API
+  request bodies.
 - Razorpay Checkout supports UPI/card tip orders with server-side capture
   verification and wallet ledger settlement when configured.
 - LiveKit provides real-time browser live rooms when configured.
-- Provider-backed features fail closed with an explicit unavailable response
-  when their credentials are missing.
+- Optional provider-backed features fail closed with an explicit unavailable
+  response when their credentials are missing. Production also requires an
+  `OPENAI_API_KEY` or `GEMINI_API_KEY` so safety checks cannot silently be
+  bypassed.
 
 ## Quick start with Docker
 
@@ -76,6 +81,8 @@ Docker, then rebuild the API:
 - Resend: create an API key and verify the sender/domain used by `EMAIL_FROM`.
 - Cloudinary: copy the cloud name, API key, and API secret. Uploads use signed
   server-side requests; no Cloudinary secret reaches the browser.
+- Moderation: set `OPENAI_API_KEY` or `GEMINI_API_KEY`. The production API will
+  refuse to start without at least one moderation provider.
 - Razorpay: use test-mode keys for beta, set `RAZORPAY_KEY_ID` and
   `RAZORPAY_KEY_SECRET`, and test Checkout with a Razorpay test UPI method.
   The API fetches and verifies the captured payment before crediting the
@@ -159,8 +166,9 @@ pnpm --filter @workspace/api-server test
 - Set `NODE_ENV=production` on every deployed API, including an API hosted
   outside the included Docker stack. Vercel is detected as production by
   default, but explicitly setting it prevents platform-specific surprises.
-- Configure and test Resend, Cloudinary, Razorpay test mode, and LiveKit Cloud
-  before inviting students.
+- Configure and test Resend, Cloudinary, and one moderation provider before
+  launch. Razorpay test mode and LiveKit Cloud are required before enabling
+  their respective payment and live-room surfaces.
 - Verify the Razorpay flow with a successful test order, a failed payment, and
   a duplicate callback before switching to live keys.
 - Confirm the browser can reach the LiveKit WebSocket URL from the deployed
