@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
-  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone
+  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -40,6 +40,7 @@ export function AppShell({ children }: AppShellProps) {
     }
   });
   const [isComposing, setIsComposing] = useState(false);
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
 
   useEffect(() => {
     try {
@@ -48,6 +49,17 @@ export function AppShell({ children }: AppShellProps) {
       // Storage can be unavailable in private or restricted browser contexts.
     }
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('yor-low-bandwidth', worldPreferences.lowBandwidth);
@@ -80,6 +92,15 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <CommandPalette />
+      {isOffline && (
+        <div className="yor-offline-banner" role="status" aria-live="polite">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          <span>
+            <strong>Offline mode</strong>
+            <small>Some actions are paused. Yor will reconnect automatically.</small>
+          </span>
+        </div>
+      )}
       
       {/* ── DESKTOP NAVIGATION ─────────────────────────────────────────── */}
       <aside className={cn(

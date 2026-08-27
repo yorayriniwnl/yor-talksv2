@@ -2705,3 +2705,50 @@ html.yor-low-bandwidth video {
   .yor-composer__publishing-controls { grid-template-columns: 1fr; gap: 0.5rem; }
   .yor-composer__publishing-controls select { height: 2.35rem; }
 }
+
+/* Network state is global feedback, not a toast: it remains available while
+ * the user moves through locally cached surfaces. */
+.yor-offline-banner {
+  position: fixed;
+  top: 4.85rem;
+  right: 1rem;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.7rem 0.8rem;
+  border: 1px solid hsl(var(--warning) / 0.35);
+  border-radius: 0.85rem;
+  background: hsl(var(--card) / 0.94);
+  color: hsl(var(--warning));
+  box-shadow: 0 12px 28px hsl(var(--premium-shadow-deep) / 0.14);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.yor-offline-banner > span {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.yor-offline-banner strong {
+  color: hsl(var(--foreground));
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.yor-offline-banner small {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 680px) {
+  .yor-offline-banner {
+    top: 4.35rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
+  }
+}

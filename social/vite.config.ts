@@ -62,6 +62,10 @@ export default defineConfig({
           'vendor-icons': ['lucide-react'],
           // State management + data
           'vendor-state': ['zustand'],
+          // Socket transport is used by the shell; keep its payload separate.
+          'vendor-socket': ['socket.io-client'],
+          // Live calling is route-level and should not block first paint.
+          'vendor-livekit': ['livekit-client'],
         },
       },
     },
