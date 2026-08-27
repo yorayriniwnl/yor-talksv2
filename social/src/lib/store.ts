@@ -750,6 +750,40 @@ interface AppState {
   switchAccount: (userId: string) => void;
 }
 
+function clearPrivateSessionState(
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
+): void {
+  set({
+    currentUser: null,
+    tokens: null,
+    authError: null,
+    feedCursor: null,
+    hasMoreFeed: false,
+    feedMode: 'following',
+    favoriteCreatorIds: [],
+    closeFriends: [],
+    users: {},
+    posts: [],
+    stories: [],
+    notes: [],
+    communities: [],
+    liveStreams: [],
+    events: [],
+    products: [],
+    articles: [],
+    videos: [],
+    achievements: [],
+    notifications: [],
+    followRequests: [],
+    conversations: [],
+    messagesByConversation: {},
+    aiMessages: [],
+    privacy: { ...DEFAULT_PRIVACY_SETTINGS },
+    profileComments: {},
+    showcases: {},
+  });
+}
+
 function hydrateSessionData(get: () => AppState): void {
   // These datasets power independent surfaces. Loading them in the background
   // lets the authenticated shell render as soon as identity is restored; one
@@ -906,7 +940,8 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
+          clearPrivateSessionState(set);
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -923,7 +958,8 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
+          clearPrivateSessionState(set);
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -940,7 +976,8 @@ export const useAppStore = create<AppState>()(
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
+          clearPrivateSessionState(set);
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
           setupRealtime(set, get);
           hydrateSessionData(get);
           return null;
@@ -956,7 +993,8 @@ export const useAppStore = create<AppState>()(
           const result = await api.completeTwoFactorLogin(challengeId);
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
-          set((state) => ({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { ...state.users, [mapped.id]: mapped } }));
+          clearPrivateSessionState(set);
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
           setupRealtime(set, get);
           hydrateSessionData(get);
         } catch (err) {
@@ -972,7 +1010,7 @@ export const useAppStore = create<AppState>()(
           // Registration is intentionally not an authenticated session. The
           // account must prove ownership of its email address first.
           setStoredTokens(null);
-          set({ currentUser: null, tokens: null });
+          clearPrivateSessionState(set);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
           throw err;
@@ -987,7 +1025,7 @@ export const useAppStore = create<AppState>()(
         }
         stopRealtime();
         setStoredTokens(null);
-        set({ currentUser: null, tokens: null });
+        clearPrivateSessionState(set);
       },
 
       switchAccount: () => {
@@ -1003,7 +1041,7 @@ export const useAppStore = create<AppState>()(
         set({ isInitializing: true });
         // The access token is intentionally memory-only. Never trust a
         // persisted profile as an authenticated session after a reload.
-        set({ currentUser: null, tokens: null });
+        clearPrivateSessionState(set);
 
         // Restore a live session from the short-lived access token, or rotate
         // the HttpOnly refresh cookie after a normal browser reload.
