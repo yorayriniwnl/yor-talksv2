@@ -65,6 +65,7 @@ export const postsTable = pgTable("posts", {
   score: integer("score").default(0),
   postType: text("post_type").default("text"),
   visibility: text("visibility").default("public"),
+  audience: text("audience").notNull().default("public"),
   language: text("language"),
   contentCategory: text("content_category").notNull().default("other"),
   contentQualityScore: integer("content_quality_score").default(0),

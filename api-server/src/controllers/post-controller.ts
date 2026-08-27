@@ -49,7 +49,7 @@ export class PostController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const images = Array.isArray(req.body.images) ? req.body.images : [];
     try {
-      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.poll);
+      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll);
       return res.status(201).json(createResponse("Post created", post));
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {

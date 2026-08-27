@@ -6,6 +6,7 @@ const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 export const createPostSchema = z.object({
   content: z.string().trim().min(1).max(5000),
   images: z.array(z.string().url()).optional().default([]),
+  audience: z.enum(["followers", "close_friends", "public"]).default("public"),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema,
   poll: z.object({

@@ -91,6 +91,7 @@ export type Post = {
   likedByMe?: boolean;
   savedByMe?: boolean;
   repostedByMe?: boolean;
+  audience: 'followers' | 'close_friends' | 'public';
   contentCategory: string;
   contentRating: ContentRating;
   poll?: {
@@ -419,6 +420,7 @@ function mapPost(p: BackendPost, currentUserId?: string): Post {
     likedByMe: !!(p as any).likedByMe,
     savedByMe: !!(p as any).savedByMe,
     repostedByMe: !!p.repostedByMe,
+    audience: p.audience === 'followers' || p.audience === 'close_friends' ? p.audience : 'public',
     contentCategory: p.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
     poll: p.poll ? {
@@ -673,7 +675,7 @@ interface AppState {
   loadPost: (postId: string) => Promise<void>;
   syncPostFromBackend: (post: BackendPost) => void;
   likePost: (postId: string) => Promise<void>;
-  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory) => Promise<void>;
+  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience']) => Promise<void>;
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
@@ -1248,14 +1250,14 @@ export const useAppStore = create<AppState>()(
           users: { ...state.users, [mapped.id]: mapped },
         }));
       },
-      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY) => {
+      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public') => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
           toast.error('Verify your email before posting');
           return;
         }
         try {
-          const created = await api.createPost({ content, images: media, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
+          const created = await api.createPost({ content, images: media, audience, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');

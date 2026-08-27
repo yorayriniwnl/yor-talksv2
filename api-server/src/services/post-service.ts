@@ -77,7 +77,7 @@ export class PostService {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const post = await this.postRepository.findById(postId, excludedAuthorIds, contentFilter);
-    if (!post || !(await this.canViewAuthorContent(post.authorId, currentUserId))) return undefined;
+    if (!post || !(await this.canViewPost(post, currentUserId))) return undefined;
     return (await this.attachInteractions([post], currentUserId))[0];
   }
 
@@ -87,6 +87,7 @@ export class PostService {
     images: string[],
     contentCategory = DEFAULT_CONTENT_CATEGORY,
     contentRating = DEFAULT_CONTENT_RATING,
+    audience: PostRecord["audience"] = "public",
     poll?: { question: string; options: Array<{ text: string }> },
   ): Promise<PostRecord> {
     const mentions = this.extractMentions(content);
@@ -107,6 +108,7 @@ export class PostService {
       tags,
       mentions,
       score: this.calculateScore({ likes: 0, shares: 0, comments: 0 }),
+      audience,
       contentCategory,
       contentRating,
     };
@@ -534,10 +536,10 @@ export class PostService {
   }
 
   private async filterVisiblePosts(posts: PostRecord[], viewerId?: string): Promise<PostRecord[]> {
-    if (posts.length === 0 || !viewerId) return posts;
+    if (posts.length === 0) return posts;
     const visible = await Promise.all(posts.map(async (post) => ({
       post,
-      allowed: await this.canViewAuthorContent(post.authorId, viewerId),
+      allowed: await this.canViewPost(post, viewerId),
     })));
     return visible.filter(({ allowed }) => allowed).map(({ post }) => post);
   }
@@ -557,6 +559,14 @@ export class PostService {
     const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
     if (visibility === "public") return true;
     return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
+  }
+
+  private async canViewPost(post: PostRecord, viewerId?: string): Promise<boolean> {
+    if (!(await this.canViewAuthorContent(post.authorId, viewerId))) return false;
+    if (post.authorId === viewerId || (post.audience ?? "public") === "public") return true;
+    if (!viewerId) return false;
+    if (post.audience === "close_friends") return this.userRepository.isCloseFriend(post.authorId, viewerId);
+    return this.userRepository.isFollowing(viewerId, post.authorId);
   }
 
   close(): void {

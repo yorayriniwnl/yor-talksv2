@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart2, Bookmark, Heart, ImagePlus, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, X, Plus } from 'lucide-react';
+import { BarChart2, Bookmark, Globe2, Heart, ImagePlus, LockKeyhole, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, UsersRound, X, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
@@ -38,6 +38,7 @@ interface CreatePostProps {
 
 export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const currentUser = useAppStore((state) => state.currentUser);
+  const closeFriends = useAppStore((state) => state.closeFriends);
   const addPost = useAppStore((state) => state.addPost);
   const [content, setContent] = useState('');
   const [media, setMedia] = useState<string[]>([]);
@@ -50,6 +51,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const [draftSaved, setDraftSaved] = useState(false);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
+  const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('public');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -70,13 +72,14 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     try {
       const savedDraft = window.localStorage.getItem(draftStorageKey);
       if (savedDraft) {
-        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating };
-        if (draft.content || draft.pollOpen || draft.contentCategory) {
+        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating; audience?: 'followers' | 'close_friends' | 'public' };
+        if (draft.content || draft.pollOpen || draft.contentCategory || draft.audience) {
           setContent(typeof draft.content === 'string' ? draft.content : '');
           setPollOpen(Boolean(draft.pollOpen));
           setPollOptions(Array.isArray(draft.pollOptions) && draft.pollOptions.length >= 2 ? draft.pollOptions.slice(0, 4) : ['', '']);
           setContentCategory(draft.contentCategory ?? '');
           setContentRating(draft.contentRating ?? DEFAULT_CONTENT_RATING);
+          setAudience(draft.audience ?? 'public');
           setDraftSaved(true);
         }
       }
@@ -89,7 +92,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
 
   useEffect(() => {
     if (!draftReady) return;
-    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length);
+    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length || audience !== 'public');
     try {
       if (hasDraft) {
         window.localStorage.setItem(draftStorageKey, JSON.stringify({
@@ -98,6 +101,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
           pollOptions,
           contentCategory,
           contentRating,
+          audience,
           savedAt: new Date().toISOString(),
         }));
         setDraftSaved(true);
@@ -108,7 +112,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     } catch {
       // Draft persistence is an enhancement; posting must work without storage.
     }
-  }, [content, contentCategory, contentRating, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
+  }, [audience, content, contentCategory, contentRating, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -121,7 +125,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   if (!currentUser) return null;
 
   const validPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
-  const canPublish = Boolean(content.trim()) && Boolean(contentCategory) && content.length <= MAX_POST_LENGTH && (!pollOpen || validPollOptions.length >= 2);
+  const canPublish = Boolean(content.trim()) && Boolean(contentCategory) && content.length <= MAX_POST_LENGTH && (!pollOpen || validPollOptions.length >= 2) && !(audience === 'close_friends' && closeFriends.length === 0);
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
@@ -158,7 +162,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
       const uploadedMedia = mediaFiles.length
         ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
         : undefined;
-      await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory);
+      await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory, audience);
     } catch (error) {
       toast({ title: 'Could not publish your thought', description: error instanceof Error ? error.message : 'Try again in a moment.' });
       setIsUploading(false);
@@ -172,6 +176,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     setPollOptions(['', '']);
     setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
+    setAudience('public');
     try { window.localStorage.removeItem(draftStorageKey); } catch { /* Ignore storage failures. */ }
     setDraftSaved(false);
     
@@ -269,6 +274,15 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
           <div className="yor-composer__publishing-controls">
             <ContentCategorySelect id="post-content-category" value={contentCategory} onChange={setContentCategory} />
             <ContentRatingSelect id="post-content-rating" value={contentRating} onChange={setContentRating} />
+            <label htmlFor="post-audience" className="mt-2 block text-xs font-semibold">
+              <span className="mb-1.5 flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-primary" /> Audience</span>
+              <select id="post-audience" value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+                <option value="public">Public · Everyone can see this</option>
+                <option value="followers">Followers · Your followers only</option>
+                <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends · {closeFriends.length} people</option>
+              </select>
+              {audience === 'close_friends' && closeFriends.length === 0 && <span className="mt-1 block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
+            </label>
           </div>
 
           <div className="mt-2 flex items-center justify-between pt-1">
@@ -565,6 +579,12 @@ export function PostCard({ post }: { post: PostType }) {
                 {contentRatingLabel(post.contentRating)}
               </span>
               <ContentCategoryBadge value={post.contentCategory} className="hidden sm:inline-flex" />
+              {post.audience !== 'public' && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[0.58rem] font-semibold text-primary" title={post.audience === 'close_friends' ? 'Close Friends post' : 'Followers-only post'}>
+                  {post.audience === 'close_friends' ? <UsersRound className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{post.audience === 'close_friends' ? 'Close Friends' : 'Followers'}</span>
+                </span>
+              )}
             </div>
             
             <DropdownMenu>

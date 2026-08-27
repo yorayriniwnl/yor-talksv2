@@ -433,7 +433,7 @@ export const api = {
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string, contentCategory?: ContentCategory, contentRating?: ContentRating) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content, ...(contentCategory ? { contentCategory } : {}), ...(contentRating ? { contentRating } : {}) }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -632,6 +632,7 @@ export interface BackendPost {
   authorId: string;
   content: string;
   images: string[];
+  audience?: 'followers' | 'close_friends' | 'public';
   createdAt: string;
   likedBy?: string[];
   comments?: { id: string; authorId: string; content: string; createdAt: string }[];

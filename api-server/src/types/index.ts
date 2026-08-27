@@ -52,6 +52,8 @@ export interface PrivacySettings {
   allowDmFromStrangers: boolean;
 }
 
+export type PostAudience = "followers" | "close_friends" | "public";
+
 export interface PostRecord {
   id: string;
   authorId: string;
@@ -70,6 +72,7 @@ export interface PostRecord {
   tags?: string[];
   mentions?: string[];
   score?: number;
+  audience?: PostAudience;
   /** Legacy compatibility fields; likes, bookmarks, and comments are relational. */
   likedBy?: string[];
   bookmarkedBy?: string[];
