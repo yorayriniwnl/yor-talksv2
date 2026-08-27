@@ -1,5 +1,5 @@
 import { useParams, Link, useLocation } from 'wouter';
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAppStore, type Showcase, type ProfileComment, type Story } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,21 +16,18 @@ import {
   UserPlus, Zap, Eye, Play, ChevronRight, Copy, Check, UserRound, Crown
 } from 'lucide-react';
 
-import { PostCardMemo as PostCard } from '@/components/feed/Post';
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { BadgeShowcaseModal } from '@/components/steam/BadgeShowcaseModal';
-import { ProfileTiltCard } from '@/components/ui/ProfileTiltCard';
-import { HoloAvatarCard } from '@/components/ui/HoloAvatarCard';
-import { ParallaxCover } from '@/components/ui/ParallaxCover';
 import { ProfileMusicPlayer } from '@/components/profile/ProfileMusicPlayer';
 import ReelsSwiper from '@/components/video/ReelsSwiper';
 import StoryViewer from '@/components/feed/StoryViewer';
 import { StoryBuilderModal } from '@/components/feed/StoryBuilderModal';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { staggerContainer, staggerItem, tapScale, springGentle, springBouncy, layoutIds } from '@/lib/motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerItem, springGentle } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api, type BackendUser } from '@/lib/api-client';
+import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -245,22 +242,6 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
 // ═══════════════════════════════════════════════════════════════════════════
 //  MEDIA GRID ITEM — Instagram-style with hover overlay
 // ═══════════════════════════════════════════════════════════════════════════
-function MediaGridItem({ src, likes, comments }: { src: string; likes: number; comments: number }) {
-  return (
-    <div className="aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift">
-      <img src={src} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100">
-        <span className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
-          <Heart className="w-5 h-5 fill-white" /> {formatCount(likes)}
-        </span>
-        <span className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
-          <MessageCircle className="w-5 h-5 fill-white" /> {formatCount(comments)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 //  POST GRID ITEM — Instagram 3-column grid with overlay
 // ═══════════════════════════════════════════════════════════════════════════
@@ -372,10 +353,6 @@ export default function Profile() {
   const userVideos = useMemo(() => videos.filter(v => v.authorId === profile?.id), [videos, profile?.id]);
   const userReels = useMemo(() => userVideos.filter(v => v.type === 'short'), [userVideos]);
   const genreBadge = useMemo(() => getGenreBadge(profile?.bio, profile?.username), [profile?.bio, profile?.username]);
-  const userMedia = useMemo(() => userPosts.flatMap(p => {
-    const ml = (p as any).mediaUrls || (p as any).media || [];
-    return ml.map((m: any) => typeof m === 'string' ? { url: m, likes: (p as any).likes || 0, comments: (p as any).comments || 0 } : m);
-  }), [userPosts]);
   const likedPosts = useMemo(() => posts.filter(p => p.likedByMe), [posts]);
 
   const userShowcases = profile ? (showcases[profile.id] || []) : [];
@@ -459,7 +436,7 @@ export default function Profile() {
   const suggestedUsers = Object.values(users).filter(u => u.id !== profile.id && u.id !== currentUser?.id).slice(0, 5);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="operator-profile-page flex min-h-screen flex-col bg-background">
       <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />
       <StoryBuilderModal isOpen={highlightBuilderOpen} onOpenChange={setHighlightBuilderOpen} isHighlight />
       {highlightViewerOpen && profile && userHighlights.length > 0 && (
@@ -474,32 +451,34 @@ export default function Profile() {
       {/* ══════════════════════════════════════════════════════════════════
          STICKY GLASS HEADER
          ══════════════════════════════════════════════════════════════════ */}
-      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky top-0 z-40 glass-heavy px-4 py-2 flex items-center gap-3">
+      <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="operator-profile-topbar sticky top-0 z-40 flex items-center gap-3 px-4 py-2">
         <Link href="/"><Button variant="ghost" size="icon" className="rounded-full h-9 w-9 shrink-0" aria-label="Back to Orbit"><ArrowLeft className="w-[18px] h-[18px]" /></Button></Link>
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-bold text-[0.92rem] leading-tight truncate">{profile.displayName}</h2>
           <p className="text-[0.6rem] text-muted-foreground font-mono tracking-wide">{userPosts.length} posts</p>
         </div>
-        <button onClick={() => setBadgeModalOpen(true)} className="level-badge cursor-pointer hover:scale-105 transition-transform" aria-label={`View level ${levelData.level} achievements`}>
-          <Shield className="w-3 h-3 text-amber-400" /> Lv.{levelData.level}
+        <button onClick={() => setBadgeModalOpen(true)} className="operator-profile-topbar__level" aria-label={`View level ${levelData.level} achievements`}>
+          <Shield className="h-3.5 w-3.5" /> Level {levelData.level}
         </button>
-      </motion.div>
+      </motion.header>
 
       {/* ══════════════════════════════════════════════════════════════════
          CINEMATIC COVER — 3D Parallax Tilt with gradient dissolve
          ══════════════════════════════════════════════════════════════════ */}
-      <ProfileTiltCard className="profile-hero noise-overlay">
-        <ParallaxCover className="profile-hero-cover hover-lift">
-          {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="w-full h-full aurora-bg" />}
-        </ParallaxCover>
-      </ProfileTiltCard>
+      <section className="operator-profile-cover" aria-label={`${profile.displayName}'s cover`}>
+        {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="operator-profile-cover__fallback"><span>YOR // IDENTITY NODE</span></div>}
+        <div className="operator-profile-cover__shade" />
+        <SignalLabel className="operator-profile-cover__label">Profile signal</SignalLabel>
+      </section>
 
       {/* ══════════════════════════════════════════════════════════════════
          MAIN CONTENT
          ══════════════════════════════════════════════════════════════════ */}
-      <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 pb-28">
+      <div className="operator-profile-layout">
+        <main className="operator-profile-main">
 
         {/* ── Avatar + Actions ──────────────────────────────────────── */}
+        <section className="operator-profile-identity operator-panel">
         <div className="flex flex-wrap items-end justify-between gap-3 -mt-14 relative z-10 mb-4">
           <div className={cn("profile-avatar-ring shadow-xl glow-neon-primary animated-border", `steam-frame-${selectedFrame}`)}>
             <Avatar className="w-[88px] h-[88px] avatar-inner">
@@ -514,15 +493,15 @@ export default function Profile() {
                 <Dialog open={frameDialogOpen} onOpenChange={setFrameDialogOpen}>
                   <DialogTrigger asChild>
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Button variant="outline" aria-label="Customize Steam theme and avatar frame" className="rounded-xl h-9 font-bold text-[0.78rem] px-3 sm:px-5 border-border/80">
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /><span className="hidden sm:inline">Steam Theme &amp; Frame</span><span className="sm:hidden">Frame</span>
+                      <Button variant="outline" aria-label="Customize profile theme and avatar frame" className="rounded-xl h-9 font-bold text-[0.78rem] px-3 sm:px-5 border-border/80">
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 text-primary" /><span className="hidden sm:inline">Theme &amp; frame</span><span className="sm:hidden">Frame</span>
                       </Button>
                     </motion.div>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[420px] rounded-2xl">
-                    <DialogHeader><DialogTitle className="font-display text-lg">Customize Steam Frame</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="font-display text-lg">Customize profile frame</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-2 font-sans">
-                      <p className="text-xs text-muted-foreground font-serif">Choose an animated Steam Avatar Frame to display on your profile:</p>
+                      <p className="text-xs text-muted-foreground font-serif">Choose an avatar frame that matches your profile identity.</p>
                       <div className="grid grid-cols-2 gap-3">
                         {[
                           { id: 'neon', name: 'Cyber Neon', color: 'from-cyan-400 to-blue-500' },
@@ -661,11 +640,17 @@ export default function Profile() {
             </div>
           )}
         </div>
+        </section>
 
         {/* ══════════════════════════════════════════════════════════════
            STORY HIGHLIGHTS — Instagram-style circular row
            ══════════════════════════════════════════════════════════════ */}
-        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-5 mb-1 border-b border-border/50">
+        <section className="operator-profile-highlights operator-panel">
+          <div className="operator-profile-module-heading">
+            <div><SignalLabel>Moments</SignalLabel><h2>Highlights</h2></div>
+            <span>{highlightGroups.length} collections</span>
+          </div>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1">
           {isOwnProfile && (
             <button type="button" onClick={() => setHighlightBuilderOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group">
               <div className="w-[62px] h-[62px] rounded-full border-[1.5px] border-dashed border-muted-foreground/40 flex items-center justify-center group-hover:border-primary transition-colors">
@@ -687,16 +672,17 @@ export default function Profile() {
             </button>;
           })}
           {!isOwnProfile && highlightGroups.length === 0 && <span className="py-6 text-xs text-muted-foreground">No highlights yet.</span>}
-        </div>
+          </div>
+        </section>
 
         {/* ══════════════════════════════════════════════════════════════
            STEAM SHOWCASE — Animated gradient border cards
            ══════════════════════════════════════════════════════════════ */}
         {(userShowcases.length > 0 || isOwnProfile) && (
-          <div className="my-8">
+          <section className="operator-profile-showcases operator-panel">
             <div className="showcase-section-title">
               <Zap className="w-4 h-4 text-primary" />
-              <h3 className="font-display tracking-tight">Featured Showcase</h3>
+              <div><SignalLabel>Selected work</SignalLabel><h3>Featured showcase</h3></div>
             </div>
             <div className="showcase-grid">
               <AnimatePresence mode="popLayout">
@@ -706,36 +692,13 @@ export default function Profile() {
               </AnimatePresence>
               {isOwnProfile && userShowcases.length < 6 && <AddShowcaseDialog userId={profile.id} />}
             </div>
-          </div>
+          </section>
         )}
-
-
-
-        {/* ══════════════════════════════════════════════════════════════
-           XP & LEVEL BAR
-           ══════════════════════════════════════════════════════════════ */}
-        <div className="mb-8 p-4 rounded-2xl surface-1 border border-border/40">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="level-badge"><Star className="w-3 h-3" /> Level {levelData.level}</div>
-            </div>
-            <span className="text-[0.68rem] font-mono text-muted-foreground font-medium">{levelData.totalXp} / {levelData.nextLevelXp} XP</span>
-          </div>
-          <div className="xp-bar-container"><div className="xp-bar-fill" style={{ width: `${levelData.progress}%` }} /></div>
-          <p className="text-[0.65rem] text-muted-foreground mt-2.5 font-medium">{Math.round(levelData.nextLevelXp - levelData.totalXp)} XP until Level {levelData.level + 1}</p>
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════
-           HOLOGRAPHIC AVATAR CARD — 3D Particle Aura
-           ══════════════════════════════════════════════════════════════ */}
-        <div className="mb-8">
-          <HoloAvatarCard user={profile} level={levelData.level} />
-        </div>
 
         {/* ══════════════════════════════════════════════════════════════
            CONTENT TABS — Instagram-style grid
            ══════════════════════════════════════════════════════════════ */}
-        <div className="border-t border-border/50">
+        <section className="operator-profile-content operator-panel">
           <div className="profile-tabs my-0 rounded-none bg-transparent gap-0 p-0 border-b border-border/50">
             {([
               { key: 'grid' as const, icon: Grid3X3, label: 'Posts' },
@@ -832,7 +795,7 @@ export default function Profile() {
                     <p className="text-sm text-muted-foreground max-w-[260px] mx-auto mb-4">When short-form reels and creative clips are uploaded, they'll appear here.</p>
                     <Link href="/videos">
                       <Button variant="outline" className="rounded-2xl font-bold text-xs">
-                        <Play className="w-3.5 h-3.5 mr-1.5" /> Explore Multiverse Reels
+                        <Play className="w-3.5 h-3.5 mr-1.5" /> Explore Yor Reels
                       </Button>
                     </Link>
                   </div>
@@ -861,36 +824,12 @@ export default function Profile() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════
-           SUGGESTED USERS (own profile only)
-           ══════════════════════════════════════════════════════════════ */}
-        {isOwnProfile && suggestedUsers.length > 0 && (
-          <div className="my-10">
-            <div className="showcase-section-title"><Star className="w-4 h-4 text-accent" /><h3 className="font-display tracking-tight">Suggested for You</h3></div>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-3">
-              {suggestedUsers.map(user => {
-                const sf = !!currentUser?.followingIds?.includes(user.id);
-                return (
-                  <motion.div key={user.id} whileHover={{ y: -3 }} className="surface-1 p-4 rounded-2xl min-w-[155px] max-w-[170px] shrink-0 flex flex-col items-center text-center border border-border/40 hover:border-primary/20 transition-all">
-                    <Link href={`/profile/${user.id}`}><Avatar className="w-16 h-16 mb-2.5 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all"><AvatarImage src={user.avatarUrl} /><AvatarFallback className="font-display text-lg">{user.displayName.charAt(0)}</AvatarFallback></Avatar></Link>
-                    <Link href={`/profile/${user.id}`}><h4 className="font-bold text-[0.82rem] truncate w-full cursor-pointer hover:underline">{user.displayName}</h4></Link>
-                    <p className="text-[0.68rem] text-muted-foreground mb-3 truncate w-full font-mono">@{user.username}</p>
-                    <Button variant={sf ? 'outline' : 'default'} size="sm" className="w-full rounded-xl h-8 text-[0.72rem] font-bold" onClick={() => handleToggleFollow(user.id)}>
-                      {sf ? 'Following' : 'Follow'}
-                    </Button>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        </section>
 
         {/* ══════════════════════════════════════════════════════════════
            STEAM COMMENT WALL
            ══════════════════════════════════════════════════════════════ */}
-        <div className="pt-8 mt-4 border-t border-border/50 glass-heavy rounded-2xl p-6">
+        <section className="operator-profile-comments operator-panel">
           <div className="comment-wall-header">
             <div className="flex items-center gap-2.5">
               <MessageCircle className="w-4 h-4 text-primary" />
@@ -955,7 +894,78 @@ export default function Profile() {
               </div>
             )}
           </div>
-        </div>
+        </section>
+        </main>
+
+        <aside className="operator-profile-rail">
+          <section className="operator-profile-level operator-panel">
+            <div className="operator-profile-level__topline">
+              <StatusBadge status={isOwnProfile ? 'online' : 'offline'}>{isOwnProfile ? 'Online now' : 'Presence private'}</StatusBadge>
+              <LevelBadge level={levelData.level} />
+            </div>
+            <SignalLabel tone="ember">Progress record</SignalLabel>
+            <h2>Level {levelData.level} operator</h2>
+            <p>{levelData.totalXp.toLocaleString()} XP recorded across achievements and community activity.</p>
+            <div className="operator-profile-level__progress" role="progressbar" aria-label="Level progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(levelData.progress)}>
+              <span style={{ width: `${levelData.progress}%` }} />
+            </div>
+            <div className="operator-profile-level__progress-copy">
+              <span>{Math.round(levelData.progress)}% complete</span>
+              <span>{Math.max(0, Math.round(levelData.nextLevelXp - levelData.totalXp))} XP to level {levelData.level + 1}</span>
+            </div>
+            <div className="operator-profile-level__metrics">
+              <Metric value={achievements.filter((achievement) => achievement.unlocked).length} label="Unlocked" />
+              <Metric value={userShowcases.length} label="Showcases" />
+              <Metric value={userComments.length} label="Wall notes" />
+            </div>
+            <Button variant="outline" className="operator-profile-rail__action" onClick={() => setBadgeModalOpen(true)}>
+              <Trophy className="h-4 w-4" /> View achievements
+            </Button>
+          </section>
+
+          <section className="operator-profile-library operator-panel">
+            <div className="operator-profile-module-heading">
+              <div><SignalLabel>Collections</SignalLabel><h2>Profile library</h2></div>
+            </div>
+            <div className="operator-profile-library__list">
+              <button type="button" onClick={() => setActiveTab('grid')}>
+                <span><Grid3X3 className="h-4 w-4" /><strong>Posts</strong></span><small>{userPosts.length}</small>
+              </button>
+              <button type="button" onClick={() => setActiveTab('reels')}>
+                <span><Film className="h-4 w-4" /><strong>Reels</strong></span><small>{userReels.length}</small>
+              </button>
+              <button type="button" onClick={() => setHighlightViewerOpen(highlightGroups.length > 0)} disabled={highlightGroups.length === 0}>
+                <span><Star className="h-4 w-4" /><strong>Highlights</strong></span><small>{highlightGroups.length}</small>
+              </button>
+              <div>
+                <span><Award className="h-4 w-4" /><strong>Showcases</strong></span><small>{userShowcases.length}</small>
+              </div>
+            </div>
+          </section>
+
+          {suggestedUsers.length > 0 && (
+            <section className="operator-profile-people operator-panel">
+              <div className="operator-profile-module-heading">
+                <div><SignalLabel tone="muted">Network edge</SignalLabel><h2>People to know</h2></div>
+                <Link href="/explore">Explore</Link>
+              </div>
+              <div className="operator-profile-people__list">
+                {suggestedUsers.slice(0, 4).map((user) => {
+                  const following = !!currentUser?.followingIds?.includes(user.id);
+                  return (
+                    <div key={user.id}>
+                      <Link href={`/profile/${user.id}`}>
+                        <Avatar className="h-9 w-9"><AvatarImage src={user.avatarUrl} /><AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback></Avatar>
+                        <span><strong>{user.displayName}</strong><small>@{user.username}</small></span>
+                      </Link>
+                      <button type="button" onClick={() => handleToggleFollow(user.id)}>{following ? 'Following' : 'Follow'}</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </aside>
       </div>
 
       {activeReelIndex !== null && (
