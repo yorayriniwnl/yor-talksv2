@@ -34,7 +34,10 @@ export function connectSocket(): Socket | null {
   // from repeatedly attempting a Socket.IO connection to a host that cannot
   // keep a durable WebSocket process alive. Docker/Nginx explicitly opts in
   // with VITE_REALTIME_ENABLED=true because it proxies to the long-lived API.
-  if (import.meta.env.PROD && (import.meta.env.VITE_REALTIME_ENABLED !== 'true' || !realtimeUrl)) return null;
+  // Production Docker can use an empty URL to connect to the same-origin
+  // Socket.IO proxy. Vercel and other serverless builds stay disabled unless
+  // the deployment explicitly opts in with VITE_REALTIME_ENABLED=true.
+  if (import.meta.env.PROD && import.meta.env.VITE_REALTIME_ENABLED !== 'true') return null;
   socket = io(realtimeUrl, {
     auth: { token: tokens.accessToken },
     path: '/socket.io',
