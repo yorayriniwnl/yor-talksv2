@@ -4,11 +4,13 @@ import { authenticate } from "../middlewares/auth.js";
 import { validateBody, validateParams } from "../middlewares/validation.js";
 import { BroadcastChannelRepository } from "../repositories/broadcast-channel-repository.js";
 import { BroadcastChannelService } from "../services/broadcast-channel-service.js";
+import { NotificationRepository } from "../repositories/notification-repository.js";
+import { QueueService } from "../services/queue-service.js";
 import { createBroadcastChannelMessageSchema, createBroadcastChannelSchema } from "../validators/broadcast-channel.js";
 import { uuidParamSchema } from "../validators/params.js";
 
 const router = Router();
-const controller = new BroadcastChannelController(new BroadcastChannelService(new BroadcastChannelRepository()));
+const controller = new BroadcastChannelController(new BroadcastChannelService(new BroadcastChannelRepository(), undefined, undefined, new NotificationRepository(), new QueueService()));
 
 router.get("/broadcast-channels", authenticate, controller.list);
 router.post("/broadcast-channels", authenticate, validateBody(createBroadcastChannelSchema), controller.create);

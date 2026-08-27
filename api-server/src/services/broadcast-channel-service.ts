@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { BroadcastChannelRepository } from "../repositories/broadcast-channel-repository.js";
+import { NotificationRepository } from "../repositories/notification-repository.js";
+import { QueueService } from "./queue-service.js";
+import { emitToUser } from "../lib/realtime.js";
 import type { BroadcastChannelMessageRecord, BroadcastChannelRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
@@ -12,6 +15,8 @@ export class BroadcastChannelService {
     private readonly repository: BroadcastChannelRepository = new BroadcastChannelRepository(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
     private readonly aiService: AIService = new AIService(),
+    private readonly notificationRepository?: NotificationRepository,
+    private readonly queueService?: QueueService,
   ) {}
 
   async listChannels(viewerId: string): Promise<BroadcastChannelRecord[]> {
@@ -47,6 +52,7 @@ export class BroadcastChannelService {
   async joinChannel(channelId: string, userId: string): Promise<BroadcastChannelRecord | undefined> {
     const channel = await this.repository.findById(channelId, userId);
     if (!channel) return undefined;
+    if (!channel.isOwner && (await this.contentSafetyService.filterVisible([channel], userId)).length === 0) return undefined;
     await this.repository.join(channelId, userId);
     return this.repository.findById(channelId, userId);
   }
@@ -73,7 +79,7 @@ export class BroadcastChannelService {
   }): Promise<BroadcastChannelMessageRecord | undefined> {
     const content = input.content.trim();
     await enforceTextContentPolicy(content, this.aiService, "broadcast message");
-    return this.repository.createMessage({
+    const message = await this.repository.createMessage({
       id: randomUUID(),
       channelId: input.channelId,
       authorId: input.authorId,
@@ -82,5 +88,27 @@ export class BroadcastChannelService {
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
       createdAt: new Date().toISOString(),
     });
+    if (!message || !this.notificationRepository) return message;
+
+    const channel = await this.repository.findById(input.channelId, input.authorId);
+    if (!channel) return message;
+    const recipients = await this.repository.listNotificationRecipients(input.channelId, input.authorId);
+    await Promise.all(recipients.map(async (recipientId) => {
+      const notification = await this.notificationRepository!.create({
+        id: randomUUID(),
+        recipientId,
+        type: "broadcast_channel",
+        title: `${channel.name} posted an update`,
+        message: content.slice(0, 180),
+        relatedId: channel.id,
+        createdAt: message.createdAt,
+        readAt: null,
+        channel: "in_app",
+        metadata: { channelId: channel.id, messageId: message.id },
+      });
+      await this.queueService?.enqueue("notification:deliver", notification);
+      emitToUser(recipientId, "notification:new", notification);
+    }));
+    return message;
   }
 }

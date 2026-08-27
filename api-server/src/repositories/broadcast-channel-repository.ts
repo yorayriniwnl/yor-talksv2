@@ -103,6 +103,17 @@ export class BroadcastChannelRepository {
     return Boolean(membership);
   }
 
+  async listNotificationRecipients(channelId: string, ownerId: string): Promise<string[]> {
+    const members = await db.select({ userId: broadcastChannelMembersTable.userId })
+      .from(broadcastChannelMembersTable)
+      .where(and(
+        eq(broadcastChannelMembersTable.channelId, channelId),
+        ne(broadcastChannelMembersTable.userId, ownerId),
+        eq(broadcastChannelMembersTable.notificationsEnabled, true),
+      ));
+    return members.map((member) => member.userId);
+  }
+
   async listMessages(channelId: string, userId: string, limit = 100): Promise<BroadcastChannelMessageRecord[] | undefined> {
     if (!(await this.isMember(channelId, userId))) return undefined;
     const messages = await db.select().from(broadcastChannelMessagesTable)
