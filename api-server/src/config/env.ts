@@ -7,8 +7,8 @@ const envSchema = z.object({
   PORT: z.string().default(process.env.PORT || process.env.API_PORT || "4000"),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || "change-me-access"),
   JWT_REFRESH_SECRET: z.string().default(process.env.JWT_REFRESH_SECRET || "change-me-refresh"),
-  // Provider-backed uploads are optional in local development and fail closed
-  // in production when Cloudinary is missing.
+  // Provider-backed uploads are optional in local development and required for
+  // a complete production launch.
   CLOUDINARY_CLOUD_NAME: z.string().default(process.env.CLOUDINARY_CLOUD_NAME || ""),
   CLOUDINARY_API_KEY: z.string().default(process.env.CLOUDINARY_API_KEY || ""),
   CLOUDINARY_API_SECRET: z.string().default(process.env.CLOUDINARY_API_SECRET || ""),
@@ -40,11 +40,6 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.parse(process.env);
-const cloudinaryFields = [
-  "CLOUDINARY_CLOUD_NAME",
-  "CLOUDINARY_API_KEY",
-  "CLOUDINARY_API_SECRET",
-] as const;
 
 if (parsedEnv.NODE_ENV === "production") {
   const insecureSecrets = new Set([
@@ -73,21 +68,22 @@ if (parsedEnv.NODE_ENV === "production") {
     ["REDIS_URL", parsedEnv.REDIS_URL],
     ["CORS_ORIGINS", parsedEnv.CORS_ORIGINS],
     ["CLIENT_ORIGIN", parsedEnv.CLIENT_ORIGIN],
+    ["CLOUDINARY_CLOUD_NAME", parsedEnv.CLOUDINARY_CLOUD_NAME],
+    ["CLOUDINARY_API_KEY", parsedEnv.CLOUDINARY_API_KEY],
+    ["CLOUDINARY_API_SECRET", parsedEnv.CLOUDINARY_API_SECRET],
+    ["RESEND_API_KEY", parsedEnv.RESEND_API_KEY],
+    ["EMAIL_FROM", parsedEnv.EMAIL_FROM],
   ] as const;
+  const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example/i;
   const missingProductionConfig = requiredProductionConfig
-    .filter(([, value]) => !value || /localhost|127\.0\.0\.1/i.test(value))
+    .filter(([, value]) => !value || /localhost|127\.0\.0\.1/i.test(value) || placeholderPattern.test(value))
     .map(([field]) => field);
   if (missingProductionConfig.length) {
     throw new Error(`[Config Error] Production requires deployed values for: ${missingProductionConfig.join(", ")}`);
   }
 
-  const missingCloudinaryConfig = cloudinaryFields.filter((field) => !parsedEnv[field]);
-  if (missingCloudinaryConfig.length) {
-    console.warn(`[Config Warning] Missing Cloudinary keys: ${missingCloudinaryConfig.join(", ")}. Image uploads will be disabled.`);
-  }
-
-  if (!parsedEnv.RESEND_API_KEY || !parsedEnv.EMAIL_FROM) {
-    console.warn("[Config Warning] Resend is not fully configured. Password reset, verification, and email OTP delivery will be disabled.");
+  if (![parsedEnv.OPENAI_API_KEY, parsedEnv.GEMINI_API_KEY].some((value) => value && !placeholderPattern.test(value))) {
+    throw new Error("[Config Error] Production requires OPENAI_API_KEY or GEMINI_API_KEY for content safety checks");
   }
   if (!parsedEnv.WEB_PUSH_VAPID_PUBLIC_KEY || !parsedEnv.WEB_PUSH_VAPID_PRIVATE_KEY) {
     console.warn("[Config Warning] Web Push VAPID keys are not configured. Device push delivery will be disabled.");
@@ -101,10 +97,6 @@ if (parsedEnv.NODE_ENV === "production") {
   if (!parsedEnv.LIVEKIT_URL || !parsedEnv.LIVEKIT_API_KEY || !parsedEnv.LIVEKIT_API_SECRET) {
     console.warn("[Config Warning] LiveKit is not fully configured. Live rooms will be disabled.");
   }
-  if (!parsedEnv.OPENAI_API_KEY && !parsedEnv.GEMINI_API_KEY) {
-    console.warn("[Config Warning] No AI moderation provider is configured. User-authored text publication will be unavailable.");
-  }
-
   if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {
     throw new Error("[Config Error] Production CORS_ORIGINS must list explicit browser origins; wildcard is not allowed.");
   }
