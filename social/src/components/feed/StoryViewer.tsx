@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { useAppStore, type Story } from '@/lib/store';
-import { X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2 } from 'lucide-react';
+import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
@@ -64,6 +64,11 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
     return () => clearInterval(timer);
   }, [authorIndex, storyIndex, isPaused, currentStory]);
+
+  useEffect(() => {
+    setProgress(0);
+    setIsPaused(currentStory?.type === 'voice');
+  }, [currentStory?.id, currentStory?.type]);
 
   // Mark as viewed
   useEffect(() => {
@@ -249,6 +254,28 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 <p className="text-white text-2xl font-display font-black leading-snug whitespace-pre-wrap drop-shadow-xl">
                   {currentStory.textContent}
                 </p>
+              </div>
+            )}
+
+            {currentStory.type === 'voice' && (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-gradient-to-br from-slate-950 via-indigo-950 to-fuchsia-950 p-8 text-center"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <AudioLines className="h-16 w-16 text-white/90" />
+                <div className="w-full max-w-sm space-y-3">
+                  <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/60">Voice Story</p>
+                  <audio
+                    controls
+                    autoFocus={false}
+                    src={currentStory.mediaUrl}
+                    className="story-controls w-full"
+                    onPlay={() => setIsPaused(true)}
+                    onPause={() => setIsPaused(true)}
+                    onEnded={handleNext}
+                  />
+                  {currentStory.textContent && <p className="text-lg font-semibold leading-snug text-white">{currentStory.textContent}</p>}
+                </div>
               </div>
             )}
 
