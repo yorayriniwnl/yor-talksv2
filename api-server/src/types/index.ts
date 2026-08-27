@@ -450,5 +450,6 @@ export interface BroadcastChannelMessageRecord {
   content: string;
   contentCategory: string;
   contentRating: ContentRating;
+  reactions?: Record<string, string[]>;
   createdAt: string;
 }

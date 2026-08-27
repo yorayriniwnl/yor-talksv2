@@ -160,6 +160,16 @@ export default function BroadcastChannels() {
     }
   };
 
+  const handleReaction = async (message: BackendBroadcastChannelMessage, reaction: string) => {
+    if (!selectedChannel?.isMember || saving) return;
+    try {
+      const updated = await api.reactToBroadcastChannelMessage(selectedChannel.id, message.id, reaction);
+      setMessages((current) => current.map((item) => item.id === updated.id ? updated : item));
+    } catch (reactionError) {
+      setMessageError(reactionError instanceof Error ? reactionError.message : 'Could not update reaction');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24 font-sans">
       <header className="sticky top-0 z-30 border-b border-border/40 bg-background/85 px-4 py-4 backdrop-blur-xl sm:px-6">
@@ -223,7 +233,7 @@ export default function BroadcastChannels() {
                 <>
                   <div className="flex-1 space-y-3 overflow-y-auto p-5">
                     {messageError && <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">{messageError}</div>}
-                    {messageLoading ? <div className="space-y-3">{[1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl bg-muted/50" />)}</div> : messages.length === 0 ? <div className="py-16 text-center"><Megaphone className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">The signal is quiet.</p><p className="mt-1 text-xs text-muted-foreground">New announcements from the owner will land here.</p></div> : messages.map((message) => <article key={message.id} className="rounded-2xl border border-border/40 bg-background/35 p-4"><div className="mb-2 flex items-center justify-between gap-3"><span className="inline-flex items-center gap-1.5 text-[0.62rem] font-mono font-bold uppercase tracking-[0.12em] text-primary"><ShieldCheck className="h-3 w-3" /> Official update</span><time className="text-[0.62rem] text-muted-foreground" dateTime={message.createdAt}>{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</time></div><p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p></article>)}
+                    {messageLoading ? <div className="space-y-3">{[1, 2].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl bg-muted/50" />)}</div> : messages.length === 0 ? <div className="py-16 text-center"><Megaphone className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">The signal is quiet.</p><p className="mt-1 text-xs text-muted-foreground">New announcements from the owner will land here.</p></div> : messages.map((message) => <article key={message.id} className="rounded-2xl border border-border/40 bg-background/35 p-4"><div className="mb-2 flex items-center justify-between gap-3"><span className="inline-flex items-center gap-1.5 text-[0.62rem] font-mono font-bold uppercase tracking-[0.12em] text-primary"><ShieldCheck className="h-3 w-3" /> Official update</span><time className="text-[0.62rem] text-muted-foreground" dateTime={message.createdAt}>{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</time></div><p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p><div className="mt-3 flex items-center gap-1.5">{['❤️', '🔥', '👏', '💡'].map((reaction) => { const count = message.reactions?.[reaction]?.length ?? 0; return <button key={reaction} type="button" onClick={() => void handleReaction(message, reaction)} className={cn('rounded-full border px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:bg-primary/5', count > 0 && 'border-primary/30 bg-primary/5')} aria-label={`React ${reaction}${count ? `, ${count} reactions` : ''}`}>{reaction}{count > 0 && <span className="ml-1 font-mono text-[0.62rem]">{count}</span>}</button>; })}</div></article>)}
                   </div>
                   {selectedChannel.isOwner && <div className="border-t border-border/40 bg-background/30 p-4"><Textarea value={messageContent} onChange={(event) => setMessageContent(event.target.value)} placeholder="Publish an official update to your subscribers…" maxLength={2000} rows={3} className="resize-none rounded-2xl" /><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><ContentCategorySelect id="broadcast-message-category" value={messageCategory} onChange={(value) => { if (value) setMessageCategory(value); }} /><ContentRatingSelect id="broadcast-message-rating" value={messageRating} onChange={setMessageRating} /><Button type="button" onClick={() => void handlePublish()} disabled={saving || !messageContent.trim()} className="rounded-xl font-bold"><Send className="mr-1.5 h-4 w-4" /> {saving ? 'Sending…' : 'Publish'}</Button></div></div>}
                 </>

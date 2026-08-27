@@ -7,6 +7,10 @@ function paramId(req: Request): string {
   return Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 }
 
+function messageParamId(req: Request): string {
+  return Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
+}
+
 export class BroadcastChannelController {
   constructor(private readonly service: BroadcastChannelService) {}
 
@@ -75,5 +79,13 @@ export class BroadcastChannelController {
       }
       throw error;
     }
+  };
+
+  reactToMessage = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    const message = await this.service.reactToMessage(paramId(req), messageParamId(req), userId, req.body.reaction);
+    if (!message) return res.status(403).json(createResponse("Subscribe to this channel to react", null, {}, ["channel_subscription_required"]));
+    return res.status(200).json(createResponse("Broadcast reaction updated", message));
   };
 }

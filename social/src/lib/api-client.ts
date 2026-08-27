@@ -497,6 +497,8 @@ export const api = {
   getBroadcastChannelMessages: (id: string) => request<BackendBroadcastChannelMessage[]>(`/broadcast-channels/${encodeURIComponent(id)}/messages`),
   publishBroadcastChannelMessage: (id: string, payload: { content: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendBroadcastChannelMessage>(`/broadcast-channels/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
+  reactToBroadcastChannelMessage: (channelId: string, messageId: string, reaction: string) =>
+    request<BackendBroadcastChannelMessage>(`/broadcast-channels/${encodeURIComponent(channelId)}/messages/${encodeURIComponent(messageId)}/react`, { method: 'POST', body: JSON.stringify({ reaction }) }),
 
   // ---- Ephemeral Notes ----
   getNotes: () => request<BackendNote[]>('/notes'),
@@ -661,6 +663,7 @@ export interface BackendBroadcastChannelMessage {
   content: string;
   contentCategory: ContentCategory;
   contentRating: ContentRating;
+  reactions?: Record<string, string[]>;
   createdAt: string;
 }
 

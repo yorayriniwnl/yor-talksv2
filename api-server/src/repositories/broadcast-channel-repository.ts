@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   broadcastChannelMembersTable,
   broadcastChannelMessagesTable,
@@ -133,6 +133,7 @@ export class BroadcastChannelRepository {
       .limit(Math.min(100, Math.max(1, limit)));
     return messages.reverse().map((message) => ({
       ...message,
+      reactions: (message.reactions ?? {}) as Record<string, string[]>,
       contentRating: message.contentRating as BroadcastChannelMessageRecord["contentRating"],
     }));
   }
@@ -155,6 +156,29 @@ export class BroadcastChannelRepository {
     await db.update(broadcastChannelsTable).set({ updatedAt: input.createdAt }).where(eq(broadcastChannelsTable.id, input.channelId));
     return message ? {
       ...message,
+      reactions: (message.reactions ?? {}) as Record<string, string[]>,
+      contentRating: message.contentRating as BroadcastChannelMessageRecord["contentRating"],
+    } : undefined;
+  }
+
+  async reactToMessage(channelId: string, messageId: string, userId: string, reaction: string): Promise<BroadcastChannelMessageRecord | undefined> {
+    if (!(await this.isMember(channelId, userId))) return undefined;
+    const [message] = await db.update(broadcastChannelMessagesTable).set({
+      reactions: sql`jsonb_set(
+        COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb),
+        ARRAY[${reaction}],
+        (
+          CASE
+            WHEN COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction} ? ${userId}
+              THEN (COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction}) - ${userId}
+            ELSE COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction} || jsonb_build_array(${userId})
+          END
+        )
+      )`,
+    }).where(and(eq(broadcastChannelMessagesTable.id, messageId), eq(broadcastChannelMessagesTable.channelId, channelId))).returning();
+    return message ? {
+      ...message,
+      reactions: (message.reactions ?? {}) as Record<string, string[]>,
       contentRating: message.contentRating as BroadcastChannelMessageRecord["contentRating"],
     } : undefined;
   }

@@ -248,6 +248,7 @@ export const broadcastChannelMessagesTable = pgTable("broadcast_channel_messages
   content: text("content").notNull(),
   contentCategory: text("content_category").notNull().default("other"),
   contentRating: text("content_rating").notNull().default("regular"),
+  reactions: jsonb("reactions").notNull().default({}),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   channelIdx: index("broadcast_channel_message_channel_idx").on(table.channelId, table.createdAt),

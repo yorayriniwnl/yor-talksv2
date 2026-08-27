@@ -6,8 +6,8 @@ import { BroadcastChannelRepository } from "../repositories/broadcast-channel-re
 import { BroadcastChannelService } from "../services/broadcast-channel-service.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import { QueueService } from "../services/queue-service.js";
-import { createBroadcastChannelMessageSchema, createBroadcastChannelSchema, updateBroadcastChannelNotificationsSchema } from "../validators/broadcast-channel.js";
-import { uuidParamSchema } from "../validators/params.js";
+import { createBroadcastChannelMessageSchema, createBroadcastChannelSchema, reactToBroadcastChannelMessageSchema, updateBroadcastChannelNotificationsSchema } from "../validators/broadcast-channel.js";
+import { messageIdParamSchema, uuidParamSchema } from "../validators/params.js";
 
 const router = Router();
 const controller = new BroadcastChannelController(new BroadcastChannelService(new BroadcastChannelRepository(), undefined, undefined, new NotificationRepository(), new QueueService()));
@@ -19,5 +19,6 @@ router.delete("/broadcast-channels/:id/join", authenticate, validateParams(uuidP
 router.patch("/broadcast-channels/:id/notifications", authenticate, validateParams(uuidParamSchema), validateBody(updateBroadcastChannelNotificationsSchema), controller.notifications);
 router.get("/broadcast-channels/:id/messages", authenticate, validateParams(uuidParamSchema), controller.messages);
 router.post("/broadcast-channels/:id/messages", authenticate, validateParams(uuidParamSchema), validateBody(createBroadcastChannelMessageSchema), controller.createMessage);
+router.post("/broadcast-channels/:id/messages/:messageId/react", authenticate, validateParams(uuidParamSchema.merge(messageIdParamSchema)), validateBody(reactToBroadcastChannelMessageSchema), controller.reactToMessage);
 
 export default router;

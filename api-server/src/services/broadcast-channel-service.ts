@@ -118,4 +118,8 @@ export class BroadcastChannelService {
     }));
     return message;
   }
+
+  async reactToMessage(channelId: string, messageId: string, userId: string, reaction: string): Promise<BroadcastChannelMessageRecord | undefined> {
+    return this.repository.reactToMessage(channelId, messageId, userId, reaction.slice(0, 16));
+  }
 }

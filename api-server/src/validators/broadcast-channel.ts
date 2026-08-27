@@ -20,3 +20,7 @@ export const createBroadcastChannelMessageSchema = z.object({
 export const updateBroadcastChannelNotificationsSchema = z.object({
   enabled: z.boolean(),
 });
+
+export const reactToBroadcastChannelMessageSchema = z.object({
+  reaction: z.string().trim().min(1).max(16),
+});
