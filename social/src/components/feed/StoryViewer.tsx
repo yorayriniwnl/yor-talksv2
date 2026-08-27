@@ -26,12 +26,14 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const viewStory = useAppStore((s) => s.viewStory);
   const reactToStory = useAppStore((s) => s.reactToStory);
   const voteStoryPoll = useAppStore((s) => s.voteStoryPoll);
+  const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
 
   const [authorIndex, setAuthorIndex] = useState(authors.indexOf(initialAuthorId) >= 0 ? authors.indexOf(initialAuthorId) : 0);
   const [storyIndex, setStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [reactionText, setReactionText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
   
   // Floating reaction particle stream
   const [floatingParticles, setFloatingParticles] = useState<{ id: string; emoji: string; x: number }[]>([]);
@@ -122,14 +124,17 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
   const handleSendReaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reactionText.trim() || !currentStory) return;
+    if (!reactionText.trim() || !currentStory || !currentUser || currentAuthorId === currentUser.id || isSendingReply) return;
+    setIsSendingReply(true);
     try {
       sounds.playChime();
-      await reactToStory(currentStory.id, reactionText);
+      await sendDirectMessage(currentAuthorId, `[Story Reply] ${reactionText.trim()}`);
       toast.success('Reply sent to story author! 💬');
       setReactionText('');
     } catch {
       // toast will handle error
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -294,12 +299,13 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               <Input
                 value={reactionText}
                 onChange={(e) => setReactionText(e.target.value)}
-                placeholder={`Reply to ${displayName}…`}
+                placeholder={currentAuthorId === currentUser?.id ? 'Your own story' : `Reply to ${displayName}…`}
+                disabled={currentAuthorId === currentUser?.id || isSendingReply}
                 className="rounded-full bg-white/10 border-white/20 text-xs h-10 text-white placeholder:text-white/60 focus:border-primary/60"
               />
               <button
                 type="submit"
-                disabled={!reactionText.trim()}
+                disabled={!reactionText.trim() || currentAuthorId === currentUser?.id || isSendingReply}
                 className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
               >
                 <Send className="w-4 h-4" />
