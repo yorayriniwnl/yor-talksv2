@@ -189,6 +189,25 @@ export class UserService {
     return this.userRepository.listFavoriteCreatorIds(userId);
   }
 
+  async listCloseFriends(userId: string): Promise<UserRecord[]> {
+    const ids = await this.userRepository.listCloseFriendIds(userId);
+    if (ids.length === 0) return [];
+    const users = await Promise.all(ids.map((id) => this.userRepository.findById(id)));
+    return users.filter((user): user is UserRecord => Boolean(user));
+  }
+
+  async setCloseFriend(userId: string, friendId: string, enabled: boolean): Promise<{ friendId: string; closeFriend: boolean } | undefined> {
+    if (userId === friendId) throw new Error("Cannot add yourself to Close Friends");
+    const [owner, friend] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.userRepository.findById(friendId),
+    ]);
+    if (!owner || !friend || !(await this.contactShieldService.canView(userId, friendId))) return undefined;
+    if (enabled) await this.userRepository.addCloseFriend(userId, friendId);
+    else await this.userRepository.removeCloseFriend(userId, friendId);
+    return { friendId, closeFriend: enabled };
+  }
+
   async setFavoriteCreator(userId: string, creatorId: string, favorite: boolean): Promise<{ creatorId: string; favorite: boolean } | undefined> {
     if (userId === creatorId) {
       throw new Error("Cannot favorite yourself");

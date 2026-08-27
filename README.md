@@ -19,8 +19,10 @@ The launch path supports a global deployment or a closed beta:
   login when configured.
 - GitHub-style number matching protects accounts with an authenticated Yor
   device approval flow, with TOTP as an explicit fallback.
-- Notes expire after 24 hours with follower/public audience controls, the
-  three-layer content filter, and server-side moderation. Group conversations
+- Notes expire after 24 hours with follower/Close Friends/public audience
+  controls, the three-layer content filter, and server-side moderation.
+  Stories and Highlights enforce the same audience rules, with a private
+  Close Friends list managed from Settings. Group conversations
   support member selection, read receipts, reactions, pins, and persisted
   read-triggered Vanish Mode with a 24-hour safety expiry.
 - Browser Web Push delivers notification events when VAPID keys are configured.

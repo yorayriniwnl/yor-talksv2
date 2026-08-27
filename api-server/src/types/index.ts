@@ -404,12 +404,14 @@ export interface StoryRecord {
   reactions: StoryReaction[];
   isHighlight: boolean;
   highlightTitle?: string | null;
+  audience?: StoryAudience;
   contentCategory?: string;
   contentRating?: ContentRating;
   poll?: StoryPoll;
 }
 
-export type NoteAudience = "followers" | "public";
+export type StoryAudience = "followers" | "close_friends" | "public";
+export type NoteAudience = "followers" | "close_friends" | "public";
 
 export interface NoteRecord {
   id: string;

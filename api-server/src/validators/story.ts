@@ -10,6 +10,7 @@ export const createStorySchema = z.object({
   backgroundGradient: z.string().optional(),
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
+  audience: z.enum(["followers", "close_friends", "public"]).default("followers"),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema,
   poll: z.object({

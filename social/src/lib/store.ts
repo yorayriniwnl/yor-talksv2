@@ -121,6 +121,7 @@ export type Story = {
   };
   isHighlight?: boolean;
   highlightTitle?: string;
+  audience: 'followers' | 'close_friends' | 'public';
   contentCategory: string;
   contentRating: ContentRating;
 };
@@ -129,7 +130,7 @@ export type Note = {
   id: string;
   authorId: string;
   content: string;
-  audience: 'followers' | 'public';
+  audience: 'followers' | 'close_friends' | 'public';
   contentCategory: ContentCategory;
   contentRating: ContentRating;
   createdAt: string;
@@ -363,6 +364,7 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     } : undefined,
     isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
+    audience: s.audience === 'public' || s.audience === 'close_friends' ? s.audience : 'followers',
     contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: s.contentRating ?? DEFAULT_CONTENT_RATING,
   };
@@ -373,7 +375,7 @@ function mapNote(note: BackendNote): Note {
     id: note.id,
     authorId: note.authorId,
     content: note.content || '',
-    audience: note.audience === 'public' ? 'public' : 'followers',
+    audience: note.audience === 'public' || note.audience === 'close_friends' ? note.audience : 'followers',
     contentCategory: note.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: note.contentRating ?? DEFAULT_CONTENT_RATING,
     createdAt: note.createdAt || new Date().toISOString(),
@@ -625,6 +627,7 @@ interface AppState {
   hasMoreFeed: boolean;
   feedMode: FeedMode;
   favoriteCreatorIds: string[];
+  closeFriends: User[];
   authError: string | null;
   users: Record<string, User>;
   posts: Post[];
@@ -663,6 +666,7 @@ interface AppState {
   loadFeed: (mode?: FeedMode) => Promise<void>;
   loadMoreFeed: () => Promise<void>;
   loadFavoriteCreators: () => Promise<void>;
+  loadCloseFriends: () => Promise<void>;
   loadSavedPosts: () => Promise<void>;
   loadLikedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
@@ -708,6 +712,7 @@ interface AppState {
   followUser: (userId: string) => Promise<void>;
   unfollowUser: (userId: string) => Promise<void>;
   toggleFavoriteCreator: (userId: string) => Promise<void>;
+  toggleCloseFriend: (userId: string) => Promise<void>;
 
   votePoll: (postId: string, optionId: string) => Promise<void>;
   loadEvents: () => Promise<void>;
@@ -726,7 +731,7 @@ interface AppState {
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; audience?: Story['audience']; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string) => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
@@ -752,6 +757,7 @@ function hydrateSessionData(get: () => AppState): void {
   void Promise.allSettled([
     get().loadFeed(),
     get().loadFavoriteCreators(),
+    get().loadCloseFriends(),
     get().loadCommunities(),
     get().loadNotifications(),
     get().loadFollowRequests(),
@@ -867,6 +873,7 @@ export const useAppStore = create<AppState>()(
       hasMoreFeed: false,
       feedMode: 'following',
       favoriteCreatorIds: [],
+      closeFriends: [],
       users: {},
       posts: [],
       stories: [],
@@ -1100,6 +1107,19 @@ export const useAppStore = create<AppState>()(
           }));
         } catch {
           // Favorites are an enhancement; keep the last local snapshot offline.
+        }
+      },
+
+      loadCloseFriends: async () => {
+        try {
+          const friends = await api.getCloseFriends();
+          const mapped = friends.map(mapUser);
+          set((state) => ({
+            closeFriends: mapped,
+            users: { ...state.users, ...Object.fromEntries(mapped.map((user) => [user.id, user])) },
+          }));
+        } catch {
+          // Close Friends is an enhancement; keep the last successful snapshot offline.
         }
       },
 
@@ -1546,6 +1566,25 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      toggleCloseFriend: async (userId) => {
+        const currentUser = get().currentUser;
+        const friend = get().users[userId] ?? get().closeFriends.find((user) => user.id === userId);
+        if (!currentUser || currentUser.id === userId || !friend) return;
+        const wasCloseFriend = get().closeFriends.some((user) => user.id === userId);
+        const nextCloseFriends = wasCloseFriend
+          ? get().closeFriends.filter((user) => user.id !== userId)
+          : [...get().closeFriends, friend];
+        set({ closeFriends: nextCloseFriends });
+        try {
+          if (wasCloseFriend) await api.removeCloseFriend(userId);
+          else await api.addCloseFriend(userId);
+        } catch (error) {
+          set({ closeFriends: wasCloseFriend ? [...nextCloseFriends, friend] : nextCloseFriends.filter((user) => user.id !== userId) });
+          toast.error(error instanceof Error ? error.message : 'Could not update Close Friends');
+          throw error;
+        }
+      },
+
       loadFollowRequests: async () => {
         try {
           const requests = await api.getFollowRequests();
@@ -1723,6 +1762,7 @@ export const useAppStore = create<AppState>()(
           reactions: [],
           isHighlight: Boolean(story.isHighlight),
           highlightTitle: story.highlightTitle,
+          audience: story.audience ?? 'followers',
           poll: story.poll ? {
             question: story.poll.question,
             options: story.poll.options.map((option, index) => ({ id: `optimistic-story-poll-${index}`, ...option, votes: 0 })),

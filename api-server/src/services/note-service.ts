@@ -50,6 +50,7 @@ export class NoteService {
       if (note.authorId === viewerId) return note;
       if (!(await this.contentSafetyService.isVisible(note, viewerId, note.authorId))) return undefined;
       if (note.audience === "followers" && !(await this.userRepository.isFollowing(viewerId, note.authorId))) return undefined;
+      if (note.audience === "close_friends" && !(await this.userRepository.isCloseFriend(note.authorId, viewerId))) return undefined;
       return note;
     }));
     return visible.filter((note): note is NoteRecord => Boolean(note));

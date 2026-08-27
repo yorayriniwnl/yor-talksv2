@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { followRequestsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
+import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { FollowRequestRecord, UserRecord } from "../types/index.js";
 
@@ -199,6 +199,43 @@ export class UserRepository {
         eq(userFavoriteCreatorsTable.creatorId, creatorId),
       ))
       .returning({ creatorId: userFavoriteCreatorsTable.creatorId });
+    return deleted.length > 0;
+  }
+
+  async listCloseFriendIds(userId: string): Promise<string[]> {
+    const rows = await db.select({ friendId: userCloseFriendsTable.friendId })
+      .from(userCloseFriendsTable)
+      .where(eq(userCloseFriendsTable.userId, userId))
+      .orderBy(desc(userCloseFriendsTable.createdAt));
+    return rows.map(({ friendId }) => friendId);
+  }
+
+  async isCloseFriend(userId: string, friendId: string): Promise<boolean> {
+    const [relationship] = await db.select({ friendId: userCloseFriendsTable.friendId })
+      .from(userCloseFriendsTable)
+      .where(and(
+        eq(userCloseFriendsTable.userId, userId),
+        eq(userCloseFriendsTable.friendId, friendId),
+      ))
+      .limit(1);
+    return Boolean(relationship);
+  }
+
+  async addCloseFriend(userId: string, friendId: string): Promise<boolean> {
+    const inserted = await db.insert(userCloseFriendsTable)
+      .values({ userId, friendId })
+      .onConflictDoNothing()
+      .returning({ friendId: userCloseFriendsTable.friendId });
+    return inserted.length > 0;
+  }
+
+  async removeCloseFriend(userId: string, friendId: string): Promise<boolean> {
+    const deleted = await db.delete(userCloseFriendsTable)
+      .where(and(
+        eq(userCloseFriendsTable.userId, userId),
+        eq(userCloseFriendsTable.friendId, friendId),
+      ))
+      .returning({ friendId: userCloseFriendsTable.friendId });
     return deleted.length > 0;
   }
 }

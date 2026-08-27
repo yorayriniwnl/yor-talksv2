@@ -9,7 +9,7 @@ import { api, type ContactShield } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { fadeInUp, springGentle } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone } from 'lucide-react';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import QRCode from 'qrcode';
 
@@ -154,6 +154,105 @@ function ContactShieldPanel() {
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+function CloseFriendsPanel() {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const closeFriends = useAppStore((state) => state.closeFriends);
+  const loadCloseFriends = useAppStore((state) => state.loadCloseFriends);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Awaited<ReturnType<typeof api.searchUsers>>>([]);
+  const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const search = async () => {
+      const normalized = query.trim();
+      if (normalized.length < 2) {
+        setResults([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const users = await api.searchUsers(normalized);
+        if (active) setResults(users.filter((user) => user.id !== currentUser?.id));
+      } catch {
+        if (active) setResults([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    const timer = window.setTimeout(() => void search(), 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [currentUser?.id, query]);
+
+  const toggle = async (user: Awaited<ReturnType<typeof api.searchUsers>>[number]) => {
+    const isCloseFriend = closeFriends.some((friend) => friend.id === user.id);
+    setUpdatingId(user.id);
+    try {
+      if (isCloseFriend) await api.removeCloseFriend(user.id);
+      else await api.addCloseFriend(user.id);
+      await loadCloseFriends();
+      toast.success(isCloseFriend ? `Removed @${user.username} from Close Friends` : `Added @${user.username} to Close Friends`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update Close Friends');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  return (
+    <section className="surface-1 rounded-2xl border border-border/40 p-6 space-y-5">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600"><UsersRound className="h-5 w-5" /></div>
+        <div>
+          <h3 className="font-display text-base font-bold">Close Friends</h3>
+          <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Create a private circle for Stories and Notes. People are never notified when you add or remove them.</p>
+        </div>
+        <span className="ml-auto shrink-0 text-sm font-bold text-emerald-600">{closeFriends.length}</span>
+      </div>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search people by name or username" className="h-11 rounded-2xl pl-9" aria-label="Search people for Close Friends" />
+      </div>
+
+      {loading && <p className="text-xs text-muted-foreground">Searching…</p>}
+      {!loading && query.trim().length >= 2 && results.length === 0 && <p className="text-xs text-muted-foreground">No people found. Try a different name or username.</p>}
+      {results.length > 0 && (
+        <div className="space-y-2 border-t border-border/40 pt-4">
+          {results.slice(0, 12).map((user) => {
+            const isCloseFriend = closeFriends.some((friend) => friend.id === user.id);
+            return (
+              <div key={user.id} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-background/35 px-3 py-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary">
+                  {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : user.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{user.fullName || user.username}</p><p className="truncate text-xs text-muted-foreground">@{user.username}</p></div>
+                <Button type="button" variant={isCloseFriend ? 'outline' : 'default'} onClick={() => void toggle(user)} disabled={updatingId === user.id} className="rounded-xl text-xs">
+                  {updatingId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isCloseFriend ? <X className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+                  {isCloseFriend ? 'Remove' : 'Add'}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {closeFriends.length > 0 && (
+        <div className="border-t border-border/40 pt-4">
+          <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Your private circle</p>
+          <div className="flex flex-wrap gap-2">
+            {closeFriends.map((friend) => <span key={friend.id} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><span className="max-w-32 truncate">@{friend.username}</span><span aria-hidden="true">·</span><span className="text-[0.65rem] font-normal">private</span></span>)}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -466,6 +565,7 @@ export default function Settings() {
           </div>
         </section>
 
+        <CloseFriendsPanel />
         <ContactShieldPanel />
 
         {/* Notifications */}

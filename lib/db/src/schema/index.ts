@@ -227,6 +227,7 @@ export const storiesTable = pgTable("stories", {
   reactions: jsonb("reactions").notNull().default([]),
   isHighlight: boolean("is_highlight").notNull().default(false),
   highlightTitle: text("highlight_title"),
+  audience: text("audience").notNull().default("followers"),
   contentCategory: text("content_category").notNull().default("other"),
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
@@ -536,6 +537,17 @@ export const userFavoriteCreatorsTable = pgTable("user_favorite_creators", {
   pk: primaryKey({ columns: [t.userId, t.creatorId] }),
   creatorIdx: index("user_favorite_creators_creator_idx").on(t.creatorId),
   userIdx: index("user_favorite_creators_user_idx").on(t.userId, t.createdAt),
+}));
+
+/** People an account explicitly trusts with Close Friends-only stories and notes. */
+export const userCloseFriendsTable = pgTable("user_close_friends", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  friendId: uuid("friend_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.friendId] }),
+  friendIdx: index("user_close_friends_friend_idx").on(t.friendId),
+  userIdx: index("user_close_friends_user_idx").on(t.userId, t.createdAt),
 }));
 
 export const followRequestsTable = pgTable("follow_requests", {
@@ -961,6 +973,10 @@ export type Story = typeof storiesTable.$inferSelect;
 export const insertUserNoteSchema = createInsertSchema(userNotesTable);
 export type InsertUserNote = typeof userNotesTable.$inferInsert;
 export type UserNote = typeof userNotesTable.$inferSelect;
+
+export const insertUserCloseFriendSchema = createInsertSchema(userCloseFriendsTable);
+export type InsertUserCloseFriend = typeof userCloseFriendsTable.$inferInsert;
+export type UserCloseFriend = typeof userCloseFriendsTable.$inferSelect;
 
 export const insertEventSchema = createInsertSchema(eventsTable);
 export type InsertEvent = typeof eventsTable.$inferInsert;

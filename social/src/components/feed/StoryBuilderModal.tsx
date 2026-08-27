@@ -30,6 +30,7 @@ const STORY_GRADIENTS = [
 export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }: StoryBuilderModalProps) {
   const addStory = useAppStore((s) => s.addStory);
   const currentUser = useAppStore((s) => s.currentUser);
+  const closeFriends = useAppStore((s) => s.closeFriends);
 
   const [textContent, setTextContent] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
@@ -38,6 +39,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [highlightTitle, setHighlightTitle] = useState('');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
+  const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('followers');
   const [pollOpen, setPollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -57,6 +59,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         backgroundGradient: selectedGradient.css,
         contentCategory,
         contentRating,
+        audience,
         isHighlight,
         ...(isHighlight ? { highlightTitle: highlightTitle.trim() || 'Highlights' } : {}),
         ...(pollOpen ? { poll: { question: pollQuestion.trim(), options: normalizedPollOptions.map((text) => ({ text })) } } : {}),
@@ -69,6 +72,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setHighlightTitle('');
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
+      setAudience('followers');
       setPollOpen(false);
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -109,7 +113,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           </div>
 
           <div className="text-[0.68rem] text-white/80 font-mono text-center relative z-10">
-            Visible to followers for 24 hours
+            Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : 'followers'} for 24 hours
           </div>
         </div>
 
@@ -151,6 +155,16 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           {/* Gradient Palette Picker */}
           <ContentCategorySelect id="story-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="story-content-rating" value={contentRating} onChange={setContentRating} />
+
+          <label className="space-y-1.5 text-xs font-semibold">
+            <span>Audience</span>
+            <select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+              <option value="followers">Followers</option>
+              <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends ({closeFriends.length})</option>
+              <option value="public">Public</option>
+            </select>
+            {audience === 'close_friends' && closeFriends.length === 0 && <span className="block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
+          </label>
 
           {isHighlight && (
             <input

@@ -44,6 +44,7 @@ export {
   liveStreamsTable,
   storiesTable,
   userNotesTable,
+  userCloseFriendsTable,
   postRepostsTable,
   userFavoriteCreatorsTable,
   postPollsTable,
@@ -73,6 +74,7 @@ export {
   insertLiveStreamSchema,
   insertStorySchema,
   insertUserNoteSchema,
+  insertUserCloseFriendSchema,
   creatorWorkspaceItemsTable,
   insertCreatorWorkspaceItemSchema,
 } from "./schema";

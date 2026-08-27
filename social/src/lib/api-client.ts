@@ -385,6 +385,9 @@ export const api = {
   getFollowers: (userId: string) => request<BackendUser[]>(`/users/${userId}/followers`),
   getFollowing: (userId: string) => request<BackendUser[]>(`/users/${userId}/following`),
   getFavoriteCreatorIds: () => request<string[]>('/users/me/favorites/creators'),
+  getCloseFriends: () => request<BackendUser[]>('/users/me/close-friends'),
+  addCloseFriend: (userId: string) => request<{ friendId: string; closeFriend: true }>(`/users/${encodeURIComponent(userId)}/close-friend`, { method: 'POST' }),
+  removeCloseFriend: (userId: string) => request<{ friendId: string; closeFriend: false }>(`/users/${encodeURIComponent(userId)}/close-friend`, { method: 'DELETE' }),
   favoriteCreator: (userId: string) => request<{ creatorId: string; favorite: true }>(`/users/${encodeURIComponent(userId)}/favorite`, { method: 'POST' }),
   unfavoriteCreator: (userId: string) => request<{ creatorId: string; favorite: false }>(`/users/${encodeURIComponent(userId)}/favorite`, { method: 'DELETE' }),
   getFollowRequests: () => request<BackendFollowRequest[]>('/users/me/follow-requests'),
@@ -478,7 +481,7 @@ export const api = {
 
   // ---- Stories ----
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
@@ -486,7 +489,7 @@ export const api = {
 
   // ---- Ephemeral Notes ----
   getNotes: () => request<BackendNote[]>('/notes'),
-  createNote: (payload: { content: string; audience: 'followers' | 'public'; contentCategory: ContentCategory; contentRating: ContentRating }) =>
+  createNote: (payload: { content: string; audience: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating: ContentRating }) =>
     request<BackendNote>('/notes', { method: 'POST', body: JSON.stringify(payload) }),
   deleteNote: (id: string) => request<null>(`/notes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
@@ -601,6 +604,7 @@ export interface BackendStory {
   reactions: { userId: string; emoji: string }[];
   isHighlight: boolean;
   highlightTitle: string | null;
+  audience?: 'followers' | 'close_friends' | 'public';
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
   poll?: {
@@ -616,7 +620,7 @@ export interface BackendNote {
   id: string;
   authorId: string;
   content: string;
-  audience: 'followers' | 'public';
+  audience: 'followers' | 'close_friends' | 'public';
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
   createdAt: string;

@@ -29,7 +29,11 @@ export class ContentSafetyService {
       viewerId ? this.userRepository.findById(viewerId) : Promise.resolve(undefined),
     ]);
     if (!author) return false;
-    if (viewerId && (author.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(authorId))) return false;
+    if (viewerId && (
+      author.blockedUsers?.includes(viewerId)
+      || viewer?.blockedUsers?.includes(authorId)
+      || viewer?.mutedUsers?.includes(authorId)
+    )) return false;
     const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
     if (visibility === "public") return true;
     return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));

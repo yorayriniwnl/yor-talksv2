@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { StoryRepository } from "../repositories/story-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
 import type { StoryRecord } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
@@ -12,6 +13,7 @@ export class StoryService {
     private readonly storyRepository: StoryRepository,
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
     private readonly aiService: AIService = new AIService(),
+    private readonly userRepository: UserRepository = new UserRepository(),
   ) {}
 
   async createStory(input: {
@@ -22,6 +24,7 @@ export class StoryService {
     backgroundGradient?: string;
     isHighlight: boolean;
     highlightTitle?: string;
+    audience?: StoryRecord["audience"];
     contentCategory?: StoryRecord["contentCategory"];
     contentRating?: StoryRecord["contentRating"];
     poll?: { question: string; options: Array<{ text: string }> };
@@ -47,6 +50,7 @@ export class StoryService {
       reactions: [],
       isHighlight: input.isHighlight,
       highlightTitle: input.highlightTitle || null,
+      audience: input.audience ?? "followers",
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
@@ -60,14 +64,17 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await this.contentSafetyService.filterVisibleByAuthor(await this.storyRepository.listActive(), viewerId, (story) => story.authorId);
-    const polls = await this.storyRepository.getPolls(stories.map((story) => story.id), viewerId);
-    return stories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
+    const stories = await Promise.all((await this.storyRepository.listActive()).map(async (story) => (
+      await this.canViewStory(story, viewerId) ? story : undefined
+    )));
+    const visibleStories = stories.filter((story): story is StoryRecord => Boolean(story));
+    const polls = await this.storyRepository.getPolls(visibleStories.map((story) => story.id), viewerId);
+    return visibleStories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
   }
 
   async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findActiveById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
+    if (!story || !(await this.canViewStory(story, userId))) return undefined;
 
     const updated = await this.storyRepository.addView(storyId, userId);
     return updated ? this.hydrateStory(updated, userId) : undefined;
@@ -75,7 +82,7 @@ export class StoryService {
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findActiveById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
+    if (!story || !(await this.canViewStory(story, userId))) return undefined;
 
     const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32));
     return updated ? this.hydrateStory(updated, userId) : undefined;
@@ -83,7 +90,7 @@ export class StoryService {
 
   async votePoll(storyId: string, optionId: string, userId: string): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findActiveById(storyId);
-    if (!story || !(await this.contentSafetyService.isVisible(story, userId, story.authorId))) return undefined;
+    if (!story || !(await this.canViewStory(story, userId))) return undefined;
     if (!(await this.storyRepository.votePoll(storyId, optionId, userId))) return undefined;
     return this.hydrateStory(story, userId);
   }
@@ -91,5 +98,13 @@ export class StoryService {
   private async hydrateStory(story: StoryRecord, viewerId?: string): Promise<StoryRecord> {
     const poll = (await this.storyRepository.getPolls([story.id], viewerId)).get(story.id);
     return poll ? { ...story, poll } : story;
+  }
+
+  private async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
+    if (!story || !(await this.contentSafetyService.isVisible(story, viewerId, story.authorId))) return false;
+    if (story.authorId === viewerId || story.audience === "public") return true;
+    if (!viewerId) return false;
+    if (story.audience === "close_friends") return this.userRepository.isCloseFriend(story.authorId, viewerId);
+    return this.userRepository.isFollowing(viewerId, story.authorId);
   }
 }

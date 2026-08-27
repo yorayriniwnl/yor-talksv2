@@ -114,6 +114,33 @@ export class UserController {
     return res.status(200).json(createResponse("Favorite creators loaded", creatorIds));
   };
 
+  listCloseFriends = async (req: Request, res: Response) => {
+    const users = await this.userService.listCloseFriends(req.user?.id ?? "");
+    return res.status(200).json(createResponse("Close Friends loaded", toPublicUsers(users)));
+  };
+
+  addCloseFriend = async (req: Request, res: Response) => {
+    const friendId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const result = await this.userService.setCloseFriend(req.user?.id ?? "", friendId, true);
+      if (!result) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      return res.status(200).json(createResponse("Close Friend added", result));
+    } catch (error) {
+      return res.status(400).json(createResponse("Could not add Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
+  removeCloseFriend = async (req: Request, res: Response) => {
+    const friendId = typeof req.params.userId === "string" ? req.params.userId : "";
+    try {
+      const result = await this.userService.setCloseFriend(req.user?.id ?? "", friendId, false);
+      if (!result) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      return res.status(200).json(createResponse("Close Friend removed", result));
+    } catch (error) {
+      return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
   favoriteCreator = async (req: Request, res: Response) => {
     const creatorId = typeof req.params.userId === "string" ? req.params.userId : "";
     try {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Globe2, LockKeyhole, MessageCircle, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { Globe2, LockKeyhole, MessageCircle, Plus, ShieldCheck, Trash2, UsersRound } from 'lucide-react';
 import { useAppStore, type Note } from '@/lib/store';
 import { CONTENT_RATING_OPTIONS, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
 import { CONTENT_CATEGORIES, type ContentCategory } from '@/lib/content-category';
@@ -20,6 +20,7 @@ export default function NotesTray() {
   const notes = useAppStore((state) => state.notes);
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
+  const closeFriends = useAppStore((state) => state.closeFriends);
   const createNote = useAppStore((state) => state.createNote);
   const deleteNote = useAppStore((state) => state.deleteNote);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -98,7 +99,7 @@ export default function NotesTray() {
                 </div>
                 <p>{note.content}</p>
                 <div className="home-note-card__meta">
-                  <span>{note.audience === 'public' ? <Globe2 className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}{note.audience === 'public' ? 'Public' : 'Followers'}</span>
+                  <span>{note.audience === 'public' ? <Globe2 className="h-3 w-3" /> : note.audience === 'close_friends' ? <UsersRound className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}{note.audience === 'public' ? 'Public' : note.audience === 'close_friends' ? 'Close Friends' : 'Followers'}</span>
                   <span><ShieldCheck className="h-3 w-3" />{contentRatingLabel(note.contentRating)}</span>
                 </div>
               </article>
@@ -131,6 +132,7 @@ export default function NotesTray() {
                 <span>Who can see it?</span>
                 <select value={audience} onChange={(event) => setAudience(event.target.value as Note['audience'])} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                   <option value="followers">Followers</option>
+                  <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends ({closeFriends.length})</option>
                   <option value="public">Public</option>
                 </select>
               </label>
