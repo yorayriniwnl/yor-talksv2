@@ -57,7 +57,7 @@ export default function NotesTray() {
   };
 
   return (
-    <section className="orbit-now-card home-notes-card">
+    <section className="orbit-now-card home-notes-card operator-panel">
       <div className="home-section-heading">
         <div>
           <span>Small signals, close to the surface</span>

@@ -16,10 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fadeInUp, tapScale, springBouncy } from '@/lib/motion';
 import { MiniProfileCard } from '@/components/ui/MiniProfileCard';
-import { AudioWaveformPlayer } from '@/components/feed/AudioWaveformPlayer';
 import { CinematicMediaLightbox } from '@/components/feed/CinematicMediaLightbox';
 import { sounds } from '@/lib/sound';
-import { TiltCard } from '@/components/ui/TiltCard';
 import { RippleEffect } from '@/components/ui/RippleEffect';
 import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 import { RichCommentComposer, type RichCommentData } from '@/components/comments/RichCommentComposer';
@@ -34,9 +32,10 @@ const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
 
 interface CreatePostProps {
   onPublished?: () => void;
+  compact?: boolean;
 }
 
-export function CreatePost({ onPublished }: CreatePostProps = {}) {
+export function CreatePost({ onPublished, compact = false }: CreatePostProps = {}) {
   const currentUser = useAppStore((state) => state.currentUser);
   const closeFriends = useAppStore((state) => state.closeFriends);
   const addPost = useAppStore((state) => state.addPost);
@@ -52,6 +51,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('public');
+  const [isExpanded, setIsExpanded] = useState(!compact);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -177,6 +177,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
     setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
     setAudience('public');
+    if (compact) setIsExpanded(false);
     try { window.localStorage.removeItem(draftStorageKey); } catch { /* Ignore storage failures. */ }
     setDraftSaved(false);
     
@@ -198,7 +199,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
   const currentDisplayName = currentUser.displayName || currentUser.username || 'User';
 
   return (
-    <div className="yor-composer border-b border-border/40 pb-4 pt-5 px-5 sm:px-6">
+    <div className="yor-composer border-b border-border/40 pb-4 pt-5 px-5 sm:px-6" data-compact={compact ? 'true' : undefined} data-expanded={isExpanded ? 'true' : 'false'}>
       <div className="flex gap-4">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-primary/20">
           <AvatarImage src={currentUser.avatarUrl} />
@@ -212,6 +213,7 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
             placeholder={pollOpen ? 'Ask a question…' : "What's on your mind?"}
             value={content}
             onChange={handleInput}
+            onFocus={() => setIsExpanded(true)}
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
                 event.preventDefault();
@@ -285,13 +287,13 @@ export function CreatePost({ onPublished }: CreatePostProps = {}) {
             </label>
           </div>
 
-          <div className="mt-2 flex items-center justify-between pt-1">
+          <div className="yor-composer__footer mt-2 flex items-center justify-between pt-1">
             <div className="flex items-center gap-1 text-primary">
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files); event.currentTarget.value = ''; }} />
-              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary" onClick={() => fileInputRef.current?.click()} aria-label="Add an image">
+              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setIsExpanded(true); fileInputRef.current?.click(); }} aria-label="Add an image">
                 <ImagePlus className="h-[18px] w-[18px]" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className={cn('h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary', pollOpen ? 'text-primary' : 'text-muted-foreground')} onClick={() => setPollOpen((open) => !open)} title={pollOpen ? 'Remove poll' : 'Add a poll'} aria-label={pollOpen ? 'Remove poll' : 'Add a poll'}>
+              <Button type="button" variant="ghost" size="icon" className={cn('h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary', pollOpen ? 'text-primary' : 'text-muted-foreground')} onClick={() => { setIsExpanded(true); setPollOpen((open) => !open); }} title={pollOpen ? 'Remove poll' : 'Add a poll'} aria-label={pollOpen ? 'Remove poll' : 'Add a poll'}>
                 <BarChart2 className="h-[18px] w-[18px]" />
               </Button>
               <Popover>
@@ -510,7 +512,7 @@ export function PostCard({ post }: { post: PostType }) {
   const authorDisplayName = author.displayName || author.username || 'User';
 
   return (
-    <TiltCard className="w-full block">
+    <div className="yor-post-shell w-full">
       <style>{`
         @keyframes heart-pop {
           0% { transform: scale(0); opacity: 0; }
@@ -537,7 +539,7 @@ export function PostCard({ post }: { post: PostType }) {
         initial="initial"
         animate="animate"
         tabIndex={0}
-        className="yor-post group cursor-pointer border-b border-border/20 px-5 py-5 transition-all hover:bg-muted/20 card-shine sm:px-6"
+        className="yor-post group cursor-pointer px-5 py-5 transition-colors sm:px-6"
         onClick={handleOpen}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
@@ -555,6 +557,7 @@ export function PostCard({ post }: { post: PostType }) {
                 <AvatarImage src={author.avatarUrl} />
                 <AvatarFallback className="font-display font-bold">{authorDisplayName.charAt(0)}</AvatarFallback>
               </Avatar>
+              <span className="yor-post__status-dot" aria-label="Creator online" />
             </div>
           </Link>
         </MiniProfileCard>
@@ -655,7 +658,7 @@ export function PostCard({ post }: { post: PostType }) {
                 <TooltipTrigger asChild>
                   <motion.button 
                     {...tapScale}
-                    aria-label={post.likedByMe ? 'Remove wave' : 'Wave'}
+                    aria-label={post.likedByMe ? 'Unlike post' : 'Like post'}
                     className="group relative flex items-center gap-1.5 focus-visible:outline-none"
                     onClick={(event) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); heartBurst(event); }}
                   >
@@ -678,7 +681,7 @@ export function PostCard({ post }: { post: PostType }) {
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.likes > 0 && post.likes}</span>
                   </motion.button>
                 </TooltipTrigger>
-                <TooltipContent>Wave</TooltipContent>
+                <TooltipContent>{post.likedByMe ? 'Unlike' : 'Like'}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -721,7 +724,7 @@ export function PostCard({ post }: { post: PostType }) {
                 </Tooltip>
                 <DropdownMenuContent align="start" className="rounded-xl">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sharePost(post.id); toast({ title: 'Echoed to feed' }); }}>
-                    Echo to feed
+                    Repost to feed
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={copyPostLink}>
                     Copy link
@@ -762,16 +765,16 @@ export function PostCard({ post }: { post: PostType }) {
                 <TooltipTrigger asChild>
                   <motion.button 
                     {...tapScale}
-                    aria-label={post.savedByMe ? 'Remove spark' : 'Spark'}
+                    aria-label={post.savedByMe ? 'Remove from saved' : 'Save post'}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); toggleSavePost(post.id); toast({ title: post.savedByMe ? 'Removed from sparks' : 'Sparked for later' }); }}
+                    onClick={(event) => { event.stopPropagation(); toggleSavePost(post.id); toast({ title: post.savedByMe ? 'Removed from saved' : 'Saved for later' }); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-amber-500/10 transition-colors">
                       <Bookmark className={cn('h-[18px] w-[18px] transition-colors', post.savedByMe ? 'fill-accent text-accent' : 'group-hover:text-foreground')} />
                     </div>
                   </motion.button>
                 </TooltipTrigger>
-                <TooltipContent>Spark</TooltipContent>
+                <TooltipContent>{post.savedByMe ? 'Unsave' : 'Save'}</TooltipContent>
               </Tooltip>
             </div>
           </TooltipProvider>
@@ -800,7 +803,7 @@ export function PostCard({ post }: { post: PostType }) {
       )}
     </motion.article>
     <HeartBurstLayer particles={particles} />
-    </TiltCard>
+    </div>
   );
 }
 

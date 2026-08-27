@@ -57,14 +57,14 @@ export default function StoriesRow() {
             type="button"
             onClick={() => setBuilderOpen(true)}
             aria-label="Add a story"
-            className="flex flex-col items-center gap-2 shrink-0 w-[72px] group hover-lift"
+            className="story-item story-item--create flex flex-col items-center gap-2 shrink-0 w-[72px] group"
           >
-            <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-primary/50 flex items-center justify-center surface-1 group-hover:border-primary transition-all group-hover:scale-105 shadow-sm">
+            <div className="story-ring story-ring--create relative w-16 h-16 rounded-full flex items-center justify-center">
               <Avatar className="w-14 h-14 opacity-70 group-hover:opacity-100 transition-opacity">
                 <AvatarImage src={currentUser.avatarUrl} />
                 <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+              <div className="story-add absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md">
                 <Plus className="w-3.5 h-3.5" />
               </div>
             </div>
@@ -87,12 +87,12 @@ export default function StoriesRow() {
               type="button"
               onClick={() => setActiveAuthorId(authorId)}
               aria-label={`Open ${authorId === currentUser?.id ? 'your story' : `${authorDisplayName}'s story`}`}
-              className="flex flex-col items-center gap-2 shrink-0 w-[72px] snap-start transition-transform duration-200 hover:scale-105"
+              className="story-item flex flex-col items-center gap-2 shrink-0 w-[72px] snap-start"
             >
               <div
                 className={cn(
-                  "p-[3px] rounded-full transition-transform hover:scale-105",
-                  hasUnseen ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 shadow-md shadow-pink-500/20" : "bg-border opacity-60"
+                  'story-ring rounded-full',
+                  hasUnseen ? 'story-ring--unseen' : 'story-ring--seen',
                 )}
               >
                 <Avatar className="w-16 h-16 border-2 border-background">

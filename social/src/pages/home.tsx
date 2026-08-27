@@ -7,7 +7,6 @@ import {
   Compass,
   Globe2,
   Loader2,
-  Orbit as OrbitIcon,
   Radio,
   RefreshCw,
   Sparkles,
@@ -30,6 +29,7 @@ import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
 import { FeedSkeleton } from '@/components/ui/Skeletons';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
+import { Metric, SignalLabel, StatusBadge } from '@/components/system';
 
 type OrbitMode = 'close' | 'discover' | 'favorites' | 'build';
 type Topic = 'all' | 'ideas' | 'tech' | 'creative' | 'culture' | 'play';
@@ -183,10 +183,10 @@ export default function Home() {
   };
 
   return (
-    <div className="orbit-page">
+    <div className="orbit-page operator-home">
       <div className="orbit-wrap">
-        <section className="home-feed-heading">
-          <div className="home-identity">
+        <header className="home-feed-heading operator-home__header">
+          <div className="home-identity operator-home__identity">
             {currentUser && (
               <Avatar className="home-identity__avatar">
                 <AvatarImage src={currentUser.avatarUrl} alt="" />
@@ -194,20 +194,21 @@ export default function Home() {
               </Avatar>
             )}
             <div>
-              <span className="yor-eyebrow"><OrbitIcon className="h-3.5 w-3.5" /> {worldPreferences.worldLabel} world</span>
-              <h1>{greeting()}, {firstName}.</h1>
+              <SignalLabel tone="online">{worldPreferences.worldLabel} // synced</SignalLabel>
+              <h1>Your signal.</h1>
+              <p>{greeting()}, {firstName}. See what your people are making and saying.</p>
             </div>
           </div>
           <div className="home-heading-actions">
             {activeLiveStreams.length > 0 && (
-              <Link href="/live" className="home-live-link"><span className="home-live-link__dot" />{activeLiveStreams.length} live</Link>
+              <Link href="/live" className="home-live-link"><StatusBadge status="busy">{activeLiveStreams.length} live</StatusBadge></Link>
             )}
             <Link href="/dream" className="home-dream-link">
               <WandSparkles className="h-4 w-4" />
-              <span>Dream</span>
+              <span>Start a project</span>
             </Link>
           </div>
-        </section>
+        </header>
 
         <nav className="home-feed-tabs" aria-label="Choose a feed" role="tablist">
           <button type="button" role="tab" onClick={() => changeMode('close')} aria-selected={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
@@ -218,11 +219,6 @@ export default function Home() {
             <Compass className="h-4 w-4" />
             <span>For you</span>
           </button>
-          <button type="button" role="tab" onClick={() => changeMode('favorites')} aria-selected={mode === 'favorites'} className={cn(mode === 'favorites' && 'is-active')}>
-            <Star className="h-4 w-4" />
-            <span>Favorites</span>
-            {favoriteCreatorIds.length > 0 && <small>{favoriteCreatorIds.length}</small>}
-          </button>
           <button type="button" role="tab" onClick={() => changeMode('build')} aria-selected={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
             <Zap className="h-4 w-4" />
             <span>Build</span>
@@ -231,21 +227,22 @@ export default function Home() {
 
         <div className="orbit-layout">
           <main className="orbit-stream">
-            <NotesTray />
-            <section className="orbit-now-card home-stories-card">
+            <section className="orbit-now-card home-stories-card operator-panel">
               <div className="home-section-heading">
-                <div><span>From the people you follow</span><h2>Stories</h2></div>
+                <div><span>Live for 24 hours</span><h2>Stories from your people</h2></div>
                 <Link href="/pulse">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
               <StoriesRow />
             </section>
 
-            <section className="orbit-composer-card home-composer-card">
+            <NotesTray />
+
+            <section className="orbit-composer-card home-composer-card operator-panel">
               <div className="home-section-heading">
-                <div><span>Start the conversation</span><h2>Share something</h2></div>
-                <span className="home-composer-world">{worldPreferences.worldLabel} world</span>
+                <div><span>New signal</span><h2>Share something useful</h2></div>
+                <span className="home-composer-world">Public · {worldPreferences.worldLabel}</span>
               </div>
-              <CreatePost />
+              <CreatePost compact />
             </section>
 
             <div className="home-feed-toolbar">
@@ -257,6 +254,10 @@ export default function Home() {
                 <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="home-feed-filters">
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>{filtersOpen ? 'Hide filters' : 'Tune'}</span>
+                </button>
+                <button type="button" onClick={() => changeMode('favorites')} aria-pressed={mode === 'favorites'} className={cn(mode === 'favorites' && 'is-active')}>
+                  <Star className="h-3.5 w-3.5" />
+                  <span>Favorites{favoriteCreatorIds.length > 0 ? ` ${favoriteCreatorIds.length}` : ''}</span>
                 </button>
                 <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
                   <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
@@ -313,7 +314,7 @@ export default function Home() {
                 ))}
               </motion.div>
             ) : (
-              <section className="orbit-empty">
+              <section className="orbit-empty operator-panel">
                 {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
                 <h2>{mode === 'build' ? 'No builder signals in this orbit yet.' : mode === 'favorites' ? 'Your Favorites orbit is quiet.' : 'This orbit is quiet.'}</h2>
                 <p>{mode === 'build' ? 'Activate a dream and invite the people who can change its outcome.' : mode === 'favorites' ? 'Favorite creators from their profiles to keep their newest work close.' : 'Follow someone new or discover beyond the people you already know.'}</p>
@@ -324,14 +325,14 @@ export default function Home() {
             )}
 
             {visiblePosts.length > 0 && (
-              <section className="orbit-complete">
+              <section className="orbit-complete operator-panel">
                 <span><CircleCheck className="h-5 w-5" /></span>
                 <div>
-                  <strong>{hasMore ? 'This chapter is complete.' : 'You are caught up.'}</strong>
-                  <p>Yor pauses on purpose. Your attention belongs to you.</p>
+                  <strong>{hasMore ? 'You reached the end of this set.' : 'You are all caught up.'}</strong>
+                  <p>{hasMore ? 'Load another set when you are ready.' : 'Come back later for new posts from your network.'}</p>
                 </div>
                 {hasMore ? (
-                  <Button variant="outline" onClick={() => void openNextChapter()} disabled={isLoadingMore}>{isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isLoadingMore ? 'Loading…' : 'Open next chapter'}</Button>
+                  <Button variant="outline" onClick={() => void openNextChapter()} disabled={isLoadingMore}>{isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{isLoadingMore ? 'Loading…' : 'Load more posts'}</Button>
                 ) : (
                   <Link href="/pulse">See what is moving <ArrowRight className="h-3.5 w-3.5" /></Link>
                 )}
@@ -341,20 +342,30 @@ export default function Home() {
 
           <aside className="orbit-rail">
             {currentUser && (
-              <section className="orbit-profile-card">
-                <Link href={`/profile/${currentUser.id}`}>
-                  <Avatar className="h-11 w-11 border border-border">
-                    <AvatarImage src={currentUser.avatarUrl} alt="" />
-                    <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div><strong>{displayName}</strong><span>@{currentUser.username}</span></div>
-                </Link>
-                <small>{followingIds.length} chosen connections</small>
+              <section className="orbit-profile-card operator-panel operator-home-profile">
+                <div className="operator-home-profile__identity">
+                  <Link href={`/profile/${currentUser.id}`}>
+                    <span className="operator-home-profile__avatar">
+                      <Avatar className="h-12 w-12 border border-border">
+                        <AvatarImage src={currentUser.avatarUrl} alt="" />
+                        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <i aria-label="Online" />
+                    </span>
+                    <div><strong>{displayName}</strong><span>@{currentUser.username}</span></div>
+                  </Link>
+                  <Link href={`/profile/${currentUser.id}`} aria-label="Open your profile"><ArrowRight className="h-4 w-4" /></Link>
+                </div>
+                <div className="operator-home-profile__metrics">
+                  <Metric value={currentUser.followers.toLocaleString()} label="Followers" />
+                  <Metric value={followingIds.length.toLocaleString()} label="Following" />
+                  <Metric value={posts.filter((post) => post.authorId === currentUser.id).length.toLocaleString()} label="Posts" />
+                </div>
               </section>
             )}
 
             {activeLiveStreams.length > 0 && (
-              <section className="orbit-rail-card orbit-live-card">
+              <section className="orbit-rail-card orbit-live-card operator-panel">
                 <div className="orbit-section-heading">
                   <div><span>Happening now</span><h2>Live in your orbit</h2></div>
                   <Radio className="h-4 w-4" />
@@ -372,28 +383,31 @@ export default function Home() {
               </section>
             )}
 
-            <section className="orbit-rail-card">
-              <div className="orbit-section-heading">
-                <div><span>Network pulse</span><h2>Signals getting stronger</h2></div>
-                <TrendingUp className="h-4 w-4" />
-              </div>
-              <div className="orbit-signal-list">
-                {strongestSignals.map((post, index) => {
-                  const author = users[post.authorId];
-                  return (
-                    <Link href={`/post/${post.id}`} key={post.id}>
-                      <span>0{index + 1}</span>
-                      <div><strong>{author?.displayName || author?.username || 'Someone'}</strong><p>{post.content}</p></div>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  );
-                })}
-                {strongestSignals.length === 0 && <p className="orbit-rail-empty">Signals appear as your network starts talking.</p>}
-              </div>
-              <Link href="/pulse" className="orbit-rail-link">Enter live Pulse <ArrowRight className="h-3.5 w-3.5" /></Link>
-            </section>
+            {activeLiveStreams.length === 0 && (
+              <section className="orbit-rail-card operator-panel">
+                <div className="orbit-section-heading">
+                  <div><span>Network pulse</span><h2>Signals getting stronger</h2></div>
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div className="orbit-signal-list">
+                  {strongestSignals.map((post, index) => {
+                    const author = users[post.authorId];
+                    return (
+                      <Link href={`/post/${post.id}`} key={post.id}>
+                        <span>0{index + 1}</span>
+                        <div><strong>{author?.displayName || author?.username || 'Someone'}</strong><p>{post.content}</p></div>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    );
+                  })}
+                  {strongestSignals.length === 0 && <p className="orbit-rail-empty">Signals appear as your network starts talking.</p>}
+                </div>
+                <Link href="/pulse" className="orbit-rail-link">Open Pulse <ArrowRight className="h-3.5 w-3.5" /></Link>
+              </section>
+            )}
 
-            <section className="orbit-rail-card">
+            {suggestedUsers.length === 0 && (
+            <section className="orbit-rail-card operator-panel">
               <div className="orbit-section-heading">
                 <div><span>Shared gravity</span><h2>Worlds near you</h2></div>
                 <Globe2 className="h-4 w-4" />
@@ -409,9 +423,10 @@ export default function Home() {
               </div>
               <Link href="/worlds" className="orbit-rail-link">Explore all worlds <ArrowRight className="h-3.5 w-3.5" /></Link>
             </section>
+            )}
 
             {suggestedUsers.length > 0 && (
-              <section className="orbit-rail-card">
+              <section className="orbit-rail-card operator-panel">
                 <div className="orbit-section-heading">
                   <div><span>New gravity</span><h2>People at your edge</h2></div>
                   <Sparkles className="h-4 w-4" />
