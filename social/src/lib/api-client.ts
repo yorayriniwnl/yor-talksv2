@@ -512,6 +512,7 @@ export const api = {
   sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),
   sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}) }) }),
   createGroupChat: (payload: { memberIds: string[]; title: string }) => request<BackendConversation>('/conversations/group', { method: 'POST', body: JSON.stringify(payload) }),
+  setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
   getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
   markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
@@ -796,6 +797,7 @@ export interface BackendConversation {
   participantIds: string[];
   isGroup: boolean;
   title: string | null;
+  vanishMode: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -810,6 +812,7 @@ export interface BackendMessage {
   seenAt: string | null;
   editedAt: string | null;
   deletedAt: string | null;
+  expiresAt: string | null;
   replyToId?: string | null;
   reactions?: Record<string, string[]> | null;
   pinned?: boolean | null;

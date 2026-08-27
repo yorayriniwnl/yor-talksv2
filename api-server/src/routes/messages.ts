@@ -16,6 +16,7 @@ const messageController = new MessageController(messageService);
 router.post("/messages", authenticate, validateBody(messageSchema), messageController.sendMessage);
 router.post("/conversations/group", authenticate, validateBody(createGroupChatSchema), messageController.createGroupChat);
 router.get("/conversations", authenticate, messageController.listConversations);
+router.put("/conversations/:conversationId/vanish", authenticate, validateParams(conversationIdParamSchema), validateBody(z.object({ enabled: z.boolean() })), messageController.setVanishMode);
 router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), messageController.listConversation);
 router.post("/messages/:messageId/seen", authenticate, validateParams(messageIdParamSchema), messageController.markSeen);
 router.put("/messages/:messageId", authenticate, validateParams(messageIdParamSchema), validateBody(z.object({ content: z.string().trim().min(1).max(4000) })), messageController.editMessage);

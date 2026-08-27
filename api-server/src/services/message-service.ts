@@ -54,6 +54,12 @@ export class MessageService {
     return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat");
   }
 
+  async setVanishMode(conversationId: string, userId: string, enabled: boolean): Promise<ConversationRecord | undefined> {
+    const members = await this.conversationRepository.getMembers(conversationId);
+    if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
+    return this.conversationRepository.setVanishMode(conversationId, enabled);
+  }
+
   // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
     if (this.userRepository) {
@@ -105,19 +111,21 @@ export class MessageService {
         throw new InvalidReplyTargetError("Reply target must belong to this conversation");
       }
     }
+    const createdAt = new Date();
     const message: MessageRecord = {
       id: randomUUID(),
       conversationId,
       senderId,
       recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
       content: content.trim(),
-      createdAt: new Date().toISOString(),
+      createdAt: createdAt.toISOString(),
       seenAt: null,
       replyToId,
       forwardedFromId: options?.forwardedFromId ?? null,
       reactions: options?.reactions ?? {},
       editedAt: null,
       deletedAt: null,
+      expiresAt: conversation.vanishMode ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
       pinned: false,
       ...options,
     };
@@ -169,6 +177,9 @@ export class MessageService {
     });
 
     const conversation = await this.conversationRepository.findById(message.conversationId);
+    if (conversation?.vanishMode) {
+      return this.messageRepository.update(messageId, { seenAt: readAt, deletedAt: readAt });
+    }
     // `seen_at` is a legacy single-recipient field. In a group it would tell
     // every member that everyone has read the message, so keep group read
     // receipts in message_reads and only update the legacy field for DMs.

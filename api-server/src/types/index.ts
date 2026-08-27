@@ -151,6 +151,7 @@ export interface MessageRecord {
   reactions?: Record<string, string[]>;
   editedAt?: string | null;
   deletedAt?: string | null;
+  expiresAt?: string | null;
   pinned?: boolean;
 }
 
@@ -162,6 +163,7 @@ export interface ConversationRecord {
   participantIds?: string[];
   isGroup?: boolean;
   title?: string | null;
+  vanishMode?: boolean;
   createdAt?: string;
 }
 

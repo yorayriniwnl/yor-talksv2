@@ -167,8 +167,13 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       try {
         const updated = await messageService.markSeen(messageId, userId);
         if (updated) {
-          // Notify others in the conversation that it was seen
-          socket.to(`conversation:${updated.conversationId}`).emit("message:seen:update", { messageId, userId, seenAt: updated.seenAt });
+          // Vanish-mode reads remove the message for every connected device;
+          // regular reads only update the receipt.
+          if (updated.deletedAt) {
+            socket.to(`conversation:${updated.conversationId}`).emit("message:update", updated);
+          } else {
+            socket.to(`conversation:${updated.conversationId}`).emit("message:seen:update", { messageId, userId, seenAt: updated.seenAt });
+          }
         }
       } catch (err) {
         logger.warn({ err, messageId, userId }, "Failed to mark message seen");

@@ -84,6 +84,19 @@ export class MessageController {
     return res.status(200).json(createResponse("Conversations loaded", conversations));
   };
 
+  setVanishMode = async (req: Request, res: Response) => {
+    const conversationId = typeof req.params.conversationId === "string" ? req.params.conversationId : "";
+    try {
+      const conversation = await this.messageService.setVanishMode(conversationId, req.user?.id ?? "", req.body.enabled);
+      if (!conversation) return res.status(404).json(createResponse("Conversation not found", null, {}, ["Conversation not found"]));
+      getIo()?.to(`conversation:${conversationId}`).emit("conversation:vanish:update", conversation);
+      return res.status(200).json(createResponse("Vanish mode updated", conversation));
+    } catch (error) {
+      if (error instanceof UnauthorizedError) return res.status(403).json(createResponse("Cannot update vanish mode", null, {}, [error.message]));
+      throw error;
+    }
+  };
+
   markSeen = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     const message = await this.messageService.markSeen(messageId, req.user?.id ?? "");
@@ -93,11 +106,15 @@ export class MessageController {
     
     const io = getIo();
     if (io) {
-      io.to(`conversation:${message.conversationId}`).emit("message:seen:update", { 
-        messageId, 
-        userId: req.user?.id, 
-        seenAt: message.seenAt 
-      });
+      if (message.deletedAt) {
+        io.to(`conversation:${message.conversationId}`).emit("message:update", message);
+      } else {
+        io.to(`conversation:${message.conversationId}`).emit("message:seen:update", {
+          messageId,
+          userId: req.user?.id,
+          seenAt: message.seenAt,
+        });
+      }
     }
 
     return res.status(200).json(createResponse("Message marked as seen", message));

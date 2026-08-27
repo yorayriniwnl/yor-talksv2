@@ -11,13 +11,18 @@ The launch path supports a global deployment or a closed beta:
 - Registration and login accept any verified email when
   `ALLOWED_EMAIL_DOMAINS` is empty. Set that variable to a comma-separated
   domain allow-list for a closed beta.
-- Core profiles, posts, feed interactions, communities, messages, events,
-  stories, products, projects and reports use the backend API.
+- Core profiles, posts, personalized feeds, ephemeral Notes, feed interactions,
+  communities, one-to-one and group messages, Stories, events, products,
+  projects and reports use the backend API.
 - Postgres and Redis are included in Docker Compose.
 - Resend email delivery supports password reset, verification, and email-code
   login when configured.
 - GitHub-style number matching protects accounts with an authenticated Yor
   device approval flow, with TOTP as an explicit fallback.
+- Notes expire after 24 hours with follower/public audience controls, the
+  three-layer content filter, and server-side moderation. Group conversations
+  support member selection, read receipts, reactions, pins, and persisted
+  read-triggered Vanish Mode with a 24-hour safety expiry.
 - Browser Web Push delivers notification events when VAPID keys are configured.
 - Cloudinary handles avatar, image, and stored video uploads when configured.
 - Razorpay Checkout supports UPI/card tip orders with server-side capture

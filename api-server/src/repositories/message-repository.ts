@@ -1,4 +1,4 @@
-import { eq, or, and, desc, inArray, isNull } from "drizzle-orm";
+import { eq, or, and, desc, inArray, isNull, gt } from "drizzle-orm";
 import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
@@ -14,7 +14,11 @@ export class MessageRepository {
     const messages = await db
       .select()
       .from(messagesTable)
-      .where(and(eq(messagesTable.conversationId, conversationId), isNull(messagesTable.deletedAt)))
+      .where(and(
+        eq(messagesTable.conversationId, conversationId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      ))
       .orderBy(desc(messagesTable.createdAt))
       .limit(200);
     return messages.reverse() as MessageRecord[];
@@ -24,7 +28,11 @@ export class MessageRepository {
     const [message] = await db
       .select()
       .from(messagesTable)
-      .where(and(eq(messagesTable.conversationId, conversationId), isNull(messagesTable.deletedAt)))
+      .where(and(
+        eq(messagesTable.conversationId, conversationId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      ))
       .orderBy(desc(messagesTable.createdAt))
       .limit(1);
     return message as MessageRecord | undefined;
@@ -84,6 +92,14 @@ export class ConversationRepository {
   async findById(conversationId: string): Promise<ConversationRecord | undefined> {
     const [conversation] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
     return conversation as ConversationRecord | undefined;
+  }
+
+  async setVanishMode(conversationId: string, enabled: boolean): Promise<ConversationRecord | undefined> {
+    const [updated] = await db.update(conversationsTable)
+      .set({ vanishMode: enabled })
+      .where(eq(conversationsTable.id, conversationId))
+      .returning();
+    return updated as ConversationRecord | undefined;
   }
 
   async getMembers(conversationId: string): Promise<string[]> {

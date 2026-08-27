@@ -134,6 +134,7 @@ export const conversationsTable = pgTable("conversations", {
   participantIds: jsonb("participant_ids").default([]),
   isGroup: boolean("is_group").default(false),
   title: text("title"),
+  vanishMode: boolean("vanish_mode").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
 }, (table) => ({
   partAIdx: index("conv_part_a_idx").on(table.participantA),
@@ -153,6 +154,7 @@ export const messagesTable = pgTable("messages", {
   reactions: jsonb("reactions").default({}),
   editedAt: timestamp("edited_at", { mode: "string" }),
   deletedAt: timestamp("deleted_at", { mode: "string" }),
+  expiresAt: timestamp("expires_at", { mode: "string" }),
   pinned: boolean("pinned").default(false),
 }, (table) => ({
   convIdx: index("msg_conv_idx").on(table.conversationId),

@@ -151,6 +151,7 @@ export type Message = {
   replyToId?: string | null;
   editedAt?: string | null;
   deletedAt?: string | null;
+  expiresAt?: string | null;
   reactions?: Record<string, string[]>;
   pinned?: boolean;
 };
@@ -162,6 +163,7 @@ export type Conversation = {
   updatedAt: string;
   isGroup?: boolean;
   title?: string | null;
+  vanishMode?: boolean;
 };
 
 export type Community = {
@@ -456,6 +458,7 @@ function mapMessage(m: BackendMessage): Message {
     replyToId: m.replyToId ?? null,
     editedAt: m.editedAt ?? null,
     deletedAt: m.deletedAt ?? null,
+    expiresAt: m.expiresAt ?? null,
     reactions: m.reactions ?? {},
     pinned: Boolean(m.pinned),
   };
@@ -469,6 +472,7 @@ function mapConversation(c: BackendConversation, lastMessage: BackendMessage | n
     updatedAt: c.updatedAt || new Date().toISOString(),
     isGroup: Boolean(c.isGroup),
     title: c.title ?? null,
+    vanishMode: Boolean(c.vanishMode),
   };
 }
 
@@ -690,9 +694,11 @@ interface AppState {
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
+  markDirectMessageSeen: (messageId: string) => Promise<void>;
   sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
   sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
   createGroupChat: (memberIds: string[], title: string) => Promise<string>;
+  setConversationVanishMode: (conversationId: string, enabled: boolean) => Promise<void>;
   editDirectMessage: (messageId: string, content: string) => Promise<void>;
   deleteDirectMessage: (messageId: string) => Promise<void>;
   reactToDirectMessage: (messageId: string, reaction: string) => Promise<void>;
@@ -784,6 +790,7 @@ function setupRealtime(
   socket.off('message:update');
   socket.off('message:seen:update');
   socket.off('conversation:created');
+  socket.off('conversation:vanish:update');
   socket.off('notification:new');
   socket.on('message:receive', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
@@ -816,6 +823,13 @@ function setupRealtime(
   });
   socket.on('conversation:created', () => {
     void get().loadConversations();
+  });
+  socket.on('conversation:vanish:update', (raw: BackendConversation) => {
+    set((state) => ({
+      conversations: state.conversations.map((conversation) => conversation.id === raw.id
+        ? { ...conversation, vanishMode: Boolean(raw.vanishMode) }
+        : conversation),
+    }));
   });
   socket.on('message:update', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
@@ -1319,6 +1333,25 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      markDirectMessageSeen: async (messageId) => {
+        try {
+          const updated = mapMessage(await api.markMessageSeen(messageId));
+          set((state) => {
+            const messages = state.messagesByConversation[updated.conversationId] ?? [];
+            return {
+              messagesByConversation: {
+                ...state.messagesByConversation,
+                [updated.conversationId]: updated.deletedAt
+                  ? messages.filter((message) => message.id !== updated.id)
+                  : messages.map((message) => message.id === updated.id ? updated : message),
+              },
+            };
+          });
+        } catch {
+          // A read receipt is best effort and should never interrupt browsing.
+        }
+      },
+
       sendDirectMessage: async (recipientId, content, replyToId) => {
         try {
           const created = await api.sendMessage(recipientId, content, replyToId);
@@ -1361,6 +1394,19 @@ export const useAppStore = create<AppState>()(
         const conversation = mapConversation(created, null);
         set((state) => ({ conversations: [conversation, ...state.conversations.filter((item) => item.id !== conversation.id)] }));
         return conversation.id;
+      },
+
+      setConversationVanishMode: async (conversationId, enabled) => {
+        const previous = get().conversations;
+        set((state) => ({ conversations: state.conversations.map((conversation) => conversation.id === conversationId ? { ...conversation, vanishMode: enabled } : conversation) }));
+        try {
+          const updated = await api.setConversationVanishMode(conversationId, enabled);
+          set((state) => ({ conversations: state.conversations.map((conversation) => conversation.id === conversationId ? { ...conversation, vanishMode: Boolean(updated.vanishMode) } : conversation) }));
+        } catch (error) {
+          set({ conversations: previous });
+          toast.error(error instanceof Error ? error.message : 'Could not update vanish mode');
+          throw error;
+        }
       },
 
       editDirectMessage: async (messageId, content) => {

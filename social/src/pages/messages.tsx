@@ -325,6 +325,7 @@ export default function Messages() {
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
+  const markDirectMessageSeen = useAppStore((s) => s.markDirectMessageSeen);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
   const sendMessageToConversation = useAppStore((s) => s.sendMessageToConversation);
@@ -344,8 +345,8 @@ export default function Messages() {
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
-  const [vanishMode, setVanishMode] = useState(false);
   const [tipModalOpen, setTipModalOpen] = useState(false);
+  const setConversationVanishMode = useAppStore((s) => s.setConversationVanishMode);
   const editDirectMessage = useAppStore((s) => s.editDirectMessage);
   const deleteDirectMessage = useAppStore((s) => s.deleteDirectMessage);
   const reactToDirectMessage = useAppStore((s) => s.reactToDirectMessage);
@@ -455,6 +456,15 @@ export default function Messages() {
     if (!id) return [];
     return messagesByConversation[id] || [];
   }, [id, messagesByConversation]);
+
+  const vanishMode = Boolean(activeConv?.conv.vanishMode);
+
+  useEffect(() => {
+    if (!id || !currentUser) return;
+    activeMessages
+      .filter((msg) => msg.senderId !== currentUser.id && !msg.read)
+      .forEach((msg) => { void markDirectMessageSeen(msg.id); });
+  }, [activeMessages, currentUser?.id, id, markDirectMessageSeen]);
 
   const isPeerTyping = Boolean(id && typingConversationIds[id]);
 
@@ -625,8 +635,11 @@ export default function Messages() {
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      setVanishMode(!vanishMode);
-                      toast.info(vanishMode ? 'Vanish Mode turned off' : '⚡ Vanish Mode active — messages disappear when read');
+                      if (!activeConv) return;
+                      const enabled = !Boolean(activeConv.conv.vanishMode);
+                      void setConversationVanishMode(activeConv.conv.id, enabled).then(() => {
+                        toast.info(enabled ? '⚡ Vanish Mode active — messages disappear when read' : 'Vanish Mode turned off');
+                      }).catch(() => undefined);
                     }}
                     className={cn(
                       "rounded-full w-9 h-9 transition-colors cursor-pointer",
