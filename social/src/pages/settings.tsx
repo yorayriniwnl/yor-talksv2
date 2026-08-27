@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import QRCode from 'qrcode';
+import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -463,6 +464,8 @@ export default function Settings() {
             </Select>
           </div>
         </section>
+
+        <CompanionPetSettings />
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">

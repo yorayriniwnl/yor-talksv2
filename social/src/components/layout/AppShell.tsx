@@ -18,6 +18,7 @@ import { AppTopbar } from '@/components/layout/AppTopbar';
 import { CreatePost } from '@/components/feed/Post';
 import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { IncomingCallManager } from '@/components/messages/IncomingCallManager';
+import { CompanionPet } from '@/components/ui/CompanionPet';
 
 interface AppShellProps {
   children: ReactNode;
@@ -340,6 +341,7 @@ export function AppShell({ children }: AppShellProps) {
       <PwaInstallPrompt />
       <DeviceApprovalInbox />
       <IncomingCallManager />
+      <CompanionPet />
     </div>
   );
 }
