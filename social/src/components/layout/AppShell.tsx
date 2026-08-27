@@ -2,7 +2,8 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
-  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff
+  UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff,
+  ChevronDown, Layers3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -41,6 +42,7 @@ export function AppShell({ children }: AppShellProps) {
     }
   });
   const [isComposing, setIsComposing] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
 
   useEffect(() => {
@@ -73,24 +75,41 @@ export function AppShell({ children }: AppShellProps) {
     { icon: Film, label: 'Reels', path: '/videos' },
     { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadMessages > 0 ? unreadMessages : null },
     { icon: Heart, label: 'Notifications', path: '/notifications', badge: unreadNotifications > 0 ? unreadNotifications : null },
-    { icon: Bookmark, label: 'Saved', path: '/saved' },
   ];
 
-  const secondaryNavItems = [
-    { icon: Globe2, label: 'Worlds', path: '/worlds' },
-    { icon: Activity, label: 'Pulse', path: '/pulse' },
-    { icon: WandSparkles, label: 'Dream', path: '/dream' },
-    { icon: Radio, label: 'Live', path: '/live' },
-    { icon: Megaphone, label: 'Channels', path: '/channels' },
-    { icon: Camera, label: 'Creator Studio', path: '/studio' },
-    { icon: Gauge, label: 'Control Room', path: '/control-room' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+  const secondaryNavGroups = [
+    {
+      label: 'Social',
+      items: [
+        { icon: Globe2, label: 'Worlds', path: '/worlds' },
+        { icon: Activity, label: 'Pulse', path: '/pulse' },
+        { icon: Radio, label: 'Live', path: '/live' },
+        { icon: Megaphone, label: 'Channels', path: '/channels' },
+        { icon: Bookmark, label: 'Saved', path: '/saved' },
+      ],
+    },
+    {
+      label: 'Create',
+      items: [
+        { icon: WandSparkles, label: 'Dream Engine', path: '/dream' },
+        { icon: Camera, label: 'Creator Studio', path: '/studio' },
+        { icon: Gauge, label: 'Control Room', path: '/control-room' },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [{ icon: Settings, label: 'Settings', path: '/settings' }],
+    },
   ];
+
+  const secondaryNavItems = secondaryNavGroups.flatMap((group) => group.items);
+  const secondaryRouteActive = secondaryNavItems.some((item) => location.startsWith(item.path));
+  const showSecondaryNavigation = moreOpen || secondaryRouteActive;
 
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'User';
 
   return (
-    <div className="app-shell relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
+    <div className="app-shell operator-ui relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <CommandPalette />
       {isOffline && (
@@ -105,7 +124,7 @@ export function AppShell({ children }: AppShellProps) {
       
       {/* ── DESKTOP NAVIGATION ─────────────────────────────────────────── */}
       <aside className={cn(
-        "app-shell__rail hidden h-screen shrink-0 flex-col border-r border-border/40 py-6 backdrop-blur-xl md:sticky md:top-0 md:flex relative",
+        "app-shell__rail hidden h-screen shrink-0 flex-col border-r border-border/40 py-6 backdrop-blur-xl lg:sticky lg:top-0 lg:flex relative",
         sidebarCollapsed ? "w-[72px] px-2" : "w-64 lg:w-72 px-4",
         "transition-all duration-300 ease-out"
       )} data-collapsed={sidebarCollapsed ? 'true' : 'false'}>
@@ -123,13 +142,13 @@ export function AppShell({ children }: AppShellProps) {
             aria-label="Go to Home"
             className="flex min-w-0 items-center gap-3 group cursor-pointer text-left"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent grid place-items-center text-white text-xl font-bold font-display shadow-md glow-neon-primary group-hover:scale-105 transition-transform shrink-0">
-              Y
+            <div className="operator-brand-mark group-hover:scale-[1.03]">
+              <span>Y</span>
             </div>
             {!sidebarCollapsed && (
               <div className="flex min-w-0 flex-col">
-                <span className="font-display font-extrabold text-xl tracking-tight leading-none text-foreground">Yor</span>
-                <span className="mt-0.5 whitespace-nowrap text-[0.62rem] font-mono text-muted-foreground tracking-wider uppercase font-semibold">Current world · {worldPreferences.worldLabel}</span>
+                <span className="font-serif text-[1.35rem] font-semibold tracking-[-0.045em] leading-none text-foreground">Yor</span>
+                <span className="mt-1 whitespace-nowrap text-[0.56rem] font-mono text-primary tracking-[0.12em] uppercase font-bold">Signal network // online</span>
               </div>
             )}
           </button>
@@ -159,13 +178,6 @@ export function AppShell({ children }: AppShellProps) {
           )}
         </div>
 
-        {!sidebarCollapsed && (
-          <div className="shell-utility-row">
-            <LanguageSelector />
-            <ThemeMorpher />
-          </div>
-        )}
-
         {/* Primary create action */}
         <button
           type="button"
@@ -178,13 +190,13 @@ export function AppShell({ children }: AppShellProps) {
           aria-label="Create a post"
         >
           <PlusSquare className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span>Create</span>}
+            {!sidebarCollapsed && <span>New post</span>}
         </button>
 
         {/* Navigation List */}
-        <nav className="flex-1 space-y-5">
+        <nav className="shell-navigation flex-1">
           <div className="space-y-1.5">
-            {!sidebarCollapsed && <p className="px-3.5 pb-1 text-[0.62rem] font-mono font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Living internet</p>}
+            {!sidebarCollapsed && <p className="shell-nav-label">Your signal</p>}
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.path === '/' ? location === '/' : location.startsWith(item.path);
@@ -219,51 +231,77 @@ export function AppShell({ children }: AppShellProps) {
             })}
           </div>
 
-          <div className="space-y-1.5">
-            {!sidebarCollapsed && <p className="px-3.5 pb-1 text-[0.62rem] font-mono font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">More</p>}
-            {secondaryNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.startsWith(item.path);
+          <div className="shell-more">
+            <button
+              type="button"
+              className={cn(
+                'shell-more__trigger app-shell-nav-item',
+                sidebarCollapsed && 'shell-more__trigger--collapsed',
+                secondaryRouteActive && 'is-active',
+              )}
+              onClick={() => setMoreOpen((open) => !open)}
+              aria-expanded={showSecondaryNavigation}
+              aria-controls="shell-more-navigation"
+              title={sidebarCollapsed ? 'More' : undefined}
+            >
+              <Layers3 className="h-5 w-5" />
+              {!sidebarCollapsed && <span>More</span>}
+              {!sidebarCollapsed && <ChevronDown className={cn('shell-more__chevron h-4 w-4', showSecondaryNavigation && 'is-open')} />}
+            </button>
 
-            return (
-              <button
-                type="button"
-                key={item.label}
-                onClick={() => setLocation(item.path)}
-                className={cn(
-                  "app-shell-nav-item flex items-center w-full rounded-2xl text-sm font-semibold transition-all duration-200 group text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                  sidebarCollapsed ? "justify-center px-2 py-3 gap-0" : "gap-4 px-3.5 py-3",
-                  isActive && "text-foreground bg-primary/10 font-bold border border-primary/20"
+            {showSecondaryNavigation && (
+              <div id="shell-more-navigation" className={cn('shell-more__content', sidebarCollapsed && 'shell-more__content--collapsed')}>
+                {secondaryNavGroups.map((group) => (
+                  <section key={group.label} aria-label={group.label}>
+                    {!sidebarCollapsed && <p>{group.label}</p>}
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.startsWith(item.path);
+                      return (
+                        <button
+                          type="button"
+                          key={item.label}
+                          onClick={() => setLocation(item.path)}
+                          className={cn('app-shell-nav-item group', sidebarCollapsed && 'justify-center', isActive && 'is-active')}
+                          data-active={isActive ? 'true' : 'false'}
+                          aria-current={isActive ? 'page' : undefined}
+                          aria-label={sidebarCollapsed ? item.label : undefined}
+                          title={sidebarCollapsed ? item.label : undefined}
+                        >
+                          <Icon className="h-[18px] w-[18px]" />
+                          {!sidebarCollapsed && <span>{item.label}</span>}
+                        </button>
+                      );
+                    })}
+                  </section>
+                ))}
+                {!sidebarCollapsed && (
+                  <div className="shell-utility-row">
+                    <LanguageSelector />
+                    <ThemeMorpher />
+                  </div>
                 )}
-                data-active={isActive ? 'true' : 'false'}
-                data-nav-tier="secondary"
-                aria-current={isActive ? 'page' : undefined}
-                aria-label={sidebarCollapsed ? item.label : undefined}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <div className="relative">
-                  <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-105", isActive && "text-primary")} />
-                </div>
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </button>
-            );
-            })}
+              </div>
+            )}
           </div>
         </nav>
 
         {/* User Mini Profile */}
         {currentUser && (
           <div className="space-y-2">
-            <div className={cn("flex items-center rounded-2xl glass-heavy hover-lift border border-border/40 p-2.5", sidebarCollapsed ? "justify-center p-2" : "gap-2.5")}>
+            <div className={cn("shell-profile-card flex items-center rounded-2xl border border-border/40 p-2.5", sidebarCollapsed ? "justify-center p-2" : "gap-2.5")}>
               <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
+                <span className="shell-profile-avatar">
                 <Avatar className="w-9 h-9 border border-border/50 shrink-0 group-hover:ring-2 ring-primary/40 transition-all">
                   <AvatarImage src={currentUser.avatarUrl} />
                   <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
+                  <i aria-label="Online" />
+                </span>
                 {!sidebarCollapsed && (
                   <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{currentDisplayName}</h4>
-                    <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
+                    <p className="text-[0.62rem] text-muted-foreground font-mono truncate">@{currentUser.username} · online</p>
                   </div>
                 )}
               </Link>
@@ -281,7 +319,7 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
-      <nav aria-label="Primary navigation" className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 md:hidden">
+      <nav aria-label="Primary navigation" className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 lg:hidden">
         <button
           type="button"
           aria-label="Home"

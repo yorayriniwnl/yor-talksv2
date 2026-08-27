@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 export type ThemePreset = 'default' | 'midnight' | 'lilac' | 'amber';
 
 const THEME_PRESETS = [
-  { id: 'default', name: 'Signature', swatch: 'bg-violet-500' },
+  { id: 'default', name: 'Signal', swatch: 'bg-rose-500' },
   { id: 'midnight', name: 'Midnight', swatch: 'bg-sky-500' },
   { id: 'lilac', name: 'Lilac', swatch: 'bg-fuchsia-500' },
   { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' },

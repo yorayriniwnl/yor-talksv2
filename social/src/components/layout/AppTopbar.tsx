@@ -61,7 +61,7 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
 ];
 
 function getPageLabel(location: string) {
-  if (location === '/') return { title: 'Home', kicker: 'Your feed, your people' };
+  if (location === '/') return { title: 'Home', kicker: 'Signal feed // live' };
   return PAGE_LABELS.find((item) => location.startsWith(item.match)) ?? { title: 'Yor', kicker: 'The living internet' };
 }
 
@@ -87,7 +87,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
   }, [page.title]);
 
   return (
-    <header className="premium-topbar sticky top-0 z-30" data-home={location === '/' ? 'true' : undefined}>
+    <header className="premium-topbar sticky top-0 z-30" data-home={location === '/' ? 'true' : undefined} data-route={page.title.toLowerCase().replaceAll(' ', '-')}>
       <div className="premium-topbar__inner">
         <div className="premium-topbar__title">
           <Link href="/" className="premium-topbar__mobile-mark" aria-label="Go to home">
@@ -101,7 +101,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
 
         <button type="button" className="premium-search" onClick={openCommandPalette} aria-label="Search Yor">
           <Search className="h-4 w-4 shrink-0" />
-          <span>Search Yor</span>
+          <span>Search people, posts, worlds</span>
           <kbd className="premium-search__shortcut">Ctrl K</kbd>
         </button>
 
