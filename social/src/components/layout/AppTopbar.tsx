@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Bell, MessageCircle, Plus, Search } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +24,39 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
   { match: '/events', title: 'Events', kicker: 'Make plans together' },
   { match: '/live', title: 'Live now', kicker: 'See what is happening' },
   { match: '/channels', title: 'Broadcast Channels', kicker: 'Follow the signals that matter' },
+  { match: '/articles', title: 'Articles', kicker: 'Long-form ideas worth keeping' },
+  { match: '/tournaments', title: 'Tournaments', kicker: 'Compete with intention' },
+  { match: '/scrims', title: 'Scrims', kicker: 'Practice in public' },
+  { match: '/clans', title: 'Clans', kicker: 'Build your crew' },
+  { match: '/arcade', title: 'Arcade', kicker: 'Play beyond the feed' },
+  { match: '/predictions', title: 'Predictions', kicker: 'Read the room' },
+  { match: '/achievements', title: 'Achievements', kicker: 'Keep your momentum' },
+  { match: '/rankings', title: 'Power Rankings', kicker: 'See who is rising' },
+  { match: '/trophies', title: 'Trophy Room', kicker: 'Your wins, remembered' },
+  { match: '/calendar', title: 'Esports Calendar', kicker: 'Never miss the moment' },
+  { match: '/studio', title: 'Creator Studio', kicker: 'Make your next thing' },
+  { match: '/analytics', title: 'Analytics', kicker: 'Understand your signal' },
+  { match: '/control-room', title: 'Control Room', kicker: 'Run your world' },
+  { match: '/moderation', title: 'Moderation', kicker: 'Keep communities human' },
+  { match: '/store', title: 'Creator Store', kicker: 'Turn attention into value' },
+  { match: '/clips', title: 'Clip Studio', kicker: 'Cut the moment cleanly' },
+  { match: '/media-kit', title: 'Media Kit', kicker: 'Make your work easy to share' },
+  { match: '/merch', title: 'Merch Studio', kicker: 'Make the idea tangible' },
+  { match: '/overlays', title: 'Overlay Studio', kicker: 'Design your live layer' },
+  { match: '/marketplace', title: 'Marketplace', kicker: 'Find what fits your world' },
+  { match: '/bazaar', title: 'Game Bazaar', kicker: 'Trade the good stuff' },
+  { match: '/bounties', title: 'Bounties', kicker: 'Fund useful work' },
+  { match: '/treasury', title: 'Clan Treasury', kicker: 'Build together' },
+  { match: '/points-shop', title: 'Points Shop', kicker: 'Spend your momentum' },
+  { match: '/pass', title: 'Battle Pass', kicker: 'A season with purpose' },
+  { match: '/dashboard', title: 'Dashboard', kicker: 'Your world at a glance' },
+  { match: '/business', title: 'Business', kicker: 'Build a durable presence' },
+  { match: '/ai', title: 'AI Assistant', kicker: 'Think alongside Yor' },
+  { match: '/lounge', title: 'Lounge', kicker: 'Low-pressure, real connection' },
+  { match: '/fanclub', title: 'Fan Club', kicker: 'Bring your people closer' },
+  { match: '/comms', title: 'Squad Comms', kicker: 'Coordinate in real time' },
+  { match: '/rooms', title: 'Custom Rooms', kicker: 'Make a space of your own' },
+  { match: '/podcasts', title: 'Podcasts', kicker: 'Give the conversation room' },
   { match: '/settings', title: 'Settings', kicker: 'Make Yor yours' },
 ];
 
@@ -47,6 +81,10 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
   const unreadMessages = useAppStore((state) => state.conversations.filter((conversation) => conversation.lastMessage && !conversation.lastMessage.read).length);
   const page = getPageLabel(location);
   const displayName = currentUser?.displayName || currentUser?.username || 'You';
+
+  useEffect(() => {
+    document.title = page.title === 'Home' ? 'Yor · Your feed, your people' : `${page.title} · Yor`;
+  }, [page.title]);
 
   return (
     <header className="premium-topbar sticky top-0 z-30" data-home={location === '/' ? 'true' : undefined}>

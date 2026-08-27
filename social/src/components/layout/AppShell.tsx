@@ -32,8 +32,22 @@ export function AppShell({ children }: AppShellProps) {
   const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
   const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('yor-sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('yor-sidebar-collapsed', String(sidebarCollapsed));
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('yor-low-bandwidth', worldPreferences.lowBandwidth);

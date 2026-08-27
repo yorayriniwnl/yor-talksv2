@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -23,27 +23,34 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const userList = Object.values(useAppStore((s) => s.users));
 
-  const [aiResults, setAiResults] = useState<{id: string, content: string, score: number}[]>([]);
-  const [searchingAI, setSearchingAI] = useState(false);
+  const [smartResults, setSmartResults] = useState<{ id: string; content: string }[]>([]);
+  const [searchingSmart, setSearchingSmart] = useState(false);
+  const [smartSearchFailed, setSmartSearchFailed] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     let active = true;
     if (query.length > 3) {
       const delay = setTimeout(async () => {
-        setSearchingAI(true);
+        setSearchingSmart(true);
+        setSmartSearchFailed(false);
         try {
-          const res = await api.request<any>(`/ai/search?q=${encodeURIComponent(query)}`);
-          if (active) setAiResults(res?.results || []);
-        } catch (e) {
-          console.error(e);
+          const res = await api.request<{ posts?: Array<{ id: string; content: string }> }>(`/search?q=${encodeURIComponent(query)}`);
+          if (active) setSmartResults((res?.posts ?? []).slice(0, 4));
+        } catch {
+          if (active) {
+            setSmartResults([]);
+            setSmartSearchFailed(true);
+          }
         } finally {
-          if (active) setSearchingAI(false);
+          if (active) setSearchingSmart(false);
         }
       }, 500);
       return () => { active = false; clearTimeout(delay); };
     } else {
-      setAiResults([]);
-      setSearchingAI(false);
+      setSmartResults([]);
+      setSearchingSmart(false);
+      setSmartSearchFailed(false);
     }
     return () => { active = false; };
   }, [query]);
@@ -156,6 +163,45 @@ export function CommandPalette() {
     },
   ];
 
+  const matchingNavigationGroups = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return navigationGroups;
+    return navigationGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.label.toLowerCase().includes(normalizedQuery)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navigationGroups, query]);
+
+  const paletteTargets = useMemo(() => [
+    ...filteredUsers.map((user) => ({ key: `user:${user.id}`, path: `/profile/${user.id}` })),
+    ...smartResults.map((result) => ({ key: `post:${result.id}`, path: `/post/${result.id}` })),
+    ...matchingNavigationGroups.flatMap((group) => group.items.map((item) => ({ key: `route:${item.path}`, path: item.path }))),
+  ], [filteredUsers, matchingNavigationGroups, smartResults]);
+
+  const activeTargetKey = paletteTargets[activeIndex]?.key;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [isOpen, query, paletteTargets.length]);
+
+  const handlePaletteKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((index) => paletteTargets.length ? (index + 1) % paletteTargets.length : 0);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((index) => paletteTargets.length ? (index - 1 + paletteTargets.length) % paletteTargets.length : 0);
+    } else if (event.key === 'Enter') {
+      const target = paletteTargets[activeIndex];
+      if (target) {
+        event.preventDefault();
+        handleNavigate(target.path);
+      }
+    }
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -168,6 +214,9 @@ export function CommandPalette() {
             onClick={() => setIsOpen(false)}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="yor-command-palette-title"
               initial={{ scale: 0.95, y: -20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: -10 }}
@@ -178,15 +227,17 @@ export function CommandPalette() {
               {/* Search Bar Input */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
                 <Search className="w-5 h-5 text-primary shrink-0" />
+                <span id="yor-command-palette-title" className="sr-only">Search Yor</span>
                 <input
                   autoFocus
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handlePaletteKeyDown}
                   placeholder="Search people, routes, or features... (ESC to exit)"
                   className="w-full bg-transparent outline-none text-base text-foreground placeholder:text-muted-foreground font-serif"
                 />
-                <button onClick={() => setIsOpen(false)} className="p-1 rounded-full text-muted-foreground hover:text-foreground">
+                <button type="button" onClick={() => setIsOpen(false)} aria-label="Close search" className="p-1 rounded-full text-muted-foreground hover:text-foreground">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -198,20 +249,28 @@ export function CommandPalette() {
                     <div className="mt-4">
                       <h4 className="flex items-center gap-2 text-[0.68rem] font-mono font-bold uppercase text-primary tracking-wider mb-2 px-2 glow-neon-primary">
                         <BrainCircuit className="w-3 h-3" />
-                        AI Semantic Search {searchingAI && <span className="animate-pulse">...</span>}
+                        Smart search {searchingSmart && <span className="animate-pulse">...</span>}
                       </h4>
                       <div className="space-y-2">
-                        {aiResults.map((r, i) => (
-                          <div key={i} className="p-3 rounded-2xl bg-primary/10 border border-primary/30 flex items-start gap-3 cursor-pointer hover:bg-primary/20 transition-colors">
+                        {smartResults.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => handleNavigate(`/post/${r.id}`)}
+                            aria-label={`Open matching post: ${r.content}`}
+                            className={`w-full p-3 rounded-2xl bg-primary/10 border border-primary/30 flex items-start gap-3 text-left hover:bg-primary/20 transition-colors ${activeTargetKey === `post:${r.id}` ? 'ring-2 ring-primary/30' : ''}`}
+                          >
                             <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                             <div>
                               <p className="text-sm text-foreground">{r.content}</p>
-                              <span className="text-[10px] text-primary/70 font-mono mt-1 block">Match Score: {(r.score * 100).toFixed(1)}%</span>
+                              <span className="text-[10px] text-primary/70 font-mono mt-1 block">Open matching post</span>
                             </div>
-                          </div>
+                          </button>
                         ))}
-                        {!searchingAI && aiResults.length === 0 && (
-                          <p className="text-xs text-muted-foreground px-2">No semantic matches found.</p>
+                        {!searchingSmart && smartResults.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-2">
+                            {smartSearchFailed ? 'Smart search is unavailable right now. Try a profile or route search.' : 'No matching posts found.'}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -228,8 +287,9 @@ export function CommandPalette() {
                       return (
                         <button
                           key={u.id}
+                          type="button"
                           onClick={() => handleNavigate(`/profile/${u.id}`)}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group"
+                          className={`w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group ${activeTargetKey === `user:${u.id}` ? 'bg-primary/10 ring-1 ring-primary/20' : ''}`}
                         >
                           <Avatar className="w-9 h-9 border border-border/40 shrink-0">
                             <AvatarImage src={u.avatarUrl} />
@@ -246,7 +306,7 @@ export function CommandPalette() {
                 </div>
 
                 {/* Navigation Groups Section */}
-                {!query && navigationGroups.map((group) => (
+                {matchingNavigationGroups.map((group) => (
                   <div key={group.label}>
                     <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
                       {group.label}
@@ -257,8 +317,9 @@ export function CommandPalette() {
                         return (
                           <button
                             key={item.label}
+                            type="button"
                             onClick={() => handleNavigate(item.path)}
-                            className="flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group"
+                            className={`flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group ${activeTargetKey === `route:${item.path}` ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/20' : ''}`}
                           >
                             <Icon className="w-4 h-4 text-primary shrink-0 transition-transform group-hover:scale-110" />
                             <span className="font-bold text-xs truncate">{item.label}</span>
