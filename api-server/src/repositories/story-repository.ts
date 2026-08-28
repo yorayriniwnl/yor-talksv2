@@ -5,7 +5,7 @@ import type { StoryRecord } from "../types/index.js";
 
 export class StoryRepository {
   async create(story: StoryRecord, poll?: { id: string; question: string; options: Array<{ id: string; text: string; position: number }> }): Promise<StoryRecord> {
-    const { poll: _poll, ...persistedStory } = story;
+    const { poll: _poll, viewerIds: _viewerIds, reactions: _reactions, ...persistedStory } = story;
     const [created] = await db.transaction(async (tx) => {
       const [createdStory] = await tx.insert(storiesTable).values(persistedStory).returning();
       if (poll) {
@@ -19,7 +19,7 @@ export class StoryRepository {
       }
       return [createdStory];
     });
-    return created as StoryRecord;
+    return { ...(created as StoryRecord), viewerIds: [], reactions: [] };
   }
 
   /** Only stories that haven't expired yet — matches the 24-hour-expiry pattern of the feature itself. */
@@ -46,7 +46,7 @@ export class StoryRepository {
   }
 
   async update(id: string, updates: Partial<StoryRecord>): Promise<StoryRecord | undefined> {
-    const { poll: _poll, ...persistedUpdates } = updates;
+    const { poll: _poll, viewerIds: _viewerIds, reactions: _reactions, ...persistedUpdates } = updates;
     const [updated] = await db.update(storiesTable).set(persistedUpdates).where(eq(storiesTable.id, id)).returning();
     return updated as StoryRecord | undefined;
   }

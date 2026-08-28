@@ -400,7 +400,7 @@ async function runMegaScaleSeed() {
 
   for (let c = 0; c < communityBatches.length; c += 200) {
     const chunk = communityBatches.slice(c, c + 200);
-    await db.insert(communitiesTable).values(chunk).onConflictDoNothing();
+    await db.insert(communitiesTable).values(chunk.map(({ memberIds: _memberIds, ...community }) => community)).onConflictDoNothing();
     const memberships = chunk.flatMap((community) => [...new Set([community.ownerId, ...community.memberIds])].map((userId) => ({
       communityId: community.id,
       userId,
@@ -434,7 +434,7 @@ async function runMegaScaleSeed() {
         rsvpStatus: "going"
       });
     }
-    await db.insert(eventsTable).values(chunk).onConflictDoNothing();
+    await db.insert(eventsTable).values(chunk.map(({ attendeeIds: _attendeeIds, interestedIds: _interestedIds, ...event }) => event)).onConflictDoNothing();
     const rsvps = chunk.flatMap((event) => {
       const attendees = new Set<string>(event.attendeeIds);
       return [
@@ -468,7 +468,7 @@ async function runMegaScaleSeed() {
         createdAt: new Date().toISOString()
       });
     }
-    await db.insert(productsTable).values(chunk).onConflictDoNothing();
+    await db.insert(productsTable).values(chunk.map(({ savedBy: _savedBy, ...product }) => product)).onConflictDoNothing();
     const saves = chunk.flatMap((product) => [...new Set<string>(product.savedBy as string[])].map((userId) => ({ productId: product.id, userId })));
     for (let saveOffset = 0; saveOffset < saves.length; saveOffset += 2000) {
       await db.insert(productSavesTable).values(saves.slice(saveOffset, saveOffset + 2000)).onConflictDoNothing();
@@ -521,7 +521,7 @@ async function runMegaScaleSeed() {
         highlightTitle: i % 3 === 0 ? `${genre.prefix.toUpperCase()} Vault` : null
       });
     }
-    await db.insert(storiesTable).values(chunk).onConflictDoNothing();
+    await db.insert(storiesTable).values(chunk.map(({ viewerIds: _viewerIds, reactions: _reactions, ...story }) => story)).onConflictDoNothing();
     const storyViews = chunk.flatMap((story) => [...new Set<string>(story.viewerIds as string[])].map((userId) => ({ storyId: story.id, userId })));
     for (let viewOffset = 0; viewOffset < storyViews.length; viewOffset += 2000) {
       await db.insert(storyViewsTable).values(storyViews.slice(viewOffset, viewOffset + 2000)).onConflictDoNothing();

@@ -5,8 +5,9 @@ import type { ProductRecord } from "../types/index.js";
 
 export class ProductRepository {
   async create(product: ProductRecord): Promise<ProductRecord> {
-    const [created] = await db.insert(productsTable).values(product).returning();
-    return created as ProductRecord;
+    const { savedBy: _savedBy, ...persistedProduct } = product;
+    const [created] = await db.insert(productsTable).values(persistedProduct).returning();
+    return { ...(created as ProductRecord), savedBy: [] };
   }
 
   async list(viewerId?: string): Promise<ProductRecord[]> {
@@ -19,7 +20,8 @@ export class ProductRepository {
   }
 
   async update(id: string, updates: Partial<ProductRecord>): Promise<ProductRecord | undefined> {
-    const [updated] = await db.update(productsTable).set(updates).where(eq(productsTable.id, id)).returning();
+    const { savedBy: _savedBy, ...persistedUpdates } = updates;
+    const [updated] = await db.update(productsTable).set(persistedUpdates).where(eq(productsTable.id, id)).returning();
     return updated ? (await this.hydrateViewerSave([updated as ProductRecord]))[0] : undefined;
   }
 

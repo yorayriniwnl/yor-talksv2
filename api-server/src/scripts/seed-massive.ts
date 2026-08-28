@@ -201,7 +201,6 @@ async function seedMassive() {
         description: `Official community hub for ${communityCategories[i % communityCategories.length]} creators, builders, and enthusiasts.`,
         ownerId,
         moderators: [ownerId],
-        memberIds,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
@@ -230,8 +229,6 @@ async function seedMassive() {
         startsAt: new Date(Date.now() + (i + 1) * 86400000).toISOString(),
         location: "Virtual Main Stage & Live Stream",
         isOnline: true,
-        attendeeIds,
-        interestedIds,
         rsvpStatus: "going"
       });
       await db.insert(eventRsvpsTable).values([
@@ -256,7 +253,6 @@ async function seedMassive() {
         images: [sampleCovers[i % sampleCovers.length]],
         category: "Hardware",
         condition: "new",
-        savedBy,
         createdAt: new Date().toISOString()
       });
       if (savedBy.length > 0) {

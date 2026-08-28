@@ -197,7 +197,6 @@ export const communitiesTable = pgTable("communities", {
   description: text("description").notNull().default(""),
   ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   moderators: jsonb("moderators").notNull().default([]),
-  memberIds: jsonb("member_ids").notNull().default([]),
   pendingRequests: jsonb("pending_requests").notNull().default([]),
   roles: jsonb("roles").default({}),
   inviteLinks: jsonb("invite_links").default({}),
@@ -274,8 +273,6 @@ export const storiesTable = pgTable("stories", {
   backgroundGradient: text("background_gradient"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
-  viewerIds: jsonb("viewer_ids").notNull().default([]),
-  reactions: jsonb("reactions").notNull().default([]),
   isHighlight: boolean("is_highlight").notNull().default(false),
   highlightTitle: text("highlight_title"),
   audience: text("audience").notNull().default("followers"),
@@ -333,8 +330,6 @@ export const eventsTable = pgTable("events", {
   startsAt: timestamp("starts_at", { mode: "string" }).notNull(),
   location: text("location").notNull(),
   isOnline: boolean("is_online").notNull().default(false),
-  attendeeIds: jsonb("attendee_ids").notNull().default([]),
-  interestedIds: jsonb("interested_ids").notNull().default([]),
   rsvpStatus: text("rsvp_status"),
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
@@ -364,7 +359,6 @@ export const productsTable = pgTable("products", {
   category: text("category").notNull(),
   condition: text("condition").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-  savedBy: jsonb("saved_by").notNull().default([]),
   availability: text("availability").notNull().default("active"),
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({

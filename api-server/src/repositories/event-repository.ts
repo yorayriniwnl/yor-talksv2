@@ -5,8 +5,9 @@ import type { EventRecord } from "../types/index.js";
 
 export class EventRepository {
   async create(event: EventRecord): Promise<EventRecord> {
-    const [created] = await db.insert(eventsTable).values(event).returning();
-    return created as EventRecord;
+    const { attendeeIds: _attendeeIds, interestedIds: _interestedIds, rsvpStatus: _rsvpStatus, ...persistedEvent } = event;
+    const [created] = await db.insert(eventsTable).values(persistedEvent).returning();
+    return { ...(created as EventRecord), attendeeIds: [], interestedIds: [] };
   }
 
   async list(): Promise<EventRecord[]> {
@@ -19,7 +20,8 @@ export class EventRepository {
   }
 
   async update(id: string, updates: Partial<EventRecord>): Promise<EventRecord | undefined> {
-    const [updated] = await db.update(eventsTable).set(updates).where(eq(eventsTable.id, id)).returning();
+    const { attendeeIds: _attendeeIds, interestedIds: _interestedIds, ...persistedUpdates } = updates;
+    const [updated] = await db.update(eventsTable).set(persistedUpdates).where(eq(eventsTable.id, id)).returning();
     return updated ? (await this.hydrateRsvps([updated as EventRecord]))[0] : undefined;
   }
 

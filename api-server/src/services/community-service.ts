@@ -36,14 +36,15 @@ export class CommunityService {
     };
     
     return db.transaction(async (tx) => {
-      const [created] = await tx.insert(communitiesTable).values(community).returning();
+      const { memberIds: _memberIds, ...persistedCommunity } = community;
+      const [created] = await tx.insert(communitiesTable).values(persistedCommunity).returning();
       await tx.insert(communityMembersTable).values({ communityId: created.id, userId: input.ownerId, role: "owner" });
-      return { ...(created as CommunityRecord), memberIds: [input.ownerId] };
+      return { ...(created as unknown as CommunityRecord), memberIds: [input.ownerId] };
     });
   }
 
   async listCommunities(viewerId?: string): Promise<CommunityRecord[]> {
-    const communities = await this.hydrateMembers((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[]);
+    const communities = await this.hydrateMembers((await db.select().from(communitiesTable).limit(100)) as unknown as CommunityRecord[]);
     return this.contentSafetyService.filterVisibleByAuthor(communities, viewerId, (community) => community.ownerId);
   }
 
@@ -52,7 +53,7 @@ export class CommunityService {
     const [community] = await db.select().from(communitiesTable).where(
       isUuid ? eq(communitiesTable.id, idOrSlug) : eq(communitiesTable.slug, idOrSlug.trim().toLowerCase()),
     );
-    const typedCommunity = community ? (await this.hydrateMembers([community as CommunityRecord]))[0] : undefined;
+    const typedCommunity = community ? (await this.hydrateMembers([community as unknown as CommunityRecord]))[0] : undefined;
     return await this.contentSafetyService.isVisible(typedCommunity, viewerId, typedCommunity?.ownerId) ? typedCommunity : undefined;
   }
 

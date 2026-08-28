@@ -203,8 +203,9 @@ async function seedDatabase() {
 
   for (const c of communities) {
     try {
-      await db.insert(communitiesTable).values(c);
-      await db.insert(communityMembersTable).values(c.memberIds.map((userId) => ({
+      const { memberIds, ...persistedCommunity } = c;
+      await db.insert(communitiesTable).values(persistedCommunity);
+      await db.insert(communityMembersTable).values(memberIds.map((userId) => ({
         communityId: c.id,
         userId,
         role: userId === c.ownerId ? "owner" : "member",
@@ -235,10 +236,11 @@ async function seedDatabase() {
 
   for (const ev of events) {
     try {
-      await db.insert(eventsTable).values(ev);
+      const { attendeeIds, interestedIds, ...persistedEvent } = ev;
+      await db.insert(eventsTable).values(persistedEvent);
       await db.insert(eventRsvpsTable).values([
-        ...ev.attendeeIds.map((userId) => ({ eventId: ev.id, userId, status: "going" })),
-        ...ev.interestedIds.filter((userId) => !ev.attendeeIds.includes(userId)).map((userId) => ({ eventId: ev.id, userId, status: "interested" })),
+        ...attendeeIds.map((userId) => ({ eventId: ev.id, userId, status: "going" })),
+        ...interestedIds.filter((userId) => !attendeeIds.includes(userId)).map((userId) => ({ eventId: ev.id, userId, status: "interested" })),
       ]).onConflictDoNothing();
       console.log(`✅ Seeded event: ${ev.title}`);
     } catch (err: any) {
@@ -266,8 +268,9 @@ async function seedDatabase() {
 
   for (const pr of products) {
     try {
-      await db.insert(productsTable).values(pr);
-      await db.insert(productSavesTable).values(pr.savedBy.map((userId) => ({ productId: pr.id, userId }))).onConflictDoNothing();
+      const { savedBy, ...persistedProduct } = pr;
+      await db.insert(productsTable).values(persistedProduct);
+      await db.insert(productSavesTable).values(savedBy.map((userId) => ({ productId: pr.id, userId }))).onConflictDoNothing();
       console.log(`✅ Seeded product: ${pr.title}`);
     } catch (err: any) {
       console.log(`⚠️ Product skipped: ${err.message}`);
