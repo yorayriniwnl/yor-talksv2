@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
-import { fadeInUp, staggerContainer, staggerItem, tapScale } from '@/lib/motion';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Play, Film, Sparkles, Video as VideoIcon, UploadCloud, FileVideo, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { Plus, Play, Video as VideoIcon, UploadCloud, Link as LinkIcon, CheckCircle2, Eye, Radio, ScanLine } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import ReelsSwiper from '@/components/video/ReelsSwiper';
@@ -19,6 +19,9 @@ import { ContentCategorySelect } from '@/components/content/ContentCategorySelec
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { api } from '@/lib/api-client';
+import { useLocation, useRoute } from 'wouter';
+import { OperatorPanel, SectionHeader, SignalLabel, StatusBadge } from '@/components/system';
+import '@/styles/operator-discovery.css';
 
 function UploadVideoDialog() {
   const createVideo = useAppStore((s: any) => s.createVideo);
@@ -141,14 +144,14 @@ function UploadVideoDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-xl font-bold text-xs px-4 glow-neon-primary bg-primary shadow-lg hover:shadow-primary/25">
-          <Plus className="w-4 h-4 mr-1.5" /> Upload Video / Reel
+        <Button className="operator-video-upload-trigger">
+          <Plus aria-hidden="true" /> Publish video
         </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-2xl max-w-lg">
+      <DialogContent className="operator-video-upload-dialog max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display font-bold text-xl flex items-center gap-2">
-            <VideoIcon className="w-5 h-5 text-primary" /> Publish Video or Short Reel
+            <VideoIcon aria-hidden="true" /> Publish a video
           </DialogTitle>
         </DialogHeader>
 
@@ -297,7 +300,16 @@ function matchesGenre(video: any, author: any, genre: string): boolean {
   }
 }
 
+function formatPublishedDate(value?: string): string {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+  return formatDistanceToNow(date, { addSuffix: true });
+}
+
 export default function Videos() {
+  const [, setLocation] = useLocation();
+  const [, videoRouteParams] = useRoute<{ id: string }>('/videos/:id');
   const users = useAppStore((s: any) => s.users);
   const videos = useAppStore((s: any) => s.videos);
   const loadVideos = useAppStore((s: any) => s.loadVideos);
@@ -315,158 +327,163 @@ export default function Videos() {
     }
   }, [videos, users, loadUserProfile]);
 
-  const filteredVideos = (videos || []).filter((v: any) => {
-    const formatMatch = formatTab === 'All' || v.type === formatTab;
-    const categoryMatch = selectedCategory === 'all' || resolveContentCategory(v.contentCategory).value === selectedCategory;
-    const author = users[v.authorId];
-    const genreMatch = matchesGenre(v, author, selectedGenre);
-    return formatMatch && categoryMatch && genreMatch;
-  });
+  const filteredVideos = useMemo(() => (videos || []).filter((video: any) => {
+    const formatMatch = formatTab === 'All' || video.type === formatTab;
+    const categoryMatch = selectedCategory === 'all' || resolveContentCategory(video.contentCategory).value === selectedCategory;
+    const author = users[video.authorId];
+    return formatMatch && categoryMatch && matchesGenre(video, author, selectedGenre);
+  }), [videos, formatTab, selectedCategory, selectedGenre, users]);
 
-  const swiperVideos = filteredVideos.filter((v: any) => v.type === 'short');
-  const activeSwiperList = swiperVideos.length > 0 ? swiperVideos : filteredVideos;
+  const activeSwiperList = filteredVideos;
+  const totalViews = useMemo(() => (videos || []).reduce((sum: number, video: any) => sum + (video.views || 0), 0), [videos]);
+  const reelCount = useMemo(() => (videos || []).filter((video: any) => video.type === 'short').length, [videos]);
+  const hasActiveFilters = formatTab !== 'All' || selectedCategory !== 'all' || selectedGenre !== 'all';
+
+  useEffect(() => {
+    const routeId = videoRouteParams?.id;
+    if (!routeId) {
+      setActiveReelIndex(null);
+      return;
+    }
+    const index = activeSwiperList.findIndex((video: any) => video.id === routeId);
+    if (index !== -1) setActiveReelIndex(index);
+  }, [videoRouteParams?.id, activeSwiperList]);
+
+  const openVideo = (videoId: string) => {
+    const index = activeSwiperList.findIndex((video: any) => video.id === videoId);
+    if (index === -1) return;
+    setActiveReelIndex(index);
+    setLocation(`/videos/${videoId}`);
+  };
+
+  const closeViewer = () => {
+    setActiveReelIndex(null);
+    setLocation('/videos');
+  };
+
+  const resetFilters = () => {
+    setFormatTab('All');
+    setSelectedCategory('all');
+    setSelectedGenre('all');
+  };
 
   return (
-    <div className="min-h-screen bg-background pb-24 font-sans">
-      {/* Sticky Glass Header */}
-      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold font-display text-foreground">Videos & Reels</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Stream short and long form content across all genres</p>
+    <div className="operator-video-page">
+      <header className="operator-video-hero">
+        <div className="operator-video-hero__copy">
+          <SignalLabel>Watch surface // live queue</SignalLabel>
+          <h1>Watch what the network is making.</h1>
+          <p>Short reels for momentum. Full videos for the work behind it.</p>
         </div>
-        <UploadVideoDialog />
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
-        {/* Format Selection Row */}
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
-          {([
-            { id: 'All' as const, label: '⚡ All Formats' },
-            { id: 'short' as const, label: '🎬 Short Form (Reels)' },
-            { id: 'standard' as const, label: '📹 Standard Videos' },
-          ]).map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFormatTab(f.id)}
-              className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap",
-                formatTab === f.id ? "bg-primary text-primary-foreground glow-neon-primary" : "surface-1 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="operator-video-hero__action">
+          <StatusBadge status="online">Playback ready</StatusBadge>
+          <UploadVideoDialog />
         </div>
-
-        <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1" aria-label="Filter videos by content category">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={cn(
-              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
-              selectedCategory === 'all' ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
-            )}
-          >
-            ✨ All categories
-          </button>
-          {CONTENT_CATEGORIES.map((category) => (
-            <button
-              key={category.value}
-              onClick={() => setSelectedCategory(category.value)}
-              className={cn(
-                'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border shrink-0',
-                selectedCategory === category.value ? 'bg-primary text-primary-foreground border-primary glow-neon-primary' : 'surface-1 border-border/50 text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {category.emoji} {category.label}
-            </button>
-          ))}
+        <div className="operator-video-hero__metrics" aria-label="Video library summary">
+          <div><Radio aria-hidden="true" /><span><strong>{(videos || []).length}</strong><small>published</small></span></div>
+          <div><ScanLine aria-hidden="true" /><span><strong>{reelCount}</strong><small>reels</small></span></div>
+          <div><Eye aria-hidden="true" /><span><strong>{totalViews.toLocaleString()}</strong><small>total views</small></span></div>
         </div>
+      </header>
 
-        {/* Genre Category Pills */}
-        <div className="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
-          {GENRE_CATEGORIES.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setSelectedGenre(g.id)}
-              className={cn(
-                "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border",
-                selectedGenre === g.id
-                  ? "bg-foreground text-background border-foreground font-bold shadow-md"
-                  : "surface-1 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-              )}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-
-        {filteredVideos.length === 0 && (
-          <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
-            <VideoIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-            <h3 className="font-display font-bold text-lg mb-1">No videos found</h3>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">Upload a short or standard video to populate this gallery.</p>
+      <main className="operator-video-main">
+        <OperatorPanel className="operator-video-filters">
+          <div className="operator-video-filters__head">
+            <span>Refine watch queue</span>
+            <strong>{filteredVideos.length} results</strong>
+            {hasActiveFilters && <button type="button" onClick={resetFilters}>Clear filters</button>}
           </div>
-        )}
 
-        <motion.div 
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredVideos.map((video: any) => {
-            const author = users[video.authorId];
+          <div className="operator-video-filter-row">
+            <span>Format</span>
+            <div role="group" aria-label="Filter videos by format">
+              {([
+                { id: 'All' as const, label: 'All' },
+                { id: 'short' as const, label: 'Reels' },
+                { id: 'standard' as const, label: 'Full videos' },
+              ]).map(format => (
+                <button type="button" key={format.id} onClick={() => setFormatTab(format.id)} aria-pressed={formatTab === format.id}>{format.label}</button>
+              ))}
+            </div>
+          </div>
 
-            return (
-              <motion.div 
-                variants={staggerItem}
-                key={video.id} 
-                className="surface-1 rounded-2xl overflow-hidden cursor-pointer group border border-border/40 hover:border-primary/40 transition-all duration-300"
-                whileHover={{ y: -4 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                onClick={() => {
-                  const idx = activeSwiperList.findIndex((v: any) => v.id === video.id);
-                  if (idx !== -1) setActiveReelIndex(idx);
-                }}
-              >
-                <div className="relative aspect-video bg-muted overflow-hidden">
-                  <img src={video.thumbnailUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={video.title} />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100">
-                      <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2.5 right-2.5 bg-black/70 text-white font-mono text-[0.65rem] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm">
-                    {video.type === 'short' ? 'REEL' : 'VIDEO'}
-                  </div>
-                  <ContentCategoryBadge value={video.contentCategory} className="absolute left-2.5 top-2.5 border-white/25 bg-black/50 text-white backdrop-blur-md" />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-display font-bold text-sm line-clamp-2 mb-2.5 group-hover:text-primary transition-colors leading-tight">{video.title}</h3>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={author?.avatarUrl} />
-                      <AvatarFallback>{(author?.displayName ?? '?').charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-xs font-mono text-muted-foreground truncate flex-1 flex items-center justify-between">
-                      <span className="font-semibold text-foreground/80 truncate">{author?.displayName ?? 'Unknown'}</span>
-                      <span className="shrink-0 ml-2">{video.views?.toLocaleString() ?? 0} views</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+          <div className="operator-video-filter-row">
+            <span>Channel</span>
+            <div role="group" aria-label="Filter videos by content channel">
+              <button type="button" onClick={() => setSelectedCategory('all')} aria-pressed={selectedCategory === 'all'}>All channels</button>
+              {CONTENT_CATEGORIES.map(category => (
+                <button type="button" key={category.value} onClick={() => setSelectedCategory(category.value)} aria-pressed={selectedCategory === category.value}>
+                  <span aria-hidden="true">{category.emoji}</span> {category.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {activeReelIndex !== null && (
-          <ReelsSwiper 
-            videos={activeSwiperList}
-            initialIndex={activeReelIndex}
-            onClose={() => setActiveReelIndex(null)}
+          <div className="operator-video-filter-row">
+            <span>Interest</span>
+            <div role="group" aria-label="Filter videos by interest">
+              {GENRE_CATEGORIES.map(genre => (
+                <button type="button" key={genre.id} onClick={() => setSelectedGenre(genre.id)} aria-pressed={selectedGenre === genre.id}>{genre.label}</button>
+              ))}
+            </div>
+          </div>
+        </OperatorPanel>
+
+        <section className="operator-video-library" aria-labelledby="watch-queue-title">
+          <SectionHeader
+            id="watch-queue-title"
+            eyebrow="Curated playback"
+            title="Your watch queue"
+            description={filteredVideos.length ? `${filteredVideos.length} videos matched to the active filters.` : 'No videos match this combination yet.'}
           />
+
+          {filteredVideos.length === 0 ? (
+            <OperatorPanel className="operator-discovery-empty">
+              <VideoIcon aria-hidden="true" />
+              <h3>Your queue is empty</h3>
+              <p>Reset the filters or publish the first video in this channel.</p>
+              {hasActiveFilters && <button type="button" onClick={resetFilters}>Reset filters</button>}
+            </OperatorPanel>
+          ) : (
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="operator-video-grid">
+              {filteredVideos.map((video: any, index: number) => {
+                const author = users[video.authorId];
+                return (
+                  <motion.button
+                    type="button"
+                    variants={staggerItem}
+                    key={video.id}
+                    className="operator-video-card"
+                    data-format={video.type}
+                    data-featured={index === 0 || undefined}
+                    onClick={() => openVideo(video.id)}
+                    aria-label={`Watch ${video.title}`}
+                  >
+                    <span className="operator-video-card__media">
+                      <img src={video.thumbnailUrl} alt="" />
+                      <span className="operator-video-card__play"><Play aria-hidden="true" /></span>
+                      <span className="operator-video-card__format">{video.type === 'short' ? 'Reel' : 'Video'}</span>
+                      <ContentCategoryBadge value={video.contentCategory} className="operator-video-card__category" />
+                    </span>
+                    <span className="operator-video-card__body">
+                      <span className="operator-video-card__title">{video.title}</span>
+                      <span className="operator-video-card__creator">
+                        <Avatar><AvatarImage src={author?.avatarUrl} /><AvatarFallback>{(author?.displayName ?? '?').charAt(0)}</AvatarFallback></Avatar>
+                        <span><strong>{author?.displayName ?? 'Unknown creator'}</strong><small>@{author?.username ?? 'unknown'}</small></span>
+                      </span>
+                      <span className="operator-video-card__meta"><span><Eye aria-hidden="true" /> {video.views?.toLocaleString() ?? 0}</span><span>{formatPublishedDate(video.createdAt)}</span></span>
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          )}
+        </section>
+
+        {activeReelIndex !== null && activeSwiperList.length > 0 && (
+          <ReelsSwiper videos={activeSwiperList} initialIndex={activeReelIndex} onClose={closeViewer} />
         )}
-      </div>
+      </main>
     </div>
   );
 }

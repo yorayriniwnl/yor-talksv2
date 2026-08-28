@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, type Video } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Heart, MessageCircle, Share2, X, Music, Volume2, VolumeX, 
-  Send, Bookmark, Sparkles, Copy, Check, QrCode, Zap, 
-  Gauge, Subtitles, Wand2 
+  Bookmark, Copy, Zap, Gauge, Subtitles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
@@ -74,16 +72,29 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   const [activeRemixAudio, setActiveRemixAudio] = useState<{ title: string; artist: string } | undefined>(undefined);
   const [tippingCreator, setTippingCreator] = useState<{ id: string; displayName: string; username: string; avatarUrl?: string } | null>(null);
 
+  const goToIndex = useCallback((nextIndex: number) => {
+    const boundedIndex = Math.max(0, Math.min(videos.length - 1, nextIndex));
+    const target = containerRef.current?.children[boundedIndex] as HTMLElement | undefined;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setPlayingIndex(boundedIndex);
+  }, [videos.length]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
   // Keyboard navigation for reels
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setPlayingIndex((prev) => Math.min(videos.length - 1, prev + 1));
+        goToIndex(playingIndex + 1);
         sounds.playSwoosh();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setPlayingIndex((prev) => Math.max(0, prev - 1));
+        goToIndex(playingIndex - 1);
         sounds.playSwoosh();
       } else if (e.key === 'Escape') {
         if (showComments) setShowComments(false);
@@ -93,7 +104,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [videos, onClose, showComments, showShareModal]);
+  }, [videos, onClose, showComments, showShareModal, goToIndex, playingIndex]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -143,6 +154,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     if (!players) return;
     players.forEach((player, index) => {
       player.muted = isMuted;
+      player.playbackRate = playbackSpeed;
       if (index === playingIndex) {
         void player.play().catch(() => {
           // Autoplay can be blocked until the viewer interacts with the page.
@@ -152,7 +164,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         player.currentTime = 0;
       }
     });
-  }, [playingIndex, isMuted, videos]);
+  }, [playingIndex, isMuted, playbackSpeed, videos]);
 
   const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
     const now = Date.now();
@@ -240,19 +252,21 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed inset-0 z-50 bg-black flex justify-center font-sans text-white"
+        className="operator-reels-viewer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Video viewer"
       >
-        {/* Top Floating Action Bar */}
-        <div className="absolute top-6 left-4 right-4 z-50 flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-2">
+        <div className="operator-reels-topbar">
+          <div className="operator-reels-topbar__group">
             <button 
               onClick={onClose} 
-              className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+              className="operator-reels-control"
+              aria-label="Close video viewer"
             >
-              <X className="w-6 h-6" />
+              <X aria-hidden="true" />
             </button>
 
-            {/* Playback Speed Controller */}
             <button
               onClick={() => {
                 const speeds = [1, 1.5, 2, 0.5];
@@ -261,41 +275,48 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                 sounds.playPop();
                 toast.success(`Speed: ${nextSpeed}x`);
               }}
-              className="px-3 py-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10 text-xs font-mono font-bold flex items-center gap-1"
+              className="operator-reels-control operator-reels-control--text"
               title="Change Speed"
+              aria-label={`Playback speed ${playbackSpeed} times`}
             >
-              <Gauge className="w-3.5 h-3.5 text-primary" /> {playbackSpeed}x
+              <Gauge aria-hidden="true" /> {playbackSpeed}x
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Auto-Subtitles Toggle */}
+          <div className="operator-reels-progress" aria-live="polite">
+            <strong>{String(playingIndex + 1).padStart(2, '0')}</strong>
+            <span>/ {String(videos.length).padStart(2, '0')}</span>
+            <small>Use ↑ ↓</small>
+          </div>
+
+          <div className="operator-reels-topbar__group">
             <button
               onClick={() => {
                 setShowSubtitles(!showSubtitles);
                 sounds.playPop();
               }}
-              className={cn(
-                "p-3 rounded-full backdrop-blur-md transition-colors border border-white/10",
-                showSubtitles ? "bg-primary text-black font-bold" : "bg-black/50 text-white hover:bg-black/80"
-              )}
-              title="Toggle Captions"
+              className="operator-reels-control"
+              data-active={showSubtitles || undefined}
+              title="Toggle caption"
+              aria-label={`${showSubtitles ? 'Hide' : 'Show'} caption`}
+              aria-pressed={showSubtitles}
             >
-              <Subtitles className="w-5 h-5" />
+              <Subtitles aria-hidden="true" />
             </button>
 
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/80 transition-colors border border-white/10"
+              className="operator-reels-control"
+              aria-label={isMuted ? 'Unmute video' : 'Mute video'}
             >
-              {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
+              {isMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         <div 
           ref={containerRef}
-          className="w-full h-[100dvh] max-w-[480px] overflow-y-scroll snap-y snap-mandatory hide-scrollbar relative bg-zinc-950"
+          className="operator-reels-track"
         >
           {videos.map((video, idx) => {
             const author = users[video.authorId];
@@ -311,21 +332,23 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                 key={video.id} 
                 data-index={idx}
                 onClick={(e) => handleDoubleTap(e, video.id)}
-                className="w-full h-[100dvh] snap-center snap-always relative flex items-center justify-center bg-black select-none overflow-hidden"
+                className="operator-reel-slide"
+                data-format={video.type}
+                aria-hidden={!isPlaying}
+                inert={!isPlaying}
               >
-                {/* Video / Visual Asset */}
-                <div className="relative w-full h-full">
+                <div className="operator-reel-slide__media">
                   <video
                     src={video.videoUrl}
                     poster={video.thumbnailUrl}
-                    className="w-full h-full object-cover opacity-90"
+                    className="operator-reel-video"
                     muted={isMuted}
                     loop
                     playsInline
                     preload={isPlaying ? 'auto' : 'metadata'}
                     aria-label={video.title}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40" />
+                  <div className="operator-reel-scrim" />
                 </div>
 
                 {/* Double Tap Heart Burst Animation */}
@@ -344,10 +367,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                   )}
                 </AnimatePresence>
 
-                {/* Right Side Action Bar (Insta / TikTok Style) */}
-                <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 z-20">
-                  {/* Like Button */}
-                  <div className="flex flex-col items-center gap-1 group">
+                <div className="operator-reel-actions" aria-label="Video actions">
+                  <div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -358,58 +379,32 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                           if (!success) setLikedVideos(prev => ({ ...prev, [video.id]: isLiked }));
                         });
                       }}
-                      className={cn(
-                        "p-3.5 rounded-full backdrop-blur-md transition-all active:scale-75 shadow-lg border border-white/10",
-                        isLiked ? "bg-rose-600 text-white" : "bg-black/50 text-white hover:bg-black/70"
-                      )}
+                      className="operator-reel-action"
+                      data-active={isLiked || undefined}
+                      aria-label={isLiked ? 'Unlike video' : 'Like video'}
+                      aria-pressed={isLiked}
                     >
-                      <Heart className={cn("w-7 h-7", isLiked && "fill-white")} />
+                      <Heart className={cn(isLiked && 'fill-current')} aria-hidden="true" />
                     </button>
-                    <span className="text-white text-xs font-mono font-bold drop-shadow-md">
-                      {displayedLikes.toLocaleString()}
-                    </span>
-                  </div>
-                  
-                  {/* Direct Instant UPI Creator Tip Button */}
-                  <div className="flex flex-col items-center gap-1 group">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sounds.playPop();
-                        if (author) {
-                          setTippingCreator({
-                            id: author.id,
-                            displayName: author.displayName,
-                            username: author.username,
-                            avatarUrl: author.avatarUrl,
-                          });
-                        }
-                      }}
-                      className="p-3.5 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-full text-black font-bold backdrop-blur-md hover:scale-110 transition-all shadow-lg border border-amber-300/40 glow-neon-primary cursor-pointer"
-                      title="Tip Creator via UPI"
-                    >
-                      <Zap className="w-6 h-6 fill-black" />
-                    </button>
-                    <span className="text-amber-400 text-[0.68rem] font-mono font-black drop-shadow-md">Tip UPI</span>
+                    <span>{displayedLikes.toLocaleString()}</span>
                   </div>
 
-                  {/* Comments Button */}
-                  <div className="flex flex-col items-center gap-1 group">
+                  <div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         sounds.playPop();
                         setShowComments(true);
                       }}
-                      className="p-3.5 bg-black/50 rounded-full text-white backdrop-blur-md hover:bg-black/70 transition-colors shadow-lg border border-white/10"
+                      className="operator-reel-action"
+                      aria-label="Open comments"
                     >
-                      <MessageCircle className="w-7 h-7" />
+                      <MessageCircle aria-hidden="true" />
                     </button>
-                    <span className="text-white text-xs font-mono font-bold drop-shadow-md">{comments.length}</span>
+                    <span>{comments.length}</span>
                   </div>
 
-                  {/* Bookmark Save Button */}
-                  <div className="flex flex-col items-center gap-1 group">
+                  <div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -421,55 +416,39 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                           else setSavedVideos(prev => ({ ...prev, [video.id]: isSaved }));
                         });
                       }}
-                      className={cn(
-                        "p-3.5 rounded-full backdrop-blur-md transition-all shadow-lg border border-white/10",
-                        isSaved ? "bg-primary text-primary-foreground" : "bg-black/50 text-white hover:bg-black/70"
-                      )}
+                      className="operator-reel-action"
+                      data-active={isSaved || undefined}
+                      aria-label={isSaved ? 'Remove saved video' : 'Save video'}
+                      aria-pressed={isSaved}
                     >
-                      <Bookmark className={cn("w-6 h-6", isSaved && "fill-current")} />
+                      <Bookmark className={cn(isSaved && 'fill-current')} aria-hidden="true" />
                     </button>
+                    <span>Save</span>
                   </div>
 
-                  {/* Share Button */}
-                  <div className="flex flex-col items-center gap-1 group">
+                  <div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         sounds.playPop();
                         setShowShareModal(true);
                       }}
-                      className="p-3.5 bg-black/50 rounded-full text-white backdrop-blur-md hover:bg-black/70 transition-colors shadow-lg border border-white/10"
+                      className="operator-reel-action"
+                      aria-label="Share video"
                     >
-                      <Share2 className="w-6 h-6" />
+                      <Share2 aria-hidden="true" />
                     </button>
-                  </div>
-
-                  {/* Spinning Audio Vinyl Disc */}
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      sounds.playPop();
-                      setActiveRemixAudio({ title: video.title, artist: author?.displayName || 'Soundtrack' });
-                      setStudioOpen(true);
-                    }}
-                    className="p-1 rounded-full bg-zinc-900 border border-white/20 animate-[spin_4s_linear_infinite] shadow-xl cursor-pointer hover:scale-110 transition-transform"
-                    title="Use this sound"
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={author?.avatarUrl} />
-                      <AvatarFallback>M</AvatarFallback>
-                    </Avatar>
+                    <span>Share</span>
                   </div>
                 </div>
 
-                {/* Bottom Creator Info & Sound Banner */}
-                <div className="absolute bottom-0 left-0 right-16 p-5 pt-12 z-20">
-                  <div className="flex items-center gap-3 mb-2.5">
-                    <Avatar className="w-10 h-10 border-2 border-white/30 shadow-md">
+                <div className="operator-reel-info">
+                  <div className="operator-reel-creator">
+                    <Avatar>
                       <AvatarImage src={author?.avatarUrl} />
                       <AvatarFallback>{author?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
-                    <span className="text-white font-bold text-sm drop-shadow-md">{author?.displayName || 'Creator'}</span>
+                    <span><strong>{author?.displayName || 'Creator'}</strong><small>@{author?.username || 'creator'}</small></span>
                     {author && author.id !== currentUser?.id && (
                       <button
                         onClick={(event) => {
@@ -477,30 +456,47 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                           setFollowedAuthors((prev) => ({ ...prev, [author.id]: !isFollowing }));
                           void (isFollowing ? unfollowUser(author.id) : followUser(author.id));
                         }}
-                        className="px-3 py-1 bg-white text-black rounded-full text-xs font-bold hover:bg-zinc-200 transition-colors shadow-sm"
+                        data-following={isFollowing || undefined}
                       >
                         {isFollowing ? 'Following' : 'Follow'}
                       </button>
                     )}
                   </div>
 
-                  <p className="text-white text-sm line-clamp-2 drop-shadow-md font-medium mb-3 leading-relaxed">
-                    {video.title}
-                  </p>
+                  {showSubtitles && <p className="operator-reel-caption">{video.title}</p>}
 
-                  {/* Remix Sound Banner */}
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      sounds.playPop();
-                      setActiveRemixAudio({ title: video.title, artist: author?.displayName || 'Soundtrack' });
-                      setStudioOpen(true);
-                    }}
-                    className="flex items-center gap-2 text-white/90 text-xs font-mono bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full w-fit border border-white/10 cursor-pointer hover:bg-black/70 transition-colors"
-                  >
-                    <Music className="w-3.5 h-3.5 animate-pulse text-primary" />
-                    <span className="truncate max-w-[170px]">Audio: {video.title}</span>
-                    <span className="text-[0.62rem] px-1.5 py-0.5 rounded bg-primary/30 text-primary font-bold ml-1">Use Sound</span>
+                  <div className="operator-reel-info__tools">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        sounds.playPop();
+                        setActiveRemixAudio({ title: video.title, artist: author?.displayName || 'Soundtrack' });
+                        setStudioOpen(true);
+                      }}
+                    >
+                      <Music aria-hidden="true" />
+                      <span>Use this sound</span>
+                    </button>
+                    {author && (
+                      <button
+                        type="button"
+                        data-tone="tip"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          sounds.playPop();
+                          setTippingCreator({
+                            id: author.id,
+                            displayName: author.displayName,
+                            username: author.username,
+                            avatarUrl: author.avatarUrl,
+                          });
+                        }}
+                      >
+                        <Zap aria-hidden="true" />
+                        <span>Tip creator</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -516,20 +512,20 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="absolute inset-x-0 bottom-0 max-w-[480px] mx-auto h-[60vh] bg-zinc-950 border-t border-border/40 rounded-t-3xl p-5 flex flex-col justify-between z-50 shadow-2xl"
+              className="operator-reels-comments"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-border/40">
-                <h4 className="font-display font-bold text-sm text-white">Comments ({comments.length})</h4>
-                <button onClick={() => setShowComments(false)} className="p-1 text-zinc-400 hover:text-white">
-                  <X className="w-5 h-5" />
+              <div className="operator-reels-comments__head">
+                <span><small>Conversation</small><h4>Comments ({comments.length})</h4></span>
+                <button onClick={() => setShowComments(false)} aria-label="Close comments">
+                  <X aria-hidden="true" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto py-3 space-y-3 hide-scrollbar">
+              <div className="operator-reels-comments__list">
                 <RichCommentList comments={comments} onLikeComment={handleLikeComment} />
               </div>
 
-              <div className="pt-2 border-t border-border/40">
+              <div className="operator-reels-comments__composer">
                 <RichCommentComposer
                   postId={videos[playingIndex]?.id || 'reel'}
                   creatorUser={users[videos[playingIndex]?.authorId]}
@@ -548,26 +544,24 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              className="operator-reels-share-backdrop"
             >
-              <div className="w-full max-w-sm bg-zinc-950 border border-border/50 rounded-3xl p-6 shadow-2xl font-sans text-center">
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center mx-auto mb-3">
-                  <Share2 className="w-6 h-6" />
+              <div className="operator-reels-share">
+                <div className="operator-reels-share__icon">
+                  <Share2 aria-hidden="true" />
                 </div>
-                <h3 className="font-display font-bold text-lg text-white mb-1">Share Reel</h3>
-                <p className="text-xs text-zinc-400 mb-6">Share this video with friends or social feeds</p>
+                <h3>Share video</h3>
+                <p>Copy a direct link to this item in the watch queue.</p>
 
-                <div className="space-y-2.5">
+                <div className="operator-reels-share__actions">
                   <Button
                     onClick={handleCopyShareLink}
-                    className="w-full rounded-2xl font-bold text-xs h-11 bg-primary text-primary-foreground glow-neon-primary"
                   >
-                    <Copy className="w-4 h-4 mr-1.5" /> Copy Link
+                    <Copy aria-hidden="true" /> Copy link
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setShowShareModal(false)}
-                    className="w-full rounded-2xl font-bold text-xs h-11 border-border/60 text-white hover:bg-zinc-900"
                   >
                     Cancel
                   </Button>
