@@ -5,6 +5,7 @@ import {
   postsTable,
   videosTable,
   communitiesTable,
+  communityMembersTable,
   eventsTable,
   productsTable,
   articlesTable,
@@ -397,6 +398,14 @@ async function runMegaScaleSeed() {
   for (let c = 0; c < communityBatches.length; c += 200) {
     const chunk = communityBatches.slice(c, c + 200);
     await db.insert(communitiesTable).values(chunk).onConflictDoNothing();
+    const memberships = chunk.flatMap((community) => [...new Set([community.ownerId, ...community.memberIds])].map((userId) => ({
+      communityId: community.id,
+      userId,
+      role: userId === community.ownerId ? "owner" : "member",
+    })));
+    for (let memberOffset = 0; memberOffset < memberships.length; memberOffset += 2000) {
+      await db.insert(communityMembersTable).values(memberships.slice(memberOffset, memberOffset + 2000)).onConflictDoNothing();
+    }
   }
   console.log(`✅ ${communityBatches.length} Communities Created.`);
 

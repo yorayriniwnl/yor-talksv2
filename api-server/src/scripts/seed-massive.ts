@@ -5,6 +5,7 @@ import {
   postsTable,
   videosTable,
   communitiesTable,
+  communityMembersTable,
   eventsTable,
   productsTable,
 } from "@workspace/db/schema";
@@ -189,17 +190,24 @@ async function seedMassive() {
   for (let i = 0; i < 15; i++) {
     const ownerId = createdUserIds[i % createdUserIds.length];
     try {
+      const communityId = randomUUID();
+      const memberIds = [...new Set([ownerId, ...createdUserIds.slice(0, Math.floor(Math.random() * 30) + 5)])];
       await db.insert(communitiesTable).values({
-        id: randomUUID(),
+        id: communityId,
         name: `Multiverse Hub: ${communityCategories[i % communityCategories.length]} ${i + 1}`,
         slug: `multiverse-hub-${communityCategories[i % communityCategories.length].toLowerCase().replace(/[^a-z0-9]/g, "-")}-${i + 1}`,
         description: `Official community hub for ${communityCategories[i % communityCategories.length]} creators, builders, and enthusiasts.`,
         ownerId,
         moderators: [ownerId],
-        memberIds: createdUserIds.slice(0, Math.floor(Math.random() * 30) + 5),
+        memberIds,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+      await db.insert(communityMembersTable).values(memberIds.map((userId) => ({
+        communityId,
+        userId,
+        role: userId === ownerId ? "owner" : "member",
+      }))).onConflictDoNothing();
     } catch(e) {}
   }
 

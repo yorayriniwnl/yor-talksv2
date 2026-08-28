@@ -33,16 +33,16 @@ export class AchievementService {
   ) {}
 
   async getProgressForUser(userId: string): Promise<AchievementProgress[]> {
-    const [posts, user, communities] = await Promise.all([
+    const [posts, user, communityCount] = await Promise.all([
       this.postRepository.listByUser(userId),
       this.userRepository.findById(userId),
-      this.communityService.listCommunities(),
+      this.communityService.countMemberships(userId),
     ]);
 
     const metrics: Record<AchievementDefinition["metric"], number> = {
       postCount: posts.length,
       followerCount: user?.followerCount ?? 0,
-      communityCount: communities.filter((c) => c.memberIds.includes(userId)).length,
+      communityCount,
     };
 
     return DEFINITIONS.map((def) => {

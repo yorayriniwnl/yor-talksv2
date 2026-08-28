@@ -34,6 +34,7 @@ export {
   profileCommentsTable,
   profileShowcasesTable,
   communitiesTable,
+  communityMembersTable,
   broadcastChannelsTable,
   broadcastChannelMembersTable,
   broadcastChannelMessagesTable,

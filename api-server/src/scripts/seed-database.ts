@@ -3,6 +3,7 @@ import {
   usersTable,
   postsTable,
   communitiesTable,
+  communityMembersTable,
   eventsTable,
   productsTable,
   articlesTable,
@@ -201,6 +202,11 @@ async function seedDatabase() {
   for (const c of communities) {
     try {
       await db.insert(communitiesTable).values(c);
+      await db.insert(communityMembersTable).values(c.memberIds.map((userId) => ({
+        communityId: c.id,
+        userId,
+        role: userId === c.ownerId ? "owner" : "member",
+      }))).onConflictDoNothing();
       console.log(`✅ Seeded community: ${c.name}`);
     } catch (err: any) {
       console.log(`⚠️ Community skipped: ${err.message}`);

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
-import { communitiesTable } from "@workspace/db/schema";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { communitiesTable, communityMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { CommunityDiscussion, CommunityRecord } from "../types/index.js";
 import { AIService } from "./ai-service.js";
@@ -35,12 +35,16 @@ export class CommunityService {
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     
-    const [created] = await db.insert(communitiesTable).values(community).returning();
-    return created as CommunityRecord;
+    return db.transaction(async (tx) => {
+      const [created] = await tx.insert(communitiesTable).values(community).returning();
+      await tx.insert(communityMembersTable).values({ communityId: created.id, userId: input.ownerId, role: "owner" });
+      return { ...(created as CommunityRecord), memberIds: [input.ownerId] };
+    });
   }
 
   async listCommunities(viewerId?: string): Promise<CommunityRecord[]> {
-    return this.contentSafetyService.filterVisibleByAuthor((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[], viewerId, (community) => community.ownerId);
+    const communities = await this.hydrateMembers((await db.select().from(communitiesTable).limit(100)) as CommunityRecord[]);
+    return this.contentSafetyService.filterVisibleByAuthor(communities, viewerId, (community) => community.ownerId);
   }
 
   async getCommunity(idOrSlug: string, viewerId?: string): Promise<CommunityRecord | undefined> {
@@ -48,22 +52,18 @@ export class CommunityService {
     const [community] = await db.select().from(communitiesTable).where(
       isUuid ? eq(communitiesTable.id, idOrSlug) : eq(communitiesTable.slug, idOrSlug.trim().toLowerCase()),
     );
-    const typedCommunity = community as CommunityRecord | undefined;
+    const typedCommunity = community ? (await this.hydrateMembers([community as CommunityRecord]))[0] : undefined;
     return await this.contentSafetyService.isVisible(typedCommunity, viewerId, typedCommunity?.ownerId) ? typedCommunity : undefined;
   }
 
   async joinCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
     const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
-    const [updated] = await db.update(communitiesTable).set({
-      memberIds: sql`CASE
-        WHEN COALESCE(${communitiesTable.memberIds}, '[]'::jsonb) ? ${userId}
-          THEN COALESCE(${communitiesTable.memberIds}, '[]'::jsonb)
-        ELSE COALESCE(${communitiesTable.memberIds}, '[]'::jsonb) || jsonb_build_array(${userId})
-      END`,
-      updatedAt: new Date().toISOString(),
-    }).where(eq(communitiesTable.id, community.id)).returning();
-    return (updated as CommunityRecord | undefined) ?? community;
+    await db.transaction(async (tx) => {
+      await tx.insert(communityMembersTable).values({ communityId: community.id, userId }).onConflictDoNothing();
+      await tx.update(communitiesTable).set({ updatedAt: new Date().toISOString() }).where(eq(communitiesTable.id, community.id));
+    });
+    return this.getCommunity(community.id, userId);
   }
 
   async leaveCommunity(communityId: string, userId: string): Promise<CommunityRecord | undefined> {
@@ -72,15 +72,14 @@ export class CommunityService {
     if (community.ownerId === userId) {
       throw new Error("The owner can't leave their own community");
     }
-    const [updated] = await db.update(communitiesTable).set({
-      memberIds: sql`COALESCE((
-        SELECT jsonb_agg(to_jsonb(value))
-        FROM jsonb_array_elements_text(COALESCE(${communitiesTable.memberIds}, '[]'::jsonb)) AS values(value)
-        WHERE value <> ${userId}
-      ), '[]'::jsonb)`,
-      updatedAt: new Date().toISOString(),
-    }).where(eq(communitiesTable.id, community.id)).returning();
-    return (updated as CommunityRecord | undefined) ?? community;
+    await db.transaction(async (tx) => {
+      await tx.delete(communityMembersTable).where(and(
+        eq(communityMembersTable.communityId, community.id),
+        eq(communityMembersTable.userId, userId),
+      ));
+      await tx.update(communitiesTable).set({ updatedAt: new Date().toISOString() }).where(eq(communitiesTable.id, community.id));
+    });
+    return this.getCommunity(community.id, userId);
   }
 
   async listDiscussions(communityId: string, viewerId?: string): Promise<CommunityDiscussion[]> {
@@ -97,7 +96,7 @@ export class CommunityService {
   async createDiscussion(communityId: string, userId: string, input: { title: string; content?: string; tag: string; contentRating?: CommunityDiscussion["contentRating"] }): Promise<CommunityDiscussion | undefined> {
     const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
-    if (!community.memberIds.includes(userId)) throw new Error("Join this community before starting a discussion");
+    if (!(await this.isMember(community.id, userId))) throw new Error("Join this community before starting a discussion");
     await enforceTextContentPolicy(`${input.title}\n${input.content ?? ""}`, this.aiService, "discussion");
 
     const discussion: CommunityDiscussion = {
@@ -114,7 +113,11 @@ export class CommunityService {
     };
     await db.transaction(async (tx) => {
       const [locked] = await tx.select().from(communitiesTable).where(eq(communitiesTable.id, community.id)).for("update");
-      if (!locked || !(locked.memberIds as string[]).includes(userId)) throw new Error("Join this community before starting a discussion");
+      const [membership] = await tx.select({ userId: communityMembersTable.userId }).from(communityMembersTable).where(and(
+        eq(communityMembersTable.communityId, community.id),
+        eq(communityMembersTable.userId, userId),
+      )).limit(1);
+      if (!locked || !membership) throw new Error("Join this community before starting a discussion");
       const announcements = [...(Array.isArray(locked.announcements) ? locked.announcements : []), discussion];
       await tx.update(communitiesTable)
         .set({ announcements, postsCount: sql`${communitiesTable.postsCount} + 1`, updatedAt: new Date().toISOString() })
@@ -126,10 +129,14 @@ export class CommunityService {
   async likeDiscussion(communityId: string, discussionId: string, userId: string): Promise<CommunityDiscussion | undefined> {
     const community = await this.getCommunity(communityId, userId);
     if (!community) return undefined;
-    if (!community.memberIds.includes(userId)) throw new Error("Join this community before liking a discussion");
+    if (!(await this.isMember(community.id, userId))) throw new Error("Join this community before liking a discussion");
     return db.transaction(async (tx) => {
       const [locked] = await tx.select().from(communitiesTable).where(eq(communitiesTable.id, community.id)).for("update");
-      if (!locked || !(locked.memberIds as string[]).includes(userId)) throw new Error("Join this community before liking a discussion");
+      const [membership] = await tx.select({ userId: communityMembersTable.userId }).from(communityMembersTable).where(and(
+        eq(communityMembersTable.communityId, community.id),
+        eq(communityMembersTable.userId, userId),
+      )).limit(1);
+      if (!locked || !membership) throw new Error("Join this community before liking a discussion");
       const discussions = (Array.isArray(locked.announcements) ? locked.announcements : []) as CommunityDiscussion[];
       const index = discussions.findIndex((discussion) => discussion.id === discussionId);
       if (index < 0) return undefined;
@@ -144,5 +151,36 @@ export class CommunityService {
       }
       return discussions[index];
     });
+  }
+
+  async countMemberships(userId: string): Promise<number> {
+    const [result] = await db.select({ value: count() }).from(communityMembersTable).where(eq(communityMembersTable.userId, userId));
+    return Number(result?.value ?? 0);
+  }
+
+  private async isMember(communityId: string, userId: string): Promise<boolean> {
+    const [membership] = await db.select({ userId: communityMembersTable.userId }).from(communityMembersTable).where(and(
+      eq(communityMembersTable.communityId, communityId),
+      eq(communityMembersTable.userId, userId),
+    )).limit(1);
+    return Boolean(membership);
+  }
+
+  private async hydrateMembers(communities: CommunityRecord[]): Promise<CommunityRecord[]> {
+    if (communities.length === 0) return [];
+    const memberships = await db.select({
+      communityId: communityMembersTable.communityId,
+      userId: communityMembersTable.userId,
+    }).from(communityMembersTable).where(inArray(communityMembersTable.communityId, communities.map((community) => community.id)));
+    const memberIdsByCommunity = new Map<string, string[]>();
+    for (const membership of memberships) {
+      const current = memberIdsByCommunity.get(membership.communityId) ?? [];
+      current.push(membership.userId);
+      memberIdsByCommunity.set(membership.communityId, current);
+    }
+    return communities.map((community) => ({
+      ...community,
+      memberIds: memberIdsByCommunity.get(community.id) ?? [],
+    }));
   }
 }

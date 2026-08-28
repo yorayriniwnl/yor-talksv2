@@ -215,6 +215,16 @@ export const communitiesTable = pgTable("communities", {
   ownerIdx: index("community_owner_idx").on(table.ownerId)
 }));
 
+export const communityMembersTable = pgTable("community_members", {
+  communityId: uuid("community_id").references(() => communitiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  role: text("role").notNull().default("member"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.communityId, table.userId] }),
+  userIdx: index("community_member_user_idx").on(table.userId, table.createdAt),
+}));
+
 export const broadcastChannelsTable = pgTable("broadcast_channels", {
   id: uuid("id").primaryKey(),
   ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
@@ -921,6 +931,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   sentMessages: many(messagesTable, { relationName: 'sentMessages' }),
   receivedMessages: many(messagesTable, { relationName: 'receivedMessages' }),
   communities: many(communitiesTable),
+  communityMemberships: many(communityMembersTable),
   events: many(eventsTable),
   products: many(productsTable),
   articles: many(articlesTable),
@@ -947,8 +958,14 @@ export const messagesRelations = relations(messagesTable, ({ one }) => ({
   recipient: one(usersTable, { fields: [messagesTable.recipientId], references: [usersTable.id], relationName: 'receivedMessages' })
 }));
 
-export const communitiesRelations = relations(communitiesTable, ({ one }) => ({
-  owner: one(usersTable, { fields: [communitiesTable.ownerId], references: [usersTable.id] })
+export const communitiesRelations = relations(communitiesTable, ({ one, many }) => ({
+  owner: one(usersTable, { fields: [communitiesTable.ownerId], references: [usersTable.id] }),
+  members: many(communityMembersTable),
+}));
+
+export const communityMembersRelations = relations(communityMembersTable, ({ one }) => ({
+  community: one(communitiesTable, { fields: [communityMembersTable.communityId], references: [communitiesTable.id] }),
+  user: one(usersTable, { fields: [communityMembersTable.userId], references: [usersTable.id] }),
 }));
 
 export const eventsRelations = relations(eventsTable, ({ one }) => ({
