@@ -8,20 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Search, Plus, UsersRound, MoreVertical, SendHorizontal, MessageCircle, ArrowLeft,
-  Sparkles, Reply, X, Video, Phone, Mic, Zap, EyeOff, Shield, Image as ImageIcon, Pencil, Trash2, Pin, Smile
+  Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft,
+  Reply, X, Video, Phone, Mic, Zap, EyeOff, Image as ImageIcon, Pencil, Trash2, Pin, Smile,
+  ArrowLeftRight, LockKeyhole, Inbox
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
 import { format, formatDistanceToNow, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
-import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
 import { VoiceNoteRecorder } from '@/components/messages/VoiceNoteRecorder';
 import { WebRtcCallModal } from '@/components/messages/WebRtcCallModal';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
+import { SignalLabel, StatusBadge } from '@/components/system';
+import '@/styles/operator-communications.css';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -51,36 +53,39 @@ function MessageContent({ content, isMine, reply: structuredReply }: { content: 
   const legacyReply = parseReply(content);
   const reply = structuredReply ?? legacyReply;
   const body = legacyReply?.body ?? content;
+  const imageMatch = body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/);
+  const imageUrl = imageMatch?.[1];
+  const textBody = imageMatch ? body.slice(0, imageMatch.index).trim() : body;
 
-  // Check if content is a voice note
+  const replyMarkup = reply ? (
+    <div className="operator-message-reply" data-mine={isMine || undefined}>
+      <Reply aria-hidden="true" />
+      <div>
+        <strong>Replying to {reply.senderName}</strong>
+        <span>{reply.excerpt}</span>
+      </div>
+    </div>
+  ) : null;
+
   if (body.startsWith('[Voice Note]')) {
     const audioUrlMatch = body.match(/\[Voice Note\]\s*(https?:\/\/[^\s]+|\S+)/);
     const audioUrl = audioUrlMatch ? audioUrlMatch[1] : '';
     return (
-      <div className="flex items-center gap-2 py-1">
-        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-          <Mic className="w-4 h-4" />
+      <>
+        {replyMarkup}
+        <div className="operator-message-audio">
+          <span><Mic aria-hidden="true" /></span>
+          <audio controls src={audioUrl} preload="metadata" />
         </div>
-        <audio controls src={audioUrl} className="max-w-[200px] h-8" />
-      </div>
+      </>
     );
   }
 
-  if (!reply) return <span className="whitespace-pre-wrap">{body}</span>;
-
   return (
     <>
-      <div className={cn(
-        'mb-2 flex gap-2 rounded-xl border px-2.5 py-2 text-xs',
-        isMine ? 'border-white/15 bg-black/10 text-white/80' : 'border-border/40 bg-background/35 text-muted-foreground'
-      )}>
-        <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <div className="min-w-0">
-          <p className="font-semibold">Replying to {reply.senderName}</p>
-          <p className="mt-0.5 truncate opacity-80">{reply.excerpt}</p>
-        </div>
-      </div>
-      <span className="whitespace-pre-wrap">{body}</span>
+      {replyMarkup}
+      {textBody && <span className="operator-message-text">{textBody}</span>}
+      {imageUrl && <img className="operator-message-image" src={imageUrl} alt="Shared attachment" loading="lazy" />}
     </>
   );
 }
@@ -88,12 +93,11 @@ function MessageContent({ content, isMine, reply: structuredReply }: { content: 
 /* ─── Typing indicator dots ────────────────────────────────────────────── */
 function TypingIndicator({ name }: { name: string }) {
   return (
-    <div className="mr-auto flex items-center gap-2 px-4 py-3" role="status" aria-live="polite">
-      <div className="surface-1 rounded-[20px] rounded-bl-md px-4 py-3 flex items-center gap-1">
+    <div className="operator-typing-indicator" role="status" aria-live="polite">
+      <div className="operator-typing-indicator__dots">
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-[7px] h-[7px] rounded-full bg-muted-foreground/50"
             animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
             transition={{
               duration: 0.8,
@@ -104,7 +108,7 @@ function TypingIndicator({ name }: { name: string }) {
           />
         ))}
       </div>
-      <span className="text-xs text-muted-foreground">{name} is typing</span>
+      <span>{name} is typing</span>
     </div>
   );
 }
@@ -150,8 +154,8 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="surface-2 rounded-2xl border-none shadow-xl">
-        <DialogHeader><DialogTitle className="font-display">Start a chat</DialogTitle></DialogHeader>
+      <DialogContent className="operator-message-dialog">
+        <DialogHeader><DialogTitle>Start a conversation</DialogTitle></DialogHeader>
         {!selected ? (
           <div className="space-y-3">
             <div className="relative">
@@ -236,8 +240,8 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="surface-2 rounded-2xl border-none shadow-xl">
-        <DialogHeader><DialogTitle className="font-display">Create a group chat</DialogTitle></DialogHeader>
+      <DialogContent className="operator-message-dialog">
+        <DialogHeader><DialogTitle>Create a group conversation</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <Input value={title} onChange={(event) => setTitle(event.target.value.slice(0, 120))} placeholder="Group name" className="rounded-xl" autoFocus />
           <div className="relative">
@@ -279,39 +283,42 @@ function ConversationItem({
   isTyping,
   onSelect,
 }: {
-  entry: { conv: any; user: any; lastMsg?: DirectMessage };
+  entry: { conv: any; user: any; lastMsg?: DirectMessage; unreadCount: number };
   active: boolean;
   isTyping: boolean;
   onSelect: (id: string) => void;
 }) {
-  const { conv, user, lastMsg } = entry;
+  const { conv, user, lastMsg, unreadCount } = entry;
   const displayName = user.displayName || user.username || 'User';
 
   return (
     <button
       onClick={() => onSelect(conv.id)}
-      className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-2xl transition-all text-left cursor-pointer",
-        active ? "bg-primary/15 border border-primary/30 glow-neon-primary" : "hover:bg-muted/40 border border-transparent"
-      )}
+      className="operator-conversation-item"
+      data-active={active || undefined}
+      data-unread={unreadCount > 0 || undefined}
+      aria-current={active ? 'page' : undefined}
     >
-      <Avatar className="w-11 h-11 border border-border/50">
+      <span className="operator-conversation-item__avatar">
+      <Avatar>
         <AvatarImage src={user.avatarUrl} />
-        <AvatarFallback className="font-display font-bold">{displayName.charAt(0)}</AvatarFallback>
+        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
       </Avatar>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-sm truncate text-foreground">{displayName}</span>
+      </span>
+      <span className="operator-conversation-item__body">
+        <span className="operator-conversation-item__head">
+          <strong>{displayName}</strong>
           {lastMsg && (
-            <span className="text-[0.68rem] font-mono text-muted-foreground shrink-0">
+            <time dateTime={lastMsg.createdAt}>
               {formatDistanceToNow(new Date(lastMsg.createdAt))}
-            </span>
+            </time>
           )}
-        </div>
-        <p className={cn("text-xs truncate mt-0.5", isTyping ? "text-primary font-bold" : "text-muted-foreground")}>
+        </span>
+        <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
           {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
-        </p>
-      </div>
+        </span>
+      </span>
+      {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
   );
 }
@@ -355,7 +362,7 @@ export default function Messages() {
   const [editingText, setEditingText] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingStopTimeoutRef = useRef<number | null>(null);
   const typingConversationIdRef = useRef<string | null>(null);
 
@@ -423,7 +430,8 @@ export default function Messages() {
           };
           const msgs = messagesByConversation[conv.id] || [];
           const lastMsg = msgs[msgs.length - 1];
-          return { conv, user: groupUser, lastMsg };
+          const unreadCount = msgs.filter((message) => message.senderId !== currentUser?.id && !message.read).length;
+          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, unreadCount };
         }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
@@ -439,7 +447,8 @@ export default function Messages() {
         }
         const msgs = messagesByConversation[conv.id] || [];
         const lastMsg = msgs[msgs.length - 1];
-        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg };
+        const unreadCount = msgs.filter((message) => message.senderId !== currentUser?.id && !message.read).length;
+        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
       })
       .filter((entry) =>
         entry.user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -475,22 +484,19 @@ export default function Messages() {
       ? `${message.trim()}\n📷 ${imageAttachment.trim()}`
       : message.trim();
 
-    const toSend = replyTarget
-      ? `[Reply to ${replyTarget.senderName}] ${replyTarget.excerpt}\n${baseMessage}`
-      : baseMessage;
-
     setSending(true);
     setPulseSend(true);
     sounds.playPop();
 
     try {
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, toSend);
-      else await sendDirectMessage(activeConv.user.id, toSend);
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId);
+      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId);
       setMessage('');
       setImageAttachment('');
       setShowImageInput(false);
       setReplyTarget(null);
       stopTyping();
+      if (inputRef.current) inputRef.current.style.height = 'auto';
     } catch {
       toast.error('Failed to send message');
     } finally {
@@ -551,45 +557,48 @@ export default function Messages() {
   };
 
   return (
-    <div className="messages-page w-full max-w-6xl mx-auto lg:p-4 font-sans">
-      <div className="flex min-h-0 w-full h-full lg:surface-1 lg:rounded-3xl lg:shadow-xl overflow-hidden border-none lg:border lg:border-border/50">
+    <div className="messages-page operator-messages-page">
+      <div className="operator-messages-shell">
         
-        {/* ── SIDEBAR (Chats List) ────────────────────────────────────────── */}
-        <div className={cn(
-          "min-h-0 w-full lg:w-[340px] flex-col border-r border-border/50 bg-background lg:bg-transparent",
-          id ? "hidden lg:flex" : "flex"
+        <aside className={cn(
+          'operator-inbox',
+          id ? 'operator-inbox--mobile-hidden' : 'operator-inbox--mobile-visible'
         )}>
-          <div className="p-4 flex flex-col gap-4 border-b border-border/30">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display font-black text-2xl tracking-tight text-foreground">Direct Chats</h2>
-              <div className="flex items-center gap-1.5">
-                <Button size="icon" variant="outline" className="rounded-full w-9 h-9 cursor-pointer" onClick={() => setNewGroupOpen(true)} aria-label="Create a group chat" title="Create a group chat">
-                  <UsersRound className="w-4 h-4" />
+          <header className="operator-inbox__header">
+            <div className="operator-inbox__title-row">
+              <div>
+                <SignalLabel>Inbox // realtime</SignalLabel>
+                <h1>Messages</h1>
+              </div>
+              <div className="operator-inbox__actions">
+                <Button size="icon" variant="outline" onClick={() => setNewGroupOpen(true)} aria-label="Create a group chat" title="Create a group chat">
+                  <UsersRound aria-hidden="true" />
                 </Button>
-                <Button size="icon" className="rounded-full w-9 h-9 glow-neon-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-md cursor-pointer" onClick={() => setNewMessageOpen(true)} aria-label="Start a new conversation" title="Start a new conversation">
-                  <Plus className="w-4 h-4" />
+                <Button size="icon" onClick={() => setNewMessageOpen(true)} aria-label="Start a new conversation" title="Start a new conversation">
+                  <Plus aria-hidden="true" />
                 </Button>
               </div>
             </div>
 
-            <div className="relative group/search rounded-xl transition-all focus-within:ring-2 focus-within:ring-primary/40 focus-within:glow-neon-primary">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
+            <div className="operator-inbox-search">
+              <Search aria-hidden="true" />
               <Input 
                 placeholder="Search conversations" 
                 aria-label="Search conversations"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 surface-2 border-none rounded-xl h-10 text-xs focus-visible:ring-0" 
               />
             </div>
-          </div>
+            <div className="operator-inbox__summary"><span>{conversationList.length} conversations</span><StatusBadge status="online">Connected</StatusBadge></div>
+          </header>
           
-          <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-2 space-y-1">
+          <div className="operator-inbox__list">
             {conversationList.length === 0 ? (
-              <div className="p-8 flex flex-col items-center justify-center text-center h-full text-muted-foreground opacity-80">
-                <MessageCircle className="w-8 h-8 mb-3 opacity-50 text-primary" />
-                <p className="text-sm font-medium">No chats found.</p>
-                <p className="text-xs mt-1 text-muted-foreground/60">Start a conversation from explore</p>
+              <div className="operator-inbox__empty">
+                <Inbox aria-hidden="true" />
+                <h2>{searchQuery ? 'No matching conversations' : 'Your inbox is clear'}</h2>
+                <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a private conversation with someone in your network.'}</p>
+                {!searchQuery && <button type="button" onClick={() => setNewMessageOpen(true)}>Start a conversation</button>}
               </div>
             ) : (
               conversationList.map((entry) => (
@@ -603,213 +612,228 @@ export default function Messages() {
               ))
             )}
           </div>
-        </div>
+        </aside>
 
-        {/* ── CHAT THREAD AREA ───────────────────────────────────────────── */}
-        <div className={cn("min-h-0 flex-1 flex-col bg-background lg:bg-transparent", id ? "flex" : "hidden lg:flex")}>
+        <section className={cn('operator-thread', id ? 'operator-thread--mobile-visible' : 'operator-thread--mobile-hidden')}>
           {activeConv ? (
             <>
-              {/* Chat Header */}
-              <div className="h-16 px-4 border-b border-border/30 flex items-center justify-between glass-heavy sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="lg:hidden -ml-2 w-9 h-9 text-muted-foreground hover:text-foreground" onClick={() => setLocation('/messages')} aria-label="Back to conversations">
-                    <ArrowLeft className="w-5 h-5" />
+              <header className="operator-thread__header">
+                <div className="operator-thread__identity">
+                  <Button variant="ghost" size="icon" className="operator-thread__back" onClick={() => setLocation('/messages')} aria-label="Back to conversations">
+                    <ArrowLeft aria-hidden="true" />
                   </Button>
-                  <div className="relative">
-                    <Avatar className="w-10 h-10 ring-2 ring-primary/20">
+                  <div className="operator-thread__avatar">
+                    <Avatar>
                       <AvatarImage src={activeConv.user.avatarUrl} />
-                      <AvatarFallback className="font-display font-semibold">{activeConv.user.displayName.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{activeConv.user.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </div>
-                  <div className="flex flex-col">
-                    <h3 className="font-display font-bold text-sm leading-tight text-foreground">{activeConv.user.displayName}</h3>
-                    <span className={cn('text-xs font-mono leading-tight', isPeerTyping ? 'text-primary' : 'text-muted-foreground')}>
+                  <div className="operator-thread__identity-copy">
+                    <h2>{activeConv.user.displayName}</h2>
+                    <span data-typing={isPeerTyping || undefined}>
                       {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : `@${activeConv.user.username}`}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  {/* Vanish Mode */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (!activeConv) return;
-                      const enabled = !Boolean(activeConv.conv.vanishMode);
-                      void setConversationVanishMode(activeConv.conv.id, enabled).then(() => {
-                        toast.info(enabled ? '⚡ Vanish Mode active — messages disappear when read' : 'Vanish Mode turned off');
-                      }).catch(() => undefined);
-                    }}
-                    className={cn(
-                      "rounded-full w-9 h-9 transition-colors cursor-pointer",
-                      vanishMode ? "bg-purple-600/30 text-purple-400 border border-purple-500/50" : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Toggle Vanish Mode"
-                    aria-label="Toggle Vanish Mode"
-                  >
-                    <EyeOff className="w-4 h-4" />
-                  </Button>
-
+                <div className="operator-thread__actions">
                   {!activeConv.conv.isGroup && <>
-                    {/* Instant Tip UPI */}
-                    <Button variant="ghost" size="icon" onClick={() => setTipModalOpen(true)} className="rounded-full w-9 h-9 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 cursor-pointer" title="Tip via UPI" aria-label="Tip via UPI">
-                      <Zap className="w-4 h-4 fill-amber-400" />
+                    <Button variant="ghost" size="icon" onClick={() => { setCallType('audio'); setCallModalOpen(true); }} title="Voice Call" aria-label="Start voice call">
+                      <Phone aria-hidden="true" />
                     </Button>
-
-                    {/* Audio Call */}
-                    <Button variant="ghost" size="icon" onClick={() => { setCallType('audio'); setCallModalOpen(true); }} className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer" title="Voice Call" aria-label="Start voice call">
-                      <Phone className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" onClick={() => { setCallType('video'); setCallModalOpen(true); }} title="Start video call" aria-label="Start video call">
+                      <Video aria-hidden="true" />
                     </Button>
-
-                    {/* Video Call */}
-                    <Button variant="ghost" size="icon" onClick={() => { setCallType('video'); setCallModalOpen(true); }} className="rounded-full w-9 h-9 text-primary hover:bg-primary/20 cursor-pointer" title="Start video call" aria-label="Start video call">
-                      <Video className="w-4 h-4" />
-                    </Button>
-
-                    <SteamTradeModal partnerName={activeConv.user.displayName} partnerAvatar={activeConv.user.avatarUrl} />
                   </>}
-                  <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-muted/50" aria-label="More conversation options">
-                    <MoreVertical className="w-5 h-5" />
-                  </Button>
+                  <details className="operator-thread-menu">
+                    <summary aria-label="More conversation options"><MoreVertical aria-hidden="true" /></summary>
+                    <div className="operator-thread-menu__content">
+                      <button type="button" data-active={vanishMode || undefined} onClick={() => {
+                        const enabled = !Boolean(activeConv.conv.vanishMode);
+                        void setConversationVanishMode(activeConv.conv.id, enabled).then(() => {
+                          toast.info(enabled ? 'Vanish mode active — messages disappear when read' : 'Vanish mode turned off');
+                        }).catch(() => undefined);
+                      }}><EyeOff aria-hidden="true" /><span><strong>Vanish mode</strong><small>{vanishMode ? 'On' : 'Off'}</small></span></button>
+                      {!activeConv.conv.isGroup && <>
+                        <button type="button" onClick={() => setTipModalOpen(true)}><Zap aria-hidden="true" /><span><strong>Tip creator</strong><small>Open UPI tip jar</small></span></button>
+                        <SteamTradeModal
+                          partnerName={activeConv.user.displayName}
+                          partnerAvatar={activeConv.user.avatarUrl}
+                          trigger={<button type="button"><ArrowLeftRight aria-hidden="true" /><span><strong>Gear trade</strong><small>Prepare a trade draft</small></span></button>}
+                        />
+                      </>}
+                    </div>
+                  </details>
                 </div>
-              </div>
+              </header>
 
-              {/* Messages Flow */}
-              <div className={cn("min-h-0 flex-1 overflow-y-auto p-4 lg:p-6 flex flex-col hide-scrollbar", vanishMode && "bg-purple-950/20")}>
+              <div className="operator-thread__flow" data-vanish={vanishMode || undefined}>
                 {activeMessages.length === 0 && (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="relative overflow-hidden rounded-2xl p-6 text-center surface-1 border border-border/30">
-                      <Sparkles className="w-6 h-6 text-primary mx-auto mb-2 opacity-70" />
-                      <p className="text-sm font-display font-bold text-foreground">Start the chat with a wave 👋</p>
-                      <p className="text-xs text-muted-foreground mt-1">End-to-end encrypted direct messaging</p>
+                  <div className="operator-thread__empty">
+                    <div>
+                      <LockKeyhole aria-hidden="true" />
+                      <h3>Private channel ready</h3>
+                      <p>Send the first message to {activeConv.user.displayName}. Your calls and message tools stay in this channel.</p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-col mt-auto justify-end space-y-2">
-                  {activeMessages.map((msg) => {
+                <div className="operator-thread__messages">
+                  {activeMessages.map((msg, index) => {
                     const isMine = msg.senderId === currentUser?.id;
+                    const senderName = isMine ? 'You' : users[msg.senderId]?.displayName || activeConv.user.displayName;
                     const reactionCount = Object.values(msg.reactions ?? {}).reduce((count, users) => count + users.length, 0);
+                    const previousMessage = activeMessages[index - 1];
+                    const showDate = !previousMessage || !isSameDay(new Date(previousMessage.createdAt), new Date(msg.createdAt));
+                    const repliedMessage = msg.replyToId ? activeMessages.find((candidate) => candidate.id === msg.replyToId) : null;
+                    const replyPreview = repliedMessage ? {
+                      senderName: repliedMessage.senderId === currentUser?.id ? 'You' : users[repliedMessage.senderId]?.displayName || activeConv.user.displayName,
+                      excerpt: (parseReply(repliedMessage.content)?.body || repliedMessage.content).replace(/\s+/g, ' ').slice(0, 96),
+                    } : null;
+
                     return (
-                      <div key={msg.id} className={cn('group relative flex max-w-[88%] flex-col', isMine ? 'ml-auto items-end' : 'mr-auto items-start')}>
-                        <div className="mb-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                          <button type="button" onClick={() => void handleReactMessage(msg.id)} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-rose-400" title="React with heart" aria-label="React to message"><Smile className="h-3.5 w-3.5" /></button>
-                          <button type="button" onClick={() => void handlePinMessage(msg.id)} className={cn('rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary', msg.pinned && 'text-primary')} title={msg.pinned ? 'Pinned' : 'Pin message'} aria-label={msg.pinned ? 'Message pinned' : 'Pin message'}><Pin className="h-3.5 w-3.5" /></button>
-                          {isMine && <button type="button" onClick={() => { setEditingMessageId(msg.id); setEditingText(msg.content); }} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-primary" title="Edit message" aria-label="Edit message"><Pencil className="h-3.5 w-3.5" /></button>}
-                          {isMine && <button type="button" onClick={() => void handleDeleteMessage(msg.id)} className="rounded-full border border-border/40 bg-background/80 p-1.5 text-muted-foreground hover:text-destructive" title="Delete message" aria-label="Delete message"><Trash2 className="h-3.5 w-3.5" /></button>}
-                        </div>
-                        <div className={cn(
-                          "max-w-full rounded-2xl px-4 py-2.5 text-xs font-sans leading-relaxed shadow-sm",
-                          isMine
-                            ? "bg-gradient-to-r from-primary to-purple-600 text-white rounded-br-none"
-                            : "surface-2 text-foreground rounded-bl-none border border-border/40"
-                        )}>
-                          {editingMessageId === msg.id ? (
-                            <div className="flex min-w-[220px] items-center gap-2">
-                              <Input value={editingText} onChange={(event) => setEditingText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleEditMessage(); if (event.key === 'Escape') setEditingMessageId(null); }} className="h-8 rounded-lg border-white/20 bg-black/10 text-xs text-current" autoFocus aria-label="Edit message" />
-                              <button type="button" onClick={() => void handleEditMessage()} className="text-[0.65rem] font-bold underline">Save</button>
-                            </div>
-                          ) : (
-                            <MessageContent content={msg.content} isMine={isMine} />
-                          )}
-                          <span className="mt-1 block text-right text-[0.62rem] font-mono opacity-60">
-                            {format(new Date(msg.createdAt), 'hh:mm a')}{msg.editedAt ? ' · edited' : ''}
-                          </span>
-                        </div>
-                        {(reactionCount > 0 || msg.pinned) && <div className="mt-1 flex items-center gap-2 text-[0.62rem] text-muted-foreground"><span>{reactionCount > 0 ? `❤️ ${reactionCount}` : ''}</span>{msg.pinned && <span className="flex items-center gap-1"><Pin className="h-3 w-3" /> Pinned</span>}</div>}
-                      </div>
+                      <React.Fragment key={msg.id}>
+                        {showDate && (
+                          <div className="operator-message-date" role="separator" aria-label={format(new Date(msg.createdAt), 'MMMM d, yyyy')}>
+                            <span>{format(new Date(msg.createdAt), 'EEE, MMM d')}</span>
+                          </div>
+                        )}
+                        <article className="operator-message" data-mine={isMine || undefined}>
+                          <div className="operator-message__actions">
+                            <button type="button" onClick={() => setReplyTarget({
+                              messageId: msg.id,
+                              senderName,
+                              excerpt: (parseReply(msg.content)?.body || msg.content).replace(/\s+/g, ' ').slice(0, 96),
+                            })} title="Reply" aria-label="Reply to message"><Reply aria-hidden="true" /></button>
+                            <button type="button" onClick={() => void handleReactMessage(msg.id)} title="React with heart" aria-label="React to message"><Smile aria-hidden="true" /></button>
+                            <button type="button" onClick={() => void handlePinMessage(msg.id)} data-active={msg.pinned || undefined} title={msg.pinned ? 'Pinned' : 'Pin message'} aria-label={msg.pinned ? 'Message pinned' : 'Pin message'}><Pin aria-hidden="true" /></button>
+                            {isMine && <button type="button" onClick={() => { setEditingMessageId(msg.id); setEditingText(msg.content); }} title="Edit message" aria-label="Edit message"><Pencil aria-hidden="true" /></button>}
+                            {isMine && <button type="button" onClick={() => void handleDeleteMessage(msg.id)} data-destructive="true" title="Delete message" aria-label="Delete message"><Trash2 aria-hidden="true" /></button>}
+                          </div>
+                          <div className="operator-message__bubble">
+                            {editingMessageId === msg.id ? (
+                              <div className="operator-message__edit">
+                                <Input value={editingText} maxLength={MAX_MESSAGE_LENGTH} onChange={(event) => setEditingText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleEditMessage(); if (event.key === 'Escape') setEditingMessageId(null); }} autoFocus aria-label="Edit message" />
+                                <button type="button" onClick={() => void handleEditMessage()}>Save</button>
+                              </div>
+                            ) : (
+                              <MessageContent content={msg.content} isMine={isMine} reply={replyPreview} />
+                            )}
+                            <time dateTime={msg.createdAt}>{format(new Date(msg.createdAt), 'h:mm a')}{msg.editedAt ? ' · edited' : ''}</time>
+                          </div>
+                          {(reactionCount > 0 || msg.pinned) && <div className="operator-message__meta"><span>{reactionCount > 0 ? `❤️ ${reactionCount}` : ''}</span>{msg.pinned && <span><Pin aria-hidden="true" /> Pinned</span>}</div>}
+                        </article>
+                      </React.Fragment>
                     );
                   })}
+                  {isPeerTyping && <TypingIndicator name={activeConv.user.displayName} />}
                   <div ref={scrollRef} className="h-1" />
                 </div>
               </div>
 
-              {/* Input Area */}
-              <div className="p-3 lg:p-4 border-t border-border/30 surface-1">
+              <footer className="operator-composer" data-vanish={vanishMode || undefined}>
                 {showVoiceRecorder ? (
                   <VoiceNoteRecorder
                     onSendVoiceNote={handleSendVoiceNote}
                     onCancel={() => setShowVoiceRecorder(false)}
                   />
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="operator-composer__stack">
+                    {replyTarget && (
+                      <div className="operator-composer-reply">
+                        <Reply aria-hidden="true" />
+                        <span><strong>Replying to {replyTarget.senderName}</strong><small>{replyTarget.excerpt}</small></span>
+                        <button type="button" onClick={() => setReplyTarget(null)} aria-label="Cancel reply"><X aria-hidden="true" /></button>
+                      </div>
+                    )}
                     {showImageInput && (
-                      <div className="mb-2 space-y-2">
-                        <div className="flex items-center gap-2">
+                      <div className="operator-composer-attachment">
+                        <div>
                           <Input
                             value={imageAttachment}
                             onChange={(e) => setImageAttachment(e.target.value)}
-                            placeholder="Paste image URL..."
-                            className="rounded-xl text-xs h-9 flex-1"
+                            placeholder="Paste a direct image URL"
+                            aria-label="Image URL"
                           />
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => { setShowImageInput(false); setImageAttachment(''); }}
-                            className="rounded-lg h-9 px-2 text-muted-foreground"
                             aria-label="Close image attachment"
                           >
-                            <X className="w-4 h-4" />
+                            <X aria-hidden="true" />
                           </Button>
                         </div>
                         {imageAttachment.trim() && (
-                          <div className="h-32 rounded-xl overflow-hidden bg-muted border border-border/40">
-                            <img src={imageAttachment} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="operator-composer-attachment__preview">
+                            <img src={imageAttachment} alt="Attachment preview" />
                           </div>
                         )}
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
+                    <div className="operator-composer__controls">
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => setShowVoiceRecorder(true)}
-                        className="rounded-full w-10 h-10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer"
                         title="Record Voice Note"
                         aria-label="Record voice note"
                       >
-                        <Mic className="w-5 h-5" />
+                        <Mic aria-hidden="true" />
                       </Button>
 
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => setShowImageInput(prev => !prev)}
-                        className="rounded-full w-10 h-10 text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0 cursor-pointer"
+                        data-active={showImageInput || undefined}
                         title="Send Image"
                         aria-label="Add image attachment"
                       >
-                        <ImageIcon className="w-5 h-5" />
+                        <ImageIcon aria-hidden="true" />
                       </Button>
 
-                      <Input
+                      <textarea
                         ref={inputRef}
                         value={message}
+                        rows={1}
+                        maxLength={MAX_MESSAGE_LENGTH}
                         onChange={(e) => {
                           setMessage(e.target.value);
                           signalTyping(id);
                         }}
+                        onInput={(event) => {
+                          event.currentTarget.style.height = 'auto';
+                          event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 120)}px`;
+                        }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSend();
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            void handleSend();
+                          }
                         }}
                         placeholder="Write a direct message…"
-                        className="rounded-2xl surface-2 border-border/40 text-xs h-11"
+                        aria-label="Message"
                       />
 
                       <Button
                         size="icon"
                         disabled={(!message.trim() && !imageAttachment.trim()) || sending}
                         onClick={handleSend}
-                        className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground shrink-0 glow-neon-primary cursor-pointer"
+                        className="operator-composer__send"
+                        data-pulse={pulseSend || undefined}
                         aria-label="Send message"
                       >
-                        <SendHorizontal className="w-4 h-4" />
+                        <SendHorizontal aria-hidden="true" />
                       </Button>
+                    </div>
+                    <div className="operator-composer__hint">
+                      <span>{vanishMode ? 'Vanish mode is on' : 'Enter to send · Shift + Enter for a new line'}</span>
+                      {message.length > MAX_MESSAGE_LENGTH * 0.8 && <span>{message.length}/{MAX_MESSAGE_LENGTH}</span>}
                     </div>
                   </div>
                 )}
-              </div>
+              </footer>
 
               {/* WebRTC Video Call Modal */}
               <WebRtcCallModal
@@ -837,23 +861,16 @@ export default function Messages() {
               />
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full relative overflow-hidden">
-              <div className="w-16 h-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-4 shadow-xl ring-2 ring-primary/20">
-                <MessageCircle className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-display font-black text-foreground">Select a chat to begin</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                Encrypted chats, voice notes, 4K WebRTC video calls and zero-fee UPI payouts.
-              </p>
-              <Button
-                onClick={() => setNewMessageOpen(true)}
-                className="mt-5 rounded-2xl font-display font-bold text-xs h-11 px-6 bg-primary text-primary-foreground glow-neon-primary cursor-pointer"
-              >
-                <Plus className="w-4 h-4 mr-1.5" /> Start New Chat
-              </Button>
+            <div className="operator-thread-placeholder">
+              <span><LockKeyhole aria-hidden="true" /></span>
+              <SignalLabel tone="muted">Private operator channel</SignalLabel>
+              <h2>Select a conversation</h2>
+              <p>Message your network, send voice notes, make direct calls, tip creators, and prepare trade drafts from one focused workspace.</p>
+              <button type="button" onClick={() => setNewMessageOpen(true)}><Plus aria-hidden="true" />Start a conversation</button>
+              <small>Private messaging // call ready // live presence</small>
             </div>
           )}
-        </div>
+        </section>
 
         <NewMessageDialog open={newMessageOpen} onOpenChange={setNewMessageOpen} />
         <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} />

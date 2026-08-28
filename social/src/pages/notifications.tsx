@@ -1,308 +1,251 @@
-import { useMemo, useCallback } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Check, Clock, Calendar, CalendarDays, Archive } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAppStore, type FollowRequest } from '@/lib/store';
-import { formatDistanceToNow, isToday, isYesterday, differenceInDays } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { staggerContainer, staggerItem, springSnappy } from '@/lib/motion';
+import { useCallback, useMemo, type ElementType } from 'react';
+import {
+  Archive,
+  AtSign,
+  BadgeCheck,
+  Bell,
+  Check,
+  Clock,
+  Heart,
+  MessageCircle,
+  Radio,
+  ShieldCheck,
+  UserPlus,
+} from 'lucide-react';
+import { formatDistanceToNow, isToday } from 'date-fns';
 import { Link } from 'wouter';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignalLabel, StatusBadge } from '@/components/system';
+import { useAppStore, type FollowRequest, type Notification } from '@/lib/store';
+import '@/styles/operator-communications.css';
 
-/* ─── icon config per notification type ──────────────────────────────────── */
+type NotificationTone = 'signal' | 'blue' | 'online' | 'ember' | 'muted';
 
-const typeConfig: Record<string, { icon: React.ElementType; bg: string; ring: string }> = {
-  like:    { icon: Heart,         bg: 'bg-rose-500/15',    ring: 'ring-rose-500/20' },
-  comment: { icon: MessageCircle, bg: 'bg-sky-500/15',     ring: 'ring-sky-500/20' },
-  follow:  { icon: UserPlus,      bg: 'bg-emerald-500/15', ring: 'ring-emerald-500/20' },
-  mention: { icon: AtSign,        bg: 'bg-violet-500/15',  ring: 'ring-violet-500/20' },
+const typeConfig: Record<string, { icon: ElementType; tone: NotificationTone }> = {
+  like: { icon: Heart, tone: 'signal' },
+  comment: { icon: MessageCircle, tone: 'blue' },
+  follow: { icon: UserPlus, tone: 'online' },
+  follow_request: { icon: UserPlus, tone: 'ember' },
+  follow_request_accepted: { icon: BadgeCheck, tone: 'online' },
+  mention: { icon: AtSign, tone: 'blue' },
+  broadcast_channel: { icon: Radio, tone: 'ember' },
+  achievement: { icon: BadgeCheck, tone: 'ember' },
+  announcement: { icon: Radio, tone: 'blue' },
+  security: { icon: ShieldCheck, tone: 'online' },
+  system: { icon: ShieldCheck, tone: 'muted' },
 };
 
-const typeIconColor: Record<string, string> = {
-  like:    'text-rose-500',
-  comment: 'text-sky-500',
-  follow:  'text-emerald-500',
-  mention: 'text-violet-500',
+const systemNotificationTypes = new Set([
+  'achievement',
+  'announcement',
+  'broadcast_channel',
+  'creator_membership',
+  'security',
+  'system',
+]);
+
+const groupMeta: Record<string, { icon: ElementType; description: string }> = {
+  Today: { icon: Clock, description: 'Fresh activity from your network' },
+  Earlier: { icon: Archive, description: 'Previous social activity' },
+  System: { icon: ShieldCheck, description: 'Account, channel, and platform updates' },
 };
-
-const groupMeta: Record<string, { icon: React.ElementType }> = {
-  Today:       { icon: Clock },
-  Yesterday:   { icon: Calendar },
-  'This Week': { icon: CalendarDays },
-  Earlier:     { icon: Archive },
-};
-
-/* ─── action copy ────────────────────────────────────────────────────────── */
-
-function getActionText(type: string, actorName: string) {
-  switch (type) {
-    case 'like':    return <><span className="font-semibold text-foreground">{actorName}</span>{' '}liked your post</>;
-    case 'comment': return <><span className="font-semibold text-foreground">{actorName}</span>{' '}commented on your post</>;
-    case 'follow':  return <><span className="font-semibold text-foreground">{actorName}</span>{' '}started following you</>;
-    case 'mention': return <><span className="font-semibold text-foreground">{actorName}</span>{' '}mentioned you</>;
-    default:        return <><span className="font-semibold text-foreground">{actorName}</span>{' '}interacted with you</>;
-  }
-}
 
 function typeLabel(type: string): string {
   switch (type) {
     case 'like': return 'liked your post';
     case 'comment': return 'commented on your post';
     case 'follow': return 'started following you';
+    case 'follow_request': return 'requested to follow you';
+    case 'follow_request_accepted': return 'accepted your follow request';
     case 'mention': return 'mentioned you';
-    default: return 'interacted with you';
+    default: return 'sent you an update';
   }
 }
 
 type GroupedNotification = {
   key: string;
-  type: string;
-  targetId?: string;
   actors: string[];
-  latestNotif: any;
+  latestNotification: Notification;
+  notificationIds: string[];
+  unreadIds: string[];
   count: number;
 };
 
-/* ─── link target helper ─────────────────────────────────────────────────── */
-
-function getNotifHref(notif: { type: string; actorId?: string; targetId?: string | null }) {
-  if (notif.type === 'follow' && notif.actorId) return `/profile/${notif.actorId}`;
-  if (notif.targetId) return `/post/${notif.targetId}`;
-  if (notif.actorId) return `/profile/${notif.actorId}`;
-  return '#';
+function getNotificationHref(notification: Notification) {
+  if (notification.type === 'broadcast_channel') return '/channels';
+  if ((notification.type === 'follow' || notification.type === 'follow_request_accepted') && notification.actorId) {
+    return `/profile/${notification.actorId}`;
+  }
+  if (['like', 'comment', 'mention'].includes(notification.type) && notification.targetId) {
+    return `/post/${notification.targetId}`;
+  }
+  if (notification.actorId) return `/profile/${notification.actorId}`;
+  return '/notifications';
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
 export default function Notifications() {
-  const users = useAppStore((s) => s.users);
-  const notifications = useAppStore((s) => s.notifications);
-  const followRequests = useAppStore((s) => s.followRequests);
-  const acceptFollowRequest = useAppStore((s) => s.acceptFollowRequest);
-  const rejectFollowRequest = useAppStore((s) => s.rejectFollowRequest);
+  const users = useAppStore((state) => state.users);
+  const notifications = useAppStore((state) => state.notifications);
+  const followRequests = useAppStore((state) => state.followRequests);
+  const acceptFollowRequest = useAppStore((state) => state.acceptFollowRequest);
+  const rejectFollowRequest = useAppStore((state) => state.rejectFollowRequest);
+  const markAllNotificationsRead = useAppStore((state) => state.markAllNotificationsRead);
+  const markNotificationRead = useAppStore((state) => state.markNotificationRead);
 
-  // Use markNotificationsRead if available, else fallback to markAllNotificationsRead
-  const markAll = useAppStore((s) => (s as any).markNotificationsRead || s.markAllNotificationsRead);
-  const markOne = useAppStore((s) => s.markNotificationRead);
-
-  /* ── group notifications by time bucket ────────────────────────────────── */
   const grouped = useMemo(() => {
-    const today: typeof notifications = [];
-    const yesterday: typeof notifications = [];
-    const thisWeek: typeof notifications = [];
-    const earlier: typeof notifications = [];
+    const today: Notification[] = [];
+    const earlier: Notification[] = [];
+    const system: Notification[] = [];
 
-    notifications.forEach(n => {
-      const date = new Date(n.createdAt);
-      if (isToday(date)) today.push(n);
-      else if (isYesterday(date)) yesterday.push(n);
-      else if (differenceInDays(new Date(), date) <= 7) thisWeek.push(n);
-      else earlier.push(n);
+    notifications.forEach((notification) => {
+      if (systemNotificationTypes.has(notification.type)) system.push(notification);
+      else if (isToday(new Date(notification.createdAt))) today.push(notification);
+      else earlier.push(notification);
     });
 
-    return { Today: today, Yesterday: yesterday, 'This Week': thisWeek, Earlier: earlier };
+    return { Today: today, Earlier: earlier, System: system };
   }, [notifications]);
 
-  const groupNotifications = useCallback((items: typeof notifications): GroupedNotification[] => {
-    const map = new Map<string, GroupedNotification>();
-    
-    for (const n of items) {
-      // Group by type + targetId (e.g., all likes on the same post)
-      const key = `${n.type}-${n.targetId || n.id}`;
-      const existing = map.get(key);
-      
-      if (existing && n.actorId && !existing.actors.includes(n.actorId)) {
-        existing.actors.push(n.actorId);
-        existing.count++;
-        // Keep the most recent notification as the representative
-        if (new Date(n.createdAt) > new Date(existing.latestNotif.createdAt)) {
-          existing.latestNotif = n;
-        }
-      } else if (!existing) {
-        map.set(key, {
+  const groupNotifications = useCallback((items: Notification[]): GroupedNotification[] => {
+    const groups = new Map<string, GroupedNotification>();
+
+    items.forEach((notification) => {
+      const key = `${notification.type}-${notification.targetId || notification.id}`;
+      const existing = groups.get(key);
+
+      if (!existing) {
+        groups.set(key, {
           key,
-          type: n.type,
-          targetId: n.targetId || undefined,
-          actors: n.actorId ? [n.actorId] : [],
-          latestNotif: n,
+          actors: notification.actorId ? [notification.actorId] : [],
+          latestNotification: notification,
+          notificationIds: [notification.id],
+          unreadIds: notification.read ? [] : [notification.id],
           count: 1,
         });
+        return;
       }
-    }
-    
-    return [...map.values()].sort((a, b) => 
-      new Date(b.latestNotif.createdAt).getTime() - new Date(a.latestNotif.createdAt).getTime()
+
+      existing.notificationIds.push(notification.id);
+      if (!notification.read) existing.unreadIds.push(notification.id);
+      if (notification.actorId && !existing.actors.includes(notification.actorId)) existing.actors.push(notification.actorId);
+      existing.count = existing.notificationIds.length;
+      if (new Date(notification.createdAt) > new Date(existing.latestNotification.createdAt)) {
+        existing.latestNotification = notification;
+      }
+    });
+
+    return [...groups.values()].sort(
+      (a, b) => new Date(b.latestNotification.createdAt).getTime() - new Date(a.latestNotification.createdAt).getTime(),
     );
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const systemCount = grouped.System.length;
 
   const handleMarkAllRead = useCallback(() => {
-    markAll?.();
-  }, [markAll]);
+    void markAllNotificationsRead();
+  }, [markAllNotificationsRead]);
 
-  /* ── empty state ───────────────────────────────────────────────────────── */
-  if (notifications.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 min-h-screen">
-        {/* Header */}
-        <StickyHeader unreadCount={0} onMarkAllRead={handleMarkAllRead} />
-
-        {followRequests.length > 0 && (
-          <FollowRequestsSection requests={followRequests} onAccept={acceptFollowRequest} onReject={rejectFollowRequest} />
-        )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, ...springSnappy }}
-          className="flex flex-col items-center justify-center py-24 text-center"
-        >
-          <div className="relative mb-6">
-            <div className="absolute inset-0 rounded-full bg-primary/10 blur-2xl scale-150" />
-            <div className="relative glass-heavy rounded-full p-6">
-              <Bell className="w-10 h-10 text-muted-foreground/50" strokeWidth={1.5} />
-            </div>
-          </div>
-          <h2 className="text-xl font-display font-semibold text-foreground mb-2">
-            No activity yet
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            When someone likes, comments, or follows you — it'll show up here.
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  /* ── main list ─────────────────────────────────────────────────────────── */
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 min-h-screen">
-      <StickyHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} />
+    <main className="operator-activity-page">
+      <ActivityHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} />
+
+      <section className="operator-activity-overview" aria-label="Activity overview">
+        <div><strong>{unreadCount}</strong><span>Unread</span></div>
+        <div><strong>{followRequests.length}</strong><span>Requests</span></div>
+        <div><strong>{systemCount}</strong><span>System</span></div>
+        <p>Review the signal, clear what matters, and get back to the conversation.</p>
+      </section>
 
       {followRequests.length > 0 && (
-        <FollowRequestsSection requests={followRequests} onAccept={acceptFollowRequest} onReject={rejectFollowRequest} />
+        <FollowRequestsSection
+          requests={followRequests}
+          onAccept={acceptFollowRequest}
+          onReject={rejectFollowRequest}
+        />
       )}
 
-      <div className="space-y-8 mt-2">
-        {Object.entries(grouped).map(([label, items]) => {
-          if (items.length === 0) return null;
-          const meta = groupMeta[label];
-          const GroupIcon = meta?.icon ?? Clock;
+      {notifications.length === 0 ? (
+        <section className="operator-activity-empty">
+          <span><Bell aria-hidden="true" /></span>
+          <SignalLabel tone="muted">Activity monitor</SignalLabel>
+          <h2>You’re all caught up</h2>
+          <p>Likes, comments, mentions, follows, and important system notices will appear here.</p>
+        </section>
+      ) : (
+        <div className="operator-activity-groups">
+          {Object.entries(grouped).map(([label, items]) => {
+            if (items.length === 0) return null;
+            const meta = groupMeta[label];
+            const GroupIcon = meta?.icon ?? Clock;
 
-          return (
-            <section key={label}>
-              {/* ── showcase-section-title style group header ── */}
-              <div className="flex items-center gap-3 mb-4">
-                <GroupIcon className="w-4 h-4 text-muted-foreground/60 shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70 font-mono shrink-0">
-                  {label}
-                </span>
-                <div className="flex-1 h-px bg-gradient-to-r from-border/60 to-transparent" />
-              </div>
+            return (
+              <section className="operator-activity-group" key={label}>
+                <header>
+                  <span><GroupIcon aria-hidden="true" /></span>
+                  <div><h2>{label}</h2><p>{meta?.description}</p></div>
+                  <small>{items.length} {items.length === 1 ? 'event' : 'events'}</small>
+                </header>
 
-              {/* ── staggered notification list ── */}
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-                className="space-y-1.5"
-              >
-                <AnimatePresence mode="popLayout">
+                <div className="operator-notification-list">
                   {groupNotifications(items).map((group) => {
-                    const notif = group.latestNotif;
-                    const primaryActor = group.actors.length > 0 ? users[group.actors[0]] : null;
-                    const actorName = primaryActor?.displayName || 'Someone';
-                    const othersCount = group.count - 1;
-                    const isUnread = !notif.read;
-                    const cfg = typeConfig[notif.type] ?? typeConfig.like;
-                    const IconComp = cfg.icon;
-                    const href = getNotifHref(notif);
+                    const notification = group.latestNotification;
+                    const primaryActor = group.actors[0] ? users[group.actors[0]] : null;
+                    const actorName = primaryActor?.displayName || notification.title || 'Yor Talks';
+                    const uniqueOthers = Math.max(group.actors.length - 1, 0);
+                    const isUnread = group.unreadIds.length > 0;
+                    const config = typeConfig[notification.type] ?? { icon: Bell, tone: 'muted' as const };
+                    const Icon = config.icon;
+                    const isSystem = systemNotificationTypes.has(notification.type);
 
                     return (
-                      <motion.div
-                        layout
-                        variants={staggerItem}
+                      <Link
                         key={group.key}
-                        className="relative"
+                        href={getNotificationHref(notification)}
+                        className="operator-notification"
+                        data-unread={isUnread || undefined}
+                        onClick={() => {
+                          if (group.unreadIds.length > 0) {
+                            void Promise.all(group.unreadIds.map((id) => markNotificationRead(id)));
+                          }
+                        }}
                       >
-                        <Link
-                          href={href}
-                          onClick={() => {
-                            if (isUnread) markOne?.(notif.id);
-                          }}
-                          className={cn(
-                            'flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all duration-200 group cursor-pointer',
-                            'hover:bg-muted/40 active:scale-[0.99]',
-                            isUnread
-                              ? 'bg-primary/[0.04] border-l-[3px] border-primary'
-                              : 'border-l-[3px] border-transparent',
+                        <div className="operator-notification__avatar">
+                          <Avatar>
+                            {primaryActor && <AvatarImage src={primaryActor.avatarUrl} alt={primaryActor.displayName} />}
+                            <AvatarFallback>{actorName.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          {group.count > 1 && <span>+{group.count > 9 ? '9+' : group.count - 1}</span>}
+                          <i data-tone={config.tone}><Icon aria-hidden="true" /></i>
+                        </div>
+
+                        <div className="operator-notification__copy">
+                          <p>
+                            <strong>{actorName}</strong>
+                            {!isSystem && uniqueOthers > 0 && <> and {uniqueOthers} {uniqueOthers === 1 ? 'other' : 'others'}</>}
+                            {!isSystem && <> {typeLabel(notification.type)}</>}
+                          </p>
+                          {isSystem && <p>{notification.message}</p>}
+                          {!isSystem && notification.message && !['like', 'follow', 'follow_request_accepted'].includes(notification.type) && (
+                            <blockquote>{notification.message}</blockquote>
                           )}
-                        >
-                          {/* ── avatar + type badge ── */}
-                          <div className="relative shrink-0">
-                            <Avatar className="w-11 h-11 ring-2 ring-background shadow-sm">
-                              {primaryActor && <AvatarImage src={primaryActor.avatarUrl} alt={primaryActor.displayName} />}
-                              <AvatarFallback className="text-sm font-medium">
-                                {actorName[0]?.toUpperCase() || '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                            {othersCount > 0 && (
-                              <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background px-1 z-10 shadow-sm">
-                                +{othersCount > 9 ? '9+' : othersCount}
-                              </span>
-                            )}
-                            {/* type icon pill */}
-                            <span
-                              className={cn(
-                                'absolute -bottom-1 -right-1 flex items-center justify-center',
-                                'w-5.5 h-5.5 rounded-full ring-2 ring-background',
-                                cfg.bg,
-                              )}
-                              style={{ width: 22, height: 22 }}
-                            >
-                              <IconComp
-                                className={cn('w-3 h-3', typeIconColor[notif.type] ?? 'text-primary')}
-                                strokeWidth={2.5}
-                              />
-                            </span>
-                          </div>
+                          <time dateTime={notification.createdAt}>
+                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                            {group.count > 1 ? ` · ${group.count} grouped` : ''}
+                          </time>
+                        </div>
 
-                          {/* ── body ── */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13.5px] leading-snug text-muted-foreground">
-                              <span className="font-semibold text-foreground">{actorName}</span>
-                              {othersCount > 0 && <span className="text-muted-foreground"> and {othersCount} {othersCount === 1 ? 'other' : 'others'}</span>}
-                              {' '}<span className="text-muted-foreground">{notif.message?.replace(actorName, '').trim() || typeLabel(notif.type)}</span>
-                            </p>
-
-                            {/* show comment/message excerpt */}
-                            {notif.message && notif.type !== 'like' && notif.type !== 'follow' && (
-                              <p className="text-xs text-muted-foreground/60 truncate mt-0.5 max-w-[260px]">
-                                "{notif.message}"
-                              </p>
-                            )}
-
-                            {/* timestamp */}
-                            <span className="text-[11px] text-muted-foreground/50 font-mono mt-1 block">
-                              {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                            </span>
-                          </div>
-
-                          {/* ── unread dot ── */}
-                          {isUnread && (
-                            <span className="w-2 h-2 rounded-full bg-primary shrink-0 shadow-[0_0_6px_rgba(var(--primary),0.4)]" />
-                          )}
-                        </Link>
-                      </motion.div>
+                        {isUnread && <span className="operator-notification__unread">New</span>}
+                      </Link>
                     );
                   })}
-                </AnimatePresence>
-              </motion.div>
-            </section>
-          );
-        })}
-      </div>
-    </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </main>
   );
 }
 
@@ -316,81 +259,53 @@ function FollowRequestsSection({
   onReject: (requestId: string) => Promise<void>;
 }) {
   return (
-    <section className="mb-6 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <section className="operator-follow-requests">
+      <header>
+        <span><UserPlus aria-hidden="true" /></span>
         <div>
-          <h2 className="font-display text-sm font-bold">Follow requests</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Choose who can see your private posts.</p>
+          <SignalLabel tone="ember">Access queue</SignalLabel>
+          <h2>Follow requests</h2>
+          <p>Approve who can enter your private network.</p>
         </div>
-        <UserPlus className="h-4 w-4 text-primary" />
-      </div>
-      <div className="space-y-2">
+        <small>{requests.length} pending</small>
+      </header>
+
+      <div className="operator-follow-requests__list">
         {requests.map((request) => (
-          <div key={request.id} className="flex items-center gap-3 rounded-xl bg-background/50 p-2.5">
-            <Avatar className="h-9 w-9">
+          <article key={request.id}>
+            <Avatar>
               <AvatarImage src={request.requester.avatarUrl} alt={request.requester.displayName} />
               <AvatarFallback>{request.requester.displayName.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{request.requester.displayName}</p>
-              <p className="truncate text-xs text-muted-foreground">@{request.requester.username}</p>
+            <div>
+              <strong>{request.requester.displayName}</strong>
+              <span>@{request.requester.username} · {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}</span>
             </div>
-            <div className="flex shrink-0 gap-1.5">
-              <button type="button" onClick={() => void onReject(request.id)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted">Decline</button>
-              <button type="button" onClick={() => void onAccept(request.id)} className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Accept</button>
+            <div>
+              <button type="button" onClick={() => void onReject(request.id)}>Decline</button>
+              <button type="button" onClick={() => void onAccept(request.id)}>Accept</button>
             </div>
-          </div>
+          </article>
         ))}
       </div>
     </section>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   STICKY HEADER
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function StickyHeader({
-  unreadCount,
-  onMarkAllRead,
-}: {
-  unreadCount: number;
-  onMarkAllRead: () => void;
-}) {
+function ActivityHeader({ unreadCount, onMarkAllRead }: { unreadCount: number; onMarkAllRead: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={springSnappy}
-      className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 pb-4 pt-1 glass-heavy backdrop-blur-xl rounded-b-2xl mb-4"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">
-            Activity
-          </h1>
-          {unreadCount > 0 && (
-            <span className="level-badge text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums">
-              {unreadCount}
-            </span>
-          )}
-        </div>
-
+    <header className="operator-activity-header">
+      <div>
+        <SignalLabel>Signal // activity</SignalLabel>
+        <h1>Activity</h1>
+        <p>Your social inbox, organized by urgency instead of noise.</p>
+      </div>
+      <div className="operator-activity-header__actions">
+        <StatusBadge status={unreadCount > 0 ? 'busy' : 'online'}>{unreadCount > 0 ? `${unreadCount} unread` : 'Clear'}</StatusBadge>
         {unreadCount > 0 && (
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onMarkAllRead}
-            className={cn(
-              'flex items-center gap-1.5 text-xs font-medium text-primary',
-              'px-3 py-1.5 rounded-lg',
-              'hover:bg-primary/10 transition-colors duration-150',
-            )}
-          >
-            <Check className="w-3.5 h-3.5" />
-            Mark all read
-          </motion.button>
+          <button type="button" onClick={onMarkAllRead}><Check aria-hidden="true" />Mark all read</button>
         )}
       </div>
-    </motion.div>
+    </header>
   );
 }
