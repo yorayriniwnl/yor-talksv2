@@ -19,3 +19,5 @@ api-server/scan-redis.ts
 api-server/migrate.cjs
 
 .vercel
+playwright-report
+test-results

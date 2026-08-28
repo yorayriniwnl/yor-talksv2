@@ -37,6 +37,7 @@ export function connectSocket(): Socket | null {
   // Production Docker can use an empty URL to connect to the same-origin
   // Socket.IO proxy. Vercel and other serverless builds stay disabled unless
   // the deployment explicitly opts in with VITE_REALTIME_ENABLED=true.
+  if (import.meta.env.VITE_REALTIME_ENABLED === 'false') return null;
   if (import.meta.env.PROD && import.meta.env.VITE_REALTIME_ENABLED !== 'true') return null;
   socket = io(realtimeUrl, {
     auth: { token: tokens.accessToken },

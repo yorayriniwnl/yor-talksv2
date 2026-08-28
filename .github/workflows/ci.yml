@@ -85,6 +85,12 @@ jobs:
           JWT_REFRESH_SECRET: ci-refresh-secret-012345678901234567890123456789
           CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
 
+      - name: Install browser test runtime
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser smoke tests
+        run: pnpm test:e2e
+
       - name: Build API and web
         run: |
           pnpm --filter @workspace/api-server build
