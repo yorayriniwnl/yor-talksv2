@@ -59,8 +59,7 @@ app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 100
 app.use(cookieParser());
 
 app.use("/api", router);
-app.use("/api/v1", router); // Phase 10: Versioned endpoints for multi-client ecosystem
-app.use(router);
+app.use("/api/v1", router);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: "Route not found", data: null, errors: ["Not found"] });
