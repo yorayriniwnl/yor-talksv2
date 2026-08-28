@@ -64,7 +64,7 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await Promise.all((await this.storyRepository.listActive()).map(async (story) => (
+    const stories = await Promise.all((await this.storyRepository.listActive(viewerId)).map(async (story) => (
       await this.canViewStory(story, viewerId) ? story : undefined
     )));
     const visibleStories = stories.filter((story): story is StoryRecord => Boolean(story));
@@ -73,7 +73,7 @@ export class StoryService {
   }
 
   async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findActiveById(storyId);
+    const story = await this.storyRepository.findActiveById(storyId, userId);
     if (!story || !(await this.canViewStory(story, userId))) return undefined;
 
     const updated = await this.storyRepository.addView(storyId, userId);
@@ -81,7 +81,7 @@ export class StoryService {
   }
 
   async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findActiveById(storyId);
+    const story = await this.storyRepository.findActiveById(storyId, userId);
     if (!story || !(await this.canViewStory(story, userId))) return undefined;
 
     const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32));
@@ -89,7 +89,7 @@ export class StoryService {
   }
 
   async votePoll(storyId: string, optionId: string, userId: string): Promise<StoryRecord | undefined> {
-    const story = await this.storyRepository.findActiveById(storyId);
+    const story = await this.storyRepository.findActiveById(storyId, userId);
     if (!story || !(await this.canViewStory(story, userId))) return undefined;
     if (!(await this.storyRepository.votePoll(storyId, optionId, userId))) return undefined;
     return this.hydrateStory(story, userId);

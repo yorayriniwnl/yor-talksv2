@@ -1,5 +1,5 @@
 import { eq, gt, desc, and, inArray, or, sql } from "drizzle-orm";
-import { storyPollOptionsTable, storyPollsTable, storyPollVotesTable, storiesTable } from "@workspace/db/schema";
+import { storyPollOptionsTable, storyPollsTable, storyPollVotesTable, storyReactionsTable, storiesTable, storyViewsTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { StoryRecord } from "../types/index.js";
 
@@ -23,26 +23,26 @@ export class StoryRepository {
   }
 
   /** Only stories that haven't expired yet — matches the 24-hour-expiry pattern of the feature itself. */
-  async listActive(): Promise<StoryRecord[]> {
-    return (await db
+  async listActive(viewerId?: string): Promise<StoryRecord[]> {
+    return this.hydrateViewerInteractions((await db
       .select()
       .from(storiesTable)
       .where(or(eq(storiesTable.isHighlight, true), gt(storiesTable.expiresAt, new Date().toISOString())))
       .orderBy(desc(storiesTable.createdAt))
-      .limit(100)) as StoryRecord[];
+      .limit(100)) as StoryRecord[], viewerId);
   }
 
-  async findById(id: string): Promise<StoryRecord | undefined> {
+  async findById(id: string, viewerId?: string): Promise<StoryRecord | undefined> {
     const [story] = await db.select().from(storiesTable).where(eq(storiesTable.id, id));
-    return story as StoryRecord | undefined;
+    return story ? (await this.hydrateViewerInteractions([story as StoryRecord], viewerId))[0] : undefined;
   }
 
-  async findActiveById(id: string): Promise<StoryRecord | undefined> {
+  async findActiveById(id: string, viewerId?: string): Promise<StoryRecord | undefined> {
     const [story] = await db.select().from(storiesTable).where(and(
       eq(storiesTable.id, id),
       or(eq(storiesTable.isHighlight, true), gt(storiesTable.expiresAt, new Date().toISOString())),
     ));
-    return story as StoryRecord | undefined;
+    return story ? (await this.hydrateViewerInteractions([story as StoryRecord], viewerId))[0] : undefined;
   }
 
   async update(id: string, updates: Partial<StoryRecord>): Promise<StoryRecord | undefined> {
@@ -52,27 +52,17 @@ export class StoryRepository {
   }
 
   async addView(id: string, userId: string): Promise<StoryRecord | undefined> {
-    const [updated] = await db.update(storiesTable).set({
-      viewerIds: sql`CASE
-        WHEN EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(COALESCE(${storiesTable.viewerIds}, '[]'::jsonb)) AS values(value)
-          WHERE value = ${userId}
-        ) THEN COALESCE(${storiesTable.viewerIds}, '[]'::jsonb)
-        ELSE COALESCE(${storiesTable.viewerIds}, '[]'::jsonb) || jsonb_build_array(${userId})
-      END`,
-    }).where(eq(storiesTable.id, id)).returning();
-    return updated as StoryRecord | undefined;
+    await db.insert(storyViewsTable).values({ storyId: id, userId }).onConflictDoNothing();
+    return this.findActiveById(id, userId);
   }
 
   async react(id: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
-    const [updated] = await db.update(storiesTable).set({
-      reactions: sql`COALESCE((
-        SELECT jsonb_agg(value)
-        FROM jsonb_array_elements(COALESCE(${storiesTable.reactions}, '[]'::jsonb)) AS values(value)
-        WHERE value->>'userId' <> ${userId}
-      ), '[]'::jsonb) || jsonb_build_array(jsonb_build_object('userId', ${userId}, 'emoji', ${emoji}))`,
-    }).where(eq(storiesTable.id, id)).returning();
-    return updated as StoryRecord | undefined;
+    await db.insert(storyReactionsTable).values({ storyId: id, userId, emoji })
+      .onConflictDoUpdate({
+        target: [storyReactionsTable.storyId, storyReactionsTable.userId],
+        set: { emoji, updatedAt: new Date().toISOString() },
+      });
+    return this.findActiveById(id, userId);
   }
 
   async votePoll(storyId: string, optionId: string, userId: string): Promise<boolean> {
@@ -135,5 +125,28 @@ export class StoryRepository {
   async delete(id: string): Promise<boolean> {
     const result = await db.delete(storiesTable).where(eq(storiesTable.id, id)).returning();
     return result.length > 0;
+  }
+
+  private async hydrateViewerInteractions(stories: StoryRecord[], viewerId?: string): Promise<StoryRecord[]> {
+    if (stories.length === 0) return [];
+    if (!viewerId) return stories.map((story) => ({ ...story, viewerIds: [], reactions: [] }));
+    const storyIds = stories.map((story) => story.id);
+    const [views, reactions] = await Promise.all([
+      db.select({ storyId: storyViewsTable.storyId }).from(storyViewsTable).where(and(
+        eq(storyViewsTable.userId, viewerId),
+        inArray(storyViewsTable.storyId, storyIds),
+      )),
+      db.select({ storyId: storyReactionsTable.storyId, emoji: storyReactionsTable.emoji }).from(storyReactionsTable).where(and(
+        eq(storyReactionsTable.userId, viewerId),
+        inArray(storyReactionsTable.storyId, storyIds),
+      )),
+    ]);
+    const viewed = new Set(views.map((view) => view.storyId));
+    const reactionByStory = new Map(reactions.map((reaction) => [reaction.storyId, reaction.emoji]));
+    return stories.map((story) => ({
+      ...story,
+      viewerIds: viewed.has(story.id) ? [viewerId] : [],
+      reactions: reactionByStory.has(story.id) ? [{ userId: viewerId, emoji: reactionByStory.get(story.id) ?? "" }] : [],
+    }));
   }
 }

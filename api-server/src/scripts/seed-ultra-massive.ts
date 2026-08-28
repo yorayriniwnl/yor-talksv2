@@ -12,6 +12,7 @@ import {
   productSavesTable,
   articlesTable,
   storiesTable,
+  storyViewsTable,
 } from "@workspace/db/schema";
 import bcrypt from "bcryptjs";
 
@@ -521,6 +522,10 @@ async function runMegaScaleSeed() {
       });
     }
     await db.insert(storiesTable).values(chunk).onConflictDoNothing();
+    const storyViews = chunk.flatMap((story) => [...new Set<string>(story.viewerIds as string[])].map((userId) => ({ storyId: story.id, userId })));
+    for (let viewOffset = 0; viewOffset < storyViews.length; viewOffset += 2000) {
+      await db.insert(storyViewsTable).values(storyViews.slice(viewOffset, viewOffset + 2000)).onConflictDoNothing();
+    }
   }
   console.log(`✅ 40000 Stories Created.`);
 

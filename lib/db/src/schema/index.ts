@@ -285,6 +285,27 @@ export const storiesTable = pgTable("stories", {
   authorIdx: index("story_author_idx").on(table.authorId)
 }));
 
+export const storyViewsTable = pgTable("story_views", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  viewedAt: timestamp("viewed_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_view_user_idx").on(table.userId, table.viewedAt),
+}));
+
+export const storyReactionsTable = pgTable("story_reactions", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_reaction_user_idx").on(table.userId, table.updatedAt),
+  validEmoji: check("story_reaction_emoji_check", sql`char_length(${table.emoji}) BETWEEN 1 AND 32`),
+}));
+
 /** Short-lived profile statuses shown above the main feed. A note is replaced
  * when the author publishes another one and expires automatically after 24h. */
 export const userNotesTable = pgTable("user_notes", {
@@ -961,6 +982,8 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   articles: many(articlesTable),
   videos: many(videosTable),
   stories: many(storiesTable),
+  storyViews: many(storyViewsTable),
+  storyReactions: many(storyReactionsTable),
   notes: many(userNotesTable),
   liveStreams: many(liveStreamsTable),
   notifications: many(notificationsTable)
@@ -1020,8 +1043,20 @@ export const videosRelations = relations(videosTable, ({ one }) => ({
   author: one(usersTable, { fields: [videosTable.authorId], references: [usersTable.id] })
 }));
 
-export const storiesRelations = relations(storiesTable, ({ one }) => ({
-  author: one(usersTable, { fields: [storiesTable.authorId], references: [usersTable.id] })
+export const storiesRelations = relations(storiesTable, ({ one, many }) => ({
+  author: one(usersTable, { fields: [storiesTable.authorId], references: [usersTable.id] }),
+  views: many(storyViewsTable),
+  reactions: many(storyReactionsTable),
+}));
+
+export const storyViewsRelations = relations(storyViewsTable, ({ one }) => ({
+  story: one(storiesTable, { fields: [storyViewsTable.storyId], references: [storiesTable.id] }),
+  user: one(usersTable, { fields: [storyViewsTable.userId], references: [usersTable.id] }),
+}));
+
+export const storyReactionsRelations = relations(storyReactionsTable, ({ one }) => ({
+  story: one(storiesTable, { fields: [storyReactionsTable.storyId], references: [storiesTable.id] }),
+  user: one(usersTable, { fields: [storyReactionsTable.userId], references: [usersTable.id] }),
 }));
 
 export const userNotesRelations = relations(userNotesTable, ({ one }) => ({

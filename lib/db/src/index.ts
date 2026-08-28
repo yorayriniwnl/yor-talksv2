@@ -49,6 +49,8 @@ export {
   videoBookmarksTable,
   liveStreamsTable,
   storiesTable,
+  storyViewsTable,
+  storyReactionsTable,
   userNotesTable,
   userCloseFriendsTable,
   postRepostsTable,
