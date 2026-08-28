@@ -56,7 +56,9 @@ docker compose exec api pnpm --filter @workspace/api-server seed
 
 Open [http://localhost:8080](http://localhost:8080). The API health endpoint is
 [http://localhost:8080/api/healthz](http://localhost:8080/api/healthz), and the
-direct API is available on port 4000.
+direct API is available on port 4000. The generated OpenAPI document is exposed
+at `/api/docs`; it is built from the mounted Express routes and checked for
+drift in CI.
 
 The seeded demo accounts use the following credentials:
 
@@ -115,6 +117,12 @@ docker compose exec api pnpm --filter @workspace/db push
 docker compose exec api pnpm --filter @workspace/db migrate:beta
 ```
 
+`migrate:beta` backfills the normalized community-member, event-RSVP,
+marketplace-save, story-view, and story-reaction tables before removing their
+legacy JSON relationship columns. Take a database backup before applying it to
+an existing deployment. The migration is idempotent so it can also run after a
+fresh schema push.
+
 Check `docker compose logs api` for provider warnings. A warning means that
 feature remains unavailable; it does not prevent the rest of the beta from
 starting.
@@ -135,17 +143,26 @@ API on port 4000.
 ## Verification
 
 ```bash
+pnpm contract:check
 pnpm --filter @workspace/api-server typecheck
 pnpm --filter @workspace/social typecheck
 pnpm build
 pnpm audit --prod
+pnpm test:e2e
 ```
 
-The API test suite uses the configured Postgres and Redis instances:
+The Playwright smoke test starts the Vite application and verifies the core
+authenticated feed, post creation, and Explore navigation loop. The API test
+suite uses the configured Postgres and Redis instances:
 
 ```bash
 pnpm --filter @workspace/api-server test
 ```
+
+Authenticated administrators and moderators can scrape bounded-cardinality
+Prometheus request metrics from `/api/metrics`. Keep this route behind the
+application's normal authentication boundary; do not expose a privileged token
+through a public scraper configuration.
 
 ## Repository structure
 
@@ -163,6 +180,9 @@ pnpm --filter @workspace/api-server test
 - Use a separate beta database and take a Postgres backup before launch.
 - Replace all local JWT secrets and restrict `CORS_ORIGINS` to the deployed
   frontend.
+- Keep `AUTH_COOKIE_SAME_SITE=lax` for a same-site deployment. Use `none` only
+  for an HTTPS cross-site frontend/API pair and retain the trusted-origin
+  refresh protection.
 - Set `NODE_ENV=production` on every deployed API, including an API hosted
   outside the included Docker stack. Vercel is detected as production by
   default, but explicitly setting it prevents platform-specific surprises.
