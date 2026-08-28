@@ -31,6 +31,8 @@
 	"scripts": {
 		"build": "node ./build.mjs",
 		"build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
+		"contract:generate": "node ./scripts/generate-api-contract.mjs",
+		"contract:check": "node ./scripts/generate-api-contract.mjs --check",
 		"smoke": "node ./ops/smoke-test.mjs",
 		"dev": "node ./dev.mjs",
 		"dev:api": "npm run --prefix api-server dev",
