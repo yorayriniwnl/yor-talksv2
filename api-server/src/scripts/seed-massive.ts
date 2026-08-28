@@ -9,6 +9,7 @@ import {
   eventsTable,
   eventRsvpsTable,
   productsTable,
+  productSavesTable,
 } from "@workspace/db/schema";
 import bcrypt from "bcryptjs";
 
@@ -244,8 +245,10 @@ async function seedMassive() {
   for (let i = 0; i < 15; i++) {
     const sellerId = createdUserIds[i % createdUserIds.length];
     try {
+      const productId = randomUUID();
+      const savedBy = createdUserIds.slice(0, Math.floor(Math.random() * 10));
       await db.insert(productsTable).values({
-        id: randomUUID(),
+        id: productId,
         sellerId,
         title: `Custom Anodized CNC Mechanical Component Series #${i + 1}`,
         description: `Precision CNC milled 6063 aerospace aluminum part with mirror PVD brass weights and custom finishes.`,
@@ -253,9 +256,12 @@ async function seedMassive() {
         images: [sampleCovers[i % sampleCovers.length]],
         category: "Hardware",
         condition: "new",
-        savedBy: createdUserIds.slice(0, Math.floor(Math.random() * 10)),
+        savedBy,
         createdAt: new Date().toISOString()
       });
+      if (savedBy.length > 0) {
+        await db.insert(productSavesTable).values(savedBy.map((userId) => ({ productId, userId }))).onConflictDoNothing();
+      }
     } catch(e) {}
   }
 

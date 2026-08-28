@@ -7,6 +7,7 @@ import {
   eventsTable,
   eventRsvpsTable,
   productsTable,
+  productSavesTable,
   articlesTable,
   videosTable,
   liveStreamsTable,
@@ -266,6 +267,7 @@ async function seedDatabase() {
   for (const pr of products) {
     try {
       await db.insert(productsTable).values(pr);
+      await db.insert(productSavesTable).values(pr.savedBy.map((userId) => ({ productId: pr.id, userId }))).onConflictDoNothing();
       console.log(`✅ Seeded product: ${pr.title}`);
     } catch (err: any) {
       console.log(`⚠️ Product skipped: ${err.message}`);

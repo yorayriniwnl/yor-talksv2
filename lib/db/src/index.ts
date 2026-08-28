@@ -41,6 +41,7 @@ export {
   eventsTable,
   eventRsvpsTable,
   productsTable,
+  productSavesTable,
   marketplaceOrdersTable,
   articlesTable,
   videosTable,

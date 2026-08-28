@@ -36,17 +36,17 @@ export class ProductService {
   }
 
   async toggleSave(productId: string, userId: string): Promise<ProductRecord | undefined> {
-    const product = await this.productRepository.findById(productId);
+    const product = await this.productRepository.findById(productId, userId);
     if (!product || !(await this.contentSafetyService.isVisible(product, userId, product.sellerId))) return undefined;
     return this.productRepository.toggleSaved(productId, userId);
   }
 
   async listProducts(viewerId?: string): Promise<ProductRecord[]> {
-    return this.contentSafetyService.filterVisibleByAuthor(await this.productRepository.list(), viewerId, (product) => product.sellerId);
+    return this.contentSafetyService.filterVisibleByAuthor(await this.productRepository.list(viewerId), viewerId, (product) => product.sellerId);
   }
 
   async getProduct(id: string, viewerId?: string): Promise<ProductRecord | undefined> {
-    const product = await this.productRepository.findById(id);
+    const product = await this.productRepository.findById(id, viewerId);
     return await this.contentSafetyService.isVisible(product, viewerId, product?.sellerId) ? product : undefined;
   }
 

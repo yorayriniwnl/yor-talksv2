@@ -350,6 +350,15 @@ export const productsTable = pgTable("products", {
   sellerIdx: index("product_seller_idx").on(table.sellerId)
 }));
 
+export const productSavesTable = pgTable("product_saves", {
+  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.productId, table.userId] }),
+  userIdx: index("product_save_user_idx").on(table.userId, table.createdAt),
+}));
+
 export const articlesTable = pgTable("articles", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -948,6 +957,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   events: many(eventsTable),
   eventRsvps: many(eventRsvpsTable),
   products: many(productsTable),
+  productSaves: many(productSavesTable),
   articles: many(articlesTable),
   videos: many(videosTable),
   stories: many(storiesTable),
@@ -992,8 +1002,14 @@ export const eventRsvpsRelations = relations(eventRsvpsTable, ({ one }) => ({
   user: one(usersTable, { fields: [eventRsvpsTable.userId], references: [usersTable.id] }),
 }));
 
-export const productsRelations = relations(productsTable, ({ one }) => ({
-  seller: one(usersTable, { fields: [productsTable.sellerId], references: [usersTable.id] })
+export const productsRelations = relations(productsTable, ({ one, many }) => ({
+  seller: one(usersTable, { fields: [productsTable.sellerId], references: [usersTable.id] }),
+  saves: many(productSavesTable),
+}));
+
+export const productSavesRelations = relations(productSavesTable, ({ one }) => ({
+  product: one(productsTable, { fields: [productSavesTable.productId], references: [productsTable.id] }),
+  user: one(usersTable, { fields: [productSavesTable.userId], references: [usersTable.id] }),
 }));
 
 export const articlesRelations = relations(articlesTable, ({ one }) => ({

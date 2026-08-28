@@ -9,6 +9,7 @@ import {
   eventsTable,
   eventRsvpsTable,
   productsTable,
+  productSavesTable,
   articlesTable,
   storiesTable,
 } from "@workspace/db/schema";
@@ -467,6 +468,10 @@ async function runMegaScaleSeed() {
       });
     }
     await db.insert(productsTable).values(chunk).onConflictDoNothing();
+    const saves = chunk.flatMap((product) => [...new Set<string>(product.savedBy as string[])].map((userId) => ({ productId: product.id, userId })));
+    for (let saveOffset = 0; saveOffset < saves.length; saveOffset += 2000) {
+      await db.insert(productSavesTable).values(saves.slice(saveOffset, saveOffset + 2000)).onConflictDoNothing();
+    }
   }
   console.log(`✅ 20000 Products Created.`);
 
