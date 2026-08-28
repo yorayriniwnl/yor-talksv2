@@ -8,6 +8,8 @@ Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.pro
 
 `DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge. The included Postgres container is not TLS-enabled, so keep `DB_SSL=false`; set it to `true` only when using a TLS-enabled managed database.
 
+Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; the API still enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh.
+
 ## 2. Configure the external launch dependencies
 
 - Point the public domain and TLS certificate at the host’s `${WEB_PORT}`. The included Nginx container terminates the application edge; use a managed load balancer, Caddy, or a host reverse proxy for HTTPS and certificate renewal.

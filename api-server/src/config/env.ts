@@ -19,6 +19,7 @@ const envSchema = z.object({
   // anyway (see social/vite.config.ts), so this default is rarely exercised.
   CORS_ORIGINS: z.string().default(process.env.CORS_ORIGINS || "http://localhost:5173"),
   CLIENT_ORIGIN: z.string().default(process.env.CLIENT_ORIGIN || "http://localhost:5173"),
+  AUTH_COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default((process.env.AUTH_COOKIE_SAME_SITE || "lax") as "lax" | "strict" | "none"),
   // Empty means open registration for a global launch. Closed-beta
   // deployments can set a comma-separated allow-list such as
   // "kiit.ac.in,example.edu".
@@ -99,6 +100,9 @@ if (parsedEnv.NODE_ENV === "production") {
   }
   if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {
     throw new Error("[Config Error] Production CORS_ORIGINS must list explicit browser origins; wildcard is not allowed.");
+  }
+  if (parsedEnv.AUTH_COOKIE_SAME_SITE === "none" && !parsedEnv.CLIENT_ORIGIN.startsWith("https://")) {
+    throw new Error("[Config Error] AUTH_COOKIE_SAME_SITE=none requires an HTTPS CLIENT_ORIGIN");
   }
 }
 

@@ -6,7 +6,7 @@ import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
 
 export class AuthController {
-  private readonly refreshCookieSameSite = env.NODE_ENV === "production" ? "none" : "lax";
+  private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
 
   constructor(private readonly authService: AuthService) {}
 

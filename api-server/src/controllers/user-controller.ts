@@ -268,7 +268,7 @@ export class UserController {
       if (!deleted) {
         return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       }
-      res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: env.NODE_ENV === "production" ? "none" : "lax", path: "/" });
+      res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: env.AUTH_COOKIE_SAME_SITE, path: "/" });
       return res.status(200).json(createResponse("Account deleted", null));
     } catch (error) {
       if (error instanceof InvalidAccountPasswordError) {

@@ -8,6 +8,7 @@ import { AuthService } from "../services/auth-service.js";
 import { emailOtpRequestSchema, emailOtpVerifySchema, googleLoginSchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
 import { challengeIdParamSchema } from "../validators/params.js";
 import { authRateLimiter } from "../middlewares/rate-limit.js";
+import { requireTrustedOrigin } from "../middlewares/trusted-origin.js";
 
 const router = Router();
 const userRepo = new UserRepository();
@@ -32,7 +33,7 @@ router.post("/auth/login", validateBody(loginSchema), authController.login);
 router.post("/auth/google", validateBody(googleLoginSchema), authController.googleLogin);
 router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
 router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
-router.post("/auth/refresh", authController.refresh);
+router.post("/auth/refresh", requireTrustedOrigin, authController.refresh);
 router.post("/auth/logout", authenticate, authController.logout);
 router.post("/auth/logout-all", authenticate, authController.logoutAllDevices);
 router.post("/auth/reset-password", validateBody(resetPasswordSchema), authController.resetPassword);
