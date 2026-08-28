@@ -5,6 +5,7 @@ import {
   communitiesTable,
   communityMembersTable,
   eventsTable,
+  eventRsvpsTable,
   productsTable,
   articlesTable,
   videosTable,
@@ -234,6 +235,10 @@ async function seedDatabase() {
   for (const ev of events) {
     try {
       await db.insert(eventsTable).values(ev);
+      await db.insert(eventRsvpsTable).values([
+        ...ev.attendeeIds.map((userId) => ({ eventId: ev.id, userId, status: "going" })),
+        ...ev.interestedIds.filter((userId) => !ev.attendeeIds.includes(userId)).map((userId) => ({ eventId: ev.id, userId, status: "interested" })),
+      ]).onConflictDoNothing();
       console.log(`✅ Seeded event: ${ev.title}`);
     } catch (err: any) {
       console.log(`⚠️ Event skipped: ${err.message}`);

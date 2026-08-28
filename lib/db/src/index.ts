@@ -39,6 +39,7 @@ export {
   broadcastChannelMembersTable,
   broadcastChannelMessagesTable,
   eventsTable,
+  eventRsvpsTable,
   productsTable,
   marketplaceOrdersTable,
   articlesTable,

@@ -7,6 +7,7 @@ import {
   communitiesTable,
   communityMembersTable,
   eventsTable,
+  eventRsvpsTable,
   productsTable,
   articlesTable,
   storiesTable,
@@ -432,6 +433,16 @@ async function runMegaScaleSeed() {
       });
     }
     await db.insert(eventsTable).values(chunk).onConflictDoNothing();
+    const rsvps = chunk.flatMap((event) => {
+      const attendees = new Set<string>(event.attendeeIds);
+      return [
+        ...event.attendeeIds.map((userId: string) => ({ eventId: event.id, userId, status: "going" })),
+        ...event.interestedIds.filter((userId: string) => !attendees.has(userId)).map((userId: string) => ({ eventId: event.id, userId, status: "interested" })),
+      ];
+    });
+    for (let rsvpOffset = 0; rsvpOffset < rsvps.length; rsvpOffset += 2000) {
+      await db.insert(eventRsvpsTable).values(rsvps.slice(rsvpOffset, rsvpOffset + 2000)).onConflictDoNothing();
+    }
   }
   console.log(`✅ 10000 Events Created.`);
 

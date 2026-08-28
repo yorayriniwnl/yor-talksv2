@@ -7,6 +7,7 @@ import {
   communitiesTable,
   communityMembersTable,
   eventsTable,
+  eventRsvpsTable,
   productsTable,
 } from "@workspace/db/schema";
 import bcrypt from "bcryptjs";
@@ -215,8 +216,11 @@ async function seedMassive() {
   for (let i = 0; i < 12; i++) {
     const hostId = createdUserIds[i % createdUserIds.length];
     try {
+      const eventId = randomUUID();
+      const attendeeIds = createdUserIds.slice(0, Math.floor(Math.random() * 20) + 3);
+      const interestedIds = createdUserIds.slice(0, Math.floor(Math.random() * 15)).filter((userId) => !attendeeIds.includes(userId));
       await db.insert(eventsTable).values({
-        id: randomUUID(),
+        id: eventId,
         hostId,
         title: `Global Multiverse Summit & Hackathon #${i + 1}`,
         description: `48-hour global sprint building spatial UI components, zero-latency WebRTC streams, and generative agent pipelines.`,
@@ -225,10 +229,14 @@ async function seedMassive() {
         startsAt: new Date(Date.now() + (i + 1) * 86400000).toISOString(),
         location: "Virtual Main Stage & Live Stream",
         isOnline: true,
-        attendeeIds: createdUserIds.slice(0, Math.floor(Math.random() * 20) + 3),
-        interestedIds: createdUserIds.slice(0, Math.floor(Math.random() * 15)),
+        attendeeIds,
+        interestedIds,
         rsvpStatus: "going"
       });
+      await db.insert(eventRsvpsTable).values([
+        ...attendeeIds.map((userId) => ({ eventId, userId, status: "going" })),
+        ...interestedIds.map((userId) => ({ eventId, userId, status: "interested" })),
+      ]).onConflictDoNothing();
     } catch(e) {}
   }
 

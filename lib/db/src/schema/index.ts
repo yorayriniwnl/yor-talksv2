@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index, primaryKey, uniqueIndex, check } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 
 export const usersTable = pgTable("users", {
@@ -318,6 +318,19 @@ export const eventsTable = pgTable("events", {
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   hostIdx: index("event_host_idx").on(table.hostId)
+}));
+
+export const eventRsvpsTable = pgTable("event_rsvps", {
+  eventId: uuid("event_id").references(() => eventsTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.eventId, table.userId] }),
+  userIdx: index("event_rsvp_user_idx").on(table.userId, table.status, table.updatedAt),
+  eventStatusIdx: index("event_rsvp_event_status_idx").on(table.eventId, table.status),
+  validStatus: check("event_rsvp_status_check", sql`${table.status} IN ('going', 'interested')`),
 }));
 
 export const productsTable = pgTable("products", {
@@ -933,6 +946,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   communities: many(communitiesTable),
   communityMemberships: many(communityMembersTable),
   events: many(eventsTable),
+  eventRsvps: many(eventRsvpsTable),
   products: many(productsTable),
   articles: many(articlesTable),
   videos: many(videosTable),
@@ -968,8 +982,14 @@ export const communityMembersRelations = relations(communityMembersTable, ({ one
   user: one(usersTable, { fields: [communityMembersTable.userId], references: [usersTable.id] }),
 }));
 
-export const eventsRelations = relations(eventsTable, ({ one }) => ({
-  host: one(usersTable, { fields: [eventsTable.hostId], references: [usersTable.id] })
+export const eventsRelations = relations(eventsTable, ({ one, many }) => ({
+  host: one(usersTable, { fields: [eventsTable.hostId], references: [usersTable.id] }),
+  rsvps: many(eventRsvpsTable),
+}));
+
+export const eventRsvpsRelations = relations(eventRsvpsTable, ({ one }) => ({
+  event: one(eventsTable, { fields: [eventRsvpsTable.eventId], references: [eventsTable.id] }),
+  user: one(usersTable, { fields: [eventRsvpsTable.userId], references: [usersTable.id] }),
 }));
 
 export const productsRelations = relations(productsTable, ({ one }) => ({
