@@ -28,10 +28,12 @@ import { projectRoutes } from "./projects.js";
 import { reportRoutes } from "./reports.js";
 import { creatorWorkspaceRoutes } from "./creator-workspace.js";
 import profileInteractionRouter from "./profile-interactions.js";
+import metricsRouter from "./metrics.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(metricsRouter);
 router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);

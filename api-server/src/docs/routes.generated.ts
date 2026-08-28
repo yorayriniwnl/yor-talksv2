@@ -768,6 +768,18 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/metrics",
+    "operationId": "getMetrics",
+    "tag": "metrics",
+    "summary": "Get /metrics",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
     "path": "/notes",
     "operationId": "getNotes",
     "tag": "notes",

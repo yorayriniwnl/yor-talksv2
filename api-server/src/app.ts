@@ -10,6 +10,7 @@ import { env, corsOrigins } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 import { apiRateLimiter } from "./middlewares/rate-limit.js";
+import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -39,6 +40,7 @@ const createHelmetMiddleware = helmet as unknown as (options?: Record<string, un
 app.disable("x-powered-by");
 app.use(requestContext);
 app.use(requestLogger);
+app.use(recordOperationalMetrics);
 app.use(createHelmetMiddleware());
 app.use(compression());
 app.use(
