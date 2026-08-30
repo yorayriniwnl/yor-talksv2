@@ -83,6 +83,34 @@
 :root {
   color-scheme: light;
 
+  /* ── Product rhythm ─────────────────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* ── Interaction contract ──────────────────────────────────────────── */
+  --motion-fast: 160ms;
+  --motion-standard: 220ms;
+  --motion-slow: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ── Layer contract ─────────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-sticky: 30;
+  --z-navigation: 40;
+  --z-overlay: 100;
+  --z-toast: 110;
+
   --button-outline: rgba(0, 0, 0, 0.08);
   --badge-outline: rgba(0, 0, 0, 0.04);
 

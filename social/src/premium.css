@@ -15,7 +15,7 @@
   --premium-border-deep: 220 12% 16%;
   --premium-shadow: 224 28% 24%;
   --premium-shadow-deep: 230 42% 3%;
-  --premium-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --premium-ease: var(--ease-standard);
 }
 
 .dark {
@@ -86,7 +86,7 @@ body {
  * navigation and the safe-area inset while preserving a compact desktop
  * footprint. */
 [data-sonner-toaster] {
-  z-index: 110 !important;
+  z-index: var(--z-toast) !important;
 }
 
 [data-sonner-toast] {

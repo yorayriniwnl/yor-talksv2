@@ -5,9 +5,9 @@
  */
 
 :root {
-  --operator-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --operator-fast: 160ms;
-  --operator-normal: 220ms;
+  --operator-ease: var(--ease-emphasized);
+  --operator-fast: var(--motion-fast);
+  --operator-normal: var(--motion-standard);
   --operator-shadow: 0 18px 55px hsl(225 35% 2% / 0.12);
   --operator-shadow-dark: 0 20px 70px hsl(225 50% 1% / 0.42);
 }
