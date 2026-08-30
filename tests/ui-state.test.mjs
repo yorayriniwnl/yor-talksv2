@@ -8,6 +8,7 @@ async function loadSource(path) {
 }
 const { isUnreadMessage, hasUnreadConversation, upsertMessage, reconcileMessageSnapshot } = await loadSource('social/src/lib/message-state.ts');
 const { safeInternalRedirect } = await loadSource('social/src/lib/safe-redirect.ts');
+const { utcTimestamp, normalizeApiTimestamps } = await loadSource('social/src/lib/timestamps.ts');
 const message = { id: 'one', conversationId: 'chat', senderId: 'other', content: 'hello', createdAt: '2026-08-31T00:00:00Z', read: false };
 
 test('unread state excludes outgoing, deleted, read, and signed-out messages', () => {
@@ -45,4 +46,16 @@ test('post-login redirects reject external, encoded, control-character and self-
     assert.equal(safeInternalRedirect(value), '/', String(value));
   }
   assert.equal(safeInternalRedirect('/messages/chat?view=unread#latest'), '/messages/chat?view=unread#latest');
+});
+
+test('database UTC timestamps retain the same instant in every browser timezone', () => {
+  const value = '2026-08-31 10:15:30.123456';
+  assert.equal(utcTimestamp(value), '2026-08-31T10:15:30.123456Z');
+  assert.equal(utcTimestamp('2026-08-31T10:15:30+05:30'), '2026-08-31T10:15:30+05:30');
+  assert.equal(utcTimestamp('2026-08-31T10:15:30Z'), '2026-08-31T10:15:30Z');
+  assert.equal(utcTimestamp('not a date'), 'not a date');
+  const normalized = normalizeApiTimestamps({ data: [{ createdAt: value, content: value, seenAt: null }], meta: {} });
+  assert.equal(normalized.data[0].createdAt.endsWith('Z'), true);
+  assert.equal(normalized.data[0].content, value, 'never rewrite user content');
+  assert.equal(normalized.data[0].seenAt, null);
 });

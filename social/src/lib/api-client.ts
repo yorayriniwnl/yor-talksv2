@@ -31,6 +31,7 @@ const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
+import { normalizeApiTimestamps } from './timestamps';
 let memoryAccessToken: string | null = null;
 let sessionEpoch = 0;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
@@ -180,7 +181,7 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   if (!res.ok || !json?.success) {
     throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
   }
-  return json;
+  return normalizeApiTimestamps(json);
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {

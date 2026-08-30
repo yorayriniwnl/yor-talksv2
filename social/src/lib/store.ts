@@ -32,6 +32,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
 import { reconcileMessageSnapshot, upsertMessage } from '@/lib/message-state';
+import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
@@ -475,7 +476,7 @@ function mapMessage(m: BackendMessage): Message {
     conversationId: m.conversationId,
     senderId: m.senderId,
     content: m.content || '',
-    createdAt: m.createdAt || new Date().toISOString(),
+    createdAt: m.createdAt ? utcTimestamp(m.createdAt) : new Date().toISOString(),
     read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
     replyToId: m.replyToId ?? null,
     editedAt: m.editedAt ?? null,
@@ -597,7 +598,7 @@ function mapNotification(n: BackendNotification): Notification {
     actorId: n.metadata?.actorId,
     targetId: n.relatedId,
     read: Boolean(n.readAt !== null && n.readAt !== undefined),
-    createdAt: n.createdAt || new Date().toISOString(),
+    createdAt: n.createdAt ? utcTimestamp(n.createdAt) : new Date().toISOString(),
   };
 }
 
