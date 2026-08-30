@@ -12,6 +12,8 @@ export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
 export class UnauthorizedError extends Error {}
 
+type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId">;
+
 export class MessageService {
   constructor(
     private readonly conversationRepository: ConversationRepository,
@@ -61,7 +63,7 @@ export class MessageService {
   }
 
   // Legacy support for 1-to-1
-  async sendMessage(senderId: string, recipientId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
+  async sendMessage(senderId: string, recipientId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
       const sender = await this.userRepository.findById(senderId);
@@ -76,7 +78,7 @@ export class MessageService {
     return this.sendMessageToConversation(senderId, conversation.id, content, options);
   }
 
-  async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: Partial<MessageRecord>): Promise<MessageRecord> {
+  async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
     const conversation = await this.conversationRepository.findById(conversationId);
     if (!conversation) {
       throw new UnauthorizedError("Conversation not found");
@@ -121,13 +123,12 @@ export class MessageService {
       createdAt: createdAt.toISOString(),
       seenAt: null,
       replyToId,
-      forwardedFromId: options?.forwardedFromId ?? null,
-      reactions: options?.reactions ?? {},
+      forwardedFromId: null,
+      reactions: {},
       editedAt: null,
       deletedAt: null,
       expiresAt: conversation.vanishMode ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
       pinned: false,
-      ...options,
     };
     await this.messageRepository.create(message);
     return message;
