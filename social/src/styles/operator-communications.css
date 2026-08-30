@@ -837,6 +837,26 @@
   .operator-notification__unread::after { display: block; width: 0.42rem; height: 0.42rem; border-radius: 50%; background: hsl(var(--signal)); content: ''; }
 }
 
+@media (max-width: 600px) {
+  .operator-thread__actions > button,
+  .operator-thread-menu > summary {
+    width: 2.5rem;
+    height: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .operator-message__actions button {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .operator-composer__controls > button {
+    width: 2.65rem;
+    height: 2.65rem;
+    min-height: 2.65rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .operator-thread-menu__content,
   .operator-composer__controls .operator-composer__send[data-pulse='true'] { animation: none; }
