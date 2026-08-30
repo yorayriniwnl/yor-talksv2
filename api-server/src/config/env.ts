@@ -1,9 +1,16 @@
 import { z } from "zod";
 
 const defaultNodeEnvironment = process.env.NODE_ENV || (process.env.VERCEL ? "production" : "development");
-const booleanFromEnv = (value: string | undefined, fallback = false): boolean => {
-  if (value === undefined || value.trim() === "") return fallback;
-  return value.trim().toLowerCase() === "true";
+const booleanFromEnv = (value: unknown, fallback = false): unknown => {
+  if (value === undefined || (typeof value === "string" && value.trim() === "")) return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  // Return the invalid value so Zod rejects it instead of silently treating a
+  // typo such as "treu" as false and changing the deployment's safety gates.
+  return value;
 };
 
 const envSchema = z.object({
@@ -46,11 +53,11 @@ const envSchema = z.object({
   TOTP_ENCRYPTION_KEY: z.string().default(process.env.TOTP_ENCRYPTION_KEY || "totp-development-encryption-key-change-me"),
   TERMS_VERSION: z.string().trim().default(process.env.TERMS_VERSION || "development"),
   MINIMUM_AGE: z.coerce.number().int().min(13).default(Number(process.env.MINIMUM_AGE || 18)),
-  PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(typeof value === "string" ? value : undefined), z.boolean()),
-  PAYMENTS_ENABLED: z.preprocess((value) => booleanFromEnv(typeof value === "string" ? value : undefined), z.boolean()),
-  LIVE_ROOMS_ENABLED: z.preprocess((value) => booleanFromEnv(typeof value === "string" ? value : undefined), z.boolean()),
-  WEB_PUSH_ENABLED: z.preprocess((value) => booleanFromEnv(typeof value === "string" ? value : undefined), z.boolean()),
-  RTC_CALLS_ENABLED: z.preprocess((value) => booleanFromEnv(typeof value === "string" ? value : undefined), z.boolean()),
+  PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  PAYMENTS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  LIVE_ROOMS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  WEB_PUSH_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  RTC_CALLS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   LEGAL_OPERATOR_NAME: z.string().default(process.env.LEGAL_OPERATOR_NAME || ""),
   LEGAL_OPERATOR_ADDRESS: z.string().default(process.env.LEGAL_OPERATOR_ADDRESS || ""),
   LEGAL_EFFECTIVE_DATE: z.string().default(process.env.LEGAL_EFFECTIVE_DATE || ""),

@@ -1,6 +1,9 @@
 function readBoolean(value: unknown, fallback = false): boolean {
   if (typeof value !== "string" || value.trim() === "") return fallback;
-  return value.trim().toLowerCase() === "true";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  throw new Error("Invalid boolean value in the public beta build configuration");
 }
 
 function readNumber(value: unknown, fallback: number): number {
