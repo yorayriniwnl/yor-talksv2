@@ -27,6 +27,21 @@ import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
+function normalizedRequestPath(req: Request): string {
+  return req.originalUrl.split("?")[0].replace(/^\/api(?:\/v1)?/, "") || "/";
+}
+
+function consentExempt(req: Request): boolean {
+  const path = normalizedRequestPath(req);
+  return (
+    (path === "/users/me" && (req.method === "GET" || req.method === "DELETE")) ||
+    (path === "/users/me/consent" && req.method === "POST") ||
+    (path === "/users/me/export" && req.method === "GET") ||
+    (path === "/auth/logout" && req.method === "POST") ||
+    (path === "/auth/logout-all" && req.method === "POST")
+  );
+}
+
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
@@ -53,9 +68,17 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     req.user = {
       id: decoded.sub,
-      role: decoded.role,
-      permissions: decoded.permissions ?? [],
+      role: user.role,
+      permissions: user.permissions ?? [],
     };
+    if (env.PUBLIC_BETA && (user.termsVersion !== env.TERMS_VERSION || !user.termsAcceptedAt || !user.ageConfirmedAt) && !consentExempt(req)) {
+      return res.status(428).json(createResponse(
+        "Current terms acceptance required",
+        null,
+        { termsAcceptanceRequired: true, termsVersion: env.TERMS_VERSION, minimumAge: env.MINIMUM_AGE },
+        ["Accept the current Terms and confirm the minimum age to continue"],
+      ));
+    }
     return next();
   } catch {
     return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
@@ -72,7 +95,7 @@ export const optionalAuthenticate = async (req: Request, _res: Response, next: N
     const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
     if (activeSession && user && user.accountStatus !== "suspended" && user.accountStatus !== "deactivated") {
-      req.user = { id: decoded.sub, role: decoded.role, permissions: decoded.permissions ?? [] };
+      req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
     }
   } catch {
     // An invalid optional credential is treated as anonymous access.

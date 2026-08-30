@@ -62,6 +62,21 @@ export class AuthController {
     }
   };
 
+  acceptTerms = async (req: Request, res: Response) => {
+    try {
+      const user = await this.authService.acceptCurrentTerms(req.user?.id ?? "", req.body);
+      if (!user) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("Terms accepted", { user: toOwnUser(user) }, { termsVersion: env.TERMS_VERSION }));
+    } catch (error) {
+      if (error instanceof RegistrationNotAllowedError) {
+        return res.status(400).json(createResponse("Terms acceptance required", null, {}, [error.message]));
+      }
+      return res.status(500).json(createResponse("Could not save terms acceptance", null, {}, ["Please try again shortly"]));
+    }
+  };
+
   login = async (req: Request, res: Response) => {
     try {
       const result = await this.authService.login(req.body);
@@ -301,11 +316,14 @@ export class AuthController {
       const token = await this.authService.requestPasswordReset(req.body.email);
       // Always return the same success response whether or not the email is
       // registered, so this endpoint can't be used to enumerate accounts.
-      // No email transport is configured yet, so outside production we return
-      // the token directly (and log it) — swap this for a real send once one exists.
+      // Development also returns the token to keep local testing possible when
+      // an external email provider is intentionally not configured.
       const data = token && env.NODE_ENV !== "production" ? { devResetToken: token } : null;
       return res.status(200).json(createResponse("If that email is registered, a reset link has been sent", data));
     } catch (error) {
+      if (error instanceof TooManyAttemptsError) {
+        return res.status(429).json(createResponse("Please wait before requesting another reset", null, {}, [error.message]));
+      }
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Password reset is unavailable", null, {}, [error.message]));
       }

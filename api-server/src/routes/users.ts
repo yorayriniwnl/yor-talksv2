@@ -12,16 +12,20 @@ import { UserService } from "../services/user-service.js";
 import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
 import { followRequestIdParamSchema, userIdParamSchema, usernameParamSchema } from "../validators/params.js";
 import { AccountService } from "../services/account-service.js";
+import { AuthController } from "../controllers/auth-controller.js";
+import { acceptTermsSchema } from "../validators/auth.js";
 
 const router = Router();
 const userRepository = new UserRepository();
 const redisRepository = new RedisRepository();
 const userService = new UserService(userRepository, new NotificationRepository(), new QueueService());
 const authService = new AuthService(userRepository, redisRepository);
+const authController = new AuthController(authService);
 const userController = new UserController(userService, authService, new AccountService(userRepository, redisRepository));
 
 router.get("/users/search", authenticate, validateQuery(searchUsersSchema), userController.searchUsers);
 router.get("/users/me", authenticate, userController.getCurrentUser);
+router.post("/users/me/consent", authenticate, validateBody(acceptTermsSchema), authController.acceptTerms);
 router.get("/users/me/export", authenticate, userController.exportAccount);
 router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), userController.deleteAccount);
 router.get("/users/by-username/:username", authenticate, validateParams(usernameParamSchema), userController.getProfileByUsername);

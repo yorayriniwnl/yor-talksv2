@@ -10,7 +10,7 @@ export class LiveKitNotConfiguredError extends Error {
 
 export class LiveKitService {
   isConfigured(): boolean {
-    return Boolean(env.LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET);
+    return env.LIVE_ROOMS_ENABLED && Boolean(env.LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET);
   }
 
   async createRoomToken(input: {

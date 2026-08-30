@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { CheckCircle2, Loader2, ShieldAlert } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import '@/styles/operator-access.css';
 
 export default function VerifyEmail() {
   const [location] = useLocation();
@@ -29,18 +30,26 @@ export default function VerifyEmail() {
   }, [token]);
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
-      <section className="w-full max-w-md rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-2xl">
-        <div className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${state === 'success' ? 'bg-emerald-500/15 text-emerald-600' : state === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-          {state === 'loading' && <Loader2 className="h-7 w-7 animate-spin" />}
-          {state === 'success' && <CheckCircle2 className="h-7 w-7" />}
-          {state === 'error' && <ShieldAlert className="h-7 w-7" />}
+    <main className="operator-access-state-page">
+      <div className="operator-access-state-page__brand">
+        <span className="operator-access-brand__mark" aria-hidden="true">Y</span>
+        <span><strong>Yor Talks</strong><small>Identity verification</small></span>
+      </div>
+      <section className={`operator-access-state-card is-${state}`}>
+        <div className="operator-access-state-card__index">AUTH / VERIFY</div>
+        <div className="operator-access-state-card__icon">
+          {state === 'loading' && <Loader2 className="animate-spin" />}
+          {state === 'success' && <CheckCircle2 />}
+          {state === 'error' && <ShieldAlert />}
         </div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Yor · verified access</p>
-        <h1 className="mb-3 text-2xl font-black tracking-tight">{state === 'success' ? 'You’re verified' : state === 'error' ? 'Verification failed' : 'Confirming your email'}</h1>
-        <p className="mb-8 text-sm leading-6 text-muted-foreground">{message}</p>
+        <p className="operator-kicker"><span /> Verified access</p>
+        <h1>{state === 'success' ? 'Email confirmed.' : state === 'error' ? 'Link not accepted.' : 'Confirming identity…'}</h1>
+        <p>{message}</p>
+        <div className="operator-access-state-card__status">
+          <span><i /> Email ownership</span><b>{state === 'success' ? 'VERIFIED' : state === 'error' ? 'ACTION NEEDED' : 'CHECKING'}</b>
+        </div>
         <Link href="/auth">
-          <Button className="w-full rounded-2xl">Continue to sign in</Button>
+          <Button>Continue to sign in <span>→</span></Button>
         </Link>
       </section>
     </main>

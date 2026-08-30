@@ -7,6 +7,9 @@ export interface UserRecord {
   email: string;
   googleSubject?: string | null;
   passwordHash: string;
+  termsVersion?: string | null;
+  termsAcceptedAt?: string | null;
+  ageConfirmedAt?: string | null;
   fullName: string;
   bio: string;
   avatarUrl: string | null;
@@ -44,6 +47,8 @@ export interface UserSettings {
   allowMentions?: boolean;
   /** Highest content rating this viewer wants to see. */
   contentFilter?: ContentRating;
+  /** Explicitly false for new accounts until the guided setup is saved. */
+  onboardingCompleted?: boolean;
 }
 
 export interface PrivacySettings {

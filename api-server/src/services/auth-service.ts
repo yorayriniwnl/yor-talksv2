@@ -15,6 +15,7 @@ import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
 import { isAllowedEmail } from "../validators/auth.js";
 import { getContactIdentifierDigest } from "../utils/contact-shield.js";
+import { decryptSecret, encryptSecret } from "../lib/secret-box.js";
 
 export class TooManyAttemptsError extends Error {}
 export type LoginApprovalChallenge = {
@@ -51,19 +52,34 @@ export class RegistrationNotAllowedError extends Error {}
 export class UserAlreadyExistsError extends Error {}
 
 export class AuthService {
+  private readonly userRepository: UserRepository;
+  private readonly redisRepository: RedisRepository;
+  private readonly securityService: SecurityService;
+  private readonly emailService: EmailService;
+
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly redisRepository: RedisRepository = new RedisRepository(),
-    private readonly securityService: SecurityService = new SecurityService(),
-    private readonly emailService: EmailService = new EmailService(),
-  ) {}
+    userRepository: UserRepository,
+    redisRepository = new RedisRepository(),
+    securityService?: SecurityService,
+    emailService = new EmailService(),
+  ) {
+    this.userRepository = userRepository;
+    this.redisRepository = redisRepository;
+    this.securityService = securityService ?? new SecurityService(redisRepository);
+    this.emailService = emailService;
+  }
 
   async register(input: {
     username: string;
     email: string;
     password: string;
     fullName: string;
+    acceptedTerms: boolean;
+    confirmedAge: boolean;
   }): Promise<{ user: UserRecord; verificationToken?: string }> {
+    if (input.acceptedTerms !== true || input.confirmedAge !== true) {
+      throw new RegistrationNotAllowedError("You must accept the current terms and confirm the minimum age");
+    }
     const email = input.email.trim().toLowerCase();
     if (!isAllowedEmail(email)) {
       throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
@@ -79,11 +95,15 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
+    const consentTimestamp = new Date().toISOString();
     const user: UserRecord = {
       id: randomUUID(),
       username: normalizedUsername,
       email,
       passwordHash,
+      termsVersion: env.TERMS_VERSION,
+      termsAcceptedAt: consentTimestamp,
+      ageConfirmedAt: consentTimestamp,
       fullName: input.fullName,
       bio: "",
       avatarUrl: null,
@@ -97,6 +117,7 @@ export class AuthService {
         privateAccount: false,
         allowMentions: true,
         contentFilter: "regular",
+        onboardingCompleted: false,
       },
       emailVerified: false,
       contactIdentityDigest: getContactIdentifierDigest("email", email),
@@ -130,7 +151,7 @@ export class AuthService {
 
   async login(input: { identifier: string; password: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
     const normalizedIdentifier = input.identifier.trim().toLowerCase();
-    if (this.securityService.detectAbuse(normalizedIdentifier, "login_failure")) {
+    if (await this.securityService.detectAbuse(normalizedIdentifier, "login_failure")) {
       throw new TooManyAttemptsError("Too many failed login attempts. Please try again later.");
     }
 
@@ -158,14 +179,15 @@ export class AuthService {
     }
     this.assertAccountActive(user);
 
-    if (user.totpSecret) {
+    const totpSecret = await this.readTotpSecret(user);
+    if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
           await this.createLoginApprovalChallenge(user.id),
         );
       }
-      if (!authenticator.check(input.totpCode, user.totpSecret)) {
+      if (!authenticator.check(input.totpCode, totpSecret)) {
         this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — wrong 2FA code`, normalizedIdentifier);
         throw new Error("Invalid two-factor code");
       }
@@ -214,14 +236,15 @@ export class AuthService {
     const finalUser = linked ?? user;
     this.assertAccountActive(finalUser);
 
-    if (finalUser.totpSecret) {
+    const totpSecret = await this.readTotpSecret(finalUser);
+    if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
           await this.createLoginApprovalChallenge(finalUser.id),
         );
       }
-      if (!authenticator.check(input.totpCode, finalUser.totpSecret)) {
+      if (!authenticator.check(input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(finalUser.id, input.challengeId);
@@ -302,14 +325,15 @@ export class AuthService {
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
     this.assertAccountActive(user);
-    if (user.totpSecret) {
+    const totpSecret = await this.readTotpSecret(user);
+    if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
           await this.createLoginApprovalChallenge(user.id, key),
         );
       }
-      if (!authenticator.check(input.totpCode, user.totpSecret)) {
+      if (!authenticator.check(input.totpCode, totpSecret)) {
         throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
@@ -405,7 +429,7 @@ export class AuthService {
     if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
 
     const user = await this.userRepository.findById(challenge.userId);
-    if (!user?.totpSecret || !this.isAccountActive(user)) return undefined;
+    if (!user || !this.isAccountActive(user) || !(await this.readTotpSecret(user))) return undefined;
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -446,15 +470,17 @@ export class AuthService {
       if (!user || !this.isAccountActive(user)) {
         return undefined;
       }
-      const storedToken = await this.redisRepository.getStrict(`session:${user.id}:${deviceId}`);
-      if (!storedToken || storedToken !== refreshToken) {
+      const storedTokenHash = await this.redisRepository.getStrict(`session:${user.id}:${deviceId}`);
+      const refreshTokenHash = await this.redisRepository.hashToken(refreshToken);
+      if (!storedTokenHash || storedTokenHash !== refreshTokenHash) {
         return undefined;
       }
       const nextRefreshToken = this.issueRefreshToken(user, deviceId);
+      const nextRefreshTokenHash = await this.redisRepository.hashToken(nextRefreshToken);
       const rotated = await this.redisRepository.rotateValueStrict(
         `session:${user.id}:${deviceId}`,
-        refreshToken,
-        nextRefreshToken,
+        refreshTokenHash,
+        nextRefreshTokenHash,
         7 * 24 * 60 * 60,
       );
       if (!rotated) return undefined;
@@ -475,6 +501,15 @@ export class AuthService {
       // Don't reveal whether this email is registered.
       return undefined;
     }
+
+    // Prevent email bombing: at most one reset dispatch per email per 2 minutes.
+    const throttleHash = await this.redisRepository.hashToken(normalizedEmail);
+    const throttleKey = `password-reset-throttle:${throttleHash}`;
+    if (await this.redisRepository.getStrict(throttleKey)) {
+      throw new TooManyAttemptsError("A password reset email was already sent. Please wait before requesting another.");
+    }
+    await this.redisRepository.setStrict(throttleKey, "1", 120);
+
     const token = randomBytes(32).toString("hex");
     const hashed = await this.redisRepository.hashToken(token);
     await this.redisRepository.setStrict(`password-reset:${hashed}`, user.id, 60 * 60);
@@ -493,16 +528,19 @@ export class AuthService {
   async confirmPasswordReset(token: string, newPassword: string): Promise<boolean> {
     const hashed = await this.redisRepository.hashToken(token);
     const key = `password-reset:${hashed}`;
-    const userId = await this.redisRepository.get(key);
+    const userId = await this.redisRepository.getStrict(key);
     if (!userId) {
       return false;
     }
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.userRepository.update(userId, { passwordHash, passwordResetRequired: false });
-    await this.redisRepository.del(key);
+    await this.redisRepository.delStrict(key);
     // A password reset is a meaningful security event — invalidate every existing
     // session (including any an attacker might hold) and require fresh logins.
     await this.logoutAllDevices(userId);
+    // Also invalidate any pending login-approval challenges so a pre-staged
+    // two-factor challenge cannot be completed after the password changes.
+    await this.invalidateLoginApprovalChallenges(userId);
     return true;
   }
 
@@ -576,6 +614,18 @@ export class AuthService {
     });
   }
 
+  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge: boolean }): Promise<UserRecord | undefined> {
+    if (input.acceptedTerms !== true || input.confirmedAge !== true) {
+      throw new RegistrationNotAllowedError("You must accept the current terms and confirm the minimum age");
+    }
+    const now = new Date().toISOString();
+    return this.userRepository.update(userId, {
+      termsVersion: env.TERMS_VERSION,
+      termsAcceptedAt: now,
+      ageConfirmedAt: now,
+    });
+  }
+
   /**
    * Generates a TOTP secret and holds it in Redis (not yet on the user
    * record) until confirmTwoFactorSetup verifies the user actually has it
@@ -585,28 +635,53 @@ export class AuthService {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
     const secret = authenticator.generateSecret();
-    await this.redisRepository.set(`totp-setup:${userId}`, secret, 10 * 60);
+    await this.redisRepository.set(
+      `totp-setup:${userId}`,
+      encryptSecret(secret, env.TOTP_ENCRYPTION_KEY),
+      10 * 60,
+    );
     const otpauthUrl = authenticator.keyuri(user.email, "Yor Talks", secret);
     return { secret, otpauthUrl };
   }
 
   async confirmTwoFactorSetup(userId: string, code: string): Promise<boolean> {
-    const pendingSecret = await this.redisRepository.get(`totp-setup:${userId}`);
-    if (!pendingSecret || !authenticator.check(code, pendingSecret)) {
+    const pendingSecretValue = await this.redisRepository.get(`totp-setup:${userId}`);
+    if (!pendingSecretValue) {
       return false;
     }
-    await this.userRepository.update(userId, { totpSecret: pendingSecret });
+    let pendingSecret: string;
+    try {
+      pendingSecret = decryptSecret(pendingSecretValue, env.TOTP_ENCRYPTION_KEY).secret;
+    } catch {
+      return false;
+    }
+    if (!authenticator.check(code, pendingSecret)) {
+      return false;
+    }
+    await this.userRepository.update(userId, { totpSecret: encryptSecret(pendingSecret, env.TOTP_ENCRYPTION_KEY) });
     await this.redisRepository.del(`totp-setup:${userId}`);
     return true;
   }
 
   async disableTwoFactor(userId: string, code: string): Promise<boolean> {
     const user = await this.userRepository.findById(userId);
-    if (!user?.totpSecret || !authenticator.check(code, user.totpSecret)) {
+    const secret = user ? await this.readTotpSecret(user) : null;
+    if (!secret || !authenticator.check(code, secret)) {
       return false;
     }
     await this.userRepository.update(userId, { totpSecret: null });
     return true;
+  }
+
+  private async readTotpSecret(user: UserRecord): Promise<string | null> {
+    if (!user.totpSecret) return null;
+    const decrypted = decryptSecret(user.totpSecret, env.TOTP_ENCRYPTION_KEY);
+    if (decrypted.needsMigration) {
+      await this.userRepository.update(user.id, {
+        totpSecret: encryptSecret(decrypted.secret, env.TOTP_ENCRYPTION_KEY),
+      });
+    }
+    return decrypted.secret;
   }
 
   private async createLoginApprovalChallenge(userId: string, emailOtpKey?: string): Promise<LoginApprovalChallenge> {
@@ -666,6 +741,19 @@ export class AuthService {
     return `login-approvals:user:${userId}`;
   }
 
+  /** Removes all pending login-approval challenges for a user.
+   *  Called after password reset and logout-all to prevent pre-staged
+   *  two-factor challenges from being completed after a credential change. */
+  private async invalidateLoginApprovalChallenges(userId: string): Promise<void> {
+    const indexKey = this.loginApprovalIndexKey(userId);
+    const challengeIds = await this.redisRepository.getSetStrict(indexKey);
+    if (challengeIds.length === 0) return;
+    await Promise.all([
+      ...challengeIds.map((id) => this.redisRepository.delStrict(this.loginApprovalKey(id))),
+      this.redisRepository.delStrict(indexKey),
+    ]);
+  }
+
   private async createSession(
     user: UserRecord,
     updates: Partial<Pick<UserRecord, "emailVerified">> = {},
@@ -673,7 +761,11 @@ export class AuthService {
     this.assertAccountActive(user);
     const deviceId = randomUUID();
     const refreshToken = this.issueRefreshToken(user, deviceId);
-    await this.redisRepository.setStrict(`session:${user.id}:${deviceId}`, refreshToken, 7 * 24 * 60 * 60);
+    await this.redisRepository.setStrict(
+      `session:${user.id}:${deviceId}`,
+      await this.redisRepository.hashToken(refreshToken),
+      7 * 24 * 60 * 60,
+    );
     const updatedUser = await this.userRepository.update(user.id, { ...updates, lastLoginAt: new Date().toISOString() });
     const finalUser = updatedUser ?? user;
     return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };

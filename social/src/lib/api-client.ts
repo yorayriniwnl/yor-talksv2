@@ -293,11 +293,20 @@ export interface BackendUser {
   followerCount?: number;
   followingCount?: number;
   emailVerified: boolean;
+  termsVersion?: string | null;
+  termsAcceptedAt?: string | null;
+  ageConfirmedAt?: string | null;
   createdAt: string;
   blockedUsers?: string[];
   mutedUsers?: string[];
   twoFactorEnabled?: boolean;
-  settings?: { notificationsEnabled?: boolean; privateAccount?: boolean; theme?: 'light' | 'dark'; contentFilter?: ContentRating };
+  settings?: {
+    notificationsEnabled?: boolean;
+    privateAccount?: boolean;
+    theme?: 'light' | 'dark';
+    contentFilter?: ContentRating;
+    onboardingCompleted?: boolean;
+  };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
 
@@ -409,8 +418,17 @@ export interface BackendProject {
 export const api = {
   request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
   refreshSession,
-  register: (payload: { username: string; email: string; password: string; fullName: string }) =>
+  checkReadiness: async (): Promise<{ ok: boolean; status: number }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/readyz`, { credentials: 'include', cache: 'no-store' });
+      return { ok: response.ok, status: response.status };
+    } catch {
+      return { ok: false, status: 0 };
+    }
+  },
+  register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; confirmedAge: boolean }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true, confirmedAge: true }) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>
     request<AuthLoginResult>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
@@ -450,6 +468,8 @@ export const api = {
   resendVerificationEmail: () => request<{ devVerificationToken?: string } | null>('/auth/verify-email/resend', { method: 'POST' }),
   resendPublicVerificationEmail: (email: string) => request<null>('/auth/verify-email/resend-public', { method: 'POST', body: JSON.stringify({ email }) }),
   verifyEmail: (token: string) => request<{ user: BackendUser }>(`/auth/verify-email/${encodeURIComponent(token)}`),
+  completeOnboarding: (payload: { interests: string[]; followedCreatorIds: string[] }) =>
+    request<null>('/onboarding/complete', { method: 'POST', body: JSON.stringify(payload) }),
 
   // ---- Users ----
   getCurrentUser: () => request<BackendUser>('/users/me'),

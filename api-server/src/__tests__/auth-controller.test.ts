@@ -46,7 +46,7 @@ const makeResponse = () => {
 test("auth controller returns success on register", async () => {
   const controller = new AuthController(new AuthService(new UserRepository(), redisRepository));
   const unique = Date.now();
-  const req = { body: { username: `bob-${unique}`, email: `${String(unique).slice(-7)}@kiit.ac.in`, password: "supersecret", fullName: "Bob Example" } } as Request;
+  const req = { body: { username: `bob-${unique}`, email: `${String(unique).slice(-7)}@kiit.ac.in`, password: "supersecret", fullName: "Bob Example", acceptedTerms: true, confirmedAge: true } } as Request;
   const res = makeResponse();
 
   await controller.register(req, res);

@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 // Shell & Layout
 import { AppShell } from '@/components/layout/AppShell';
@@ -26,7 +27,8 @@ const Auth = lazyWithRetry(() => import('@/pages/auth'));
 const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
 const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
-  const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
+const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
+const Consent = lazyWithRetry(() => import('@/pages/consent'));
 const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
 const Home = lazyWithRetry(() => import('@/pages/home'));
 const Pulse = lazyWithRetry(() => import('@/pages/pulse'));
@@ -34,7 +36,7 @@ const Worlds = lazyWithRetry(() => import('@/pages/worlds'));
 const Dream = lazyWithRetry(() => import('@/pages/dream'));
 const Explore = lazyWithRetry(() => import('@/pages/explore'));
 const Profile = lazyWithRetry(() => import('@/pages/profile'));
-  const Projects = lazyWithRetry(() => import('@/pages/projects'));
+const Projects = lazyWithRetry(() => import('@/pages/projects'));
 const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
 const Messages = lazyWithRetry(() => import('@/pages/messages'));
 const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
@@ -186,7 +188,8 @@ function ProtectedRoutes() {
 
 function AuthRedirect() {
   const [location] = useLocation();
-  const params = new URLSearchParams(location.split('?')[1] ?? '');
+  const routeSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
+  const params = new URLSearchParams(window.location.search || routeSearch);
   const redirect = params.get('redirect');
   const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/';
   return <Redirect to={safeRedirect} />;
@@ -197,6 +200,12 @@ function Router() {
   const isInitializing = useAppStore((s) => s.isInitializing);
   const initialize = useAppStore((s) => s.initialize);
   const [location] = useLocation();
+  const needsOnboarding = currentUser?.onboardingCompleted === false;
+  const needsTerms = Boolean(currentUser && publicBetaConfig.publicBeta && (
+    currentUser.termsVersion !== publicBetaConfig.termsVersion ||
+    !currentUser.termsAcceptedAt ||
+    !currentUser.ageConfirmedAt
+  ));
 
   useEffect(() => {
     initialize().catch(console.error);
@@ -217,19 +226,41 @@ function Router() {
             <Route path="/auth" component={Auth} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
-            <Route path="/onboarding" component={Onboarding} />
             <Route path="/grievance" component={Grievance} />
             <Route>
               <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
             </Route>
           </>
         )}
-        {currentUser && (
+        {currentUser && needsTerms && (
+          <>
+            <Route path="/consent" component={Consent} />
+            <Route path="/privacy" component={LegalPage} />
+            <Route path="/terms" component={LegalPage} />
+            <Route path="/community-guidelines" component={LegalPage} />
+            <Route>
+              <Redirect to="/consent" />
+            </Route>
+          </>
+        )}
+        {currentUser && !needsTerms && needsOnboarding && (
+          <>
+            <Route path="/verify-email/:token" component={VerifyEmail} />
+            <Route path="/reset-password" component={ResetPassword} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route>
+              <Redirect to="/onboarding" />
+            </Route>
+          </>
+        )}
+        {currentUser && !needsTerms && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
-            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/onboarding">
+              <Redirect to="/" />
+            </Route>
             <Route>
               <ProtectedRoutes />
             </Route>

@@ -1,192 +1,228 @@
 import { useEffect, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Compass,
+  Loader2,
+  MapPinned,
+  Network,
+  Radio,
+  UserPlus,
+} from 'lucide-react';
 import { useLocation } from 'wouter';
-import { Network, ArrowRight, UserPlus, Sparkles, CheckCircle2 } from 'lucide-react';
-import { useAppStore } from '@/lib/store';
-import { api, type BackendUser } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FloatingParticles } from '@/components/ui/FloatingParticles';
+
 import { WorldPreferencesForm } from '@/components/worlds/WorldPreferencesForm';
-import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { api, type BackendUser } from '@/lib/api-client';
+import { useAppStore } from '@/lib/store';
+import { type WorldPreferences } from '@/lib/world-preferences';
+import '@/styles/operator-access.css';
 
 const INTERESTS = [
-  "Artificial Intelligence", "Web3", "Startups", "Venture Capital",
-  "Design", "Engineering", "Gaming", "Productivity",
-  "Investing", "Crypto", "SaaS", "Creator Economy"
+  'Artificial Intelligence',
+  'Web3',
+  'Startups',
+  'Venture Capital',
+  'Design',
+  'Engineering',
+  'Gaming',
+  'Productivity',
+  'Investing',
+  'Crypto',
+  'SaaS',
+  'Creator Economy',
 ];
+
+const STEPS = [
+  { number: '01', label: 'Locale', icon: MapPinned },
+  { number: '02', label: 'Signal', icon: Radio },
+  { number: '03', label: 'Network', icon: Network },
+] as const;
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
-  const updateWorldPreferences = useAppStore((state) => state.updateWorldPreferences);
   const currentUser = useAppStore((state) => state.currentUser);
+  const savedWorldPreferences = useAppStore((state) => state.worldPreferences);
   const [step, setStep] = useState(0);
-  const [worldDraft, setWorldDraft] = useState<WorldPreferences>(DEFAULT_WORLD_PREFERENCES);
+  const [worldDraft, setWorldDraft] = useState<WorldPreferences>(savedWorldPreferences);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [followedIds, setFollowedIds] = useState<string[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<BackendUser[]>([]);
+  const [loadingCreators, setLoadingCreators] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void api.searchUsers('').then((users) => {
-      if (!active) return;
-      setSuggestedCreators(users.filter((user) => user.id !== currentUser?.id).slice(0, 3));
-    }).catch(() => {
-      if (active) setSuggestedCreators([]);
-    });
+    setLoadingCreators(true);
+    void api.searchUsers('')
+      .then((users) => {
+        if (!active) return;
+        setSuggestedCreators(users.filter((user) => user.id !== currentUser?.id).slice(0, 4));
+      })
+      .catch(() => {
+        if (active) setSuggestedCreators([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCreators(false);
+      });
     return () => { active = false; };
   }, [currentUser?.id]);
 
   const toggleInterest = (interest: string) => {
-    setSelectedInterests(prev => 
-      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
-    );
+    setSelectedInterests((current) => current.includes(interest)
+      ? current.filter((item) => item !== interest)
+      : [...current, interest]);
   };
 
   const toggleFollow = (id: string) => {
-    setFollowedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    setFollowedIds((current) => current.includes(id)
+      ? current.filter((item) => item !== id)
+      : [...current, id]);
   };
 
-  const handleFinish = async () => {
+  const finishOnboarding = async () => {
+    if (!currentUser || submitting) return;
+    setSubmitting(true);
     try {
-      updateWorldPreferences(worldDraft);
-      await api.request('/onboarding/complete', {
-        method: 'POST',
-        body: JSON.stringify({ interests: selectedInterests, followedCreatorIds: followedIds })
+      await api.saveCreatorWorkspaceItem({
+        kind: 'preference',
+        itemKey: 'world',
+        payload: worldDraft as unknown as Record<string, unknown>,
       });
-      toast.success("Welcome to Yor Talks!");
+      await api.completeOnboarding({ interests: selectedInterests, followedCreatorIds: followedIds });
+
+      useAppStore.setState((state) => {
+        if (!state.currentUser) return { worldPreferences: worldDraft };
+        const updatedUser = { ...state.currentUser, onboardingCompleted: true };
+        return {
+          currentUser: updatedUser,
+          worldPreferences: worldDraft,
+          users: {
+            ...state.users,
+            [updatedUser.id]: { ...(state.users[updatedUser.id] ?? updatedUser), onboardingCompleted: true },
+          },
+        };
+      });
+      toast.success('Setup complete. Your signal is ready.');
       setLocation('/');
-    } catch (e) {
-      toast.error("Failed to complete setup");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Setup could not be saved. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 relative overflow-hidden">
-      <FloatingParticles />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
-      
-      <div className="w-full max-w-xl surface-1 border border-border/40 rounded-3xl p-8 relative z-10 shadow-2xl">
-        
-        <div className="flex items-center justify-center mb-8">
-          <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center glow-neon-primary">
-            <Network className="w-6 h-6 text-primary" />
-          </div>
+    <main className="operator-onboarding-shell">
+      <header className="operator-onboarding-topbar">
+        <div className="operator-access-brand">
+          <span className="operator-access-brand__mark" aria-hidden="true">Y</span>
+          <span><strong>Yor Talks</strong><small>Initial setup</small></span>
         </div>
+        <span className="operator-onboarding-user">@{currentUser?.username ?? 'operator'} <i /></span>
+      </header>
 
-        <AnimatePresence mode="wait">
+      <div className="operator-onboarding-layout">
+        <aside className="operator-onboarding-rail" aria-label="Setup progress">
+          <p className="operator-kicker"><span /> Configure your feed</p>
+          <h1>Build a signal worth opening.</h1>
+          <p>Three short decisions set your language, topics, and first creator network. You can change all of them later.</p>
+
+          <ol>
+            {STEPS.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.number} className={index === step ? 'is-active' : index < step ? 'is-complete' : ''} aria-current={index === step ? 'step' : undefined}>
+                  <span>{index < step ? <Check /> : item.number}</span>
+                  <Icon />
+                  <div><strong>{item.label}</strong><small>{index === 0 ? 'Place and language' : index === 1 ? 'Topics you value' : 'People to begin with'}</small></div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="operator-onboarding-rail__note"><Compass /><span><strong>No algorithmic lock-in.</strong> Your choices tune the starting feed; following and filtering stay in your control.</span></div>
+        </aside>
+
+        <section className="operator-onboarding-panel">
+          <div className="operator-onboarding-progress" aria-hidden="true"><span style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></div>
+
+          {step > 0 && <button type="button" className="operator-onboarding-back" onClick={() => setStep((current) => current - 1)}><ArrowLeft /> Back</button>}
+
           {step === 0 && (
-            <motion.div
-              key="step0"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="space-y-2 text-center">
-                <h1 className="text-2xl font-black font-display uppercase tracking-wider">Where should Yor begin?</h1>
-                <p className="text-sm text-muted-foreground">Choose the language, time, and world radius that make the internet feel like yours.</p>
+            <div className="operator-onboarding-step">
+              <header>
+                <p className="operator-step-index">Step 01 / 03</p>
+                <h2>Where should Yor begin?</h2>
+                <p>Choose how place, time, language, and media should behave for you.</p>
+              </header>
+              <div className="operator-world-form">
+                <WorldPreferencesForm value={worldDraft} onChange={(patch) => setWorldDraft((current) => ({ ...current, ...patch }))} idPrefix="onboarding-world" compact />
               </div>
-              <WorldPreferencesForm value={worldDraft} onChange={(patch) => setWorldDraft((current) => ({ ...current, ...patch }))} idPrefix="onboarding-world" compact />
-              <Button onClick={() => setStep(1)} className="h-12 w-full rounded-xl bg-primary font-bold text-black">
-                Tune my signal <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </motion.div>
+              <div className="operator-onboarding-actions">
+                <span>Saved when setup is complete.</span>
+                <Button onClick={() => setStep(1)}>Tune my signal <ArrowRight /></Button>
+              </div>
+            </div>
           )}
 
           {step === 1 && (
-            <motion.div 
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6 text-center"
-            >
-              <div className="space-y-2">
-                <h1 className="text-2xl font-black font-display uppercase tracking-wider">What builds your DNA?</h1>
-                <p className="text-muted-foreground text-sm">Select 3 or more topics to tune your knowledge graph.</p>
-              </div>
+            <div className="operator-onboarding-step">
+              <header>
+                <p className="operator-step-index">Step 02 / 03</p>
+                <h2>What earns your attention?</h2>
+                <p>Select at least three topics. This creates your starting mix, not a permanent bubble.</p>
+              </header>
 
-              <div className="flex flex-wrap gap-2 justify-center py-4">
-                {INTERESTS.map(interest => {
-                  const isSelected = selectedInterests.includes(interest);
-                  return (
-                    <button
-                      key={interest}
-                      onClick={() => toggleInterest(interest)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${isSelected ? 'bg-primary border-primary text-black scale-105' : 'bg-zinc-900 border-border/40 hover:border-primary/50 text-foreground'}`}
-                    >
-                      {interest}
-                    </button>
-                  );
+              <div className="operator-interest-meta"><span><b>{selectedInterests.length}</b> selected</span><span>{selectedInterests.length < 3 ? `${3 - selectedInterests.length} more required` : 'Minimum reached'}</span></div>
+              <div className="operator-interest-grid">
+                {INTERESTS.map((interest, index) => {
+                  const selected = selectedInterests.includes(interest);
+                  return <button key={interest} type="button" className={selected ? 'is-selected' : ''} onClick={() => toggleInterest(interest)} aria-pressed={selected}><small>{String(index + 1).padStart(2, '0')}</small><span>{interest}</span><i>{selected ? <Check /> : '+'}</i></button>;
                 })}
               </div>
 
-              <Button 
-                onClick={() => setStep(2)} 
-                disabled={selectedInterests.length < 3}
-                className="w-full rounded-xl bg-primary text-black font-bold h-12"
-              >
-                Continue <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </motion.div>
+              <div className="operator-onboarding-actions">
+                <span>{selectedInterests.length < 3 ? 'Choose at least 3 topics.' : 'Your first signal mix is ready.'}</span>
+                <Button onClick={() => setStep(2)} disabled={selectedInterests.length < 3}>Choose creators <ArrowRight /></Button>
+              </div>
+            </div>
           )}
 
           {step === 2 && (
-            <motion.div 
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6 text-center"
-            >
-              <div className="space-y-2">
-                <h1 className="text-2xl font-black font-display uppercase tracking-wider">Build Your Network</h1>
-                <p className="text-muted-foreground text-sm">Follow creators matching your DNA.</p>
-              </div>
+            <div className="operator-onboarding-step">
+              <header>
+                <p className="operator-step-index">Step 03 / 03</p>
+                <h2>Start with real people.</h2>
+                <p>Follow anyone useful now, or enter with an empty graph and discover people yourself.</p>
+              </header>
 
-              <div className="space-y-3 text-left py-4">
-                {suggestedCreators.map(creator => {
-                  const isFollowed = followedIds.includes(creator.id);
+              <div className="operator-creator-list" aria-busy={loadingCreators}>
+                {loadingCreators && <div className="operator-creator-empty"><Loader2 className="animate-spin" /><span>Finding creators in your world…</span></div>}
+                {!loadingCreators && suggestedCreators.map((creator) => {
+                  const followed = followedIds.includes(creator.id);
                   return (
-                    <div key={creator.id} className="flex items-center justify-between p-3 rounded-2xl border border-border/40 bg-zinc-900/50">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10"><AvatarImage src={creator.avatarUrl ?? undefined} /><AvatarFallback>{(creator.fullName || creator.username).charAt(0)}</AvatarFallback></Avatar>
-                        <div>
-                          <div className="font-bold text-sm">{creator.fullName || creator.username}</div>
-                          <div className="text-[10px] text-muted-foreground">@{creator.username}</div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => toggleFollow(creator.id)}
-                        variant={isFollowed ? "outline" : "default"}
-                        className={`rounded-full ${isFollowed ? 'border-primary/50 text-primary' : 'bg-white text-black'}`}
-                      >
-                        {isFollowed ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}
-                        {isFollowed ? 'Following' : 'Follow'}
-                      </Button>
-                    </div>
+                    <article key={creator.id} className={followed ? 'is-followed' : ''}>
+                      <Avatar><AvatarImage src={creator.avatarUrl ?? undefined} /><AvatarFallback>{(creator.fullName || creator.username).charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                      <div><strong>{creator.fullName || creator.username}</strong><span>@{creator.username}</span><p>{creator.bio || 'Building and sharing on Yor.'}</p></div>
+                      <button type="button" onClick={() => toggleFollow(creator.id)} aria-pressed={followed}>{followed ? <Check /> : <UserPlus />}{followed ? 'Following' : 'Follow'}</button>
+                    </article>
                   );
                 })}
+                {!loadingCreators && suggestedCreators.length === 0 && <div className="operator-creator-empty"><Network /><span>No creator suggestions yet. Enter Yor and build your network from Explore.</span></div>}
               </div>
 
-              {suggestedCreators.length === 0 && <p className="text-xs text-muted-foreground">No creator suggestions are available yet. You can continue and discover people from the feed.</p>}
-
-              <Button 
-                onClick={handleFinish} 
-                className="w-full rounded-xl bg-primary text-black font-bold h-12 glow-neon-primary"
-              >
-                <Sparkles className="w-4 h-4 mr-2" /> Enter Yor Talks
-              </Button>
-            </motion.div>
+              <div className="operator-onboarding-actions">
+                <span>{followedIds.length > 0 ? `${followedIds.length} creator${followedIds.length === 1 ? '' : 's'} selected.` : 'Following creators is optional.'}</span>
+                <Button onClick={finishOnboarding} disabled={submitting}>{submitting ? <><Loader2 className="animate-spin" /> Saving setup…</> : <>Enter Yor Talks <ArrowRight /></>}</Button>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
-
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

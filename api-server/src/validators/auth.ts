@@ -28,6 +28,13 @@ export const registerSchema = z.object({
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   fullName: z.string().min(2),
+  acceptedTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the current Terms and Privacy Notice" }) }),
+  confirmedAge: z.literal(true, { errorMap: () => ({ message: "You must confirm that you meet the minimum age" }) }),
+});
+
+export const acceptTermsSchema = z.object({
+  acceptedTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the current Terms and Privacy Notice" }) }),
+  confirmedAge: z.literal(true, { errorMap: () => ({ message: "You must confirm that you meet the minimum age" }) }),
 });
 
 export const loginSchema = z.object({

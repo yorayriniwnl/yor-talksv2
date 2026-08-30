@@ -6,6 +6,7 @@ import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 function decodeVapidKey(value: string): Uint8Array {
   const padding = '='.repeat((4 - (value.length % 4)) % 4);
@@ -20,6 +21,15 @@ export function PushNotificationManager() {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
+    if (!publicBetaConfig.webPushEnabled) return;
+    // Register the worker independently of the permission prompt. The old
+    // early return left browsers without an updated worker after a deploy.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('SW registration info:', err);
+      });
+    }
+
     // Check if notifications are supported
     if ('Notification' in window) {
       setPermission(Notification.permission);
@@ -32,16 +42,10 @@ export function PushNotificationManager() {
         return () => clearTimeout(timer);
       }
     }
-
-    // Register service worker if available
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.warn('SW registration info:', err);
-      });
-    }
   }, [currentUser]);
 
   const registerPushSubscription = async () => {
+    if (!publicBetaConfig.webPushEnabled) throw new Error('Push notifications are not enabled for this beta');
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       throw new Error('Push notifications are not supported by this browser');
     }

@@ -27,13 +27,16 @@ router.get("/notifications", authenticate, notificationController.listNotificati
 router.post("/notifications/:notificationId/read", authenticate, validateParams(notificationIdParamSchema), notificationController.markRead);
 router.post("/notifications/read-all", authenticate, notificationController.markAllRead);
 router.get("/notifications/push/public-key", authenticate, (_req, res) => {
-  if (!env.WEB_PUSH_VAPID_PUBLIC_KEY) {
+  if (!env.WEB_PUSH_ENABLED || !env.WEB_PUSH_VAPID_PUBLIC_KEY) {
     return res.status(503).json({ success: false, message: "Push notifications are not configured", data: null, errors: ["push_not_configured"], meta: {} });
   }
   return res.status(200).json({ success: true, message: "Push configuration loaded", data: { publicKey: env.WEB_PUSH_VAPID_PUBLIC_KEY }, errors: [], meta: {} });
 });
 router.post("/notifications/push/subscribe", authenticate, async (req, res, next) => {
   try {
+    if (!env.WEB_PUSH_ENABLED) {
+      return res.status(503).json({ success: false, message: "Push notifications are not enabled for this beta", data: null, errors: ["push_not_enabled"], meta: {} });
+    }
     const parsed = pushSubscriptionSchema.parse(req.body);
     const subscription = await pushSubscriptionRepository.upsert({
       userId: req.user!.id,
@@ -49,6 +52,9 @@ router.post("/notifications/push/subscribe", authenticate, async (req, res, next
 });
 router.delete("/notifications/push/subscribe", authenticate, async (req, res, next) => {
   try {
+    if (!env.WEB_PUSH_ENABLED) {
+      return res.status(503).json({ success: false, message: "Push notifications are not enabled for this beta", data: null, errors: ["push_not_enabled"], meta: {} });
+    }
     const parsed = z.object({ endpoint: z.string().url().max(2048) }).parse(req.body);
     await pushSubscriptionRepository.remove(req.user!.id, parsed.endpoint);
     return res.status(200).json({ success: true, message: "Push subscription removed", data: null, errors: [], meta: {} });

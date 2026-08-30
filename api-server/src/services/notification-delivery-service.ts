@@ -13,7 +13,7 @@ export class NotificationDeliveryService {
       return notification;
     }
 
-    if (!env.WEB_PUSH_VAPID_PUBLIC_KEY || !env.WEB_PUSH_VAPID_PRIVATE_KEY) {
+    if (!env.WEB_PUSH_ENABLED || !env.WEB_PUSH_VAPID_PUBLIC_KEY || !env.WEB_PUSH_VAPID_PRIVATE_KEY) {
       logger.info({ notificationId: notification.id, recipientId: notification.recipientId }, "Notification stored for in-app delivery; Web Push is not configured");
       return notification;
     }

@@ -4,10 +4,6 @@ import Redis from "ioredis";
 import type { Request, Response } from "express";
 import { env } from "../config/env.js";
 
-const redisClient = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: 1,
-  enableOfflineQueue: false,
-});
 const healthPaths = new Set([
   "/api/livez",
   "/api/healthz",
@@ -39,6 +35,11 @@ function createLimiter(prefix: string, windowMs: number, max: number) {
   // Redis versions commonly installed on developer machines. Production uses
   // Redis 7 through the deployed stack for shared limits across instances.
   if (env.NODE_ENV !== "production") return rateLimit(config);
+
+  const redisClient = new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: 1,
+    enableOfflineQueue: false,
+  });
 
   return rateLimit({
     ...config,

@@ -32,6 +32,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -40,6 +41,9 @@ export type User = {
   role?: string;
   email?: string;
   emailVerified?: boolean;
+  termsVersion?: string | null;
+  termsAcceptedAt?: string | null;
+  ageConfirmedAt?: string | null;
   displayName: string;
   avatarUrl: string;
   coverUrl?: string;
@@ -55,6 +59,7 @@ export type User = {
   twoFactorEnabled?: boolean;
   notificationsEnabled?: boolean;
   contentFilter?: ContentRating;
+  onboardingCompleted?: boolean;
 };
 
 export type ProfileComment = {
@@ -318,6 +323,9 @@ function mapUser(u: BackendUser): User {
     role: u.role,
     email: u.email,
     emailVerified: Boolean(u.emailVerified),
+    termsVersion: u.termsVersion ?? null,
+    termsAcceptedAt: u.termsAcceptedAt ?? null,
+    ageConfirmedAt: u.ageConfirmedAt ?? null,
     displayName: u.fullName || u.username || 'User',
     avatarUrl: u.avatarUrl || `https://i.pravatar.cc/150?u=${u.id}`,
     bio: u.bio || '',
@@ -332,6 +340,7 @@ function mapUser(u: BackendUser): User {
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
     notificationsEnabled: u.settings?.notificationsEnabled !== false,
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
+    onboardingCompleted: u.settings?.onboardingCompleted,
   };
 }
 
@@ -341,6 +350,14 @@ function mapPrivacy(user: BackendUser): PrivacySettings {
     ...(user.privacy ?? {}),
     twoFactorEnabled: Boolean(user.twoFactorEnabled),
   };
+}
+
+function needsTermsAcceptance(user: BackendUser | User): boolean {
+  return publicBetaConfig.publicBeta && (
+    user.termsVersion !== publicBetaConfig.termsVersion ||
+    !user.termsAcceptedAt ||
+    !user.ageConfirmedAt
+  );
 }
 
 function mapStory(s: BackendStory, currentUserId?: string): Story {
@@ -655,7 +672,8 @@ interface AppState {
   loginWithGoogle: (credential: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   loginWithEmailOtp: (email: string, code: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   completeTwoFactorLogin: (challengeId: string) => Promise<void>;
-  register: (username: string, email: string, password: string, fullName: string) => Promise<void>;
+  register: (username: string, email: string, password: string, fullName: string, acceptedTerms: boolean, confirmedAge: boolean) => Promise<void>;
+  acceptCurrentTerms: () => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   initialize: () => Promise<void>;
@@ -944,8 +962,10 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          if (!needsTermsAcceptance(result.user)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
@@ -962,8 +982,10 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          if (!needsTermsAcceptance(result.user)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Google sign-in failed' });
@@ -980,8 +1002,10 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          if (!needsTermsAcceptance(result.user)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
@@ -997,24 +1021,44 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          if (!needsTermsAcceptance(result.user)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Could not complete sign-in' });
           throw err;
         }
       },
 
-      register: async (username, email, password, fullName) => {
+      register: async (username, email, password, fullName, acceptedTerms, confirmedAge) => {
         set({ authError: null });
         try {
-          await api.register({ username, email, password, fullName });
+          await api.register({ username, email, password, fullName, acceptedTerms, confirmedAge });
           // Registration is intentionally not an authenticated session. The
           // account must prove ownership of its email address first.
           setStoredTokens(null);
           clearPrivateSessionState(set);
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
+          throw err;
+        }
+      },
+
+      acceptCurrentTerms: async () => {
+        set({ authError: null });
+        try {
+          const result = await api.acceptCurrentTerms();
+          const mapped = mapUser(result.user);
+          set((state) => ({
+            currentUser: mapped,
+            privacy: mapPrivacy(result.user),
+            users: { ...state.users, [mapped.id]: mapped },
+          }));
+          setupRealtime(set, get);
+          hydrateSessionData(get);
+        } catch (err) {
+          set({ authError: err instanceof ApiError ? err.message : 'Could not save terms acceptance' });
           throw err;
         }
       },
@@ -1084,7 +1128,7 @@ export const useAppStore = create<AppState>()(
           return;
         }
 
-        setupRealtime(set, get);
+        if (!needsTermsAcceptance(currentUser)) setupRealtime(set, get);
         set({ isInitializing: false });
         hydrateSessionData(get);
       },

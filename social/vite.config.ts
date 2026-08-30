@@ -11,6 +11,40 @@ const port = !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 5173;
 
 const basePath = process.env.BASE_PATH || '/';
 
+function assertPublicBetaBuildConfiguration(): void {
+  if (process.env.VITE_PUBLIC_BETA !== 'true') return;
+  const required = [
+    'VITE_TERMS_VERSION',
+    'VITE_LEGAL_OPERATOR_NAME',
+    'VITE_LEGAL_OPERATOR_ADDRESS',
+    'VITE_LEGAL_EFFECTIVE_DATE',
+    'VITE_LEGAL_GOVERNING_LAW',
+    'VITE_PRIVACY_CONTACT_EMAIL',
+    'VITE_SUPPORT_EMAIL',
+    'VITE_GRIEVANCE_OFFICER_NAME',
+    'VITE_GRIEVANCE_CONTACT_EMAIL',
+    'VITE_GOOGLE_CLIENT_ID',
+  ];
+  const placeholder = /change[_-]?me|replace-with|your-domain\.example|^development$/i;
+  const missing = required.filter((key) => {
+    const value = process.env[key];
+    return !value || placeholder.test(value);
+  });
+  if (missing.length) {
+    throw new Error(`[Vite Config Error] VITE_PUBLIC_BETA requires: ${missing.join(', ')}`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(process.env.VITE_LEGAL_EFFECTIVE_DATE || '') || Number.isNaN(Date.parse(process.env.VITE_LEGAL_EFFECTIVE_DATE || ''))) {
+    throw new Error('[Vite Config Error] VITE_LEGAL_EFFECTIVE_DATE must be an ISO date (YYYY-MM-DD)');
+  }
+  for (const key of ['VITE_PRIVACY_CONTACT_EMAIL', 'VITE_SUPPORT_EMAIL', 'VITE_GRIEVANCE_CONTACT_EMAIL']) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env[key] || '')) {
+      throw new Error(`[Vite Config Error] ${key} must be a valid email address`);
+    }
+  }
+}
+
+assertPublicBetaBuildConfiguration();
+
 export default defineConfig({
   base: basePath,
   plugins: [

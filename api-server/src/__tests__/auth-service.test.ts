@@ -24,6 +24,8 @@ test("registration requires email verification before password login", async () 
     email,
     password: "supersecret",
     fullName: "Alice Example",
+    acceptedTerms: true,
+    confirmedAge: true,
   });
 
   assert.equal(registered.user.emailVerified, false);
@@ -52,6 +54,8 @@ test("two-factor authentication blocks password login until the authenticator co
     email,
     password: "supersecret",
     fullName: "Two Factor Example",
+    acceptedTerms: true,
+    confirmedAge: true,
   });
 
   await authService.confirmEmailVerification(registered.verificationToken!);

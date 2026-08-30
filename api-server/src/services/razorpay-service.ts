@@ -40,7 +40,7 @@ interface RazorpayPayment {
 }
 
 function isConfigured(): boolean {
-  return Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+  return env.PAYMENTS_ENABLED && Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET && env.RAZORPAY_WEBHOOK_SECRET);
 }
 
 function authorizationHeader(): string {

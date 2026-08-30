@@ -1,8 +1,6 @@
 // Yor Talks — Production Service Worker (Bharat Edition 🇮🇳)
-const CACHE_NAME = 'yor-talks-v2.0';
+const CACHE_NAME = 'yor-talks-v3';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.svg',
 ];
@@ -29,26 +27,46 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Stale-while-revalidate for fast offline reading
+// Fetch: navigation is network-first so a deploy can never serve HTML that
+// points at deleted hashed chunks. Hashed assets remain cache-first because
+// Vite gives them immutable filenames.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  
-  // API requests go directly to network
-  if (event.request.url.includes('/api/')) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networked = fetch(event.request)
+  // API requests go directly to network
+  if (event.request.url.includes('/api/') || new URL(event.request.url).origin !== self.location.origin) return;
+
+  const isNavigation = event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html');
+  if (isNavigation) {
+    event.respondWith(
+      fetch(new Request(event.request, { cache: 'no-store' }))
         .then((response) => {
-          if (response.status === 200) {
+          if (response.ok) {
             const cacheCopy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', cacheCopy));
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
 
-      return cached || networked;
+  const url = new URL(event.request.url);
+  const cacheable = url.pathname.startsWith('/assets/') || STATIC_ASSETS.includes(url.pathname);
+  if (!cacheable) return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const cacheCopy = response.clone();
+            void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+          }
+          return response;
+        })
+        .catch(() => cached || Response.error());
     })
   );
 });
