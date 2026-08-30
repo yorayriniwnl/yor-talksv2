@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import AxeBuilder from '@axe-core/playwright';
 
 const user = {
   id: "1cc96a14-2728-46fd-ae3c-cbf15fd9db1a",
@@ -63,6 +64,10 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, { accessToken: "browser-smoke-access-token" });
     }
     if (path === "/users/me" && request.method() === "GET") return json(route, profile);
+    if (path === `/users/${user.id}`) return json(route, profile);
+    if (path === "/users/search") return json(route, [user]);
+    if (path === "/search") return json(route, { users: [], posts: [] });
+    if (path === "/readyz") return json(route, { status: 'ready' });
     if (path === "/feed" && request.method() === "GET") {
       return json(route, [post("A real signal delivered through the feed boundary.", "18fac78e-65fa-4fd4-931e-8b79e086c48d")], {
         nextCursor: null,
@@ -98,6 +103,98 @@ test("restores the social shell, publishes a post, and navigates discovery", asy
 
   await page.getByRole("button", { name: "Explore", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
+});
+
+test('feed failures show a retry, never a false empty-success state', async ({ page }) => {
+  await installApiBoundary(page);
+  let unavailable = true;
+  await page.route('**/api/feed?*', async (route) => {
+    if (unavailable) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Feed temporarily unavailable', errors: [] }) });
+    return json(route, [post('The recovered feed is here.', 'recover-post')]);
+  });
+  await page.goto('/');
+  await expect(page.getByRole('alert').filter({ hasText: 'Feed temporarily unavailable' })).toBeVisible();
+  await expect(page.getByText('You are all caught up.')).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry feed' }).click();
+  await expect(page.getByRole('article').getByText('The recovered feed is here.')).toBeVisible();
+});
+
+test('posts survive unavailable author profiles and recover without hook errors', async ({ page }) => {
+  await installApiBoundary(page);
+  const authorId = '10000000-0000-4000-8000-000000000007';
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  let unavailable = true;
+  await page.route('**/api/feed?*', (route) => json(route, [{ ...post('A post from a new creator.', 'author-post'), authorId }]));
+  await page.route(`**/api/users/${authorId}`, (route) => unavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Temporarily unavailable' }) })
+    : json(route, { ...user, id: authorId, username: 'maya', fullName: 'Maya Chen' }));
+  await page.goto('/');
+  await expect(page.getByRole('article').getByText('A post from a new creator.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry creator details' })).toBeVisible();
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry creator details' }).click();
+  await expect(page.getByRole('article').getByRole('link', { name: 'Maya Chen', exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('outgoing messages never increase the unread conversation badge', async ({ page }) => {
+  await installApiBoundary(page);
+  const other = '10000000-0000-4000-8000-000000000009';
+  await page.route('**/api/conversations', (route) => json(route, ['incoming', 'outgoing'].map((id) => ({
+    conversation: { id, participantA: user.id, participantB: other, participantIds: [user.id, other], updatedAt: user.createdAt },
+    lastMessage: { id: `${id}-message`, conversationId: id, senderId: id === 'incoming' ? other : user.id, recipientId: user.id, content: id, createdAt: user.createdAt, seenAt: null },
+  }))));
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: '1 unread conversations', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '2 unread conversations', exact: true })).toHaveCount(0);
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+test(`mobile home is readable and keyboard-operable in ${colorScheme} mode`, async ({ page }) => {
+  await page.emulateMedia({ colorScheme });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installApiBoundary(page);
+  await page.goto('/');
+  await expect(page.getByRole('article')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Following' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Following' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'For you' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'For you' })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+}
+
+test('sign-in preserves password and email-code paths with accessible controls', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/auth');
+  await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('discovery loads beyond an empty following feed without changing the selected home feed', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/feed?*', (route) => {
+    const mode = new URL(route.request().url()).searchParams.get('mode');
+    return json(route, mode === 'for_you' ? [post('An idea beyond your following list.', 'discovery-post')] : []);
+  });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Your people are out there.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Explore', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Open post: An idea beyond your following list.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Home', exact: true }).first().click();
+  await expect(page.getByRole('tab', { name: 'Following' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Your people are out there.' })).toBeVisible();
 });
 
 test("public beta legal pages show configured, dated policy content", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppStore, type Story } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -6,13 +6,18 @@ import StoryViewer from './StoryViewer';
 import { StoryBuilderModal } from './StoryBuilderModal';
 import { Plus } from 'lucide-react';
 
-export default function StoriesRow() {
+export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: boolean }) {
   const stories = useAppStore((s) => s.stories);
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
+  const loadUserProfile = useAppStore((s) => s.loadUserProfile);
 
   const [activeAuthorId, setActiveAuthorId] = useState<string | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+
+  useEffect(() => {
+    for (const id of new Set(stories.map((story) => story.authorId))) void loadUserProfile(id);
+  }, [stories, loadUserProfile]);
 
   // Group stories by author
   const groupedStories = useMemo(() => {
@@ -50,7 +55,12 @@ export default function StoriesRow() {
     <>
       <StoryBuilderModal isOpen={builderOpen} onOpenChange={setBuilderOpen} />
 
-      <div className="home-story-row flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
+      {compactEmpty && authors.length === 0 ? (
+        <button type="button" className="home-moment-action" onClick={() => setBuilderOpen(true)} aria-label="Add a story">
+          <span className="home-moment-action__icon"><Plus className="h-5 w-5" /></span>
+          <span><strong>Your story starts here</strong><small>Share a moment · 24 hours</small></span>
+        </button>
+      ) : <div className="home-story-row flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
         {/* Add Story Button */}
         {currentUser && (
           <button
@@ -106,7 +116,7 @@ export default function StoriesRow() {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {activeAuthorId && (
         <StoryViewer

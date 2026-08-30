@@ -5,8 +5,8 @@ import {
   Code2,
   Eye,
   EyeOff,
-  Gamepad2,
-  Github,
+  MessageCircle,
+  PenLine,
   KeyRound,
   Loader2,
   Lock,
@@ -366,36 +366,35 @@ export default function Auth() {
         <div className="operator-access-intro__inner">
           <div className="operator-access-brand">
             <span className="operator-access-brand__mark" aria-hidden="true">Y</span>
-            <span><strong>Yor Talks</strong><small>Operator social network</small></span>
+            <span><strong>Yor Talks</strong><small>A place for your people</small></span>
           </div>
 
           <div className="operator-access-copy">
-            <p className="operator-kicker"><span /> Identity is the interface</p>
-            <h1>Your work.<br />Your people.<br /><em>Your signal.</em></h1>
-            <p>Publish like a creator, prove what you build, and stay present with the communities you actually care about.</p>
+            <p className="operator-kicker"><span /> A little closer to what matters</p>
+            <h1>Good people.<br />Great ideas.<br /><em>Your corner.</em></h1>
+            <p>For the things you’re making, the thoughts you’re having, and the people who make it all worthwhile.</p>
           </div>
 
-          <section className="operator-identity-card" aria-label="Yor identity preview">
+          <section className="operator-identity-card" aria-label="What you can do on Yor">
             <header>
-              <div className="operator-identity-card__avatar">YR</div>
-              <div><strong>yoray // operator</strong><span>@yoray · Bhubaneswar, IN</span></div>
-              <span className="operator-online"><i /> online</span>
+              <div className="operator-identity-card__avatar" aria-hidden="true">Y</div>
+              <div><strong>Room for your many sides.</strong><span>A conversation is a good place to start.</span></div>
             </header>
             <div className="operator-identity-card__proof">
-              <div><Github /><span><strong>Developer proof</strong><small>Projects, commits, craft</small></span><b>LINKED</b></div>
-              <div><Gamepad2 /><span><strong>Player presence</strong><small>Status, games, squads</small></span><b>LIVE</b></div>
-              <div><Users /><span><strong>Social graph</strong><small>Creators, circles, worlds</small></span><b>OPEN</b></div>
+              <div><PenLine /><span><strong>Put something into the world</strong><small>A thought, a photo, a work in progress.</small></span><b>SHARE</b></div>
+              <div><MessageCircle /><span><strong>Keep the conversation going</strong><small>Reply, connect, and catch up in messages.</small></span><b>CONNECT</b></div>
+              <div><Users /><span><strong>Find your kind of people</strong><small>Follow creators and explore communities.</small></span><b>BELONG</b></div>
             </div>
             <footer>
-              <span><b>38</b> projects</span>
-              <span><b>4.8k</b> network</span>
-              <span><b>126</b> signals</span>
+              <span><b>Your voice.</b> Make it yours</span>
+              <span><b>Your circle.</b> Find your people</span>
+              <span><b>Your pace.</b> Stay a little</span>
             </footer>
           </section>
 
           <div className="operator-access-system">
             <span><i className={readiness === 'operational' ? undefined : 'is-muted'} /> {readiness === 'checking' ? 'Checking API…' : readiness === 'operational' ? 'API operational' : 'API unavailable'}</span>
-            <span>Encrypted sessions</span>
+            <span>Private sign-in</span>
             <span>{publicBetaConfig.publicBeta ? 'Public beta' : 'Development build'}</span>
           </div>
         </div>
@@ -406,7 +405,7 @@ export default function Auth() {
           <div className="operator-access-mobile-brand">
             <div className="operator-access-brand">
               <span className="operator-access-brand__mark" aria-hidden="true">Y</span>
-              <span><strong>Yor Talks</strong><small>Operator social network</small></span>
+              <span><strong>Yor Talks</strong><small>A place for your people</small></span>
             </div>
           </div>
 
@@ -417,8 +416,8 @@ export default function Auth() {
 
           <header className="operator-access-heading">
             <p className="operator-kicker"><span /> Secure access</p>
-            <h2>{mode === 'login' ? 'Enter your network' : 'Claim your identity'}</h2>
-            <p>{mode === 'login' ? `Use your password, a one-time email code${googleClientId ? ', or Google' : ''}.` : 'One verified email unlocks your profile and onboarding.'}</p>
+            <h2>{mode === 'login' ? 'Welcome to your corner.' : 'Make yourself at home.'}</h2>
+            <p>{mode === 'login' ? `Pick up where you left off. Sign in with your password, email code${googleClientId ? ', or Google' : ''}.` : 'Create an account, verify your email, and find your people.'}</p>
           </header>
 
           {mode === 'login' && googleClientId && (

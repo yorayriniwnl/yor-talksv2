@@ -203,18 +203,13 @@ export function CompanionPetSettings({ className }: CompanionPetSettingsProps) {
 
 export function CompanionPet() {
   const { preferences, updatePreferences } = useCompanionPetPreferences();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const copy = useMemo(() => petCopy(preferences.kind), [preferences.kind]);
 
-  if (!preferences.enabled) {
-    return (
-      <button type="button" onClick={() => updatePreferences({ enabled: true })} className="yor-companion__wake" aria-label="Show your on-screen companion">
-        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>Wake companion</span>
-      </button>
-    );
-  }
+  // Keep an active conversation's composer unobstructed. A hidden companion
+  // can always be enabled again from Settings, without a replacement overlay.
+  if (!preferences.enabled || /^\/messages\/[^/]+/.test(location)) return null;
 
   return (
     <aside className="yor-companion" aria-label="On-screen companion">
@@ -237,10 +232,10 @@ export function CompanionPet() {
         </div>
       )}
 
-      <button type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} className={cn('yor-companion__trigger', `yor-companion-pet--${preferences.color}`, `yor-companion__trigger--${preferences.size}`)}>
+      <button type="button" aria-label={`${copy.name} companion controls`} onClick={() => setOpen((current) => !current)} aria-expanded={open} className={cn('yor-companion__trigger', `yor-companion-pet--${preferences.color}`, `yor-companion__trigger--${preferences.size}`)}>
         <span className="yor-companion__sparkle" aria-hidden="true"><Sparkles className="h-3 w-3" /></span>
         <span className="yor-companion__avatar"><PetIcon kind={preferences.kind} className="h-6 w-6" /></span>
-        <span className="min-w-0 text-left"><strong>{copy.name}</strong><small>{copy.status}</small></span>
+        <span className="yor-companion__label min-w-0 text-left"><strong>{copy.name}</strong><small>{copy.status}</small></span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
     </aside>

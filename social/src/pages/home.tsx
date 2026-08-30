@@ -60,7 +60,7 @@ function matchesTopic(post: Post, authorText: string, topic: Topic) {
 }
 
 function postStrength(post: Post) {
-  return post.resonanceScore * 100 + Math.log10(Math.max(1, post.likes + 1)) * 12 + post.comments * 0.08;
+  return post.likes + post.comments * 2 + post.shares * 2 + post.reposts * 3;
 }
 
 function greeting() {
@@ -71,7 +71,12 @@ function greeting() {
 }
 
 export default function Home() {
-  const posts = useAppStore((state) => state.posts);
+  const cachedPosts = useAppStore((state) => state.posts);
+  const feedPostIds = useAppStore((state) => state.feedPostIds);
+  const posts = useMemo(() => {
+    const byId = new Map(cachedPosts.map((post) => [post.id, post]));
+    return feedPostIds.flatMap((id) => byId.has(id) ? [byId.get(id)!] : []);
+  }, [cachedPosts, feedPostIds]);
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
   const worldPreferences = useAppStore((state) => state.worldPreferences);
@@ -85,8 +90,10 @@ export default function Home() {
   const hasMoreFeed = useAppStore((state) => state.hasMoreFeed);
   const feedLoading = useAppStore((state) => state.feedLoading);
   const feedError = useAppStore((state) => state.feedError);
+  const feedMode = useAppStore((state) => state.feedMode);
+  const stories = useAppStore((state) => state.stories);
 
-  const [mode, setMode] = useState<OrbitMode>('close');
+  const [mode, setMode] = useState<OrbitMode>(() => feedMode === 'for_you' ? 'discover' : feedMode === 'favorites' ? 'favorites' : 'close');
   const [topic, setTopic] = useState<Topic>('all');
   const [contentCategory, setContentCategory] = useState<ContentCategory | 'all'>('all');
   const [visibleCount, setVisibleCount] = useState(8);
@@ -108,9 +115,7 @@ export default function Home() {
 
   const filteredPosts = useMemo(() => {
     let result = [...posts];
-    if (mode === 'close' && followingIds.length > 0) {
-      result = result.filter((post) => followingIds.includes(post.authorId) || post.authorId === currentUser?.id);
-    } else if (mode === 'discover') {
+    if (mode === 'discover') {
       result.sort((a, b) => postStrength(b) - postStrength(a));
     } else if (mode === 'build') {
       result = result
@@ -196,70 +201,75 @@ export default function Home() {
               </Avatar>
             )}
             <div>
-              <SignalLabel tone="online">{worldPreferences.worldLabel} // synced</SignalLabel>
-              <h1>Your signal.</h1>
-              <p>{greeting()}, {firstName}. See what your people are making and saying.</p>
+              <SignalLabel>{worldPreferences.worldLabel} / Your daily circle</SignalLabel>
+              <h2>{greeting()}, <em>{firstName}.</em></h2>
+              <p>A little inspiration. A good conversation. Something worth sharing.</p>
             </div>
           </div>
           <div className="home-heading-actions">
             {activeLiveStreams.length > 0 && (
               <Link href="/live" className="home-live-link"><StatusBadge status="busy">{activeLiveStreams.length} live</StatusBadge></Link>
             )}
-            <Link href="/dream" className="home-dream-link">
+            <Link href="/dream" className="home-dream-link" aria-label="Start a project">
               <WandSparkles className="h-4 w-4" />
               <span>Start a project</span>
             </Link>
           </div>
         </header>
 
-        <nav className="home-feed-tabs" aria-label="Choose a feed" role="tablist">
-          <button type="button" role="tab" onClick={() => changeMode('close')} aria-selected={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
+        <div className="orbit-layout">
+          <section aria-label="Your social feed" className="orbit-stream">
+        <nav className="home-feed-tabs" aria-label="Choose a feed" role="tablist" onKeyDown={(event) => {
+          const modes: OrbitMode[] = ['close', 'discover', 'favorites', 'build'];
+          const current = modes.indexOf(mode);
+          const next = event.key === 'ArrowRight' ? (current + 1) % 4 : event.key === 'ArrowLeft' ? (current + 3) % 4 : event.key === 'Home' ? 0 : event.key === 'End' ? 3 : -1;
+          if (next < 0) return;
+          event.preventDefault();
+          changeMode(modes[next]);
+          event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+        }}>
+          <button id="feed-close" aria-controls="feed-posts" type="button" role="tab" tabIndex={mode === 'close' ? 0 : -1} onClick={() => changeMode('close')} aria-selected={mode === 'close'} className={cn(mode === 'close' && 'is-active')}>
             <Users className="h-4 w-4" />
             <span>Following</span>
           </button>
-          <button type="button" role="tab" onClick={() => changeMode('discover')} aria-selected={mode === 'discover'} className={cn(mode === 'discover' && 'is-active')}>
+          <button id="feed-discover" aria-controls="feed-posts" type="button" role="tab" tabIndex={mode === 'discover' ? 0 : -1} onClick={() => changeMode('discover')} aria-selected={mode === 'discover'} className={cn(mode === 'discover' && 'is-active')}>
             <Compass className="h-4 w-4" />
             <span>For you</span>
           </button>
-          <button type="button" role="tab" onClick={() => changeMode('build')} aria-selected={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
+          <button id="feed-favorites" aria-controls="feed-posts" type="button" role="tab" tabIndex={mode === 'favorites' ? 0 : -1} onClick={() => changeMode('favorites')} aria-selected={mode === 'favorites'} className={cn(mode === 'favorites' && 'is-active')}>
+            <Star className="h-4 w-4" /><span>Favorites</span>
+          </button>
+          <button id="feed-build" aria-controls="feed-posts" type="button" role="tab" tabIndex={mode === 'build' ? 0 : -1} onClick={() => changeMode('build')} aria-selected={mode === 'build'} className={cn(mode === 'build' && 'is-active')}>
             <Zap className="h-4 w-4" />
             <span>Build</span>
           </button>
         </nav>
 
-        <div className="orbit-layout">
-          <section aria-label="Your social feed" className="orbit-stream">
-            <section className="orbit-now-card home-stories-card operator-panel">
+            <div className={cn('home-moments', stories.length === 0 && 'home-moments--quiet')}>
+            <section className="orbit-now-card home-stories-card operator-panel" aria-label="Stories" data-empty={stories.length === 0}>
+              {stories.length > 0 && (
               <div className="home-section-heading">
-                <div><span>Live for 24 hours</span><h2>Stories from your people</h2></div>
+                <div><h2>Little moments, lately</h2></div>
                 <Link href="/pulse">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
-              <StoriesRow />
+              )}
+              <StoriesRow compactEmpty />
             </section>
+            <NotesTray compactEmpty />
+            </div>
 
-            <NotesTray />
-
-            <section className="orbit-composer-card home-composer-card operator-panel">
-              <div className="home-section-heading">
-                <div><span>New signal</span><h2>Share something useful</h2></div>
-                <span className="home-composer-world">Public · {worldPreferences.worldLabel}</span>
-              </div>
+            <section className="orbit-composer-card home-composer-card operator-panel" aria-label="Share a thought">
               <CreatePost compact />
             </section>
 
             <div className="home-feed-toolbar">
               <div>
-                <span>Fresh from your network</span>
-                <strong>{mode === 'close' ? 'Following' : mode === 'discover' ? 'For you' : mode === 'favorites' ? 'Favorites' : 'Build'}</strong>
+                <strong>{mode === 'close' ? 'From your people' : mode === 'discover' ? 'Worth a closer look' : mode === 'favorites' ? `Your favorites${favoriteCreatorIds.length ? ` · ${favoriteCreatorIds.length}` : ''}` : 'Made in the open'}</strong>
               </div>
               <div className="home-feed-toolbar__actions">
-                <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="home-feed-filters">
+                <button type="button" aria-label="Filter your feed" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="home-feed-filters">
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>{filtersOpen ? 'Hide filters' : 'Tune'}</span>
-                </button>
-                <button type="button" onClick={() => changeMode('favorites')} aria-pressed={mode === 'favorites'} className={cn(mode === 'favorites' && 'is-active')}>
-                  <Star className="h-3.5 w-3.5" />
-                  <span>Favorites{favoriteCreatorIds.length > 0 ? ` ${favoriteCreatorIds.length}` : ''}</span>
                 </button>
                 <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
                   <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
@@ -305,6 +315,7 @@ export default function Home() {
               </div>
             )}
 
+            <div id="feed-posts" role="tabpanel" aria-labelledby={`feed-${mode}`} aria-busy={feedLoading} className="home-feed-results">
             {feedError && (
               <div role="alert" className="home-feed-error">
                 <AlertCircle className="h-5 w-5 shrink-0" />
@@ -326,10 +337,11 @@ export default function Home() {
             ) : !feedError ? (
               <section className="orbit-empty operator-panel">
                 {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
-                <h2>{mode === 'build' ? 'No builder signals in this orbit yet.' : mode === 'favorites' ? 'Your Favorites orbit is quiet.' : 'This orbit is quiet.'}</h2>
-                <p>{mode === 'build' ? 'Activate a dream and invite the people who can change its outcome.' : mode === 'favorites' ? 'Favorite creators from their profiles to keep their newest work close.' : 'Follow someone new or discover beyond the people you already know.'}</p>
+                <h2>{contentCategory !== 'all' || topic !== 'all' ? 'No posts match these filters.' : mode === 'build' ? 'Every great project starts somewhere.' : mode === 'favorites' ? 'Keep your favorite people close.' : 'Your people are out there.'}</h2>
+                <p>{contentCategory !== 'all' || topic !== 'all' ? 'Try another category or clear your filters to see more.' : mode === 'build' ? 'Share what you’re making and find someone to make it with.' : mode === 'favorites' ? 'Add favorites from a profile to bring their latest posts here.' : 'Follow a few creators and their latest posts will appear here.'}</p>
+                {(contentCategory !== 'all' || topic !== 'all') && <Button variant="outline" onClick={() => { setContentCategory('all'); setTopic('all'); }}>Clear filters</Button>}
                 <Link href={mode === 'build' || mode === 'favorites' ? (mode === 'build' ? '/dream' : '/explore') : '/explore'} className="yor-primary-action">
-                  {mode === 'build' ? 'Activate a dream' : mode === 'favorites' ? 'Discover creators' : 'Find people'} <ArrowRight className="h-4 w-4" />
+                  {mode === 'build' ? 'Start a project' : mode === 'favorites' ? 'Discover creators' : 'Find your people'} <ArrowRight className="h-4 w-4" />
                 </Link>
               </section>
             ) : null}
@@ -348,11 +360,13 @@ export default function Home() {
                 )}
               </section>
             )}
+            </div>
           </section>
 
           <aside className="orbit-rail">
             {currentUser && (
               <section className="orbit-profile-card operator-panel operator-home-profile">
+                <div className="operator-home-profile__cover" aria-hidden="true"><span /><span /><span /></div>
                 <div className="operator-home-profile__identity">
                   <Link href={`/profile/${currentUser.id}`}>
                     <span className="operator-home-profile__avatar">
@@ -368,8 +382,8 @@ export default function Home() {
                 </div>
                 <div className="operator-home-profile__metrics">
                   <Metric value={currentUser.followers.toLocaleString()} label="Followers" />
-                  <Metric value={followingIds.length.toLocaleString()} label="Following" />
-                  <Metric value={posts.filter((post) => post.authorId === currentUser.id).length.toLocaleString()} label="Posts" />
+                  <Metric value={currentUser.following.toLocaleString()} label="Following" />
+                  <Metric value={favoriteCreatorIds.length.toLocaleString()} label="Favorites" />
                 </div>
               </section>
             )}
@@ -396,7 +410,7 @@ export default function Home() {
             {activeLiveStreams.length === 0 && (
               <section className="orbit-rail-card operator-panel">
                 <div className="orbit-section-heading">
-                  <div><span>Network pulse</span><h2>Signals getting stronger</h2></div>
+                  <div><span>From this feed</span><h2>Conversation starters</h2></div>
                   <TrendingUp className="h-4 w-4" />
                 </div>
                 <div className="orbit-signal-list">

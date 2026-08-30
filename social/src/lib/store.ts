@@ -417,7 +417,7 @@ function getSpatialData(id: string) {
   };
 }
 
-function mapPost(p: BackendPost, currentUserId?: string): Post {
+export function mapPost(p: BackendPost, currentUserId?: string): Post {
   const spatial = getSpatialData(p.id);
   const likedBy = Array.isArray(p.likedBy) ? p.likedBy : [];
   const bookmarkedBy = Array.isArray(p.bookmarkedBy) ? p.bookmarkedBy : [];
@@ -647,6 +647,7 @@ interface AppState {
   feedCursor: string | null;
   hasMoreFeed: boolean;
   feedMode: FeedMode;
+  feedPostIds: string[];
   feedLoading: boolean;
   feedLoadingMore: boolean;
   feedError: string | null;
@@ -734,6 +735,7 @@ interface AppState {
   pinDirectMessage: (messageId: string) => Promise<void>;
 
   loadUserProfile: (userId: string) => Promise<void>;
+  cachePublicProfiles: (users: BackendUser[]) => void;
   followUser: (userId: string) => Promise<void>;
   unfollowUser: (userId: string) => Promise<void>;
   toggleFavoriteCreator: (userId: string) => Promise<void>;
@@ -787,6 +789,7 @@ function clearPrivateSessionState(
     feedCursor: null,
     hasMoreFeed: false,
     feedMode: 'following',
+    feedPostIds: [],
     feedLoading: false,
     feedLoadingMore: false,
     feedError: null,
@@ -943,6 +946,7 @@ export const useAppStore = create<AppState>()(
       feedCursor: null,
       hasMoreFeed: false,
       feedMode: 'following',
+      feedPostIds: [],
       feedLoading: false,
       feedLoadingMore: false,
       feedError: null,
@@ -1158,14 +1162,18 @@ export const useAppStore = create<AppState>()(
         const requestSequence = ++feedRequestSequence;
         set({
           feedMode: mode, feedCursor: null, hasMoreFeed: false, feedLoading: true, feedLoadingMore: false, feedError: null,
-          ...(mode !== get().feedMode ? { posts: [] } : {}),
+          ...(mode !== get().feedMode ? { feedPostIds: [] } : {}),
         });
         try {
           const res = await api.getFeed(mode);
           if (requestSequence !== feedRequestSequence || get().feedMode !== mode) return;
           const backendPosts = res.data;
           const currentUserId = get().currentUser?.id;
-          set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)), feedCursor: res.nextCursor ?? null, hasMoreFeed: Boolean(res.hasMore) });
+          const ids = new Set(backendPosts.map((post) => post.id));
+          set((state) => ({
+            posts: [...backendPosts.map((post) => mapPost(post, currentUserId)), ...state.posts.filter((post) => !ids.has(post.id))],
+            feedPostIds: [...ids], feedCursor: res.nextCursor ?? null, hasMoreFeed: Boolean(res.hasMore),
+          }));
           return;
         } catch (error) {
           if (requestSequence === feedRequestSequence) {
@@ -1190,6 +1198,7 @@ export const useAppStore = create<AppState>()(
           const seenIds = new Set(get().posts.map((post) => post.id));
           set((current) => ({
             posts: [...current.posts, ...nextPosts.filter((post) => !seenIds.has(post.id))],
+            feedPostIds: [...new Set([...current.feedPostIds, ...nextPosts.map((post) => post.id)])],
             feedCursor: res.nextCursor ?? null,
             hasMoreFeed: Boolean(res.hasMore),
           }));
@@ -1321,7 +1330,7 @@ export const useAppStore = create<AppState>()(
         }
         try {
           const created = await api.createPost({ content, images: media, audience, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
-          set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts] }));
+          set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts], feedPostIds: [created.id, ...state.feedPostIds] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
           throw error;
@@ -1580,6 +1589,10 @@ export const useAppStore = create<AppState>()(
           },
         }));
       },
+
+      cachePublicProfiles: (profiles) => set((state) => ({
+        users: { ...state.users, ...Object.fromEntries(profiles.filter((user) => user.id !== state.currentUser?.id).map((user) => [user.id, mapUser(user)])) },
+      })),
 
       loadUserProfile: (userId) => {
         if (get().users[userId]) return Promise.resolve();

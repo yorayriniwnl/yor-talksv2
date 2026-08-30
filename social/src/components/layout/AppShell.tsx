@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, Suspense, lazy, useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
@@ -18,10 +18,11 @@ import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 import { AppTopbar } from '@/components/layout/AppTopbar';
 import { CreatePost } from '@/components/feed/Post';
 import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
-import { IncomingCallManager } from '@/components/messages/IncomingCallManager';
 import { CompanionPet } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { hasUnreadConversation } from '@/lib/message-state';
+
+const IncomingCallManager = lazy(() => import('@/components/messages/IncomingCallManager').then((module) => ({ default: module.IncomingCallManager })));
 
 interface AppShellProps {
   children: ReactNode;
@@ -150,7 +151,7 @@ export function AppShell({ children }: AppShellProps) {
             {!sidebarCollapsed && (
               <div className="flex min-w-0 flex-col">
                 <span className="font-serif text-[1.35rem] font-semibold tracking-[-0.045em] leading-none text-foreground">Yor</span>
-                <span className="mt-1 whitespace-nowrap text-[0.56rem] font-mono text-primary tracking-[0.12em] uppercase font-bold">Signal network // online</span>
+                <span className="mt-1 whitespace-nowrap text-[0.6rem] font-mono text-primary tracking-[0.1em] uppercase font-bold">A place for your people</span>
               </div>
             )}
           </button>
@@ -303,7 +304,7 @@ export function AppShell({ children }: AppShellProps) {
                 {!sidebarCollapsed && (
                   <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-xs truncate leading-tight group-hover:text-primary transition-colors">{currentDisplayName}</h4>
-                    <p className="text-[0.62rem] text-muted-foreground font-mono truncate">@{currentUser.username} · online</p>
+                    <p className="text-[0.68rem] text-muted-foreground font-mono truncate">@{currentUser.username}</p>
                   </div>
                 )}
               </Link>
@@ -380,7 +381,7 @@ export function AppShell({ children }: AppShellProps) {
       <GlobalAudioPlayer />
       <PwaInstallPrompt />
       <DeviceApprovalInbox />
-      {publicBetaConfig.rtcCallsEnabled && <IncomingCallManager />}
+      {publicBetaConfig.rtcCallsEnabled && <Suspense fallback={null}><IncomingCallManager /></Suspense>}
       <CompanionPet />
     </div>
   );

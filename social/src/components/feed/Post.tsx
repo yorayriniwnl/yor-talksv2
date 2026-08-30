@@ -376,9 +376,14 @@ export function PostCard({ post }: { post: PostType }) {
 
   const copyPostLink = async (event: React.MouseEvent) => {
     event.stopPropagation();
-    try { await navigator.clipboard?.writeText(`${window.location.origin}/post/${post.id}`); } catch { /* Ignore */ }
-    sharePost(post.id);
-    toast({ title: 'Link copied', description: 'Share the conversation anywhere.' });
+    try {
+      if (!navigator.clipboard) throw new Error('Copy is unavailable in this browser. Open the post and copy its address.');
+      await navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
+      void sharePost(post.id);
+      toast({ title: 'Link copied', description: 'Share the conversation anywhere.' });
+    } catch (error) {
+      toast({ title: 'Could not copy this link', description: error instanceof Error ? error.message : 'Open the post and copy its address.' });
+    }
   };
 
   const reportPost = async (event: React.MouseEvent) => {
@@ -572,7 +577,6 @@ export function PostCard({ post }: { post: PostType }) {
                 <AvatarImage src={author.avatarUrl} />
                 <AvatarFallback className="font-display font-bold">{authorDisplayName.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span className="yor-post__status-dot" aria-label="Creator online" />
             </div>
           </Link>
         </MiniProfileCard>
@@ -607,14 +611,14 @@ export function PostCard({ post }: { post: PostType }) {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 text-muted-foreground hover:text-foreground" onClick={(event) => event.stopPropagation()} aria-label="More post options">
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full opacity-100 text-muted-foreground hover:text-foreground" onClick={(event) => event.stopPropagation()} aria-label="More post options">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
                 <DropdownMenuItem onClick={copyPostLink}>Copy link</DropdownMenuItem>
                 <DropdownMenuItem onClick={reportPost}>Report</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={blockAuthor}>Block user</DropdownMenuItem>
+                {author.id !== currentUser?.id && <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={blockAuthor}>Block user</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

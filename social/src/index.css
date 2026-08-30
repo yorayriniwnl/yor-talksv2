@@ -139,14 +139,14 @@
   --sidebar: 240 10% 97%;
   --sidebar-foreground: 240 18% 10%;
   --sidebar-border: 240 8% 90%;
-  --sidebar-primary: 352 78% 52%;
+  --sidebar-primary: 352 78% 46%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 352 56% 95%;
   --sidebar-accent-foreground: 352 72% 42%;
-  --sidebar-ring: 352 78% 52%;
+  --sidebar-ring: 352 78% 46%;
 
   /* Brand */
-  --primary: 352 78% 52%;
+  --primary: 352 78% 46%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 240 8% 94%;
@@ -167,10 +167,10 @@
   --warning-foreground: 38 80% 16%;
 
   --input: 240 8% 88%;
-  --ring: 352 78% 52%;
+  --ring: 352 78% 46%;
 
   /* Operator Social */
-  --signal: 352 78% 52%;
+  --signal: 352 78% 46%;
   --signal-soft: 352 72% 95%;
   --ember: 24 94% 56%;
   --online: 151 64% 39%;
@@ -219,13 +219,13 @@
   --sidebar-foreground: 210 20% 96%;
   --sidebar-border: 220 12% 16%;
   --sidebar-primary: 352 88% 62%;
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 225 20% 8%;
   --sidebar-accent: 352 36% 13%;
   --sidebar-accent-foreground: 352 90% 76%;
   --sidebar-ring: 352 88% 62%;
 
   --primary: 352 88% 62%;
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 225 20% 8%;
 
   --secondary: 222 12% 14%;
   --secondary-foreground: 210 20% 96%;

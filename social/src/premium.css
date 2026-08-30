@@ -46,7 +46,7 @@
   --muted-foreground: 222 12% 45%;
   --secondary: 224 28% 94%;
   --input: 224 28% 94%;
-  --primary: 352 78% 52%;
+  --primary: 352 78% 46%;
   --accent: 24 94% 56%;
 }
 
@@ -260,6 +260,10 @@ body {
 @media (max-width: 767px) {
   .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__wake { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  .yor-companion__trigger { min-width: 3rem; width: 3rem; height: 3rem; justify-content: center; padding: 0.3rem; border-radius: 1rem; transform: none; }
+  .yor-companion__trigger .yor-companion__label,
+  .yor-companion__trigger .yor-companion__sparkle,
+  .yor-companion__trigger > svg { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2304,7 +2308,6 @@ a.yor-secondary-action:hover {
   padding: 0.8rem 0 1rem;
 }
 
-.home-feed-heading > div { display: grid; gap: 0.35rem; }
 .home-feed-heading .yor-eyebrow { margin: 0; }
 .home-feed-heading h1 {
   color: hsl(var(--foreground));
@@ -2456,7 +2459,7 @@ a.yor-secondary-action:hover {
   gap: 1rem;
   margin: 1rem 0 0.6rem;
 }
-.home-feed-toolbar > div { display: grid; gap: 0.12rem; }
+.home-feed-toolbar > div:first-child { display: grid; gap: 0.12rem; }
 .home-feed-toolbar span {
   color: hsl(var(--muted-foreground));
   font-size: 0.63rem;
@@ -2678,19 +2681,6 @@ html.yor-low-bandwidth video {
   background: hsl(var(--background) / 0.88);
   backdrop-filter: blur(16px) saturate(1.12);
   -webkit-backdrop-filter: blur(16px) saturate(1.12);
-}
-
-.home-feed-tabs button[aria-selected="true"]::after {
-  content: '';
-  position: absolute;
-  right: 50%;
-  bottom: -0.12rem;
-  width: 0.32rem;
-  height: 0.32rem;
-  border-radius: 50%;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.1);
-  transform: translateX(50%);
 }
 
 .home-feed-tabs button { position: relative; }

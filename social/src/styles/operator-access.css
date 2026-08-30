@@ -12,7 +12,7 @@
   --access-line-strong: #343946;
   --access-text: #f3f4f6;
   --access-muted: #9298a5;
-  --access-dim: #626976;
+  --access-dim: #9298a5;
   --access-signal: #f43f5e;
   --access-signal-soft: rgba(244, 63, 94, 0.1);
   --access-green: #4ade80;
@@ -44,7 +44,7 @@
 
 .operator-access-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(31rem, 0.88fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(31rem, 0.92fr);
 }
 
 .operator-access-intro {
@@ -53,9 +53,9 @@
   overflow: hidden;
   border-right: 1px solid var(--access-line);
   background:
-    linear-gradient(rgba(255, 255, 255, 0.027) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.027) 1px, transparent 1px),
-    radial-gradient(circle at 78% 31%, rgba(244, 63, 94, 0.12), transparent 33%),
+    linear-gradient(rgba(255, 255, 255, 0.013) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.013) 1px, transparent 1px),
+    radial-gradient(ellipse at 85% 15%, rgba(244, 63, 94, 0.17), transparent 55%),
     #08090c;
   background-size: 48px 48px, 48px 48px, auto, auto;
 }
@@ -76,7 +76,7 @@
   min-height: 100dvh;
   flex-direction: column;
   margin-left: auto;
-  padding: clamp(2rem, 4vw, 4.5rem);
+  padding: clamp(2rem, 4vw, 4rem);
 }
 
 .operator-access-brand,
@@ -120,7 +120,7 @@
 .operator-access-state-page__brand small {
   color: var(--access-muted);
   font-family: var(--app-font-mono);
-  font-size: 0.5rem;
+  font-size: 0.61rem;
   font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -128,7 +128,7 @@
 
 .operator-access-copy {
   max-width: 45rem;
-  margin-top: clamp(4.5rem, 9vh, 8rem);
+  margin-top: clamp(2.5rem, 6vh, 5rem);
 }
 
 .operator-kicker {
@@ -138,7 +138,7 @@
   margin: 0;
   color: var(--access-muted);
   font-family: var(--app-font-mono);
-  font-size: 0.59rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -153,10 +153,10 @@
 .operator-access-copy h1 {
   margin: 1.15rem 0 0;
   font-family: var(--app-font-serif);
-  font-size: clamp(3.25rem, 6.3vw, 6.75rem);
+  font-size: clamp(3.25rem, 5.9vw, 6rem);
   font-weight: 500;
-  letter-spacing: -0.075em;
-  line-height: 0.82;
+  letter-spacing: -0.055em;
+  line-height: 1.02;
 }
 
 .operator-access-copy h1 em {
@@ -166,7 +166,7 @@
 
 .operator-access-copy > p:last-child {
   max-width: 36rem;
-  margin: 1.65rem 0 0;
+  margin: 1.35rem 0 0;
   color: #a6abb6;
   font-size: clamp(0.92rem, 1.35vw, 1.08rem);
   line-height: 1.75;
@@ -174,7 +174,7 @@
 
 .operator-identity-card {
   width: min(100%, 42rem);
-  margin-top: clamp(2.5rem, 5vh, 4rem);
+  margin-top: clamp(1.6rem, 3.5vh, 3rem);
   overflow: hidden;
   border: 1px solid var(--access-line-strong);
   border-radius: 1.15rem;
@@ -213,7 +213,7 @@
 
 .operator-identity-card > header strong {
   overflow: hidden;
-  font-size: 0.77rem;
+  font-size: 0.9rem;
   font-weight: 730;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -223,7 +223,7 @@
   overflow: hidden;
   color: var(--access-muted);
   font-family: var(--app-font-mono);
-  font-size: 0.53rem;
+  font-size: 0.65rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -276,18 +276,18 @@
 }
 
 .operator-identity-card__proof strong {
-  font-size: 0.68rem;
+  font-size: 0.79rem;
 }
 
 .operator-identity-card__proof small {
   color: var(--access-muted);
-  font-size: 0.58rem;
+  font-size: 0.7rem;
 }
 
 .operator-identity-card__proof b {
-  color: var(--access-green);
+  color: #ffa0b0;
   font-family: var(--app-font-mono);
-  font-size: 0.48rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
 }
 
@@ -304,12 +304,12 @@
   border-right: 1px solid var(--access-line);
   color: var(--access-muted);
   font-family: var(--app-font-mono);
-  font-size: 0.48rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
 }
 
 .operator-identity-card > footer span:last-child { border-right: 0; }
-.operator-identity-card > footer b { color: var(--access-text); font-size: 0.7rem; }
+.operator-identity-card > footer b { color: var(--access-text); font-family: var(--app-font-serif); font-size: 0.98rem; font-weight: 500; text-transform: none; }
 
 .operator-access-system {
   display: flex;
@@ -319,7 +319,7 @@
   padding-top: 2.5rem;
   color: var(--access-dim);
   font-family: var(--app-font-mono);
-  font-size: 0.48rem;
+  font-size: 0.59rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -339,9 +339,9 @@
 }
 
 .operator-access-panel__inner {
-  width: min(100%, 34rem);
+  width: min(100%, 35rem);
   margin: 0 auto;
-  padding: clamp(2rem, 5vw, 4.5rem);
+  padding: clamp(2rem, 4vw, 3.75rem);
 }
 
 .operator-access-mobile-brand { display: none; }
@@ -358,13 +358,13 @@
 
 .operator-access-mode button,
 .operator-method-switch button {
-  min-height: 2.45rem;
+  min-height: 2.75rem;
   border: 0;
   border-radius: 0.48rem;
   background: transparent;
   color: var(--access-muted);
   font-family: var(--app-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -388,15 +388,15 @@
   font-family: var(--app-font-serif);
   font-size: clamp(2.3rem, 4.2vw, 3.35rem);
   font-weight: 500;
-  letter-spacing: -0.065em;
-  line-height: 0.94;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
 }
 
 .operator-access-heading > p:last-child,
 .operator-access-state-card > p:not(.operator-kicker) {
   margin: 0.8rem 0 0;
   color: var(--access-muted);
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   line-height: 1.65;
 }
 
@@ -454,7 +454,7 @@
 .operator-reset-form .operator-field > label {
   color: #b8bdc8;
   font-family: var(--app-font-mono);
-  font-size: 0.54rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -491,17 +491,17 @@
 
 .operator-field__control input {
   width: 100%;
-  height: 2.8rem;
+  height: 3.15rem;
   padding: 0 2.7rem 0 2.5rem;
   border: 1px solid var(--access-line) !important;
   border-radius: 0.65rem !important;
   background: #090b0e !important;
   color: var(--access-text) !important;
-  font-size: 0.76rem !important;
+  font-size: 1rem !important;
   box-shadow: none !important;
 }
 
-.operator-field__control input::placeholder { color: #555c68; }
+.operator-field__control input::placeholder { color: #9298a5; }
 .operator-field__control input:hover { border-color: var(--access-line-strong) !important; }
 .operator-field__control input:focus { border-color: rgba(244, 63, 94, 0.65) !important; }
 .operator-field__control input[aria-invalid='true'] { border-color: rgba(244, 63, 94, 0.55) !important; }
@@ -511,8 +511,8 @@
   z-index: 2;
   right: 0.4rem;
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 0;
   border-radius: 0.45rem;
@@ -607,15 +607,15 @@
 .operator-access-state-card > a > button,
 .operator-onboarding-actions > button {
   display: inline-flex;
-  height: 2.95rem;
+  height: 3.15rem;
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
   border: 1px solid var(--access-signal) !important;
   border-radius: 0.65rem !important;
-  background: var(--access-signal) !important;
+  background: #d72f50 !important;
   color: white !important;
-  font-size: 0.7rem !important;
+  font-size: 0.88rem !important;
   font-weight: 750 !important;
   box-shadow: none !important;
   transition: background 150ms ease, transform 150ms ease;
@@ -642,7 +642,7 @@
 .operator-access-legal {
   margin: 0.1rem auto 0;
   color: var(--access-dim);
-  font-size: 0.54rem;
+  font-size: 0.72rem;
   line-height: 1.65;
   text-align: center;
 }
@@ -660,7 +660,7 @@
 }
 
 .operator-access-trust svg { width: 0.9rem; height: 0.9rem; flex: 0 0 auto; color: var(--access-green); }
-.operator-access-trust span { font-size: 0.56rem; line-height: 1.6; }
+.operator-access-trust span { font-size: 0.72rem; line-height: 1.6; }
 .operator-access-trust strong { color: var(--access-muted); }
 
 /* Onboarding */

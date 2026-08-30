@@ -9,11 +9,11 @@
 .operator-discovery-hero {
   position: relative;
   display: grid;
-  width: min(100%, 80rem);
+  width: min(100%, 68rem);
   margin-inline: auto;
-  padding: clamp(2.25rem, 5vw, 4.75rem) clamp(1rem, 4vw, 3rem) 1.6rem;
+  padding: clamp(1.75rem, 3vw, 2.75rem) clamp(1rem, 3vw, 2rem) 1.8rem;
   grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
-  gap: clamp(1.5rem, 4vw, 4rem);
+  gap: clamp(1rem, 3vw, 2.5rem);
   overflow: hidden;
 }
 
@@ -36,15 +36,17 @@
   gap: 0.8rem;
 }
 
-.operator-discovery-hero__copy h1 {
+.operator-discovery-hero__copy h2 {
   max-width: 48rem;
   font-family: var(--app-font-serif);
-  font-size: clamp(2.3rem, 5vw, 4.5rem);
-  font-weight: 600;
-  letter-spacing: -0.06em;
-  line-height: 0.94;
+  font-size: clamp(2.3rem, 4vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
   text-wrap: balance;
 }
+
+.operator-discovery-hero__copy h2 em { color: hsl(var(--signal)); }
 
 .operator-discovery-hero__copy > p {
   max-width: 39rem;
@@ -84,7 +86,7 @@
   outline: 0;
   background: transparent;
   color: hsl(var(--foreground));
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -96,8 +98,8 @@
 .operator-discovery-search button,
 .operator-discovery-search kbd {
   display: grid;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 1px solid hsl(var(--operator-line));
   border-radius: 0.55rem;
@@ -143,10 +145,10 @@
 
 .operator-discovery-main {
   display: grid;
-  width: min(100%, 80rem);
+  width: min(100%, 68rem);
   margin-inline: auto;
-  padding-inline: clamp(1rem, 4vw, 3rem);
-  gap: 2.5rem;
+  padding-inline: clamp(1rem, 3vw, 2rem);
+  gap: 1.5rem;
 }
 
 .operator-discovery-filters {
@@ -191,7 +193,7 @@
 
 .operator-discovery-sections {
   display: grid;
-  gap: clamp(2.5rem, 6vw, 5rem);
+  gap: clamp(2rem, 4vw, 3rem);
 }
 
 .operator-discovery-radar,
@@ -727,7 +729,7 @@
 }
 
 @media (max-width: 520px) {
-  .operator-discovery-hero__copy h1 { font-size: 2.45rem; }
+  .operator-discovery-hero__copy h2 { font-size: 2.45rem; }
   .operator-discovery-search { min-height: 3.7rem; padding-left: 0.8rem; }
   .operator-discovery-search input { font-size: 0.78rem; }
   .operator-discovery-hero__metrics .operator-status-badge { display: none; }

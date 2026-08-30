@@ -5,11 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { api, type BackendPost, type BackendUser } from '@/lib/api-client';
-import { useAppStore, type Community, type User, type Post } from '@/lib/store';
+import { mapPost, useAppStore, type Community, type User, type Post } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import StoriesRow from '@/components/feed/StoriesRow';
 import { staggerContainer, staggerItem } from '@/lib/motion';
-import { OperatorPanel, SectionHeader, SignalLabel, StatusBadge } from '@/components/system';
+import { OperatorPanel, SectionHeader, SignalLabel } from '@/components/system';
 import '@/styles/operator-discovery.css';
 
 type SearchResults = { users: BackendUser[]; posts: BackendPost[] };
@@ -60,13 +59,13 @@ function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: bool
       type="button"
       variants={staggerItem}
       onClick={onClick}
-      aria-label="Open post"
+      aria-label={`Open post: ${post.content.slice(0, 90)}`}
       className={cn('operator-discovery-tile', isLarge && 'operator-discovery-tile--large')}
       data-media={isVideo ? 'video' : firstMedia ? 'image' : 'text'}
     >
       {firstMedia ? (
         isVideo ? (
-          <video src={firstMedia} aria-label="Video post" className="operator-discovery-tile__media" muted loop playsInline autoPlay preload="metadata" />
+          <video src={firstMedia} aria-label="Video post" className="operator-discovery-tile__media" muted playsInline preload="metadata" />
         ) : (
           <img src={firstMedia} alt="" className="operator-discovery-tile__media" loading="lazy" />
         )
@@ -128,11 +127,32 @@ function matchesExploreGenre(text: string, genre: string): boolean {
 export default function Explore() {
   const [, setLocation] = useLocation();
   const users = useAppStore((s: any) => s.users || {}) as Record<string, User>;
-  const posts = useAppStore((s: any) => s.posts || []) as Post[];
+  const [posts, setPosts] = useState<Post[]>([]);
   const communities = useAppStore((s: any) => s.communities || []) as Community[];
   const currentUser = useAppStore((s: any) => s.currentUser);
   const followUser = useAppStore((s: any) => s.followUser);
   const unfollowUser = useAppStore((s: any) => s.unfollowUser);
+  const cachePublicProfiles = useAppStore((s) => s.cachePublicProfiles);
+  const loadUserProfile = useAppStore((s) => s.loadUserProfile);
+  const [discoveryLoading, setDiscoveryLoading] = useState(true);
+  const [discoveryError, setDiscoveryError] = useState('');
+  const [discoveryAttempt, setDiscoveryAttempt] = useState(0);
+  const [searchError, setSearchError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setDiscoveryLoading(true);
+    setDiscoveryError('');
+    void Promise.all([api.getFeed('for_you'), api.searchUsers('')]).then(([feed, profiles]) => {
+      if (!active) return;
+      setPosts(feed.data.map((post) => mapPost(post, currentUser?.id)));
+      cachePublicProfiles(profiles);
+      for (const id of new Set(feed.data.map((post) => post.authorId))) void loadUserProfile(id);
+    }).catch(() => {
+      if (active) setDiscoveryError('Discovery could not load. Please try again.');
+    }).finally(() => { if (active) setDiscoveryLoading(false); });
+    return () => { active = false; };
+  }, [currentUser?.id, cachePublicProfiles, loadUserProfile, discoveryAttempt]);
 
   const [query, setQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -167,7 +187,8 @@ export default function Explore() {
 
   const visualPosts = useMemo(() => {
     return posts
-      .filter(p => p.media?.length && matchesExploreGenre(`${p.content} ${users[p.authorId]?.bio || ''}`, selectedGenre));
+      .filter(p => matchesExploreGenre(`${p.content} ${users[p.authorId]?.bio || ''}`, selectedGenre))
+      .sort((a, b) => Number(Boolean(b.media?.length)) - Number(Boolean(a.media?.length)));
   }, [posts, users, selectedGenre]);
 
   const GRID_PAGE_SIZE = 18;
@@ -208,91 +229,30 @@ export default function Explore() {
     return allTopics.filter(t => matchesExploreGenre(t.name, selectedGenre));
   }, [posts, selectedGenre]);
 
-  // Search Debounce with full fallback
+  // Search the server's authorized index, not the last visited feed cache.
   useEffect(() => {
     const trimmed = query.trim().toLowerCase();
+    setSearchError('');
     if (trimmed.length < 2) { setResults(null); setSearching(false); return; }
     let active = true;
+    setSearching(true);
     const timer = setTimeout(async () => {
-      setSearching(true);
       try {
         const apiRes = await api.search(trimmed);
         if (!active) return;
-        if (apiRes) {
-          setResults(apiRes);
-        } else {
-          // Client-side search across all creators and posts
-          const matchedUsers = Object.values(users).filter(u =>
-            u.username.toLowerCase().includes(trimmed) ||
-            u.displayName.toLowerCase().includes(trimmed) ||
-            (u.bio && u.bio.toLowerCase().includes(trimmed))
-          ).slice(0, 12).map(u => ({
-            id: u.id,
-            username: u.username,
-            fullName: u.displayName,
-            avatarUrl: u.avatarUrl,
-            bio: u.bio || '',
-            followers: [],
-            following: [],
-            isOnline: false,
-            createdAt: new Date().toISOString()
-          } as any));
-
-          const matchedPosts = posts.filter(p =>
-            p.content.toLowerCase().includes(trimmed)
-          ).slice(0, 16).map(p => ({
-            id: p.id,
-            authorId: p.authorId,
-            content: p.content,
-            images: p.media || [],
-            likedBy: [],
-            bookmarkedBy: [],
-            comments: [],
-            shareCount: p.shares,
-            createdAt: p.createdAt
-          } as any));
-
-          setResults({ users: matchedUsers, posts: matchedPosts });
-        }
+        setResults(apiRes);
+        cachePublicProfiles(apiRes.users);
+        for (const id of new Set(apiRes.posts.map((post) => post.authorId))) void loadUserProfile(id);
       } catch {
         if (!active) return;
-        const matchedUsers = Object.values(users).filter(u =>
-          u.username.toLowerCase().includes(trimmed) ||
-          u.displayName.toLowerCase().includes(trimmed) ||
-          (u.bio && u.bio.toLowerCase().includes(trimmed))
-        ).slice(0, 12).map(u => ({
-          id: u.id,
-          username: u.username,
-          fullName: u.displayName,
-          avatarUrl: u.avatarUrl,
-          bio: u.bio || '',
-          followers: [],
-          following: [],
-          isOnline: false,
-          createdAt: new Date().toISOString()
-        } as any));
-
-        const matchedPosts = posts.filter(p =>
-          p.content.toLowerCase().includes(trimmed)
-        ).slice(0, 16).map(p => ({
-          id: p.id,
-          authorId: p.authorId,
-          content: p.content,
-          images: p.media || [],
-          likedBy: [],
-          bookmarkedBy: [],
-          comments: [],
-          shareCount: p.shares,
-          createdAt: p.createdAt
-        } as any));
-
-        setResults({ users: matchedUsers, posts: matchedPosts });
+        setResults(null);
+        setSearchError('Search is unavailable right now. Your query is still here; try again shortly.');
       } finally {
         if (active) setSearching(false);
       }
     }, 250);
     return () => { active = false; clearTimeout(timer); };
-  }, [query, users, posts]);
+  }, [query, cachePublicProfiles, loadUserProfile]);
 
   const handleToggleFollow = (targetId: string) => {
     if (!currentUser) return;
@@ -305,9 +265,9 @@ export default function Explore() {
     <div className="operator-discovery-page">
       <section className="operator-discovery-hero" aria-labelledby="discovery-title">
         <div className="operator-discovery-hero__copy">
-          <SignalLabel>Discovery desk // live index</SignalLabel>
-          <h1 id="discovery-title">Find the people and work worth following.</h1>
-          <p>Search the network, scan what is moving, and turn a useful signal into your next connection.</p>
+          <SignalLabel>Follow your curiosity</SignalLabel>
+          <h2 id="discovery-title">Your next <em>good find.</em></h2>
+          <p>New perspectives, interesting people, and ideas that stay with you.</p>
         </div>
 
         <div className="operator-discovery-search" data-focused={isFocused || undefined}>
@@ -318,8 +278,8 @@ export default function Explore() {
             onChange={event => setQuery(event.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            aria-label="Search people, topics, posts, or communities"
-            placeholder="Search people, topics, posts, or worlds"
+            aria-label="Search people and posts"
+            placeholder="Search people, ideas, and posts"
           />
           {query ? (
             <button type="button" onClick={() => setQuery('')} aria-label="Clear search">
@@ -330,15 +290,10 @@ export default function Explore() {
           )}
         </div>
 
-        <div className="operator-discovery-hero__metrics" aria-label="Current discovery index">
-          <div><strong>{visualPosts.length}</strong><span>visual signals</span></div>
-          <div><strong>{people.length}</strong><span>people indexed</span></div>
-          <div><strong>{rooms.length}</strong><span>worlds open</span></div>
-          <StatusBadge status="online">Index live</StatusBadge>
-        </div>
       </section>
 
       <section aria-label="Discovery results" className="operator-discovery-main">
+        {discoveryError && <div role="alert" className="home-feed-error"><p>{discoveryError}</p><Button variant="outline" onClick={() => setDiscoveryAttempt((attempt) => attempt + 1)}>Retry discovery</Button></div>}
         <nav className="operator-discovery-filters" aria-label="Filter discovery by interest">
           {EXPLORE_GENRES.map((genre, index) => (
             <button
@@ -363,6 +318,8 @@ export default function Explore() {
                   <h2>Scanning the network</h2>
                   <p>Looking through people and published signals.</p>
                 </OperatorPanel>
+              ) : searchError ? (
+                <OperatorPanel className="operator-discovery-empty" role="alert"><Search aria-hidden="true" /><h2>Let’s try that again.</h2><p>{searchError}</p><button type="button" onClick={() => { setQuery(''); searchInputRef.current?.focus(); }}>Search again</button></OperatorPanel>
               ) : !results || (!results.users.length && !results.posts.length) ? (
                 <OperatorPanel className="operator-discovery-empty">
                   <Search aria-hidden="true" />
@@ -416,40 +373,15 @@ export default function Explore() {
           ) : (
             /* ── DISCOVERY DEFAULT STATE ──────────────────────────────────── */
             <motion.div key="discovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="operator-discovery-sections">
-              <section className="operator-discovery-radar">
-                <SectionHeader eyebrow="Trend radar" title="Signals gaining velocity" description="Ranked from the language moving through the network now." />
-                <div className="operator-discovery-topic-grid">
-                  {topics.map((t, i) => (
-                    <motion.button
-                      key={t.name}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setQuery(t.name)}
-                      className="operator-discovery-topic"
-                    >
-                      <span className="operator-discovery-topic__rank">{String(i + 1).padStart(2, '0')}</span>
-                      <Hash aria-hidden="true" />
-                      <span><strong>{t.name}</strong><small>{t.count} {t.count === 1 ? 'post' : 'posts'}</small></span>
-                      <ArrowUpRight aria-hidden="true" />
-                    </motion.button>
-                  ))}
-                  {topics.length === 0 && <p className="operator-discovery-radar__empty">No hashtags are indexed for this interest yet.</p>}
-                </div>
-              </section>
-
-              <OperatorPanel className="operator-discovery-stories">
-                <SectionHeader eyebrow="Now" title="Active stories" description="Quick updates from people in your orbit." />
-                <StoriesRow />
-              </OperatorPanel>
-
               <section className="operator-discovery-dispatches">
                 <SectionHeader
-                  eyebrow="Visual index"
-                  title="Dispatches from the network"
-                  description={`${visualPosts.length} media posts matched to your current interest.`}
+                  eyebrow="Look a little closer"
+                  title="Made to catch your eye."
+                  description={`${visualPosts.length} posts and perspectives in this discovery set.`}
                   action={<Button type="button" variant="ghost" onClick={() => { setSelectedGenre('all'); setQuery(''); }}>Reset view <ArrowUpRight aria-hidden="true" /></Button>}
                 />
                 
-                {visualPosts.length > 0 ? (
+                {discoveryLoading ? <OperatorPanel className="operator-discovery-empty" role="status"><Loader2 className="operator-discovery-spinner" aria-hidden="true" /><p>Finding something interesting…</p></OperatorPanel> : visualPosts.length > 0 ? (
                   <>
                     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="operator-discovery-grid">
                       {visibleGridPosts.map((post, i) => {
@@ -466,12 +398,26 @@ export default function Explore() {
                 ) : (
                   <OperatorPanel className="operator-discovery-empty">
                     <Compass aria-hidden="true" />
-                    <h3>No visual signals in this channel</h3>
-                    <p>Choose another interest or follow more people to expand the index.</p>
-                    <button type="button" onClick={() => setSelectedGenre('all')}>Show all signals</button>
+                    <h3>A new perspective is around the corner.</h3>
+                    <p>Try another interest or search for a creator you know.</p>
+                    <button type="button" onClick={() => setSelectedGenre('all')}>Show all posts</button>
                   </OperatorPanel>
                 )}
               </section>
+
+              {topics.length > 0 && <section className="operator-discovery-radar">
+                <SectionHeader eyebrow="Conversation starters" title="A few things on people’s minds." description="Popular hashtags in the posts loaded here." />
+                <div className="operator-discovery-topic-grid">
+                  {topics.map((topic, index) => (
+                    <motion.button key={topic.name} whileTap={{ scale: 0.98 }} onClick={() => setQuery(topic.name)} className="operator-discovery-topic">
+                      <span className="operator-discovery-topic__rank">{String(index + 1).padStart(2, '0')}</span>
+                      <Hash aria-hidden="true" />
+                      <span><strong>{topic.name}</strong><small>{topic.count} {topic.count === 1 ? 'post' : 'posts'}</small></span>
+                      <ArrowUpRight aria-hidden="true" />
+                    </motion.button>
+                  ))}
+                </div>
+              </section>}
 
               {(people.length > 0 || rooms.length > 0) && (
                 <section className="operator-discovery-directory">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Globe2, LockKeyhole, MessageCircle, Plus, ShieldCheck, Trash2, UsersRound } from 'lucide-react';
 import { useAppStore, type Note } from '@/lib/store';
 import { CONTENT_RATING_OPTIONS, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const NOTE_LIMIT = 180;
 
@@ -16,19 +17,24 @@ function timeRemaining(expiresAt: string) {
   return `${hours}h left`;
 }
 
-export default function NotesTray() {
+export default function NotesTray({ compactEmpty = false }: { compactEmpty?: boolean }) {
   const notes = useAppStore((state) => state.notes);
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
   const closeFriends = useAppStore((state) => state.closeFriends);
   const createNote = useAppStore((state) => state.createNote);
   const deleteNote = useAppStore((state) => state.deleteNote);
+  const loadUserProfile = useAppStore((state) => state.loadUserProfile);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [content, setContent] = useState('');
   const [audience, setAudience] = useState<Note['audience']>('followers');
   const [contentCategory, setContentCategory] = useState<ContentCategory>('other');
   const [contentRating, setContentRating] = useState<ContentRating>('regular');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    for (const id of new Set(notes.map((note) => note.authorId))) void loadUserProfile(id);
+  }, [notes, loadUserProfile]);
 
   const myNote = notes.find((note) => note.authorId === currentUser?.id);
   const visibleNotes = useMemo(() => {
@@ -51,29 +57,29 @@ export default function NotesTray() {
       await createNote({ content, audience, contentCategory, contentRating });
       setDialogOpen(false);
       setContent('');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Your note could not be saved. Try again.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="orbit-now-card home-notes-card operator-panel">
-      <div className="home-section-heading">
+    <section className="orbit-now-card home-notes-card operator-panel" aria-label="Notes" data-compact-empty={compactEmpty && visibleNotes.length === 0}>
+      {!(compactEmpty && visibleNotes.length === 0) && <div className="home-section-heading">
         <div>
-          <span>Small signals, close to the surface</span>
           <h2>Notes</h2>
         </div>
         <button type="button" className="home-notes-compose" onClick={openComposer}>
           <Plus className="h-3.5 w-3.5" /> {myNote ? 'Edit yours' : 'Leave a Note'}
         </button>
-      </div>
+      </div>}
 
       <div className="home-notes-row" aria-label="Notes from your network">
         {visibleNotes.length === 0 ? (
-          <button type="button" className="home-note-empty" onClick={openComposer}>
-            <MessageCircle className="h-5 w-5" />
-            <span><strong>Start the conversation</strong><small>Leave a thought that disappears in 24 hours.</small></span>
-            <Plus className="ml-auto h-4 w-4" />
+          <button type="button" className={compactEmpty ? 'home-moment-action' : 'home-note-empty'} onClick={openComposer} aria-label="Leave a Note">
+            <span className="home-moment-action__icon"><MessageCircle className="h-5 w-5" /></span>
+            <span><strong>Leave a little thought</strong><small>A note for your people</small></span>
           </button>
         ) : (
           visibleNotes.map((note) => {
@@ -117,6 +123,7 @@ export default function NotesTray() {
           <div className="space-y-4">
             <div>
               <Textarea
+                aria-label="Write a note"
                 value={content}
                 onChange={(event) => setContent(event.target.value.slice(0, NOTE_LIMIT))}
                 placeholder="What is on your mind?"
