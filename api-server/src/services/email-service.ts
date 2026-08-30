@@ -84,12 +84,9 @@ export class EmailService {
 
     if ((env.NODE_ENV as string) !== "production" && !env.RESEND_API_KEY) {
       // Development and tests stay usable without an external email account.
-      logger.info({ recipientHash: recipientHash(to), subject }, "Email dispatch requested");
-      console.log("==========================================");
-      console.log(`[EMAIL DISPATCH] To: ${to}`);
-      console.log(`[SUBJECT]: ${subject}`);
-      console.log(`[BODY]:\n${html}`);
-      console.log("==========================================");
+      // Do not print the address, subject, HTML, or text: verification links,
+      // reset links, and email OTPs are credentials and must not land in logs.
+      logger.info({ recipientHash: recipientHash(to), htmlBytes: Buffer.byteLength(html, "utf8") }, "Email dispatch simulated");
       return true;
     }
 
@@ -118,7 +115,8 @@ export class EmailService {
       throw new EmailDeliveryProviderError(`Resend rejected the email (${response.status})`);
     }
 
-    logger.info({ recipientHash: recipientHash(to), subject }, "Email delivered through Resend");
+    // Subjects can contain one-time login codes, so keep provider logs opaque.
+    logger.info({ recipientHash: recipientHash(to) }, "Email delivered through Resend");
     return true;
   }
 
