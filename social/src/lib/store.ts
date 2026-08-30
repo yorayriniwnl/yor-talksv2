@@ -327,7 +327,7 @@ function mapUser(u: BackendUser): User {
     termsAcceptedAt: u.termsAcceptedAt ?? null,
     ageConfirmedAt: u.ageConfirmedAt ?? null,
     displayName: u.fullName || u.username || 'User',
-    avatarUrl: u.avatarUrl || `https://i.pravatar.cc/150?u=${u.id}`,
+    avatarUrl: u.avatarUrl || '',
     bio: u.bio || '',
     verified: Boolean(u.role === 'admin' || (u as any).verified),
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),

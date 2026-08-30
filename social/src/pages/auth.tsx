@@ -301,7 +301,7 @@ export default function Auth() {
         toast.success('Account created. Verify your email to continue.');
       }
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+      setErrorMsg(error instanceof Error ? error.message : 'We couldn’t complete that request. Check your details and try again.');
     } finally {
       setLoading(false);
     }

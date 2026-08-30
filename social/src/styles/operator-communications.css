@@ -379,6 +379,31 @@
 .operator-thread__error button:hover { background: hsl(var(--signal) / 0.08); }
 .operator-thread__error button:disabled { cursor: wait; opacity: 0.55; }
 
+.operator-thread__syncing,
+.operator-thread__stale-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid hsl(var(--border) / 0.55);
+  border-radius: 0.85rem;
+  background: hsl(var(--background) / 0.72);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.68rem;
+}
+
+.operator-thread__syncing { justify-content: flex-start; }
+.operator-thread__syncing svg { width: 0.9rem; color: hsl(var(--signal)); animation: operator-thread-spin 900ms linear infinite; }
+.operator-thread__stale-error { border-color: hsl(var(--destructive) / 0.28); }
+.operator-thread__stale-error > span { display: grid; gap: 0.15rem; min-width: 0; }
+.operator-thread__stale-error strong { color: hsl(var(--foreground)); font-size: 0.68rem; }
+.operator-thread__stale-error small { color: hsl(var(--muted-foreground)); font-size: 0.62rem; line-height: 1.4; }
+.operator-thread__stale-error button { flex: 0 0 auto; min-height: 2rem; padding-inline: 0.7rem; border: 1px solid hsl(var(--signal) / 0.35); border-radius: 0.6rem; color: hsl(var(--signal)); font-size: 0.62rem; font-weight: 800; }
+.operator-thread__stale-error button:hover { background: hsl(var(--signal) / 0.08); }
+.operator-thread__stale-error button:disabled { cursor: wait; opacity: 0.55; }
+
 @keyframes operator-thread-spin { to { transform: rotate(360deg); } }
 
 .operator-message-date {
@@ -904,5 +929,6 @@
 @media (prefers-reduced-motion: reduce) {
   .operator-thread-menu__content,
   .operator-composer__controls .operator-composer__send[data-pulse='true'],
-  .operator-thread__loading-mark svg { animation: none; }
+  .operator-thread__loading-mark svg,
+  .operator-thread__syncing svg { animation: none; }
 }

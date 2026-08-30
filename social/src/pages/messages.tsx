@@ -458,7 +458,7 @@ export default function Messages() {
             id: otherId,
             username: 'User',
             displayName: 'User',
-            avatarUrl: `https://i.pravatar.cc/150?u=${otherId}`,
+            avatarUrl: '',
             followers: 0,
             following: 0,
           };
@@ -693,12 +693,12 @@ export default function Messages() {
               </header>
 
               <div className="operator-thread__flow" data-vanish={vanishMode || undefined}>
-                {loadingMessages ? (
+                {loadingMessages && activeMessages.length === 0 ? (
                   <div className="operator-thread__loading" role="status" aria-live="polite">
                     <span className="operator-thread__loading-mark"><LoaderCircle aria-hidden="true" /></span>
                     <p>Loading secure conversation…</p>
                   </div>
-                ) : messageLoadError ? (
+                ) : messageLoadError && activeMessages.length === 0 ? (
                   <div className="operator-thread__error" role="alert">
                     <LockKeyhole aria-hidden="true" />
                     <p>{messageLoadError}</p>
@@ -711,6 +711,19 @@ export default function Messages() {
                       <h3>Private channel ready</h3>
                       <p>Send the first message to {activeConv.user.displayName}. Your calls and message tools stay in this channel.</p>
                     </div>
+                  </div>
+                )}
+
+                {loadingMessages && activeMessages.length > 0 && (
+                  <div className="operator-thread__syncing" role="status" aria-live="polite">
+                    <LoaderCircle aria-hidden="true" />
+                    <span>Refreshing this conversation…</span>
+                  </div>
+                )}
+                {messageLoadError && activeMessages.length > 0 && (
+                  <div className="operator-thread__stale-error" role="alert">
+                    <span><strong>Showing saved messages</strong><small>We couldn’t refresh this conversation. Your messages are safe.</small></span>
+                    <button type="button" onClick={() => void requestConversationMessages(activeConv.conv.id)} disabled={loadingMessages}>Try again</button>
                   </div>
                 )}
 

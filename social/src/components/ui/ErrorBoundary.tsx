@@ -25,6 +25,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   handleResetStorage() {
+    if (!window.confirm('Reset local Yor Talks data and reload? This will sign you out on this device.')) return;
     try {
       localStorage.removeItem('yortalks-storage');
       localStorage.removeItem('yortalks-tokens');
@@ -42,32 +43,35 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-5 ring-4 ring-destructive/5">
             <AlertTriangle className="w-8 h-8 text-destructive" />
           </div>
-          <h2 className="font-display font-bold text-xl mb-2 text-foreground">Something went wrong</h2>
+          <h2 className="font-display font-bold text-xl mb-2 text-foreground">We hit a loading snag</h2>
           <p className="text-sm text-muted-foreground max-w-md mb-6 font-serif">
-            We couldn't load this part of the app. You can retry, refresh the page, or reset cached data.
+            Your account and saved data are untouched. Retry this surface or reload the page; reset local cache only if the problem persists.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
             <button
+              type="button"
               onClick={this.handleRetry}
-              aria-label="Retry loading"
+              aria-label="Retry this surface"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity glow-neon-primary"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Retry
+              <RotateCcw className="w-3.5 h-3.5" /> Retry this surface
             </button>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               aria-label="Reload page"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-border/60 text-xs font-bold hover:bg-muted/50 transition-colors text-foreground"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Reload Page
+              <RefreshCw className="w-3.5 h-3.5" /> Reload page
             </button>
             <button
+              type="button"
               onClick={this.handleResetStorage}
-              aria-label="Reset Cache & Reload"
+              aria-label="Reset local cache"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-destructive/30 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Reset Cache & Reload
+              <Trash2 className="w-3.5 h-3.5" /> Reset local cache
             </button>
           </div>
 
