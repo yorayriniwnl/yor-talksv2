@@ -17,6 +17,9 @@ const user = {
   verified: true,
   settings: { notificationsEnabled: true, privateAccount: false, contentFilter: "regular" },
   privacy: { profileVisibility: "public", messageRequests: true, allowDmFromStrangers: true },
+  termsVersion: "test-public-beta-1",
+  termsAcceptedAt: "2026-08-30T00:00:00.000Z",
+  ageConfirmedAt: "2026-08-30T00:00:00.000Z",
 };
 
 function post(content: string, id: string) {
@@ -49,7 +52,7 @@ async function json(route: Route, data: unknown, meta: Record<string, unknown> =
   });
 }
 
-async function installApiBoundary(page: Page) {
+async function installApiBoundary(page: Page, profile = user) {
   await page.route("**/socket.io/**", (route) => route.abort());
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -59,7 +62,7 @@ async function installApiBoundary(page: Page) {
     if (path === "/auth/refresh" && request.method() === "POST") {
       return json(route, { accessToken: "browser-smoke-access-token" });
     }
-    if (path === "/users/me" && request.method() === "GET") return json(route, user);
+    if (path === "/users/me" && request.method() === "GET") return json(route, profile);
     if (path === "/feed" && request.method() === "GET") {
       return json(route, [post("A real signal delivered through the feed boundary.", "18fac78e-65fa-4fd4-931e-8b79e086c48d")], {
         nextCursor: null,
@@ -95,4 +98,19 @@ test("restores the social shell, publishes a post, and navigates discovery", asy
 
   await page.getByRole("button", { name: "Explore", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
+});
+
+test("public beta legal pages show configured, dated policy content", async ({ page }) => {
+  await installApiBoundary(page);
+  await page.goto("/privacy");
+  await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
+  await expect(page.getByText("test-public-beta-1", { exact: false })).toBeVisible();
+  await expect(page.getByText(/draft|not configured/i)).toHaveCount(0);
+});
+
+test("public beta requires consent before opening protected social routes", async ({ page }) => {
+  await installApiBoundary(page, { ...user, termsVersion: null, termsAcceptedAt: null, ageConfirmedAt: null });
+  await page.goto("/explore");
+  await expect(page).toHaveURL(/\/consent$/);
+  await expect(page.getByRole("heading", { name: "Review the rules before you enter" })).toBeVisible();
 });

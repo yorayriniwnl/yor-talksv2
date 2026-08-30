@@ -9,6 +9,7 @@ import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { env } from "../config/env.js";
 
 const VALID_STATUSES = ["scheduled", "live", "ended"] as const;
 type StreamStatus = (typeof VALID_STATUSES)[number];
@@ -33,6 +34,9 @@ export class LiveStreamService {
     category: string;
     contentRating?: LiveStreamRecord["contentRating"];
   }): Promise<LiveStreamRecord> {
+    if (!this.liveKitService.isConfigured()) {
+      throw new LiveKitNotConfiguredError();
+    }
     await enforceTextContentPolicy(input.title, this.aiService, "live stream title");
     const stream: LiveStreamRecord = {
       id: randomUUID(),
@@ -46,6 +50,7 @@ export class LiveStreamService {
   }
 
   async listStreams(viewerId?: string): Promise<LiveStreamRecord[]> {
+    if (!env.LIVE_ROOMS_ENABLED) return [];
     return this.contentSafetyService.filterVisibleByAuthor(await this.liveStreamRepository.list(), viewerId, (stream) => stream.hostId);
   }
 

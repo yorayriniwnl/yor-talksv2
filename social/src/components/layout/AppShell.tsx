@@ -20,6 +20,7 @@ import { CreatePost } from '@/components/feed/Post';
 import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { IncomingCallManager } from '@/components/messages/IncomingCallManager';
 import { CompanionPet } from '@/components/ui/CompanionPet';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 interface AppShellProps {
   children: ReactNode;
@@ -378,7 +379,7 @@ export function AppShell({ children }: AppShellProps) {
       <GlobalAudioPlayer />
       <PwaInstallPrompt />
       <DeviceApprovalInbox />
-      <IncomingCallManager />
+      {publicBetaConfig.rtcCallsEnabled && <IncomingCallManager />}
       <CompanionPet />
     </div>
   );

@@ -24,6 +24,7 @@ import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
 import { SignalLabel, StatusBadge } from '@/components/system';
 import '@/styles/operator-communications.css';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -637,7 +638,7 @@ export default function Messages() {
                 </div>
 
                 <div className="operator-thread__actions">
-                  {!activeConv.conv.isGroup && <>
+                  {publicBetaConfig.rtcCallsEnabled && !activeConv.conv.isGroup && <>
                     <Button variant="ghost" size="icon" onClick={() => { setCallType('audio'); setCallModalOpen(true); }} title="Voice Call" aria-label="Start voice call">
                       <Phone aria-hidden="true" />
                     </Button>
@@ -836,7 +837,7 @@ export default function Messages() {
               </footer>
 
               {/* WebRTC Video Call Modal */}
-              <WebRtcCallModal
+              {publicBetaConfig.rtcCallsEnabled && <WebRtcCallModal
                 isOpen={callModalOpen}
                 onClose={() => setCallModalOpen(false)}
                 peerUser={{
@@ -846,7 +847,7 @@ export default function Messages() {
                   avatarUrl: activeConv.user.avatarUrl,
                 }}
                 callType={callType}
-              />
+              />}
 
               {/* UPI Tip Jar Modal */}
               <UpiTipJarModal
@@ -865,9 +866,9 @@ export default function Messages() {
               <span><LockKeyhole aria-hidden="true" /></span>
               <SignalLabel tone="muted">Private operator channel</SignalLabel>
               <h2>Select a conversation</h2>
-              <p>Message your network, send voice notes, make direct calls, tip creators, and prepare trade drafts from one focused workspace.</p>
+              <p>Message your network, send voice notes, {publicBetaConfig.rtcCallsEnabled ? 'make direct calls, ' : ''}tip creators, and prepare trade drafts from one focused workspace.</p>
               <button type="button" onClick={() => setNewMessageOpen(true)}><Plus aria-hidden="true" />Start a conversation</button>
-              <small>Private messaging // call ready // live presence</small>
+              <small>Private messaging // {publicBetaConfig.rtcCallsEnabled ? 'call ready' : 'calling paused'} // live presence</small>
             </div>
           )}
         </section>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { api, type BackendSubscription, type BackendSubscriptionTier, type BackendUser } from '@/lib/api-client';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 interface FanTier {
   id: BackendSubscriptionTier['id'];
@@ -84,6 +85,10 @@ export default function FanClubSubscriptions() {
   const activeMembership = subscriptions.find((subscription) => subscription.creatorId === creatorId && subscription.status === 'active' && (!subscription.expiresAt || new Date(subscription.expiresAt) > new Date()));
 
   const handleSubscribe = async (tier: FanTier) => {
+    if (!publicBetaConfig.paymentsEnabled) {
+      toast.info('Membership payments are not enabled for this public beta.');
+      return;
+    }
     if (!creatorId) {
       toast.info('Open a creator profile and choose Fan Club to subscribe.');
       return;
@@ -155,6 +160,7 @@ export default function FanClubSubscriptions() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
         {!creatorId && <div className="surface-1 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-sm">Open a creator profile and choose Fan Club to select who you want to support. Membership access is granted only after the payment provider confirms a captured payment.</div>}
+        {!publicBetaConfig.paymentsEnabled && <div className="surface-1 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-sm text-amber-100">Membership checkout is paused for this beta while payment settlement and support operations are completed.</div>}
         {error && <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
         {activeMembership && <div className="surface-1 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-mono uppercase text-emerald-300">Active membership</p><p className="font-display font-bold">{activeMembership.tier} · valid until {new Date(activeMembership.expiresAt ?? '').toLocaleDateString()}</p></div><Button variant="outline" onClick={() => void cancelMembership()} className="rounded-xl text-xs font-bold">Cancel membership</Button></div>}
 
@@ -166,7 +172,7 @@ export default function FanClubSubscriptions() {
               <div><h3 className="font-display font-bold text-lg">{tier.name}</h3><p className="text-xs text-muted-foreground font-mono mt-0.5">Cancel before the next purchase anytime</p></div>
               <ul className="space-y-2.5 pt-4 border-t border-border/30 text-xs"><li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /><span>Access is granted only after server verification</span></li>{tier.perks.map((perk) => <li key={perk} className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /><span>{perk}</span></li>)}</ul>
             </div>
-            <div className="pt-6"><Button onClick={() => void handleSubscribe(tier)} disabled={Boolean(payingTier) || Boolean(activeMembership) || !creatorId} className={cn('w-full rounded-2xl font-bold text-xs h-11 shadow-lg', tier.popular ? 'bg-primary text-primary-foreground glow-neon-primary' : 'bg-muted/40 hover:bg-muted text-foreground')}>{payingTier === tier.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : activeMembership ? 'Membership active' : creatorId ? `Join for ₹${tier.price}` : 'Select a creator first'}</Button></div>
+            <div className="pt-6"><Button onClick={() => void handleSubscribe(tier)} disabled={!publicBetaConfig.paymentsEnabled || Boolean(payingTier) || Boolean(activeMembership) || !creatorId} className={cn('w-full rounded-2xl font-bold text-xs h-11 shadow-lg', tier.popular ? 'bg-primary text-primary-foreground glow-neon-primary' : 'bg-muted/40 hover:bg-muted text-foreground')}>{payingTier === tier.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : activeMembership ? 'Membership active' : !publicBetaConfig.paymentsEnabled ? 'Payments paused' : creatorId ? `Join for ₹${tier.price}` : 'Select a creator first'}</Button></div>
           </div>)}
         </div>
       </div>

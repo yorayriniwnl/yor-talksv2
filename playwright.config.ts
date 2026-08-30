@@ -21,6 +21,18 @@ export default defineConfig({
     env: {
       ...process.env,
       VITE_REALTIME_ENABLED: "false",
+      VITE_PUBLIC_BETA: "true",
+      VITE_TERMS_VERSION: "test-public-beta-1",
+      VITE_MINIMUM_AGE: "18",
+      VITE_LEGAL_OPERATOR_NAME: "Yor Talks Test Operator",
+      VITE_LEGAL_OPERATOR_ADDRESS: "1 Test Street, Bhubaneswar, India",
+      VITE_LEGAL_EFFECTIVE_DATE: "2026-08-30",
+      VITE_LEGAL_GOVERNING_LAW: "India",
+      VITE_PRIVACY_CONTACT_EMAIL: "privacy@example.test",
+      VITE_SUPPORT_EMAIL: "support@example.test",
+      VITE_GRIEVANCE_OFFICER_NAME: "Yor Talks Test Officer",
+      VITE_GRIEVANCE_CONTACT_EMAIL: "grievance@example.test",
+      VITE_GOOGLE_CLIENT_ID: "test.apps.googleusercontent.com",
     },
   },
   projects: [

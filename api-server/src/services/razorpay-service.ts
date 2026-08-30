@@ -97,7 +97,7 @@ export class RazorpayService {
   }
 
   verifySignature(orderId: string, paymentId: string, signature: string): boolean {
-    if (!env.RAZORPAY_KEY_SECRET || !signature) {
+    if (!env.PAYMENTS_ENABLED || !env.RAZORPAY_KEY_SECRET || !signature) {
       return false;
     }
     const expected = createHmac("sha256", env.RAZORPAY_KEY_SECRET)

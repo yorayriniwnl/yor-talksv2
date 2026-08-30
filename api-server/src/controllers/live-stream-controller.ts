@@ -16,8 +16,15 @@ export class LiveStreamController {
     if (!hostId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const stream = await this.liveStreamService.createStream({ ...req.body, hostId });
-    return res.status(201).json(createResponse("Stream scheduled", stream));
+    try {
+      const stream = await this.liveStreamService.createStream({ ...req.body, hostId });
+      return res.status(201).json(createResponse("Stream scheduled", stream));
+    } catch (error) {
+      if (error instanceof LiveKitNotConfiguredError) {
+        return res.status(503).json(createResponse("Live video is unavailable", null, {}, [error.message]));
+      }
+      throw error;
+    }
   };
 
   list = async (req: Request, res: Response) => {

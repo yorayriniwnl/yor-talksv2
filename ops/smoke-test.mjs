@@ -20,6 +20,17 @@ for (const header of ["x-content-type-options", "x-frame-options", "referrer-pol
   }
 }
 
+const referencedAssets = [...webHtml.matchAll(/(?:src|href)=["'](\/assets\/[^"']+)["']/g)].map((match) => match[1]);
+if (referencedAssets.length === 0) throw new Error("/ does not reference a built asset bundle");
+for (const assetPath of new Set(referencedAssets)) {
+  await check(assetPath, undefined, 200);
+}
+const serviceWorker = await check("/sw.js", undefined, 200);
+const serviceWorkerCache = serviceWorker.headers.get("cache-control") || "";
+if (!/no-cache/i.test(serviceWorkerCache) || !/no-store/i.test(serviceWorkerCache)) {
+  throw new Error("/sw.js must be served with no-cache and no-store headers");
+}
+
 const readiness = await check("/api/readyz", undefined, 200);
 const readinessBody = await readiness.json();
 if (readinessBody.status !== "healthy" || readinessBody.services?.database !== "up" || readinessBody.services?.redis !== "up") {

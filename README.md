@@ -113,7 +113,8 @@ After changing provider variables:
 
 ```bash
 docker compose up --build -d api web
-docker compose exec api pnpm --filter @workspace/db push
+# For an existing populated database, take a backup first and run the
+# additive/idempotent beta migration. Never run `push --force` against it.
 docker compose exec api pnpm --filter @workspace/db migrate:beta
 ```
 
@@ -121,7 +122,11 @@ docker compose exec api pnpm --filter @workspace/db migrate:beta
 marketplace-save, story-view, and story-reaction tables before removing their
 legacy JSON relationship columns. Take a database backup before applying it to
 an existing deployment. The migration is idempotent so it can also run after a
-fresh schema push.
+fresh schema push. For a brand-new empty database, use
+`docker compose -f docker-compose.production.yml run --rm migrate` (which runs
+`migrate:production`) before starting the API. Use `pnpm --filter
+@workspace/db push` only for additive changes on an empty/local database, and
+review its SQL prompt before accepting it.
 
 Check `docker compose logs api` for provider warnings. A warning means that
 feature remains unavailable; it does not prevent the rest of the beta from
@@ -132,10 +137,11 @@ starting.
 1. Start dependencies: `docker compose up -d postgres redis`.
 2. Copy `api-server/.env.example` to `api-server/.env` and set local secrets.
 3. Install packages from the root: `pnpm install`.
-4. Push the schema: `pnpm --filter @workspace/db push`.
-5. Install the idempotent beta indexes: `pnpm --filter @workspace/db migrate:beta`.
-6. Start the API: `pnpm --filter @workspace/api-server dev`.
-7. Start the frontend in another terminal: `pnpm --filter @workspace/social dev`.
+4. On an existing local database, take a backup and run
+   `pnpm --filter @workspace/db migrate:beta`; use `push` only when creating an
+   empty database or after reviewing an additive change.
+5. Start the API: `pnpm --filter @workspace/api-server dev`.
+6. Start the frontend in another terminal: `pnpm --filter @workspace/social dev`.
 
 The Vite server runs on port 5173 and proxies `/api` and `/socket.io` to the
 API on port 4000.
@@ -189,6 +195,13 @@ through a public scraper configuration.
 - Configure and test Resend, Cloudinary, and one moderation provider before
   launch. Razorpay test mode and LiveKit Cloud are required before enabling
   their respective payment and live-room surfaces.
+- Set `PUBLIC_BETA=true` only after replacing every legal/operator placeholder,
+  publishing the effective date and grievance contact, and using the same
+  `TERMS_VERSION` in the API and frontend build. The frontend build fails closed
+  when these values are missing.
+- Keep `PAYMENTS_ENABLED`, `LIVE_ROOMS_ENABLED`, `WEB_PUSH_ENABLED`, and
+  `RTC_CALLS_ENABLED` false until their provider, moderation, support and
+  incident-response runbooks are exercised in the deployed environment.
 - Verify the Razorpay flow with a successful test order, a failed payment, and
   a duplicate callback before switching to live keys.
 - Confirm the browser can reach the LiveKit WebSocket URL from the deployed

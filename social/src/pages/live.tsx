@@ -14,6 +14,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80';
 
@@ -224,7 +225,7 @@ export default function Live() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (params?.id) return;
+    if (!publicBetaConfig.liveRoomsEnabled || params?.id) return;
     let active = true;
     api.getStreams()
       .then((data) => { if (active) setStreams(data); })
@@ -232,6 +233,10 @@ export default function Live() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [params?.id]);
+
+  if (!publicBetaConfig.liveRoomsEnabled) {
+    return <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6"><section className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-8 text-center"><Radio className="mx-auto h-10 w-10 text-amber-300" /><h1 className="mt-4 font-display text-3xl font-black tracking-tight">Live rooms are paused</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Live streaming will open after the public beta completes provider, moderation, and incident-response checks. Your core social experience is available now.</p></section></main>;
+  }
 
   if (params?.id) return <LiveRoom streamId={params.id} />;
 
