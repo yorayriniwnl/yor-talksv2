@@ -72,6 +72,12 @@ export class LiveStreamService {
   }
 
   async getRoomAccessToken(id: string, userId: string) {
+    // Reject disabled or incomplete LiveKit deployments before touching stream
+    // data. This keeps a disabled feature uniformly unavailable and avoids
+    // exposing whether a stream ID exists through different error responses.
+    if (!this.liveKitService.isConfigured()) {
+      throw new LiveKitNotConfiguredError();
+    }
     const stream = await this.liveStreamRepository.findById(id);
     if (!stream) {
       throw new LiveStreamNotFoundError("Stream not found");
