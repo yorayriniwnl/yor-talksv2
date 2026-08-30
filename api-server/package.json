@@ -14,7 +14,7 @@
     "seed": "node --import tsx ./src/scripts/seed-database.ts",
     "seed-massive": "node --import tsx ./src/scripts/seed-massive.ts",
     "seed-ultra": "node --import tsx ./src/scripts/seed-ultra-massive.ts",
-    "test": "node --import tsx --test src/__tests__/*.test.ts"
+    "test": "tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {
     "@types/web-push": "^3.6.4",
