@@ -10,12 +10,13 @@ import { PostService } from "../services/post-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { commentSchema, createPostSchema, editPostSchema, pollVoteSchema, repostSchema, replySchema } from "../validators/post.js";
 import { postIdParamSchema, userIdParamSchema, commentIdParamSchema } from "../validators/params.js";
+import { mediaRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const postService = new PostService(new PostRepository(), new UserRepository(), new NotificationRepository(), new QueueService());
 const postController = new PostController(postService);
 
-router.post("/posts/upload-image", authenticate, upload.single("image"), postController.uploadImage);
+router.post("/posts/upload-image", authenticate, mediaRateLimiter, upload.single("image"), postController.uploadImage);
 router.post("/posts", authenticate, validateBody(createPostSchema), postController.createPost);
 router.get("/posts/saved", authenticate, postController.saved);
 router.get("/posts/liked", authenticate, postController.liked);

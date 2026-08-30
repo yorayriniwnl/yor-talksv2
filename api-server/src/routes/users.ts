@@ -14,6 +14,7 @@ import { followRequestIdParamSchema, userIdParamSchema, usernameParamSchema } fr
 import { AccountService } from "../services/account-service.js";
 import { AuthController } from "../controllers/auth-controller.js";
 import { acceptTermsSchema } from "../validators/auth.js";
+import { mediaRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const userRepository = new UserRepository();
@@ -31,7 +32,7 @@ router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), user
 router.get("/users/by-username/:username", authenticate, validateParams(usernameParamSchema), userController.getProfileByUsername);
 router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);
 router.put("/users/me", authenticate, validateBody(updateProfileSchema), userController.updateProfile);
-router.post("/users/me/avatar", authenticate, imageUpload.single("avatar"), userController.uploadAvatar);
+router.post("/users/me/avatar", authenticate, mediaRateLimiter, imageUpload.single("avatar"), userController.uploadAvatar);
 router.post("/users/:userId/follow", authenticate, validateParams(userIdParamSchema), userController.followUser);
 router.post("/users/:userId/unfollow", authenticate, validateParams(userIdParamSchema), userController.unfollowUser);
 router.get("/users/:userId/followers", authenticate, validateParams(userIdParamSchema), userController.followers);

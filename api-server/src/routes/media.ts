@@ -4,6 +4,7 @@ import { MediaProviderNotConfiguredError, StorageService } from "../services/sto
 import { assertValidUploadedFile, upload } from "../middlewares/upload.js";
 import { authenticate } from "../middlewares/auth.js";
 import { createResponse } from "../utils/response.js";
+import { mediaRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const mediaService = new MediaService();
@@ -13,6 +14,7 @@ const storageService = new StorageService();
 router.post(
   "/media/upload",
   authenticate,
+  mediaRateLimiter,
   upload.single("file"),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -41,6 +43,7 @@ router.post(
 router.post(
   "/media/presign",
   authenticate,
+  mediaRateLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const filename = typeof req.body?.filename === "string" ? req.body.filename.trim() : "";

@@ -9,11 +9,12 @@ import { grievanceSchema, grievanceStatusSchema, grievanceTicketParamSchema } fr
 import { reportSchema, reportStatusSchema } from "../validators/report.js";
 import { reportIdParamSchema } from "../validators/params.js";
 import { ModerationService } from "../services/moderation-service.js";
+import { grievanceStatusRateLimiter, grievanceSubmitRateLimiter, reportRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const moderationService = new ModerationService();
 
-router.post("/grievance", validateBody(grievanceSchema), async (req, res) => {
+router.post("/grievance", grievanceSubmitRateLimiter, validateBody(grievanceSchema), async (req, res) => {
   try {
     const ticket = await moderationService.fileGrievance(req.body);
     return res.status(201).json({
@@ -28,7 +29,7 @@ router.post("/grievance", validateBody(grievanceSchema), async (req, res) => {
   }
 });
 
-router.get("/grievance/:ticketId", validateParams(grievanceTicketParamSchema), async (req, res) => {
+router.get("/grievance/:ticketId", grievanceStatusRateLimiter, validateParams(grievanceTicketParamSchema), async (req, res) => {
   const ticketId = typeof req.params.ticketId === "string" ? req.params.ticketId : "";
   const ticket = await moderationService.getGrievanceStatus(ticketId);
   if (!ticket) {
@@ -61,7 +62,7 @@ router.patch("/grievance/:ticketId/status", authenticate, requireRole("admin", "
   }
 });
 
-router.post("/", authenticate, validateBody(reportSchema), async (req, res) => {
+router.post("/", authenticate, reportRateLimiter, validateBody(reportSchema), async (req, res) => {
   try {
     const { entityType, entityId, reason, details } = req.body;
     
