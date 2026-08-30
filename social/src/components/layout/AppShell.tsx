@@ -110,7 +110,7 @@ export function AppShell({ children }: AppShellProps) {
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'User';
 
   return (
-    <div className="app-shell operator-ui relative flex min-h-screen overflow-hidden bg-background font-sans text-foreground">
+    <div className="app-shell operator-ui relative flex min-h-screen overflow-x-clip bg-background font-sans text-foreground">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <CommandPalette />
       {isOffline && (

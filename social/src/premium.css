@@ -263,12 +263,15 @@ body {
 }
 
 .premium-topbar__heading {
+  overflow: hidden;
   margin: 0;
   color: hsl(var(--foreground));
   font-family: var(--app-font-display);
   font-size: 1rem;
   font-weight: 750;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .premium-topbar__mobile-mark {
@@ -727,8 +730,12 @@ body {
 
   .premium-topbar__title {
     min-width: 0;
-    flex: 1;
+    flex: 0 1 auto;
   }
+
+  .premium-topbar__title > div { min-width: 0; }
+
+  .premium-topbar__actions { gap: 0.25rem; }
 
   .premium-topbar__mobile-mark {
     display: grid;

@@ -33,11 +33,12 @@ export function WorldSelector({ compact = false }: WorldSelectorProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={cn('inline-flex min-w-0 items-center gap-2 rounded-2xl border border-border/50 bg-background/45 text-left text-xs font-bold transition hover:border-primary/50 hover:bg-primary/5', compact ? 'px-2.5 py-2' : 'px-3 py-2.5')}
+        className={cn('world-selector-button inline-flex min-w-0 items-center gap-2 rounded-2xl border border-border/50 bg-background/45 text-left text-xs font-bold transition hover:border-primary/50 hover:bg-primary/5', compact ? 'px-2.5 py-2' : 'px-3 py-2.5')}
         aria-label={`Open world settings for ${preferences.worldLabel}`}
+        data-compact={compact || undefined}
       >
         <Globe2 className="h-4 w-4 shrink-0 text-primary" />
-        <span className={cn('truncate', compact && 'max-w-20 sm:max-w-28')}>{preferences.worldLabel}</span>
+        <span className={cn('world-selector-button__label truncate', compact && 'max-w-20 sm:max-w-28')}>{preferences.worldLabel}</span>
         <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </button>
 
