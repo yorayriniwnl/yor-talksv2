@@ -123,6 +123,7 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [selected, setSelected] = useState<BackendUser | null>(null);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); return; }
@@ -139,6 +140,7 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const handleSend = async () => {
     if (!selected || !content.trim()) return;
     setSending(true);
+    setSendError('');
     try {
       await sendDirectMessage(selected.id, content.trim());
       onOpenChange(false);
@@ -148,7 +150,8 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       const conv = useAppStore.getState().conversations.find((c) => c.participantIds.includes(selected.id));
       if (conv) setLocation(`/messages/${conv.id}`);
     } catch (err) {
-      console.error('Failed to send message', err);
+      setSendError('Could not send this message. Your draft is still here.');
+      toast.error('Message not sent. Your draft is still here.');
     }
     setSending(false);
   };
@@ -161,7 +164,7 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
           <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search people" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus className="pl-9 surface-1 border-none rounded-xl" />
+              <Input placeholder="Search people" aria-label="Search people to message" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus className="pl-9 surface-1 border-none rounded-xl" />
             </div>
             <div className="max-h-64 overflow-y-auto space-y-1 thin-scrollbar">
               {results.map((u) => (
@@ -177,7 +180,7 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-xl surface-1">
+              <div className="flex items-center gap-3 p-3 rounded-xl surface-1">
               <Avatar className="w-10 h-10"><AvatarImage src={selected.avatarUrl ?? undefined} /><AvatarFallback>{(selected.fullName || selected.username).charAt(0)}</AvatarFallback></Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{selected.fullName || selected.username}</p>
@@ -185,8 +188,9 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
               </div>
               <button onClick={() => setSelected(null)} className="text-xs text-primary font-medium hover:underline px-2 cursor-pointer">Change</button>
             </div>
-            <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write a message…" className="w-full min-h-[100px] rounded-xl border border-transparent surface-1 p-3 text-[15px] outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/30 transition-all resize-none" autoFocus />
-            <Button onClick={handleSend} disabled={!content.trim() || sending} className="w-full rounded-xl py-6 cursor-pointer">{sending ? 'Sending…' : 'Send message'}</Button>
+            {sendError && <div className="operator-message-dialog__error" role="alert">{sendError}</div>}
+            <textarea value={content} onChange={(e) => { setContent(e.target.value); setSendError(''); }} placeholder="Write a message…" aria-label="Message" className="w-full min-h-[100px] rounded-xl border border-transparent surface-1 p-3 text-[15px] outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/30 transition-all resize-none" autoFocus />
+            <Button onClick={handleSend} disabled={!content.trim() || sending} aria-busy={sending} className="w-full rounded-xl py-6 cursor-pointer">{sending ? 'Sending…' : 'Send message'}</Button>
           </div>
         )}
       </DialogContent>
@@ -344,6 +348,7 @@ export default function Messages() {
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -486,6 +491,7 @@ export default function Messages() {
       : message.trim();
 
     setSending(true);
+    setSendError('');
     setPulseSend(true);
     sounds.playPop();
 
@@ -499,7 +505,8 @@ export default function Messages() {
       stopTyping();
       if (inputRef.current) inputRef.current.style.height = 'auto';
     } catch {
-      toast.error('Failed to send message');
+      setSendError('Could not send this message. Your draft is still here.');
+      toast.error('Message not sent. Your draft is still here.');
     } finally {
       setSending(false);
       setTimeout(() => setPulseSend(false), 300);
@@ -752,7 +759,7 @@ export default function Messages() {
                         <div>
                           <Input
                             value={imageAttachment}
-                            onChange={(e) => setImageAttachment(e.target.value)}
+                            onChange={(e) => { setImageAttachment(e.target.value); setSendError(''); }}
                             placeholder="Paste a direct image URL"
                             aria-label="Image URL"
                           />
@@ -801,6 +808,7 @@ export default function Messages() {
                         maxLength={MAX_MESSAGE_LENGTH}
                         onChange={(e) => {
                           setMessage(e.target.value);
+                          setSendError('');
                           signalTyping(id);
                         }}
                         onInput={(event) => {
@@ -815,11 +823,13 @@ export default function Messages() {
                         }}
                         placeholder="Write a direct message…"
                         aria-label="Message"
+                        aria-describedby={sendError ? 'operator-composer-error' : undefined}
                       />
 
                       <Button
                         size="icon"
                         disabled={(!message.trim() && !imageAttachment.trim()) || sending}
+                        aria-busy={sending}
                         onClick={handleSend}
                         className="operator-composer__send"
                         data-pulse={pulseSend || undefined}
@@ -828,6 +838,12 @@ export default function Messages() {
                         <SendHorizontal aria-hidden="true" />
                       </Button>
                     </div>
+                    {sendError && (
+                      <div id="operator-composer-error" className="operator-composer-error" role="alert">
+                        <span>{sendError}</span>
+                        <button type="button" onClick={() => void handleSend()} disabled={sending}>Retry</button>
+                      </div>
+                    )}
                     <div className="operator-composer__hint">
                       <span>{vanishMode ? 'Vanish mode is on' : 'Enter to send · Shift + Enter for a new line'}</span>
                       {message.length > MAX_MESSAGE_LENGTH * 0.8 && <span>{message.length}/{MAX_MESSAGE_LENGTH}</span>}

@@ -501,6 +501,39 @@
 .operator-composer__controls .operator-composer__send[data-pulse='true'] { animation: operator-send-pulse 300ms ease; }
 .operator-composer__hint { display: flex; min-height: 0.7rem; align-items: center; justify-content: space-between; padding-inline: 5.35rem 3rem; color: hsl(var(--muted-foreground) / 0.7); font-family: var(--app-font-mono); font-size: 0.48rem; gap: 1rem; }
 
+.operator-composer-error,
+.operator-message-dialog__error {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid hsl(var(--destructive) / 0.28);
+  border-radius: 0.65rem;
+  background: hsl(var(--destructive) / 0.08);
+  color: hsl(var(--destructive));
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.operator-composer-error span { min-width: 0; }
+
+.operator-composer-error button {
+  flex: 0 0 auto;
+  min-height: 1.8rem;
+  padding-inline: 0.65rem;
+  border: 1px solid hsl(var(--destructive) / 0.35);
+  border-radius: 0.45rem;
+  color: hsl(var(--destructive));
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.operator-composer-error button:hover { background: hsl(var(--destructive) / 0.12); }
+.operator-composer-error button:disabled { cursor: wait; opacity: 0.55; }
+.operator-message-dialog__error { display: block; }
+
 .operator-composer-reply {
   display: grid;
   min-height: 2.65rem;

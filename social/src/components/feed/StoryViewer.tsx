@@ -137,7 +137,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
       toast.success('Reply sent to story author! 💬');
       setReactionText('');
     } catch {
-      // toast will handle error
+      toast.error('Reply not sent. Try again when you are ready.');
     } finally {
       setIsSendingReply(false);
     }

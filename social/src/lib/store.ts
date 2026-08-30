@@ -1469,7 +1469,6 @@ export const useAppStore = create<AppState>()(
             return { messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: [...existing, newMsg] }, conversations };
           });
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not send the message');
           throw error;
         }
       },
@@ -1488,7 +1487,6 @@ export const useAppStore = create<AppState>()(
             };
           });
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not send the message');
           throw error;
         }
       },
