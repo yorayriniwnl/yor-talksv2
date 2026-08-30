@@ -85,7 +85,9 @@ export class UserController {
     if (!result) {
       return res.status(404).json(createResponse("Target user not found", null, {}, ["Target user not found"]));
     }
-    return res.status(200).json(createResponse("User followed", { follower: toOwnUser(result.follower), target: toPublicUser(result.target) }));
+    return res.status(200).json(createResponse(result.status === "pending" ? "Follow request sent" : "User followed", {
+      follower: toOwnUser(result.follower), target: toPublicUser(result.target), status: result.status,
+    }));
   };
 
   unfollowUser = async (req: Request, res: Response) => {
