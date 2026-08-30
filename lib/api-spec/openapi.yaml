@@ -3281,6 +3281,59 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /reports/grievance/{ticketId}/status:
+    patch:
+      operationId: patchReportsGrievanceByTicketIdStatus
+      summary: Patch /reports/grievance/{ticketId}/status
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+  /reports/grievances:
+    get:
+      operationId: getReportsGrievances
+      summary: Get /reports/grievances
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
   /reports/queue:
     get:
       operationId: getReportsQueue
@@ -4356,6 +4409,31 @@ paths:
       tags: [users]
       security:
         - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /users/me/consent:
+    post:
+      operationId: postUsersMeConsent
+      summary: Post /users/me/consent
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
           description: Successful response

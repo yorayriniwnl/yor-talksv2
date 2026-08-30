@@ -9,6 +9,7 @@ import { api } from '@/lib/api-client';
 import { useAppStore, type Product } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
 
@@ -45,6 +46,10 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
   const [error, setError] = useState('');
 
   const startPurchase = async () => {
+    if (!publicBetaConfig.paymentsEnabled) {
+      toast.info('Creator-store payments are not enabled for this public beta.');
+      return;
+    }
     setPaying(true);
     setError('');
     try {
@@ -89,6 +94,10 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
       setPaying(false);
     }
   };
+
+  if (!publicBetaConfig.paymentsEnabled) {
+    return <span className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[0.68rem] font-bold text-amber-200">Payments paused</span>;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

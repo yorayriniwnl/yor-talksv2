@@ -1214,6 +1214,30 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "patch",
+    "path": "/reports/grievance/{ticketId}/status",
+    "operationId": "patchReportsGrievanceByTicketIdStatus",
+    "tag": "reports",
+    "summary": "Patch /reports/grievance/{ticketId}/status",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/reports/grievances",
+    "operationId": "getReportsGrievances",
+    "tag": "reports",
+    "summary": "Get /reports/grievances",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
     "method": "get",
     "path": "/reports/queue",
     "operationId": "getReportsQueue",
@@ -1600,6 +1624,15 @@ export const apiRouteCatalog = [
     "operationId": "getUsersMeCloseFriends",
     "tag": "users",
     "summary": "Get /users/me/close-friends",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/consent",
+    "operationId": "postUsersMeConsent",
+    "tag": "users",
+    "summary": "Post /users/me/consent",
     "authenticated": true,
     "roles": []
   },

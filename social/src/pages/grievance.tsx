@@ -10,6 +10,7 @@ import { api } from '@/lib/api-client';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 export default function GrievancePortal() {
   const [activeTab, setActiveTab] = useState<'file' | 'track'>('file');
@@ -84,7 +85,7 @@ export default function GrievancePortal() {
           Grievance Redressal & Trust Portal 🇮🇳
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
-          Submit a report to the Yor Talks trust queue. Formal statutory officer details and legal policy publication are launch prerequisites and are shown only after appointment.
+          Submit a report to the Yor Talks trust queue. You will receive a ticket ID, status updates, and a human-review path.
         </p>
 
         {/* Tab Switcher */}
@@ -270,9 +271,10 @@ export default function GrievancePortal() {
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
           <Building className="w-4 h-4 text-primary" /> Statutory Grievance Redressal Officer
         </h4>
-        <p><strong>Officer:</strong> Appointed grievance officer details are not configured yet.</p>
-        <p><strong>Contact:</strong> The official contact address must be published before statutory production launch.</p>
-        <p><strong>Beta handling:</strong> Tickets are persisted, assigned for review, and can be tracked with the ticket ID.</p>
+        <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
+        <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>
+        <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured in this development build.'}</p>
+        <p><strong>Handling:</strong> Tickets are persisted, assigned for review, and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'wouter';
 import { ArrowLeft, FileText, ShieldCheck, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { legalConfigReady, publicBetaConfig } from '@/lib/public-beta-config';
 
 type LegalDocument = {
   title: string;
@@ -9,50 +10,71 @@ type LegalDocument = {
   sections: Array<{ heading: string; body: string }>;
 };
 
-const documents: Record<string, LegalDocument> = {
-  '/privacy': {
-    title: 'Privacy Policy',
-    eyebrow: 'Yor Talks · global trust center',
-    intro: 'This draft explains the data Yor Talks uses to operate a global social platform. It must be reviewed, approved and dated by the product owner and legal adviser before production launch.',
-    sections: [
-      { heading: 'What we collect', body: 'We collect your verified email, account credentials, profile details, content you publish, follows, messages, reports and safety settings. Passwords are stored as one-way hashes. We do not store your raw address book for IRL Shield; selected contact identifiers are normalized into keyed match digests.' },
-      { heading: 'Why we use it', body: 'We use this information to authenticate accounts, provide social features, prevent abuse, apply audience safety controls, respond to reports, maintain security logs and improve the service. We do not sell personal data.' },
-      { heading: 'Sharing and providers', body: 'Content and account data may be processed by infrastructure and service providers required to run the product, such as Postgres, Redis, media storage, email delivery, realtime rooms and error/operational tooling. Production provider contracts, regions and subprocessor notices must be confirmed before launch.' },
-      { heading: 'Your controls', body: 'You can change privacy settings, block users, manage IRL Shield entries, export your account data and permanently delete your account after password confirmation. Legal retention may apply to de-identified financial or safety records.' },
-      { heading: 'Security and retention', body: 'Sessions use short-lived access tokens and an HttpOnly refresh cookie. We retain account and safety data only as long as needed for the stated purposes or a documented legal obligation. The production retention schedule, incident contact and deletion timelines must be approved before launch.' },
-      { heading: 'Contact', body: 'An official privacy contact address and effective date are still required. Do not treat this draft as final legal advice or a substitute for a signed privacy notice.' },
-    ],
-  },
-  '/terms': {
-    title: 'Terms of Use',
-    eyebrow: 'Yor Talks · terms draft',
-    intro: 'These draft terms govern use of Yor Talks. They require owner acceptance, an effective date and legal review before production launch.',
-    sections: [
-      { heading: 'Eligibility and account security', body: 'Access is available to people who control a verified email accepted by this deployment’s registration policy. Keep your password and authenticator codes private. Do not create accounts for other people or evade a safety restriction.' },
-      { heading: 'Your content', body: 'You retain ownership of content you submit, and grant Yor Talks the limited permission needed to host, display, transmit and moderate it for the service. Do not upload content you do not have the right to use.' },
-      { heading: 'Prohibited use', body: 'Do not harass, threaten, impersonate, dox, exploit, scam, spam, distribute non-consensual intimate material, target minors, infringe copyright, disrupt the service or attempt unauthorized access.' },
-      { heading: 'Moderation and reports', body: 'Yor Talks may restrict, remove or preserve content, suspend accounts and cooperate with lawful requests when necessary to protect people or the service. Reports and grievances should include enough detail for review.' },
-      { heading: 'Service limits', body: 'The beta may change, pause or remove experimental features. Payments, creator earnings, live rooms and external provider features remain disabled where production credentials or approvals are missing.' },
-      { heading: 'Contact and governing terms', body: 'The legal entity, registered address, support contact, governing law and dispute process must be completed and approved before launch. This draft is not final.' },
-    ],
-  },
-  '/community-guidelines': {
-    title: 'Community Guidelines',
-    eyebrow: 'Make every world feel safer, not smaller',
-    intro: 'Yor is built for expressive communities everywhere. These rules set the baseline for participation and are enforced with context, consistency and an appeal path.',
-    sections: [
-      { heading: 'Protect people', body: 'No threats, harassment, stalking, bullying, hate, targeted humiliation, doxxing, blackmail or encouragement of self-harm. Critique ideas without attacking a person’s identity or safety.' },
-      { heading: 'Consent matters', body: 'Do not share private information, intimate imagery, recordings or identifying material without consent. Never sexualize or exploit minors.' },
-      { heading: 'Be honest', body: 'No impersonation, fraud, phishing, fake giveaways, deceptive engagement, spam, coordinated manipulation or attempts to bypass account restrictions.' },
-      { heading: 'Respect creative work', body: 'Post only material you created or have permission to use. Copyright and takedown requests should include the relevant work and a reliable contact.' },
-      { heading: 'How enforcement works', body: 'We may warn, limit reach, remove content, lock features or suspend accounts. Severe safety risks may be escalated immediately. Mistakes can be reported through the grievance portal; the production appeal owner and response process must be published before launch.' },
-      { heading: 'Report a problem', body: 'Use the report controls on content or visit the grievance portal. Include links, context and timestamps. Do not submit emergencies through Yor; contact local emergency services instead.' },
-    ],
-  },
-};
+const providerSummary = [
+  'Postgres and Redis for account, content, session and queue storage',
+  'Cloudinary (when configured) for uploaded media',
+  'Resend (when configured) for transactional email',
+  'LiveKit (only when enabled) for live rooms',
+].join('; ');
+
+function buildDocuments(): Record<string, LegalDocument> {
+  const identity = publicBetaConfig.publicBeta
+    ? `${publicBetaConfig.operatorName}, ${publicBetaConfig.operatorAddress}`
+    : 'the Yor Talks development operator';
+  const effective = publicBetaConfig.effectiveDate || 'development build';
+  const support = publicBetaConfig.supportEmail || 'the support contact configured by the operator';
+  const privacyContact = publicBetaConfig.privacyContactEmail || support;
+  const grievanceContact = publicBetaConfig.grievanceContactEmail || support;
+  const betaNotice = publicBetaConfig.publicBeta
+    ? `Effective ${effective}. Operator: ${identity}.`
+    : 'This is a local development build and is not a public beta. Do not rely on it as a final legal notice.';
+
+  return {
+    '/privacy': {
+      title: 'Privacy Notice',
+      eyebrow: publicBetaConfig.publicBeta ? 'Yor Talks · public beta trust center' : 'Yor Talks · development trust center',
+      intro: `${betaNotice} This notice explains the personal data processed to provide Yor Talks, protect people, and honor account controls.`,
+      sections: [
+        { heading: 'Data we process', body: 'We process your verified email, account credentials, profile details, content, follows, messages, reports, device/session identifiers, moderation decisions and safety settings. Passwords and one-time credentials are stored as one-way hashes; TOTP seeds are encrypted at rest. We do not retain a raw address book for IRL Shield: selected identifiers are normalized into keyed match digests.' },
+        { heading: 'How we use it', body: 'We use data to authenticate you, deliver social and creator features, personalize feeds, prevent abuse, apply audience controls, answer support and grievance requests, maintain security logs, and improve reliability. We do not sell personal data.' },
+        { heading: 'Providers and disclosures', body: `Data may be processed by providers needed to run the service: ${providerSummary}. We disclose data when you ask us to, when needed to provide a feature, or when required to protect people, the service, or comply with a lawful request. Provider availability is controlled by this beta's feature flags.` },
+        { heading: 'Your controls', body: 'You can edit profile and privacy settings, block or mute accounts, manage IRL Shield entries, export your account data, and permanently delete your account after password confirmation. Some safety, fraud, accounting or legal records may be retained in a minimized form for a documented period.' },
+        { heading: 'Retention and security', body: 'Access tokens are short-lived and refresh credentials are held in an HttpOnly cookie; refresh values and TOTP seeds are protected before storage. We retain data only for the stated purpose, a reasonable safety period, or a documented legal obligation, then delete or de-identify it.' },
+        { heading: 'Contact', body: `Privacy questions: ${privacyContact}. General support: ${support}. Include the account email and enough context for us to locate your request; never send a password or authenticator code.` },
+      ],
+    },
+    '/terms': {
+      title: 'Terms of Use',
+      eyebrow: publicBetaConfig.publicBeta ? `Yor Talks · terms ${publicBetaConfig.termsVersion}` : 'Yor Talks · development terms',
+      intro: `${betaNotice} By using the public beta, you agree to these terms and the Community Guidelines. You must be at least ${publicBetaConfig.minimumAge}.`,
+      sections: [
+        { heading: 'Eligibility and account security', body: `You must be at least ${publicBetaConfig.minimumAge}, provide a verified email accepted by this deployment, and keep your password, recovery links and authenticator codes private. Do not create accounts for other people, impersonate someone, or evade a safety restriction.` },
+        { heading: 'Your content and permission', body: 'You retain rights you hold in content you submit. You grant Yor Talks the limited, non-exclusive permission needed to host, transmit, display, back up and moderate that content for the service. Post only material you created or are authorized to use.' },
+        { heading: 'Prohibited conduct', body: 'Do not threaten, harass, stalk, dox, exploit, scam, spam, phish, distribute non-consensual intimate material, sexualize or target minors, infringe copyright, manipulate engagement, disrupt the service, or attempt unauthorized access.' },
+        { heading: 'Moderation and appeals', body: 'We may warn, reduce reach, remove content, limit features, preserve evidence, or suspend accounts when needed to protect people or the service. Severe safety risks may be escalated immediately. Use the in-product report controls or grievance portal to request human review; include links, timestamps and context.' },
+        { heading: 'Beta limits and optional features', body: `The beta may change, pause or remove experimental features. Payments, live rooms, push alerts and RTC calls are ${publicBetaConfig.paymentsEnabled || publicBetaConfig.liveRoomsEnabled || publicBetaConfig.webPushEnabled || publicBetaConfig.rtcCallsEnabled ? 'enabled only where the interface says so' : 'disabled for this beta'}. No feature creates a promise of earnings, availability or uninterrupted service.` },
+        { heading: 'Contact and governing terms', body: `Support: ${support}. Governing law and dispute information: ${publicBetaConfig.governingLaw || 'to be supplied by the operator before public release'}. The operator for this build is ${identity}.` },
+      ],
+    },
+    '/community-guidelines': {
+      title: 'Community Guidelines',
+      eyebrow: 'Make every world feel safer, not smaller',
+      intro: `${betaNotice} These rules apply to posts, profiles, messages, rooms, comments, marketplace activity and creator spaces.`,
+      sections: [
+        { heading: 'Protect people', body: 'No threats, harassment, stalking, bullying, hate, targeted humiliation, doxxing, blackmail or encouragement of self-harm. Critique ideas without attacking a person’s identity or safety.' },
+        { heading: 'Consent matters', body: 'Do not share private information, intimate imagery, recordings or identifying material without consent. Never sexualize, groom or exploit minors. Do not use Yor to solicit harmful contact with a minor.' },
+        { heading: 'Be honest', body: 'No impersonation, fraud, phishing, fake giveaways, deceptive engagement, spam, coordinated manipulation or attempts to bypass account restrictions.' },
+        { heading: 'Respect creative work', body: 'Post only material you created or have permission to use. Copyright and takedown requests should include the relevant work, location and a reliable contact.' },
+        { heading: 'How enforcement works', body: `We may warn, limit reach, remove content, lock features or suspend accounts. Decisions consider severity, context, repeated behavior and safety risk. You can request human review through the grievance portal; the appointed contact is ${publicBetaConfig.grievanceOfficerName || 'the operator contact shown on that portal'} at ${grievanceContact}.` },
+        { heading: 'Report a problem', body: 'Use report controls on content or visit the grievance portal. Include links, context and timestamps. Do not submit emergencies through Yor; contact local emergency services instead.' },
+      ],
+    },
+  };
+}
 
 export default function LegalPage() {
   const [location] = useLocation();
+  const documents = buildDocuments();
   const document = documents[location] ?? documents['/privacy'];
 
   return (
@@ -67,6 +89,7 @@ export default function LegalPage() {
             <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary"><FileText className="h-4 w-4" /> {document.eyebrow}</p>
             <h1 className="mb-4 text-3xl font-black tracking-tight sm:text-4xl">{document.title}</h1>
             <p className="text-sm leading-7 text-muted-foreground">{document.intro}</p>
+            {publicBetaConfig.publicBeta && legalConfigReady && <p className="mt-4 text-xs font-semibold text-muted-foreground">Version {publicBetaConfig.termsVersion} · Effective {publicBetaConfig.effectiveDate} · Contact {publicBetaConfig.supportEmail}</p>}
           </div>
           <div className="space-y-8">
             {document.sections.map((section) => <section key={section.heading}><h2 className="mb-2 flex items-center gap-2 text-base font-bold"><Scale className="h-4 w-4 text-primary" /> {section.heading}</h2><p className="text-sm leading-7 text-muted-foreground">{section.body}</p></section>)}

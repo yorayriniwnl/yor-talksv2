@@ -14,6 +14,7 @@ import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeMo
 import { sounds } from '@/lib/sound';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
@@ -152,6 +153,10 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
   const [error, setError] = useState('');
 
   const startPurchase = async () => {
+    if (!publicBetaConfig.paymentsEnabled) {
+      toast.info('Marketplace payments are not enabled for this public beta.');
+      return;
+    }
     setPaying(true);
     setError('');
     try {
@@ -189,6 +194,10 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
       setPaying(false);
     }
   };
+
+  if (!publicBetaConfig.paymentsEnabled) {
+    return <span className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[0.68rem] font-bold text-amber-200">Payments paused</span>;
+  }
 
   return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="sm" disabled={product.availability && product.availability !== 'active'} className="rounded-xl font-bold text-xs bg-primary">{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}</Button></DialogTrigger><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Buy {product.title}</DialogTitle></DialogHeader><div className="space-y-4"><p className="text-sm text-muted-foreground">Your payment is verified server-side before the listing is marked sold. Shipping details are shared with the seller for fulfillment.</p><div className="space-y-1.5"><Label htmlFor={`shipping-name-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Recipient name</Label><Input id={`shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} className="rounded-xl" maxLength={100} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-address-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Shipping / pickup details</Label><Textarea id={`shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} className="rounded-xl resize-none" maxLength={1000} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-phone-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Phone (optional)</Label><Input id={`shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} className="rounded-xl" maxLength={24} /></div>{error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}<Button onClick={() => void startPurchase()} disabled={paying || shippingName.trim().length < 2 || shippingAddress.trim().length < 5} className="w-full rounded-2xl font-bold h-11">{paying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : <>Pay ₹{Number(product.price).toLocaleString('en-IN')}</>}</Button></div></DialogContent></Dialog>;
 }

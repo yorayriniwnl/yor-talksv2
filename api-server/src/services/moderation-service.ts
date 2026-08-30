@@ -119,4 +119,24 @@ export class ModerationService {
       .limit(1);
     return (ticket as GrievanceTicket | undefined) ?? null;
   }
+
+  async listGrievances(status?: GrievanceTicket["status"]): Promise<GrievanceTicket[]> {
+    const rows = await db.select().from(grievanceTicketsTable)
+      .where(status ? eq(grievanceTicketsTable.status, status) : undefined)
+      .orderBy(desc(grievanceTicketsTable.createdAt))
+      .limit(200);
+    return rows as GrievanceTicket[];
+  }
+
+  async updateGrievanceStatus(ticketId: string, status: GrievanceTicket["status"], officerNote?: string): Promise<GrievanceTicket | null> {
+    const [updated] = await db.update(grievanceTicketsTable)
+      .set({
+        status,
+        ...(officerNote !== undefined ? { officerNote } : {}),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(grievanceTicketsTable.ticketId, ticketId))
+      .returning();
+    return (updated as GrievanceTicket | undefined) ?? null;
+  }
 }

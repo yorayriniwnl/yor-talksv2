@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 interface UpiTipJarModalProps {
   creator: {
@@ -62,6 +63,10 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
   const [error, setError] = useState('');
 
   const startPayment = async () => {
+    if (!publicBetaConfig.paymentsEnabled) {
+      toast.info('Payments are not enabled for this public beta.');
+      return;
+    }
     setPaying(true);
     setError('');
     try {
@@ -121,6 +126,7 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
         </DialogHeader>
 
         <div className="space-y-4">
+          {!publicBetaConfig.paymentsEnabled && <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-xs leading-relaxed text-amber-100">Payments are paused for this beta while provider settlement and support operations are completed.</div>}
           <div className="grid grid-cols-3 gap-2">
             {[500, 1000, 2500].map((value) => (
               <Button
@@ -144,11 +150,11 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
           {error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}
           <div className="flex items-center justify-center gap-2 text-[0.68rem] text-muted-foreground">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Verified server-side through Razorpay
+            {publicBetaConfig.paymentsEnabled ? 'Verified server-side through Razorpay' : 'Payment controls are disabled for this beta'}
           </div>
-          <Button onClick={startPayment} disabled={paying} className="w-full rounded-2xl font-bold text-xs h-11">
+          <Button onClick={startPayment} disabled={paying || !publicBetaConfig.paymentsEnabled} className="w-full rounded-2xl font-bold text-xs h-11">
             {paying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            {paying ? 'Waiting for payment…' : `Tip ₹${(amountMinor / 100).toFixed(0)}`}
+            {paying ? 'Waiting for payment…' : publicBetaConfig.paymentsEnabled ? `Tip ₹${(amountMinor / 100).toFixed(0)}` : 'Payments paused'}
           </Button>
         </div>
 

@@ -11,3 +11,8 @@ export const grievanceSchema = z.object({
 export const grievanceTicketParamSchema = z.object({
   ticketId: z.string().regex(/^YT-GRV-[A-Z0-9]{10}$/),
 });
+
+export const grievanceStatusSchema = z.object({
+  status: z.enum(["received", "under_review", "resolved", "dismissed"]),
+  officerNote: z.string().trim().max(5000).optional(),
+});

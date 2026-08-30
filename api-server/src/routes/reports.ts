@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { reportsTable } from "@workspace/db/schema";
 import { randomUUID } from "node:crypto";
 import { validateBody, validateParams } from "../middlewares/validation.js";
-import { grievanceSchema, grievanceTicketParamSchema } from "../validators/grievance.js";
+import { grievanceSchema, grievanceStatusSchema, grievanceTicketParamSchema } from "../validators/grievance.js";
 import { reportSchema, reportStatusSchema } from "../validators/report.js";
 import { reportIdParamSchema } from "../validators/params.js";
 import { ModerationService } from "../services/moderation-service.js";
@@ -36,6 +36,29 @@ router.get("/grievance/:ticketId", validateParams(grievanceTicketParamSchema), a
   }
   const { reporterEmail: _reporterEmail, description: _description, ...publicTicket } = ticket;
   return res.status(200).json({ success: true, message: "Grievance status loaded", data: publicTicket, errors: [], meta: {} });
+});
+
+router.get("/grievances", authenticate, requireRole("admin", "moderator"), async (req, res) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    if (status && !["received", "under_review", "resolved", "dismissed"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid grievance status", data: null, errors: ["Invalid status"], meta: {} });
+    }
+    const tickets = await moderationService.listGrievances(status as Parameters<ModerationService["listGrievances"]>[0]);
+    return res.status(200).json({ success: true, message: "Grievance queue loaded", data: tickets, errors: [], meta: {} });
+  } catch {
+    return res.status(500).json({ success: false, message: "Grievance queue could not be loaded", data: null, errors: ["Queue failure"], meta: {} });
+  }
+});
+
+router.patch("/grievance/:ticketId/status", authenticate, requireRole("admin", "moderator"), validateParams(grievanceTicketParamSchema), validateBody(grievanceStatusSchema), async (req, res) => {
+  try {
+    const ticket = await moderationService.updateGrievanceStatus(req.params.ticketId as string, req.body.status, req.body.officerNote);
+    if (!ticket) return res.status(404).json({ success: false, message: "Grievance ticket not found", data: null, errors: ["Ticket not found"], meta: {} });
+    return res.status(200).json({ success: true, message: "Grievance status updated", data: ticket, errors: [], meta: {} });
+  } catch {
+    return res.status(500).json({ success: false, message: "Grievance status could not be updated", data: null, errors: ["Update failure"], meta: {} });
+  }
 });
 
 router.post("/", authenticate, validateBody(reportSchema), async (req, res) => {
