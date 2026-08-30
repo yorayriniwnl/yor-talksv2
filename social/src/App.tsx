@@ -8,6 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { safeInternalRedirect } from '@/lib/safe-redirect';
 
 // Shell & Layout
 import { AppShell } from '@/components/layout/AppShell';
@@ -101,9 +102,9 @@ function ProtectedRoutes() {
   const [location] = useLocation();
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary resetKey={location}>
       <AppShell>
-        <ErrorBoundary>
+        <ErrorBoundary resetKey={location}>
           <Suspense fallback={<RouteSkeleton />}>
             <PageTransition>
               <Switch location={location}>
@@ -191,7 +192,7 @@ function AuthRedirect() {
   const routeSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
   const params = new URLSearchParams(window.location.search || routeSearch);
   const redirect = params.get('redirect');
-  const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/';
+  const safeRedirect = safeInternalRedirect(redirect);
   return <Redirect to={safeRedirect} />;
 }
 
@@ -221,12 +222,12 @@ function Router() {
         <Route path="/privacy" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
+        <Route path="/grievance" component={Grievance} />
         {!currentUser && (
           <>
             <Route path="/auth" component={Auth} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
-            <Route path="/grievance" component={Grievance} />
             <Route>
               <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
             </Route>
@@ -280,7 +281,11 @@ function App() {
       <MotionConfig reducedMotion="user">
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
+            <ErrorBoundary>
+              <Suspense fallback={<RouteSkeleton />}>
+                <Router />
+              </Suspense>
+            </ErrorBoundary>
           </WouterRouter>
           <PushNotificationManager />
           <Toaster />

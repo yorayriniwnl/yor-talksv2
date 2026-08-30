@@ -340,6 +340,7 @@ export function PostCard({ post }: { post: PostType }) {
   const users = useAppStore((state) => state.users);
   const currentUser = useAppStore((state) => state.currentUser);
   const likePost = useAppStore((state) => state.likePost);
+  const loadUserProfile = useAppStore((state) => state.loadUserProfile);
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
   const sharePost = useAppStore((state) => state.sharePost);
@@ -350,10 +351,28 @@ export function PostCard({ post }: { post: PostType }) {
   const { particles, burst: heartBurst } = useHeartBurst();
   const [commentText, setCommentText] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [showHeartOverlay, setShowHeartOverlay] = useState(false);
+  const [authorLoading, setAuthorLoading] = useState(true);
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
+  const retryAuthor = useCallback(async () => {
+    setAuthorLoading(true);
+    try { await loadUserProfile(post.authorId); } finally { setAuthorLoading(false); }
+  }, [loadUserProfile, post.authorId]);
 
-  if (!author) return null;
+  useEffect(() => {
+    if (!author) void retryAuthor();
+  }, [author, retryAuthor]);
+
+  if (!author) return (
+    <article className="p-5" aria-label="Post awaiting creator details">
+      <p className="mb-3 text-sm text-muted-foreground">{authorLoading ? 'Loading creator details…' : 'Creator details are unavailable right now.'}</p>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.content}</p>
+      {!authorLoading && <button type="button" className="mt-3 min-h-11 text-sm text-primary underline" onClick={() => void retryAuthor()}>Retry creator details</button>}
+    </article>
+  );
 
   const copyPostLink = async (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -397,10 +416,6 @@ export function PostCard({ post }: { post: PostType }) {
     if (length < 200) return 'text-base';
     return 'text-sm';
   };
-
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
-  const [showHeartOverlay, setShowHeartOverlay] = useState(false);
 
   const handleDoubleTap = (event: React.MouseEvent) => {
     event.stopPropagation();

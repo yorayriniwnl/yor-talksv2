@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { WorldSelector } from '@/components/worlds/WorldSelector';
+import { hasUnreadConversation } from '@/lib/message-state';
 
 interface AppTopbarProps {
   onCompose: () => void;
@@ -78,7 +79,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
   const [location] = useLocation();
   const currentUser = useAppStore((state) => state.currentUser);
   const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
-  const unreadMessages = useAppStore((state) => state.conversations.filter((conversation) => conversation.lastMessage && !conversation.lastMessage.read).length);
+  const unreadMessages = useAppStore((state) => state.conversations.filter((conversation) => hasUnreadConversation(conversation, state.currentUser?.id)).length);
   const page = getPageLabel(location);
   const displayName = currentUser?.displayName || currentUser?.username || 'You';
 
@@ -108,7 +109,7 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
         <div className="premium-topbar__actions">
           <WorldSelector compact />
 
-          <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread messages` : 'Messages'}>
+          <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread conversations` : 'Messages'}>
             <MessageCircle className="h-[18px] w-[18px]" />
             {unreadMessages > 0 && <span className="premium-notification-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
           </Link>

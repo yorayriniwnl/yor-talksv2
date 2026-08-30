@@ -21,6 +21,7 @@ import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { IncomingCallManager } from '@/components/messages/IncomingCallManager';
 import { CompanionPet } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { hasUnreadConversation } from '@/lib/message-state';
 
 interface AppShellProps {
   children: ReactNode;
@@ -32,7 +33,7 @@ export function AppShell({ children }: AppShellProps) {
   const worldPreferences = useAppStore((state) => state.worldPreferences);
 
   const conversations = useAppStore((state) => state.conversations);
-  const unreadMessages = conversations.filter(c => c.lastMessage && !c.lastMessage.read).length || 0;
+  const unreadMessages = conversations.filter((conversation) => hasUnreadConversation(conversation, currentUser?.id)).length;
   const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {

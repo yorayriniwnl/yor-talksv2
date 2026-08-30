@@ -31,6 +31,7 @@ import {
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
+import { reconcileMessageSnapshot, upsertMessage } from '@/lib/message-state';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
@@ -645,6 +646,9 @@ interface AppState {
   feedCursor: string | null;
   hasMoreFeed: boolean;
   feedMode: FeedMode;
+  feedLoading: boolean;
+  feedLoadingMore: boolean;
+  feedError: string | null;
   favoriteCreatorIds: string[];
   closeFriends: User[];
   authError: string | null;
@@ -773,6 +777,8 @@ interface AppState {
 function clearPrivateSessionState(
   set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
 ): void {
+  feedRequestSequence += 1;
+  profileRequests.clear();
   set({
     currentUser: null,
     tokens: null,
@@ -780,6 +786,9 @@ function clearPrivateSessionState(
     feedCursor: null,
     hasMoreFeed: false,
     feedMode: 'following',
+    feedLoading: false,
+    feedLoadingMore: false,
+    feedError: null,
     favoriteCreatorIds: [],
     closeFriends: [],
     users: {},
@@ -824,6 +833,8 @@ function hydrateSessionData(get: () => AppState): void {
 
 let realtimePollingTimer: number | null = null;
 let feedRequestSequence = 0;
+let sessionInitialization: Promise<void> | null = null;
+const profileRequests = new Map<string, Promise<void>>();
 
 function stopRealtime(): void {
   disconnectSocket();
@@ -856,9 +867,7 @@ function setupRealtime(
     const mapped = mapMessage(raw);
     set((state) => {
       const existing = state.messagesByConversation[mapped.conversationId] ?? [];
-      const messages = existing.some((message) => message.id === mapped.id)
-        ? existing.map((message) => message.id === mapped.id ? mapped : message)
-        : [...existing, mapped];
+      const messages = upsertMessage(existing, mapped);
       const conversations = state.conversations.some((c) => c.id === mapped.conversationId)
         ? state.conversations.map((c) => (c.id === mapped.conversationId ? { ...c, lastMessage: mapped, updatedAt: mapped.createdAt } : c))
         : state.conversations;
@@ -871,14 +880,21 @@ function setupRealtime(
       get().loadConversations();
     }
   });
-  socket.on('message:seen:update', ({ messageId, seenAt }: { messageId?: string; seenAt?: string | null }) => {
+  socket.on('message:seen:update', ({ messageId, userId, seenAt }: { messageId?: string; userId?: string; seenAt?: string | null }) => {
     if (!messageId) return;
     set((state) => {
       const nextMessages = Object.fromEntries(Object.entries(state.messagesByConversation).map(([conversationId, messages]) => [
         conversationId,
-        messages.map((message) => message.id === messageId ? { ...message, read: Boolean(seenAt) } : message),
+        messages.map((message) => message.id === messageId && (userId === state.currentUser?.id || message.senderId === state.currentUser?.id)
+          ? { ...message, read: Boolean(seenAt) } : message),
       ]));
-      return { messagesByConversation: nextMessages };
+      return {
+        messagesByConversation: nextMessages,
+        conversations: state.conversations.map((conversation) => conversation.lastMessage?.id === messageId
+          && (userId === state.currentUser?.id || conversation.lastMessage.senderId === state.currentUser?.id)
+          ? { ...conversation, lastMessage: { ...conversation.lastMessage, read: Boolean(seenAt) } }
+          : conversation),
+      };
     });
   });
   socket.on('conversation:created', () => {
@@ -921,11 +937,14 @@ export const useAppStore = create<AppState>()(
       currentUser: null,
       worldPreferences: DEFAULT_WORLD_PREFERENCES,
       tokens: null,
-      isInitializing: false,
+      isInitializing: true,
       authError: null,
       feedCursor: null,
       hasMoreFeed: false,
       feedMode: 'following',
+      feedLoading: false,
+      feedLoadingMore: false,
+      feedError: null,
       favoriteCreatorIds: [],
       closeFriends: [],
       users: {},
@@ -1082,55 +1101,44 @@ export const useAppStore = create<AppState>()(
         await api.requestPasswordReset(email);
       },
 
-      initialize: async () => {
-        stopRealtime();
-        set({ isInitializing: true });
-        // The access token is intentionally memory-only. Never trust a
-        // persisted profile as an authenticated session after a reload.
-        clearPrivateSessionState(set);
-
-        // Restore a live session from the short-lived access token, or rotate
-        // the HttpOnly refresh cookie after a normal browser reload.
-        let tokens = getStoredTokens();
-        if (!tokens) {
-          tokens = await api.refreshSession();
-        }
-        if (tokens) {
-          try {
-            const meResponse = await api.getCurrentUser();
-            if (meResponse) {
-              const mapped = mapUser(meResponse);
-              set((state) => ({
-                currentUser: mapped,
-                tokens,
-                privacy: mapPrivacy(meResponse),
-                users: { ...state.users, [mapped.id]: mapped },
-              }));
+      initialize: () => {
+        if (sessionInitialization) return sessionInitialization;
+        sessionInitialization = (async () => {
+          stopRealtime();
+          set({ isInitializing: true });
+          // A persisted profile is never proof of a live authenticated session.
+          clearPrivateSessionState(set);
+          let tokens = getStoredTokens();
+          if (!tokens) tokens = await api.refreshSession();
+          if (tokens) {
+            try {
+              const meResponse = await api.getCurrentUser();
+              if (meResponse) {
+                const mapped = mapUser(meResponse);
+                set((state) => ({
+                  currentUser: mapped,
+                  tokens: getStoredTokens(),
+                  privacy: mapPrivacy(meResponse),
+                  users: { ...state.users, [mapped.id]: mapped },
+                }));
+              }
+            } catch {
+              // Do not clear a newer login that completed while this read ran.
+              if (!get().currentUser) setStoredTokens(null);
             }
-          } catch {
-            // Token expired or invalid — remain signed out.
-            setStoredTokens(null);
           }
-        }
 
-        // If still no user after token check, remain signed out.
-        const currentUser = get().currentUser;
-        set((state) => ({
-          currentUser,
-          users: { ...state.users },
-        }));
-
-        // Do not block the signed-out entry point on protected social data.
-        // Auth should be usable even when the feed or a secondary service is
-        // slow, unavailable, or still warming up in the beta environment.
-        if (!currentUser) {
+          // Identity restoration must not wait on optional social datasets.
+          const currentUser = get().currentUser;
+          if (currentUser && !needsTermsAcceptance(currentUser)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
+        })().finally(() => {
           set({ isInitializing: false });
-          return;
-        }
-
-        if (!needsTermsAcceptance(currentUser)) setupRealtime(set, get);
-        set({ isInitializing: false });
-        hydrateSessionData(get);
+          sessionInitialization = null;
+        });
+        return sessionInitialization;
       },
 
       loadWorldPreferences: async () => {
@@ -1147,7 +1155,10 @@ export const useAppStore = create<AppState>()(
 
       loadFeed: async (mode = get().feedMode) => {
         const requestSequence = ++feedRequestSequence;
-        set({ feedMode: mode, feedCursor: null, hasMoreFeed: false });
+        set({
+          feedMode: mode, feedCursor: null, hasMoreFeed: false, feedLoading: true, feedLoadingMore: false, feedError: null,
+          ...(mode !== get().feedMode ? { posts: [] } : {}),
+        });
         try {
           const res = await api.getFeed(mode);
           if (requestSequence !== feedRequestSequence || get().feedMode !== mode) return;
@@ -1155,16 +1166,21 @@ export const useAppStore = create<AppState>()(
           const currentUserId = get().currentUser?.id;
           set({ posts: backendPosts.map((p) => mapPost(p, currentUserId)), feedCursor: res.nextCursor ?? null, hasMoreFeed: Boolean(res.hasMore) });
           return;
-        } catch {
-          // Keep the last successful snapshot during a transient outage.
+        } catch (error) {
+          if (requestSequence === feedRequestSequence) {
+            set({ feedError: error instanceof ApiError ? error.message : 'We could not load your feed. Please try again.' });
+          }
+        } finally {
+          if (requestSequence === feedRequestSequence) set({ feedLoading: false });
         }
       },
 
       loadMoreFeed: async () => {
         const state = get();
-        if (!state.hasMoreFeed || !state.feedCursor) return;
+        if (!state.hasMoreFeed || !state.feedCursor || state.feedLoading || state.feedLoadingMore) return;
         const requestSequence = feedRequestSequence;
         const requestedMode = state.feedMode;
+        set({ feedLoadingMore: true, feedError: null });
         try {
           const res = await api.getFeed(requestedMode, state.feedCursor);
           if (requestSequence !== feedRequestSequence || get().feedMode !== requestedMode) return;
@@ -1177,7 +1193,9 @@ export const useAppStore = create<AppState>()(
             hasMoreFeed: Boolean(res.hasMore),
           }));
         } catch {
-          // Preserve the visible feed when a subsequent page is temporarily unavailable.
+          if (requestSequence === feedRequestSequence) set({ feedError: 'The next posts could not load. Your current feed is still here.' });
+        } finally {
+          if (requestSequence === feedRequestSequence) set({ feedLoadingMore: false });
         }
       },
 
@@ -1287,7 +1305,7 @@ export const useAppStore = create<AppState>()(
           ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
           ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
         });
-        const mapped = mapUser(updated);
+        const mapped = { ...mapUser(updated), followingIds: updated.following ?? get().currentUser?.followingIds ?? [] };
         set((state) => ({
           currentUser: mapped,
           privacy: mapPrivacy(updated),
@@ -1427,9 +1445,15 @@ export const useAppStore = create<AppState>()(
       },
 
       loadConversationMessages: async (conversationId) => {
+        const before = get().messagesByConversation[conversationId] ?? [];
         getSocket()?.emit('conversation:join', { conversationId });
         const messages = await api.getConversationMessages(conversationId);
-        set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
+        set((state) => {
+          // Reconcile events received while this snapshot was in flight. Keep
+          // server deletions authoritative for unchanged, previously cached rows.
+          const merged = reconcileMessageSnapshot(before, state.messagesByConversation[conversationId] ?? [], messages.map(mapMessage));
+          return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
+        });
       },
 
       markDirectMessageSeen: async (messageId) => {
@@ -1444,6 +1468,9 @@ export const useAppStore = create<AppState>()(
                   ? messages.filter((message) => message.id !== updated.id)
                   : messages.map((message) => message.id === updated.id ? updated : message),
               },
+              conversations: state.conversations.map((conversation) => conversation.lastMessage?.id === updated.id
+                ? { ...conversation, lastMessage: updated.deletedAt ? undefined : updated }
+                : conversation),
             };
           });
         } catch {
@@ -1461,7 +1488,7 @@ export const useAppStore = create<AppState>()(
             const conversations = existingConversation
               ? state.conversations.map((conversation) => conversation.id === newMsg.conversationId ? { ...conversation, lastMessage: newMsg, updatedAt: newMsg.createdAt } : conversation)
               : [{ id: newMsg.conversationId, participantIds: [get().currentUser?.id ?? '', recipientId], lastMessage: newMsg, updatedAt: newMsg.createdAt }, ...state.conversations];
-            return { messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: [...existing, newMsg] }, conversations };
+            return { messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: upsertMessage(existing, newMsg) }, conversations };
           });
         } catch (error) {
           throw error;
@@ -1475,7 +1502,7 @@ export const useAppStore = create<AppState>()(
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
             return {
-              messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: [...existing, newMsg] },
+              messagesByConversation: { ...state.messagesByConversation, [newMsg.conversationId]: upsertMessage(existing, newMsg) },
               conversations: state.conversations.map((conversation) => conversation.id === newMsg.conversationId
                 ? { ...conversation, lastMessage: newMsg, updatedAt: newMsg.createdAt }
                 : conversation),
@@ -1553,14 +1580,24 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
-      loadUserProfile: async (userId) => {
-        if (get().users[userId]) return;
-        try {
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
-          const user = isUuid ? await api.getProfile(userId) : await api.getProfileByUsername(userId.replace(/^@/, ""));
-          const mapped = mapUser(user);
-          set((state) => ({ users: { ...state.users, [mapped.id]: mapped } }));
-        } catch {}
+      loadUserProfile: (userId) => {
+        if (get().users[userId]) return Promise.resolve();
+        const pending = profileRequests.get(userId);
+        if (pending) return pending;
+        const request = (async () => {
+          try {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+            const user = isUuid ? await api.getProfile(userId) : await api.getProfileByUsername(userId.replace(/^@/, ''));
+            const mapped = mapUser(user);
+            set((state) => ({ users: { ...state.users, [mapped.id]: mapped } }));
+          } catch {
+            // Callers render a retryable unavailable state instead of hiding posts.
+          }
+        })().finally(() => {
+          if (profileRequests.get(userId) === request) profileRequests.delete(userId);
+        });
+        profileRequests.set(userId, request);
+        return request;
       },
 
       followUser: async (userId) => {

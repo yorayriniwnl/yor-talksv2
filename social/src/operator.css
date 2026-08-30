@@ -774,6 +774,21 @@
   background: transparent;
 }
 
+.home-feed-error {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--destructive) / 0.3);
+  border-radius: 1rem;
+  background: hsl(var(--destructive) / 0.05);
+  font-size: 0.85rem;
+}
+
+.home-feed-error > div { flex: 1; min-width: 0; }
+.home-feed-error p { margin-top: 0.25rem; color: hsl(var(--muted-foreground)); }
+@media (max-width: 480px) { .home-feed-error { flex-wrap: wrap; } }
+
 .operator-home .home-feed-toolbar > div:first-child span {
   color: hsl(var(--signal));
   font-size: 0.5rem;

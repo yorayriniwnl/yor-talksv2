@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import {
   ArrowRight,
+  AlertCircle,
   CircleCheck,
   Compass,
   Globe2,
@@ -82,7 +83,8 @@ export default function Home() {
   const loadMoreFeed = useAppStore((state) => state.loadMoreFeed);
   const favoriteCreatorIds = useAppStore((state) => state.favoriteCreatorIds);
   const hasMoreFeed = useAppStore((state) => state.hasMoreFeed);
-  const isInitializing = useAppStore((state) => state.isInitializing);
+  const feedLoading = useAppStore((state) => state.feedLoading);
+  const feedError = useAppStore((state) => state.feedError);
 
   const [mode, setMode] = useState<OrbitMode>('close');
   const [topic, setTopic] = useState<Topic>('all');
@@ -303,7 +305,15 @@ export default function Home() {
               </div>
             )}
 
-            {isInitializing ? (
+            {feedError && (
+              <div role="alert" className="home-feed-error">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <div><strong>Let’s try that again.</strong><p>{feedError}</p></div>
+                <Button variant="outline" onClick={refresh} disabled={feedLoading}>Retry feed</Button>
+              </div>
+            )}
+
+            {feedLoading && visiblePosts.length === 0 ? (
               <FeedSkeleton count={3} />
             ) : visiblePosts.length > 0 ? (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="orbit-post-list">
@@ -313,7 +323,7 @@ export default function Home() {
                   </ScrollReveal>
                 ))}
               </motion.div>
-            ) : (
+            ) : !feedError ? (
               <section className="orbit-empty operator-panel">
                 {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
                 <h2>{mode === 'build' ? 'No builder signals in this orbit yet.' : mode === 'favorites' ? 'Your Favorites orbit is quiet.' : 'This orbit is quiet.'}</h2>
@@ -322,9 +332,9 @@ export default function Home() {
                   {mode === 'build' ? 'Activate a dream' : mode === 'favorites' ? 'Discover creators' : 'Find people'} <ArrowRight className="h-4 w-4" />
                 </Link>
               </section>
-            )}
+            ) : null}
 
-            {visiblePosts.length > 0 && (
+            {visiblePosts.length > 0 && !feedError && !feedLoading && (
               <section className="orbit-complete operator-panel">
                 <span><CircleCheck className="h-5 w-5" /></span>
                 <div>

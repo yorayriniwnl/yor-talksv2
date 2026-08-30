@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AlertTriangle, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 
-type Props = { children: React.ReactNode };
+type Props = { children: React.ReactNode; resetKey?: string };
 type State = { hasError: boolean; error?: Error; resetKey: number; showDetails: boolean };
 
 export default class ErrorBoundary extends React.Component<Props, State> {
@@ -20,16 +20,19 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     console.error('Uncaught error in UI:', error, info);
   }
 
+  componentDidUpdate(previous: Props) {
+    if (this.state.hasError && previous.resetKey !== this.props.resetKey) this.handleRetry();
+  }
+
   handleRetry() {
     this.setState((s) => ({ hasError: false, error: undefined, resetKey: s.resetKey + 1 }));
   }
 
   handleResetStorage() {
-    if (!window.confirm('Reset local Yor Talks data and reload? This will sign you out on this device.')) return;
+    if (!window.confirm('Reset local Yor Talks preferences and reload? Your saved account data and sign-in session will be kept.')) return;
     try {
       localStorage.removeItem('yortalks-storage');
       localStorage.removeItem('yortalks-tokens');
-      sessionStorage.clear();
     } catch {
       // Ignore
     }

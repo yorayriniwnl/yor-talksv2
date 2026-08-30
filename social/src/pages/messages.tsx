@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
+import { hasUnreadConversation, isUnreadMessage } from '@/lib/message-state';
 import { format, formatDistanceToNow, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
@@ -373,6 +374,8 @@ export default function Messages() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingStopTimeoutRef = useRef<number | null>(null);
   const typingConversationIdRef = useRef<string | null>(null);
+  const messageRequestSequence = useRef(0);
+  const requestedProfiles = useRef(new Set<string>());
 
   const stopTyping = useCallback(() => {
     if (typingStopTimeoutRef.current !== null) {
@@ -411,14 +414,15 @@ export default function Messages() {
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
   const requestConversationMessages = useCallback(async (conversationId: string) => {
+    const sequence = ++messageRequestSequence.current;
     setLoadingMessages(true);
     setMessageLoadError('');
     try {
       await loadConversationMessages(conversationId);
     } catch {
-      setMessageLoadError('Could not load this conversation. Your existing messages are safe. Try again.');
+      if (sequence === messageRequestSequence.current) setMessageLoadError('Could not load this conversation. Your existing messages are safe. Try again.');
     } finally {
-      setLoadingMessages(false);
+      if (sequence === messageRequestSequence.current) setLoadingMessages(false);
     }
   }, [loadConversationMessages]);
 
@@ -428,7 +432,17 @@ export default function Messages() {
       setLoadingMessages(false);
       setMessageLoadError('');
     }
+    return () => { messageRequestSequence.current++; };
   }, [id, requestConversationMessages]);
+
+  useEffect(() => {
+    for (const userId of new Set(conversations.flatMap((conversation) => conversation.participantIds))) {
+      if (userId !== currentUser?.id && !users[userId] && !requestedProfiles.current.has(userId)) {
+        requestedProfiles.current.add(userId);
+        void loadUserProfile(userId);
+      }
+    }
+  }, [conversations, users, currentUser?.id, loadUserProfile]);
 
   const conversationList = useMemo(() => {
     return conversations
@@ -448,12 +462,11 @@ export default function Messages() {
           };
           const msgs = messagesByConversation[conv.id] || [];
           const lastMsg = msgs[msgs.length - 1];
-          const unreadCount = msgs.filter((message) => message.senderId !== currentUser?.id && !message.read).length;
+          const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
           return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, unreadCount };
         }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
-          loadUserProfile(otherId);
           otherUser = {
             id: otherId,
             username: 'User',
@@ -465,14 +478,15 @@ export default function Messages() {
         }
         const msgs = messagesByConversation[conv.id] || [];
         const lastMsg = msgs[msgs.length - 1];
-        const unreadCount = msgs.filter((message) => message.senderId !== currentUser?.id && !message.read).length;
+        const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
         return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
       })
       .filter((entry) =>
         entry.user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-  }, [conversations, users, currentUser?.id, messagesByConversation, searchQuery, loadUserProfile]);
+      )
+      .sort((a, b) => (b.lastMsg?.createdAt ?? b.conv.updatedAt).localeCompare(a.lastMsg?.createdAt ?? a.conv.updatedAt));
+  }, [conversations, users, currentUser?.id, messagesByConversation, searchQuery]);
 
   const activeConv = useMemo(() => {
     if (!id) return null;
