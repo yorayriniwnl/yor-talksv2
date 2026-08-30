@@ -17,7 +17,7 @@ export interface AuditEvent {
  * survive process restarts and are shared across all instances. A 15-minute
  * sliding window is used for abuse detection (≥ 5 events of the same type).
  *
- * Redis key pattern: `security:audit:{type}:{subject}` → sorted set
+ * Redis key pattern: `security:audit:{type}:{subjectHash}` → sorted set
  *   score  = Unix-ms timestamp
  *   member = event ID
  *
@@ -37,20 +37,28 @@ export class SecurityService {
     private readonly redisRepository: RedisRepository = new RedisRepository(),
   ) {}
 
+  private subjectHash(subject: string): string {
+    return crypto.createHash("sha256").update(subject).digest("hex");
+  }
+
   createAuditEvent(type: string, message: string, subject?: string): AuditEvent {
+    // User identifiers are only needed to correlate repeated abuse. Keep both
+    // Redis keys and retained audit records opaque so emails/usernames never
+    // land in logs or admin-visible audit payloads.
+    const hashedSubject = subject ? this.subjectHash(subject) : undefined;
     const event: AuditEvent = {
       id: crypto.randomUUID(),
       type,
       message,
       createdAt: new Date().toISOString(),
-      ...(subject ? { subject } : {}),
+      ...(hashedSubject ? { subject: hashedSubject } : {}),
     };
     logger.warn({ eventId: event.id, type, message }, "Security audit event");
 
     // Fire-and-forget write to Redis. Audit recording must not block the
     // calling auth flow; if Redis is temporarily unavailable the event is
     // still captured in the structured log output above.
-    const effectiveSubject = subject ?? message;
+    const effectiveSubject = hashedSubject ?? this.subjectHash(message);
     const indexKey = `security:audit:${type}:${effectiveSubject}`;
     const score = Date.now();
     const write = (async () => {
@@ -105,7 +113,7 @@ export class SecurityService {
 
   async detectAbuse(subject: string, action: string): Promise<boolean> {
     try {
-      const indexKey = `security:audit:${action}:${subject}`;
+      const indexKey = `security:audit:${action}:${this.subjectHash(subject)}`;
       const cutoff = Date.now() - SecurityService.ABUSE_WINDOW_MS;
       const count = await this.redisRepository.zcount(indexKey, String(cutoff), "+inf");
       return count >= SecurityService.ABUSE_THRESHOLD;

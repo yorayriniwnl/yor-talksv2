@@ -158,23 +158,23 @@ export class AuthService {
     const byEmail = await this.userRepository.findByEmail(normalizedIdentifier);
     const user = byEmail ?? await this.userRepository.findByUsername(normalizedIdentifier);
     if (!user) {
-      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — unknown identifier`, normalizedIdentifier);
+      this.securityService.createAuditEvent("login_failure", "Unknown identifier", normalizedIdentifier);
       throw new Error("Invalid credentials");
     }
 
     if (!isAllowedEmail(user.email)) {
-      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — disallowed account`, normalizedIdentifier);
+      this.securityService.createAuditEvent("login_failure", "Disallowed account", normalizedIdentifier);
       throw new Error("Invalid credentials");
     }
 
     const valid = await bcrypt.compare(input.password, user.passwordHash);
     if (!valid) {
-      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — wrong password`, normalizedIdentifier);
+      this.securityService.createAuditEvent("login_failure", "Wrong password", normalizedIdentifier);
       throw new Error("Invalid credentials");
     }
 
     if (!user.emailVerified) {
-      this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — email not verified`, normalizedIdentifier);
+      this.securityService.createAuditEvent("login_failure", "Email not verified", normalizedIdentifier);
         throw new EmailVerificationRequiredError("Verify your email before signing in");
     }
     this.assertAccountActive(user);
@@ -188,7 +188,7 @@ export class AuthService {
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
-        this.securityService.createAuditEvent("login_failure", `${normalizedIdentifier} — wrong 2FA code`, normalizedIdentifier);
+        this.securityService.createAuditEvent("login_failure", "Wrong 2FA code", normalizedIdentifier);
         throw new Error("Invalid two-factor code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
