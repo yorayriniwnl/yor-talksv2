@@ -55,17 +55,18 @@ export class LiveStreamService {
   }
 
   async getStream(id: string, viewerId?: string): Promise<LiveStreamRecord | undefined> {
+    if (!env.LIVE_ROOMS_ENABLED) return undefined;
     const stream = await this.liveStreamRepository.findById(id);
     return await this.contentSafetyService.isVisible(stream, viewerId, stream?.hostId) ? stream : undefined;
   }
 
   async setStatus(id: string, hostId: string, status: StreamStatus): Promise<LiveStreamRecord | undefined> {
+    if (!env.LIVE_ROOMS_ENABLED || !this.liveKitService.isConfigured()) {
+      throw new LiveKitNotConfiguredError();
+    }
     const stream = await this.liveStreamRepository.findById(id);
     if (!stream || stream.hostId !== hostId) {
       return undefined;
-    }
-    if (status === "live" && !this.liveKitService.isConfigured()) {
-      throw new LiveKitNotConfiguredError();
     }
     return this.liveStreamRepository.update(id, { status });
   }

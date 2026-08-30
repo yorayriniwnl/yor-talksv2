@@ -182,6 +182,10 @@ export const attachSocketServer = (httpServer: HttpServer) => {
 
     // WebRTC Live Stream Signaling
     socket.on("stream:join", async (payload: { streamId?: unknown } = {}) => {
+      if (!env.LIVE_ROOMS_ENABLED) {
+        socket.emit("stream:error", { streamId: payload.streamId, error: "Live rooms are disabled for this deployment" });
+        return;
+      }
       const { streamId } = payload;
       if (typeof streamId !== "string" || !streamId) return;
 
@@ -204,6 +208,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("stream:leave", (payload: { streamId?: unknown } = {}) => {
+      if (!env.LIVE_ROOMS_ENABLED) return;
       const { streamId } = payload;
       if (typeof streamId === "string" && joinedStreams.delete(streamId)) {
         socket.leave(`stream:${streamId}`);
@@ -212,6 +217,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("webrtc:offer", (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
+      if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, offer, streamId } = payload;
       if (typeof targetSocketId === "string" && offer && typeof streamId === "string" && joinedStreams.has(streamId)) {
         const target = io.sockets.sockets.get(targetSocketId);
@@ -222,6 +228,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("webrtc:answer", (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
+      if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, answer, streamId } = payload;
       if (typeof targetSocketId === "string" && answer && typeof streamId === "string" && joinedStreams.has(streamId)) {
         const target = io.sockets.sockets.get(targetSocketId);
@@ -232,6 +239,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("webrtc:ice-candidate", (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
+      if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, candidate, streamId } = payload;
       if (typeof targetSocketId === "string" && candidate && typeof streamId === "string" && joinedStreams.has(streamId)) {
         const target = io.sockets.sockets.get(targetSocketId);
@@ -256,6 +264,10 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       callType?: unknown;
       offer?: unknown;
     } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) {
+        emitCallError("Realtime calling is disabled for this deployment");
+        return;
+      }
       const { callId, targetUserId, callType, offer } = payload;
       if (
         typeof callId !== "string" || callId.length < 8 || callId.length > 80 ||
@@ -317,6 +329,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("call:accept", (payload: { callId?: unknown } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) return;
       const call = callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId) {
         emitCallError("Call is no longer available");
@@ -326,6 +339,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("call:reject", (payload: { callId?: unknown } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) return;
       const call = callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId) return;
       activeCalls.delete(payload.callId as string);
@@ -333,12 +347,14 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("call:answer", (payload: { callId?: unknown; answer?: unknown } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) return;
       const call = callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId || !payload.answer || typeof payload.answer !== "object") return;
       io.to(call.callerId).emit("call:answer", { callId: payload.callId, answer: payload.answer });
     });
 
     socket.on("call:ice", (payload: { callId?: unknown; candidate?: unknown } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) return;
       const call = callForParticipant(payload.callId);
       if (!call || !payload.candidate || typeof payload.candidate !== "object") return;
       const peerId = call.callerId === userId ? call.recipientId : call.callerId;
@@ -346,6 +362,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     socket.on("call:end", (payload: { callId?: unknown } = {}) => {
+      if (!env.RTC_CALLS_ENABLED) return;
       const call = callForParticipant(payload.callId);
       if (!call) return;
       activeCalls.delete(payload.callId as string);
