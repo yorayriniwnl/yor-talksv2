@@ -25,7 +25,7 @@ export class QueueService {
           if (!compatibility.compatible) {
             this.nextRetryAt = Date.now() + this.retryDelayMs;
             logger.warn(
-              { redisUrl: env.REDIS_URL, redisVersion: compatibility.version, reason: compatibility.reason },
+              { redisVersion: compatibility.version, reason: compatibility.reason },
               "BullMQ queue temporarily unavailable",
             );
             return null;
@@ -39,7 +39,7 @@ export class QueueService {
           return this.queue;
         } catch (error) {
           this.nextRetryAt = Date.now() + this.retryDelayMs;
-          logger.warn({ error, redisUrl: env.REDIS_URL }, "BullMQ queue disabled because Redis could not be initialized");
+          logger.warn({ error }, "BullMQ queue disabled because Redis could not be initialized");
           return null;
         }
       })();

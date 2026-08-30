@@ -41,7 +41,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
         const compatibility = await inspectRedisCompatibility(env.REDIS_URL);
         if (this.closed || !compatibility.compatible) {
           logger.warn(
-            { redisUrl: env.REDIS_URL, redisVersion: compatibility.version, reason: compatibility.reason },
+            { redisVersion: compatibility.version, reason: compatibility.reason },
             "Notification worker temporarily unavailable",
           );
           return;

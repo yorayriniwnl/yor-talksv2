@@ -1,5 +1,10 @@
+import { createHash } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
+
+function recipientHash(email: string): string {
+  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 16);
+}
 
 export class EmailDeliveryNotConfiguredError extends Error {
   constructor() {
@@ -79,7 +84,7 @@ export class EmailService {
 
     if ((env.NODE_ENV as string) !== "production" && !env.RESEND_API_KEY) {
       // Development and tests stay usable without an external email account.
-      logger.info({ to, subject }, "Email dispatch requested");
+      logger.info({ recipientHash: recipientHash(to), subject }, "Email dispatch requested");
       console.log("==========================================");
       console.log(`[EMAIL DISPATCH] To: ${to}`);
       console.log(`[SUBJECT]: ${subject}`);
@@ -108,12 +113,12 @@ export class EmailService {
     });
 
     if (!response.ok) {
-      const detail = await response.text().catch(() => "Unknown Resend error");
-      logger.error({ status: response.status, detail }, "Resend email delivery failed");
+      await response.text().catch(() => undefined);
+      logger.error({ status: response.status, recipientHash: recipientHash(to) }, "Resend email delivery failed");
       throw new EmailDeliveryProviderError(`Resend rejected the email (${response.status})`);
     }
 
-    logger.info({ to, subject }, "Email delivered through Resend");
+    logger.info({ recipientHash: recipientHash(to), subject }, "Email delivered through Resend");
     return true;
   }
 

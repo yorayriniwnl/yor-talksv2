@@ -12,8 +12,9 @@ after(async () => {
 test("audit events track abuse heuristics via Redis", async () => {
   const securityService = new SecurityService(redisRepository);
   const subject = `user-${crypto.randomUUID()}`;
+  const eventIds: string[] = [];
   for (let index = 0; index < 5; index += 1) {
-    securityService.createAuditEvent("spam", `test action ${index}`, subject);
+    eventIds.push(securityService.createAuditEvent("spam", `test action ${index}`, subject).id);
   }
 
   await securityService.flush();
@@ -21,7 +22,7 @@ test("audit events track abuse heuristics via Redis", async () => {
   assert.equal(await securityService.detectAbuse(subject, "spam"), true);
   assert.equal(await securityService.detectAbuse("user-2", "spam"), false);
   const log = await securityService.getAuditLog();
-  const matchingEvents = log.filter((event) => event.message.startsWith("test action"));
+  const matchingEvents = log.filter((event) => eventIds.includes(event.id));
   assert.equal(matchingEvents.length, 5);
   assert.ok(matchingEvents.every((event) => event.subject !== subject));
 });

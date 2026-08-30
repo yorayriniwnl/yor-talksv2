@@ -37,7 +37,7 @@ export class NotificationDeliveryService {
         const statusCode = Number(error?.statusCode);
         if (statusCode === 404 || statusCode === 410) {
           await this.pushSubscriptionRepository.removeByEndpoint(subscription.endpoint);
-          logger.info({ endpoint: subscription.endpoint, statusCode }, "Removed expired Web Push subscription");
+          logger.info({ subscriptionId: subscription.id, statusCode }, "Removed expired Web Push subscription");
           return;
         }
         logger.warn({ err: error, subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
