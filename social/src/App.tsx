@@ -3,7 +3,7 @@ import { MotionConfig } from 'framer-motion';
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
