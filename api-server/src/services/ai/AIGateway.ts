@@ -1,4 +1,5 @@
 import { env } from "../../config/env.js";
+import { parseOpenAIModeration } from "./moderation-response.js";
 
 // Core interface for all AI models
 export interface AIProvider {
@@ -92,18 +93,11 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async analyzeToxicity(text: string): Promise<{ isToxic: boolean, score: number, flags: string[] }> {
-    const result = await this.request<{ results?: Array<{ flagged?: boolean; category_scores?: Record<string, number>; categories?: Record<string, boolean> }> }>("moderations", {
+    const result = await this.request<unknown>("moderations", {
       model: "omni-moderation-latest",
       input: text,
     });
-    const moderation = result.results?.[0];
-    const scores = moderation?.category_scores ?? {};
-    const flags = Object.entries(moderation?.categories ?? {}).filter(([, flagged]) => flagged).map(([name]) => name);
-    return {
-      isToxic: Boolean(moderation?.flagged),
-      score: Math.max(0, ...Object.values(scores)),
-      flags,
-    };
+    return parseOpenAIModeration(result);
   }
 }
 

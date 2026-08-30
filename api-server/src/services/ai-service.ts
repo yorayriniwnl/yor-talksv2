@@ -1,6 +1,7 @@
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
 import { ai, AIProviderNotConfiguredError } from "./ai/AIGateway.js";
+import { parseGeminiModeration } from "./ai/moderation-response.js";
 
 export interface AIRecommendation {
   reason: string;
@@ -31,8 +32,7 @@ export class AIService {
         const json = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
         const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error("Gemini returned no moderation result");
-        const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as Record<string, unknown>;
-        return { spam: Boolean(parsed.spam), toxicity: Boolean(parsed.toxicity), nsfw: Boolean(parsed.nsfw) };
+        return parseGeminiModeration(text);
       } catch (error) {
         logger.warn({ err: error }, "Gemini moderation request failed; trying the configured gateway provider");
       }
