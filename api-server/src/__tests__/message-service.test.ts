@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
-import { MessageService } from "../services/message-service.js";
+import { InvalidMessageContentError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
@@ -39,4 +39,13 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   assert.equal(forged.pinned, false);
   assert.equal(forged.deletedAt, null);
   assert.equal(forged.replyToId, sent.id);
+});
+
+test("message content length is bounded before transport-specific persistence", async () => {
+  const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
+
+  await assert.rejects(
+    () => messageService.sendMessage("sender", "recipient", "x".repeat(4001)),
+    InvalidMessageContentError,
+  );
 });

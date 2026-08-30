@@ -10,9 +10,19 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
+export class InvalidMessageContentError extends Error {}
 export class UnauthorizedError extends Error {}
 
 type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId">;
+
+const normalizeMessageContent = (content: string): string => {
+  if (typeof content !== "string") throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
+  const normalized = content.trim();
+  if (!normalized || normalized.length > 4000) {
+    throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
+  }
+  return normalized;
+};
 
 export class MessageService {
   constructor(
@@ -64,6 +74,7 @@ export class MessageService {
 
   // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
+    const normalizedContent = normalizeMessageContent(content);
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
       const sender = await this.userRepository.findById(senderId);
@@ -75,10 +86,11 @@ export class MessageService {
       }
     }
     const conversation = await this.createConversation(senderId, recipientId);
-    return this.sendMessageToConversation(senderId, conversation.id, content, options);
+    return this.sendMessageToConversation(senderId, conversation.id, normalizedContent, options);
   }
 
   async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
+    const normalizedContent = normalizeMessageContent(content);
     const conversation = await this.conversationRepository.findById(conversationId);
     if (!conversation) {
       throw new UnauthorizedError("Conversation not found");
@@ -104,7 +116,7 @@ export class MessageService {
     // Authorize the conversation and its participants before invoking the
     // moderation provider. This prevents unauthorized requests from spending
     // moderation quota on arbitrary conversations.
-    await enforceTextContentPolicy(content, this.aiService, "message");
+    await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
 
     const replyToId = options?.replyToId ?? null;
     if (replyToId) {
@@ -119,7 +131,7 @@ export class MessageService {
       conversationId,
       senderId,
       recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
-      content: content.trim(),
+      content: normalizedContent,
       createdAt: createdAt.toISOString(),
       seenAt: null,
       replyToId,

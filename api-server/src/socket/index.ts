@@ -6,7 +6,7 @@ import { logger } from "../lib/logger.js";
 import { setIo } from "../lib/realtime.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { MessageBlockedError, MessageService } from "../services/message-service.js";
+import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
@@ -153,6 +153,8 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         socket.emit("message:sent", message); // Confirm to sender's current device
       } catch (err) {
         if (err instanceof MessageBlockedError) {
+          socket.emit("message:error", { error: err.message });
+        } else if (err instanceof InvalidMessageContentError) {
           socket.emit("message:error", { error: err.message });
         } else {
           logger.error({ err, userId, recipientId, conversationId }, "Failed to persist socket message");

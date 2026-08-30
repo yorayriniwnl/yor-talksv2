@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
-import { InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -41,6 +41,9 @@ export class MessageController {
       }
       if (error instanceof InvalidReplyTargetError) {
         return res.status(400).json(createResponse("Invalid reply target", null, {}, [error.message]));
+      }
+      if (error instanceof InvalidMessageContentError) {
+        return res.status(400).json(createResponse("Invalid message", null, {}, [error.message]));
       }
       return res.status(500).json(createResponse("Failed to send message", null, {}, ["Internal server error"]));
     }
