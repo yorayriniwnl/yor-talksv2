@@ -14,7 +14,7 @@ const webHtml = await web.text();
 if (!webHtml.includes("<div id=\"root\">") && !webHtml.includes("<div id='root'>")) {
   throw new Error("/ does not look like the built Yor web shell");
 }
-for (const header of ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy"]) {
+for (const header of ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy"]) {
   if (!web.headers.get(header)) {
     throw new Error(`/ is missing the ${header} security header`);
   }
