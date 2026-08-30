@@ -42,7 +42,7 @@ export default function Saved() {
 
   return (
     <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+      <section aria-label="Saved collection" className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
         <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.14] via-card to-card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -96,7 +96,7 @@ export default function Saved() {
             <Link href="/explore" className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground"><Compass className="h-4 w-4" /> Explore posts</Link>
           </section>
         ) : null}
-      </main>
+      </section>
     </div>
   );
 }

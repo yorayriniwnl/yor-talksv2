@@ -475,7 +475,7 @@ export default function Profile() {
          MAIN CONTENT
          ══════════════════════════════════════════════════════════════════ */}
       <div className="operator-profile-layout">
-        <main className="operator-profile-main">
+        <section aria-label="Profile content" className="operator-profile-main">
 
         {/* ── Avatar + Actions ──────────────────────────────────────── */}
         <section className="operator-profile-identity operator-panel">
@@ -895,7 +895,7 @@ export default function Profile() {
             )}
           </div>
         </section>
-        </main>
+        </section>
 
         <aside className="operator-profile-rail">
           <section className="operator-profile-level operator-panel">

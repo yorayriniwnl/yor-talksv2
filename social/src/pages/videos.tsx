@@ -386,7 +386,7 @@ export default function Videos() {
         </div>
       </header>
 
-      <main className="operator-video-main">
+      <section aria-label="Video library" className="operator-video-main">
         <OperatorPanel className="operator-video-filters">
           <div className="operator-video-filters__head">
             <span>Refine watch queue</span>
@@ -483,7 +483,7 @@ export default function Videos() {
         {activeReelIndex !== null && activeSwiperList.length > 0 && (
           <ReelsSwiper videos={activeSwiperList} initialIndex={activeReelIndex} onClose={closeViewer} />
         )}
-      </main>
+      </section>
     </div>
   );
 }

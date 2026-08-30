@@ -338,7 +338,7 @@ export default function Explore() {
         </div>
       </section>
 
-      <main className="operator-discovery-main">
+      <section aria-label="Discovery results" className="operator-discovery-main">
         <nav className="operator-discovery-filters" aria-label="Filter discovery by interest">
           {EXPLORE_GENRES.map((genre, index) => (
             <button
@@ -521,7 +521,7 @@ export default function Explore() {
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </section>
     </div>
   );
 }

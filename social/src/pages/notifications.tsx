@@ -147,7 +147,7 @@ export default function Notifications() {
   }, [markAllNotificationsRead]);
 
   return (
-    <main className="operator-activity-page">
+    <section aria-label="Activity" className="operator-activity-page">
       <ActivityHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} />
 
       <section className="operator-activity-overview" aria-label="Activity overview">
@@ -245,7 +245,7 @@ export default function Notifications() {
           })}
         </div>
       )}
-    </main>
+    </section>
   );
 }
 

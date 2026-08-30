@@ -193,11 +193,11 @@ function LiveRoom({ streamId }: { streamId: string }) {
   };
 
   if (loading) {
-    return <main className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></main>;
+    return <section aria-label="Live room loading" className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></section>;
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <section aria-label="Live room" className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <button onClick={() => setLocation('/live')} className="mb-2 text-xs text-muted-foreground hover:text-foreground">← Back to live</button>
@@ -212,7 +212,7 @@ function LiveRoom({ streamId }: { streamId: string }) {
       </section>
       {!participants.length && <div className="rounded-2xl border border-border/50 bg-card/40 p-10 text-center text-sm text-muted-foreground">Waiting for someone to publish media…</div>}
       <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mic className="h-4 w-4" /> Only the host can publish media in this beta room.</div>
-    </main>
+    </section>
   );
 }
 
@@ -235,13 +235,13 @@ export default function Live() {
   }, [params?.id]);
 
   if (!publicBetaConfig.liveRoomsEnabled) {
-    return <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6"><section className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-8 text-center"><Radio className="mx-auto h-10 w-10 text-amber-300" /><h1 className="mt-4 font-display text-3xl font-black tracking-tight">Live rooms are paused</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Live streaming will open after the public beta completes provider, moderation, and incident-response checks. Your core social experience is available now.</p></section></main>;
+    return <section aria-label="Live rooms" className="mx-auto max-w-4xl px-4 py-16 sm:px-6"><section className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-8 text-center"><Radio className="mx-auto h-10 w-10 text-amber-300" /><h1 className="mt-4 font-display text-3xl font-black tracking-tight">Live rooms are paused</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Live streaming will open after the public beta completes provider, moderation, and incident-response checks. Your core social experience is available now.</p></section></section>;
   }
 
   if (params?.id) return <LiveRoom streamId={params.id} />;
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6">
+    <section aria-label="Live rooms" className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6">
       <section className="flex flex-col justify-between gap-4 rounded-3xl border border-border/50 bg-card/40 p-6 sm:flex-row sm:items-end">
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-400"><Radio className="h-4 w-4" /> Live rooms</p>
@@ -271,6 +271,6 @@ export default function Live() {
         </section>
       )}
       {!loading && !streams.length && <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center text-sm text-muted-foreground">No live rooms yet. Start the first one for your current world.</div>}
-    </main>
+    </section>
   );
 }

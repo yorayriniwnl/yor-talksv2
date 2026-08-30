@@ -1,6 +1,6 @@
 export default function RouteSkeleton() {
   return (
-    <main aria-busy="true" aria-label="Loading content" className="min-h-screen bg-background px-4 py-8 sm:px-6">
+    <div aria-busy="true" aria-label="Loading content" className="min-h-screen bg-background px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-4xl space-y-5">
         <div className="surface-1 overflow-hidden rounded-2xl border border-border/40 p-5 shadow-sm">
           <div className="flex items-center gap-3">
@@ -25,6 +25,6 @@ export default function RouteSkeleton() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

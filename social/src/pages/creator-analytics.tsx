@@ -62,7 +62,7 @@ export default function CreatorAnalytics() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+      <section aria-label="Creator analytics" className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
         {error && <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">Daily server telemetry is not available yet: {error}. Local Control Room rollups remain visible below.</div>}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Profile views" value={totals.profileViews.toLocaleString()} detail={isServerConnected ? 'Last 30 recorded days' : 'Awaiting server rollup'} icon={Eye} />
@@ -81,7 +81,7 @@ export default function CreatorAnalytics() {
             <div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-4 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /><h3 className="font-display font-bold">Trust gates</h3></div><div className="space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-muted-foreground">Content Passport</span><strong className="text-emerald-400">Active</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Payment verification</span><strong className="text-amber-300">Provider-gated</strong></div><div className="flex items-center justify-between"><span className="text-muted-foreground">Daily telemetry</span><strong className={isServerConnected ? 'text-emerald-400' : 'text-amber-300'}>{isServerConnected ? 'Connected' : 'Backfill pending'}</strong></div></div><Link href="/control-room" className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-primary">Open Control Room <BarChart3 className="h-4 w-4" /></Link></div>
           </div>
         </section>
-      </main>
+      </section>
     </div>
   );
 }

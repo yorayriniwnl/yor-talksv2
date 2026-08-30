@@ -226,7 +226,7 @@ export default function Home() {
         </nav>
 
         <div className="orbit-layout">
-          <main className="orbit-stream">
+          <section aria-label="Your social feed" className="orbit-stream">
             <section className="orbit-now-card home-stories-card operator-panel">
               <div className="home-section-heading">
                 <div><span>Live for 24 hours</span><h2>Stories from your people</h2></div>
@@ -338,7 +338,7 @@ export default function Home() {
                 )}
               </section>
             )}
-          </main>
+          </section>
 
           <aside className="orbit-rail">
             {currentUser && (

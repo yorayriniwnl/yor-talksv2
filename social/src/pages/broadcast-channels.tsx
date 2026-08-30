@@ -190,7 +190,7 @@ export default function BroadcastChannels() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.5fr)]">
+      <section aria-label="Broadcast channels" className="mx-auto grid max-w-6xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.5fr)]">
         <section className="surface-1 overflow-hidden rounded-3xl border border-border/40">
           <div className="border-b border-border/40 p-5">
             <div className="flex items-center justify-between gap-3"><div><p className="text-[0.62rem] font-mono font-bold uppercase tracking-[0.16em] text-muted-foreground">Your signal map</p><h2 className="mt-1 font-display text-lg font-black">Channels to follow</h2></div><Sparkles className="h-5 w-5 text-primary" /></div>
@@ -241,7 +241,7 @@ export default function BroadcastChannels() {
             </>
           )}
         </section>
-      </main>
+      </section>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="rounded-3xl sm:max-w-[500px]">
