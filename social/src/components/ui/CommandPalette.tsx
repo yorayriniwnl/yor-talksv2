@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -27,6 +27,9 @@ export function CommandPalette() {
   const [searchingSmart, setSearchingSmart] = useState(false);
   const [smartSearchFailed, setSmartSearchFailed] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -56,26 +59,74 @@ export function CommandPalette() {
   }, [query]);
 
 
+  const closePalette = () => {
+    setIsOpen(false);
+    setQuery('');
+  };
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen((prev) => !prev);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        if (isOpen) {
+          closePalette();
+        } else {
+          restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setIsOpen(true);
+        }
       }
-      if (e.key === 'Escape') {
-        setIsOpen(false);
+      if (event.key === 'Escape' && isOpen) {
+        event.preventDefault();
+        closePalette();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusFrame = window.requestAnimationFrame(() => searchInputRef.current?.focus());
+
+    const handleTab = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !paletteRef.current) return;
+      const focusable = Array.from(paletteRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute('aria-hidden'));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener('keydown', handleTab);
+      document.body.style.overflow = previousOverflow;
+      const restoreTarget = restoreFocusRef.current;
+      restoreFocusRef.current = null;
+      if (restoreTarget) window.requestAnimationFrame(() => restoreTarget.focus());
+    };
+  }, [isOpen]);
 
   const handleNavigate = (path: string) => {
     sounds.playSwoosh();
     setLocation(path);
-    setIsOpen(false);
-    setQuery('');
+    closePalette();
   };
 
   const filteredUsers = query
@@ -85,7 +136,7 @@ export function CommandPalette() {
       )
     : userList.slice(0, 4);
 
-  const navigationGroups = [
+  const navigationGroups = useMemo(() => [
     {
       label: 'Living internet',
       items: [
@@ -161,7 +212,7 @@ export function CommandPalette() {
         { icon: Settings, label: 'Settings', path: '/settings' },
       ]
     },
-  ];
+  ], []);
 
   const matchingNavigationGroups = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -174,13 +225,23 @@ export function CommandPalette() {
       .filter((group) => group.items.length > 0);
   }, [navigationGroups, query]);
 
+  const visibleNavigationGroups = useMemo(() => {
+    if (query.trim()) return matchingNavigationGroups;
+    const quickPaths = new Set(['/', '/explore', '/messages', '/notifications', '/settings']);
+    const items = navigationGroups.flatMap((group) => group.items).filter((item) => quickPaths.has(item.path));
+    return items.length > 0 ? [{ label: 'Quick jump', items }] : [];
+  }, [matchingNavigationGroups, navigationGroups, query]);
+
   const paletteTargets = useMemo(() => [
-    ...filteredUsers.map((user) => ({ key: `user:${user.id}`, path: `/profile/${user.id}` })),
     ...smartResults.map((result) => ({ key: `post:${result.id}`, path: `/post/${result.id}` })),
-    ...matchingNavigationGroups.flatMap((group) => group.items.map((item) => ({ key: `route:${item.path}`, path: item.path }))),
-  ], [filteredUsers, matchingNavigationGroups, smartResults]);
+    ...filteredUsers.map((user) => ({ key: `user:${user.id}`, path: `/profile/${user.id}` })),
+    ...visibleNavigationGroups.flatMap((group) => group.items.map((item) => ({ key: `route:${item.path}`, path: item.path }))),
+  ], [filteredUsers, smartResults, visibleNavigationGroups]);
 
   const activeTargetKey = paletteTargets[activeIndex]?.key;
+  const activeTargetId = activeTargetKey
+    ? `palette-${activeTargetKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+    : undefined;
 
   useEffect(() => {
     setActiveIndex(0);
@@ -210,10 +271,11 @@ export function CommandPalette() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-xl flex items-start justify-center pt-20 px-4 font-sans"
-            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 z-[100] flex items-start justify-center bg-background/80 px-4 pb-4 pt-[max(4.5rem,env(safe-area-inset-top))] font-sans backdrop-blur-xl"
+            onClick={closePalette}
           >
             <motion.div
+              ref={paletteRef}
               role="dialog"
               aria-modal="true"
               aria-labelledby="yor-command-palette-title"
@@ -221,28 +283,32 @@ export function CommandPalette() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: -10 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="w-full max-w-xl surface-1 border border-border/50 rounded-3xl shadow-2xl overflow-hidden"
+              className="surface-1 max-h-[calc(100dvh-6rem)] w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-border/50 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Search Bar Input */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+              <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3 sm:px-5 sm:py-4">
                 <Search className="w-5 h-5 text-primary shrink-0" />
                 <span id="yor-command-palette-title" className="sr-only">Search Yor</span>
                 <input
-                  autoFocus
+                  ref={searchInputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handlePaletteKeyDown}
-                  placeholder="Search people, routes, or features... (ESC to exit)"
+                  role="combobox"
+                  aria-controls="yor-command-palette-results"
+                  aria-expanded="true"
+                  aria-activedescendant={activeTargetId}
+                  placeholder="Search people, routes, or features…"
                   className="w-full bg-transparent outline-none text-base text-foreground placeholder:text-muted-foreground font-serif"
                 />
-                <button type="button" onClick={() => setIsOpen(false)} aria-label="Close search" className="p-1 rounded-full text-muted-foreground hover:text-foreground">
+                <button type="button" onClick={closePalette} aria-label="Close search" className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-4 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div id="yor-command-palette-results" role="listbox" aria-label="Search results" className="custom-scrollbar max-h-[min(60vh,32rem)] space-y-5 overflow-y-auto p-3 sm:space-y-6 sm:p-4">
                 
                   {/* AI Semantic Results Section */}
                   {query.length > 3 && (
@@ -258,6 +324,9 @@ export function CommandPalette() {
                             type="button"
                             onClick={() => handleNavigate(`/post/${r.id}`)}
                             aria-label={`Open matching post: ${r.content}`}
+                            id={`palette-post-${r.id}`}
+                            role="option"
+                            aria-selected={activeTargetKey === `post:${r.id}`}
                             className={`w-full p-3 rounded-2xl bg-primary/10 border border-primary/30 flex items-start gap-3 text-left hover:bg-primary/20 transition-colors ${activeTargetKey === `post:${r.id}` ? 'ring-2 ring-primary/30' : ''}`}
                           >
                             <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -277,36 +346,41 @@ export function CommandPalette() {
                   )}
 
                   {/* Users Section */}
-                <div>
-                  <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
-                    {query ? 'Matching Profiles' : 'Suggested People'}
-                  </h4>
-                  <div className="space-y-1">
-                    {filteredUsers.map((u) => {
-                      const displayName = u.displayName || u.username || 'User';
-                      return (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => handleNavigate(`/profile/${u.id}`)}
-                          className={`w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group ${activeTargetKey === `user:${u.id}` ? 'bg-primary/10 ring-1 ring-primary/20' : ''}`}
-                        >
-                          <Avatar className="w-9 h-9 border border-border/40 shrink-0">
-                            <AvatarImage src={u.avatarUrl} />
-                            <AvatarFallback className="font-display font-bold">{displayName.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <h5 className="font-bold text-sm truncate group-hover:text-primary transition-colors">{displayName}</h5>
-                            <p className="text-xs text-muted-foreground font-mono truncate">@{u.username}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                {filteredUsers.length > 0 && (
+                  <div>
+                    <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
+                      {query ? 'Matching Profiles' : 'Suggested People'}
+                    </h4>
+                    <div className="space-y-1">
+                      {filteredUsers.map((u) => {
+                        const displayName = u.displayName || u.username || 'User';
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => handleNavigate(`/profile/${u.id}`)}
+                            id={`palette-user-${u.id}`}
+                            role="option"
+                            aria-selected={activeTargetKey === `user:${u.id}`}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-muted/60 transition-colors text-left group ${activeTargetKey === `user:${u.id}` ? 'bg-primary/10 ring-1 ring-primary/20' : ''}`}
+                          >
+                            <Avatar className="w-9 h-9 border border-border/40 shrink-0">
+                              <AvatarImage src={u.avatarUrl} />
+                              <AvatarFallback className="font-display font-bold">{displayName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <h5 className="font-bold text-sm truncate group-hover:text-primary transition-colors">{displayName}</h5>
+                              <p className="text-xs text-muted-foreground font-mono truncate">@{u.username}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Navigation Groups Section */}
-                {matchingNavigationGroups.map((group) => (
+                {visibleNavigationGroups.map((group) => (
                   <div key={group.label}>
                     <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
                       {group.label}
@@ -319,6 +393,9 @@ export function CommandPalette() {
                             key={item.label}
                             type="button"
                             onClick={() => handleNavigate(item.path)}
+                            id={`palette-route-${item.path.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+                            role="option"
+                            aria-selected={activeTargetKey === `route:${item.path}`}
                             className={`flex items-center gap-3 p-3 rounded-2xl surface-1 border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group ${activeTargetKey === `route:${item.path}` ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/20' : ''}`}
                           >
                             <Icon className="w-4 h-4 text-primary shrink-0 transition-transform group-hover:scale-110" />
@@ -326,15 +403,22 @@ export function CommandPalette() {
                           </button>
                         );
                       })}
-                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
+              {paletteTargets.length === 0 && !searchingSmart && (
+                <div role="status" className="rounded-2xl border border-dashed border-border/50 px-4 py-8 text-center">
+                  <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-semibold text-foreground">No matches yet.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Try a name, route, or a shorter phrase.</p>
+                </div>
+              )}
               </div>
 
               {/* Footer hint */}
-              <div className="px-5 py-2.5 surface-1 border-t border-border/30 flex items-center justify-between text-[0.68rem] font-mono text-muted-foreground">
+              <div className="surface-1 flex items-center justify-between gap-3 border-t border-border/30 px-4 py-2.5 text-[0.68rem] font-mono text-muted-foreground sm:px-5">
                 <span>Press <kbd className="px-1.5 py-0.5 rounded bg-muted font-bold text-foreground">Ctrl + K</kbd> anytime to toggle</span>
-                <span>Yor Talks Multiverse</span>
+                <span className="hidden sm:inline">Yor Talks Multiverse</span>
               </div>
             </motion.div>
           </motion.div>
