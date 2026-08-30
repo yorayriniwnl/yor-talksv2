@@ -15,6 +15,12 @@ const trustedOrigins = new Set([
   normalizedOrigin(env.CLIENT_ORIGIN),
 ].filter((origin): origin is string => Boolean(origin)));
 
+export function isTrustedOrigin(origin?: string): boolean {
+  if (!origin) return true; // Native clients do not send a browser Origin.
+  const normalized = normalizedOrigin(origin);
+  return Boolean(normalized && trustedOrigins.has(normalized));
+}
+
 /**
  * Cookie-authenticated mutations need an origin check because CORS only
  * controls whether a browser can read a response; it does not prevent every
@@ -28,8 +34,7 @@ export function requireTrustedOrigin(req: Request, res: Response, next: NextFunc
     next();
     return;
   }
-  const normalized = normalizedOrigin(origin);
-  if (!normalized || !trustedOrigins.has(normalized)) {
+  if (!isTrustedOrigin(origin)) {
     res.status(403).json(createResponse("Request origin is not trusted", null, {}, ["Forbidden origin"]));
     return;
   }

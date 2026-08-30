@@ -131,6 +131,18 @@ export class RedisRepository {
     await this.client.del(key);
   }
 
+  /** Account-scoped socket budgets survive reconnects and work across API replicas. */
+  async consumeBudgetStrict(key: string, limit: number, windowSeconds: number): Promise<boolean> {
+    await this.ensureReady();
+    const count = await this.client.eval(
+      `local count = redis.call('INCR', KEYS[1])
+       if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+       return count`,
+      1, key, windowSeconds,
+    );
+    return typeof count === "number" && count <= limit;
+  }
+
   async addToSetStrict(key: string, value: string): Promise<void> {
     await this.ensureReady();
     await this.client.sadd(key, value);

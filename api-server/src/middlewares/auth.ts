@@ -2,6 +2,7 @@ import { type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { createResponse } from "../utils/response.js";
+import { hasCurrentConsent } from "../utils/consent.js";
 
 interface JwtPayload {
   sub: string;
@@ -71,7 +72,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       permissions: user.permissions ?? [],
     };
-    if (env.PUBLIC_BETA && (user.termsVersion !== env.TERMS_VERSION || !user.termsAcceptedAt || !user.ageConfirmedAt) && !consentExempt(req)) {
+    if (!hasCurrentConsent(user) && !consentExempt(req)) {
       return res.status(428).json(createResponse(
         "Current terms acceptance required",
         null,
