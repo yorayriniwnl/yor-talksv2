@@ -11,10 +11,9 @@ onStoredTokensChange((accessToken) => {
     return;
   }
   socket.auth = { token: accessToken };
-  if (socket.connected) {
-    socket.disconnect();
-    socket.connect();
-  }
+  // A refreshed credential must also revive a connection the server expired.
+  socket.disconnect();
+  socket.connect();
 });
 
 /** Connects (or returns the existing connection) using the current access token. */

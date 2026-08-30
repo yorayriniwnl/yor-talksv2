@@ -23,6 +23,12 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test('rate-limit errors display actionable text instead of machine error codes', async (t) => {
+  const { api } = await client(t);
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ success: false, message: 'Too many requests. Please try again later.', errors: ['rate_limit_exceeded'] }, { status: 429, headers: { 'Retry-After': '90' } }));
+  await assert.rejects(api.getCurrentUser(), /Please try again in 2 minutes/);
+});
+
 test('a late refresh cannot restore tokens after logout', async (t) => {
   const { api, setStoredTokens, getStoredTokens } = await client(t);
   const response = deferred();

@@ -179,7 +179,12 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   assertSession();
 
   if (!res.ok || !json?.success) {
-    throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
+    const detail = json?.errors?.[0];
+    const message = detail && !/^[a-z][a-z0-9_]+$/.test(detail) ? detail : json?.message;
+    const retryAfter = Number(res.headers.get('Retry-After'));
+    throw new ApiError(res.status === 429 && retryAfter > 0
+      ? `Too many requests. Please try again in ${Math.ceil(retryAfter / 60)} minute${retryAfter > 60 ? 's' : ''}.`
+      : message || `Request failed (${res.status})`, res.status);
   }
   return normalizeApiTimestamps(json);
 }

@@ -27,10 +27,13 @@ export function DeviceApprovalInbox() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.twoFactorEnabled) return;
     let active = true;
+    let inFlight = false;
 
     const loadPendingChallenges = async () => {
+      if (document.visibilityState === 'hidden' || inFlight) return;
+      inFlight = true;
       try {
         const pending = await api.listTwoFactorChallenges();
         if (!active) return;
@@ -43,16 +46,18 @@ export function DeviceApprovalInbox() {
       } catch {
         // The inbox is secondary UI. A transient API failure should not
         // interrupt the rest of the signed-in session.
+      } finally {
+        inFlight = false;
       }
     };
 
     void loadPendingChallenges();
-    const timer = window.setInterval(() => void loadPendingChallenges(), 3000);
+    const timer = window.setInterval(() => void loadPendingChallenges(), 15_000);
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [currentUser, dismissedChallengeId]);
+  }, [currentUser?.id, currentUser?.twoFactorEnabled, dismissedChallengeId]);
 
   const closeApproval = () => {
     if (challenge) setDismissedChallengeId(challenge.challengeId);

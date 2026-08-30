@@ -851,7 +851,7 @@ function setupRealtime(
 ) {
   if (typeof window !== 'undefined' && realtimePollingTimer === null) {
     realtimePollingTimer = window.setInterval(() => {
-      if (!get().currentUser) return;
+      if (!get().currentUser || document.visibilityState === 'hidden' || getSocket()?.connected) return;
       void get().loadNotifications();
       void get().loadConversations();
     }, 15_000);

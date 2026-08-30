@@ -1,7 +1,7 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import Redis from "ioredis";
-import type { Request, Response } from "express";
+import type { Request, Response, RequestHandler } from "express";
 import { env } from "../config/env.js";
 
 const healthPaths = new Set([
@@ -52,6 +52,10 @@ function createLimiter(prefix: string, windowMs: number, max: number) {
 
 export const apiRateLimiter = createLimiter("yor:rate:api:", 15 * 60 * 1000, 300);
 export const authRateLimiter = createLimiter("yor:rate:auth:", 15 * 60 * 1000, 40);
+export const scopedAuthRateLimiter: RequestHandler = (req, res, next) => {
+  if (!req.path.startsWith('/auth/') || (req.method === 'GET' && /^\/auth\/2fa\/challenges(?:\/|$)/.test(req.path))) return next();
+  return authRateLimiter(req, res, next);
+};
 export const aiRateLimiter = createLimiter("yor:rate:ai:", 15 * 60 * 1000, 20);
 // Public grievance intake and media signatures can be abused for storage,
 // email, or moderation-provider spend, so they need tighter limits than the
