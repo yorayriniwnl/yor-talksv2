@@ -337,6 +337,50 @@
 .operator-thread__empty h3 { font-family: var(--app-font-serif); font-size: 1.25rem; font-weight: 600; }
 .operator-thread__empty p { color: hsl(var(--muted-foreground)); font-size: 0.72rem; line-height: 1.55; }
 
+.operator-thread__loading,
+.operator-thread__error {
+  box-sizing: border-box;
+  display: grid;
+  min-height: 100%;
+  flex: 1;
+  align-content: center;
+  justify-items: center;
+  padding: 2rem;
+  text-align: center;
+  gap: 0.6rem;
+}
+
+.operator-thread__loading-mark {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border: 1px solid hsl(var(--signal) / 0.28);
+  border-radius: 0.9rem;
+  background: hsl(var(--signal) / 0.07);
+  color: hsl(var(--signal));
+}
+
+.operator-thread__loading-mark svg {
+  width: 1.1rem;
+  animation: operator-thread-spin 900ms linear infinite;
+}
+
+.operator-thread__loading p,
+.operator-thread__error p {
+  max-width: 20rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.operator-thread__error > svg { width: 1.3rem; color: hsl(var(--destructive)); }
+.operator-thread__error button { min-height: 2.35rem; padding-inline: 0.85rem; border: 1px solid hsl(var(--signal) / 0.35); border-radius: 0.65rem; color: hsl(var(--signal)); font-size: 0.65rem; font-weight: 800; }
+.operator-thread__error button:hover { background: hsl(var(--signal) / 0.08); }
+.operator-thread__error button:disabled { cursor: wait; opacity: 0.55; }
+
+@keyframes operator-thread-spin { to { transform: rotate(360deg); } }
+
 .operator-message-date {
   display: flex;
   width: 100%;
@@ -859,5 +903,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .operator-thread-menu__content,
-  .operator-composer__controls .operator-composer__send[data-pulse='true'] { animation: none; }
+  .operator-composer__controls .operator-composer__send[data-pulse='true'],
+  .operator-thread__loading-mark svg { animation: none; }
 }

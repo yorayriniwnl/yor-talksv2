@@ -1427,14 +1427,9 @@ export const useAppStore = create<AppState>()(
       },
 
       loadConversationMessages: async (conversationId) => {
-        try {
-          getSocket()?.emit('conversation:join', { conversationId });
-          const messages = await api.getConversationMessages(conversationId);
-          set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
-          return;
-        } catch {
-          // Keep the last successful snapshot during a transient outage.
-        }
+        getSocket()?.emit('conversation:join', { conversationId });
+        const messages = await api.getConversationMessages(conversationId);
+        set((state) => ({ messagesByConversation: { ...state.messagesByConversation, [conversationId]: messages.map(mapMessage) } }));
       },
 
       markDirectMessageSeen: async (messageId) => {

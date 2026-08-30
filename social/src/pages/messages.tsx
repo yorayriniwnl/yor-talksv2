@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft,
+  Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft, LoaderCircle,
   Reply, X, Video, Phone, Mic, Zap, EyeOff, Image as ImageIcon, Pencil, Trash2, Pin, Smile,
   ArrowLeftRight, LockKeyhole, Inbox
 } from 'lucide-react';
@@ -349,6 +349,8 @@ export default function Messages() {
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageLoadError, setMessageLoadError] = useState('');
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -408,15 +410,25 @@ export default function Messages() {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  useEffect(() => {
-    if (id) {
-      loadConversationMessages(id);
+  const requestConversationMessages = useCallback(async (conversationId: string) => {
+    setLoadingMessages(true);
+    setMessageLoadError('');
+    try {
+      await loadConversationMessages(conversationId);
+    } catch {
+      setMessageLoadError('Could not load this conversation. Your existing messages are safe. Try again.');
+    } finally {
+      setLoadingMessages(false);
     }
-  }, [id, loadConversationMessages]);
+  }, [loadConversationMessages]);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesByConversation, id]);
+    if (id) void requestConversationMessages(id);
+    else {
+      setLoadingMessages(false);
+      setMessageLoadError('');
+    }
+  }, [id, requestConversationMessages]);
 
   const conversationList = useMemo(() => {
     return conversations
@@ -471,6 +483,11 @@ export default function Messages() {
     if (!id) return [];
     return messagesByConversation[id] || [];
   }, [id, messagesByConversation]);
+
+  useEffect(() => {
+    if (loadingMessages || messageLoadError || activeMessages.length === 0) return;
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeMessages, id, loadingMessages, messageLoadError]);
 
   const vanishMode = Boolean(activeConv?.conv.vanishMode);
 
@@ -676,7 +693,18 @@ export default function Messages() {
               </header>
 
               <div className="operator-thread__flow" data-vanish={vanishMode || undefined}>
-                {activeMessages.length === 0 && (
+                {loadingMessages ? (
+                  <div className="operator-thread__loading" role="status" aria-live="polite">
+                    <span className="operator-thread__loading-mark"><LoaderCircle aria-hidden="true" /></span>
+                    <p>Loading secure conversation…</p>
+                  </div>
+                ) : messageLoadError ? (
+                  <div className="operator-thread__error" role="alert">
+                    <LockKeyhole aria-hidden="true" />
+                    <p>{messageLoadError}</p>
+                    <button type="button" onClick={() => void requestConversationMessages(activeConv.conv.id)} disabled={loadingMessages}>Try again</button>
+                  </div>
+                ) : activeMessages.length === 0 && (
                   <div className="operator-thread__empty">
                     <div>
                       <LockKeyhole aria-hidden="true" />
