@@ -1,5 +1,4 @@
-// Real API client for the backend built in api-server/. Every function here
-// hits an endpoint that's actually implemented and verified end-to-end.
+// HTTP boundary for the backend built in api-server/.
 // Vite's dev server proxies /api to the backend (see social/vite.config.ts).
 // A Vercel frontend can point at a separately hosted API with
 // VITE_API_BASE_URL without changing application code.
@@ -33,6 +32,7 @@ export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
 let memoryAccessToken: string | null = null;
+let sessionEpoch = 0;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 let tokenChangeListener: ((token: string | null) => void) | null = null;
 
@@ -54,11 +54,18 @@ export function getStoredTokens(): Tokens | null {
 }
 
 export function setStoredTokens(tokens: Tokens | null): void {
-  if (tokens) {
-    memoryAccessToken = tokens.accessToken;
-  } else {
-    memoryAccessToken = null;
+  // Login, account changes, and logout invalidate all previous in-flight data.
+  // Token rotation within one session deliberately does not advance this epoch.
+  sessionEpoch++;
+  updateMemoryTokens(tokens);
+}
+
+function updateMemoryTokens(tokens: Tokens | null): void {
+  memoryAccessToken = tokens?.accessToken ?? null;
+  try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // A restricted storage context must not prevent a memory-only logout.
   }
   tokenChangeListener?.(memoryAccessToken);
 }
@@ -94,25 +101,30 @@ interface ApiEnvelope<T> {
 }
 
 let refreshInFlight: Promise<Tokens | null> | null = null;
+let refreshEpoch = -1;
 
 async function tryRefresh(): Promise<Tokens | null> {
   // Coalesce concurrent refreshes (e.g. several components hitting a 401 at once)
   // into a single request instead of racing multiple refresh calls.
-  if (!refreshInFlight) {
+  const epoch = sessionEpoch;
+  if (!refreshInFlight || refreshEpoch !== epoch) {
+    refreshEpoch = epoch;
     refreshInFlight = (async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          signal: AbortSignal.timeout(20_000),
         });
         if (!res.ok) return null;
         const json = (await res.json()) as ApiEnvelope<Tokens>;
-        return json.success ? json.data : null;
+        return epoch === sessionEpoch && json.success && typeof json.data?.accessToken === 'string' && json.data.accessToken
+          ? json.data : null;
       } catch {
         return null;
       } finally {
-        refreshInFlight = null;
+        if (refreshEpoch === epoch) refreshInFlight = null;
       }
     })();
   }
@@ -120,12 +132,18 @@ async function tryRefresh(): Promise<Tokens | null> {
 }
 
 async function refreshSession(): Promise<Tokens | null> {
+  const epoch = sessionEpoch;
   const refreshed = await tryRefresh();
-  if (refreshed) setStoredTokens(refreshed);
+  if (epoch !== sessionEpoch) return null;
+  if (refreshed) updateMemoryTokens(refreshed);
   return refreshed;
 }
 
-async function request<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
+async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch): Promise<ApiEnvelope<T>> {
+  const assertSession = () => {
+    if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+  };
+  assertSession();
   const tokens = getStoredTokens();
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
   if (!(options.body instanceof FormData)) {
@@ -135,15 +153,20 @@ async function request<T>(path: string, options: RequestInit = {}, isRetry = fal
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: 'include' });
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options, headers, credentials: 'include', signal: options.signal ?? AbortSignal.timeout(20_000),
+  });
+  assertSession();
 
-  if (res.status === 401 && !isRetry) {
-    const refreshed = await tryRefresh();
+  // A rejected sign-in must never authenticate through an unrelated cookie.
+  if (res.status === 401 && !isRetry && tokens && !path.startsWith('/auth/')) {
+    const refreshed = await refreshSession();
+    assertSession();
     if (refreshed) {
-      setStoredTokens(refreshed);
-      return request<T>(path, options, true);
+      return requestEnvelope<T>(path, options, true, epoch);
     }
     setStoredTokens(null);
+    throw new ApiError('Your session expired. Please sign in again.', 401);
   }
 
   let json: ApiEnvelope<T> | null = null;
@@ -152,11 +175,16 @@ async function request<T>(path: string, options: RequestInit = {}, isRetry = fal
   } catch {
     // no body
   }
+  assertSession();
 
   if (!res.ok || !json?.success) {
     throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
   }
-  return json.data;
+  return json;
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return (await requestEnvelope<T>(path, options)).data;
 }
 
 export interface PaginatedResult<T> {
@@ -165,27 +193,8 @@ export interface PaginatedResult<T> {
   hasMore?: boolean;
 }
 
-async function requestPaginated<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<PaginatedResult<T>> {
-  const tokens = getStoredTokens();
-  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
-  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  if (tokens) headers['Authorization'] = `Bearer ${tokens.accessToken}`;
-
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: 'include' });
-  if (res.status === 401 && !isRetry) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      setStoredTokens(refreshed);
-      return requestPaginated<T>(path, options, true);
-    }
-    setStoredTokens(null);
-  }
-
-  let json: any = null;
-  try { json = await res.json(); } catch { /* no body */ }
-  if (!res.ok || !json?.success) {
-    throw new ApiError(json?.errors?.[0] || json?.message || `Request failed (${res.status})`, res.status);
-  }
+async function requestPaginated<T>(path: string, options: RequestInit = {}): Promise<PaginatedResult<T>> {
+  const json = await requestEnvelope<any>(path, options);
 
   const data = (Array.isArray(json.data) ? json.data : json.data?.items ?? json.data ?? []) as T;
   const nextCursor = json.meta?.nextCursor ?? json.data?.nextCursor ?? null;
@@ -420,7 +429,7 @@ export const api = {
   refreshSession,
   checkReadiness: async (): Promise<{ ok: boolean; status: number }> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/readyz`, { credentials: 'include', cache: 'no-store' });
+      const response = await fetch(`${API_BASE_URL}/readyz`, { credentials: 'include', cache: 'no-store', signal: AbortSignal.timeout(10_000) });
       return { ok: response.ok, status: response.status };
     } catch {
       return { ok: false, status: 0 };
