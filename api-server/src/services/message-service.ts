@@ -4,7 +4,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { db } from "@workspace/db";
 import { messageReadsTable, messagesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 
@@ -152,7 +152,7 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId);
-    return messages.filter((message: MessageRecord) => !message.deletedAt);
+    return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
@@ -163,12 +163,28 @@ export class MessageService {
 
   async getConversationsForUser(userId: string): Promise<{ conversation: ConversationRecord; lastMessage: MessageRecord | undefined }[]> {
     const conversations = await this.conversationRepository.listForUser(userId);
-    return Promise.all(
+    const results = await Promise.all(
       conversations.map(async (conversation) => ({
         conversation,
         lastMessage: await this.messageRepository.lastMessageForConversation(conversation.id),
       })),
     );
+    const lastMessages = results.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
+    const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
+    return results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
+  }
+
+  private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
+    if (!messages.length) return messages;
+    const receipts = await db.select({ messageId: messageReadsTable.messageId, readAt: sql<string>`min(${messageReadsTable.readAt})` })
+      .from(messageReadsTable)
+      .innerJoin(messagesTable, eq(messagesTable.id, messageReadsTable.messageId))
+      .where(and(
+        inArray(messageReadsTable.messageId, messages.map((message) => message.id)),
+        or(eq(messageReadsTable.userId, userId), eq(messagesTable.senderId, userId)),
+      )).groupBy(messageReadsTable.messageId);
+    const byId = new Map(receipts.map((receipt) => [receipt.messageId, receipt.readAt]));
+    return messages.map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -177,6 +193,8 @@ export class MessageService {
     
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
+    // A sender opening their own message is not a recipient read receipt.
+    if (message.senderId === userId) return message;
 
     // Track read receipt
     const readAt = new Date().toISOString();
@@ -202,12 +220,13 @@ export class MessageService {
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
+    const normalizedContent = normalizeMessageContent(content);
     const message = await this.messageRepository.findById(messageId);
     if (!message || message.deletedAt || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
-    await enforceTextContentPolicy(content, this.aiService, "message");
-    message.content = content;
+    await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
+    message.content = normalizedContent;
     message.editedAt = new Date().toISOString();
     return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt });
   }

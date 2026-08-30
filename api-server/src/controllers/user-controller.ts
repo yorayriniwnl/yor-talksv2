@@ -38,7 +38,7 @@ export class UserController {
   };
 
   getCurrentUser = async (req: Request, res: Response) => {
-    const user = await this.userService.getProfile(req.user?.id ?? "");
+    const user = await this.userService.getProfile(req.user?.id ?? "", req.user?.id);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }

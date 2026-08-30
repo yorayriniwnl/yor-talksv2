@@ -48,4 +48,22 @@ test("message content length is bounded before transport-specific persistence", 
     () => messageService.sendMessage("sender", "recipient", "x".repeat(4001)),
     InvalidMessageContentError,
   );
+  await assert.rejects(() => messageService.editMessage("id", "sender", "x".repeat(4001)), InvalidMessageContentError);
+});
+
+test("group read receipts survive reload and stay scoped to each recipient", async () => {
+  const users = new UserRepository();
+  const sender = await createTestUser(users);
+  const first = await createTestUser(users);
+  const second = await createTestUser(users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
+  const message = await service.sendMessageToConversation(sender.id, group.id, "A shared conversation");
+  assert.equal((await service.markSeen(message.id, sender.id))?.seenAt, null);
+  await service.markSeen(message.id, first.id);
+  assert.ok((await service.listConversation(group.id, first.id))[0].seenAt);
+  assert.equal((await service.listConversation(group.id, second.id))[0].seenAt, null);
+  assert.ok((await service.listConversation(group.id, sender.id))[0].seenAt);
+  assert.ok((await service.getConversationsForUser(first.id))[0].lastMessage?.seenAt);
+  assert.equal((await service.getConversationsForUser(second.id))[0].lastMessage?.seenAt, null);
 });

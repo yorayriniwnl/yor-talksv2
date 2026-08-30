@@ -22,6 +22,7 @@ export class UserService {
       return undefined;
     }
     if (viewerId && viewerId !== userId) void this.creatorAnalyticsService.recordProfileView(userId, viewerId);
+    if (viewerId === userId) return { ...user, following: await this.userRepository.listFollowingIds(userId) };
     return user;
   }
 

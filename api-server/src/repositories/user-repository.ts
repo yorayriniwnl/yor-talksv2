@@ -165,6 +165,12 @@ export class UserRepository {
       .map(({ user }) => user as UserRecord);
   }
 
+  async listFollowingIds(userId: string): Promise<string[]> {
+    const rows = await db.select({ id: userFollowsTable.followingId }).from(userFollowsTable)
+      .where(eq(userFollowsTable.followerId, userId));
+    return rows.map((row) => row.id);
+  }
+
   async listFavoriteCreatorIds(userId: string): Promise<string[]> {
     const rows = await db.select({ creatorId: userFavoriteCreatorsTable.creatorId })
       .from(userFavoriteCreatorsTable)
