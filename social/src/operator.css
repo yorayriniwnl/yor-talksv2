@@ -1626,3 +1626,101 @@
 
   .operator-profile-people { grid-column: auto; }
 }
+
+/* ── Trust surfaces ─────────────────────────────────────────────────────── */
+.operator-grievance-page {
+  color: hsl(var(--foreground));
+}
+
+.operator-grievance__header h1 {
+  text-wrap: balance;
+}
+
+.operator-grievance-form,
+.operator-grievance-success,
+.operator-grievance-track-form {
+  background: hsl(var(--card) / 0.48);
+  box-shadow: 0 1.2rem 3rem hsl(0 0% 0% / 0.16);
+}
+
+.operator-grievance-form {
+  position: relative;
+}
+
+.operator-grievance-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid hsl(var(--destructive) / 0.34);
+  border-radius: 0.9rem;
+  background: hsl(var(--destructive) / 0.09);
+  color: hsl(var(--destructive));
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.operator-grievance-alert svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.05rem;
+}
+
+.operator-grievance-field {
+  min-width: 0;
+}
+
+.operator-grievance-field input,
+.operator-grievance-field select,
+.operator-grievance-field textarea {
+  transition: border-color var(--operator-fast) ease, box-shadow var(--operator-fast) ease;
+}
+
+.operator-grievance-field input[aria-invalid='true'],
+.operator-grievance-field select[aria-invalid='true'],
+.operator-grievance-field textarea[aria-invalid='true'] {
+  border-color: hsl(var(--destructive) / 0.72) !important;
+  box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.1);
+}
+
+.operator-grievance-field__error {
+  color: hsl(var(--destructive));
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.operator-grievance-field__meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.operator-grievance-field__meta > span:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: var(--app-font-sans);
+}
+
+.operator-grievance-track-form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 1.25rem;
+}
+
+.operator-grievance-track-form input[aria-invalid='true'] {
+  border-color: hsl(var(--destructive) / 0.72) !important;
+  box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.1);
+}
+
+@media (max-width: 520px) {
+  .operator-grievance-form { padding: 1rem; }
+  .operator-grievance-success { padding: 1.15rem; }
+}
