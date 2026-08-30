@@ -34,6 +34,7 @@
 		"build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
 		"contract:generate": "node ./scripts/generate-api-contract.mjs",
 		"contract:check": "node ./scripts/generate-api-contract.mjs --check",
+		"production-config:check": "node ./scripts/check-production-config.mjs",
 		"test:e2e": "playwright test",
 		"smoke": "node ./ops/smoke-test.mjs",
 		"dev": "node ./dev.mjs",

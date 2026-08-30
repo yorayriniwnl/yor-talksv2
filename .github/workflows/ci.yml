@@ -96,23 +96,8 @@ jobs:
           pnpm --filter @workspace/api-server build
           pnpm --filter @workspace/social build
 
+      - name: Verify production configuration wiring
+        run: pnpm production-config:check
+
       - name: Validate production Compose file
-        shell: bash
-        env:
-          POSTGRES_PASSWORD: 01234567890123456789012345678901
-          DATABASE_URL: postgresql://yor_talks:01234567890123456789012345678901@postgres:5432/yor_talks
-          REDIS_PASSWORD: 01234567890123456789012345678901
-          JWT_SECRET: 01234567890123456789012345678901
-          JWT_REFRESH_SECRET: 11234567890123456789012345678901
-          CONTACT_SHIELD_SECRET: 21234567890123456789012345678901
-          CORS_ORIGINS: https://ci.example
-          CLIENT_ORIGIN: https://ci.example
-          CLOUDINARY_CLOUD_NAME: ci
-          CLOUDINARY_API_KEY: ci
-          CLOUDINARY_API_SECRET: ci
-          RESEND_API_KEY: ci
-          EMAIL_FROM: ci@example.com
-          LIVEKIT_URL: wss://ci.example
-          LIVEKIT_API_KEY: ci
-          LIVEKIT_API_SECRET: ci
-        run: docker compose -f docker-compose.production.yml config --quiet
+        run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet
