@@ -67,3 +67,32 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   assert.ok((await service.getConversationsForUser(first.id))[0].lastMessage?.seenAt);
   assert.equal((await service.getConversationsForUser(second.id))[0].lastMessage?.seenAt, null);
 });
+
+test("concurrent first messages share one direct conversation in either direction", async () => {
+  const users = new UserRepository();
+  const first = await createTestUser(users);
+  const second = await createTestUser(users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository());
+  const conversations = await Promise.all(Array.from({ length: 12 }, (_, index) =>
+    index % 2 === 0
+      ? service.createConversation(first.id, second.id)
+      : service.createConversation(second.id, first.id),
+  ));
+  assert.equal(new Set(conversations.map((conversation) => conversation.id)).size, 1);
+  assert.deepEqual((await service.getConversationsForUser(first.id)).map((item) => item.conversation.id), [conversations[0].id]);
+});
+
+test("new messages move old conversations to the top of the inbox", async () => {
+  const users = new UserRepository();
+  const sender = await createTestUser(users);
+  const recipient = await createTestUser(users);
+  const other = await createTestUser(users);
+  const repository = new ConversationRepository();
+  const service = new MessageService(repository, new MessageRepository());
+  const older = await service.createConversation(sender.id, recipient.id);
+  await pool.query('update conversations set updated_at = $1 where id = $2', ['2020-01-01T00:00:00Z', older.id]);
+  await service.createConversation(sender.id, other.id);
+  assert.notEqual((await repository.listForUser(sender.id))[0].id, older.id);
+  await service.sendMessageToConversation(sender.id, older.id, 'Returning to an older conversation');
+  assert.equal((await repository.listForUser(sender.id))[0].id, older.id);
+});

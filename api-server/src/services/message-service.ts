@@ -33,21 +33,7 @@ export class MessageService {
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
-    const existing = await this.conversationRepository.findBetween(participantA, participantB);
-    if (existing) {
-      return existing;
-    }
-    const conversation: ConversationRecord = {
-      id: randomUUID(),
-      participantA,
-      participantB,
-      updatedAt: new Date().toISOString(),
-      participantIds: [participantA, participantB],
-      isGroup: false,
-      title: null,
-      createdAt: new Date().toISOString(),
-    };
-    return this.conversationRepository.create(conversation);
+    return this.conversationRepository.findOrCreateDirect(participantA, participantB);
   }
 
   async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {

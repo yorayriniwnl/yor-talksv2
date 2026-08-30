@@ -1,4 +1,4 @@
-import { eq, or, and, desc, inArray, isNull, gt } from "drizzle-orm";
+import { eq, or, and, desc, inArray, isNull, gt, sql } from "drizzle-orm";
 import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
@@ -6,8 +6,13 @@ import { randomUUID } from "crypto";
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
-    const [created] = await db.insert(messagesTable).values(message).returning();
-    return created as MessageRecord;
+    return db.transaction(async (tx) => {
+      const [created] = await tx.insert(messagesTable).values(message).returning();
+      await tx.update(conversationsTable).set({
+        updatedAt: sql`greatest(${conversationsTable.updatedAt}, ${message.createdAt}::timestamp)`,
+      }).where(eq(conversationsTable.id, message.conversationId));
+      return created as MessageRecord;
+    });
   }
 
   async listConversation(conversationId: string): Promise<MessageRecord[]> {
@@ -58,6 +63,29 @@ export class ConversationRepository {
     return created as ConversationRecord;
   }
 
+  async findOrCreateDirect(firstId: string, secondId: string): Promise<ConversationRecord> {
+    const [participantA, participantB] = [firstId, secondId].sort();
+    return db.transaction(async (tx) => {
+      // Coordinate across requests AND server replicas, not just this process.
+      // The canonical pair makes A->B and B->A acquire the same transaction lock.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`direct:${participantA}:${participantB}`}, 0))`);
+      const [existing] = await tx.select().from(conversationsTable).where(and(
+        eq(conversationsTable.isGroup, false),
+        or(
+          and(eq(conversationsTable.participantA, participantA), eq(conversationsTable.participantB, participantB)),
+          and(eq(conversationsTable.participantA, participantB), eq(conversationsTable.participantB, participantA)),
+        ),
+      )).limit(1);
+      if (existing) return existing as ConversationRecord;
+      const [created] = await tx.insert(conversationsTable).values({
+        id: randomUUID(), participantA, participantB,
+        participantIds: [participantA, participantB], isGroup: false,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      }).returning();
+      return created as ConversationRecord;
+    });
+  }
+
   async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
     return db.transaction(async (tx) => {
       const [created] = await tx.insert(conversationsTable).values({
@@ -80,12 +108,13 @@ export class ConversationRepository {
   }
 
   async findBetween(participantA: string, participantB: string): Promise<ConversationRecord | undefined> {
-    const [conversation] = await db.select().from(conversationsTable).where(
+    const [conversation] = await db.select().from(conversationsTable).where(and(
+      eq(conversationsTable.isGroup, false),
       or(
         and(eq(conversationsTable.participantA, participantA), eq(conversationsTable.participantB, participantB)),
         and(eq(conversationsTable.participantA, participantB), eq(conversationsTable.participantB, participantA))
       )
-    );
+    ));
     return conversation as ConversationRecord | undefined;
   }
 
