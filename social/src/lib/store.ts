@@ -65,6 +65,11 @@ export type User = {
   onboardingCompleted?: boolean;
 };
 
+function visibleSocialItems<T extends { authorId: string }>(items: T[], viewer: User | null): T[] {
+  const hidden = new Set([...(viewer?.blockedUserIds ?? []), ...(viewer?.mutedUserIds ?? [])]);
+  return items.filter((item) => !hidden.has(item.authorId));
+}
+
 export type ProfileComment = {
   id: string;
   authorId: string;
@@ -805,8 +810,8 @@ interface AppState {
   toggleSaveProduct: (productId: string) => Promise<void>;
   sendAIMessage: (content: string) => Promise<void>;
   updatePrivacy: (patch: Partial<Omit<PrivacySettings, 'twoFactorEnabled'>>) => Promise<void>;
-  toggleBlockUser: (userId: string) => Promise<void>;
-  toggleMuteUser: (userId: string) => Promise<void>;
+  toggleBlockUser: (userId: string) => Promise<boolean>;
+  toggleMuteUser: (userId: string) => Promise<boolean>;
   setTwoFactorEnabled: (enabled: boolean) => void;
   updateWorldPreferences: (patch: Partial<WorldPreferences>) => void;
   switchAccount: (userId: string) => void;
@@ -822,6 +827,7 @@ function clearPrivateSessionState(
   followRequestSequence += 1;
   activitySessionSequence += 1;
   notificationReadRequests.clear();
+  safetyRelationshipRequests.clear();
   profileRequests.clear();
   set({
     currentUser: null,
@@ -896,6 +902,7 @@ let notificationRequestSequence = 0;
 let followRequestSequence = 0;
 let activitySessionSequence = 0;
 const notificationReadRequests = new Map<string, Promise<void>>();
+const safetyRelationshipRequests = new Map<string, Promise<boolean>>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
 
@@ -995,6 +1002,55 @@ function setupRealtime(
     if (mapped.actorId) void get().loadUserProfile(mapped.actorId);
     if (mapped.type === 'follow_request') void get().loadFollowRequests();
   });
+}
+
+function toggleSafetyRelationship(
+  kind: 'block' | 'mute', userId: string,
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
+  get: () => AppState,
+): Promise<boolean> {
+  const currentUser = get().currentUser;
+  if (!currentUser || currentUser.id === userId) return Promise.resolve(false);
+  const key = `${currentUser.id}:${kind}:${userId}`;
+  const pending = safetyRelationshipRequests.get(key);
+  if (pending) return pending;
+  const field = kind === 'block' ? 'blockedUserIds' : 'mutedUserIds';
+  const removing = currentUser[field]?.includes(userId) === true;
+  const session = activitySessionSequence;
+  const request = (async () => {
+    try {
+      const action = kind === 'block'
+        ? removing ? api.unblockUser : api.blockUser
+        : removing ? api.unmuteUser : api.muteUser;
+      await action(userId);
+      if (session !== activitySessionSequence) return false;
+      set((state) => {
+        if (state.currentUser?.id !== currentUser.id) return {};
+        // Apply only the acknowledged target; a response snapshot can predate
+        // another successful block/mute even though both writes are atomic.
+        const ids = new Set(state.currentUser[field] ?? []);
+        if (removing) ids.delete(userId);
+        else ids.add(userId);
+        const posts = removing ? state.posts : state.posts.filter((post) => post.authorId !== userId);
+        const postIds = new Set(posts.map((post) => post.id));
+        return {
+          currentUser: { ...state.currentUser, [field]: [...ids] },
+          posts,
+          feedPostIds: state.feedPostIds.filter((id) => postIds.has(id)),
+          stories: removing ? state.stories : state.stories.filter((story) => story.authorId !== userId),
+          notes: removing ? state.notes : state.notes.filter((note) => note.authorId !== userId),
+        };
+      });
+      return true;
+    } catch (error) {
+      if (session === activitySessionSequence) toast.error(error instanceof Error ? error.message : `Could not update ${kind === 'block' ? 'blocked' : 'muted'} users`);
+      return false;
+    }
+  })().finally(() => {
+    if (safetyRelationshipRequests.get(key) === request) safetyRelationshipRequests.delete(key);
+  });
+  safetyRelationshipRequests.set(key, request);
+  return request;
 }
 
 export const useAppStore = create<AppState>()(
@@ -1244,7 +1300,7 @@ export const useAppStore = create<AppState>()(
         try {
           const res = await api.getFeed(mode);
           if (requestSequence !== feedRequestSequence || get().feedMode !== mode) return;
-          const backendPosts = res.data;
+          const backendPosts = visibleSocialItems(res.data, get().currentUser);
           const currentUserId = get().currentUser?.id;
           const ids = new Set(backendPosts.map((post) => post.id));
           set((state) => ({
@@ -1271,7 +1327,7 @@ export const useAppStore = create<AppState>()(
           const res = await api.getFeed(requestedMode, state.feedCursor);
           if (requestSequence !== feedRequestSequence || get().feedMode !== requestedMode) return;
           const currentUserId = get().currentUser?.id;
-          const nextPosts = res.data.map((post) => mapPost(post, currentUserId));
+          const nextPosts = visibleSocialItems(res.data, get().currentUser).map((post) => mapPost(post, currentUserId));
           const seenIds = new Set(get().posts.map((post) => post.id));
           set((current) => ({
             posts: [...current.posts, ...nextPosts.filter((post) => !seenIds.has(post.id))],
@@ -1876,23 +1932,25 @@ export const useAppStore = create<AppState>()(
       },
 
       loadStories: async () => {
+        const session = activitySessionSequence;
         try {
           const backendStories = await api.getStories();
+          if (session !== activitySessionSequence) return;
           const currentUserId = get().currentUser?.id;
           if (backendStories && backendStories.length > 0) {
-            set({ stories: backendStories.map((s) => mapStory(s, currentUserId)) });
+            set({ stories: visibleSocialItems(backendStories, get().currentUser).map((s) => mapStory(s, currentUserId)) });
             return;
           }
         } catch {
           // fallback
         }
-        set({ stories: [] });
+        if (session === activitySessionSequence) set({ stories: [] });
       },
 
       loadNotes: async () => {
         try {
           const backendNotes = await api.getNotes();
-          set({ notes: backendNotes.map(mapNote) });
+          set({ notes: visibleSocialItems(backendNotes, get().currentUser).map(mapNote) });
         } catch {
           // Keep the last successful snapshot during a transient outage.
         }
@@ -2339,60 +2397,9 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      toggleBlockUser: async (userId) => {
-        const isBlocked = get().currentUser?.blockedUserIds?.includes(userId);
-        set((state) => {
-          if (!state.currentUser) return state;
-          const blockedUserIds = isBlocked
-            ? (state.currentUser.blockedUserIds || []).filter(id => id !== userId)
-            : [...(state.currentUser.blockedUserIds || []), userId];
-          return { currentUser: { ...state.currentUser, blockedUserIds } };
-        });
-        try {
-          if (isBlocked) {
-            await api.unblockUser(userId);
-          } else {
-            await api.blockUser(userId);
-            set((state) => ({ posts: state.posts.filter((post) => post.authorId !== userId) }));
-          }
-        } catch (error) {
-          set((state) => {
-            if (!state.currentUser) return state;
-            const blockedUserIds = isBlocked
-              ? [...(state.currentUser.blockedUserIds || []), userId]
-              : (state.currentUser.blockedUserIds || []).filter(id => id !== userId);
-            return { currentUser: { ...state.currentUser, blockedUserIds } };
-          });
-          toast.error(error instanceof Error ? error.message : 'Could not update blocked users');
-        }
-      },
+      toggleBlockUser: (userId) => toggleSafetyRelationship('block', userId, set, get),
 
-      toggleMuteUser: async (userId) => {
-        const isMuted = get().currentUser?.mutedUserIds?.includes(userId);
-        set((state) => {
-          if (!state.currentUser) return state;
-          const mutedUserIds = isMuted
-            ? (state.currentUser.mutedUserIds || []).filter(id => id !== userId)
-            : [...(state.currentUser.mutedUserIds || []), userId];
-          return { currentUser: { ...state.currentUser, mutedUserIds } };
-        });
-        try {
-          if (isMuted) {
-            await api.unmuteUser(userId);
-          } else {
-            await api.muteUser(userId);
-          }
-        } catch (error) {
-          set((state) => {
-            if (!state.currentUser) return state;
-            const mutedUserIds = isMuted
-              ? [...(state.currentUser.mutedUserIds || []), userId]
-              : (state.currentUser.mutedUserIds || []).filter(id => id !== userId);
-            return { currentUser: { ...state.currentUser, mutedUserIds } };
-          });
-          toast.error(error instanceof Error ? error.message : 'Could not update muted users');
-        }
-      },
+      toggleMuteUser: (userId) => toggleSafetyRelationship('mute', userId, set, get),
 
       setTwoFactorEnabled: (enabled) => {
         set((state) => ({

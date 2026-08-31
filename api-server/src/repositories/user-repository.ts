@@ -150,6 +150,19 @@ export class UserRepository {
     return updated as UserRecord | undefined;
   }
 
+  async setSafetyRelationship(id: string, targetId: string, field: "blockedUsers" | "mutedUsers", enabled: boolean): Promise<UserRecord | undefined> {
+    const column = usersTable[field];
+    const current = sql`coalesce(${column}, '[]'::jsonb)`;
+    const target = JSON.stringify([targetId]);
+    const [updated] = await db.update(usersTable).set({
+      [field]: enabled
+        ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`
+        : sql`${current} - ${targetId}::text`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(usersTable.id, id)).returning();
+    return updated as UserRecord | undefined;
+  }
+
   async deleteById(id: string): Promise<void> {
     await db.delete(usersTable).where(eq(usersTable.id, id));
   }

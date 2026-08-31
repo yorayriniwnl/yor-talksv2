@@ -512,3 +512,34 @@ test('follow decisions prevent duplicate actions and activity read-all handles f
   await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).not.toHaveAttribute('data-unread', 'true');
   expect(readAttempts).toBe(2);
 });
+
+test('failed blocking never announces success or hides the post, and retry persists', async ({ page }) => {
+  const profile = { ...user, blockedUsers: [] as string[] };
+  await installApiBoundary(page, profile);
+  const creator = { ...user, id: '10000000-0000-4000-8000-000000000090', username: 'block_fixture', fullName: 'Safety Test Creator' };
+  const item = { ...post('Keep this visible until blocking is confirmed.', 'block-post'), authorId: creator.id };
+  await page.route(`**/api/users/${creator.id}`, (route) => json(route, creator));
+  await page.route('**/api/feed?*', (route) => json(route, profile.blockedUsers.length ? [] : [item]));
+  let attempts = 0;
+  await page.route(`**/api/users/${creator.id}/block`, (route) => {
+    attempts++;
+    if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Blocking could not be saved' }) });
+    profile.blockedUsers.push(creator.id);
+    return json(route, { blockedUsers: profile.blockedUsers });
+  });
+  await page.goto('/');
+  const itemCard = page.getByRole('article').filter({ hasText: item.content });
+  await expect(itemCard.getByRole('link', { name: creator.fullName, exact: true })).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(page.getByText('Blocking could not be saved', { exact: true })).toBeVisible();
+  await expect(page.getByText('User blocked', { exact: true })).toHaveCount(0);
+  await expect(itemCard).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(itemCard).toHaveCount(0);
+  expect(attempts).toBe(2);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(itemCard).toHaveCount(0);
+});

@@ -398,8 +398,9 @@ export function PostCard({ post }: { post: PostType }) {
 
   const blockAuthor = async (event: React.MouseEvent) => {
     event.stopPropagation();
-    await toggleBlockUser(author.id);
-    toast({ title: 'User blocked', description: 'You will no longer see this user’s content.' });
+    if (await toggleBlockUser(author.id)) {
+      toast({ title: 'User blocked', description: 'You will no longer see this user’s content.' });
+    }
   };
 
   const handleInlineComment = async (data: RichCommentData) => {

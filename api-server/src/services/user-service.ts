@@ -236,44 +236,26 @@ export class UserService {
     if (userId === targetId) {
       throw new Error("Cannot block yourself");
     }
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
     const target = await this.userRepository.findById(targetId);
     if (!target) return undefined;
-    const blockedUsers = [...(user.blockedUsers ?? [])];
-    if (!blockedUsers.includes(targetId)) {
-      blockedUsers.push(targetId);
-    }
-    return this.userRepository.update(userId, { blockedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "blockedUsers", true);
   }
 
   async unblockUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    const blockedUsers = (user.blockedUsers ?? []).filter((id) => id !== targetId);
-    return this.userRepository.update(userId, { blockedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "blockedUsers", false);
   }
 
   async muteUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
     if (userId === targetId) {
       throw new Error("Cannot mute yourself");
     }
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
     const target = await this.userRepository.findById(targetId);
     if (!target) return undefined;
-    const mutedUsers = [...(user.mutedUsers ?? [])];
-    if (!mutedUsers.includes(targetId)) {
-      mutedUsers.push(targetId);
-    }
-    return this.userRepository.update(userId, { mutedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "mutedUsers", true);
   }
 
   async unmuteUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    const mutedUsers = (user.mutedUsers ?? []).filter((id) => id !== targetId);
-    return this.userRepository.update(userId, { mutedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "mutedUsers", false);
   }
 
   private async canViewProfile(user: UserRecord, viewerId?: string): Promise<boolean> {

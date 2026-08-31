@@ -419,8 +419,7 @@ export default function Profile() {
 
   const handleBlockProfile = useCallback(async () => {
     if (!profile || isOwnProfile) return;
-    await toggleBlockUser(profile.id);
-    setLocation('/');
+    if (await toggleBlockUser(profile.id)) setLocation('/');
   }, [isOwnProfile, profile, setLocation, toggleBlockUser]);
 
   if (!profile) {
