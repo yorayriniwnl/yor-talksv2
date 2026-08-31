@@ -845,8 +845,8 @@
 .operator-notification__unread { padding: 0.28rem 0.42rem; border: 1px solid hsl(var(--signal) / 0.25); border-radius: 999px; background: hsl(var(--signal) / 0.08); color: hsl(var(--signal)); font-family: var(--app-font-mono); font-size: 0.48rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
 
 .operator-activity-empty { display: grid; min-height: 26rem; align-content: center; justify-items: center; text-align: center; gap: 0.55rem; }
-.operator-activity-empty > span { display: grid; width: 3.7rem; height: 3.7rem; place-items: center; margin-bottom: 0.3rem; border: 1px solid hsl(var(--operator-line)); border-radius: 1rem; background: hsl(var(--operator-surface)); color: hsl(var(--signal)); }
-.operator-activity-empty > span svg { width: 1.45rem; }
+.operator-activity-empty > span:first-child { display: grid; width: 3.7rem; height: 3.7rem; place-items: center; margin-bottom: 0.3rem; border: 1px solid hsl(var(--operator-line)); border-radius: 1rem; background: hsl(var(--operator-surface)); color: hsl(var(--signal)); }
+.operator-activity-empty > span:first-child svg { width: 1.45rem; }
 .operator-activity-empty h2 { font-family: var(--app-font-serif); font-size: 1.8rem; font-weight: 600; letter-spacing: -0.04em; }
 .operator-activity-empty p { max-width: 25rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem; line-height: 1.6; }
 
