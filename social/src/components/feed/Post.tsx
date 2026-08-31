@@ -742,20 +742,19 @@ export function PostCard({ post }: { post: PostType }) {
                   <TooltipContent>Share</TooltipContent>
                 </Tooltip>
                 <DropdownMenuContent align="start" className="rounded-xl">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sharePost(post.id); toast({ title: 'Echoed to feed' }); }}>
-                    Repost to feed
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void toggleRepost(post.id); }}>
+                    {post.repostedByMe ? 'Remove repost' : 'Repost to feed'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={copyPostLink}>
                     Copy link
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => {
+                  <DropdownMenuItem onClick={async (e) => {
                     e.stopPropagation();
                     const url = window.location.origin + '/post/' + post.id;
                     if (navigator.share) {
                       navigator.share({ title: 'Check this post on Yor Talks', url }).catch(() => {});
                     } else {
-                      navigator.clipboard?.writeText(url);
-                      toast({ title: 'Link copied to clipboard!' });
+                      await copyPostLink(e);
                     }
                   }}>
                     Share via...

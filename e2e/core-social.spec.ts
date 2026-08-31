@@ -282,3 +282,21 @@ test('wall comments preserve failed drafts and unknown profiles offer a retry', 
   await expect(page.getByRole('heading', { name: 'Profile unavailable' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry profile' })).toBeVisible();
 });
+
+test('shared post links fetch uncached posts and recover failed replies', async ({ page }) => {
+  await installApiBoundary(page);
+  const id = '10000000-0000-4000-8000-000000000021';
+  let unavailable = true;
+  await page.route(`**/api/posts/${id}`, (route) => json(route, post('A shared post outside the loaded home feed.', id)));
+  await page.route(`**/api/posts/${id}/comments`, (route) => unavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Replies unavailable' }) })
+    : json(route, [{ id: 'reply', authorId: user.id, author: user, content: 'Recovered reply', createdAt: user.createdAt }]));
+  await page.goto(`/post/${id}`);
+  await expect(page.getByRole('article').getByText('A shared post outside the loaded home feed.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Replies could not load.' })).toBeVisible();
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry replies' }).click();
+  await expect(page.getByText('Recovered reply', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('article').getByText('A shared post outside the loaded home feed.')).toBeVisible();
+});

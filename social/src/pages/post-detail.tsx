@@ -21,10 +21,31 @@ export default function PostDetail() {
 
   const [commentList, setCommentList] = useState<CommentItem[]>([]);
   const [replyingTo, setReplyingTo] = useState<CommentItem | null>(null);
+  const [postLoading, setPostLoading] = useState(true);
+  const [postError, setPostError] = useState('');
+  const [postAttempt, setPostAttempt] = useState(0);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [commentsError, setCommentsError] = useState('');
+  const [commentsAttempt, setCommentsAttempt] = useState(0);
 
   useEffect(() => {
-    if (!post) return;
     let active = true;
+    setPostLoading(true);
+    setPostError('');
+    setReplyingTo(null);
+    if (!id) { setPostError('This post is unavailable.'); setPostLoading(false); return; }
+    void api.getPost(id).then((loaded) => { if (active) syncPostFromBackend(loaded); })
+      .catch(() => { if (active) setPostError('This post may be private, removed, or temporarily unavailable.'); })
+      .finally(() => { if (active) setPostLoading(false); });
+    return () => { active = false; };
+  }, [id, postAttempt, syncPostFromBackend]);
+
+  useEffect(() => {
+    if (!post || postLoading || postError) return;
+    let active = true;
+    setCommentsLoading(true);
+    setCommentsError('');
+    setCommentList([]);
     void api.getPostComments(post.id).then((comments) => {
       if (!active) return;
       setCommentList(comments.map((comment) => ({
@@ -44,17 +65,21 @@ export default function PostDetail() {
         createdAt: comment.createdAt,
       })));
     }).catch(() => {
-      if (active) setCommentList([]);
-    });
+      if (active) setCommentsError('Replies could not load. Please try again.');
+    }).finally(() => { if (active) setCommentsLoading(false); });
     return () => { active = false; };
-  }, [post?.id]);
+  }, [post?.id, postLoading, postError, commentsAttempt]);
 
-  if (!post) {
+  if (!post || postError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p className="text-sm font-mono text-muted-foreground">Loading post details…</p>
+          {postLoading ? <><div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" /><p role="status" className="text-sm text-muted-foreground">Loading post details…</p></> : <>
+            <h2 className="text-xl font-semibold">Post unavailable</h2>
+            <p role="alert" className="max-w-sm text-center text-sm text-muted-foreground">{postError}</p>
+            <Button onClick={() => setPostAttempt((value) => value + 1)}>Retry post</Button>
+            <Link href="/">Back to home</Link>
+          </>}
         </div>
       </div>
     );
@@ -118,13 +143,13 @@ export default function PostDetail() {
       {/* Sticky Glass Header */}
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 flex items-center gap-4 border-b border-border/30">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9 cursor-pointer">
+          <Button aria-label="Back to home" variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9 cursor-pointer">
             <ArrowLeft className="w-4.5 h-4.5" />
           </Button>
         </Link>
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h2>
-          <p className="text-[0.65rem] text-muted-foreground font-mono">Replies, Photos, GIFs & Super Comments 🇮🇳</p>
+          <p className="text-xs text-muted-foreground">A thought worth talking about.</p>
         </div>
       </div>
 
@@ -143,7 +168,7 @@ export default function PostDetail() {
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
             <h3 className="font-display font-extrabold text-sm text-foreground">
-              Replies & Super Comments ({commentList.length})
+              Replies{!commentsLoading && !commentsError ? ` (${commentList.length})` : ''}
             </h3>
           </div>
           
@@ -159,12 +184,12 @@ export default function PostDetail() {
           <RichCommentComposer
             postId={post.id}
             creatorUser={users[post.authorId]}
-            placeholder={replyingTo ? 'Write a text reply...' : 'Add a reply, photo, GIF, voice note or tip...'}
+            placeholder={replyingTo ? 'Write a text reply...' : 'Add a reply, photo, GIF, or voice note...'}
             onCommentSubmit={handleAddComment}
           />
 
           {/* Comments List */}
-          <RichCommentList comments={commentList} onLikeComment={handleLikeComment} onReplyComment={setReplyingTo} />
+          {commentsLoading ? <p role="status">Loading replies…</p> : commentsError ? <div role="alert" className="space-y-3"><p>{commentsError}</p><Button onClick={() => setCommentsAttempt((value) => value + 1)}>Retry replies</Button></div> : <RichCommentList comments={commentList} onLikeComment={handleLikeComment} onReplyComment={setReplyingTo} />}
         </div>
 
         {/* Related Posts */}

@@ -1289,7 +1289,9 @@ export const useAppStore = create<AppState>()(
       syncPostFromBackend: (post) => {
         const currentUserId = get().currentUser?.id;
         set((state) => ({
-          posts: state.posts.map((item) => item.id === post.id ? mapPost(post, currentUserId) : item),
+          posts: state.posts.some((item) => item.id === post.id)
+            ? state.posts.map((item) => item.id === post.id ? mapPost(post, currentUserId) : item)
+            : [...state.posts, mapPost(post, currentUserId)],
         }));
       },
 
