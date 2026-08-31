@@ -453,3 +453,62 @@ test('privacy preferences show confirmed state, prevent duplicate saves, and rec
   await expect(strangers).not.toBeChecked();
   await expect(requests).toBeChecked();
 });
+
+test('activity failures are retryable and never look caught up', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  let unavailable = true;
+  const failure = (route: Route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) });
+  await page.route('**/api/notifications', (route) => unavailable ? failure(route) : json(route, []));
+  await page.route('**/api/users/me/follow-requests', (route) => unavailable ? failure(route) : json(route, []));
+  await page.goto('/notifications');
+  await expect(page.getByRole('alert').filter({ hasText: 'Your activity could not refresh.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'You’re all caught up' })).toHaveCount(0);
+  await expect(page.getByText('Clear', { exact: true })).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry activity' }).click();
+  await expect(page.getByRole('heading', { name: 'You’re all caught up' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry activity' })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(result.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('follow decisions prevent duplicate actions and activity read-all handles failure and retry', async ({ page }) => {
+  await installApiBoundary(page);
+  const requester = { ...user, id: '10000000-0000-4000-8000-000000000080', username: 'river', fullName: 'River Stone' };
+  let requests = [{ id: 'follow-fixture', requesterId: requester.id, targetId: user.id, status: 'pending', createdAt: new Date().toISOString(), requester }];
+  await page.route('**/api/users/me/follow-requests', (route) => json(route, requests));
+  const notification = { id: 'notification-fixture', type: 'like', title: 'New like', message: 'River liked your post', relatedId: 'post-fixture', metadata: { actorId: requester.id }, readAt: null, createdAt: new Date().toISOString() };
+  await page.route('**/api/notifications', (route) => json(route, [notification]));
+  await page.route(`**/api/users/${requester.id}`, (route) => json(route, requester));
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  let decisions = 0;
+  await page.route('**/api/users/me/follow-requests/*/accept', async (route) => {
+    decisions++;
+    await pending;
+    requests = [];
+    return json(route, { follower: requester, target: { ...user, followerCount: 13 } });
+  });
+  let readAttempts = 0;
+  await page.route('**/api/notifications/read-all', async (route) => {
+    readAttempts++;
+    if (readAttempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Read status could not be saved' }) });
+    return json(route, null);
+  });
+  await page.goto('/notifications');
+  await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).toBeVisible();
+  await page.getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Decline', exact: true })).toBeDisabled();
+  expect(decisions).toBe(1);
+  release();
+  await expect(page.getByRole('heading', { name: 'Follow requests' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark all read' }).click();
+  await expect(page.getByText('Read status could not be saved')).toBeVisible();
+  await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).toHaveAttribute('data-unread', 'true');
+  await page.getByRole('button', { name: 'Mark all read' }).click();
+  await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).not.toHaveAttribute('data-unread', 'true');
+  expect(readAttempts).toBe(2);
+});

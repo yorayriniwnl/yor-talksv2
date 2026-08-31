@@ -712,6 +712,15 @@
 }
 .operator-activity-header__actions > button:hover { border-color: hsl(var(--signal) / 0.45); color: hsl(var(--signal)); }
 .operator-activity-header__actions > button svg { width: 0.85rem; }
+.operator-activity-header__actions > button:disabled,
+.operator-follow-requests__list button:disabled { cursor: wait; opacity: 0.6; }
+
+.operator-activity-recovery { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem; border: 1px solid hsl(var(--destructive) / 0.35); border-radius: 0.9rem; background: hsl(var(--destructive) / 0.04); }
+.operator-activity-recovery p { color: hsl(var(--foreground)); font-size: 0.85rem; line-height: 1.6; }
+.operator-activity-recovery button { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.5rem; padding: 0.65rem 0.9rem; border: 1px solid hsl(var(--operator-line)); border-radius: 0.6rem; color: hsl(var(--foreground)); font-size: 0.8rem; font-weight: 650; }
+.operator-activity-recovery button:disabled { cursor: wait; opacity: 0.6; }
+.operator-activity-recovery button svg { width: 1rem; height: 1rem; }
+.operator-activity-loading { padding: 2rem 1rem; color: hsl(var(--muted-foreground)); font-size: 0.9rem; }
 
 .operator-activity-overview {
   display: grid;

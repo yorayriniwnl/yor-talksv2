@@ -10,6 +10,7 @@ const { isUnreadMessage, hasUnreadConversation, upsertMessage, reconcileMessageS
 const { safeInternalRedirect } = await loadSource('social/src/lib/safe-redirect.ts');
 const { utcTimestamp, normalizeApiTimestamps } = await loadSource('social/src/lib/timestamps.ts');
 const { computeLevel } = await loadSource('social/src/lib/achievement-progress.ts');
+const { reconcileNotifications, reconcileFollowRequests } = await loadSource('social/src/lib/activity-state.ts');
 const message = { id: 'one', conversationId: 'chat', senderId: 'other', content: 'hello', createdAt: '2026-08-31T00:00:00Z', read: false };
 
 test('levels reflect earned XP and progress within the current level only', () => {
@@ -68,4 +69,19 @@ test('database UTC timestamps retain the same instant in every browser timezone'
   assert.equal(normalized.data[0].createdAt.endsWith('Z'), true);
   assert.equal(normalized.data[0].content, value, 'never rewrite user content');
   assert.equal(normalized.data[0].seenAt, null);
+});
+
+test('notification refresh preserves live arrivals and never reverses acknowledged reads', () => {
+  const old = { id: 'old', read: false, createdAt: '2026-08-31T00:00:00Z' };
+  const arrival = { id: 'new', read: false, createdAt: '2026-08-31T01:00:00Z' };
+  const refreshed = reconcileNotifications([old], [{ ...old, read: true }, arrival], [old]);
+  assert.deepEqual(refreshed, [arrival, { ...old, read: true }]);
+  assert.deepEqual(reconcileNotifications([old], [old], []), [], 'items outside the latest server window can expire');
+  assert.equal(reconcileNotifications([], Array.from({ length: 120 }, (_, id) => ({ ...old, id: String(id) })), []).length, 100);
+});
+
+test('late follow-request snapshots cannot resurrect accepted or declined requests', () => {
+  const handled = { id: 'handled', createdAt: '2026-08-31T00:00:00Z' };
+  const pending = { id: 'pending', createdAt: handled.createdAt };
+  assert.deepEqual(reconcileFollowRequests([handled, pending], [pending], [handled, pending]), [pending]);
 });

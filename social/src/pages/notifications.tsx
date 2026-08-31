@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ElementType } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ElementType } from 'react';
 import {
   Archive,
   AtSign,
@@ -9,6 +9,7 @@ import {
   Heart,
   MessageCircle,
   Radio,
+  RefreshCw,
   ShieldCheck,
   UserPlus,
 } from 'lucide-react';
@@ -86,11 +87,29 @@ function getNotificationHref(notification: Notification) {
 export default function Notifications() {
   const users = useAppStore((state) => state.users);
   const notifications = useAppStore((state) => state.notifications);
+  const notificationsLoaded = useAppStore((state) => state.notificationsLoaded);
+  const notificationsLoading = useAppStore((state) => state.notificationsLoading);
+  const notificationsError = useAppStore((state) => state.notificationsError);
+  const notificationsMarkingAll = useAppStore((state) => state.notificationsMarkingAll);
   const followRequests = useAppStore((state) => state.followRequests);
+  const followRequestsLoaded = useAppStore((state) => state.followRequestsLoaded);
+  const followRequestsLoading = useAppStore((state) => state.followRequestsLoading);
+  const followRequestsError = useAppStore((state) => state.followRequestsError);
+  const loadNotifications = useAppStore((state) => state.loadNotifications);
+  const loadFollowRequests = useAppStore((state) => state.loadFollowRequests);
   const acceptFollowRequest = useAppStore((state) => state.acceptFollowRequest);
   const rejectFollowRequest = useAppStore((state) => state.rejectFollowRequest);
   const markAllNotificationsRead = useAppStore((state) => state.markAllNotificationsRead);
   const markNotificationRead = useAppStore((state) => state.markNotificationRead);
+  const loading = notificationsLoading || followRequestsLoading;
+  const loaded = notificationsLoaded && followRequestsLoaded;
+  const errors = [notificationsError, followRequestsError].filter((error): error is string => Boolean(error));
+
+  const refresh = useCallback(() => {
+    void Promise.all([loadNotifications(), loadFollowRequests()]);
+  }, [loadNotifications, loadFollowRequests]);
+
+  useEffect(refresh, [refresh]);
 
   const grouped = useMemo(() => {
     const today: Notification[] = [];
@@ -148,14 +167,20 @@ export default function Notifications() {
 
   return (
     <section aria-label="Activity" className="operator-activity-page">
-      <ActivityHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} />
+      <ActivityHeader unreadCount={unreadCount} onMarkAllRead={handleMarkAllRead} loading={loading || !loaded} failed={errors.length > 0} markingAll={notificationsMarkingAll} />
 
       <section className="operator-activity-overview" aria-label="Activity overview">
-        <div><strong>{unreadCount}</strong><span>Unread</span></div>
-        <div><strong>{followRequests.length}</strong><span>Requests</span></div>
-        <div><strong>{systemCount}</strong><span>System</span></div>
+        <div><strong>{notificationsLoaded ? unreadCount : '—'}</strong><span>Unread</span></div>
+        <div><strong>{followRequestsLoaded ? followRequests.length : '—'}</strong><span>Requests</span></div>
+        <div><strong>{notificationsLoaded ? systemCount : '—'}</strong><span>System</span></div>
         <p>Review the signal, clear what matters, and get back to the conversation.</p>
       </section>
+
+      {errors.length > 0 && <section role="alert" className="operator-activity-recovery">
+        <div>{errors.map((error) => <p key={error}>{error}</p>)}{loaded && <p>Your last loaded activity is still shown below.</p>}</div>
+        <button type="button" onClick={refresh} disabled={loading}><RefreshCw aria-hidden="true" />Retry activity</button>
+      </section>}
+      {loading && !loaded && <p role="status" className="operator-activity-loading">Loading your activity…</p>}
 
       {followRequests.length > 0 && (
         <FollowRequestsSection
@@ -165,14 +190,14 @@ export default function Notifications() {
         />
       )}
 
-      {notifications.length === 0 ? (
+      {notifications.length === 0 && loaded && errors.length === 0 ? (
         <section className="operator-activity-empty">
           <span><Bell aria-hidden="true" /></span>
           <SignalLabel tone="muted">Activity monitor</SignalLabel>
-          <h2>You’re all caught up</h2>
+          <h2>{followRequests.length > 0 ? 'No other activity yet' : 'You’re all caught up'}</h2>
           <p>Likes, comments, mentions, follows, and important system notices will appear here.</p>
         </section>
-      ) : (
+      ) : notifications.length > 0 ? (
         <div className="operator-activity-groups">
           {Object.entries(grouped).map(([label, items]) => {
             if (items.length === 0) return null;
@@ -191,7 +216,7 @@ export default function Notifications() {
                   {groupNotifications(items).map((group) => {
                     const notification = group.latestNotification;
                     const primaryActor = group.actors[0] ? users[group.actors[0]] : null;
-                    const actorName = primaryActor?.displayName || notification.title || 'Yor Talks';
+                    const actorName = primaryActor?.displayName || (notification.actorId ? 'A member' : notification.title || 'Yor Talks');
                     const uniqueOthers = Math.max(group.actors.length - 1, 0);
                     const isUnread = group.unreadIds.length > 0;
                     const config = typeConfig[notification.type] ?? { icon: Bell, tone: 'muted' as const };
@@ -215,7 +240,7 @@ export default function Notifications() {
                             {primaryActor && <AvatarImage src={primaryActor.avatarUrl} alt={primaryActor.displayName} />}
                             <AvatarFallback>{actorName.charAt(0).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          {group.count > 1 && <span>+{group.count > 9 ? '9+' : group.count - 1}</span>}
+                          {group.count > 1 && <span>{group.count > 10 ? '9+' : `+${group.count - 1}`}</span>}
                           <i data-tone={config.tone}><Icon aria-hidden="true" /></i>
                         </div>
 
@@ -244,7 +269,7 @@ export default function Notifications() {
             );
           })}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -258,6 +283,19 @@ function FollowRequestsSection({
   onAccept: (requestId: string) => Promise<void>;
   onReject: (requestId: string) => Promise<void>;
 }) {
+  const pending = useRef(new Set<string>());
+  const [pendingIds, setPendingIds] = useState(new Set<string>());
+  const decide = async (id: string, accept: boolean) => {
+    if (pending.current.has(id)) return;
+    pending.current.add(id);
+    setPendingIds(new Set(pending.current));
+    try {
+      await (accept ? onAccept(id) : onReject(id));
+    } finally {
+      pending.current.delete(id);
+      setPendingIds(new Set(pending.current));
+    }
+  };
   return (
     <section className="operator-follow-requests">
       <header>
@@ -282,8 +320,8 @@ function FollowRequestsSection({
               <span>@{request.requester.username} · {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}</span>
             </div>
             <div>
-              <button type="button" onClick={() => void onReject(request.id)}>Decline</button>
-              <button type="button" onClick={() => void onAccept(request.id)}>Accept</button>
+              <button type="button" disabled={pendingIds.has(request.id)} onClick={() => void decide(request.id, false)}>Decline</button>
+              <button type="button" disabled={pendingIds.has(request.id)} onClick={() => void decide(request.id, true)}>{pendingIds.has(request.id) ? 'Saving…' : 'Accept'}</button>
             </div>
           </article>
         ))}
@@ -292,7 +330,7 @@ function FollowRequestsSection({
   );
 }
 
-function ActivityHeader({ unreadCount, onMarkAllRead }: { unreadCount: number; onMarkAllRead: () => void }) {
+function ActivityHeader({ unreadCount, onMarkAllRead, loading, failed, markingAll }: { unreadCount: number; onMarkAllRead: () => void; loading: boolean; failed: boolean; markingAll: boolean }) {
   return (
     <header className="operator-activity-header">
       <div>
@@ -301,9 +339,9 @@ function ActivityHeader({ unreadCount, onMarkAllRead }: { unreadCount: number; o
         <p>Your social inbox, organized by urgency instead of noise.</p>
       </div>
       <div className="operator-activity-header__actions">
-        <StatusBadge status={unreadCount > 0 ? 'busy' : 'online'}>{unreadCount > 0 ? `${unreadCount} unread` : 'Clear'}</StatusBadge>
+        <StatusBadge status={failed ? 'offline' : loading || unreadCount > 0 ? 'busy' : 'online'}>{failed ? 'Refresh needed' : loading ? 'Updating' : unreadCount > 0 ? `${unreadCount} unread` : 'Clear'}</StatusBadge>
         {unreadCount > 0 && (
-          <button type="button" onClick={onMarkAllRead}><Check aria-hidden="true" />Mark all read</button>
+          <button type="button" disabled={markingAll || loading} onClick={onMarkAllRead}><Check aria-hidden="true" />{markingAll ? 'Marking read…' : 'Mark all read'}</button>
         )}
       </div>
     </header>

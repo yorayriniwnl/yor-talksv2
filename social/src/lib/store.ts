@@ -32,6 +32,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
 import { reconcileMessageSnapshot, upsertMessage } from '@/lib/message-state';
+import { reconcileFollowRequests, reconcileNotifications } from '@/lib/activity-state';
 import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
@@ -686,7 +687,14 @@ interface AppState {
   videos: Video[];
   achievements: Achievement[];
   notifications: Notification[];
+  notificationsLoaded: boolean;
+  notificationsLoading: boolean;
+  notificationsError: string | null;
+  notificationsMarkingAll: boolean;
   followRequests: FollowRequest[];
+  followRequestsLoaded: boolean;
+  followRequestsLoading: boolean;
+  followRequestsError: string | null;
   conversations: Conversation[];
   conversationsLoading: boolean;
   conversationsError: string | null;
@@ -810,6 +818,10 @@ function clearPrivateSessionState(
   feedRequestSequence += 1;
   conversationRequestSequence += 1;
   privacyRequestSequence += 1;
+  notificationRequestSequence += 1;
+  followRequestSequence += 1;
+  activitySessionSequence += 1;
+  notificationReadRequests.clear();
   profileRequests.clear();
   set({
     currentUser: null,
@@ -836,7 +848,14 @@ function clearPrivateSessionState(
     videos: [],
     achievements: [],
     notifications: [],
+    notificationsLoaded: false,
+    notificationsLoading: false,
+    notificationsError: null,
+    notificationsMarkingAll: false,
     followRequests: [],
+    followRequestsLoaded: false,
+    followRequestsLoading: false,
+    followRequestsError: null,
     conversations: [],
     conversationsLoading: false,
     conversationsError: null,
@@ -873,6 +892,10 @@ let realtimePollingTimer: number | null = null;
 let feedRequestSequence = 0;
 let conversationRequestSequence = 0;
 let privacyRequestSequence = 0;
+let notificationRequestSequence = 0;
+let followRequestSequence = 0;
+let activitySessionSequence = 0;
+const notificationReadRequests = new Map<string, Promise<void>>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
 
@@ -892,6 +915,7 @@ function setupRealtime(
     realtimePollingTimer = window.setInterval(() => {
       if (!get().currentUser || document.visibilityState === 'hidden' || getSocket()?.connected) return;
       void get().loadNotifications();
+      void get().loadFollowRequests();
       void get().loadConversations();
     }, 15_000);
   }
@@ -967,7 +991,9 @@ function setupRealtime(
   });
   socket.on('notification:new', (raw: BackendNotification) => {
     const mapped = mapNotification(raw);
-    set((state) => (state.notifications.some((n) => n.id === mapped.id) ? state : { notifications: [mapped, ...state.notifications] }));
+    set((state) => (state.notifications.some((n) => n.id === mapped.id) ? state : { notifications: [mapped, ...state.notifications].slice(0, 100) }));
+    if (mapped.actorId) void get().loadUserProfile(mapped.actorId);
+    if (mapped.type === 'follow_request') void get().loadFollowRequests();
   });
 }
 
@@ -1000,7 +1026,14 @@ export const useAppStore = create<AppState>()(
       videos: [],
       achievements: [],
       notifications: [],
+      notificationsLoaded: false,
+      notificationsLoading: false,
+      notificationsError: null,
+      notificationsMarkingAll: false,
       followRequests: [],
+      followRequestsLoaded: false,
+      followRequestsLoading: false,
+      followRequestsError: null,
       conversations: [],
       conversationsLoading: false,
       conversationsError: null,
@@ -1460,30 +1493,55 @@ export const useAppStore = create<AppState>()(
       },
 
       loadNotifications: async () => {
+        if (!get().currentUser || get().notificationsLoading) return;
+        const sequence = ++notificationRequestSequence;
+        const before = get().notifications;
+        set({ notificationsLoading: true, notificationsError: null });
         try {
           const backendNotifications = await api.getNotifications();
-          set({ notifications: backendNotifications.map(mapNotification) });
-          return;
+          if (sequence !== notificationRequestSequence) return;
+          const incoming = backendNotifications.map(mapNotification);
+          set((state) => ({ notifications: reconcileNotifications(before, state.notifications, incoming), notificationsLoaded: true }));
+          for (const actorId of new Set(incoming.map((item) => item.actorId).filter((id): id is string => Boolean(id)))) {
+            void get().loadUserProfile(actorId);
+          }
         } catch {
-          // Keep the last successful notification snapshot during a transient outage.
+          if (sequence === notificationRequestSequence) set({ notificationsError: 'Your activity could not refresh. Please try again.' });
+        } finally {
+          if (sequence === notificationRequestSequence) set({ notificationsLoading: false });
         }
       },
 
-      markNotificationRead: async (id) => {
-        try {
-          await api.markNotificationRead(id);
-          set((state) => ({ notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not mark notification as read');
-        }
+      markNotificationRead: (id) => {
+        const pending = notificationReadRequests.get(id);
+        if (pending) return pending;
+        const session = activitySessionSequence;
+        const request = (async () => {
+          try {
+            await api.markNotificationRead(id);
+            if (session === activitySessionSequence) set((state) => ({ notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
+          } catch (error) {
+            if (session === activitySessionSequence) toast.error(error instanceof Error ? error.message : 'Could not mark notification as read');
+          }
+        })().finally(() => {
+          if (notificationReadRequests.get(id) === request) notificationReadRequests.delete(id);
+        });
+        notificationReadRequests.set(id, request);
+        return request;
       },
 
       markAllNotificationsRead: async () => {
+        if (get().notificationsMarkingAll) return;
+        const session = activitySessionSequence;
+        const ids = new Set(get().notifications.map((item) => item.id));
+        set({ notificationsMarkingAll: true });
         try {
           await api.markAllNotificationsRead();
-          set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
+          if (session === activitySessionSequence) set((state) => ({ notifications: state.notifications.map((n) => ids.has(n.id) ? { ...n, read: true } : n) }));
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Could not mark notifications as read');
+          if (session === activitySessionSequence) toast.error(error instanceof Error ? error.message : 'Could not mark notifications as read');
+        } finally {
+          if (session === activitySessionSequence) set({ notificationsMarkingAll: false });
         }
       },
 
@@ -1768,11 +1826,17 @@ export const useAppStore = create<AppState>()(
       },
 
       loadFollowRequests: async () => {
+        if (!get().currentUser || get().followRequestsLoading) return;
+        const sequence = ++followRequestSequence;
+        const before = get().followRequests;
+        set({ followRequestsLoading: true, followRequestsError: null });
         try {
           const requests = await api.getFollowRequests();
-          set({ followRequests: requests.map(mapFollowRequest) });
+          if (sequence === followRequestSequence) set((state) => ({ followRequests: reconcileFollowRequests(before, state.followRequests, requests.map(mapFollowRequest)), followRequestsLoaded: true }));
         } catch {
-          // Keep the last successful snapshot during a transient outage.
+          if (sequence === followRequestSequence) set({ followRequestsError: 'Your follow requests could not refresh. Please try again.' });
+        } finally {
+          if (sequence === followRequestSequence) set({ followRequestsLoading: false });
         }
       },
 
