@@ -684,6 +684,7 @@ interface AppState {
   requestPasswordReset: (email: string) => Promise<void>;
   initialize: () => Promise<void>;
   loadWorldPreferences: () => Promise<void>;
+  loadAchievements: () => Promise<void>;
 
   loadStories: () => Promise<void>;
   loadNotes: () => Promise<void>;
@@ -832,6 +833,7 @@ function hydrateSessionData(get: () => AppState): void {
     get().loadStories(),
     get().loadNotes(),
     get().loadWorldPreferences(),
+    get().loadAchievements(),
   ]);
 }
 
@@ -1594,6 +1596,11 @@ export const useAppStore = create<AppState>()(
         users: { ...state.users, ...Object.fromEntries(profiles.filter((user) => user.id !== state.currentUser?.id).map((user) => [user.id, mapUser(user)])) },
       })),
 
+      loadAchievements: async () => {
+        const achievements = await api.getAchievements();
+        set({ achievements });
+      },
+
       loadUserProfile: (userId) => {
         if (get().users[userId]) return Promise.resolve();
         const pending = profileRequests.get(userId);
@@ -2314,6 +2321,7 @@ export const useAppStore = create<AppState>()(
           toast.success('Comment posted');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not post the profile comment');
+          throw error;
         }
       },
 
@@ -2335,6 +2343,7 @@ export const useAppStore = create<AppState>()(
           toast.success('Showcase added');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not add the showcase');
+          throw error;
         }
       },
 

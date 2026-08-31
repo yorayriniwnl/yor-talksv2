@@ -13,6 +13,17 @@ export interface Tokens {
 export type AuthTokens = Tokens;
 export type FeedMode = 'for_you' | 'following' | 'favorites';
 
+export interface BackendAchievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  progress: number;
+  goal: number;
+  xp: number;
+}
+
 export type TwoFactorChallenge = {
   requiresTwoFactor: true;
   challengeId: string;
@@ -511,6 +522,7 @@ export const api = {
   followUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser; status: 'accepted' | 'pending' }>(`/users/${userId}/follow`, { method: 'POST' }),
   unfollowUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser }>(`/users/${userId}/unfollow`, { method: 'POST' }),
   getFollowers: (userId: string) => request<BackendUser[]>(`/users/${userId}/followers`),
+  getAchievements: () => request<BackendAchievement[]>('/achievements/me'),
   getFollowing: (userId: string) => request<BackendUser[]>(`/users/${userId}/following`),
   getFavoriteCreatorIds: () => request<string[]>('/users/me/favorites/creators'),
   getCloseFriends: () => request<BackendUser[]>('/users/me/close-friends'),

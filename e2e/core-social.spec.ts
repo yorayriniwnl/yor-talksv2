@@ -14,6 +14,7 @@ const user = {
   updatedAt: "2026-08-28T09:00:00.000Z",
   followerCount: 12,
   followingCount: 0,
+  following: [] as string[],
   postCount: 1,
   verified: true,
   settings: { notificationsEnabled: true, privateAccount: false, contentFilter: "regular" },
@@ -239,4 +240,45 @@ test('comments retain failed drafts, prevent duplicate sends, and hide disabled 
   await expect(composer).toBeHidden();
   expect(requests).toBe(2);
   await expect(page.getByRole('button', { name: 'View all 1 comments' })).toBeVisible();
+});
+
+test('profile achievements use earned server progress and never invent mutual followers', async ({ page }) => {
+  const friend = { ...user, id: '10000000-0000-4000-8000-000000000015', username: 'friend', fullName: 'A Known Friend' };
+  const target = { ...user, id: '10000000-0000-4000-8000-000000000016', username: 'newcreator', fullName: 'Another Creator' };
+  await installApiBoundary(page, { ...user, following: [friend.id] });
+  await page.route('**/api/achievements/me', (route) => json(route, [{ id: 'first-post', title: 'First Post', description: 'Publish your first post', icon: 'Sparkles', goal: 1, progress: 1, xp: 50, unlocked: true }]));
+  await page.route('**/api/feed?*', (route) => json(route, [{ ...post('A known friend is not automatically a mutual follower.', 'friend-post'), authorId: friend.id }]));
+  await page.route(`**/api/users/${friend.id}`, (route) => json(route, friend));
+  await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
+  await page.route('**/api/users/*/profile-comments', (route) => json(route, [{ id: 'wall-note', targetUserId: target.id, authorId: friend.id, author: friend, content: 'A note from a known friend.', createdAt: user.createdAt }]));
+  await page.goto(`/profile/${user.id}`);
+  await page.getByRole('button', { name: 'View level 2 achievements' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Your Yor achievements' });
+  await expect(dialog.getByText('50 XP earned', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'First Post' })).toBeVisible();
+  await expect(dialog.getByText(/1,850|Yor Pioneer|100 Social Waves/)).toHaveCount(0);
+  await page.goto(`/profile/${target.id}`);
+  await expect(page.getByRole('heading', { name: target.fullName, exact: true }).first()).toBeVisible();
+  await expect(page.getByText('A Known Friend', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/Followed by/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /View level .* achievements/ })).toHaveCount(0);
+  await expect(page.getByText('Profile Soundtrack', { exact: false })).toHaveCount(0);
+});
+
+test('wall comments preserve failed drafts and unknown profiles offer a retry', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/users/*/profile-comments', (route) => route.request().method() === 'POST'
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Wall temporarily unavailable' }) })
+    : json(route, []));
+  await page.goto(`/profile/${user.id}`);
+  const composer = page.getByRole('textbox', { name: 'Write a wall comment' });
+  await composer.fill('This wall draft must survive a failed request.');
+  await page.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect(page.getByText('Wall temporarily unavailable')).toBeVisible();
+  await expect(composer).toHaveValue('This wall draft must survive a failed request.');
+  const missing = '10000000-0000-4000-8000-000000000017';
+  await page.route(`**/api/users/${missing}`, (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Profile service unavailable' }) }));
+  await page.goto(`/profile/${missing}`);
+  await expect(page.getByRole('heading', { name: 'Profile unavailable' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry profile' })).toBeVisible();
 });

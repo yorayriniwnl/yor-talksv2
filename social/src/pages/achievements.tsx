@@ -10,6 +10,8 @@ import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
+import { publicBetaConfig } from '@/lib/public-beta-config';
+import { computeLevel } from '@/lib/achievement-progress';
 
 const ICONS: Record<string, any> = { Sparkles, TrendingUp, Users, Flame, BookOpen };
 
@@ -63,6 +65,15 @@ const INITIAL_CARD_SETS: TradingCardSet[] = [
 
 export default function Achievements() {
   const achievements = useAppStore((s) => s.achievements);
+  const loadAchievements = useAppStore((s) => s.loadAchievements);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setError('');
+    void loadAchievements().catch(() => { if (active) setError('Achievements could not load. Please try again.'); });
+    return () => { active = false; };
+  }, [loadAchievements, attempt]);
   const [cardSets, setCardSets] = useState<TradingCardSet[]>(() => {
     if (typeof window === 'undefined') return INITIAL_CARD_SETS;
     try {
@@ -82,12 +93,12 @@ export default function Achievements() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('yor-achievement-card-sets', JSON.stringify(cardSets));
+      try { localStorage.setItem('yor-achievement-card-sets', JSON.stringify(cardSets)); }
+      catch { /* Local previews also work in browsers that restrict storage. */ }
     }
   }, [cardSets]);
   
-  const totalXp = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
-  const level = Math.floor(Math.sqrt(totalXp / 50)) + 1;
+  const { totalXp, level } = computeLevel(achievements);
   
   const unlocked = achievements.filter(a => a.unlocked);
   const locked = achievements.filter(a => !a.unlocked);
@@ -113,8 +124,8 @@ export default function Achievements() {
             <Trophy className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Steam Achievements & Badges</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Trophies, Trading Cards & local badge preview</p>
+            <h1 className="text-xl font-bold font-display text-foreground">Your achievements</h1>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Progress earned on Yor</p>
           </div>
         </div>
         <div className="level-badge shadow-sm">
@@ -123,6 +134,7 @@ export default function Achievements() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
+        {error && <div role="alert" className="space-y-3"><p>{error}</p><Button onClick={() => setAttempt((value) => value + 1)}>Retry achievements</Button></div>}
         {/* XP Counter Banner */}
         <div className="p-8 rounded-3xl surface-1 border border-border/40 text-center relative overflow-hidden shadow-sm">
           <div className="absolute inset-0 aurora-bg opacity-30 pointer-events-none" />
@@ -133,13 +145,13 @@ export default function Achievements() {
             className="relative z-10 flex flex-col items-center"
           >
             <div className="level-badge mb-3 glow-neon-primary text-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400" /> Steam Level {level} Voyager
+              <Star className="w-3.5 h-3.5 fill-amber-400" /> Yor Level {level}
             </div>
             <span className="font-display font-extrabold text-6xl sm:text-7xl text-shimmer tracking-tight">
               {totalXp}
             </span>
             <span className="text-xs uppercase tracking-widest text-muted-foreground mt-2 font-bold font-mono">
-              Total Steam XP Accumulated
+              XP earned on Yor
             </span>
           </motion.div>
         </div>
@@ -154,14 +166,14 @@ export default function Achievements() {
           >
             <Trophy className="w-3.5 h-3.5 mr-1.5" /> All Achievements ({unlocked.length}/{achievements.length})
           </Button>
-          <Button
+          {!publicBetaConfig.publicBeta && <Button
             size="sm"
             variant={activeTab === 'crafting' ? 'default' : 'ghost'}
             onClick={() => setActiveTab('crafting')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'crafting' && "bg-amber-600 text-white shadow-md")}
           >
             <Hammer className="w-3.5 h-3.5 mr-1.5" /> Steam Card Crafting Station ({cardSets.filter(s => !s.crafted && s.cardsCollected === s.totalCards).length} Ready)
-          </Button>
+          </Button>}
         </div>
 
         {activeTab === 'crafting' ? (

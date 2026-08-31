@@ -1,108 +1,61 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Sparkles, Award, Star, CheckCircle, Flame, Trophy, Heart } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useState } from 'react';
+import { CheckCircle, Shield, Sparkles, Star, TrendingUp, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
+import { computeLevel } from '@/lib/achievement-progress';
 import { cn } from '@/lib/utils';
-import { sounds } from '@/lib/sound';
 
-interface BadgeShowcaseModalProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+const ICONS = { Sparkles, TrendingUp, Users };
 
-const SOCIAL_BADGES = [
-  { id: 'b1', title: 'Yor Pioneer', description: 'Early founding member of Yor’s next-generation social network', xp: 500, icon: Sparkles, color: 'from-purple-500 to-indigo-600', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b2', title: '100 Social Waves', description: 'Liked and reacted to 100 community posts across the world', xp: 350, icon: Heart, color: 'from-rose-500 to-pink-600', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b3', title: 'Master Storyteller', description: 'Published 10 high-resolution stories', xp: 450, icon: Flame, color: 'from-amber-400 to-orange-500', unlocked: true, date: 'Unlocked Aug 2026' },
-  { id: 'b4', title: 'Top Supporter', description: 'Awarded 5 Creator Awards (Koh-i-Noor 💎 & Diya ✨)', xp: 600, icon: Trophy, color: 'from-emerald-400 to-teal-600', unlocked: false, date: 'Locked (3/5 Progress)' },
-  { id: 'b5', title: 'Community Architect', description: 'Joined 5 specialized tech and gaming circles worldwide', xp: 800, icon: Shield, color: 'from-cyan-400 to-blue-600', unlocked: false, date: 'Locked (2/5 Progress)' },
-];
+export function BadgeShowcaseModal({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const achievements = useAppStore((state) => state.achievements);
+  const loadAchievements = useAppStore((state) => state.loadAchievements);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const level = computeLevel(achievements);
 
-export function BadgeShowcaseModal({ isOpen, onOpenChange }: BadgeShowcaseModalProps) {
-  const currentUser = useAppStore((s) => s.currentUser);
-  const achievements = useAppStore((s) => s.achievements);
-
-  const totalXP = 1850;
-  const currentLevel = Math.floor(Math.sqrt(totalXP / 50)) + 1;
-  const nextLevelXP = Math.pow(currentLevel, 2) * 50;
-  const progressPercent = Math.min(100, Math.round((totalXP / nextLevelXP) * 100));
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setLoading(true);
+    setError('');
+    void loadAchievements().catch(() => { if (active) setError('Achievements could not load. Please try again.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [isOpen, loadAchievements, attempt]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px] rounded-3xl font-sans glass-heavy border border-border/60">
+      <DialogContent className="sm:max-w-[540px] rounded-3xl font-sans">
         <DialogHeader>
-          <DialogTitle className="font-display font-bold text-xl flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" /> Yor Guild Level & Badges
-          </DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Your Yor achievements</DialogTitle>
+          <DialogDescription>Progress earned through your posts, followers, and communities.</DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-6 py-2">
-          {/* Level Header Banner */}
-          <div className="surface-1 rounded-2xl p-5 border border-border/40 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-3 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="level-badge text-sm px-3 py-1 shadow-md">
-                  <Star className="w-4 h-4 fill-amber-400" /> Level {currentLevel} Voyager
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm leading-tight">{currentUser?.displayName}</h4>
-                  <p className="text-[0.68rem] text-muted-foreground font-mono">Total Experience: {totalXP.toLocaleString()} XP</p>
-                </div>
+        {error ? <div role="alert" className="space-y-3"><p>{error}</p><Button onClick={() => setAttempt((value) => value + 1)}>Retry achievements</Button></div> : (
+          <div className="space-y-5" aria-busy={loading}>
+            <section className="rounded-2xl bg-muted/40 p-5">
+              <p className="font-semibold">{currentUser?.displayName} · Level {level.level}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{level.totalXp.toLocaleString()} XP earned</p>
+              <div role="progressbar" aria-label="Level progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level.progress)} className="my-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-primary" style={{ width: `${level.progress}%` }} />
               </div>
-
-              <span className="text-xs font-mono font-bold text-primary">{progressPercent}% to Lv. {currentLevel + 1}</span>
-            </div>
-
-            {/* XP Progress Bar */}
-            <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden relative z-10">
-              <div className="bg-gradient-to-r from-primary via-purple-500 to-accent h-full rounded-full transition-all duration-700 glow-neon-primary" style={{ width: `${progressPercent}%` }} />
-            </div>
-          </div>
-
-          {/* Social Badges Grid */}
-          <div>
-            <h4 className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wider mb-3">
-              Unlocked Guild Badges ({SOCIAL_BADGES.filter(b => b.unlocked).length}/{SOCIAL_BADGES.length})
-            </h4>
-
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-              {SOCIAL_BADGES.map((badge) => {
-                const Icon = badge.icon;
-
-                return (
-                  <div
-                    key={badge.id}
-                    className={cn(
-                      "p-3.5 rounded-2xl border flex items-center justify-between transition-all",
-                      badge.unlocked
-                        ? "surface-1 border-border/50 hover:border-primary/40"
-                        : "bg-muted/30 border-border/20 opacity-60"
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className={cn("w-11 h-11 rounded-2xl bg-gradient-to-tr flex items-center justify-center text-white shrink-0 shadow-md", badge.color)}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <h5 className="font-bold text-sm truncate flex items-center gap-1.5">
-                          {badge.title}
-                          {badge.unlocked && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
-                        </h5>
-                        <p className="text-xs text-muted-foreground font-serif truncate">{badge.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0 font-mono text-xs">
-                      <span className="font-bold text-amber-400">+{badge.xp} XP</span>
-                      <p className="text-[0.62rem] text-muted-foreground mt-0.5">{badge.date}</p>
-                    </div>
-                  </div>
-                );
+              <p className="text-xs text-muted-foreground">{level.nextLevelXp - level.totalXp} XP to level {level.level + 1}</p>
+            </section>
+            {loading && achievements.length === 0 && <p role="status">Loading your achievements…</p>}
+            <div className="max-h-[300px] space-y-3 overflow-y-auto">
+              {achievements.map((badge) => {
+                const Icon = ICONS[badge.icon as keyof typeof ICONS] ?? Star;
+                return <article key={badge.id} className={cn('flex items-start gap-3 rounded-2xl border p-4', badge.unlocked ? 'border-primary/30' : 'border-border')}>
+                  <Icon className="h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1"><h3 className="font-semibold">{badge.title} {badge.unlocked && <CheckCircle aria-label="Unlocked" className="inline h-4 w-4 text-primary" />}</h3><p className="mt-1 text-sm text-muted-foreground">{badge.description}</p><p className="mt-2 text-xs text-muted-foreground">{badge.progress}/{badge.goal} · {badge.xp} XP {badge.unlocked ? 'earned' : 'available'}</p></div>
+                </article>;
               })}
             </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

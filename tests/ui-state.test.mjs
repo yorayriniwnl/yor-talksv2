@@ -9,7 +9,17 @@ async function loadSource(path) {
 const { isUnreadMessage, hasUnreadConversation, upsertMessage, reconcileMessageSnapshot } = await loadSource('social/src/lib/message-state.ts');
 const { safeInternalRedirect } = await loadSource('social/src/lib/safe-redirect.ts');
 const { utcTimestamp, normalizeApiTimestamps } = await loadSource('social/src/lib/timestamps.ts');
+const { computeLevel } = await loadSource('social/src/lib/achievement-progress.ts');
 const message = { id: 'one', conversationId: 'chat', senderId: 'other', content: 'hello', createdAt: '2026-08-31T00:00:00Z', read: false };
+
+test('levels reflect earned XP and progress within the current level only', () => {
+  assert.deepEqual(computeLevel([]), { level: 1, totalXp: 0, currentLevelXp: 0, nextLevelXp: 50, progress: 0 });
+  assert.equal(computeLevel([{ unlocked: false, xp: 1850 }]).totalXp, 0);
+  const earned = computeLevel([{ unlocked: true, xp: 50 }, { unlocked: true, xp: 75 }]);
+  assert.equal(earned.level, 2);
+  assert.equal(earned.progress, 50);
+  assert.equal(computeLevel([{ unlocked: true, xp: -50 }, { unlocked: true, xp: Infinity }]).totalXp, 0);
+});
 
 test('unread state excludes outgoing, deleted, read, and signed-out messages', () => {
   assert.equal(isUnreadMessage(message, 'viewer'), true);

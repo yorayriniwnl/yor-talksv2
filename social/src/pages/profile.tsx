@@ -18,7 +18,6 @@ import {
 
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { BadgeShowcaseModal } from '@/components/steam/BadgeShowcaseModal';
-import { ProfileMusicPlayer } from '@/components/profile/ProfileMusicPlayer';
 import ReelsSwiper from '@/components/video/ReelsSwiper';
 import StoryViewer from '@/components/feed/StoryViewer';
 import { StoryBuilderModal } from '@/components/feed/StoryBuilderModal';
@@ -28,6 +27,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api, type BackendUser } from '@/lib/api-client';
 import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
+import { toast } from 'sonner';
+import { computeLevel } from '@/lib/achievement-progress';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -41,15 +42,6 @@ const AWARDS = [
   { emoji: '❤️', label: 'Heart', xp: 10 },
   { emoji: '🚀', label: 'Rocket', xp: 30 },
 ];
-
-function computeLevel(achievements: { unlocked: boolean; xp: number }[]) {
-  const totalXp = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
-  const level = Math.floor(Math.sqrt(totalXp / 50)) + 1;
-  const currentLevelXp = Math.pow(level - 1, 2) * 50;
-  const nextLevelXp = Math.pow(level, 2) * 50;
-  const progress = nextLevelXp === currentLevelXp ? 100 : ((totalXp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
-  return { level, totalXp, progress: Math.min(progress, 100), nextLevelXp, currentLevelXp };
-}
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -91,12 +83,18 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
   const [title, setTitle] = useState('');
   const [customText, setCustomText] = useState('');
   const [customImageUrl, setCustomImageUrl] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageUrl: customImageUrl.trim() || undefined });
-    setOpen(false); setTitle(''); setCustomText(''); setCustomImageUrl('');
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    try {
+      await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageUrl: customImageUrl.trim() || undefined });
+      setOpen(false); setTitle(''); setCustomText(''); setCustomImageUrl('');
+    } catch {
+      // The store reports the error; leave all fields intact for a retry.
+    } finally { setSaving(false); }
   };
 
   return (
@@ -142,7 +140,7 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
             </>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={!title.trim()} className="rounded-xl h-11 px-8 font-bold">Add to Profile</Button>
+            <Button type="submit" disabled={saving || !title.trim()} className="rounded-xl h-11 px-8 font-bold">{saving ? 'Saving…' : 'Add to Profile'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -158,7 +156,7 @@ function ShowcaseCard({ showcase, canRemove, onRemove }: { showcase: Showcase; c
     <motion.div layout initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92 }} transition={springGentle} className="showcase-card group hover-lift">
       <div className="showcase-card-inner card-shine">
         {canRemove && (
-          <button onClick={onRemove} className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all backdrop-blur-sm">
+          <button aria-label="Remove showcase" onClick={onRemove} className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-background/80 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all backdrop-blur-sm">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
@@ -170,7 +168,7 @@ function ShowcaseCard({ showcase, canRemove, onRemove }: { showcase: Showcase; c
             <div className="min-w-0 pt-0.5">
               <div className="showcase-card-badge mb-2"><Award className="w-3 h-3" /> Achievement</div>
               <h4 className="font-display font-bold text-[0.95rem] text-foreground leading-tight">{showcase.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1.5 font-medium">+50 XP earned</p>
+              <p className="text-xs text-muted-foreground mt-1.5 font-medium">Shared by the profile owner</p>
             </div>
           </div>
         ) : (
@@ -201,9 +199,6 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
   isOwner: boolean;
   onDelete: () => void;
 }) {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={springGentle} className="comment-card relative group">
       <Link href={`/profile/${author.id}`}>
@@ -222,16 +217,9 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
           </span>
         </div>
         <p className="text-[0.84rem] text-foreground/90 whitespace-pre-wrap leading-[1.55]">{comment.content}</p>
-        <div className="comment-actions mt-1.5">
-          <button type="button" onClick={() => { setLiked(!liked); setLikeCount(c => liked ? c - 1 : c + 1); }} className={cn(liked && '!text-primary')}>
-            <ThumbsUp className={cn("w-3.5 h-3.5", liked && "fill-current")} /> {likeCount > 0 && likeCount}
-          </button>
-          <button type="button"><MessageCircle className="w-3.5 h-3.5" /> Reply</button>
-          <button type="button"><Share2 className="w-3.5 h-3.5" /></button>
-        </div>
       </div>
       {isOwner && (
-        <button onClick={onDelete} className="absolute top-2.5 right-2.5 p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all">
+        <button aria-label="Delete wall comment" onClick={onDelete} className="absolute top-2.5 right-2.5 p-2.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       )}
@@ -314,6 +302,10 @@ export default function Profile() {
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [highlightBuilderOpen, setHighlightBuilderOpen] = useState(false);
   const [highlightViewerOpen, setHighlightViewerOpen] = useState(false);
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [finishedProfileLookup, setFinishedProfileLookup] = useState('');
+  const [profileFollowers, setProfileFollowers] = useState<BackendUser[]>([]);
+  const [postingComment, setPostingComment] = useState(false);
 
   const profileLookup = id || username || currentUser?.id;
   const profile = id
@@ -335,8 +327,22 @@ export default function Profile() {
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
   useEffect(() => {
-    if (profileLookup && !profile) loadUserProfile(profileLookup);
-  }, [profileLookup, profile, loadUserProfile]);
+    let active = true;
+    if (profileLookup && !profile) {
+      setFinishedProfileLookup('');
+      void loadUserProfile(profileLookup).finally(() => { if (active) setFinishedProfileLookup(profileLookup); });
+    }
+    return () => { active = false; };
+  }, [profileLookup, profile, loadUserProfile, profileAttempt]);
+
+  useEffect(() => {
+    let active = true;
+    setProfileFollowers([]);
+    if (profileId && !isOwnProfile) {
+      void api.getFollowers(profileId).then((followers) => { if (active) setProfileFollowers(followers); }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [profileId, isOwnProfile]);
 
   useEffect(() => {
     if (profile?.id) {
@@ -375,10 +381,10 @@ export default function Profile() {
 
   const mutualFollowers = useMemo(() => {
     if (isOwnProfile || !currentUser?.followingIds) return [];
-    return Object.values(users).filter(u =>
-      u.id !== profile?.id && u.id !== currentUser?.id && currentUser.followingIds?.includes(u.id)
-    ).slice(0, 3);
-  }, [users, profile?.id, currentUser, isOwnProfile]);
+    return profileFollowers.filter(u =>
+      u.id !== currentUser.id && currentUser.followingIds?.includes(u.id)
+    ).slice(0, 3).map(u => ({ ...u, displayName: u.fullName || u.username }));
+  }, [profileFollowers, currentUser, isOwnProfile]);
 
   const handleToggleFollow = useCallback((targetId: string) => {
     if (!currentUser) return;
@@ -390,10 +396,13 @@ export default function Profile() {
     await toggleFavoriteCreator(profile.id);
   }, [isOwnProfile, profile, toggleFavoriteCreator]);
 
-  const handleCopyLink = useCallback(() => {
-    navigator.clipboard?.writeText(window.location.href);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+  const handleCopyLink = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Copy is unavailable in this browser. Copy the address from the address bar.');
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not copy the profile link'); }
   }, []);
 
   const handleShareProfile = useCallback(async () => {
@@ -401,8 +410,8 @@ export default function Profile() {
       try {
         await navigator.share({ title: `${profile.displayName} on Yor`, text: `Check out ${profile.displayName}'s profile on Yor.`, url: window.location.href });
         return;
-      } catch {
-        // Sharing was cancelled or is unavailable; use the copy fallback below.
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
       }
     }
     handleCopyLink();
@@ -420,10 +429,11 @@ export default function Profile() {
         <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
           <UserRound className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h2 className="font-display font-bold text-xl">User not found</h2>
+        <h2 className="font-display font-bold text-xl">{finishedProfileLookup === profileLookup ? 'Profile unavailable' : 'Loading profile…'}</h2>
         <p className="text-sm text-muted-foreground text-center max-w-sm font-serif">
-          This profile doesn't exist or may have been removed.
+          {finishedProfileLookup === profileLookup ? 'The profile may be private, removed, or temporarily unavailable.' : 'Getting the latest profile details.'}
         </p>
+        {finishedProfileLookup === profileLookup && <Button onClick={() => setProfileAttempt((value) => value + 1)}>Retry profile</Button>}
         <Link href="/explore">
           <Button variant="outline" className="rounded-2xl font-bold text-xs">
             Discover People
@@ -437,7 +447,7 @@ export default function Profile() {
 
   return (
     <div className="operator-profile-page flex min-h-screen flex-col bg-background">
-      <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />
+      {isOwnProfile && <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />}
       <StoryBuilderModal isOpen={highlightBuilderOpen} onOpenChange={setHighlightBuilderOpen} isHighlight />
       {highlightViewerOpen && profile && userHighlights.length > 0 && (
         <StoryViewer
@@ -457,9 +467,9 @@ export default function Profile() {
           <h2 className="font-display font-bold text-[0.92rem] leading-tight truncate">{profile.displayName}</h2>
           <p className="text-[0.6rem] text-muted-foreground font-mono tracking-wide">{userPosts.length} posts</p>
         </div>
-        <button onClick={() => setBadgeModalOpen(true)} className="operator-profile-topbar__level" aria-label={`View level ${levelData.level} achievements`}>
+        {isOwnProfile && <button onClick={() => setBadgeModalOpen(true)} className="operator-profile-topbar__level" aria-label={`View level ${levelData.level} achievements`}>
           <Shield className="h-3.5 w-3.5" /> Level {levelData.level}
-        </button>
+        </button>}
       </motion.header>
 
       {/* ══════════════════════════════════════════════════════════════════
@@ -588,9 +598,6 @@ export default function Profile() {
           {/* Bio */}
           {profile.bio && <p className="text-[0.88rem] leading-[1.6] mb-3 font-serif max-w-[480px]">{profile.bio}</p>}
 
-          {/* Steam Profile Soundtrack Player */}
-          <ProfileMusicPlayer />
-
           {/* Category Badge */}
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[0.7rem] font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
@@ -629,7 +636,7 @@ export default function Profile() {
               <div className="flex -space-x-2">
                 {mutualFollowers.map(u => (
                   <Avatar key={u.id} className="w-6 h-6 ring-2 ring-background">
-                    <AvatarImage src={u.avatarUrl} /><AvatarFallback className="text-[0.5rem]">{u.displayName.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={u.avatarUrl || undefined} /><AvatarFallback className="text-[0.5rem]">{u.displayName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 ))}
               </div>
@@ -847,6 +854,9 @@ export default function Profile() {
               </Avatar>
               <div className="flex-1 flex flex-col gap-2.5">
                 <Textarea
+                  aria-label="Write a wall comment"
+                  disabled={postingComment}
+                  maxLength={280}
                   placeholder={isOwnProfile ? "Write on your wall..." : `Write something to ${profile.displayName}...`}
                   value={newComment}
                   onChange={e => setNewComment(e.target.value)}
@@ -855,14 +865,14 @@ export default function Profile() {
                 <div className="flex items-center justify-between pt-1 border-t border-border/30">
                   <Popover open={showAwardPicker} onOpenChange={setShowAwardPicker}>
                     <PopoverTrigger asChild>
-                      <button type="button" className="p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"><Award className="w-4 h-4" /></button>
+                      <button type="button" aria-label="Add an emoji to your wall comment" className="p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"><Award className="w-4 h-4" /></button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 border-0 bg-transparent shadow-none" side="top">
                       <div className="award-picker">
                         {AWARDS.map(a => (
                           <Tooltip key={a.emoji}><TooltipTrigger asChild>
                             <button type="button" onClick={() => { setNewComment(p => p + a.emoji); setShowAwardPicker(false); }}>{a.emoji}</button>
-                          </TooltipTrigger><TooltipContent className="text-xs">{a.label} · +{a.xp} XP</TooltipContent></Tooltip>
+                          </TooltipTrigger><TooltipContent className="text-xs">{a.label} emoji</TooltipContent></Tooltip>
                         ))}
                       </div>
                     </PopoverContent>
@@ -870,7 +880,13 @@ export default function Profile() {
                   <div className="flex items-center gap-3">
                     <span className={cn("text-[0.62rem] font-mono font-medium tabular-nums", newComment.length > 280 ? "text-destructive" : "text-muted-foreground/60")}>{newComment.length}/280</span>
                     <motion.div whileTap={{ scale: 0.94 }}>
-                      <Button disabled={!newComment.trim() || newComment.length > 280} onClick={() => { if (newComment.trim() && profile) { addProfileComment(profile.id, newComment.trim()); setNewComment(''); } }} className="rounded-xl h-8 px-5 text-[0.72rem] font-bold">Post</Button>
+                      <Button disabled={postingComment || !newComment.trim() || newComment.length > 280} onClick={async () => {
+                        if (!profile || !newComment.trim() || postingComment) return;
+                        setPostingComment(true);
+                        try { await addProfileComment(profile.id, newComment.trim()); setNewComment(''); }
+                        catch { /* Preserve the draft; the store reports the failure. */ }
+                        finally { setPostingComment(false); }
+                      }} className="rounded-xl h-8 px-5 text-[0.72rem] font-bold">{postingComment ? 'Posting…' : 'Post'}</Button>
                     </motion.div>
                   </div>
                 </div>
@@ -898,7 +914,7 @@ export default function Profile() {
         </section>
 
         <aside className="operator-profile-rail">
-          <section className="operator-profile-level operator-panel">
+          {isOwnProfile && <section className="operator-profile-level operator-panel">
             <div className="operator-profile-level__topline">
               <StatusBadge status={isOwnProfile ? 'online' : 'offline'}>{isOwnProfile ? 'Online now' : 'Presence private'}</StatusBadge>
               <LevelBadge level={levelData.level} />
@@ -921,7 +937,7 @@ export default function Profile() {
             <Button variant="outline" className="operator-profile-rail__action" onClick={() => setBadgeModalOpen(true)}>
               <Trophy className="h-4 w-4" /> View achievements
             </Button>
-          </section>
+          </section>}
 
           <section className="operator-profile-library operator-panel">
             <div className="operator-profile-module-heading">
