@@ -211,3 +211,32 @@ test("public beta requires consent before opening protected social routes", asyn
   await expect(page).toHaveURL(/\/consent$/);
   await expect(page.getByRole("heading", { name: "Review the rules before you enter" })).toBeVisible();
 });
+
+test('comments retain failed drafts, prevent duplicate sends, and hide disabled payments', async ({ page }) => {
+  await installApiBoundary(page);
+  let requests = 0;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/api/posts/*/comments', async (route) => {
+    requests++;
+    if (requests === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Comment service unavailable' }) });
+    await pending;
+    return json(route, { post: { ...post('A real signal delivered through the feed boundary.', '18fac78e-65fa-4fd4-931e-8b79e086c48d'), commentsCount: 1 } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Reply to post' }).click();
+  const composer = page.getByRole('textbox', { name: 'Write a comment' });
+  await composer.fill('Keep this draft until the server accepts it.');
+  await expect(page.getByRole('button', { name: /UPI Tip/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Post comment', exact: true }).click();
+  await expect(page.getByText('Comment service unavailable')).toBeVisible();
+  await expect(composer).toHaveValue('Keep this draft until the server accepts it.');
+  await composer.press('Enter');
+  await expect(composer).toBeDisabled();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests).toBe(2);
+  release();
+  await expect(composer).toBeHidden();
+  expect(requests).toBe(2);
+  await expect(page.getByRole('button', { name: 'View all 1 comments' })).toBeVisible();
+});

@@ -63,8 +63,6 @@ const TRENDING_GIFS: GifItem[] = [
   },
 ];
 
-const CATEGORIES = ['Trending 🔥', 'Reactions 😲', 'Global ✨', 'Gaming 🎮', 'Anime ✨', 'Love ❤️'];
-
 export function GifPickerModal({
   isOpen,
   onOpenChange,
@@ -75,7 +73,6 @@ export function GifPickerModal({
   onSelectGif: (gif: GifItem) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Trending 🔥');
 
   const filteredGifs = TRENDING_GIFS.filter((g) =>
     g.title.toLowerCase().includes(search.toLowerCase())
@@ -94,30 +91,17 @@ export function GifPickerModal({
         <div className="relative mt-2">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
+            aria-label="Filter featured GIFs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search all GIFs via GIPHY..."
+            placeholder="Filter featured GIFs…"
             className="pl-9 rounded-2xl surface-2 border-border/40 text-xs h-10"
             autoFocus
           />
         </div>
 
-        {/* Categories */}
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => { setActiveCategory(cat); sounds.playPop(); }}
-              className={`px-3 py-1 rounded-full text-[0.7rem] font-bold font-mono shrink-0 transition-all cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-primary text-primary-foreground glow-neon-primary'
-                  : 'surface-1 text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs text-muted-foreground">A small selection of GIFs hosted by GIPHY.</p>
+        {filteredGifs.length === 0 && <p role="status" className="py-6 text-sm text-center">No featured GIFs match that search.</p>}
 
         {/* GIF Grid */}
         <div className="grid grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto hide-scrollbar pt-2">

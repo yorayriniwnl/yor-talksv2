@@ -11,10 +11,10 @@ import { GifPickerModal, GifItem } from './GifPickerModal';
 import { VoiceNoteRecorder } from '@/components/messages/VoiceNoteRecorder';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const QUICK_EMOJIS = ['🔥', '❤️', '😂', '🚀', '💎', '👏', '🙏', '✨'];
 
@@ -51,6 +51,7 @@ export function RichCommentComposer({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedImageRef = useRef<string | null>(null);
+  const sendingRef = useRef(false);
 
   const releaseSelectedImage = () => {
     const url = selectedImageRef.current;
@@ -78,13 +79,8 @@ export function RichCommentComposer({
   };
 
   const handleSend = async () => {
-    if (!text.trim() && !selectedImage && !selectedGif && !voiceNote) return;
-
-    sounds.playPop();
-    if (selectedGif || selectedImage) {
-      triggerConfetti();
-    }
-
+    if (sendingRef.current || (!text.trim() && !selectedImage && !selectedGif && !voiceNote)) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       let imageUrl = selectedImage || undefined;
@@ -98,6 +94,7 @@ export function RichCommentComposer({
         voiceNoteUrl: voiceNote?.url || undefined,
         voiceDuration: voiceNote?.duration || undefined,
       });
+      sounds.playPop();
       setText('');
       releaseSelectedImage();
       setSelectedImage(null);
@@ -108,6 +105,7 @@ export function RichCommentComposer({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not post this comment');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -138,10 +136,13 @@ export function RichCommentComposer({
 
             <div className="flex-1 min-w-0">
               <textarea
+                aria-label="Write a comment"
+                disabled={sending}
+                maxLength={2000}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     void handleSend();
                   }
@@ -163,6 +164,8 @@ export function RichCommentComposer({
                     <img src={selectedImage} alt="Attachment" className="w-full h-full object-cover" />
                     <button
                       type="button"
+                      aria-label="Remove image attachment"
+                      disabled={sending}
                       onClick={() => { releaseSelectedImage(); setSelectedImage(null); setSelectedImageFile(null); }}
                       className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
                     >
@@ -184,6 +187,8 @@ export function RichCommentComposer({
                     </div>
                     <button
                       type="button"
+                      aria-label="Remove GIF attachment"
+                      disabled={sending}
                       onClick={() => setSelectedGif(null)}
                       className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
                     >
@@ -202,6 +207,8 @@ export function RichCommentComposer({
                     <audio controls src={voiceNote.url} className="h-6 max-w-[180px]" />
                     <button
                       type="button"
+                      aria-label="Remove voice attachment"
+                      disabled={sending}
                       onClick={() => setVoiceNote(null)}
                       className="text-muted-foreground hover:text-rose-400 ml-auto"
                     >
@@ -215,7 +222,7 @@ export function RichCommentComposer({
           </div>
 
           {/* Quick Emojis & Toolbar */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+          <fieldset disabled={sending} className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30 min-w-0">
             {/* Quick Emojis */}
             <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
               {QUICK_EMOJIS.map((emoji) => (
@@ -224,7 +231,7 @@ export function RichCommentComposer({
                   type="button"
                   onClick={() => {
                     sounds.playPop();
-                    setText((prev) => prev + emoji);
+                    setText((prev) => prev.length + emoji.length <= 2000 ? prev + emoji : prev);
                   }}
                   className="hover:scale-125 transition-transform text-sm p-0.5 cursor-pointer"
                 >
@@ -273,7 +280,7 @@ export function RichCommentComposer({
               </button>
 
               {/* Super Comment Tip */}
-              {creatorUser && (
+              {creatorUser && publicBetaConfig.paymentsEnabled && currentUser?.id !== creatorUser.id && (
                 <button
                   type="button"
                   onClick={() => {
@@ -292,6 +299,7 @@ export function RichCommentComposer({
 
               {/* Send Button */}
               <Button
+                aria-label={sending ? 'Posting comment' : 'Post comment'}
                 size="sm"
                 onClick={() => void handleSend()}
                 disabled={sending || (!text.trim() && !selectedImage && !selectedGif && !voiceNote)}
@@ -305,7 +313,7 @@ export function RichCommentComposer({
                 <SendHorizontal className="w-3.5 h-3.5" />
               </Button>
             </div>
-          </div>
+          </fieldset>
         </>
       )}
 
@@ -314,12 +322,13 @@ export function RichCommentComposer({
         isOpen={gifModalOpen}
         onOpenChange={setGifModalOpen}
         onSelectGif={(gif) => {
+          releaseSelectedImage();
           setSelectedGif(gif);
           setSelectedImage(null);
           setSelectedImageFile(null);
         }}
       />
-      {creatorUser && (
+      {creatorUser && publicBetaConfig.paymentsEnabled && (
         <UpiTipJarModal
           creator={creatorUser}
           isOpen={tipModalOpen}
