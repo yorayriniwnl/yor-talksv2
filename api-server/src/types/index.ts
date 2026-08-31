@@ -20,6 +20,9 @@ export interface UserRecord {
   /** Legacy compatibility fields; follow relationships live in user_follows. */
   followers?: string[];
   following?: string[];
+  /** Viewer-private relationship snapshots, never persisted on users. */
+  pendingFollowIds?: string[];
+  favoriteCreatorIds?: string[];
   followerCount?: number;
   followingCount?: number;
   accountTypes?: string[];

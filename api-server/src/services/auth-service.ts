@@ -767,7 +767,7 @@ export class AuthService {
       7 * 24 * 60 * 60,
     );
     const updatedUser = await this.userRepository.update(user.id, { ...updates, lastLoginAt: new Date().toISOString() });
-    const finalUser = { ...(updatedUser ?? user), following: await this.userRepository.listFollowingIds(user.id) };
+    const finalUser = { ...(updatedUser ?? user), ...(await this.userRepository.getOwnRelationships(user.id)) };
     return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
   }
 

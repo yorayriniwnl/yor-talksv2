@@ -22,7 +22,7 @@ export class UserService {
       return undefined;
     }
     if (viewerId && viewerId !== userId) void this.creatorAnalyticsService.recordProfileView(userId, viewerId);
-    if (viewerId === userId) return { ...user, following: await this.userRepository.listFollowingIds(userId) };
+    if (viewerId === userId) return { ...user, ...(await this.userRepository.getOwnRelationships(userId)) };
     return user;
   }
 
@@ -32,6 +32,7 @@ export class UserService {
       return undefined;
     }
     if (viewerId && viewerId !== user.id) void this.creatorAnalyticsService.recordProfileView(user.id, viewerId);
+    if (viewerId === user.id) return { ...user, ...(await this.userRepository.getOwnRelationships(user.id)) };
     return user;
   }
 

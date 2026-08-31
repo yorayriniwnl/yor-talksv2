@@ -316,6 +316,8 @@ export interface BackendUser {
   role: string;
   followers?: string[];
   following?: string[];
+  pendingFollowIds?: string[];
+  favoriteCreatorIds?: string[];
   followerCount?: number;
   followingCount?: number;
   emailVerified: boolean;

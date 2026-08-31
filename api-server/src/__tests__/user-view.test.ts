@@ -10,7 +10,7 @@ test("public profiles allowlist identity fields and exclude consent, email and f
     followerCount: 2, followingCount: 3, email: "private@example.test", passwordHash: "hash",
     totpSecret: "secret", googleSubject: "subject", contactIdentityDigest: "digest",
     termsVersion: "private-version", termsAcceptedAt: "private-time", ageConfirmedAt: "private-time",
-    permissions: [], settings: {}, following: ["private-relationship"], futurePrivateField: "private",
+    permissions: [], settings: {}, following: ["private-relationship"], pendingFollowIds: ["pending"], favoriteCreatorIds: ["favorite"], futurePrivateField: "private",
   } as unknown as UserRecord;
   const view = toPublicUser(user);
   assert.deepEqual(Object.keys(view).sort(), ["id", "username", "fullName", "bio", "avatarUrl", "role", "createdAt", "updatedAt", "followerCount", "followingCount"].sort());

@@ -94,7 +94,7 @@ export class UserRepository {
   }
 
   async create(user: UserRecord): Promise<UserRecord> {
-    const { followers: _followers, following: _following, ...persistedUser } = user;
+    const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUser } = user;
     const [created] = await db.insert(usersTable).values(persistedUser).returning();
     return created as UserRecord;
   }
@@ -120,7 +120,7 @@ export class UserRepository {
   }
 
   async update(id: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
-    const { followers: _followers, following: _following, ...persistedUpdates } = updates;
+    const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUpdates } = updates;
     const [updated] = await db.update(usersTable)
       .set({ ...persistedUpdates, updatedAt: new Date().toISOString() })
       .where(eq(usersTable.id, id))
@@ -169,6 +169,18 @@ export class UserRepository {
     const rows = await db.select({ id: userFollowsTable.followingId }).from(userFollowsTable)
       .where(eq(userFollowsTable.followerId, userId));
     return rows.map((row) => row.id);
+  }
+
+  async getOwnRelationships(userId: string): Promise<{ following: string[]; pendingFollowIds: string[]; favoriteCreatorIds: string[] }> {
+    const [following, requests, favoriteCreatorIds] = await Promise.all([
+      this.listFollowingIds(userId),
+      db.select({ id: followRequestsTable.targetId }).from(followRequestsTable).where(and(
+        eq(followRequestsTable.requesterId, userId),
+        eq(followRequestsTable.status, "pending"),
+      )),
+      this.listFavoriteCreatorIds(userId),
+    ]);
+    return { following, pendingFollowIds: requests.map((request) => request.id), favoriteCreatorIds };
   }
 
   async listFavoriteCreatorIds(userId: string): Promise<string[]> {

@@ -335,14 +335,27 @@ function mapUser(u: BackendUser): User {
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),
     following: Array.isArray(u.following) ? u.following.length : (u.followingCount ?? 0),
     followingIds: Array.isArray(u.following) ? u.following : [],
-    favoriteCreatorIds: [],
-    pendingFollowIds: [],
+    favoriteCreatorIds: Array.isArray(u.favoriteCreatorIds) ? u.favoriteCreatorIds : [],
+    pendingFollowIds: Array.isArray(u.pendingFollowIds) ? u.pendingFollowIds : [],
     blockedUserIds: Array.isArray(u.blockedUsers) ? u.blockedUsers : [],
     mutedUserIds: Array.isArray(u.mutedUsers) ? u.mutedUsers : [],
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
     notificationsEnabled: u.settings?.notificationsEnabled !== false,
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
     onboardingCompleted: u.settings?.onboardingCompleted,
+  };
+}
+
+// Profile mutations may omit viewer-private relationship snapshots. An
+// omitted field is not an instruction to clear the signed-in user's graph.
+function mapOwnProfile(u: BackendUser, previous: User | null): User {
+  const mapped = mapUser(u);
+  if (previous?.id !== u.id) return mapped;
+  return {
+    ...mapped,
+    followingIds: u.following ?? previous.followingIds ?? [],
+    pendingFollowIds: u.pendingFollowIds ?? previous.pendingFollowIds ?? [],
+    favoriteCreatorIds: u.favoriteCreatorIds ?? previous.favoriteCreatorIds ?? [],
   };
 }
 
@@ -987,7 +1000,7 @@ export const useAppStore = create<AppState>()(
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
-          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
           if (!needsTermsAcceptance(result.user)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
@@ -1007,7 +1020,7 @@ export const useAppStore = create<AppState>()(
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
-          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
           if (!needsTermsAcceptance(result.user)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
@@ -1027,7 +1040,7 @@ export const useAppStore = create<AppState>()(
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
-          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
           if (!needsTermsAcceptance(result.user)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
@@ -1046,7 +1059,7 @@ export const useAppStore = create<AppState>()(
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
-          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), users: { [mapped.id]: mapped } });
+          set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
           if (!needsTermsAcceptance(result.user)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
@@ -1075,7 +1088,7 @@ export const useAppStore = create<AppState>()(
         set({ authError: null });
         try {
           const result = await api.acceptCurrentTerms();
-          const mapped = mapUser(result.user);
+          const mapped = mapOwnProfile(result.user, get().currentUser);
           set((state) => ({
             currentUser: mapped,
             privacy: mapPrivacy(result.user),
@@ -1124,6 +1137,7 @@ export const useAppStore = create<AppState>()(
                 const mapped = mapUser(meResponse);
                 set((state) => ({
                   currentUser: mapped,
+                  favoriteCreatorIds: mapped.favoriteCreatorIds ?? [],
                   tokens: getStoredTokens(),
                   privacy: mapPrivacy(meResponse),
                   users: { ...state.users, [mapped.id]: mapped },
@@ -1319,7 +1333,7 @@ export const useAppStore = create<AppState>()(
           ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
           ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
         });
-        const mapped = { ...mapUser(updated), followingIds: updated.following ?? get().currentUser?.followingIds ?? [] };
+        const mapped = mapOwnProfile(updated, get().currentUser);
         set((state) => ({
           currentUser: mapped,
           privacy: mapPrivacy(updated),
@@ -1630,24 +1644,20 @@ export const useAppStore = create<AppState>()(
           const result = await api.followUser(userId);
           const follower = mapUser(result.follower);
           const target = mapUser(result.target);
-          if (result.status === 'pending') {
-            set((state) => ({
-              users: { ...state.users, [target.id]: target, [follower.id]: follower },
-              currentUser: state.currentUser?.id === follower.id
-                ? { ...follower, pendingFollowIds: [...new Set([...(state.currentUser.pendingFollowIds || []), userId])] }
-                : state.currentUser,
-            }));
-            toast.info('Follow request sent');
-            return;
-          }
-          set((state) => ({
-            users: { ...state.users, [target.id]: target, [follower.id]: follower },
-            currentUser: state.currentUser?.id === follower.id ? {
+          set((state) => {
+            if (state.currentUser?.id !== follower.id) return state;
+            const pending = result.status === 'pending';
+            const updated = {
               ...follower,
-              followingIds: [...new Set([...(state.currentUser.followingIds || []), userId])],
-              pendingFollowIds: (state.currentUser.pendingFollowIds || []).filter((id) => id !== userId),
-            } : state.currentUser,
-          }));
+              followingIds: pending ? state.currentUser.followingIds : [...new Set([...(state.currentUser.followingIds || []), userId])],
+              pendingFollowIds: pending
+                ? [...new Set([...(state.currentUser.pendingFollowIds || []), userId])]
+                : (state.currentUser.pendingFollowIds || []).filter((id) => id !== userId),
+              favoriteCreatorIds: state.favoriteCreatorIds,
+            };
+            return { users: { ...state.users, [target.id]: target, [updated.id]: updated }, currentUser: updated };
+          });
+          if (result.status === 'pending') toast.info('Follow request sent');
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not follow this person');
         }
@@ -1660,14 +1670,16 @@ export const useAppStore = create<AppState>()(
           const result = await api.unfollowUser(userId);
           const follower = mapUser(result.follower);
           const target = mapUser(result.target);
-          set((state) => ({
-            users: { ...state.users, [target.id]: target, [follower.id]: follower },
-            currentUser: state.currentUser?.id === follower.id ? {
+          set((state) => {
+            if (state.currentUser?.id !== follower.id) return state;
+            const updated = {
               ...follower,
               followingIds: (state.currentUser.followingIds || []).filter((id) => id !== userId),
               pendingFollowIds: (state.currentUser.pendingFollowIds || []).filter((id) => id !== userId),
-            } : state.currentUser,
-          }));
+              favoriteCreatorIds: state.favoriteCreatorIds,
+            };
+            return { users: { ...state.users, [target.id]: target, [updated.id]: updated }, currentUser: updated };
+          });
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not unfollow this person');
         }
@@ -1735,7 +1747,7 @@ export const useAppStore = create<AppState>()(
         try {
           const result = await api.acceptFollowRequest(requestId);
           const follower = mapUser(result.follower);
-          const target = mapUser(result.target);
+          const target = mapOwnProfile(result.target, get().currentUser);
           set((state) => ({
             followRequests: state.followRequests.filter((request) => request.id !== requestId),
             users: { ...state.users, [follower.id]: follower, [target.id]: target },

@@ -16,15 +16,27 @@ test("own profile restores canonical follow relationships without exposing them 
   const owner = await createTestUser(users);
   const followed = await createTestUser(users);
   const viewer = await createTestUser(users);
+  const pending = await createTestUser(users);
   await users.followUser(owner.id, followed.id);
+  await users.createFollowRequest(owner.id, pending.id);
+  await users.addFavoriteCreator(owner.id, followed.id);
   const profiles = new UserService(users);
   const own = await profiles.getProfile(owner.id, owner.id);
   assert.deepEqual(own?.following, [followed.id]);
   assert.equal(own?.followingCount, 1);
+  assert.deepEqual(own?.pendingFollowIds, [pending.id]);
+  assert.deepEqual(own?.favoriteCreatorIds, [followed.id]);
+  const byUsername = await profiles.getProfileByUsername(owner.username, owner.id);
+  assert.deepEqual(byUsername?.pendingFollowIds, [pending.id]);
+  assert.deepEqual(byUsername?.favoriteCreatorIds, [followed.id]);
   const publicProfile = await profiles.getProfile(owner.id, viewer.id);
   assert.equal(publicProfile?.following, undefined);
+  assert.equal(publicProfile?.pendingFollowIds, undefined);
+  assert.equal(publicProfile?.favoriteCreatorIds, undefined);
   await users.unfollowUser(owner.id, followed.id);
+  await users.removeFollowRequest(owner.id, pending.id);
   assert.deepEqual((await profiles.getProfile(owner.id, owner.id))?.following, []);
+  assert.deepEqual((await profiles.getProfile(owner.id, owner.id))?.pendingFollowIds, []);
 });
 
 test("private follow requests remain pending at the HTTP boundary", async () => {

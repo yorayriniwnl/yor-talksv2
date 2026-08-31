@@ -300,3 +300,37 @@ test('shared post links fetch uncached posts and recover failed replies', async 
   await page.reload();
   await expect(page.getByRole('article').getByText('A shared post outside the loaded home feed.')).toBeVisible();
 });
+
+test('pending follows preserve existing relationships and favorites across reloads', async ({ page }) => {
+  const target = { ...user, id: '10000000-0000-4000-8000-000000000022', username: 'private_creator', fullName: 'Private Creator' };
+  const followed = { ...user, id: '10000000-0000-4000-8000-000000000023', username: 'known_creator', fullName: 'Known Creator' };
+  const profile = { ...user, following: [followed.id], followingCount: 1, favoriteCreatorIds: [target.id], pendingFollowIds: [] as string[] };
+  await installApiBoundary(page, profile);
+  await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
+  await page.route(`**/api/users/${followed.id}`, (route) => json(route, followed));
+  await page.route('**/api/users/me/favorites/creators', (route) => json(route, [target.id]));
+  await page.route(`**/api/users/${user.id}/following`, (route) => json(route, [followed]));
+  await page.route(`**/api/users/${target.id}/follow`, (route) => {
+    profile.pendingFollowIds = [target.id];
+    return json(route, { status: 'pending', follower: { ...user, following: undefined, followingCount: 1 }, target });
+  });
+  await page.route(`**/api/users/${target.id}/unfollow`, (route) => {
+    profile.pendingFollowIds = [];
+    return json(route, { follower: { ...user, following: undefined, followingCount: 1 }, target });
+  });
+  await page.goto(`/profile/${target.id}`);
+  await expect(page.getByRole('button', { name: 'Remove Private Creator from Favorites' })).toBeVisible();
+  await page.getByRole('button', { name: 'Follow', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Requested', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Private Creator from Favorites' })).toBeVisible();
+  await page.getByRole('link', { name: /Ada Lovelace.*@ada/ }).first().click();
+  await page.getByRole('button', { name: '1 Following', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /^following$/i }).getByRole('button', { name: 'Following', exact: true })).toBeVisible();
+  await page.goto(`/profile/${target.id}`);
+  await expect(page.getByRole('button', { name: 'Requested', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Requested', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Follow', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Private Creator from Favorites' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Follow', exact: true }).first()).toBeVisible();
+});
