@@ -173,6 +173,8 @@ test(`mobile home is readable and keyboard-operable in ${colorScheme} mode`, asy
 test('sign-in preserves password and email-code paths with accessible controls', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installApiBoundary(page);
+  // Core auth accessibility must not depend on the live Google CDN completing.
+  await page.route('https://accounts.google.com/gsi/client', (route) => route.abort());
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
@@ -181,6 +183,26 @@ test('sign-in preserves password and email-code paths with accessible controls',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('Google script failure has an accessible retry without disabling other sign-in methods', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  let attempts = 0;
+  await page.route('https://accounts.google.com/gsi/client', (route) => {
+    attempts++;
+    if (attempts === 1) return route.abort();
+    // SDK-shaped rendering fixture only; this is not a live OAuth acceptance test.
+    return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
+  });
+  await page.goto('/auth');
+  await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeEnabled();
+  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Retry Google sign-in' }).click();
+  await expect(page.getByRole('group', { name: 'Google sign-in', exact: true }).getByRole('button', { name: 'Sign in with Google', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry Google sign-in' })).toHaveCount(0);
+  expect(attempts).toBe(2);
 });
 
 test('discovery loads beyond an empty following feed without changing the selected home feed', async ({ page }) => {
