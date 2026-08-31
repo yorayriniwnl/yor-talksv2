@@ -6,11 +6,12 @@ API, a React + Vite frontend, and shared Postgres/Drizzle packages.
 
 ## Public-beta status — 31 August 2026
 
-**B. CODE-READY, DEPLOYMENT BLOCKED.** The audited core beta has passing local
-regression/build checks, but this is not a verified public deployment. GitHub
-Actions is billing-locked, the local Docker engine is unavailable, and live
-provider, TLS, monitoring and restore checks remain required. See the
-[readiness report](docs/PUBLIC_BETA_READINESS_2026-08-31.md) and
+**B. CODE-READY, DEPLOYMENT BLOCKED.** The latest continuation passed 69 API,
+30 unit/integration and 23 browser tests, plus builds and an isolated database
+restore rehearsal. This is not a verified public deployment. GitHub Actions
+is billing-locked, the local Docker engine is unavailable, and production
+provider, TLS, monitoring and backup/recovery checks remain required. See the
+[latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-08-31.md) and
 [production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
 
 ## Launch scope

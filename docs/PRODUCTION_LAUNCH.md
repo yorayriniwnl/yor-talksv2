@@ -2,7 +2,7 @@
 
 This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
-The [31 August readiness report](PUBLIC_BETA_READINESS_2026-08-31.md) records
+The [latest 31 August readiness report](PUBLIC_BETA_CONTINUATION_2026-08-31.md) records
 passing local checks and the unresolved infrastructure/live-verification gates.
 Do not interpret a pushed commit or a liveness response as release approval.
 
@@ -64,6 +64,52 @@ docker compose --env-file .env.production -f docker-compose.production.yml exec 
 ```
 
 Backups must be encrypted, access-controlled and have a documented retention period. Redis is operational state and should be recoverable from a clean restart; do not treat it as the source of truth for accounts or reports.
+
+### Restore rehearsal and verification
+
+Use a separate, access-controlled non-production Postgres host with compatible
+client/server versions. Restrict a production-data rehearsal to approved
+operators; never connect it to public traffic, email, payment or moderation
+providers. Restore testing does not authorize sending private data to a new service.
+
+Configure a libpq service named `yor-restore-rehearsal` for that host using
+protected local configuration. Supply its credentials through the normal
+secret mechanism, not command-line arguments or Git. Decrypt the backup only
+inside the approved environment and verify its recorded checksum first.
+
+The following Bash example creates a new database and deliberately fails if
+that name already exists. Inspect the connection identity before proceeding;
+do not run this against a production host or use `--clean` on an existing DB.
+
+```bash
+export PGSERVICE=yor-restore-rehearsal
+psql --dbname=postgres -X -v ON_ERROR_STOP=1 \
+  -c 'SELECT inet_server_addr(), inet_server_port(), current_database(), current_user;'
+# Stop here and confirm this is the intended isolated host.
+createdb --maintenance-db=postgres yor_restore_rehearsal_20260831 && \
+  pg_restore --dbname=yor_restore_rehearsal_20260831 --exit-on-error \
+    --single-transaction --no-owner --no-privileges /approved/path/yor-talks.dump
+```
+
+After a successful restore:
+
+1. Compare table, index and constraint inventories with the source manifest.
+   Check for invalid/unvalidated constraints and compare representative row
+   counts plus content digests; do not publish production data in the manifest.
+2. Check account/content relationships and critical queries using approved
+   fixtures. Run migrations and application checks only against the rehearsal DB.
+3. Verify deployment roles and grants separately: `--no-owner --no-privileges`
+   intentionally does not reproduce production ownership or access control.
+4. Record backup age, restore duration, checksum, results and operator sign-off
+   against the agreed RPO/RTO. Exercise the off-host retrieval and decryption
+   steps too; a local volume or local dump alone is not disaster recovery.
+5. Retain or securely dispose of rehearsal data according to the approved
+   retention policy. Never automatically drop a database based on an unverified URL.
+
+The 31 August continuation verified a synthetic local logical restore: 64
+tables, 179 indexes, 180 constraints, zero invalid constraints, and matching
+user/post fixtures. Scheduled encrypted off-host production backups, retention,
+permissions and recovery-time objectives still require deployment acceptance.
 
 ## 5. Launch checks
 

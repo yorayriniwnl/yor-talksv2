@@ -1,5 +1,10 @@
 # Yor Talks — final public-beta re-audit
 
+This is the earlier audit snapshot. The
+[continuation report](PUBLIC_BETA_CONTINUATION_2026-08-31.md) supersedes its
+test counts, latest code revision and local backup/restore status while
+retaining the unresolved deployment gates.
+
 Assessment: 31 August 2026. Audited code: `fc65981` through
 `a04ddc0c57447b7013753b383ea9bf5d73541b8e` on `codex/public-beta-readiness`.
 The subsequent documentation commit does not change the tested application.
