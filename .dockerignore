@@ -1,6 +1,11 @@
 **/node_modules
 **/dist
-**/.env
+**/.env*
+**/*.pem
+**/*.key
+.codex
+playwright-report
+test-results
 .git
 .gitignore
 .vercel

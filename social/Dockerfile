@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 RUN corepack enable
@@ -58,7 +58,7 @@ ENV VITE_WEB_PUSH_ENABLED=$VITE_WEB_PUSH_ENABLED
 ENV VITE_RTC_CALLS_ENABLED=$VITE_RTC_CALLS_ENABLED
 RUN pnpm --filter @workspace/social build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 
 COPY --from=build /app/social/dist/public /usr/share/nginx/html
 COPY social/nginx.conf /etc/nginx/conf.d/default.conf

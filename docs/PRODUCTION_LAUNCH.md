@@ -6,6 +6,12 @@ This repository now has a production Compose profile, but a public launch still 
 
 Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.production.example` to `.env.production`, replace every `CHANGE_ME` value, and keep the file outside Git. Generate independent URL-safe secrets, for example with `openssl rand -hex 32`.
 
+Use Node.js 24 LTS for local and CI builds (the container also uses Node 24).
+Rebuild with `--pull` for current patched Node 24 / Nginx 1.30 base images.
+Node 20 is end-of-life; do not deploy an old cached Node 20 image.
+All `.env*` files and private-key files are excluded from Docker build contexts:
+provide production secrets at runtime, never through `COPY` or frontend build arguments.
+
 `DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge. The included Postgres container is not TLS-enabled, so keep `DB_SSL=false`; set it to `true` only when using a TLS-enabled managed database.
 
 Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; the API still enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh.
