@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
-import { InvalidMessageContentError, MessageService } from "../services/message-service.js";
+import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
@@ -96,3 +96,21 @@ test("new messages move old conversations to the top of the inbox", async () => 
   await service.sendMessageToConversation(sender.id, older.id, 'Returning to an older conversation');
   assert.equal((await repository.listForUser(sender.id))[0].id, older.id);
 });
+
+for (const disabledSetting of ['allowDmFromStrangers', 'messageRequests'] as const) {
+  test(`${disabledSetting} opt-outs cannot be bypassed by direct or group conversations`, async () => {
+    const users = new UserRepository();
+    const sender = await createTestUser(users);
+    const recipient = await createTestUser(users, { privacy: { profileVisibility: 'public', allowDmFromStrangers: true, messageRequests: true, [disabledSetting]: false } });
+    const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+    await assert.rejects(() => service.sendMessage(sender.id, recipient.id, 'Unwanted contact'), MessageBlockedError);
+    const direct = await service.createConversation(sender.id, recipient.id);
+    await assert.rejects(() => service.sendMessageToConversation(sender.id, direct.id, 'Existing thread bypass'), MessageBlockedError);
+    await assert.rejects(() => service.createGroupChat(sender.id, [recipient.id], 'Group bypass'), MessageBlockedError);
+    await users.followUser(sender.id, recipient.id);
+    const group = await service.createGroupChat(sender.id, [recipient.id], 'Known followers');
+    await service.sendMessageToConversation(sender.id, group.id, 'Allowed contact');
+    await users.unfollowUser(sender.id, recipient.id);
+    await assert.rejects(() => service.sendMessageToConversation(sender.id, group.id, 'Stale group bypass'), MessageBlockedError);
+  });
+}

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import type { ConversationRecord, MessageRecord } from "../types/index.js";
+import type { ConversationRecord, MessageRecord, UserRecord } from "../types/index.js";
 import { db } from "@workspace/db";
 import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
@@ -36,6 +36,13 @@ export class MessageService {
     return this.conversationRepository.findOrCreateDirect(participantA, participantB);
   }
 
+  private async assertContactAllowed(senderId: string, recipient: UserRecord): Promise<void> {
+    const followersOnly = recipient.privacy?.allowDmFromStrangers === false || recipient.privacy?.messageRequests === false;
+    if (followersOnly && this.userRepository && !(await this.userRepository.isFollowing(senderId, recipient.id))) {
+      throw new MessageBlockedError("This user does not accept messages from non-followers");
+    }
+  }
+
   async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
     const uniqueMemberIds = [...new Set(memberIds.filter((id) => id && id !== creatorId))];
     if (uniqueMemberIds.length === 0 || uniqueMemberIds.length > 99) {
@@ -48,6 +55,7 @@ export class MessageService {
       if (members.slice(1).some((member) => member!.blockedUsers?.includes(creatorId) || creator.blockedUsers?.includes(member!.id))) {
         throw new MessageBlockedError("A group member has blocked this account");
       }
+      await Promise.all(members.slice(1).map((member) => this.assertContactAllowed(creatorId, member!)));
     }
     return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat");
   }
@@ -67,9 +75,7 @@ export class MessageService {
       if (!recipient || !sender || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipientId)) {
         throw new MessageBlockedError("You can't message this user");
       }
-      if (recipient.privacy?.allowDmFromStrangers === false && !(await this.userRepository.isFollowing(senderId, recipientId))) {
-        throw new MessageBlockedError("This user does not accept messages from strangers");
-      }
+      await this.assertContactAllowed(senderId, recipient);
     }
     const conversation = await this.createConversation(senderId, recipientId);
     return this.sendMessageToConversation(senderId, conversation.id, normalizedContent, options);
@@ -94,9 +100,9 @@ export class MessageService {
       if (!sender || participants.some((recipient) => !recipient || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipient.id))) {
         throw new MessageBlockedError("You can't message this user");
       }
-      if (conversation.isGroup !== true && participants.length === 1 && participants[0] && participants[0].privacy?.allowDmFromStrangers === false && !(await this.userRepository.isFollowing(senderId, participants[0].id))) {
-        throw new MessageBlockedError("This user does not accept messages from strangers");
-      }
+      // A pre-existing direct thread or group must not bypass a recipient's
+      // current privacy settings after an unfollow or settings change.
+      await Promise.all(participants.map((recipient) => this.assertContactAllowed(senderId, recipient!)));
     }
 
     // Authorize the conversation and its participants before invoking the
