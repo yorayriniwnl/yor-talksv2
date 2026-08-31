@@ -4,6 +4,15 @@ Yor Talks is a global social platform for creators, communities, conversations,
 events, stories and commerce. The repository contains an Express + Socket.IO
 API, a React + Vite frontend, and shared Postgres/Drizzle packages.
 
+## Public-beta status — 31 August 2026
+
+**B. CODE-READY, DEPLOYMENT BLOCKED.** The audited core beta has passing local
+regression/build checks, but this is not a verified public deployment. GitHub
+Actions is billing-locked, the local Docker engine is unavailable, and live
+provider, TLS, monitoring and restore checks remain required. See the
+[readiness report](docs/PUBLIC_BETA_READINESS_2026-08-31.md) and
+[production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
+
 ## Launch scope
 
 The launch path supports a global deployment or a closed beta:
@@ -42,9 +51,9 @@ The launch path supports a global deployment or a closed beta:
   `OPENAI_API_KEY` or `GEMINI_API_KEY` so safety checks cannot silently be
   bypassed.
 
-## Quick start with Docker
+## Quick start with Docker (local development only)
 
-From the repository root:
+Use Node.js 24 LTS, pnpm 9.15.4, and a working Docker Engine. From the repository root:
 
 ```bash
 cp .env.example .env
@@ -68,25 +77,26 @@ The seeded demo accounts use the following credentials:
 | `2329002@kiit.ac.in` | `password123` |
 | `2329003@kiit.ac.in` | `password123` |
 
-Change or remove seeded passwords before inviting beta participants.
+Demo seeds are for isolated local databases only. Do not seed a public deployment.
 
-For a production-like container run, set `NODE_ENV=production` in `.env`, use
-unique random JWT secrets of at least 32 characters, and set
-`CORS_ORIGINS`/`CLIENT_ORIGIN` to the real frontend origin. Do not commit `.env`.
+For public traffic, use `.env.production` and `docker-compose.production.yml`
+as described in the production runbook. The development Compose profile is
+not a production deployment. Never commit environment files or private keys.
 
 ## Provider setup for a global deployment
 
-The application code is ready, but provider accounts and secrets must be
-created outside this repository. Add these values to the root `.env` used by
-Docker, then rebuild the API:
+Provider accounts, secrets and live acceptance tests must be completed outside
+this repository. Add production values securely to `.env.production`; keep
+the four optional feature flags disabled until separately approved and tested.
 
 - Resend: create an API key and verify the sender/domain used by `EMAIL_FROM`.
 - Cloudinary: copy the cloud name, API key, and API secret. Uploads use signed
   server-side requests; no Cloudinary secret reaches the browser.
 - Moderation: set `OPENAI_API_KEY` or `GEMINI_API_KEY`. The production API will
   refuse to start without at least one moderation provider.
-- Razorpay: use test-mode keys for beta, set `RAZORPAY_KEY_ID` and
-  `RAZORPAY_KEY_SECRET`, and test Checkout with a Razorpay test UPI method.
+- Razorpay (disabled for this beta): before any later enablement, configure
+  `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`, and
+  test Checkout in an isolated provider test environment.
   The API fetches and verifies the captured payment before crediting the
   creator wallet. Bank withdrawals/payouts are intentionally not enabled for
   this deployment because they require a separately verified RazorpayX/KYC
@@ -112,10 +122,10 @@ Docker, then rebuild the API:
 After changing provider variables:
 
 ```bash
-docker compose up --build -d api web
+docker compose --env-file .env.production -f docker-compose.production.yml up --build -d api web
 # For an existing populated database, take a backup first and run the
 # additive/idempotent beta migration. Never run `push --force` against it.
-docker compose exec api pnpm --filter @workspace/db migrate:beta
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate
 ```
 
 `migrate:beta` backfills the normalized community-member, event-RSVP,
@@ -123,14 +133,17 @@ marketplace-save, story-view, and story-reaction tables before removing their
 legacy JSON relationship columns. Take a database backup before applying it to
 an existing deployment. The migration is idempotent so it can also run after a
 fresh schema push. For a brand-new empty database, use
-`docker compose -f docker-compose.production.yml run --rm migrate` (which runs
-`migrate:production`) before starting the API. Use `pnpm --filter
+`docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate`
+(which runs `migrate:production`) before starting the API. Bootstrap refuses
+nonempty incomplete schemas, including unrelated tables, views and sequences.
+The migration must use the same unique `CONTACT_SHIELD_SECRET` as the API.
+Use `pnpm --filter
 @workspace/db push` only for additive changes on an empty/local database, and
 review its SQL prompt before accepting it.
 
-Check `docker compose logs api` for provider warnings. A warning means that
-feature remains unavailable; it does not prevent the rest of the beta from
-starting.
+Inspect API and migration logs. A listening API or a passing `/api/livez` is
+not readiness: `/api/healthz`, `/api/readyz`, workers, and the production smoke
+checks must also pass. An unsupported Redis version is a launch blocker.
 
 ## Local development
 
@@ -150,16 +163,20 @@ API on port 4000.
 
 ```bash
 pnpm contract:check
+pnpm production-config:check
+pnpm test:unit
 pnpm --filter @workspace/api-server typecheck
 pnpm --filter @workspace/social typecheck
-pnpm build
+pnpm build:pnpm
 pnpm audit --prod
 pnpm test:e2e
 ```
 
-The Playwright smoke test starts the Vite application and verifies the core
-authenticated feed, post creation, and Explore navigation loop. The API test
-suite uses the configured Postgres and Redis instances:
+Playwright builds and serves production chunks with deterministic API fixtures
+and no automatic retries. It covers core flows, failure recovery, consent,
+mobile keyboard navigation and targeted accessibility checks. It does not
+replace real API/provider/browser acceptance tests. The API test suite uses
+the configured isolated Postgres and Redis instances:
 
 ```bash
 pnpm --filter @workspace/api-server test
