@@ -334,3 +334,66 @@ test('pending follows preserve existing relationships and favorites across reloa
   await page.reload();
   await expect(page.getByRole('button', { name: 'Follow', exact: true }).first()).toBeVisible();
 });
+
+test('inbox failures offer a retry without claiming an empty or live-connected inbox', async ({ page }) => {
+  await installApiBoundary(page);
+  let unavailable = true;
+  await page.route('**/api/conversations', (route) => unavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+    : json(route, []));
+  await page.goto('/messages');
+  await expect(page.getByRole('alert').filter({ hasText: 'Your inbox could not refresh.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your inbox is clear' })).toHaveCount(0);
+  await expect(page.getByText('Periodic updates', { exact: true })).toBeVisible();
+  await expect(page.getByText('Connected', { exact: true })).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry inbox' }).click();
+  await expect(page.getByRole('heading', { name: 'Your inbox is clear' })).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(accessibility.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('message drafts stay with their conversation and survive failed duplicate sends', async ({ page }) => {
+  await installApiBoundary(page);
+  const peers = ['Alpha Tester', 'Beta Tester'].map((fullName, index) => ({ ...user, id: `10000000-0000-4000-8000-00000000003${index}`, username: `tester_${index}`, fullName }));
+  const conversations = peers.map((peer, index) => ({ id: `20000000-0000-4000-8000-00000000003${index}`, participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt }));
+  await page.route('**/api/conversations', (route) => json(route, conversations.map((conversation) => ({ conversation }))));
+  await page.route('**/api/conversations/*/messages', (route) => json(route, []));
+  for (const peer of peers) await page.route(`**/api/users/${peer.id}`, (route) => json(route, peer));
+  let requests = 0;
+  let release!: () => void;
+  const delayed = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/api/messages', async (route) => {
+    requests++;
+    if (requests === 1) {
+      await delayed;
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) });
+    }
+    return json(route, { id: 'sent-fixture', conversationId: conversations[0].id, senderId: user.id, recipientId: peers[0].id, content: route.request().postDataJSON().content, createdAt: user.createdAt, seenAt: null });
+  });
+  await page.goto(`/messages/${conversations[0].id}`);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('A draft for Alpha only.');
+  await page.getByRole('textbox', { name: 'Search conversations' }).fill('Beta');
+  await expect(composer).toHaveValue('A draft for Alpha only.');
+  await page.getByRole('textbox', { name: 'Search conversations' }).fill('');
+  await page.getByRole('button', { name: /Beta Tester.*No messages yet/ }).click();
+  await expect(composer).toHaveValue('');
+  await composer.fill('A separate draft for Beta.');
+  await page.getByRole('button', { name: /Alpha Tester.*No messages yet/ }).click();
+  await expect(composer).toHaveValue('A draft for Alpha only.');
+  await composer.press('Enter');
+  await expect(composer).toBeDisabled();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests).toBe(1);
+  release();
+  await expect(page.getByRole('alert').filter({ hasText: 'Could not send this message.' })).toBeVisible();
+  await expect(composer).toHaveValue('A draft for Alpha only.');
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(composer).toHaveValue('');
+  await expect(page.getByRole('article').getByText('A draft for Alpha only.', { exact: true })).toBeVisible();
+  expect(requests).toBe(2);
+  await page.getByRole('button', { name: /Beta Tester.*No messages yet/ }).click();
+  await expect(composer).toHaveValue('A separate draft for Beta.');
+  await expect(page.getByRole('button', { name: /Tip creator/ })).toHaveCount(0);
+});

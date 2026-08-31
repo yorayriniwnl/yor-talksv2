@@ -652,6 +652,13 @@ function mapShowcase(showcase: BackendShowcase): Showcase {
 
 
 
+export type MessageDraft = {
+  message: string;
+  imageAttachment: string;
+  replyTarget: { messageId: string; senderName: string; excerpt: string } | null;
+  sending?: boolean;
+};
+
 interface AppState {
   currentUser: User | null;
   worldPreferences: WorldPreferences;
@@ -681,7 +688,11 @@ interface AppState {
   notifications: Notification[];
   followRequests: FollowRequest[];
   conversations: Conversation[];
+  conversationsLoading: boolean;
+  conversationsError: string | null;
   messagesByConversation: Record<string, Message[]>;
+  messageDrafts: Record<string, MessageDraft>;
+  updateMessageDraft: (conversationId: string, patch: Partial<MessageDraft>) => void;
   aiMessages: AIMessage[];
   privacy: PrivacySettings;
   profileComments: Record<string, ProfileComment[]>;
@@ -795,6 +806,7 @@ function clearPrivateSessionState(
   set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
 ): void {
   feedRequestSequence += 1;
+  conversationRequestSequence += 1;
   profileRequests.clear();
   set({
     currentUser: null,
@@ -823,7 +835,10 @@ function clearPrivateSessionState(
     notifications: [],
     followRequests: [],
     conversations: [],
+    conversationsLoading: false,
+    conversationsError: null,
     messagesByConversation: {},
+    messageDrafts: {},
     aiMessages: [],
     privacy: { ...DEFAULT_PRIVACY_SETTINGS },
     profileComments: {},
@@ -852,6 +867,7 @@ function hydrateSessionData(get: () => AppState): void {
 
 let realtimePollingTimer: number | null = null;
 let feedRequestSequence = 0;
+let conversationRequestSequence = 0;
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
 
@@ -981,7 +997,13 @@ export const useAppStore = create<AppState>()(
       notifications: [],
       followRequests: [],
       conversations: [],
+      conversationsLoading: false,
+      conversationsError: null,
       messagesByConversation: {},
+      messageDrafts: {},
+      updateMessageDraft: (conversationId, patch) => set((state) => ({
+        messageDrafts: { ...state.messageDrafts, [conversationId]: { message: '', imageAttachment: '', replyTarget: null, ...state.messageDrafts[conversationId], ...patch } },
+      })),
       aiMessages: [],
       privacy: {
         profileVisibility: 'public',
@@ -1460,15 +1482,20 @@ export const useAppStore = create<AppState>()(
       },
 
       loadConversations: async () => {
+        if (!get().currentUser || get().conversationsLoading) return;
+        const sequence = ++conversationRequestSequence;
+        set({ conversationsLoading: true, conversationsError: null });
         try {
           const results = await api.getConversations();
+          if (sequence !== conversationRequestSequence) return;
           set({
             conversations: results.map((r) => mapConversation(r.conversation, r.lastMessage)),
             ...(results.length === 0 ? { messagesByConversation: {} } : {}),
           });
-          return;
         } catch {
-          // Keep the last successful snapshot during a transient outage.
+          if (sequence === conversationRequestSequence) set({ conversationsError: 'Your inbox could not refresh. Please try again.' });
+        } finally {
+          if (sequence === conversationRequestSequence) set({ conversationsLoading: false });
         }
       },
 

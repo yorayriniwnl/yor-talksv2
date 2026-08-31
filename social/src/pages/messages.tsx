@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useAppStore, type Message as DirectMessage } from '@/lib/store';
+import { useAppStore, type Message as DirectMessage, type MessageDraft } from '@/lib/store';
 import { api, type BackendUser } from '@/lib/api-client';
 import { useParams, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -124,6 +124,7 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [selected, setSelected] = useState<BackendUser | null>(null);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [sendError, setSendError] = useState('');
 
   useEffect(() => {
@@ -139,7 +140,8 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   }, [query, currentUser?.id]);
 
   const handleSend = async () => {
-    if (!selected || !content.trim()) return;
+    if (!selected || !content.trim() || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     setSendError('');
     try {
@@ -148,12 +150,13 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       setSelected(null);
       setContent('');
       setQuery('');
-      const conv = useAppStore.getState().conversations.find((c) => c.participantIds.includes(selected.id));
+      const conv = useAppStore.getState().conversations.find((c) => !c.isGroup && c.participantIds.length === 2 && c.participantIds.includes(selected.id));
       if (conv) setLocation(`/messages/${conv.id}`);
     } catch (err) {
       setSendError('Could not send this message. Your draft is still here.');
       toast.error('Message not sent. Your draft is still here.');
     }
+    sendingRef.current = false;
     setSending(false);
   };
 
@@ -187,10 +190,10 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
                 <p className="text-sm font-medium truncate">{selected.fullName || selected.username}</p>
                 <p className="text-xs text-muted-foreground truncate">@{selected.username}</p>
               </div>
-              <button onClick={() => setSelected(null)} className="text-xs text-primary font-medium hover:underline px-2 cursor-pointer">Change</button>
+              <button disabled={sending} onClick={() => setSelected(null)} className="text-xs text-primary font-medium hover:underline px-2 cursor-pointer">Change</button>
             </div>
             {sendError && <div className="operator-message-dialog__error" role="alert">{sendError}</div>}
-            <textarea value={content} onChange={(e) => { setContent(e.target.value); setSendError(''); }} placeholder="Write a message…" aria-label="Message" className="w-full min-h-[100px] rounded-xl border border-transparent surface-1 p-3 text-[15px] outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/30 transition-all resize-none" autoFocus />
+            <textarea value={content} disabled={sending} maxLength={MAX_MESSAGE_LENGTH} onChange={(e) => { setContent(e.target.value); setSendError(''); }} placeholder="Write a message…" aria-label="Message" className="w-full min-h-[100px] rounded-xl border border-transparent surface-1 p-3 text-[15px] outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/30 transition-all resize-none" autoFocus />
             <Button onClick={handleSend} disabled={!content.trim() || sending} aria-busy={sending} className="w-full rounded-xl py-6 cursor-pointer">{sending ? 'Sending…' : 'Send message'}</Button>
           </div>
         )}
@@ -335,6 +338,8 @@ export default function Messages() {
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
   const conversations = useAppStore((s) => s.conversations);
+  const conversationsLoading = useAppStore((s) => s.conversationsLoading);
+  const conversationsError = useAppStore((s) => s.conversationsError);
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
@@ -343,18 +348,31 @@ export default function Messages() {
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
   const sendMessageToConversation = useAppStore((s) => s.sendMessageToConversation);
   
-  const [message, setMessage] = useState('');
-  const [imageAttachment, setImageAttachment] = useState('');
+  const draft = useAppStore((state) => state.messageDrafts[id ?? '']);
+  const updateMessageDraft = useAppStore((state) => state.updateMessageDraft);
+  const message = draft?.message ?? '';
+  const imageAttachment = draft?.imageAttachment ?? '';
+  const replyTarget = draft?.replyTarget ?? null;
+  const updateDraft = useCallback((patch: Partial<MessageDraft>) => {
+    if (!id || !currentUser || useAppStore.getState().currentUser?.id !== currentUser.id) return;
+    updateMessageDraft(id, patch);
+  }, [id, currentUser?.id, updateMessageDraft]);
+  const setMessage = (value: string) => updateDraft({ message: value });
+  const setImageAttachment = (value: string) => updateDraft({ imageAttachment: value });
+  const setReplyTarget = (value: ReplyTarget | null) => updateDraft({ replyTarget: value });
   const [showImageInput, setShowImageInput] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
-  const [sending, setSending] = useState(false);
+  const sending = Boolean(draft?.sending);
+  const setSending = (value: boolean) => updateDraft({ sending: value });
+  const sendingRef = useRef(false);
   const [sendError, setSendError] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageLoadError, setMessageLoadError] = useState('');
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(() => Boolean(getSocket()?.connected));
+  const [online, setOnline] = useState(() => navigator.onLine);
   const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
   
   // Direct Messaging 2.0 Pro Features
@@ -413,6 +431,24 @@ export default function Messages() {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
+  useEffect(() => {
+    const socket = getSocket();
+    const update = () => { setRealtimeConnected(Boolean(socket?.connected)); setOnline(navigator.onLine); };
+    update();
+    socket?.on('connect', update);
+    socket?.on('disconnect', update);
+    socket?.on('connect_error', update);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      socket?.off('connect', update);
+      socket?.off('disconnect', update);
+      socket?.off('connect_error', update);
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, [currentUser?.id]);
+
   const requestConversationMessages = useCallback(async (conversationId: string) => {
     const sequence = ++messageRequestSequence.current;
     setLoadingMessages(true);
@@ -444,7 +480,7 @@ export default function Messages() {
     }
   }, [conversations, users, currentUser?.id, loadUserProfile]);
 
-  const conversationList = useMemo(() => {
+  const allConversations = useMemo(() => {
     return conversations
       .map((conv) => {
         const otherIds = conv.participantIds.filter((participantId) => participantId !== currentUser?.id);
@@ -481,17 +517,18 @@ export default function Messages() {
         const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
         return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
       })
-      .filter((entry) =>
-        entry.user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        entry.user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      )
       .sort((a, b) => (b.lastMsg?.createdAt ?? b.conv.updatedAt).localeCompare(a.lastMsg?.createdAt ?? a.conv.updatedAt));
-  }, [conversations, users, currentUser?.id, messagesByConversation, searchQuery]);
+  }, [conversations, users, currentUser?.id, messagesByConversation]);
+
+  const conversationList = useMemo(() => allConversations.filter((entry) =>
+    entry.user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    entry.user.username.toLowerCase().includes(searchQuery.toLowerCase()),
+  ), [allConversations, searchQuery]);
 
   const activeConv = useMemo(() => {
     if (!id) return null;
-    return conversationList.find((c) => c.conv.id === id) || null;
-  }, [id, conversationList]);
+    return allConversations.find((c) => c.conv.id === id) || null;
+  }, [id, allConversations]);
 
   const activeMessages = useMemo(() => {
     if (!id) return [];
@@ -515,12 +552,17 @@ export default function Messages() {
   const isPeerTyping = Boolean(id && typingConversationIds[id]);
 
   const handleSend = async () => {
-    if ((!message.trim() && !imageAttachment.trim()) || !activeConv || sending) return;
+    if ((!message.trim() && !imageAttachment.trim()) || !activeConv || sending || sendingRef.current) return;
     
     const baseMessage = imageAttachment.trim() 
       ? `${message.trim()}\n📷 ${imageAttachment.trim()}`
       : message.trim();
 
+    if (baseMessage.length > MAX_MESSAGE_LENGTH) {
+      setSendError('The message and attachment URL together must be 4,000 characters or fewer.');
+      return;
+    }
+    sendingRef.current = true;
     setSending(true);
     setSendError('');
     setPulseSend(true);
@@ -539,6 +581,7 @@ export default function Messages() {
       setSendError('Could not send this message. Your draft is still here.');
       toast.error('Message not sent. Your draft is still here.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
       setTimeout(() => setPulseSend(false), 300);
     }
@@ -606,7 +649,7 @@ export default function Messages() {
           <header className="operator-inbox__header">
             <div className="operator-inbox__title-row">
               <div>
-                <SignalLabel>Inbox // realtime</SignalLabel>
+                <SignalLabel>Your conversations</SignalLabel>
                 <h1>Messages</h1>
               </div>
               <div className="operator-inbox__actions">
@@ -628,18 +671,19 @@ export default function Messages() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="operator-inbox__summary"><span>{conversationList.length} conversations</span><StatusBadge status="online">Connected</StatusBadge></div>
+            <div className="operator-inbox__summary"><span>{conversationList.length} conversations</span><StatusBadge status={!online ? 'offline' : realtimeConnected ? 'online' : 'away'}>{!online ? 'Offline' : realtimeConnected ? 'Live updates' : 'Periodic updates'}</StatusBadge></div>
           </header>
           
           <div className="operator-inbox__list">
-            {conversationList.length === 0 ? (
+            {conversationsError && <div className="operator-thread__error" role="alert"><p>{conversationsError}</p><Button variant="outline" onClick={() => void loadConversations()} disabled={conversationsLoading}>Retry inbox</Button></div>}
+            {conversationsLoading && conversations.length === 0 ? <p role="status" className="p-6 text-sm text-muted-foreground">Loading your inbox…</p> : conversationList.length === 0 ? (!conversationsError && (
               <div className="operator-inbox__empty">
                 <Inbox aria-hidden="true" />
                 <h2>{searchQuery ? 'No matching conversations' : 'Your inbox is clear'}</h2>
                 <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a private conversation with someone in your network.'}</p>
                 {!searchQuery && <button type="button" onClick={() => setNewMessageOpen(true)}>Start a conversation</button>}
               </div>
-            ) : (
+            )) : (
               conversationList.map((entry) => (
                 <ConversationItem 
                   key={entry.conv.id} 
@@ -694,12 +738,12 @@ export default function Messages() {
                         }).catch(() => undefined);
                       }}><EyeOff aria-hidden="true" /><span><strong>Vanish mode</strong><small>{vanishMode ? 'On' : 'Off'}</small></span></button>
                       {!activeConv.conv.isGroup && <>
-                        <button type="button" onClick={() => setTipModalOpen(true)}><Zap aria-hidden="true" /><span><strong>Tip creator</strong><small>Open UPI tip jar</small></span></button>
-                        <SteamTradeModal
+                        {publicBetaConfig.paymentsEnabled && <button type="button" onClick={() => setTipModalOpen(true)}><Zap aria-hidden="true" /><span><strong>Tip creator</strong><small>Open UPI tip jar</small></span></button>}
+                        {!publicBetaConfig.publicBeta && <SteamTradeModal
                           partnerName={activeConv.user.displayName}
                           partnerAvatar={activeConv.user.avatarUrl}
                           trigger={<button type="button"><ArrowLeftRight aria-hidden="true" /><span><strong>Gear trade</strong><small>Prepare a trade draft</small></span></button>}
-                        />
+                        />}
                       </>}
                     </div>
                   </details>
@@ -723,7 +767,7 @@ export default function Messages() {
                     <div>
                       <LockKeyhole aria-hidden="true" />
                       <h3>Private channel ready</h3>
-                      <p>Send the first message to {activeConv.user.displayName}. Your calls and message tools stay in this channel.</p>
+                      <p>Send the first message to {activeConv.user.displayName}.</p>
                     </div>
                   </div>
                 )}
@@ -814,6 +858,7 @@ export default function Messages() {
                         <div>
                           <Input
                             value={imageAttachment}
+                            disabled={sending}
                             onChange={(e) => { setImageAttachment(e.target.value); setSendError(''); }}
                             placeholder="Paste a direct image URL"
                             aria-label="Image URL"
@@ -823,6 +868,7 @@ export default function Messages() {
                             variant="ghost"
                             onClick={() => { setShowImageInput(false); setImageAttachment(''); }}
                             aria-label="Close image attachment"
+                            disabled={sending}
                           >
                             <X aria-hidden="true" />
                           </Button>
@@ -841,6 +887,7 @@ export default function Messages() {
                         onClick={() => setShowVoiceRecorder(true)}
                         title="Record Voice Note"
                         aria-label="Record voice note"
+                        disabled={sending}
                       >
                         <Mic aria-hidden="true" />
                       </Button>
@@ -852,6 +899,7 @@ export default function Messages() {
                         data-active={showImageInput || undefined}
                         title="Send Image"
                         aria-label="Add image attachment"
+                        disabled={sending}
                       >
                         <ImageIcon aria-hidden="true" />
                       </Button>
@@ -859,6 +907,7 @@ export default function Messages() {
                       <textarea
                         ref={inputRef}
                         value={message}
+                        disabled={sending}
                         rows={1}
                         maxLength={MAX_MESSAGE_LENGTH}
                         onChange={(e) => {
@@ -871,7 +920,7 @@ export default function Messages() {
                           event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 120)}px`;
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
+                          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                             e.preventDefault();
                             void handleSend();
                           }
@@ -921,7 +970,7 @@ export default function Messages() {
               />}
 
               {/* UPI Tip Jar Modal */}
-              <UpiTipJarModal
+              {publicBetaConfig.paymentsEnabled && <UpiTipJarModal
                 creator={{
                   id: activeConv.user.id,
                   displayName: activeConv.user.displayName,
@@ -930,16 +979,16 @@ export default function Messages() {
                 }}
                 isOpen={tipModalOpen}
                 onOpenChange={setTipModalOpen}
-              />
+              />}
             </>
           ) : (
             <div className="operator-thread-placeholder">
               <span><LockKeyhole aria-hidden="true" /></span>
-              <SignalLabel tone="muted">Private operator channel</SignalLabel>
+              <SignalLabel tone="muted">A little more personal</SignalLabel>
               <h2>Select a conversation</h2>
-              <p>Message your network, send voice notes, {publicBetaConfig.rtcCallsEnabled ? 'make direct calls, ' : ''}tip creators, and prepare trade drafts from one focused workspace.</p>
+              <p>Keep the conversation going with messages, voice notes, and photos.</p>
               <button type="button" onClick={() => setNewMessageOpen(true)}><Plus aria-hidden="true" />Start a conversation</button>
-              <small>Private messaging // {publicBetaConfig.rtcCallsEnabled ? 'call ready' : 'calling paused'} // live presence</small>
+              <small>{realtimeConnected ? 'Live updates connected' : 'Conversations refresh periodically while this tab is open'}</small>
             </div>
           )}
         </section>
