@@ -228,10 +228,8 @@ export class UserService {
     return { creatorId, favorite };
   }
 
-  async updateSettings(userId: string, settings: UserSettings): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    return this.userRepository.update(userId, { settings: { ...(user.settings ?? {}), ...settings } });
+  async updateSettings(userId: string, settings: Partial<UserSettings>): Promise<UserRecord | undefined> {
+    return this.userRepository.patchSettings(userId, settings);
   }
 
   async blockUser(userId: string, targetId: string): Promise<UserRecord | undefined> {

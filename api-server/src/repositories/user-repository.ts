@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
-import type { FollowRequestRecord, UserRecord } from "../types/index.js";
+import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
 
 export class UserRepository {
 
@@ -125,6 +125,28 @@ export class UserRepository {
       .set({ ...persistedUpdates, updatedAt: new Date().toISOString() })
       .where(eq(usersTable.id, id))
       .returning();
+    return updated as UserRecord | undefined;
+  }
+
+  async patchSettings(id: string, patch: Partial<UserSettings>): Promise<UserRecord | undefined> {
+    // Merge in the UPDATE, under PostgreSQL's row lock. Reading the JSON first
+    // lets simultaneous requests replace each other's unrelated preferences.
+    const [updated] = await db.update(usersTable).set({
+      settings: sql`'{"theme":"light","notificationsEnabled":true,"privateAccount":false}'::jsonb
+        || coalesce(${usersTable.settings}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(usersTable.id, id)).returning();
+    return updated as UserRecord | undefined;
+  }
+
+  async patchPrivacy(id: string, patch: Partial<PrivacySettings>): Promise<UserRecord | undefined> {
+    const [updated] = await db.update(usersTable).set({
+      privacy: sql`jsonb_build_object(
+          'profileVisibility', CASE WHEN ${usersTable.settings}->>'privateAccount' = 'true' THEN 'private' ELSE 'public' END,
+          'messageRequests', true, 'allowDmFromStrangers', true
+        ) || coalesce(${usersTable.privacy}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(usersTable.id, id)).returning();
     return updated as UserRecord | undefined;
   }
 

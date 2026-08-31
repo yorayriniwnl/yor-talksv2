@@ -601,17 +601,8 @@ export class AuthService {
     return this.userRepository.update(userId, { emailVerified: true });
   }
 
-  async updatePrivacy(userId: string, privacy: UserRecord["privacy"]): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    const current = user.privacy ?? { profileVisibility: "public" as const, messageRequests: true, allowDmFromStrangers: true };
-    return this.userRepository.update(userId, {
-      privacy: {
-        profileVisibility: privacy?.profileVisibility ?? current.profileVisibility,
-        messageRequests: privacy?.messageRequests ?? current.messageRequests,
-        allowDmFromStrangers: privacy?.allowDmFromStrangers ?? current.allowDmFromStrangers,
-      },
-    });
+  async updatePrivacy(userId: string, privacy: Partial<NonNullable<UserRecord["privacy"]>>): Promise<UserRecord | undefined> {
+    return this.userRepository.patchPrivacy(userId, privacy);
   }
 
   async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge: boolean }): Promise<UserRecord | undefined> {
