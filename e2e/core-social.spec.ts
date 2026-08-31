@@ -397,3 +397,59 @@ test('message drafts stay with their conversation and survive failed duplicate s
   await expect(composer).toHaveValue('A separate draft for Beta.');
   await expect(page.getByRole('button', { name: /Tip creator/ })).toHaveCount(0);
 });
+
+test('settings expose only available notifications with accessible mobile controls', async ({ page }, testInfo) => {
+  await installApiBoundary(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByText('Push notifications are off for this beta', { exact: true })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Push notifications' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Profile visibility' })).toBeEnabled();
+  await expect(page.getByRole('switch', { name: 'Message requests', exact: true })).toBeChecked();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Account deletion confirmation' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(result.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.screenshot({ path: testInfo.outputPath('settings-mobile.png'), fullPage: true });
+});
+
+test('privacy preferences show confirmed state, prevent duplicate saves, and recover after a failure', async ({ page }) => {
+  const profile = { ...user, privacy: { ...user.privacy } };
+  await installApiBoundary(page, profile);
+  let attempts = 0;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/api/users/me/privacy', async (route) => {
+    attempts++;
+    if (attempts === 1) {
+      await pending;
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Privacy preferences could not be saved' }) });
+    }
+    profile.privacy = { ...profile.privacy, ...route.request().postDataJSON() };
+    return json(route, profile.privacy);
+  });
+  await page.goto('/settings');
+  const strangers = page.getByRole('switch', { name: 'Direct Messages from strangers', exact: true });
+  const requests = page.getByRole('switch', { name: 'Message requests', exact: true });
+  await strangers.click();
+  await expect(strangers).toBeDisabled();
+  await expect(requests).toBeDisabled();
+  await expect(strangers).toBeChecked();
+  await expect(page.getByRole('status').filter({ hasText: 'Saving privacy preferences' })).toBeVisible();
+  expect(attempts).toBe(1);
+  release();
+  await expect(page.getByRole('alert').filter({ hasText: 'Privacy preferences could not be saved' })).toBeVisible();
+  await expect(strangers).toBeEnabled();
+  await expect(strangers).toBeChecked();
+  await strangers.click();
+  await expect(strangers).not.toBeChecked();
+  await expect(requests).toBeChecked();
+  await expect(page.getByRole('alert').filter({ hasText: 'Privacy preferences could not be saved' })).toHaveCount(0);
+  expect(attempts).toBe(2);
+  await page.reload();
+  await expect(strangers).not.toBeChecked();
+  await expect(requests).toBeChecked();
+});

@@ -695,6 +695,7 @@ interface AppState {
   updateMessageDraft: (conversationId: string, patch: Partial<MessageDraft>) => void;
   aiMessages: AIMessage[];
   privacy: PrivacySettings;
+  privacySaving: boolean;
   profileComments: Record<string, ProfileComment[]>;
   showcases: Record<string, Showcase[]>;
 
@@ -792,9 +793,10 @@ interface AppState {
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
+  updateNotificationPreference: (enabled: boolean) => Promise<void>;
   toggleSaveProduct: (productId: string) => Promise<void>;
   sendAIMessage: (content: string) => Promise<void>;
-  updatePrivacy: (patch: Partial<PrivacySettings>) => Promise<void>;
+  updatePrivacy: (patch: Partial<Omit<PrivacySettings, 'twoFactorEnabled'>>) => Promise<void>;
   toggleBlockUser: (userId: string) => Promise<void>;
   toggleMuteUser: (userId: string) => Promise<void>;
   setTwoFactorEnabled: (enabled: boolean) => void;
@@ -807,6 +809,7 @@ function clearPrivateSessionState(
 ): void {
   feedRequestSequence += 1;
   conversationRequestSequence += 1;
+  privacyRequestSequence += 1;
   profileRequests.clear();
   set({
     currentUser: null,
@@ -841,6 +844,7 @@ function clearPrivateSessionState(
     messageDrafts: {},
     aiMessages: [],
     privacy: { ...DEFAULT_PRIVACY_SETTINGS },
+    privacySaving: false,
     profileComments: {},
     showcases: {},
   });
@@ -868,6 +872,7 @@ function hydrateSessionData(get: () => AppState): void {
 let realtimePollingTimer: number | null = null;
 let feedRequestSequence = 0;
 let conversationRequestSequence = 0;
+let privacyRequestSequence = 0;
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
 
@@ -1011,6 +1016,7 @@ export const useAppStore = create<AppState>()(
         messageRequests: true,
         twoFactorEnabled: false,
       },
+      privacySaving: false,
       profileComments: {},
       showcases: {},
 
@@ -2209,6 +2215,13 @@ export const useAppStore = create<AppState>()(
         ]);
       },
 
+      updateNotificationPreference: async (enabled) => {
+        const settings = await api.updateSettings({ notificationsEnabled: enabled });
+        set((state) => ({
+          currentUser: state.currentUser ? { ...state.currentUser, notificationsEnabled: settings.notificationsEnabled ?? enabled } : state.currentUser,
+        }));
+      },
+
       toggleSaveProduct: async (productId) => {
         const product = get().products.find((item) => item.id === productId);
         if (!product) return;
@@ -2250,16 +2263,15 @@ export const useAppStore = create<AppState>()(
 
 
       updatePrivacy: async (patch) => {
-        const { twoFactorEnabled, ...backendPatch } = patch;
-        const previous = get().privacy;
-        set((state) => ({ privacy: { ...state.privacy, ...patch } }));
-        if (Object.keys(backendPatch).length === 0) return;
+        if (Object.keys(patch).length === 0) return;
+        if (get().privacySaving) throw new Error('Wait for your current privacy change to finish saving.');
+        const sequence = ++privacyRequestSequence;
+        set({ privacySaving: true });
         try {
-          const updated = await api.updatePrivacy(backendPatch);
-        set((state) => ({ privacy: { ...state.privacy, ...updated } }));
-        } catch (error) {
-          set({ privacy: previous });
-          toast.error(error instanceof Error ? error.message : 'Could not update privacy settings');
+          const updated = await api.updatePrivacy(patch);
+          if (sequence === privacyRequestSequence) set((state) => ({ privacy: { ...state.privacy, ...updated } }));
+        } finally {
+          if (sequence === privacyRequestSequence) set({ privacySaving: false });
         }
       },
 

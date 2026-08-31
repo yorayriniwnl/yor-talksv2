@@ -542,7 +542,7 @@ export const api = {
   createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageUrl?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteProfileShowcase: (userId: string, showcaseId: string) => request<null>(`/users/${encodeURIComponent(userId)}/showcases/${encodeURIComponent(showcaseId)}`, { method: 'DELETE' }),
   updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
-    request<BackendUser>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+    request<NonNullable<BackendUser['settings']>>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>
     request<{ profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean }>('/users/me/privacy', { method: 'PUT', body: JSON.stringify(payload) }),
   submitReport: (payload: { entityType: 'post' | 'user' | 'comment' | 'message'; entityId: string; reason: 'spam' | 'harassment' | 'nsfw' | 'illegal' | 'hate_speech' | 'privacy_violation' | 'copyright' | 'other'; details?: string }) =>

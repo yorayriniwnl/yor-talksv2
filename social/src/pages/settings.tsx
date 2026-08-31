@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAppStore } from '@/lib/store';
+import { useAppStore, type PrivacySettings } from '@/lib/store';
 import { api, type ContactShield } from '@/lib/api-client';
 import { motion } from 'framer-motion';
-import { fadeInUp, springGentle } from '@/lib/motion';
+import { fadeInUp } from '@/lib/motion';
 import { toast } from 'sonner';
 import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
+import { publicBetaConfig } from '@/lib/public-beta-config';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -116,7 +117,7 @@ function ContactShieldPanel() {
               aria-label="Email to shield"
               className="h-11 rounded-2xl border-primary/15 bg-background/60"
             />
-            <Button type="button" onClick={handleManualAdd} disabled={adding} className="h-11 w-full shrink-0 rounded-2xl px-3 sm:w-auto sm:px-4">
+            <Button type="button" aria-label="Shield email contacts" onClick={handleManualAdd} disabled={adding} className="h-11 w-full shrink-0 rounded-2xl px-3 sm:w-auto sm:px-4">
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               <span className="hidden sm:inline">Shield</span>
             </Button>
@@ -261,13 +262,20 @@ function CloseFriendsPanel() {
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   
-  const logout = useAppStore((s: any) => s.logout);
-  const currentUser = useAppStore((s: any) => s.currentUser);
-  const updateContentFilter = useAppStore((s: any) => s.updateContentFilter);
-  const updateTwoFactorEnabled = useAppStore((s: any) => s.setTwoFactorEnabled);
-  const privacySettings = useAppStore((s: any) => s.privacySettings || s.privacy || {});
-  const updatePrivacySettings = useAppStore((s: any) => s.updatePrivacySettings || s.updatePrivacy);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(currentUser?.notificationsEnabled ?? true);
+  const logout = useAppStore((s) => s.logout);
+  const currentUser = useAppStore((s) => s.currentUser);
+  const updateContentFilter = useAppStore((s) => s.updateContentFilter);
+  const updateTwoFactorEnabled = useAppStore((s) => s.setTwoFactorEnabled);
+  const privacySettings = useAppStore((s) => s.privacy);
+  const privacySaving = useAppStore((s) => s.privacySaving);
+  const updatePrivacySettings = useAppStore((s) => s.updatePrivacy);
+  const updateNotificationPreference = useAppStore((s) => s.updateNotificationPreference);
+  const notificationsEnabled = currentUser?.notificationsEnabled ?? true;
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const notificationPending = useRef(false);
+  const [privacyError, setPrivacyError] = useState('');
+  const [contentFilterSaving, setContentFilterSaving] = useState(false);
+  const contentFilterPending = useRef(false);
   const [contentFilter, setContentFilter] = useState<ContentRating>(currentUser?.contentFilter ?? DEFAULT_CONTENT_RATING);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
@@ -283,10 +291,9 @@ export default function Settings() {
 
   useEffect(() => {
     if (!currentUser) return;
-    setNotificationsEnabled(currentUser.notificationsEnabled ?? true);
     setContentFilter(currentUser.contentFilter ?? DEFAULT_CONTENT_RATING);
     setTwoFactorEnabled(Boolean(currentUser.twoFactorEnabled));
-  }, [currentUser?.id, currentUser?.notificationsEnabled, currentUser?.contentFilter, currentUser?.twoFactorEnabled]);
+  }, [currentUser?.id, currentUser?.contentFilter, currentUser?.twoFactorEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -299,21 +306,33 @@ export default function Settings() {
     return () => { active = false; };
   }, [twoFactorSetup?.otpauthUrl]);
 
-  const handlePrivacyChange = (key: string, value: any) => {
-    updatePrivacySettings({ [key]: value });
+  const handlePrivacyChange = async <K extends keyof Omit<PrivacySettings, 'twoFactorEnabled'>>(key: K, value: PrivacySettings[K]) => {
+    setPrivacyError('');
+    try {
+      await updatePrivacySettings({ [key]: value });
+    } catch (error) {
+      setPrivacyError(error instanceof Error ? error.message : 'Could not save your privacy preferences. Please try again.');
+    }
   };
 
   const handleNotificationChange = async (value: boolean) => {
-    setNotificationsEnabled(value);
+    if (notificationPending.current || !publicBetaConfig.webPushEnabled) return;
+    notificationPending.current = true;
+    setNotificationSaving(true);
     try {
-      await api.updateSettings({ notificationsEnabled: value });
+      await updateNotificationPreference(value);
     } catch (error) {
-      setNotificationsEnabled(!value);
       toast.error(error instanceof Error ? error.message : 'Could not update notification preferences');
+    } finally {
+      notificationPending.current = false;
+      setNotificationSaving(false);
     }
   };
 
   const handleContentFilterChange = async (value: ContentRating) => {
+    if (contentFilterPending.current) return;
+    contentFilterPending.current = true;
+    setContentFilterSaving(true);
     const previous = contentFilter;
     setContentFilter(value);
     try {
@@ -322,6 +341,9 @@ export default function Settings() {
     } catch (error) {
       setContentFilter(previous);
       toast.error(error instanceof Error ? error.message : 'Could not update content filter');
+    } finally {
+      contentFilterPending.current = false;
+      setContentFilterSaving(false);
     }
   };
 
@@ -378,9 +400,14 @@ export default function Settings() {
   };
 
   const copyTwoFactorUri = async () => {
-    if (!twoFactorSetup?.otpauthUrl || !navigator.clipboard) return;
-    await navigator.clipboard.writeText(twoFactorSetup.otpauthUrl);
-    toast.success('Authenticator setup URI copied');
+    if (!twoFactorSetup?.otpauthUrl) return;
+    try {
+      if (!navigator.clipboard) throw new Error('Copy is unavailable. Select and copy the setup URI instead.');
+      await navigator.clipboard.writeText(twoFactorSetup.otpauthUrl);
+      toast.success('Authenticator setup URI copied');
+    } catch {
+      toast.error('Could not copy the setup URI. Select and copy it instead.');
+    }
   };
 
   const exportAccount = async () => {
@@ -428,7 +455,7 @@ export default function Settings() {
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold font-display text-foreground">Settings</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Personalize your Multiverse</p>
+          <p className="text-xs text-muted-foreground">Your space. Your boundaries.</p>
         </div>
         <div className="level-badge">
           <Sliders className="w-3.5 h-3.5" /> Controls
@@ -447,13 +474,13 @@ export default function Settings() {
             <Palette className="w-4 h-4 text-primary" />
             <h3>Appearance</h3>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Theme Preference</p>
               <p className="text-xs text-muted-foreground">Select your preferred color environment</p>
             </div>
             <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger className="w-36 rounded-xl font-medium">
+              <SelectTrigger aria-label="Theme preference" className="w-full shrink-0 rounded-xl font-medium sm:w-36">
                 <SelectValue placeholder="Theme" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -474,16 +501,17 @@ export default function Settings() {
             <h3>Privacy & Safety</h3>
           </div>
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Profile Visibility</p>
               <p className="text-xs text-muted-foreground">Who can see your profile and posts</p>
             </div>
             <Select 
-              value={privacySettings.profileVisibility || 'public'} 
-              onValueChange={(val) => handlePrivacyChange('profileVisibility', val)}
+              value={privacySettings.profileVisibility}
+              disabled={privacySaving}
+              onValueChange={(val) => void handlePrivacyChange('profileVisibility', val as PrivacySettings['profileVisibility'])}
             >
-              <SelectTrigger className="w-40 rounded-xl font-medium">
+              <SelectTrigger aria-label="Profile visibility" className="w-full shrink-0 rounded-xl font-medium sm:w-40">
                 <SelectValue placeholder="Visibility" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -494,35 +522,42 @@ export default function Settings() {
             </Select>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Direct Messages from strangers</p>
               <p className="text-xs text-muted-foreground">Let non-followers initiate chat requests</p>
             </div>
             <Switch 
+              aria-label="Direct Messages from strangers"
+              disabled={privacySaving}
               checked={privacySettings.allowDmFromStrangers ?? true} 
-              onCheckedChange={(val) => handlePrivacyChange('allowDmFromStrangers', val)} 
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Message requests</p>
-              <p className="text-xs text-muted-foreground">Allow non-followers to send message requests</p>
-            </div>
-            <Switch 
-              checked={privacySettings.messageRequests ?? true} 
-              onCheckedChange={(val) => handlePrivacyChange('messageRequests', val)} 
+              onCheckedChange={(val) => void handlePrivacyChange('allowDmFromStrangers', val)}
             />
           </div>
 
           <div className="flex items-center justify-between gap-4">
             <div>
+              <p className="text-sm font-semibold">Message requests</p>
+              <p className="text-xs text-muted-foreground">Allow non-followers to send message requests</p>
+            </div>
+            <Switch 
+              aria-label="Message requests"
+              disabled={privacySaving}
+              checked={privacySettings.messageRequests ?? true} 
+              onCheckedChange={(val) => void handlePrivacyChange('messageRequests', val)}
+            />
+          </div>
+
+          {privacySaving && <p role="status" className="text-sm text-muted-foreground">Saving privacy preferences…</p>}
+          {privacyError && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{privacyError} Your previous preferences are still shown.</p>}
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <p className="text-sm font-semibold">Content filter</p>
               <p className="text-xs text-muted-foreground">Choose the highest audience layer shown to you</p>
             </div>
-            <Select value={contentFilter} onValueChange={(value) => void handleContentFilterChange(value as ContentRating)}>
-              <SelectTrigger className="w-40 rounded-xl font-medium"><SelectValue placeholder="Content level" /></SelectTrigger>
+            <Select value={contentFilter} disabled={contentFilterSaving} onValueChange={(value) => void handleContentFilterChange(value as ContentRating)}>
+              <SelectTrigger aria-label="Content filter" className="w-full shrink-0 rounded-xl font-medium sm:w-40"><SelectValue placeholder="Content level" /></SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="child_safe">Child-safe only</SelectItem>
                 <SelectItem value="regular">Child-safe + Regular</SelectItem>
@@ -551,7 +586,7 @@ export default function Settings() {
                 </div>
                 <a href={twoFactorSetup.otpauthUrl} className="inline-flex text-xs font-semibold text-primary hover:underline">Open setup URI on this phone</a>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" className="rounded-xl" />
+                  <Input aria-label="Authenticator confirmation code" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
                   <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Confirm</Button>
                 </div>
               </div>
@@ -561,7 +596,7 @@ export default function Settings() {
             )}
             {twoFactorEnabled && twoFactorDisableMode && (
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Current 6-digit code" inputMode="numeric" className="rounded-xl" />
+                <Input aria-label="Current authenticator code" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Current 6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
                 <Button type="button" variant="destructive" onClick={() => void disableTwoFactor()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Disable</Button>
               </div>
             )}
@@ -578,18 +613,23 @@ export default function Settings() {
             <h3>Notification Preferences</h3>
           </div>
           
-          <div className="flex items-center justify-between">
+          {publicBetaConfig.webPushEnabled ? <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Push notifications</p>
-              <p className="text-xs text-muted-foreground">Receive instant alerts on this device</p>
+              <p className="text-xs text-muted-foreground">Allow delivery to browsers you have subscribed</p>
             </div>
             <Switch 
+              aria-label="Push notifications"
+              disabled={notificationSaving}
               checked={notificationsEnabled} 
               onCheckedChange={(val) => void handleNotificationChange(val)} 
             />
-          </div>
+          </div> : <div className="rounded-xl border border-border/50 bg-background/50 p-4">
+            <p className="text-sm font-semibold">Push notifications are off for this beta</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">You can still find your likes, replies, follow requests, and account updates in Activity.</p>
+          </div>}
 
-          <p className="text-xs leading-5 text-muted-foreground">Browser push permission is managed by your device. Email digests are not enabled in this beta.</p>
+          <p className="text-xs leading-5 text-muted-foreground">{publicBetaConfig.webPushEnabled ? 'Browser push also needs a device subscription and browser permission. ' : ''}Email digests are not enabled in this beta.</p>
         </section>
 
         {/* Account Management */}
@@ -636,8 +676,8 @@ export default function Settings() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"><KeyRound className="h-4 w-4" /></div>
               <div><h3 className="font-bold text-destructive">Permanently delete this account?</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">This removes your profile, posts, comments, relationships and contact shields. Financial audit records are retained without your identity.</p></div>
             </div>
-            <Input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE" className="rounded-xl" />
-            <Input value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Your password" type="password" className="rounded-xl" />
+            <Input aria-label="Account deletion confirmation" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE" className="rounded-xl" />
+            <Input aria-label="Current password for account deletion" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Your password" type="password" autoComplete="current-password" className="rounded-xl" />
             <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)} className="rounded-xl">Cancel</Button><Button type="button" variant="destructive" onClick={() => void deleteAccount()} disabled={deleting} className="rounded-xl">{deleting ? 'Deleting…' : 'Delete permanently'}</Button></div>
           </section>
         )}
