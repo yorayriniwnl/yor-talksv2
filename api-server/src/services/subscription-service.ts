@@ -59,6 +59,8 @@ export class SubscriptionService {
   }
 
   async createOrder(input: { subscriberId: string; creatorId: string; tier: string }) {
+    // A previously-created checkout is unavailable too when payments pause.
+    this.razorpay.assertConfigured();
     if (input.subscriberId === input.creatorId) {
       throw new SubscriptionRequestError("You cannot subscribe to your own creator membership");
     }
@@ -151,6 +153,7 @@ export class SubscriptionService {
   }
 
   async verifyPayment(input: { subscriberId: string; subscriptionId: string; orderId: string; paymentId: string; signature: string }) {
+    this.razorpay.assertConfigured();
     const [order] = await db.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.providerOrderId, input.orderId));
     if (!order) throw new SubscriptionOrderNotFoundError("Membership payment order not found");
     if (order.subscriberId !== input.subscriberId) throw new SubscriptionOrderForbiddenError("This membership payment is not yours");

@@ -24,6 +24,7 @@ export class PaymentService {
     amountMinor: number;
     message?: string;
   }) {
+    this.razorpay.assertConfigured();
     if (input.payerId === input.creatorId) {
       throw new PaymentRequestError("You cannot send a tip to yourself");
     }
@@ -78,6 +79,7 @@ export class PaymentService {
     paymentId: string;
     signature: string;
   }) {
+    this.razorpay.assertConfigured();
     const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerOrderId, input.orderId));
     if (!order) {
       throw new PaymentOrderNotFoundError("Payment order not found");

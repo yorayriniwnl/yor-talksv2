@@ -64,14 +64,14 @@ async function parseProviderResponse<T>(response: Response): Promise<T> {
 }
 
 export class RazorpayService {
-  private ensureConfigured(): void {
+  assertConfigured(): void {
     if (!isConfigured()) {
       throw new PaymentsNotConfiguredError();
     }
   }
 
   async createOrder(input: { amountMinor: number; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder> {
-    this.ensureConfigured();
+    this.assertConfigured();
     const response = await fetch(`${RAZORPAY_API}/orders`, {
       method: "POST",
       headers: {
@@ -89,7 +89,7 @@ export class RazorpayService {
   }
 
   async getPayment(paymentId: string): Promise<RazorpayPayment> {
-    this.ensureConfigured();
+    this.assertConfigured();
     const response = await fetch(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}`, {
       headers: { Authorization: authorizationHeader() },
     });
