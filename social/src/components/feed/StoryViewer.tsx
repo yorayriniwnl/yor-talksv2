@@ -249,7 +249,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             {currentStory.type === 'text' && (
               <div 
                 className="absolute inset-0 w-full h-full flex items-center justify-center p-8 text-center"
-                style={{ background: currentStory.backgroundGradient || 'linear-gradient(to bottom right, #4facfe, #00f2fe)' }}
+                          style={{ background: currentStory.backgroundGradient || 'linear-gradient(to bottom right, #671515, #e84b4b)' }}
               >
                 <p className="text-white text-2xl font-display font-black leading-snug whitespace-pre-wrap drop-shadow-xl">
                   {currentStory.textContent}

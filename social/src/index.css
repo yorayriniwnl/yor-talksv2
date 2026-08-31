@@ -81,6 +81,15 @@
    LIGHT MODE — Warm, airy, editorial
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
+  --yor-void: #000000;
+  --yor-panel: #050505;
+  --yor-crimson: #e84b4b;
+  --yor-deep-crimson: #671515;
+  --deep-crimson: 0 66% 24%;
+  --yor-signal: #ff8a7f;
+  --yor-paper: #f5eaea;
+  --yor-muted: #c4c4c4;
+
   color-scheme: light;
 
   /* ── Product rhythm ─────────────────────────────────────────────────── */
@@ -181,9 +190,9 @@
 
   /* Fonts */
   --app-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --app-font-display: 'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --app-font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --app-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --app-font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --app-font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --app-font-mono: 'DM Mono', 'SF Mono', 'Fira Code', monospace;
 
   --radius: 16px;
 }
@@ -203,38 +212,38 @@
   --elevate-3: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
   --elevate-glow: 0 0 48px -8px hsl(var(--primary) / 0.3);
 
-  --background: 225 20% 4%;
-  --foreground: 210 20% 96%;
-  --border: 220 12% 16%;
+  --background: 0 0% 0%;
+  --foreground: 0 35% 94%;
+  --border: 0 0% 16%;
 
-  --card: 225 18% 7%;
-  --card-foreground: 210 20% 96%;
-  --card-border: 220 12% 16%;
+  --card: 0 0% 2%;
+  --card-foreground: 0 35% 94%;
+  --card-border: 0 0% 16%;
 
-  --popover: 225 18% 8%;
-  --popover-foreground: 210 20% 96%;
-  --popover-border: 220 12% 18%;
+  --popover: 0 0% 3%;
+  --popover-foreground: 0 35% 94%;
+  --popover-border: 0 0% 18%;
 
-  --sidebar: 225 20% 5%;
-  --sidebar-foreground: 210 20% 96%;
-  --sidebar-border: 220 12% 16%;
-  --sidebar-primary: 352 88% 62%;
-  --sidebar-primary-foreground: 225 20% 8%;
-  --sidebar-accent: 352 36% 13%;
-  --sidebar-accent-foreground: 352 90% 76%;
-  --sidebar-ring: 352 88% 62%;
+  --sidebar: 0 0% 2%;
+  --sidebar-foreground: 0 35% 94%;
+  --sidebar-border: 0 0% 16%;
+  --sidebar-primary: 0 77% 60%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 0 66% 24%;
+  --sidebar-accent-foreground: 4 100% 75%;
+  --sidebar-ring: 0 77% 60%;
 
-  --primary: 352 88% 62%;
-  --primary-foreground: 225 20% 8%;
+  --primary: 0 77% 60%;
+  --primary-foreground: 0 0% 0%;
 
-  --secondary: 222 12% 14%;
-  --secondary-foreground: 210 20% 96%;
+  --secondary: 0 0% 9%;
+  --secondary-foreground: 0 35% 94%;
 
-  --muted: 222 12% 13%;
-  --muted-foreground: 218 9% 62%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 77%;
 
-  --accent: 24 96% 62%;
-  --accent-foreground: 24 100% 84%;
+  --accent: 4 100% 75%;
+  --accent-foreground: 0 0% 0%;
 
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
@@ -244,18 +253,18 @@
   --warning: 38 90% 54%;
   --warning-foreground: 38 80% 12%;
 
-  --input: 220 12% 19%;
-  --ring: 352 88% 62%;
+  --input: 0 0% 19%;
+  --ring: 0 77% 60%;
 
   /* Operator Social */
-  --signal: 352 88% 62%;
-  --signal-soft: 352 36% 13%;
-  --ember: 24 96% 62%;
+  --signal: 0 77% 60%;
+  --signal-soft: 0 66% 24%;
+  --ember: 4 100% 75%;
   --online: 151 66% 49%;
-  --operator-surface: 225 18% 7%;
-  --operator-surface-raised: 222 15% 10%;
-  --operator-line: 220 12% 16%;
-  --operator-grid: 210 20% 96%;
+  --operator-surface: 0 0% 2%;
+  --operator-surface-raised: 0 0% 5%;
+  --operator-line: 0 0% 16%;
+  --operator-grid: 0 35% 94%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -356,7 +365,7 @@
 
   /* ── Brand ──────────────────────────────────────────────────────── */
   .brand-mark {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 55%));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     box-shadow: 0 8px 24px -8px hsl(var(--primary) / 0.5);
   }
 
@@ -368,7 +377,7 @@
   }
 
   .text-gradient-brand {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 60%));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -557,9 +566,9 @@
     background: linear-gradient(
       -45deg,
       hsl(var(--primary) / 0.15),
-      hsl(280 70% 50% / 0.1),
+      hsl(var(--deep-crimson) / 0.1),
       hsl(var(--accent) / 0.12),
-      hsl(200 80% 50% / 0.08),
+      hsl(var(--deep-crimson) / 0.08),
       hsl(var(--primary) / 0.15)
     );
     background-size: 400% 400%;
@@ -601,7 +610,7 @@
   .glow-neon-multi {
     box-shadow:
       0 0 12px hsl(var(--primary) / 0.3),
-      0 0 24px hsl(280 70% 55% / 0.15),
+      0 0 24px hsl(var(--deep-crimson) / 0.15),
       0 0 48px hsl(var(--accent) / 0.1);
   }
 
@@ -626,7 +635,7 @@
     background: linear-gradient(
       90deg,
       hsl(var(--primary)),
-      hsl(280 70% 60%),
+      hsl(var(--deep-crimson)),
       hsl(var(--accent)),
       hsl(var(--primary))
     );
@@ -667,33 +676,33 @@
 .steam-frame-neon {
   padding: 4px;
   border-radius: 9999px;
-  background: conic-gradient(from var(--border-angle, 0deg), #00f2fe, #4facfe, #00f2fe);
+  background: conic-gradient(from var(--border-angle, 0deg), #e84b4b, #ff8a7f, #e84b4b);
   animation: rotate-border 4s linear infinite;
-  box-shadow: 0 0 20px rgba(0, 242, 254, 0.5);
+  box-shadow: 0 0 20px rgba(232, 75, 75, 0.5);
 }
 
 .steam-frame-gold {
   padding: 4px;
   border-radius: 9999px;
-  background: conic-gradient(from var(--border-angle, 0deg), #f6d365, #fda085, #f6d365);
+  background: conic-gradient(from var(--border-angle, 0deg), #ff8a7f, #671515, #ff8a7f);
   animation: rotate-border 3s linear infinite;
-  box-shadow: 0 0 20px rgba(253, 160, 133, 0.5);
+  box-shadow: 0 0 20px rgba(255, 138, 127, 0.5);
 }
 
 .steam-frame-cosmic {
   padding: 4px;
   border-radius: 9999px;
-  background: conic-gradient(from var(--border-angle, 0deg), #b92b27, #1565c0, #b92b27);
+  background: conic-gradient(from var(--border-angle, 0deg), #671515, #e84b4b, #671515);
   animation: rotate-border 5s linear infinite;
-  box-shadow: 0 0 20px rgba(185, 43, 39, 0.5);
+  box-shadow: 0 0 20px rgba(103, 21, 21, 0.5);
 }
 
 .steam-frame-fire {
   padding: 4px;
   border-radius: 9999px;
-  background: conic-gradient(from var(--border-angle, 0deg), #ff4e50, #f9d423, #ff4e50);
+  background: conic-gradient(from var(--border-angle, 0deg), #e84b4b, #671515, #e84b4b);
   animation: rotate-border 2.5s linear infinite;
-  box-shadow: 0 0 20px rgba(255, 78, 80, 0.5);
+  box-shadow: 0 0 20px rgba(232, 75, 75, 0.5);
 }
 
 .profile-hero-cover::after {
@@ -729,7 +738,7 @@
   background: conic-gradient(
     from var(--border-angle, 0deg),
     hsl(var(--primary)),
-    hsl(280 70% 55%),
+    hsl(var(--deep-crimson)),
     hsl(var(--accent)),
     hsl(var(--primary))
   );
@@ -816,7 +825,7 @@
   background: conic-gradient(
     from var(--border-angle, 0deg),
     hsl(var(--primary) / 0.6),
-    hsl(280 70% 55% / 0.3),
+    hsl(var(--deep-crimson) / 0.3),
     hsl(var(--accent) / 0.5),
     hsl(var(--primary) / 0.6)
   );
@@ -901,7 +910,7 @@
   background: linear-gradient(
     90deg,
     hsl(var(--primary)),
-    hsl(280 70% 60%),
+    hsl(var(--deep-crimson)),
     hsl(var(--accent))
   );
   background-size: 200% 100%;
@@ -916,7 +925,7 @@
   gap: 0.35rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 55%));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--deep-crimson)));
   color: white;
   font-family: var(--app-font-display);
   font-size: 0.72rem;
@@ -1787,7 +1796,7 @@
     90deg,
     hsl(var(--muted)) 0%,
     hsl(var(--primary) / 0.08) 25%,
-    hsl(280 70% 55% / 0.06) 50%,
+    hsl(var(--deep-crimson) / 0.06) 50%,
     hsl(var(--accent) / 0.08) 75%,
     hsl(var(--muted)) 100%
   );
@@ -1994,7 +2003,7 @@
   background: conic-gradient(
     from var(--gradient-angle),
     hsl(var(--primary)),
-    hsl(280 70% 55%),
+    hsl(var(--deep-crimson)),
     hsl(var(--accent)),
     hsl(var(--primary))
   );

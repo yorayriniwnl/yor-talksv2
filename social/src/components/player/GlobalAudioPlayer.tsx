@@ -125,9 +125,9 @@ export function GlobalAudioPlayer() {
 
         // Gradient bar
         const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-        gradient.addColorStop(0, '#06b6d4'); // Cyan
-        gradient.addColorStop(0.5, '#a855f7'); // Purple
-        gradient.addColorStop(1, '#ec4899'); // Pink
+      gradient.addColorStop(0, '#671515');
+      gradient.addColorStop(0.5, '#e84b4b');
+      gradient.addColorStop(1, '#ff8a7f');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();

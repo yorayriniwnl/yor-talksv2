@@ -1,8 +1,14 @@
-# Yor Talks
+# YOR // Talks
 
-Yor Talks is a global social platform for creators, communities, conversations,
-events, stories and commerce. The repository contains an Express + Socket.IO
-API, a React + Vite frontend, and shared Postgres/Drizzle packages.
+![Yor Talks realtime communication system](assets/hero.svg)
+
+`DEMO` · `CODE-READY` · `DEPLOYMENT BLOCKED`
+
+Yor Talks is a full-stack social product prototype for identity, conversation,
+communities, stories, live surfaces and creator tools. The repository contains
+an Express + Socket.IO API, a React + Vite frontend, and shared
+Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
+claim of a verified public service.
 
 ## Public-beta status — 31 August 2026
 
@@ -12,6 +18,26 @@ Actions is billing-locked, the local Docker engine is unavailable, and live
 provider, TLS, monitoring and restore checks remain required. See the
 [readiness report](docs/PUBLIC_BETA_READINESS_2026-08-31.md) and
 [production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
+
+## Architecture
+
+![Yor Talks architecture](assets/architecture.svg)
+
+The supported core path is intentionally explicit:
+
+- React + Vite owns the social shell, route-level code splitting, consent,
+  accessible controls and Socket.IO client.
+- Express 5 owns REST contracts, authentication, authorization, rate limits,
+  content boundaries and Socket.IO event gates.
+- PostgreSQL with Drizzle owns durable product state and transactional
+  relationship, messaging and migration behavior.
+- Redis owns queues, notifications and readiness-sensitive worker paths.
+- Resend, Cloudinary, moderation, Google Identity Services, LiveKit, Web Push,
+  Razorpay and TURN are provider boundaries; optional capabilities stay gated
+  until live acceptance is complete.
+
+The frontend is not described as Next.js/FastAPI because those are not the
+current implementation path for this repository.
 
 ## Launch scope
 
@@ -181,6 +207,21 @@ the configured isolated Postgres and Redis instances:
 ```bash
 pnpm --filter @workspace/api-server test
 ```
+
+The last bounded beta re-audit recorded 61/61 API tests, 17/17 root checks,
+17/17 Chromium E2E checks with zero retries, both workspace typechecks, the
+production build, 200 contract operations and a passing production Compose
+configuration check. Docker image execution, GitHub Actions execution, live
+provider delivery, TLS, monitoring and backup restore remain unverified or
+blocked; these boundaries are launch gates, not implied by a green local build.
+
+## Visual system
+
+The UI uses the shared [YOR token contract](design/yor-tokens.json): void black,
+graphite panels, crimson signal accents, warm-white type, technical mono labels,
+controlled grids and reduced-motion fallbacks. Product semantics may add
+secondary status colors, but they do not replace the YOR foundation. Run
+`pnpm design:check` when changing the contract.
 
 Authenticated administrators and moderators can scrape bounded-cardinality
 Prometheus request metrics from `/api/metrics`. Keep this route behind the

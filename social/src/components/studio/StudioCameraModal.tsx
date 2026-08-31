@@ -281,7 +281,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-border/30 glass-heavy z-20 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary via-purple-500 to-accent text-white flex items-center justify-center font-bold font-display shadow-md glow-neon-primary text-sm">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary via-red-900 to-accent text-white flex items-center justify-center font-bold font-display shadow-md glow-neon-primary text-sm">
               YT
             </div>
             <span className="font-display font-extrabold text-sm text-foreground">Ultra Studio Camera</span>
@@ -534,7 +534,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               <Button
                 onClick={handlePublish}
                 disabled={publishing || !contentCategory}
-                className="w-full rounded-2xl font-display font-extrabold text-xs h-12 bg-gradient-to-r from-primary via-purple-600 to-accent text-white glow-neon-primary shadow-xl cursor-pointer"
+            className="w-full rounded-2xl font-display font-extrabold text-xs h-12 bg-gradient-to-r from-primary via-red-900 to-accent text-white glow-neon-primary shadow-xl cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-1.5" />
                 {publishing ? 'Rendering 4K…' : `Publish ${mode.toUpperCase()} 🚀`}

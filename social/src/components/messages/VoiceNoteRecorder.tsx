@@ -106,7 +106,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
 
       for (let i = 0; i < bars; i++) {
         const height = Math.sin(Date.now() * 0.008 + i * 0.5) * 12 + 14;
-        ctx.fillStyle = '#06b6d4'; // Cyan primary
+      ctx.fillStyle = '#e84b4b';
         ctx.fillRect(i * (barWidth + spacing) + 10, (canvas.height - height) / 2, barWidth, height);
       }
 

@@ -8,9 +8,9 @@ export type ThemePreset = 'default' | 'midnight' | 'lilac' | 'amber';
 
 const THEME_PRESETS = [
   { id: 'default', name: 'Signal', swatch: 'bg-rose-500' },
-  { id: 'midnight', name: 'Midnight', swatch: 'bg-sky-500' },
-  { id: 'lilac', name: 'Lilac', swatch: 'bg-fuchsia-500' },
-  { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' },
+  { id: 'midnight', name: 'Deep signal', swatch: 'bg-red-950' },
+  { id: 'lilac', name: 'Soft signal', swatch: 'bg-[#ff8a7f]' },
+  { id: 'amber', name: 'Warm signal', swatch: 'bg-red-600' },
 ] as const;
 
 const THEME_STORAGE_KEY = 'yor-talks-accent-theme';
@@ -19,14 +19,14 @@ function setThemeVariables(theme: ThemePreset) {
   const root = document.documentElement;
 
   if (theme === 'midnight') {
-    root.style.setProperty('--primary', '201 92% 55%');
-    root.style.setProperty('--accent', '186 78% 47%');
+    root.style.setProperty('--primary', '0 66% 24%');
+    root.style.setProperty('--accent', '4 100% 75%');
   } else if (theme === 'lilac') {
-    root.style.setProperty('--primary', '284 76% 66%');
-    root.style.setProperty('--accent', '320 76% 62%');
+    root.style.setProperty('--primary', '4 100% 75%');
+    root.style.setProperty('--accent', '0 77% 60%');
   } else if (theme === 'amber') {
-    root.style.setProperty('--primary', '37 93% 57%');
-    root.style.setProperty('--accent', '18 89% 58%');
+    root.style.setProperty('--primary', '0 77% 60%');
+    root.style.setProperty('--accent', '0 66% 24%');
   } else {
     root.style.removeProperty('--primary');
     root.style.removeProperty('--accent');

@@ -62,6 +62,9 @@ jobs:
       - name: Verify API contract is synchronized
         run: pnpm contract:check
 
+      - name: Verify YOR visual framework tokens
+        run: pnpm design:check
+
       - name: Run browser-state and session-boundary unit tests
         run: pnpm test:unit
 

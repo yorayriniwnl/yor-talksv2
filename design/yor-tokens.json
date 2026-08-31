@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "name": "YOR Visual Framework",
+  "description": "The shared visual contract for Yor Talks surfaces and project worlds.",
+  "color": {
+    "void": "#000000",
+    "panel": "#050505",
+    "crimson": "#e84b4b",
+    "deepCrimson": "#671515",
+    "signal": "#ff8a7f",
+    "paper": "#f5eaea",
+    "muted": "#c4c4c4",
+    "secondaryCrimson": "#b92b2b",
+    "shimmer": "#ffffff"
+  },
+  "gradient": {
+    "showcase": ["#671515", "#8c1616", "#2a0505"],
+    "header": ["#000000", "#671515", "#160303"],
+    "footer": ["#160303", "#671515", "#000000"]
+  },
+  "typography": {
+    "display": "Cormorant Garamond 600",
+    "technical": "DM Mono 500",
+    "body": "Inter",
+    "tracking": {
+      "display": 3,
+      "technical": 1.6,
+      "metadata": 2
+    }
+  },
+  "geometry": {
+    "borderRadius": 7,
+    "panelRadius": 5,
+    "signalRailWidth": 5,
+    "hairlineWidth": 1,
+    "panelInset": 18,
+    "wideGutter": 28
+  },
+  "motion": {
+    "microMs": 160,
+    "fastMs": 240,
+    "standardMs": 420,
+    "ambientMs": 5000,
+    "showcaseSweepMs": 8000,
+    "reducedMotion": "static-alternative"
+  },
+  "signal": {
+    "intensity": {
+      "hero": 1,
+      "featured": 0.7,
+      "navigation": 0.4,
+      "card": 0.25,
+      "body": 0.1
+    },
+    "states": ["BOOT", "ACQUIRE", "TRANSMIT", "LOCK", "FAULT", "IDLE"]
+  },
+  "effects": {
+    "grainOpacity": 0.04,
+    "glowOpacity": 0.2,
+    "shadowStyle": "controlled-crimson"
+  },
+  "breakpoints": {
+    "mobile": 600,
+    "narrow": 768,
+    "wide": 1200
+  },
+  "accessibility": {
+    "minimumTouchTargetPx": 44,
+    "reducedMotionMediaQuery": "(prefers-reduced-motion: reduce)",
+    "minimumBodyContrast": 4.5
+  }
+}
