@@ -2,8 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'codex/**']
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -58,6 +62,9 @@ jobs:
       - name: Verify API contract is synchronized
         run: pnpm contract:check
 
+      - name: Run browser-state and session-boundary unit tests
+        run: pnpm test:unit
+
       - name: Build database package
         run: pnpm --filter @workspace/db build
 
@@ -91,6 +98,17 @@ jobs:
       - name: Run browser smoke tests
         run: pnpm test:e2e
 
+      - name: Retain browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Build API and web
         run: |
           pnpm --filter @workspace/api-server build
@@ -101,3 +119,6 @@ jobs:
 
       - name: Validate production Compose file
         run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet
+
+      - name: Build production container images
+        run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml build api web
