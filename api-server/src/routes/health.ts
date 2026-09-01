@@ -12,32 +12,34 @@ const liveHandler = (_req: Request, res: Response) => {
 };
 
 const healthHandler = async (_req: Request, res: Response) => {
+  const services: Record<string, "up" | "down"> = {
+    database: "down",
+    redis: "down",
+    api: "up",
+  };
+
   try {
-    // Check DB
     await db.execute(sql`SELECT 1`);
-    
-    // Redis is also the session store and queue backend. A reachable but too
-    // old Redis must not be reported ready because BullMQ will be disabled.
+    services.database = "up";
+
     const redis = await inspectRedisCompatibility(env.REDIS_URL);
     if (!redis.compatible) {
       throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
     }
+    services.redis = "up";
 
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
-      services: {
-        database: "up",
-        redis: "up",
-        api: "up"
-      },
-      uptime: process.uptime()
+      services,
+      uptime: process.uptime(),
     });
   } catch (error) {
     res.status(503).json({
       status: "unhealthy",
       timestamp: new Date().toISOString(),
-      error: "One or more dependencies are unavailable"
+      services,
+      error: error instanceof Error ? error.message : "One or more dependencies are unavailable",
     });
   }
 };
