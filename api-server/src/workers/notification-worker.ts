@@ -98,8 +98,11 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
     }
     await this.initializing;
     if (this.worker) {
-      await this.worker.close();
-      this.worker = null;
+      try {
+        await this.worker.close();
+      } finally {
+        this.worker = null;
+      }
     }
   }
 }
