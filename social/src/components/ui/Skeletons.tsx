@@ -4,7 +4,7 @@
  */
 export function FeedSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading feed">
+    <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading feed">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
@@ -45,7 +45,7 @@ export function FeedSkeleton({ count = 3 }: { count?: number }) {
  */
 export function ProfileSkeleton() {
   return (
-    <div className="min-h-screen bg-background" aria-busy="true" aria-label="Loading profile">
+    <div className="min-h-screen bg-background" role="status" aria-busy="true" aria-label="Loading profile">
       {/* Cover */}
       <div className="skeleton-aurora h-48 sm:h-64 w-full" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-16">
@@ -72,7 +72,7 @@ export function ProfileSkeleton() {
  */
 export function MessagesSkeleton() {
   return (
-    <div className="flex h-screen" aria-busy="true" aria-label="Loading messages">
+    <div className="flex h-screen" role="status" aria-busy="true" aria-label="Loading messages">
       {/* Conversation list */}
       <div className="w-80 border-r border-border/40 p-4 space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
