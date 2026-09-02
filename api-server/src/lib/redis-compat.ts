@@ -23,6 +23,11 @@ export async function inspectRedisCompatibility(redisUrl: string): Promise<Redis
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
   });
+  client.on("error", () => {
+    // Healthy production flows should not log noisy errors for expected connection
+    // failures during readiness checks; each caller already labels this as
+    // unavailable/unsupported and decides whether to fail closed.
+  });
 
   try {
     await client.connect();

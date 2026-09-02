@@ -30,6 +30,11 @@
 		"lightningcss-linux-x64-gnu": "1.32.0",
 		"lightningcss-win32-x64-msvc": "1.32.0"
 	},
+	"pnpm": {
+		"overrides": {
+			"qs": "6.16.0"
+		}
+	},
 	"scripts": {
 		"build": "node ./build.mjs",
 		"build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
