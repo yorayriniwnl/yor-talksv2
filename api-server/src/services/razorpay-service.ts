@@ -1,5 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { env } from "../config/env.js";
+import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 
 const RAZORPAY_API = "https://api.razorpay.com/v1";
 
@@ -72,7 +73,7 @@ export class RazorpayService {
 
   async createOrder(input: { amountMinor: number; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder> {
     this.assertConfigured();
-    const response = await fetch(`${RAZORPAY_API}/orders`, {
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/orders`, {
       method: "POST",
       headers: {
         Authorization: authorizationHeader(),
@@ -84,15 +85,15 @@ export class RazorpayService {
         receipt: input.receipt.slice(0, 40),
         notes: input.notes,
       }),
-    });
+    }, 12_000);
     return parseProviderResponse<RazorpayOrder>(response);
   }
 
   async getPayment(paymentId: string): Promise<RazorpayPayment> {
     this.assertConfigured();
-    const response = await fetch(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}`, {
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}`, {
       headers: { Authorization: authorizationHeader() },
-    });
+    }, 12_000);
     return parseProviderResponse<RazorpayPayment>(response);
   }
 

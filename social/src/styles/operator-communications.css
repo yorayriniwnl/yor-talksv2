@@ -239,7 +239,7 @@
   border: 1px solid hsl(var(--signal));
   border-radius: 0.68rem;
   background: hsl(var(--signal));
-  color: white;
+  color: #000;
   font-size: 0.7rem;
   font-weight: 750;
 }

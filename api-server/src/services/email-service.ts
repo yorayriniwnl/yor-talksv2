@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
+import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 
 function recipientHash(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 16);
@@ -94,7 +95,7 @@ export class EmailService {
       throw new EmailDeliveryNotConfiguredError();
     }
 
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetchWithTimeout("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
@@ -107,7 +108,7 @@ export class EmailService {
         html,
         ...(options.text ? { text: options.text } : {}),
       }),
-    });
+    }, 12_000);
 
     if (!response.ok) {
       await response.text().catch(() => undefined);
