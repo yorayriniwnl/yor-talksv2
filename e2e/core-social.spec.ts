@@ -121,6 +121,24 @@ test('feed failures show a retry, never a false empty-success state', async ({ p
   await expect(page.getByRole('article').getByText('The recovered feed is here.')).toBeVisible();
 });
 
+test('feed loading is announced while the first response is pending', async ({ page }) => {
+  await installApiBoundary(page);
+  let releaseFeed!: () => void;
+  const feedPending = new Promise<void>((resolve) => { releaseFeed = resolve; });
+  await page.route('**/api/feed?*', async (route) => {
+    await feedPending;
+    return json(route, [post('The delayed feed arrived.', 'delayed-feed-post')]);
+  });
+
+  await page.goto('/');
+  try {
+    await expect(page.getByRole('status', { name: 'Loading feed' })).toBeVisible();
+  } finally {
+    releaseFeed();
+  }
+  await expect(page.getByRole('article').getByText('The delayed feed arrived.')).toBeVisible();
+});
+
 test('posts survive unavailable author profiles and recover without hook errors', async ({ page }) => {
   await installApiBoundary(page);
   const authorId = '10000000-0000-4000-8000-000000000007';
