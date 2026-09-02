@@ -121,4 +121,44 @@ jobs:
         run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet
 
       - name: Build production container images
-        run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml build api web
+        run: docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml build migrate api web
+
+      - name: Smoke test production container stack
+        env:
+          WEB_PORT: 127.0.0.1:18080
+        run: |
+          set -euo pipefail
+          compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml)
+
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ]; then
+              "${compose[@]}" ps --all
+              "${compose[@]}" logs --no-color
+            fi
+            "${compose[@]}" down --volumes --remove-orphans
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          "${compose[@]}" up -d --no-build
+          timeout 120 sh -c 'until curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz >/dev/null; do sleep 2; done'
+          curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
+          curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
+
+          migration_id=$("${compose[@]}" ps --all --quiet migrate)
+          api_id=$("${compose[@]}" ps --quiet api)
+          redis_id=$("${compose[@]}" ps --quiet redis)
+          test -n "$migration_id"
+          test -n "$api_id"
+          test -n "$redis_id"
+          test "$(docker inspect --format '{{.State.ExitCode}}' "$migration_id")" = "0"
+          test "$(docker inspect --format '{{.Config.User}}' "$api_id")" = "node"
+          docker exec "$redis_id" sh -c 'redis-cli --no-auth-warning -a "$REDIS_PASSWORD" --scan --pattern "yor:rate:api:*" | grep -q "^yor:rate:api:"'
+
+          api_logs=$("${compose[@]}" logs --no-color api)
+          if grep -Eq 'async error during store initialization|Rate-limit Redis connection warning' <<<"$api_logs"; then
+            printf '%s\n' "$api_logs"
+            exit 1
+          fi
