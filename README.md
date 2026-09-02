@@ -4,14 +4,15 @@ Yor Talks is a global social platform for creators, communities, conversations,
 events, stories and commerce. The repository contains an Express + Socket.IO
 API, a React + Vite frontend, and shared Postgres/Drizzle packages.
 
-## Public-beta status — 31 August 2026
+## Public-beta status — 2 September 2026
 
 **B. CODE-READY, DEPLOYMENT BLOCKED.** The latest continuation passed 69 API,
-30 unit/integration and 23 browser tests, plus builds and an isolated database
-restore rehearsal. This is not a verified public deployment. GitHub Actions
-is billing-locked, the local Docker engine is unavailable, and production
-provider, TLS, monitoring and backup/recovery checks remain required. See the
-[latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-08-31.md) and
+30 unit/integration and 24 browser tests. Fresh production images also completed
+a clean PostgreSQL/Redis migration and healthy API/Nginx runtime rehearsal under
+the non-root API user. This is not a verified public deployment. GitHub Actions
+is billing-locked, and real provider, domain/TLS, monitoring and production
+backup/recovery acceptance checks remain required. See the
+[latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-09-02.md) and
 [production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
 
 ## Launch scope
