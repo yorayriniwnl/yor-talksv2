@@ -81,7 +81,7 @@ export default function LegalPage() {
     <main className="min-h-screen bg-background px-5 py-10 text-foreground sm:px-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <Link href="/auth"><Button variant="ghost" className="rounded-xl"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Yor</Button></Link>
+          <Button asChild variant="ghost" className="rounded-xl"><Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Yor</Link></Button>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Trust center</div>
         </div>
         <article className="rounded-3xl border border-border/60 bg-card/70 p-7 shadow-2xl sm:p-10">

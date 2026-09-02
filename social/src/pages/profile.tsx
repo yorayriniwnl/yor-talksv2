@@ -433,11 +433,11 @@ export default function Profile() {
           {finishedProfileLookup === profileLookup ? 'The profile may be private, removed, or temporarily unavailable.' : 'Getting the latest profile details.'}
         </p>
         {finishedProfileLookup === profileLookup && <Button onClick={() => setProfileAttempt((value) => value + 1)}>Retry profile</Button>}
-        <Link href="/explore">
-          <Button variant="outline" className="rounded-2xl font-bold text-xs">
+        <Button asChild variant="outline" className="rounded-2xl font-bold text-xs">
+          <Link href="/explore">
             Discover People
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -461,7 +461,7 @@ export default function Profile() {
          STICKY GLASS HEADER
          ══════════════════════════════════════════════════════════════════ */}
       <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="operator-profile-topbar sticky top-0 z-40 flex items-center gap-3 px-4 py-2">
-        <Link href="/"><Button variant="ghost" size="icon" className="rounded-full h-9 w-9 shrink-0" aria-label="Back to Orbit"><ArrowLeft className="w-[18px] h-[18px]" /></Button></Link>
+        <Button asChild variant="ghost" size="icon" className="rounded-full h-9 w-9 shrink-0"><Link href="/" aria-label="Back to Orbit"><ArrowLeft className="w-[18px] h-[18px]" /></Link></Button>
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-bold text-[0.92rem] leading-tight truncate">{profile.displayName}</h2>
           <p className="text-[0.6rem] text-muted-foreground font-mono tracking-wide">{userPosts.length} posts</p>
@@ -799,11 +799,11 @@ export default function Profile() {
                     </div>
                     <h3 className="font-display font-bold tracking-tight text-xl mb-1">No Reels Shared Yet</h3>
                     <p className="text-sm text-muted-foreground max-w-[260px] mx-auto mb-4">When short-form reels and creative clips are uploaded, they'll appear here.</p>
-                    <Link href="/videos">
-                      <Button variant="outline" className="rounded-2xl font-bold text-xs">
+                    <Button asChild variant="outline" className="rounded-2xl font-bold text-xs">
+                      <Link href="/videos">
                         <Play className="w-3.5 h-3.5 mr-1.5" /> Explore Yor Reels
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </div>
                 )}
               </motion.div>

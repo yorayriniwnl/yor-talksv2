@@ -244,6 +244,9 @@ test("public beta legal pages show configured, dated policy content", async ({ p
   await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
   await expect(page.getByText("test-public-beta-1", { exact: false })).toBeVisible();
   await expect(page.getByText(/draft|not configured/i)).toHaveCount(0);
+  await expect(page.locator('a button, button a')).toHaveCount(0);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
 });
 
 test("public beta requires consent before opening protected social routes", async ({ page }) => {

@@ -48,16 +48,16 @@ export default function Arcade() {
               leaderboards, and rewards. Stay tuned for the next-gen gaming experience.
             </p>
             <div className="flex items-center justify-center gap-3">
-              <Link href="/tournaments">
-                <Button className="rounded-2xl font-bold text-xs glow-neon-primary">
+              <Button asChild className="rounded-2xl font-bold text-xs glow-neon-primary">
+                <Link href="/tournaments">
                   <Trophy className="w-4 h-4 mr-2" /> Browse Tournaments
-                </Button>
-              </Link>
-              <Link href="/explore">
-                <Button variant="outline" className="rounded-2xl font-bold text-xs">
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-2xl font-bold text-xs">
+                <Link href="/explore">
                   <Sparkles className="w-4 h-4 mr-2" /> Explore
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </motion.div>

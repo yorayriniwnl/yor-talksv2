@@ -142,11 +142,11 @@ export default function PostDetail() {
     <div className="min-h-screen bg-background pb-24 font-sans">
       {/* Sticky Glass Header */}
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 flex items-center gap-4 border-b border-border/30">
-        <Link href="/">
-          <Button aria-label="Back to home" variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9 cursor-pointer">
+        <Button asChild variant="ghost" size="icon" className="rounded-full shrink-0 h-9 w-9 cursor-pointer">
+          <Link href="/" aria-label="Back to home">
             <ArrowLeft className="w-4.5 h-4.5" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h2>
           <p className="text-xs text-muted-foreground">A thought worth talking about.</p>

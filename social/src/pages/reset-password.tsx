@@ -60,7 +60,7 @@ export default function ResetPassword() {
           <>
             <p>{message}</p>
             <div className="operator-access-state-card__status"><span><i /> Account credential</span><b>UPDATED</b></div>
-            <Link href="/auth"><Button>Continue to sign in <span>→</span></Button></Link>
+            <Button asChild><Link href="/auth">Continue to sign in <span>→</span></Link></Button>
           </>
         ) : (
           <form onSubmit={submit} className="operator-reset-form">
