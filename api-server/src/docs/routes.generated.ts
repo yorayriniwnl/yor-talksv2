@@ -534,6 +534,15 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/diagnostics",
+    "operationId": "getDiagnostics",
+    "tag": "diagnostics",
+    "summary": "Get /diagnostics",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/docs",
     "operationId": "getDocs",
     "tag": "docs",

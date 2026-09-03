@@ -18,6 +18,11 @@ const healthHandler = async (_req: Request, res: Response) => {
     api: "up",
   };
 
+  const details: Record<string, unknown> = {
+    environment: env.NODE_ENV,
+    nodeVersion: process.version,
+  };
+
   try {
     await db.execute(sql`SELECT 1`);
     services.database = "up";
@@ -27,11 +32,15 @@ const healthHandler = async (_req: Request, res: Response) => {
       throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
     }
     services.redis = "up";
+    if (redis.version) {
+      details.redisVersion = redis.version;
+    }
 
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
       services,
+      details,
       uptime: process.uptime(),
     });
   } catch (error) {
@@ -39,6 +48,7 @@ const healthHandler = async (_req: Request, res: Response) => {
       status: "unhealthy",
       timestamp: new Date().toISOString(),
       services,
+      details,
       error: error instanceof Error ? error.message : "One or more dependencies are unavailable",
     });
   }
@@ -51,3 +61,4 @@ router.get("/livez", liveHandler);
 
 export const healthRoutes = router;
 export default router;
+

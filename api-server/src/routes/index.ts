@@ -4,6 +4,7 @@ import articleRouter from "./articles.js";
 import authRouter from "./auth.js";
 import communityRouter from "./communities.js";
 import broadcastChannelRouter from "./broadcast-channels.js";
+import diagnosticsRouter from "./diagnostics.js";
 import docsRouter from "./docs.js";
 import eventRouter from "./events.js";
 import healthRouter from "./health.js";
@@ -33,6 +34,7 @@ import metricsRouter from "./metrics.js";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(diagnosticsRouter);
 router.use(metricsRouter);
 router.use(docsRouter);
 router.use(authRouter);
