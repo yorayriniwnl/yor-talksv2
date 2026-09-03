@@ -19,6 +19,7 @@ tags:
   - name: communities
   - name: conversations
   - name: creator
+  - name: diagnostics
   - name: docs
   - name: economy
   - name: events
@@ -1439,6 +1440,21 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /diagnostics:
+    get:
+      operationId: getDiagnostics
+      summary: Get /diagnostics
+      tags: [diagnostics]
+      security: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
   /docs:
     get:
       operationId: getDocs
