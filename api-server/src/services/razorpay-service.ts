@@ -109,6 +109,14 @@ export class RazorpayService {
     return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer);
   }
 
+  verifyWebhookSignature(payload: Buffer, signature: string): boolean {
+    if (!env.PAYMENTS_ENABLED || !env.RAZORPAY_WEBHOOK_SECRET || !signature) return false;
+    const expected = createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET).update(payload).digest("hex");
+    const provided = Buffer.from(signature, "utf8");
+    const expectedBuffer = Buffer.from(expected, "utf8");
+    return expectedBuffer.length === provided.length && timingSafeEqual(expectedBuffer, provided);
+  }
+
   createReceipt(): string {
     return `yor_${randomUUID().replaceAll("-", "")}`;
   }

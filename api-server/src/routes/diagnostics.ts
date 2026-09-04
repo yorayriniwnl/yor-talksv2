@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { logger } from "../lib/logger.js";
+import { authenticate } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -48,6 +49,6 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
   }
 };
 
-router.get("/diagnostics", diagnosticsHandler);
+router.get("/diagnostics", authenticate, diagnosticsHandler);
 
 export default router;

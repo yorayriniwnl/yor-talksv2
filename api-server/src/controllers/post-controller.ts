@@ -3,6 +3,7 @@ import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-rep
 import { ContentPolicyViolationError, PostService } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
 import { StorageService } from "../services/storage-service.js";
+import { MediaModerationUnavailableError } from "../services/storage-service.js";
 import { assertValidUploadedFile } from "../middlewares/upload.js";
 import { createResponse } from "../utils/response.js";
 
@@ -39,6 +40,9 @@ export class PostController {
     } catch (error) {
       if (error instanceof Error && error.name === "InvalidFileTypeError") {
         return res.status(415).json(createResponse("Invalid image file", null, {}, [error.message]));
+      }
+      if (error instanceof MediaModerationUnavailableError) {
+        return res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
       }
       return res.status(502).json(createResponse("Image upload failed", null, {}, ["Upload provider error"]));
     }

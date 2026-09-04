@@ -56,7 +56,12 @@ app.use(
 // stricter limiters in their own routers.
 app.use(apiRateLimiter);
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({
+  limit: "1mb",
+  verify(req, _res, buffer) {
+    (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 }));
 app.use(cookieParser());
 

@@ -39,7 +39,7 @@ async function main() {
     return null;
   });
 
-  if (env.NODE_ENV === "production" && !notificationWorker) {
+  if (env.NODE_ENV === "production" && (!notificationWorker || !notificationWorker.isHealthy())) {
     throw new Error("Production dependency check failed: notification worker unavailable");
   }
 

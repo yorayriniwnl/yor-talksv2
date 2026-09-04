@@ -1,13 +1,18 @@
-import { Worker, type Job } from "bullmq";
+import { Queue, Worker, type Job } from "bullmq";
+import { gte } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { notificationsTable } from "@workspace/db/schema";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import type { NotificationRecord } from "../types/index.js";
+import { isNotificationWorkerHealthy, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 
 export type NotificationWorkerHandle = {
   close: () => Promise<void>;
+  isHealthy: () => boolean;
 };
 
 const RETRY_DELAY_MS = 30_000;
@@ -24,6 +29,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
   private initializing: Promise<void> | null = null;
 
   async start(): Promise<void> {
+    setNotificationWorkerHealthy(false);
     await this.ensureWorker();
     if (!this.worker) {
       this.retryTimer = setInterval(() => {
@@ -49,6 +55,17 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
 
         const userRepository = new UserRepository();
         const deliveryService = new NotificationDeliveryService();
+        const recoveryQueue = new Queue("defaultQueue", { connection: { url: env.REDIS_URL } });
+        try {
+          const recentNotifications = await db.select().from(notificationsTable)
+            .where(gte(notificationsTable.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()))
+            .limit(1000);
+          for (const notification of recentNotifications) {
+            await recoveryQueue.add("notification:deliver", notification, { jobId: notification.id, removeOnComplete: false });
+          }
+        } finally {
+          await recoveryQueue.close();
+        }
         const worker = new Worker(
           "defaultQueue",
           async (job: Job) => {
@@ -67,14 +84,19 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
           logger.error({ jobId: job?.id, err }, "Notification delivery job failed");
         });
         worker.on("error", (error) => {
+          setNotificationWorkerHealthy(false);
           logger.warn({ error }, "Notification worker connection error; BullMQ will retry");
         });
+        worker.on("ready", () => setNotificationWorkerHealthy(true));
+
+        await worker.waitUntilReady();
 
         if (this.closed) {
           await worker.close();
           return;
         }
         this.worker = worker;
+        setNotificationWorkerHealthy(true);
         if (this.retryTimer) {
           clearInterval(this.retryTimer);
           this.retryTimer = null;
@@ -92,6 +114,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
 
   async close(): Promise<void> {
     this.closed = true;
+    setNotificationWorkerHealthy(false);
     if (this.retryTimer) {
       clearInterval(this.retryTimer);
       this.retryTimer = null;
@@ -104,6 +127,10 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
         this.worker = null;
       }
     }
+  }
+
+  isHealthy(): boolean {
+    return this.worker !== null && isNotificationWorkerHealthy();
   }
 }
 

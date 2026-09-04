@@ -1,7 +1,8 @@
 FROM node:24-alpine
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable && pnpm fetch
+ENV COREPACK_HOME=/usr/local/share/corepack
+RUN mkdir -p "$COREPACK_HOME" && corepack enable && corepack install --global pnpm@9.15.4 && pnpm fetch && chmod -R a+rX "$COREPACK_HOME"
 COPY . .
 RUN pnpm install --frozen-lockfile --offline
 RUN pnpm --filter @workspace/api-server build
