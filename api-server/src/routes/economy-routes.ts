@@ -91,4 +91,24 @@ router.post("/orders/:orderId/verify", authenticate, validateBody(verifyTipPayme
   }
 });
 
+router.post("/webhooks/razorpay", async (req: Request & { rawBody?: Buffer }, res) => {
+  const signature = typeof req.headers["x-razorpay-signature"] === "string" ? req.headers["x-razorpay-signature"] : "";
+  if (!req.rawBody || !paymentService.verifyWebhookSignature(req.rawBody, signature)) {
+    return res.status(401).json(createResponse("Invalid webhook signature", null, {}, ["invalid_signature"]));
+  }
+  try {
+    const payload = req.body as { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string } } } };
+    if (payload.event !== "payment.captured") return res.status(200).json({ received: true });
+    const entity = payload.payload?.payment?.entity;
+    if (!entity?.id || !entity.order_id) return res.status(400).json(createResponse("Invalid payment event", null, {}, ["invalid_event"]));
+    await paymentService.reconcileCapturedPayment({ orderId: entity.order_id, paymentId: entity.id });
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    if (error instanceof PaymentOrderNotFoundError) return res.status(404).json(createResponse("Payment order not found", null, {}, [error.message]));
+    if (error instanceof PaymentRequestError) return res.status(400).json(createResponse("Payment reconciliation failed", null, {}, [error.message]));
+    console.error(error);
+    return res.status(500).json(createResponse("Payment reconciliation failed", null, {}, ["Internal server error"]));
+  }
+});
+
 export const economyRoutes = router;

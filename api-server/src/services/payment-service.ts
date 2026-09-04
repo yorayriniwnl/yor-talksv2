@@ -17,6 +17,10 @@ export class PaymentRequestError extends Error {}
 export class PaymentService {
   constructor(private readonly razorpay = new RazorpayService()) {}
 
+  verifyWebhookSignature(payload: Buffer, signature: string): boolean {
+    return this.razorpay.verifyWebhookSignature(payload, signature);
+  }
+
   async createTipOrder(input: {
     payerId: string;
     creatorId: string;
@@ -143,6 +147,36 @@ export class PaymentService {
       return ledger.id;
     });
 
+    return { transactionId, status: "paid" as const };
+  }
+
+  async reconcileCapturedPayment(input: { orderId: string; paymentId: string }) {
+    this.razorpay.assertConfigured();
+    const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerOrderId, input.orderId));
+    if (!order) throw new PaymentOrderNotFoundError("Payment order not found");
+    const payment = await this.razorpay.getPayment(input.paymentId);
+    if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
+      || payment.currency !== order.currency || payment.status !== "captured") {
+      throw new PaymentRequestError("The payment was not captured for this order");
+    }
+
+    const referenceId = `razorpay:${order.providerOrderId}`;
+    const transactionId = await db.transaction(async (tx) => {
+      const [existing] = await tx.select({ id: ledgerTransactionsTable.id })
+        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existing) return existing.id;
+      const [updated] = await tx.update(paymentOrdersTable).set({
+        providerPaymentId: input.paymentId,
+        status: "paid",
+        paidAt: new Date().toISOString(),
+      }).where(and(eq(paymentOrdersTable.id, order.id), eq(paymentOrdersTable.status, "created"))).returning({ id: paymentOrdersTable.id });
+      if (!updated) throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      const [ledger] = await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(), creditAccountId: order.creatorId, debitAccountId: order.payerId,
+        amountMinor: order.amountMinor, currency: order.currency, referenceId, status: "completed",
+      }).returning({ id: ledgerTransactionsTable.id });
+      return ledger.id;
+    });
     return { transactionId, status: "paid" as const };
   }
 }

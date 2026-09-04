@@ -38,7 +38,6 @@ function createLimiter(prefix: string, windowMs: number, max: number) {
 
   const redisClient = new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
   });
 
   return rateLimit({

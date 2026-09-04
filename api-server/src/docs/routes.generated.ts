@@ -538,7 +538,7 @@ export const apiRouteCatalog = [
     "operationId": "getDiagnostics",
     "tag": "diagnostics",
     "summary": "Get /diagnostics",
-    "authenticated": false,
+    "authenticated": true,
     "roles": []
   },
   {
@@ -593,6 +593,15 @@ export const apiRouteCatalog = [
     "tag": "economy",
     "summary": "Get /economy/wallet",
     "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/economy/webhooks/razorpay",
+    "operationId": "postEconomyWebhooksRazorpay",
+    "tag": "economy",
+    "summary": "Post /economy/webhooks/razorpay",
+    "authenticated": false,
     "roles": []
   },
   {

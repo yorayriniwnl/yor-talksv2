@@ -23,6 +23,11 @@ router.post(
         return;
       }
 
+      if (process.env.NODE_ENV === "production") {
+        res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
+        return;
+      }
+
       assertValidUploadedFile(req.file);
 
       const result = await mediaService.processUpload(
@@ -68,9 +73,15 @@ router.post(
         return;
       }
 
+      if (process.env.NODE_ENV === "production") {
+        res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
+        return;
+      }
+
       const signature = storageService.createDirectUploadSignature(
         isImage ? "image" : "video",
         purpose === "avatar" ? "avatars" : isAudio ? "audio" : "posts",
+        req.user!.id,
       );
       res.status(200).json(createResponse("Direct upload prepared", signature));
     } catch (err: any) {

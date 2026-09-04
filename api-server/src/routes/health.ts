@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
+import { isNotificationWorkerHealthy } from "../lib/worker-health.js";
 
 const router = Router();
 
@@ -11,11 +12,12 @@ const liveHandler = (_req: Request, res: Response) => {
   res.status(200).json({ status: "live", timestamp: new Date().toISOString(), uptime: process.uptime() });
 };
 
-const healthHandler = async (_req: Request, res: Response) => {
+const readinessHandler = async (_req: Request, res: Response) => {
   const services: Record<string, "up" | "down"> = {
     database: "down",
     redis: "down",
     api: "up",
+    worker: "down",
   };
 
   const details: Record<string, unknown> = {
@@ -36,6 +38,11 @@ const healthHandler = async (_req: Request, res: Response) => {
       details.redisVersion = redis.version;
     }
 
+    if (!isNotificationWorkerHealthy()) {
+      throw new Error("Required notification worker is not ready");
+    }
+    services.worker = "up";
+
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
@@ -54,9 +61,9 @@ const healthHandler = async (_req: Request, res: Response) => {
   }
 };
 
-router.get("/", healthHandler);
-router.get("/healthz", healthHandler);
-router.get("/readyz", healthHandler);
+router.get("/", readinessHandler);
+router.get("/healthz", liveHandler);
+router.get("/readyz", readinessHandler);
 router.get("/livez", liveHandler);
 
 export const healthRoutes = router;

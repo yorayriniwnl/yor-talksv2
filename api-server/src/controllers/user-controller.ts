@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { AuthService } from "../services/auth-service.js";
 import { StorageService } from "../services/storage-service.js";
+import { MediaModerationUnavailableError } from "../services/storage-service.js";
 import { UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
@@ -69,6 +70,9 @@ export class UserController {
     } catch (error) {
       if (error instanceof Error && error.name === "InvalidFileTypeError") {
         return res.status(415).json(createResponse("Invalid avatar file", null, {}, [error.message]));
+      }
+      if (error instanceof MediaModerationUnavailableError) {
+        return res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
       }
       return res.status(502).json(createResponse("Avatar upload failed", null, {}, ["Upload provider error"]));
     }

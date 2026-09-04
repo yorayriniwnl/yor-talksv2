@@ -71,9 +71,9 @@ backup() {
     --compress=9 \
     --disable-triggers \
     --no-privileges \
-    2>&1 | tee -a "$backup_file.log"
+    >"$backup_file" 2> >(tee -a "$backup_file.log" >&2)
   
-  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+  if [[ $? -eq 0 ]]; then
     local file_size=$(du -h "$backup_file" | cut -f1)
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Backup completed: $backup_file ($file_size)"
     echo "$backup_file"
@@ -98,8 +98,9 @@ verify() {
   if gzip -t "$backup_file" 2>/dev/null; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Backup file is valid (gzip OK)"
     
-    # Check for SQL content
-    if zcat "$backup_file" 2>/dev/null | head -100 | grep -q "^--"; then
+    # Check for common plain SQL statements without assuming comments appear
+    # before the first schema/data statement.
+    if gzip -cd "$backup_file" 2>/dev/null | grep -E "^(--|SET |CREATE |ALTER |INSERT |COPY |BEGIN)" >/dev/null; then
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Backup contains SQL statements"
       return 0
     else
@@ -147,15 +148,14 @@ restore() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting restore from $backup_file..."
   
   export PGPASSWORD="$DB_PASSWORD"
-  zcat "$backup_file" 2>/dev/null | psql \
+  local restore_log="$BACKUP_DIR/restore_${TIMESTAMP}.log"
+  if zcat "$backup_file" 2>/dev/null | psql \
     -h "$DB_HOST" \
     -p "$DB_PORT" \
     -U "$DB_USER" \
     -d "$DB_NAME" \
     --no-password \
-    2>&1 | head -50
-  
-  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+    >"$restore_log" 2>&1; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Restore completed successfully"
     
     # Verify restore by checking table count
@@ -166,6 +166,7 @@ restore() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Restored database has $table_count tables"
   else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✗ Restore failed" >&2
+    echo "See restore log: $restore_log" >&2
     exit 1
   fi
 }

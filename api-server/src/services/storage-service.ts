@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { randomUUID } from "node:crypto";
 import { env } from "../config/env.js";
 
 if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
@@ -16,6 +17,13 @@ export class MediaProviderNotConfiguredError extends Error {
   }
 }
 
+export class MediaModerationUnavailableError extends Error {
+  constructor() {
+    super("Media moderation is not configured for this deployment");
+    this.name = "MediaModerationUnavailableError";
+  }
+}
+
 export type DirectUploadResourceType = "image" | "video";
 export type DirectUploadFolder = "posts" | "audio" | "avatars";
 
@@ -24,6 +32,7 @@ export interface DirectUploadSignature {
   apiKey: string;
   timestamp: number;
   folder: DirectUploadFolder;
+  publicId: string;
   signature: string;
   resourceType: DirectUploadResourceType;
   maxFileSize: number;
@@ -33,6 +42,7 @@ export class StorageService {
   createDirectUploadSignature(
     resourceType: DirectUploadResourceType,
     folder: DirectUploadFolder,
+    ownerId: string,
   ): DirectUploadSignature {
     const cloudinaryConfigured = Boolean(
       env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
@@ -43,8 +53,9 @@ export class StorageService {
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
+    const publicId = `${ownerId}/${randomUUID()}`;
     const signature = cloudinary.utils.api_sign_request(
-      { folder, timestamp },
+      { folder, public_id: publicId, timestamp },
       env.CLOUDINARY_API_SECRET,
     );
 
@@ -53,6 +64,7 @@ export class StorageService {
       apiKey: env.CLOUDINARY_API_KEY,
       timestamp,
       folder,
+      publicId,
       signature,
       resourceType,
       maxFileSize: 10 * 1024 * 1024,
@@ -84,6 +96,10 @@ export class StorageService {
     originalName: string,
     fallbackMimeType?: string,
   ): Promise<string> {
+    if (env.NODE_ENV === "production") {
+      throw new MediaModerationUnavailableError();
+    }
+
     const cloudinaryConfigured = Boolean(
       env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
     );
