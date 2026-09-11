@@ -14,6 +14,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { hasTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -288,6 +289,7 @@ export default function Settings() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [telemetryConsent, setTelemetryConsentState] = useState(() => hasTelemetryConsent());
 
   useEffect(() => {
     if (!currentUser) return;
@@ -490,6 +492,28 @@ export default function Settings() {
               </SelectContent>
             </Select>
           </div>
+        </section>
+
+        <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
+          <div className="showcase-section-title mb-2">
+            <Shield className="w-4 h-4 text-primary" />
+            <h3>Optional analytics</h3>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Help improve Yor</p>
+              <p className="text-xs leading-5 text-muted-foreground">Allow anonymous navigation and performance events. This is off until you choose to enable it.</p>
+            </div>
+            <Switch
+              aria-label="Allow optional analytics"
+              checked={telemetryConsent}
+              onCheckedChange={(value) => {
+                setTelemetryConsent(value);
+                setTelemetryConsentState(value);
+              }}
+            />
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> for details.</p>
         </section>
 
         <CompanionPetSettings />

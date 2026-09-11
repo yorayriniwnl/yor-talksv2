@@ -6,12 +6,37 @@ type TelemetryEvent = {
 };
 
 const STORAGE_KEY = 'yor:telemetry:queue:v1';
+const CONSENT_KEY = 'yor:telemetry:consent:v1';
 const BATCH_SIZE = 20;
 const FLUSH_INTERVAL = 1000 * 10; // 10s
 const MAX_ATTEMPTS = 3;
 const DEFAULT_SAMPLING = 1; // 100%
+let queue: TelemetryEvent[] = [];
+
+export function hasTelemetryConsent(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === 'granted';
+  } catch (e) {
+    return false;
+  }
+}
+
+export function setTelemetryConsent(granted: boolean): void {
+  try {
+    if (granted) {
+      localStorage.setItem(CONSENT_KEY, 'granted');
+      return;
+    }
+    localStorage.removeItem(CONSENT_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+  queue = [];
+}
 
 function loadQueue(): TelemetryEvent[] {
+  if (!hasTelemetryConsent()) return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -22,6 +47,7 @@ function loadQueue(): TelemetryEvent[] {
 }
 
 function saveQueue(q: TelemetryEvent[]) {
+  if (!hasTelemetryConsent()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(q));
   } catch (e) {
@@ -42,6 +68,7 @@ function getSampling(): number {
 }
 
 async function sendBatch(events: TelemetryEvent[]) {
+  if (!hasTelemetryConsent()) return true;
   const url = (import.meta.env as any).VITE_TELEMETRY_URL;
   const body = JSON.stringify(events.map((e) => ({ ...e, timestamp: e.timestamp ?? new Date().toISOString() })));
 
@@ -73,11 +100,11 @@ async function sendBatch(events: TelemetryEvent[]) {
   }
 }
 
-let queue: TelemetryEvent[] = [];
 let flushTimer: number | null = null;
 let initialized = false;
 
 export function enqueueTelemetry(e: TelemetryEvent) {
+  if (!hasTelemetryConsent()) return;
   const sampling = getSampling();
   if (Math.random() > sampling) {
     return; // sampled out
@@ -95,6 +122,10 @@ export function enqueueTelemetry(e: TelemetryEvent) {
 }
 
 export async function flush() {
+  if (!hasTelemetryConsent()) {
+    queue = [];
+    return;
+  }
   if (queue.length === 0) return;
   const batch = queue.slice(0, BATCH_SIZE);
   const ok = await sendBatch(batch);
