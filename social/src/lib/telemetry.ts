@@ -1,4 +1,4 @@
-import { enqueueTelemetry, initTelemetryBatcher } from './telemetryBatcher';
+import { enqueueTelemetry, hasTelemetryConsent, initTelemetryBatcher, setTelemetryConsent } from './telemetryBatcher';
 
 type TelemetryEvent = {
   type: string;
@@ -23,5 +23,7 @@ export function initTelemetry() {
     // noop
   }
 }
+
+export { hasTelemetryConsent, setTelemetryConsent };
 
 export default { sendTelemetry, initTelemetry };

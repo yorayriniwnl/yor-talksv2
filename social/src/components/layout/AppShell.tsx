@@ -296,7 +296,7 @@ export function AppShell({ children }: AppShellProps) {
               <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
                 <span className="shell-profile-avatar">
                 <Avatar className="w-9 h-9 border border-border/50 shrink-0 group-hover:ring-2 ring-primary/40 transition-all">
-                  <AvatarImage src={currentUser.avatarUrl} />
+                  <AvatarImage src={currentUser.avatarUrl} alt={`${currentDisplayName} profile photo`} />
                   <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                   <i aria-label="Online" />
