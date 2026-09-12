@@ -48,6 +48,8 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   privateAccount: boolean;
   allowMentions?: boolean;
+  /** Whether story views should be aggregate-only for the viewer. */
+  storyViewMode?: "identified" | "private";
   /** Highest content rating this viewer wants to see. */
   contentFilter?: ContentRating;
   /** Explicitly false for new accounts until the guided setup is saved. */
@@ -421,7 +423,7 @@ export interface StoryRecord {
   poll?: StoryPoll;
 }
 
-export type StoryAudience = "followers" | "close_friends" | "public";
+export type StoryAudience = "followers" | "close_friends" | "public" | "selected_people" | "everyone_except" | "custom";
 export type NoteAudience = "followers" | "close_friends" | "public";
 
 export interface NoteRecord {

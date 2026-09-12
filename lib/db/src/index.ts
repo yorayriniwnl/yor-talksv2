@@ -65,6 +65,10 @@ export {
   pushSubscriptionsTable,
   subscriptionsTable,
   entitlementsTable,
+  featureEntitlementsTable,
+  userFeatureOverridesTable,
+  storyAudienceMembersTable,
+  storyAudienceExclusionsTable,
   subscriptionOrdersTable,
   creatorAnalyticsDailyTable,
   creatorProfileViewEventsTable,
@@ -88,4 +92,6 @@ export {
   insertUserCloseFriendSchema,
   creatorWorkspaceItemsTable,
   insertCreatorWorkspaceItemSchema,
+  insertFeatureEntitlementSchema,
+  insertUserFeatureOverrideSchema,
 } from "./schema";

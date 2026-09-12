@@ -50,6 +50,35 @@ export const usersTable = pgTable("users", {
   lastActiveTimestamp: timestamp("last_active_timestamp", { mode: "string" }),
 });
 
+/** Feature-level access is deliberately separate from subscriptions so rollout,
+ * experiments, promotions, and future plans do not leak into product logic. */
+export const featureEntitlementsTable = pgTable("feature_entitlements", {
+  id: uuid("id").primaryKey(),
+  featureKey: text("feature_key").notNull(),
+  planKey: text("plan_key").notNull().default("default"),
+  enabled: boolean("enabled").notNull().default(true),
+  status: text("status").notNull().default("active"),
+  startsAt: timestamp("starts_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  featurePlanIdx: uniqueIndex("feature_entitlement_feature_plan_idx").on(table.featureKey, table.planKey),
+  activeIdx: index("feature_entitlement_active_idx").on(table.featureKey, table.status, table.expiresAt),
+}));
+
+export const userFeatureOverridesTable = pgTable("user_feature_overrides", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  featureKey: text("feature_key").notNull(),
+  enabled: boolean("enabled").notNull(),
+  status: text("status").notNull().default("active"),
+  grantedAt: timestamp("granted_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.featureKey] }),
+  activeIdx: index("user_feature_override_active_idx").on(table.userId, table.status, table.expiresAt),
+}));
+
 export const postsTable = pgTable("posts", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -304,6 +333,24 @@ export const storyReactionsTable = pgTable("story_reactions", {
   pk: primaryKey({ columns: [table.storyId, table.userId] }),
   userIdx: index("story_reaction_user_idx").on(table.userId, table.updatedAt),
   validEmoji: check("story_reaction_emoji_check", sql`char_length(${table.emoji}) BETWEEN 1 AND 32`),
+}));
+
+export const storyAudienceMembersTable = pgTable("story_audience_members", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_audience_member_user_idx").on(table.userId, table.createdAt),
+}));
+
+export const storyAudienceExclusionsTable = pgTable("story_audience_exclusions", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_audience_exclusion_user_idx").on(table.userId, table.createdAt),
 }));
 
 /** Short-lived profile statuses shown above the main feed. A note is replaced
@@ -1171,3 +1218,11 @@ export type Subscription = typeof subscriptionsTable.$inferSelect;
 export const insertEntitlementSchema = createInsertSchema(entitlementsTable);
 export type InsertEntitlement = typeof entitlementsTable.$inferInsert;
 export type Entitlement = typeof entitlementsTable.$inferSelect;
+
+export const insertFeatureEntitlementSchema = createInsertSchema(featureEntitlementsTable);
+export type InsertFeatureEntitlement = typeof featureEntitlementsTable.$inferInsert;
+export type FeatureEntitlement = typeof featureEntitlementsTable.$inferSelect;
+
+export const insertUserFeatureOverrideSchema = createInsertSchema(userFeatureOverridesTable);
+export type InsertUserFeatureOverride = typeof userFeatureOverridesTable.$inferInsert;
+export type UserFeatureOverride = typeof userFeatureOverridesTable.$inferSelect;
