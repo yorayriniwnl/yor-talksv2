@@ -387,6 +387,7 @@ export interface LiveStreamRecord {
 export interface StoryReaction {
   userId: string;
   emoji: string;
+  reactionType?: "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM";
 }
 
 export interface StoryPollOption {
@@ -412,11 +413,16 @@ export interface StoryRecord {
   textContent?: string | null;
   backgroundGradient?: string | null;
   createdAt: string;
+  publishedAt?: string;
   expiresAt: string;
   viewerIds: string[];
   reactions: StoryReaction[];
   isHighlight: boolean;
   highlightTitle?: string | null;
+  highlightId?: string | null;
+  publishMode?: "active" | "highlight_only";
+  priorityBoost?: number;
+  engagementScore?: number;
   audience?: StoryAudience;
   contentCategory?: string;
   contentRating?: ContentRating;
@@ -425,6 +431,7 @@ export interface StoryRecord {
 
 export type StoryAudience = "followers" | "close_friends" | "public" | "selected_people" | "everyone_except" | "custom";
 export type NoteAudience = "followers" | "close_friends" | "public";
+export type StoryReactionType = "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM";
 
 export interface NoteRecord {
   id: string;

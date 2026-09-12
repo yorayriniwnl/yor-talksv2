@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { planBaseSchema, requireMigrationSecret } from '../lib/db/scripts/migration-safety.mjs';
 
@@ -16,4 +17,13 @@ test('production migration refuses missing or placeholder contact identity secre
     assert.throws(() => requireMigrationSecret(secret), /CONTACT_SHIELD_SECRET/);
   }
   assert.doesNotThrow(() => requireMigrationSecret('isolated-migration-test-secret-0123456789'));
+});
+
+test('premium story migration runs after the base story interaction tables exist', async () => {
+  const migrationSource = await readFile(new URL('../lib/db/scripts/migrate-beta.mjs', import.meta.url), 'utf8');
+  const baseStoryInteraction = migrationSource.indexOf('await ensureStoryViewerInteractionSchema();');
+  const premiumStory = migrationSource.indexOf('await ensurePremiumStorySchema();');
+  assert.ok(baseStoryInteraction >= 0);
+  assert.ok(premiumStory >= 0);
+  assert.ok(baseStoryInteraction < premiumStory);
 });

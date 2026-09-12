@@ -1,12 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { StoryRepository } from "../repositories/story-repository.js";
+import { emitToUser } from "../lib/realtime.js";
+import { NotificationRepository } from "../repositories/notification-repository.js";
+import { StoryRepository, type StoryViewerRow } from "../repositories/story-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import type { StoryRecord } from "../types/index.js";
+import type { StoryRecord, StoryReactionType } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
+import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
+import { calculateStoryScore, resolveStoryDurationHours, selectViewerExposure, type StoryAnalyticsSummary, type StoryViewExposure } from "./story-analytics-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { QueueService } from "./queue-service.js";
+
+export class PremiumFeatureUnavailableError extends Error {}
+
+const EXTENDED_STORY_MAX_HOURS = 72;
+const PRIORITY_BOOST = 20;
 
 export class StoryService {
   constructor(
@@ -14,6 +25,9 @@ export class StoryService {
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
     private readonly aiService: AIService = new AIService(),
     private readonly userRepository: UserRepository = new UserRepository(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
+    private readonly notificationRepository: NotificationRepository = new NotificationRepository(),
+    private readonly queueService: QueueService = new QueueService(),
   ) {}
 
   async createStory(input: {
@@ -24,19 +38,55 @@ export class StoryService {
     backgroundGradient?: string;
     isHighlight: boolean;
     highlightTitle?: string;
+    highlightId?: string;
+    publishMode?: "active" | "highlight_only";
+    durationHours?: number;
+    priority?: boolean;
     audience?: StoryRecord["audience"];
+    audienceMemberIds?: string[];
+    audienceExclusionIds?: string[];
     contentCategory?: StoryRecord["contentCategory"];
     contentRating?: StoryRecord["contentRating"];
     poll?: { question: string; options: Array<{ text: string }> };
   }): Promise<StoryRecord> {
+    const audience = (input.audience ?? "followers") as AudienceKind;
+    const advancedAudience = ["selected_people", "everyone_except", "custom"].includes(audience);
+    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight] = await Promise.all([
+      this.entitlementService.hasFeature(input.authorId, "CUSTOM_STORY_AUDIENCE"),
+      this.entitlementService.hasFeature(input.authorId, "EXTENDED_STORY"),
+      this.entitlementService.hasFeature(input.authorId, "STORY_PRIORITY"),
+      this.entitlementService.hasFeature(input.authorId, "DIRECT_HIGHLIGHT"),
+    ]);
+    if (advancedAudience && !hasCustomAudience) throw new PremiumFeatureUnavailableError("Custom story audiences are not enabled for this account");
+    if (input.priority && !hasPriority) throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
+    const publishMode = input.publishMode ?? "active";
+    if (publishMode === "highlight_only" && !hasDirectHighlight) {
+      throw new PremiumFeatureUnavailableError("Direct-to-Highlight publishing is not enabled for this account");
+    }
+    if (publishMode === "highlight_only" && !input.highlightId) {
+      throw new Error("A Highlight is required for highlight-only publishing");
+    }
+    if (input.highlightId && (await this.storyRepository.getHighlightOwner(input.highlightId)) !== input.authorId) {
+      throw new Error("You can only publish into your own Highlight");
+    }
+
+    const memberIds = [...new Set(input.audienceMemberIds ?? [])];
+    const exclusionIds = [...new Set(input.audienceExclusionIds ?? [])];
+    if (advancedAudience && [...memberIds, ...exclusionIds].length > 0) {
+      const users = await Promise.all([...memberIds, ...exclusionIds].map((userId) => this.userRepository.findById(userId)));
+      if (users.some((user) => !user)) throw new Error("Story audience contains an unknown account");
+    }
+
     await enforceTextContentPolicy([
       input.textContent ?? "",
       input.poll?.question ?? "",
       ...(input.poll?.options ?? []).map((option) => option.text),
     ].join("\n"), this.aiService, "story");
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
+    const now = new Date();
+    const durationHours = resolveStoryDurationHours(input.durationHours, hasExtendedStory, EXTENDED_STORY_MAX_HOURS);
+    const publishedAt = now.toISOString();
+    const expiresAt = new Date(now.getTime() + durationHours * 60 * 60 * 1000).toISOString();
     const story: StoryRecord = {
       id: randomUUID(),
       authorId: input.authorId,
@@ -44,12 +94,17 @@ export class StoryService {
       type: input.type,
       textContent: input.textContent || null,
       backgroundGradient: input.backgroundGradient || null,
-      createdAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
+      createdAt: publishedAt,
+      publishedAt,
+      expiresAt,
       viewerIds: [],
       reactions: [],
-      isHighlight: input.isHighlight,
+      isHighlight: input.isHighlight || publishMode === "highlight_only" || Boolean(input.highlightId),
       highlightTitle: input.highlightTitle || null,
+      highlightId: input.highlightId ?? null,
+      publishMode,
+      priorityBoost: input.priority ? PRIORITY_BOOST : 0,
+      engagementScore: 0,
       audience: input.audience ?? "followers",
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
@@ -59,7 +114,11 @@ export class StoryService {
       question: input.poll.question.trim(),
       options: input.poll.options.map((option, position) => ({ id: randomUUID(), text: option.text.trim(), position })),
     } : undefined;
-    const created = await this.storyRepository.create(story, normalizedPoll);
+    const created = await this.storyRepository.create(story, normalizedPoll, {
+      memberIds,
+      exclusionIds,
+      highlightId: input.highlightId,
+    });
     return this.hydrateStory(created, input.authorId);
   }
 
@@ -69,22 +128,50 @@ export class StoryService {
     )));
     const visibleStories = stories.filter((story): story is StoryRecord => Boolean(story));
     const polls = await this.storyRepository.getPolls(visibleStories.map((story) => story.id), viewerId);
-    return visibleStories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
+    const hydrated = visibleStories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
+    const ranked = await Promise.all(hydrated.map(async (story) => {
+      const relationshipScore = viewerId && story.authorId === viewerId
+        ? 40
+        : viewerId && await this.userRepository.isCloseFriend(story.authorId, viewerId)
+          ? 30
+          : viewerId && await this.userRepository.isFollowing(viewerId, story.authorId) ? 20 : 0;
+      const recencyScore = Math.max(0, 30 - ((Date.now() - new Date(story.publishedAt ?? story.createdAt).getTime()) / (60 * 60 * 1000)));
+      return {
+        story,
+        score: calculateStoryScore({
+          relationshipScore,
+          recencyScore,
+          engagementScore: story.engagementScore ?? 0,
+          priorityBoost: story.priorityBoost ?? 0,
+        }),
+      };
+    }));
+    return ranked.sort((left, right) => right.score - left.score).map(({ story }) => story);
   }
 
-  async addView(storyId: string, userId: string): Promise<StoryRecord | undefined> {
+  async addView(storyId: string, userId: string, eventKey = randomUUID()): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findActiveById(storyId, userId);
     if (!story || !(await this.canViewStory(story, userId))) return undefined;
-
-    const updated = await this.storyRepository.addView(storyId, userId);
+    const viewer = await this.userRepository.findById(userId);
+    const privateViewEnabled = await this.entitlementService.hasFeature(userId, "STORY_PRIVATE_VIEW");
+    const exposure: StoryViewExposure = selectViewerExposure({
+      storyPrivateViewEnabled: privateViewEnabled,
+      storyViewMode: viewer?.settings?.storyViewMode,
+    });
+    const updated = await this.storyRepository.addView(storyId, userId, eventKey, exposure);
     return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 
-  async react(storyId: string, userId: string, emoji: string): Promise<StoryRecord | undefined> {
+  async react(storyId: string, userId: string, emoji: string, reactionType: StoryReactionType = "CUSTOM"): Promise<StoryRecord | undefined> {
     const story = await this.storyRepository.findActiveById(storyId, userId);
     if (!story || !(await this.canViewStory(story, userId))) return undefined;
-
-    const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32));
+    if (reactionType === "SUPER_HEART" && !(await this.entitlementService.hasFeature(userId, "SUPER_HEART"))) {
+      throw new PremiumFeatureUnavailableError("Super Heart is not enabled for this account");
+    }
+    const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32), reactionType);
+    if (updated && reactionType === "SUPER_HEART" && updated.authorId !== userId) {
+      await this.notifySuperHeart(updated, userId);
+    }
     return updated ? this.hydrateStory(updated, userId) : undefined;
   }
 
@@ -95,6 +182,51 @@ export class StoryService {
     return this.hydrateStory(story, userId);
   }
 
+  async getAnalytics(storyId: string, ownerId: string): Promise<StoryAnalyticsSummary | undefined> {
+    const story = await this.storyRepository.findById(storyId, ownerId);
+    if (!story || story.authorId !== ownerId) return undefined;
+    if (!(await this.entitlementService.hasFeature(ownerId, "STORY_REWATCH_ANALYTICS"))) {
+      throw new PremiumFeatureUnavailableError("Story analytics are not enabled for this account");
+    }
+    return this.storyRepository.getAnalytics(storyId);
+  }
+
+  async searchViewers(storyId: string, ownerId: string, query?: string, cursor?: string, limit = 30): Promise<{ viewers: StoryViewerRow[]; nextCursor: string | null } | undefined> {
+    const story = await this.storyRepository.findById(storyId, ownerId);
+    if (!story || story.authorId !== ownerId) return undefined;
+    if (!(await this.entitlementService.hasFeature(ownerId, "STORY_VIEW_TIMESTAMPS"))) {
+      throw new PremiumFeatureUnavailableError("Story viewer timestamps are not enabled for this account");
+    }
+    return this.storyRepository.listViewers(storyId, query, cursor, limit);
+  }
+
+  async setPriority(storyId: string, ownerId: string, enabled: boolean): Promise<StoryRecord | undefined> {
+    const story = await this.storyRepository.findById(storyId, ownerId);
+    if (!story || story.authorId !== ownerId) return undefined;
+    if (!(await this.entitlementService.hasFeature(ownerId, "STORY_PRIORITY"))) {
+      throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
+    }
+    return this.storyRepository.update(storyId, { priorityBoost: enabled ? PRIORITY_BOOST : 0 });
+  }
+
+  private async notifySuperHeart(story: StoryRecord, actorId: string): Promise<void> {
+    const actor = await this.userRepository.findById(actorId);
+    const notification = await this.notificationRepository.create({
+      id: randomUUID(),
+      recipientId: story.authorId,
+      type: "story_super_heart",
+      title: "Super Heart",
+      message: `${actor?.fullName || actor?.username || "Someone"} sent a Super Heart on your Story`,
+      relatedId: story.id,
+      createdAt: new Date().toISOString(),
+      readAt: null,
+      metadata: { actorId, reactionType: "SUPER_HEART" },
+    });
+    await this.queueService.enqueue("notification:deliver", notification);
+    emitToUser(story.authorId, "notification:new", notification);
+    emitToUser(story.authorId, "story:reaction", { storyId: story.id, reactionType: "SUPER_HEART", actorId });
+  }
+
   private async hydrateStory(story: StoryRecord, viewerId?: string): Promise<StoryRecord> {
     const poll = (await this.storyRepository.getPolls([story.id], viewerId)).get(story.id);
     return poll ? { ...story, poll } : story;
@@ -102,9 +234,31 @@ export class StoryService {
 
   private async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
     if (!story || !(await this.contentSafetyService.isVisible(story, viewerId, story.authorId))) return false;
-    if (story.authorId === viewerId || story.audience === "public") return true;
-    if (!viewerId) return false;
-    if (story.audience === "close_friends") return this.userRepository.isCloseFriend(story.authorId, viewerId);
-    return this.userRepository.isFollowing(viewerId, story.authorId);
+    if (!viewerId && story.audience === "public") return true;
+    const author = await this.userRepository.findById(story.authorId);
+    const viewer = viewerId ? await this.userRepository.findById(viewerId) : undefined;
+    if (!author) return false;
+    const blocked = Boolean(viewerId && (
+      author.blockedUsers?.includes(viewerId)
+      || viewer?.blockedUsers?.includes(story.authorId)
+    ));
+    const [isFollowing, isCloseFriend, selectedMember, excluded] = viewerId
+      ? await Promise.all([
+        this.userRepository.isFollowing(viewerId, story.authorId),
+        this.userRepository.isCloseFriend(story.authorId, viewerId),
+        this.storyRepository.isAudienceMember(story.id, viewerId),
+        this.storyRepository.isAudienceExcluded(story.id, viewerId),
+      ])
+      : [false, false, false, false];
+    return evaluateAudience({
+      ownerId: story.authorId,
+      viewerId,
+      audience: (story.audience ?? "followers") as AudienceKind,
+      isFollowing,
+      isCloseFriend,
+      selectedMember,
+      excluded,
+      blocked,
+    }).allowed;
   }
 }

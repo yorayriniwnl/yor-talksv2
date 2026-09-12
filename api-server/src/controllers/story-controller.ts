@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { StoryService } from "../services/story-service.js";
+import { PremiumFeatureUnavailableError, StoryService } from "../services/story-service.js";
 import { createResponse } from "../utils/response.js";
 
 function paramId(req: Request): string {
@@ -24,8 +24,15 @@ export class StoryController {
     if (!authorId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const story = await this.storyService.createStory({ ...req.body, authorId });
-    return res.status(201).json(createResponse("Story created", viewStory(story, authorId)));
+    try {
+      const story = await this.storyService.createStory({ ...req.body, authorId });
+      return res.status(201).json(createResponse("Story created", viewStory(story, authorId)));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
+    }
   };
 
   listActive = async (req: Request, res: Response) => {
@@ -38,7 +45,8 @@ export class StoryController {
     if (!userId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const story = await this.storyService.addView(paramId(req), userId);
+    const eventKey = typeof req.body?.eventKey === "string" ? req.body.eventKey : undefined;
+    const story = await this.storyService.addView(paramId(req), userId, eventKey);
     if (!story) {
       return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
     }
@@ -50,11 +58,70 @@ export class StoryController {
     if (!userId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const story = await this.storyService.react(paramId(req), userId, req.body.emoji);
-    if (!story) {
-      return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
+    try {
+      const story = await this.storyService.react(paramId(req), userId, req.body.emoji, req.body.reactionType);
+      if (!story) {
+        return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
+      }
+      return res.status(200).json(createResponse("Story reacted", viewStory(story, userId)));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
     }
-    return res.status(200).json(createResponse("Story reacted", viewStory(story, userId)));
+  };
+
+  analytics = async (req: Request, res: Response) => {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    try {
+      const analytics = await this.storyService.getAnalytics(paramId(req), ownerId);
+      if (!analytics) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
+      return res.status(200).json(createResponse("Story analytics loaded", analytics));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
+    }
+  };
+
+  viewers = async (req: Request, res: Response) => {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    try {
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
+      const viewers = await this.storyService.searchViewers(
+        paramId(req),
+        ownerId,
+        typeof req.query.q === "string" ? req.query.q : undefined,
+        typeof req.query.cursor === "string" ? req.query.cursor : undefined,
+        limit,
+      );
+      if (!viewers) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
+      return res.status(200).json(createResponse("Story viewers loaded", viewers, { limit, hasMore: Boolean(viewers.nextCursor), nextCursor: viewers.nextCursor }));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
+    }
+  };
+
+  setPriority = async (req: Request, res: Response) => {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    try {
+      const story = await this.storyService.setPriority(paramId(req), ownerId, req.body.enabled);
+      if (!story) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
+      return res.status(200).json(createResponse("Story priority updated", viewStory(story, ownerId)));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
+    }
   };
 
   votePoll = async (req: Request, res: Response) => {

@@ -26,7 +26,7 @@ test("story views and reactions are persisted but scoped to the viewer", async (
   const viewed = await service.addView(story.id, viewer.id);
   assert.deepEqual(viewed?.viewerIds, [viewer.id]);
   const reacted = await service.react(story.id, viewer.id, "🔥");
-  assert.deepEqual(reacted?.reactions, [{ userId: viewer.id, emoji: "🔥" }]);
+  assert.deepEqual(reacted?.reactions, [{ userId: viewer.id, emoji: "🔥", reactionType: "CUSTOM" }]);
 
   const otherView = (await service.listActiveStories(otherViewer.id)).find((candidate) => candidate.id === story.id);
   assert.deepEqual(otherView?.viewerIds, []);

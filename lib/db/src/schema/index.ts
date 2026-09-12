@@ -296,6 +296,17 @@ export const broadcastChannelMessagesTable = pgTable("broadcast_channel_messages
   authorIdx: index("broadcast_channel_message_author_idx").on(table.authorId),
 }));
 
+export const highlightsTable = pgTable("highlights", {
+  id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  coverUrl: text("cover_url"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ownerIdx: index("highlight_owner_idx").on(table.ownerId, table.updatedAt),
+}));
+
 export const storiesTable = pgTable("stories", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -304,14 +315,29 @@ export const storiesTable = pgTable("stories", {
   textContent: text("text_content"),
   backgroundGradient: text("background_gradient"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
   isHighlight: boolean("is_highlight").notNull().default(false),
   highlightTitle: text("highlight_title"),
+  highlightId: uuid("highlight_id").references(() => highlightsTable.id, { onDelete: "set null" }),
+  publishMode: text("publish_mode").notNull().default("active"),
+  priorityBoost: integer("priority_boost").notNull().default(0),
+  engagementScore: integer("engagement_score").notNull().default(0),
   audience: text("audience").notNull().default("followers"),
   contentCategory: text("content_category").notNull().default("other"),
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("story_author_idx").on(table.authorId)
+}));
+
+export const highlightItemsTable = pgTable("highlight_items", {
+  highlightId: uuid("highlight_id").references(() => highlightsTable.id, { onDelete: "cascade" }).notNull(),
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.highlightId, table.storyId] }),
+  positionIdx: uniqueIndex("highlight_item_position_idx").on(table.highlightId, table.position),
 }));
 
 export const storyViewsTable = pgTable("story_views", {
@@ -323,10 +349,24 @@ export const storyViewsTable = pgTable("story_views", {
   userIdx: index("story_view_user_idx").on(table.userId, table.viewedAt),
 }));
 
+export const storyViewEventsTable = pgTable("story_view_events", {
+  id: uuid("id").primaryKey(),
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  viewerId: uuid("viewer_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  exposure: text("exposure").notNull().default("identified"),
+  eventKey: text("event_key").notNull(),
+  viewedAt: timestamp("viewed_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  idempotencyIdx: uniqueIndex("story_view_event_idempotency_idx").on(table.storyId, table.eventKey),
+  storyTimeIdx: index("story_view_event_story_time_idx").on(table.storyId, table.viewedAt),
+  viewerTimeIdx: index("story_view_event_viewer_time_idx").on(table.viewerId, table.viewedAt),
+}));
+
 export const storyReactionsTable = pgTable("story_reactions", {
   storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
   userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   emoji: text("emoji").notNull(),
+  reactionType: text("reaction_type").notNull().default("CUSTOM"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
@@ -1154,6 +1194,18 @@ export type BroadcastChannelMessage = typeof broadcastChannelMessagesTable.$infe
 export const insertStorySchema = createInsertSchema(storiesTable);
 export type InsertStory = typeof storiesTable.$inferInsert;
 export type Story = typeof storiesTable.$inferSelect;
+
+export const insertHighlightSchema = createInsertSchema(highlightsTable);
+export type InsertHighlight = typeof highlightsTable.$inferInsert;
+export type Highlight = typeof highlightsTable.$inferSelect;
+
+export const insertHighlightItemSchema = createInsertSchema(highlightItemsTable);
+export type InsertHighlightItem = typeof highlightItemsTable.$inferInsert;
+export type HighlightItem = typeof highlightItemsTable.$inferSelect;
+
+export const insertStoryViewEventSchema = createInsertSchema(storyViewEventsTable);
+export type InsertStoryViewEvent = typeof storyViewEventsTable.$inferInsert;
+export type StoryViewEvent = typeof storyViewEventsTable.$inferSelect;
 
 export const insertUserNoteSchema = createInsertSchema(userNotesTable);
 export type InsertUserNote = typeof userNotesTable.$inferInsert;
