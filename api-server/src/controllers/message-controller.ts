@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
-import { InvalidMessageContentError, InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -85,6 +85,20 @@ export class MessageController {
   listConversations = async (req: Request, res: Response) => {
     const conversations = await this.messageService.getConversationsForUser(req.user?.id ?? "");
     return res.status(200).json(createResponse("Conversations loaded", conversations));
+  };
+
+  preview = async (req: Request, res: Response) => {
+    const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
+    try {
+      const message = await this.messageService.previewMessage(messageId, req.user?.id ?? "");
+      if (!message) return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
+      return res.status(200).json(createResponse("Message preview loaded", message));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
+    }
   };
 
   setVanishMode = async (req: Request, res: Response) => {

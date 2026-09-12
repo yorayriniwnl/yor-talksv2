@@ -1,5 +1,5 @@
 import { eq, or, and, desc, inArray, isNull, gt, sql } from "drizzle-orm";
-import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { messagesTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
@@ -46,6 +46,14 @@ export class MessageRepository {
   async findById(messageId: string): Promise<MessageRecord | undefined> {
     const [message] = await db.select().from(messagesTable).where(eq(messagesTable.id, messageId));
     return message as MessageRecord | undefined;
+  }
+
+  async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
+    await db.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+      target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
+      set: { previewedAt },
+    });
+    return this.findById(messageId);
   }
   
   async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {

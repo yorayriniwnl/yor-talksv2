@@ -169,6 +169,8 @@ export type Message = {
   expiresAt?: string | null;
   reactions?: Record<string, string[]>;
   pinned?: boolean;
+  messageState?: 'MESSAGE_DELIVERED' | 'MESSAGE_PREVIEWED' | 'MESSAGE_OPENED' | 'MESSAGE_READ';
+  previewedAt?: string | null;
 };
 
 export type Conversation = {
@@ -503,6 +505,8 @@ function mapMessage(m: BackendMessage): Message {
     expiresAt: m.expiresAt ?? null,
     reactions: m.reactions ?? {},
     pinned: Boolean(m.pinned),
+    messageState: m.messageState,
+    previewedAt: m.previewedAt ?? null,
   };
 }
 
@@ -763,6 +767,7 @@ interface AppState {
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
+  previewDirectMessage: (messageId: string) => Promise<Message>;
   markDirectMessageSeen: (messageId: string) => Promise<void>;
   sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
   sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
@@ -1630,6 +1635,8 @@ export const useAppStore = create<AppState>()(
           return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
         });
       },
+
+      previewDirectMessage: async (messageId) => mapMessage(await api.previewMessage(messageId)),
 
       markDirectMessageSeen: async (messageId) => {
         try {

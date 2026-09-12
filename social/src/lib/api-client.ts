@@ -665,6 +665,7 @@ export const api = {
   setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
   getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
+  previewMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/preview`, { method: 'POST' }),
   markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
   editMessage: (messageId: string, content: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'PUT', body: JSON.stringify({ content }) }),
   deleteMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'DELETE' }),
@@ -995,6 +996,8 @@ export interface BackendMessage {
   replyToId?: string | null;
   reactions?: Record<string, string[]> | null;
   pinned?: boolean | null;
+  messageState?: 'MESSAGE_DELIVERED' | 'MESSAGE_PREVIEWED' | 'MESSAGE_OPENED' | 'MESSAGE_READ';
+  previewedAt?: string | null;
 }
 
 export interface BackendNotification {

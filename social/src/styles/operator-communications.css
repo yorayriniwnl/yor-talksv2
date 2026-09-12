@@ -157,11 +157,53 @@
   background: transparent;
   color: hsl(var(--foreground));
   text-align: left;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.72rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 0;
   transition: border-color var(--operator-fast) ease, background var(--operator-fast) ease;
   cursor: pointer;
 }
+.operator-conversation-item__select {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.72rem;
+  padding: 0.62rem 0.2rem 0.62rem 0.65rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.operator-conversation-item__preview-action {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.4rem;
+  place-items: center;
+  border: 1px solid hsl(var(--operator-line));
+  border-radius: 0.7rem;
+  background: hsl(var(--operator-surface-raised) / 0.72);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--operator-fast) ease, color var(--operator-fast) ease, border-color var(--operator-fast) ease;
+}
+.operator-conversation-item:hover .operator-conversation-item__preview-action,
+.operator-conversation-item:focus-within .operator-conversation-item__preview-action { opacity: 1; }
+.operator-conversation-item__preview-action:hover,
+.operator-conversation-item__preview-action:focus-visible { border-color: hsl(var(--signal) / 0.45); color: hsl(var(--signal)); outline: none; }
+.operator-conversation-item__preview-action svg { width: 0.9rem; height: 0.9rem; }
+.operator-message-preview-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--operator-line));
+  border-radius: 1rem;
+  background: hsl(var(--operator-surface-raised) / 0.6);
+}
+.operator-message-preview-card time { color: hsl(var(--muted-foreground) / 0.76); font-family: var(--app-font-mono); font-size: 0.62rem; }
 
 .operator-conversation-item::before {
   position: absolute;

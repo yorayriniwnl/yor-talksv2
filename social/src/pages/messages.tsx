@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
   Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft, LoaderCircle,
   Reply, X, Video, Phone, Mic, Zap, EyeOff, Image as ImageIcon, Pencil, Trash2, Pin, Smile,
-  ArrowLeftRight, LockKeyhole, Inbox
+  ArrowLeftRight, LockKeyhole, Inbox, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
@@ -286,49 +286,88 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   );
 }
 
+function MessagePreviewDialog({
+  message,
+  senderName,
+  open,
+  onOpenChange,
+}: {
+  message: DirectMessage | null;
+  senderName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="operator-message-dialog">
+        <DialogHeader><DialogTitle>Preview from {senderName}</DialogTitle></DialogHeader>
+        {message ? (
+          <div className="space-y-3">
+            <div className="operator-message-preview-card">
+              <MessageContent content={message.content} isMine={false} />
+              <time dateTime={message.createdAt}>{format(new Date(message.createdAt), 'MMM d, h:mm a')}</time>
+            </div>
+            <p className="flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
+              <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Preview only — opening this sheet does not send a read receipt.
+            </p>
+          </div>
+        ) : <p role="status" className="text-sm text-muted-foreground">Loading preview…</p>}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ConversationItem({
   entry,
   active,
   isTyping,
   onSelect,
+  onPreview,
 }: {
   entry: { conv: any; user: any; lastMsg?: DirectMessage; unreadCount: number };
   active: boolean;
   isTyping: boolean;
   onSelect: (id: string) => void;
+  onPreview: (message: DirectMessage) => void;
 }) {
   const { conv, user, lastMsg, unreadCount } = entry;
   const displayName = user.displayName || user.username || 'User';
 
   return (
-    <button
-      onClick={() => onSelect(conv.id)}
+    <div
       className="operator-conversation-item"
       data-active={active || undefined}
       data-unread={unreadCount > 0 || undefined}
-      aria-current={active ? 'page' : undefined}
     >
-      <span className="operator-conversation-item__avatar">
-      <Avatar>
-        <AvatarImage src={user.avatarUrl} />
-        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-      </Avatar>
-      </span>
-      <span className="operator-conversation-item__body">
-        <span className="operator-conversation-item__head">
-          <strong>{displayName}</strong>
-          {lastMsg && (
-            <time dateTime={lastMsg.createdAt}>
-              {formatDistanceToNow(new Date(lastMsg.createdAt))}
-            </time>
-          )}
+      <button type="button" onClick={() => onSelect(conv.id)} className="operator-conversation-item__select" aria-current={active ? 'page' : undefined}>
+        <span className="operator-conversation-item__avatar">
+          <Avatar>
+            <AvatarImage src={user.avatarUrl} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+          </Avatar>
         </span>
-        <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
-          {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+        <span className="operator-conversation-item__body">
+          <span className="operator-conversation-item__head">
+            <strong>{displayName}</strong>
+            {lastMsg && (
+              <time dateTime={lastMsg.createdAt}>
+                {formatDistanceToNow(new Date(lastMsg.createdAt))}
+              </time>
+            )}
+          </span>
+          <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
+            {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+          </span>
         </span>
-      </span>
-      {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-    </button>
+        {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+      </button>
+      {lastMsg && (
+        <button type="button" className="operator-conversation-item__preview-action" onClick={() => onPreview(lastMsg)} aria-label={`Preview latest message from ${displayName}`} title="Preview without marking read">
+          <Eye aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -343,6 +382,7 @@ export default function Messages() {
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
+  const previewDirectMessage = useAppStore((s) => s.previewDirectMessage);
   const markDirectMessageSeen = useAppStore((s) => s.markDirectMessageSeen);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
@@ -374,6 +414,9 @@ export default function Messages() {
   const [realtimeConnected, setRealtimeConnected] = useState(() => Boolean(getSocket()?.connected));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
+  const [previewMessage, setPreviewMessage] = useState<DirectMessage | null>(null);
+  const [previewSenderName, setPreviewSenderName] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   
   // Direct Messaging 2.0 Pro Features
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -638,6 +681,19 @@ export default function Messages() {
     }
   };
 
+  const handlePreviewMessage = async (message: DirectMessage, senderName: string) => {
+    setPreviewLoading(true);
+    try {
+      const preview = await previewDirectMessage(message.id);
+      setPreviewMessage(preview);
+      setPreviewSenderName(senderName);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not preview this message');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <div className="messages-page operator-messages-page">
       <div className="operator-messages-shell">
@@ -691,6 +747,7 @@ export default function Messages() {
                   active={activeConv?.conv.id === entry.conv.id} 
                   isTyping={Boolean(typingConversationIds[entry.conv.id])} 
                   onSelect={(convId) => setLocation(`/messages/${convId}`)} 
+                  onPreview={(message) => void handlePreviewMessage(message, entry.user.displayName || entry.user.username || 'User')}
                 />
               ))
             )}
@@ -995,6 +1052,12 @@ export default function Messages() {
 
         <NewMessageDialog open={newMessageOpen} onOpenChange={setNewMessageOpen} />
         <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} />
+        <MessagePreviewDialog
+          message={previewMessage}
+          senderName={previewSenderName}
+          open={Boolean(previewMessage) || previewLoading}
+          onOpenChange={(open) => { if (!open) setPreviewMessage(null); }}
+        />
       </div>
     </div>
   );

@@ -778,6 +778,15 @@ export const messageReadsTable = pgTable("message_reads", {
   pk: primaryKey({ columns: [t.messageId, t.userId] }),
 }));
 
+export const messagePreviewEventsTable = pgTable("message_preview_events", {
+  messageId: uuid("message_id").references(() => messagesTable.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  previewedAt: timestamp("previewed_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.messageId, t.userId] }),
+  userIdx: index("message_preview_user_idx").on(t.userId, t.previewedAt),
+}));
+
 export const creatorAnalyticsDailyTable = pgTable("creator_analytics_daily", {
   id: uuid("id").primaryKey(),
   creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -1170,6 +1179,10 @@ export type Conversation = typeof conversationsTable.$inferSelect;
 export const insertMessageSchema = createInsertSchema(messagesTable);
 export type InsertMessage = typeof messagesTable.$inferInsert;
 export type Message = typeof messagesTable.$inferSelect;
+
+export const insertMessagePreviewEventSchema = createInsertSchema(messagePreviewEventsTable);
+export type InsertMessagePreviewEvent = typeof messagePreviewEventsTable.$inferInsert;
+export type MessagePreviewEvent = typeof messagePreviewEventsTable.$inferSelect;
 
 export const insertNotificationSchema = createInsertSchema(notificationsTable);
 export type InsertNotification = typeof notificationsTable.$inferInsert;

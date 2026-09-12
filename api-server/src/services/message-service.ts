@@ -7,11 +7,13 @@ import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
 export class InvalidMessageContentError extends Error {}
 export class UnauthorizedError extends Error {}
+export class PremiumFeatureUnavailableError extends Error {}
 
 type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId">;
 
@@ -30,6 +32,7 @@ export class MessageService {
     private readonly messageRepository: MessageRepository,
     private readonly userRepository?: UserRepository,
     private readonly aiService: AIService = new AIService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
@@ -145,6 +148,19 @@ export class MessageService {
     }
     const messages = await this.messageRepository.listConversation(conversationId);
     return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+  }
+
+  async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt) return undefined;
+    const members = await this.conversationRepository.getMembers(message.conversationId);
+    if (!members.includes(userId)) return undefined;
+    if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
+      throw new PremiumFeatureUnavailableError("Unread message previews are not enabled for this account");
+    }
+    const previewedAt = new Date().toISOString();
+    const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
+    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {

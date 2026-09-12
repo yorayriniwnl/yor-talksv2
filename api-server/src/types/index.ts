@@ -166,7 +166,11 @@ export interface MessageRecord {
   deletedAt?: string | null;
   expiresAt?: string | null;
   pinned?: boolean;
+  messageState?: MessageLifecycleState;
+  previewedAt?: string | null;
 }
+
+export type MessageLifecycleState = "MESSAGE_DELIVERED" | "MESSAGE_PREVIEWED" | "MESSAGE_OPENED" | "MESSAGE_READ";
 
 export interface ConversationRecord {
   id: string;
