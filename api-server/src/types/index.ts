@@ -12,6 +12,10 @@ export interface UserRecord {
   ageConfirmedAt?: string | null;
   fullName: string;
   bio: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   avatarUrl: string | null;
   role: UserRole;
   permissions: string[];
@@ -63,6 +67,7 @@ export interface PrivacySettings {
 }
 
 export type PostAudience = "followers" | "close_friends" | "public";
+export type PostDistributionMode = "feed_and_profile" | "profile_only";
 
 export interface PostRecord {
   id: string;
@@ -83,6 +88,8 @@ export interface PostRecord {
   mentions?: string[];
   score?: number;
   audience?: PostAudience;
+  distributionMode?: PostDistributionMode;
+  pinnedPosition?: number | null;
   /** Legacy compatibility fields; likes, bookmarks, and comments are relational. */
   likedBy?: string[];
   bookmarkedBy?: string[];

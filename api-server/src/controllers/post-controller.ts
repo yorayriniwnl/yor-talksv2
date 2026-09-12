@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-repository.js";
-import { ContentPolicyViolationError, PostService } from "../services/post-service.js";
+import { ContentPolicyViolationError, PostService, PremiumFeatureUnavailableError, ProfilePinLimitError } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
 import { StorageService } from "../services/storage-service.js";
 import { assertValidUploadedFile } from "../middlewares/upload.js";
@@ -49,11 +49,14 @@ export class PostController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const images = Array.isArray(req.body.images) ? req.body.images : [];
     try {
-      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll);
+      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll, req.body.distributionMode);
       return res.status(201).json(createResponse("Post created", post));
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
       throw error;
     }
@@ -143,6 +146,26 @@ export class PostController {
       return res.status(404).json(createResponse("Comment not found", null, {}, ["Comment not found"]));
     }
     return res.status(201).json(createResponse("Reply created", result));
+  };
+
+  pin = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    try {
+      const post = await this.postService.pinPost(postId, req.user?.id ?? "");
+      if (!post) return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+      return res.status(200).json(createResponse("Post pinned", post));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      if (error instanceof ProfilePinLimitError) return res.status(409).json(createResponse(error.message, null, {}, ["profile_pin_limit"]));
+      throw error;
+    }
+  };
+
+  unpin = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const post = await this.postService.unpinPost(postId, req.user?.id ?? "");
+    if (!post) return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+    return res.status(200).json(createResponse("Post unpinned", post));
   };
 
   commentLike = async (req: Request, res: Response) => {

@@ -26,7 +26,8 @@ import {
   type BackendLiveStream,
   type AuthTokens,
   type TwoFactorChallenge,
-  type FeedMode
+  type FeedMode,
+  type PremiumProfileSelection
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
@@ -51,6 +52,10 @@ export type User = {
   avatarUrl: string;
   coverUrl?: string;
   bio?: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   verified?: boolean;
   followers: number;
   following: number;
@@ -105,6 +110,8 @@ export type Post = {
   savedByMe?: boolean;
   repostedByMe?: boolean;
   audience: 'followers' | 'close_friends' | 'public';
+  distributionMode: 'feed_and_profile' | 'profile_only';
+  pinnedPosition?: number | null;
   contentCategory: string;
   contentRating: ContentRating;
   poll?: {
@@ -339,6 +346,10 @@ function mapUser(u: BackendUser): User {
     displayName: u.fullName || u.username || 'User',
     avatarUrl: u.avatarUrl || '',
     bio: u.bio || '',
+    bioStyleId: u.bioStyleId,
+    messageFontId: u.messageFontId,
+    storyFontId: u.storyFontId,
+    appIconId: u.appIconId,
     verified: Boolean(u.role === 'admin' || (u as any).verified),
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),
     following: Array.isArray(u.following) ? u.following.length : (u.followingCount ?? 0),
@@ -461,6 +472,8 @@ export function mapPost(p: BackendPost, currentUserId?: string): Post {
     savedByMe: !!(p as any).savedByMe,
     repostedByMe: !!p.repostedByMe,
     audience: p.audience === 'followers' || p.audience === 'close_friends' ? p.audience : 'public',
+    distributionMode: p.distributionMode === 'profile_only' ? 'profile_only' : 'feed_and_profile',
+    pinnedPosition: p.pinnedPosition ?? null,
     contentCategory: p.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
     poll: p.poll ? {
@@ -742,8 +755,11 @@ interface AppState {
   loadPost: (postId: string) => Promise<void>;
   syncPostFromBackend: (post: BackendPost) => void;
   likePost: (postId: string) => Promise<void>;
-  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience']) => Promise<void>;
+  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience'], distributionMode?: Post['distributionMode']) => Promise<void>;
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
+  updatePremiumProfile: (updates: Partial<PremiumProfileSelection>) => Promise<void>;
+  pinPost: (postId: string) => Promise<void>;
+  unpinPost: (postId: string) => Promise<void>;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
   toggleRepost: (postId: string) => Promise<void>;
@@ -1462,19 +1478,39 @@ export const useAppStore = create<AppState>()(
           users: { ...state.users, [mapped.id]: mapped },
         }));
       },
-      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public') => {
+      updatePremiumProfile: async (updates) => {
+        const updated = await api.updatePremiumProfile(updates);
+        const mapped = mapOwnProfile(updated, get().currentUser);
+        set((state) => ({
+          currentUser: mapped,
+          users: { ...state.users, [mapped.id]: mapped },
+        }));
+      },
+      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public', distributionMode = 'feed_and_profile') => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
           toast.error('Verify your email before posting');
           return;
         }
         try {
-          const created = await api.createPost({ content, images: media, audience, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
+          const created = await api.createPost({ content, images: media, audience, distributionMode, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts], feedPostIds: [created.id, ...state.feedPostIds] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
           throw error;
         }
+      },
+
+      pinPost: async (postId) => {
+        const updated = await api.pinPost(postId);
+        const currentUserId = get().currentUser?.id;
+        set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
+      },
+
+      unpinPost: async (postId) => {
+        const updated = await api.unpinPost(postId);
+        const currentUserId = get().currentUser?.id;
+        set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
       },
 
       toggleSavePost: async (postId) => {

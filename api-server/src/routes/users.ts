@@ -9,7 +9,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
-import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema } from "../validators/user.js";
+import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema, premiumProfileSchema } from "../validators/user.js";
 import { followRequestIdParamSchema, userIdParamSchema, usernameParamSchema } from "../validators/params.js";
 import { AccountService } from "../services/account-service.js";
 import { AuthController } from "../controllers/auth-controller.js";
@@ -26,12 +26,14 @@ const userController = new UserController(userService, authService, new AccountS
 
 router.get("/users/search", authenticate, validateQuery(searchUsersSchema), userController.searchUsers);
 router.get("/users/me", authenticate, userController.getCurrentUser);
+router.get("/users/me/premium-profile", authenticate, userController.getPremiumProfile);
 router.post("/users/me/consent", authenticate, validateBody(acceptTermsSchema), authController.acceptTerms);
 router.get("/users/me/export", authenticate, userController.exportAccount);
 router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), userController.deleteAccount);
 router.get("/users/by-username/:username", authenticate, validateParams(usernameParamSchema), userController.getProfileByUsername);
 router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);
 router.put("/users/me", authenticate, validateBody(updateProfileSchema), userController.updateProfile);
+router.put("/users/me/premium-profile", authenticate, validateBody(premiumProfileSchema), userController.updatePremiumProfile);
 router.post("/users/me/avatar", authenticate, mediaRateLimiter, imageUpload.single("avatar"), userController.uploadAvatar);
 router.post("/users/:userId/follow", authenticate, validateParams(userIdParamSchema), userController.followUser);
 router.post("/users/:userId/unfollow", authenticate, validateParams(userIdParamSchema), userController.unfollowUser);

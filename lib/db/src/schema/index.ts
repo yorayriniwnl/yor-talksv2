@@ -13,6 +13,10 @@ export const usersTable = pgTable("users", {
   ageConfirmedAt: timestamp("age_confirmed_at", { mode: "string" }),
   fullName: text("full_name").notNull(),
   bio: text("bio").notNull().default(""),
+  bioStyleId: text("bio_style_id").notNull().default("default"),
+  messageFontId: text("message_font_id").notNull().default("default"),
+  storyFontId: text("story_font_id").notNull().default("default"),
+  appIconId: text("app_icon_id").notNull().default("yor-default"),
   avatarUrl: text("avatar_url"),
   role: text("role").notNull().default("user"),
   accountTypes: jsonb("account_types").notNull().default(["user"]), // Phase 9: Multi-role capability (creator, business, advertiser)
@@ -102,6 +106,7 @@ export const postsTable = pgTable("posts", {
   contentCategory: text("content_category").notNull().default("other"),
   contentQualityScore: integer("content_quality_score").default(0),
   trendingScore: integer("trending_score").default(0),
+  distributionMode: text("distribution_mode").notNull().default("feed_and_profile"),
   views: integer("views").default(0),
   engagementRate: integer("engagement_rate").default(0),
   contentRating: text("content_rating").notNull().default("regular"),
@@ -157,6 +162,17 @@ export const profileShowcasesTable = pgTable("profile_showcases", {
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (t) => ({
   userIdx: index("profile_showcases_user_idx").on(t.userId, t.createdAt),
+}));
+
+export const profilePostPinsTable = pgTable("profile_post_pins", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  postId: uuid("post_id").references(() => postsTable.id, { onDelete: "cascade" }).notNull(),
+  position: integer("position").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.postId] }),
+  positionIdx: uniqueIndex("profile_post_pin_position_idx").on(table.userId, table.position),
+  postIdx: index("profile_post_pin_post_idx").on(table.postId),
 }));
 
 export const conversationsTable = pgTable("conversations", {
@@ -1183,6 +1199,10 @@ export type Message = typeof messagesTable.$inferSelect;
 export const insertMessagePreviewEventSchema = createInsertSchema(messagePreviewEventsTable);
 export type InsertMessagePreviewEvent = typeof messagePreviewEventsTable.$inferInsert;
 export type MessagePreviewEvent = typeof messagePreviewEventsTable.$inferSelect;
+
+export const insertProfilePostPinSchema = createInsertSchema(profilePostPinsTable);
+export type InsertProfilePostPin = typeof profilePostPinsTable.$inferInsert;
+export type ProfilePostPin = typeof profilePostPinsTable.$inferSelect;
 
 export const insertNotificationSchema = createInsertSchema(notificationsTable);
 export type InsertNotification = typeof notificationsTable.$inferInsert;

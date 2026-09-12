@@ -22,6 +22,8 @@ router.get("/posts/saved", authenticate, postController.saved);
 router.get("/posts/liked", authenticate, postController.liked);
 router.get("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.getPost);
 router.delete("/posts/:postId", authenticate, validateParams(postIdParamSchema), postController.deletePost);
+router.post("/posts/:postId/pin", authenticate, validateParams(postIdParamSchema), postController.pin);
+router.delete("/posts/:postId/pin", authenticate, validateParams(postIdParamSchema), postController.unpin);
 router.put("/posts/:postId", authenticate, validateParams(postIdParamSchema), validateBody(editPostSchema), postController.editPost);
 router.post("/posts/:postId/like", authenticate, validateParams(postIdParamSchema), postController.like);
 router.post("/posts/:postId/unlike", authenticate, validateParams(postIdParamSchema), postController.unlike);

@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { AuthService } from "../services/auth-service.js";
 import { StorageService } from "../services/storage-service.js";
-import { UserService } from "../services/user-service.js";
+import { PremiumProfileFeatureUnavailableError, UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
 import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
@@ -51,6 +51,25 @@ export class UserController {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
     }
     return res.status(200).json(createResponse("Profile updated", toOwnUser(user)));
+  };
+
+  getPremiumProfile = async (req: Request, res: Response) => {
+    const options = await this.userService.getPremiumProfileOptions(req.user?.id ?? "");
+    if (!options) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    return res.status(200).json(createResponse("Premium profile options loaded", options));
+  };
+
+  updatePremiumProfile = async (req: Request, res: Response) => {
+    try {
+      const user = await this.userService.updatePremiumProfile(req.user?.id ?? "", req.body);
+      if (!user) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      return res.status(200).json(createResponse("Premium profile updated", toOwnUser(user)));
+    } catch (error) {
+      if (error instanceof PremiumProfileFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      return res.status(400).json(createResponse("Invalid premium profile option", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
   };
 
   uploadAvatar = async (req: Request, res: Response) => {

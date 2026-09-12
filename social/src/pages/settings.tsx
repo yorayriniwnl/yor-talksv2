@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppStore, type PrivacySettings } from '@/lib/store';
-import { api, type ContactShield } from '@/lib/api-client';
+import { api, type ContactShield, type PremiumProfileOptions, type PremiumProfileSelection } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound } from 'lucide-react';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound, Crown } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
@@ -259,6 +259,85 @@ function CloseFriendsPanel() {
   );
 }
 
+function PremiumProfilePanel() {
+  const currentUser = useAppStore((state) => state.currentUser);
+  const updatePremiumProfile = useAppStore((state) => state.updatePremiumProfile);
+  const [catalog, setCatalog] = useState<PremiumProfileOptions | null>(null);
+  const [selection, setSelection] = useState<PremiumProfileSelection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [savingField, setSavingField] = useState<keyof PremiumProfileSelection | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api.getPremiumProfileOptions()
+      .then((result) => {
+        if (!active) return;
+        setCatalog(result);
+        setSelection(result.selection);
+      })
+      .catch(() => {
+        if (active) toast.error('Could not load premium profile options');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [currentUser?.id]);
+
+  if (!currentUser) return null;
+
+  const currentSelection = selection ?? {
+    bioStyleId: currentUser.bioStyleId ?? 'default',
+    messageFontId: currentUser.messageFontId ?? 'default',
+    storyFontId: currentUser.storyFontId ?? 'default',
+    appIconId: currentUser.appIconId ?? 'yor-default',
+  };
+  const enabled = (feature: string) => catalog?.enabledFeatures[feature] === true;
+  const save = async <K extends keyof PremiumProfileSelection>(field: K, value: PremiumProfileSelection[K]) => {
+    const previous = currentSelection[field];
+    setSelection((current) => ({ ...(current ?? currentSelection), [field]: value }));
+    setSavingField(field);
+    try {
+      await updatePremiumProfile({ [field]: value });
+      toast.success('Premium profile updated');
+    } catch (error) {
+      setSelection((current) => ({ ...(current ?? currentSelection), [field]: previous }));
+      toast.error(error instanceof Error ? error.message : 'Could not update your premium profile');
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const optionIsDisabled = (id: string, feature: string) => id !== 'default' && !enabled(feature);
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+      <div className="relative space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-background/70 text-primary shadow-inner ring-1 ring-primary/20"><Crown className="h-5 w-5" /></div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2"><h3 className="font-display text-base font-bold">Premium identity</h3><span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Curated styles</span></div>
+            <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Choose the typography and app identity that make your profile feel like yours. Options are catalog-controlled; no arbitrary CSS or remote icon URLs are accepted.</p>
+          </div>
+        </div>
+
+        {loading && <p role="status" className="text-xs text-muted-foreground">Loading your premium identity options…</p>}
+        {!loading && catalog && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Bio style</span><Select value={currentSelection.bioStyleId} disabled={savingField === 'bioStyleId'} onValueChange={(value) => void save('bioStyleId', value)}><SelectTrigger aria-label="Bio style" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.bioStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'CUSTOM_BIO_FONT')}>{option.label}{option.id !== 'default' && !enabled('CUSTOM_BIO_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Message font</span><Select value={currentSelection.messageFontId} disabled={savingField === 'messageFontId'} onValueChange={(value) => void save('messageFontId', value)}><SelectTrigger aria-label="Message font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.messageStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'MESSAGE_FONT')}>{option.label}{option.id !== 'default' && !enabled('MESSAGE_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Story font</span><Select value={currentSelection.storyFontId} disabled={savingField === 'storyFontId'} onValueChange={(value) => void save('storyFontId', value)}><SelectTrigger aria-label="Story font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.storyStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'STORY_FONT')}>{option.label}{option.id !== 'default' && !enabled('STORY_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <div className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">App icon</span><div className="grid grid-cols-2 gap-2">{catalog.options.appIcons.map((option) => { const locked = option.id !== 'yor-default' && !enabled('CUSTOM_APP_ICON'); const selected = currentSelection.appIconId === option.id; return <button key={option.id} type="button" disabled={locked || savingField === 'appIconId'} onClick={() => void save('appIconId', option.id)} className={`rounded-xl border px-3 py-2 text-left text-xs transition-colors ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 bg-background/35 hover:border-primary/40'} ${locked ? 'cursor-not-allowed opacity-45' : ''}`}><span className="block font-semibold">{option.label}</span><span className="text-[0.62rem] text-muted-foreground">{locked ? 'Premium locked' : option.platforms?.join(' · ')}</span></button>; })}</div></div>
+          </div>
+        )}
+        <p className="border-t border-border/40 pt-3 text-[0.68rem] leading-relaxed text-muted-foreground">Bio copy stays separate from its presentation style. Switching a style never rewrites your text, and returning to the default style is always available.</p>
+      </div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   
@@ -493,6 +572,8 @@ export default function Settings() {
         </section>
 
         <CompanionPetSettings />
+
+        <PremiumProfilePanel />
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">

@@ -20,6 +20,13 @@ export const settingsSchema = z.object({
   storyViewMode: z.enum(["identified", "private"]).optional(),
 });
 
+export const premiumProfileSchema = z.object({
+  bioStyleId: z.string().trim().min(1).max(40).optional(),
+  messageFontId: z.string().trim().min(1).max(40).optional(),
+  storyFontId: z.string().trim().min(1).max(40).optional(),
+  appIconId: z.string().trim().min(1).max(40).optional(),
+});
+
 export const privacySchema = z.object({
   profileVisibility: z.enum(["public", "private", "followers"]).optional(),
   messageRequests: z.boolean().optional(),

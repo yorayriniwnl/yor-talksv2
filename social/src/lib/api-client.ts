@@ -312,6 +312,10 @@ export interface BackendUser {
   email: string;
   fullName: string;
   bio: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   avatarUrl: string | null;
   role: string;
   followers?: string[];
@@ -387,6 +391,31 @@ export interface BackendShowcase {
   customImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PremiumProfileSelection {
+  bioStyleId: string;
+  messageFontId: string;
+  storyFontId: string;
+  appIconId: string;
+}
+
+export interface PremiumProfileOption {
+  id: string;
+  label: string;
+  cssFamily?: string;
+  platforms?: string[];
+}
+
+export interface PremiumProfileOptions {
+  selection: PremiumProfileSelection;
+  options: {
+    bioStyles: PremiumProfileOption[];
+    messageStyles: PremiumProfileOption[];
+    storyStyles: PremiumProfileOption[];
+    appIcons: PremiumProfileOption[];
+  };
+  enabledFeatures: Record<string, boolean>;
 }
 
 export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
@@ -507,6 +536,9 @@ export const api = {
   getProfileByUsername: (username: string) => request<BackendUser>(`/users/by-username/${encodeURIComponent(username)}`),
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  updatePremiumProfile: (payload: Partial<PremiumProfileSelection>) =>
+    request<BackendUser>('/users/me/premium-profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: async (file: File) => {
     const directUpload = await uploadDirectToCloudinary(file, 'avatar');
     if (directUpload) {
@@ -575,7 +607,7 @@ export const api = {
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string, contentCategory?: ContentCategory, contentRating?: ContentRating) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content, ...(contentCategory ? { contentCategory } : {}), ...(contentRating ? { contentRating } : {}) }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -583,6 +615,8 @@ export const api = {
   unlikePost: (postId: string) => request<BackendPost>(`/posts/${postId}/unlike`, { method: 'POST' }),
   bookmarkPost: (postId: string) => request<BackendPost>(`/posts/${postId}/bookmark`, { method: 'POST' }),
   sharePost: (postId: string) => request<BackendPost>(`/posts/${postId}/share`, { method: 'POST' }),
+  pinPost: (postId: string) => request<BackendPost>(`/posts/${encodeURIComponent(postId)}/pin`, { method: 'POST' }),
+  unpinPost: (postId: string) => request<BackendPost>(`/posts/${encodeURIComponent(postId)}/pin`, { method: 'DELETE' }),
   repostPost: (postId: string, note?: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) }),
   unrepostPost: (postId: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'DELETE' }),
   votePostPoll: (postId: string, optionId: string) => request<BackendPost>(`/posts/${postId}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
@@ -808,6 +842,8 @@ export interface BackendPost {
   content: string;
   images: string[];
   audience?: 'followers' | 'close_friends' | 'public';
+  distributionMode?: 'feed_and_profile' | 'profile_only';
+  pinnedPosition?: number | null;
   createdAt: string;
   likedBy?: string[];
   comments?: { id: string; authorId: string; content: string; createdAt: string }[];

@@ -6,6 +6,10 @@ import { QueueService } from "./queue-service.js";
 import type { FollowRequestRecord, UserRecord, UserSettings } from "../types/index.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { CreatorAnalyticsService } from "./creator-analytics-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, PREMIUM_MESSAGE_STYLES, PREMIUM_STORY_STYLES, requiredPremiumFeatures, type PremiumProfileSelection } from "../features/premium-profile.js";
+
+export class PremiumProfileFeatureUnavailableError extends Error {}
 
 export class UserService {
   constructor(
@@ -14,6 +18,7 @@ export class UserService {
     private readonly queueService?: QueueService,
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
     private readonly creatorAnalyticsService: CreatorAnalyticsService = new CreatorAnalyticsService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
@@ -38,6 +43,47 @@ export class UserService {
 
   async updateProfile(userId: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
     return this.userRepository.update(userId, updates);
+  }
+
+  async updatePremiumProfile(userId: string, updates: Partial<PremiumProfileSelection>): Promise<UserRecord | undefined> {
+    const current = await this.userRepository.findById(userId);
+    if (!current) return undefined;
+    const selection = assertPremiumProfileSelection({
+      bioStyleId: updates.bioStyleId ?? current.bioStyleId,
+      messageFontId: updates.messageFontId ?? current.messageFontId,
+      storyFontId: updates.storyFontId ?? current.storyFontId,
+      appIconId: updates.appIconId ?? current.appIconId,
+    });
+    const required = requiredPremiumFeatures(selection);
+    const available = await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
+    if (available.some((enabled) => !enabled)) {
+      throw new PremiumProfileFeatureUnavailableError("One or more premium profile styles are not enabled for this account");
+    }
+    return this.userRepository.update(userId, selection);
+  }
+
+  async getPremiumProfileOptions(userId: string): Promise<{
+    selection: PremiumProfileSelection;
+    options: {
+      bioStyles: typeof PREMIUM_BIO_STYLES;
+      messageStyles: typeof PREMIUM_MESSAGE_STYLES;
+      storyStyles: typeof PREMIUM_STORY_STYLES;
+      appIcons: typeof PREMIUM_APP_ICONS;
+    };
+    enabledFeatures: Awaited<ReturnType<FeatureEntitlementService["getSnapshot"]>>;
+  } | undefined> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) return undefined;
+    return {
+      selection: assertPremiumProfileSelection(user),
+      options: {
+        bioStyles: PREMIUM_BIO_STYLES,
+        messageStyles: PREMIUM_MESSAGE_STYLES,
+        storyStyles: PREMIUM_STORY_STYLES,
+        appIcons: PREMIUM_APP_ICONS,
+      },
+      enabledFeatures: await this.entitlementService.getSnapshot(userId),
+    };
   }
 
   async uploadAvatar(userId: string, avatarUrl: string): Promise<UserRecord | undefined> {

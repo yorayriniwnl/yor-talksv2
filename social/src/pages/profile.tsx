@@ -233,12 +233,13 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
 // ═══════════════════════════════════════════════════════════════════════════
 //  POST GRID ITEM — Instagram 3-column grid with overlay
 // ═══════════════════════════════════════════════════════════════════════════
-function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
+function PostGridItem({ post, onClick, canPin = false, onTogglePin, pinBusy = false }: { post: any; onClick: () => void; canPin?: boolean; onTogglePin?: () => void; pinBusy?: boolean }) {
   const firstMedia = post.media?.[0];
   const hasMultiple = post.media && post.media.length > 1;
 
   return (
-    <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="w-full aspect-square bg-muted overflow-hidden relative group cursor-pointer hover-lift text-left" onClick={onClick}>
+    <div className="relative aspect-square overflow-hidden bg-muted group hover-lift">
+      <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="h-full w-full cursor-pointer text-left" onClick={onClick}>
       {firstMedia ? (
         <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
@@ -261,7 +262,13 @@ function PostGridItem({ post, onClick }: { post: any; onClick: () => void }) {
           <MessageCircle className="w-5 h-5 fill-white" /> {formatCount(post.comments)}
         </span>
       </div>
-    </button>
+      </button>
+      {canPin && onTogglePin && (
+        <button type="button" aria-label={post.pinnedPosition != null ? 'Unpin post from profile' : 'Pin post to profile'} aria-pressed={post.pinnedPosition != null} disabled={pinBusy} onClick={(event) => { event.stopPropagation(); onTogglePin(); }} className={cn('absolute right-2 top-2 z-20 rounded-full p-2 backdrop-blur-md transition-colors', post.pinnedPosition != null ? 'bg-primary text-primary-foreground' : 'bg-black/45 text-white hover:bg-black/65', pinBusy && 'opacity-60')}>
+          <Pin className={cn('h-3.5 w-3.5', post.pinnedPosition != null && 'fill-current')} />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -289,6 +296,8 @@ export default function Profile() {
   const addProfileComment = useAppStore(s => s.addProfileComment);
   const deleteProfileComment = useAppStore(s => s.deleteProfileComment);
   const loadProfileInteractions = useAppStore(s => s.loadProfileInteractions);
+  const pinPost = useAppStore(s => s.pinPost);
+  const unpinPost = useAppStore(s => s.unpinPost);
 
   const [newComment, setNewComment] = useState('');
   const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'liked'>('grid');
@@ -306,6 +315,7 @@ export default function Profile() {
   const [finishedProfileLookup, setFinishedProfileLookup] = useState('');
   const [profileFollowers, setProfileFollowers] = useState<BackendUser[]>([]);
   const [postingComment, setPostingComment] = useState(false);
+  const [pinBusyId, setPinBusyId] = useState<string | null>(null);
 
   const profileLookup = id || username || currentUser?.id;
   const profile = id
@@ -355,7 +365,11 @@ export default function Profile() {
   // Scroll to top on profile change
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileLookup]);
 
-  const userPosts = useMemo(() => posts.filter(p => p.authorId === profile?.id), [posts, profile?.id]);
+  const userPosts = useMemo(() => [...posts.filter(p => p.authorId === profile?.id)].sort((a, b) => {
+    const aPin = a.pinnedPosition ?? Number.MAX_SAFE_INTEGER;
+    const bPin = b.pinnedPosition ?? Number.MAX_SAFE_INTEGER;
+    return aPin - bPin || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  }), [posts, profile?.id]);
   const userVideos = useMemo(() => videos.filter(v => v.authorId === profile?.id), [videos, profile?.id]);
   const userReels = useMemo(() => userVideos.filter(v => v.type === 'short'), [userVideos]);
   const genreBadge = useMemo(() => getGenreBadge(profile?.bio, profile?.username), [profile?.bio, profile?.username]);
@@ -421,6 +435,20 @@ export default function Profile() {
     if (!profile || isOwnProfile) return;
     if (await toggleBlockUser(profile.id)) setLocation('/');
   }, [isOwnProfile, profile, setLocation, toggleBlockUser]);
+
+  const handleTogglePin = useCallback(async (post: typeof userPosts[number]) => {
+    if (!isOwnProfile || pinBusyId) return;
+    setPinBusyId(post.id);
+    try {
+      if (post.pinnedPosition != null) await unpinPost(post.id);
+      else await pinPost(post.id);
+      toast.success(post.pinnedPosition != null ? 'Post unpinned from your profile' : 'Post pinned to your profile');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update profile pins');
+    } finally {
+      setPinBusyId(null);
+    }
+  }, [isOwnProfile, pinBusyId, pinPost, unpinPost]);
 
   if (!profile) {
     return (
@@ -595,7 +623,7 @@ export default function Profile() {
           <p className="text-[0.82rem] text-muted-foreground font-mono mb-3">@{profile.username}</p>
 
           {/* Bio */}
-          {profile.bio && <p className="text-[0.88rem] leading-[1.6] mb-3 font-serif max-w-[480px]">{profile.bio}</p>}
+          {profile.bio && <p className={cn('text-[0.88rem] leading-[1.6] mb-3 font-serif max-w-[480px]', profile.bioStyleId === 'editorial' && 'premium-profile-bio--editorial', profile.bioStyleId === 'mono' && 'premium-profile-bio--mono')}>{profile.bio}</p>}
 
           {/* Category Badge */}
           <div className="flex items-center gap-2 mb-3">
@@ -727,7 +755,7 @@ export default function Profile() {
                 {userPosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {userPosts.map(post => (
-                      <PostGridItem key={post.id} post={post} onClick={() => setLocation(`/post/${post.id}`)} />
+                      <PostGridItem key={post.id} post={post} canPin={isOwnProfile} pinBusy={pinBusyId === post.id} onTogglePin={() => void handleTogglePin(post)} onClick={() => setLocation(`/post/${post.id}`)} />
                     ))}
                   </div>
                 ) : (

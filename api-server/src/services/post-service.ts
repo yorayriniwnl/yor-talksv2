@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
-import { encodePostCursor, encodeTrendingCursor, PostRepository } from "../repositories/post-repository.js";
+import { encodePostCursor, encodeTrendingCursor, PostRepository, ProfilePinLimitError } from "../repositories/post-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
@@ -18,8 +18,12 @@ import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { logger } from "../lib/logger.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
+export { ProfilePinLimitError } from "../repositories/post-repository.js";
+
+export class PremiumFeatureUnavailableError extends Error {}
 
 export type FeedMode = "for_you" | "following" | "favorites";
 
@@ -64,6 +68,7 @@ export class PostService {
     private readonly securityService: SecurityService = new SecurityService(),
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   private async notify(input: NotificationRecord) {
@@ -89,7 +94,11 @@ export class PostService {
     contentRating = DEFAULT_CONTENT_RATING,
     audience: PostRecord["audience"] = "public",
     poll?: { question: string; options: Array<{ text: string }> },
+    distributionMode: PostRecord["distributionMode"] = "feed_and_profile",
   ): Promise<PostRecord> {
+    if (distributionMode === "profile_only" && !(await this.entitlementService.hasFeature(authorId, "PROFILE_ONLY_POST"))) {
+      throw new PremiumFeatureUnavailableError("Profile-only posts are not enabled for this account");
+    }
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -109,6 +118,7 @@ export class PostService {
       mentions,
       score: this.calculateScore({ likes: 0, shares: 0, comments: 0 }),
       audience,
+      distributionMode,
       contentCategory,
       contentRating,
     };
@@ -130,6 +140,21 @@ export class PostService {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return false;
     return this.postRepository.delete(postId);
+  }
+
+  async pinPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.entitlementService.hasFeature(userId, "SIX_PINNED_POSTS"))) {
+      throw new PremiumFeatureUnavailableError("Six pinned posts are not enabled for this account");
+    }
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return undefined;
+    return this.postRepository.pinPost(postId, userId);
+  }
+
+  async unpinPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return undefined;
+    return this.postRepository.unpinPost(postId, userId);
   }
 
   async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"], contentCategory?: PostRecord["contentCategory"]): Promise<PostRecord | undefined> {

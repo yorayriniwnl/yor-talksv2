@@ -51,6 +51,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('public');
+  const [distributionMode, setDistributionMode] = useState<'feed_and_profile' | 'profile_only'>('feed_and_profile');
   const [isExpanded, setIsExpanded] = useState(!compact);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,14 +73,15 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
     try {
       const savedDraft = window.localStorage.getItem(draftStorageKey);
       if (savedDraft) {
-        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating; audience?: 'followers' | 'close_friends' | 'public' };
-        if (draft.content || draft.pollOpen || draft.contentCategory || draft.audience) {
+        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only' };
+        if (draft.content || draft.pollOpen || draft.contentCategory || draft.audience || draft.distributionMode === 'profile_only') {
           setContent(typeof draft.content === 'string' ? draft.content : '');
           setPollOpen(Boolean(draft.pollOpen));
           setPollOptions(Array.isArray(draft.pollOptions) && draft.pollOptions.length >= 2 ? draft.pollOptions.slice(0, 4) : ['', '']);
           setContentCategory(draft.contentCategory ?? '');
           setContentRating(draft.contentRating ?? DEFAULT_CONTENT_RATING);
           setAudience(draft.audience ?? 'public');
+          setDistributionMode(draft.distributionMode ?? 'feed_and_profile');
           setDraftSaved(true);
         }
       }
@@ -92,7 +94,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
 
   useEffect(() => {
     if (!draftReady) return;
-    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length || audience !== 'public');
+    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length || audience !== 'public' || distributionMode !== 'feed_and_profile');
     try {
       if (hasDraft) {
         window.localStorage.setItem(draftStorageKey, JSON.stringify({
@@ -102,6 +104,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
           contentCategory,
           contentRating,
           audience,
+          distributionMode,
           savedAt: new Date().toISOString(),
         }));
         setDraftSaved(true);
@@ -112,7 +115,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
     } catch {
       // Draft persistence is an enhancement; posting must work without storage.
     }
-  }, [audience, content, contentCategory, contentRating, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
+  }, [audience, content, contentCategory, contentRating, distributionMode, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -162,7 +165,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
       const uploadedMedia = mediaFiles.length
         ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
         : undefined;
-      await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory, audience);
+      await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory, audience, distributionMode);
     } catch (error) {
       toast({ title: 'Could not publish your thought', description: error instanceof Error ? error.message : 'Try again in a moment.' });
       setIsUploading(false);
@@ -177,6 +180,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
     setContentCategory('');
     setContentRating(DEFAULT_CONTENT_RATING);
     setAudience('public');
+    setDistributionMode('feed_and_profile');
     if (compact) setIsExpanded(false);
     try { window.localStorage.removeItem(draftStorageKey); } catch { /* Ignore storage failures. */ }
     setDraftSaved(false);
@@ -284,6 +288,14 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                 <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends · {closeFriends.length} people</option>
               </select>
               {audience === 'close_friends' && closeFriends.length === 0 && <span className="mt-1 block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
+            </label>
+            <label htmlFor="post-distribution" className="mt-2 block text-xs font-semibold">
+              <span className="mb-1.5 flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-primary" /> Distribution</span>
+              <select id="post-distribution" value={distributionMode} onChange={(event) => setDistributionMode(event.target.value as typeof distributionMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+                <option value="feed_and_profile">Feed + profile · Everyone</option>
+                <option value="profile_only">Profile only · Premium</option>
+              </select>
+              {distributionMode === 'profile_only' && <span className="mt-1 block text-[0.68rem] font-normal text-muted-foreground">This post will stay off feeds and search. Your account must have the Profile-only Posts entitlement.</span>}
             </label>
           </div>
 
