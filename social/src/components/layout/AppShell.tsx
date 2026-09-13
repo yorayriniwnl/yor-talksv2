@@ -21,6 +21,7 @@ import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { CompanionPet } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { hasUnreadConversation } from '@/lib/message-state';
+import { applyAppIcon } from '@/lib/app-icon';
 
 const IncomingCallManager = lazy(() => import('@/components/messages/IncomingCallManager').then((module) => ({ default: module.IncomingCallManager })));
 
@@ -71,6 +72,10 @@ export function AppShell({ children }: AppShellProps) {
     document.documentElement.classList.toggle('yor-low-bandwidth', worldPreferences.lowBandwidth);
     return () => document.documentElement.classList.remove('yor-low-bandwidth');
   }, [worldPreferences.lowBandwidth]);
+
+  useEffect(() => {
+    applyAppIcon(currentUser?.appIconId);
+  }, [currentUser?.appIconId]);
 
   const primaryNavItems = [
     { icon: House, label: 'Home', path: '/' },

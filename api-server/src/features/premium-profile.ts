@@ -17,9 +17,9 @@ export const PREMIUM_STORY_STYLES = [
 ] as const;
 
 export const PREMIUM_APP_ICONS = [
-  { id: "yor-default", label: "YOR Default", platforms: ["web", "ios", "android"] },
-  { id: "crimson", label: "Crimson Signal", platforms: ["web", "ios", "android"] },
-  { id: "monochrome", label: "Monochrome", platforms: ["web", "ios", "android"] },
+  { id: "yor-default", label: "YOR Default", platforms: ["web", "PWA"] },
+  { id: "crimson", label: "Crimson Signal", platforms: ["web", "PWA"] },
+  { id: "monochrome", label: "Monochrome", platforms: ["web", "PWA"] },
 ] as const;
 
 export function isPremiumMessageStyle(value: string): boolean {
