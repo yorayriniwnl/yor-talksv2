@@ -168,8 +168,15 @@ export class MessageService {
     if (!message || message.deletedAt) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
+    if (message.senderId === userId) return undefined;
     if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
       throw new PremiumFeatureUnavailableError("Unread message previews are not enabled for this account");
+    }
+    // Direct messages retain a legacy single-recipient timestamp while group
+    // conversations use the per-user message_reads table. Check both so a
+    // preview can never be used to reopen an already-read message.
+    if ((message.recipientId === userId && message.seenAt !== null) || await this.messageRepository.hasReadReceipt(messageId, userId)) {
+      return undefined;
     }
     const previewedAt = new Date().toISOString();
     const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);

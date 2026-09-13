@@ -15,13 +15,14 @@ const message: MessageRecord = {
   seenAt: null,
 };
 
-function createPreviewService(enabled: boolean) {
+function createPreviewService(enabled: boolean, alreadyRead = false) {
   let recordedPreview: { messageId: string; userId: string } | undefined;
   const conversationRepository = {
     getMembers: async () => [message.senderId, message.recipientId],
   } as unknown as ConversationRepository;
   const messageRepository = {
     findById: async () => message,
+    hasReadReceipt: async () => alreadyRead,
     recordPreview: async (messageId: string, userId: string) => {
       recordedPreview = { messageId, userId };
       return message;
@@ -54,5 +55,23 @@ test("message preview is entitlement-gated before any preview event is recorded"
     () => service.previewMessage(message.id, message.recipientId),
     PremiumFeatureUnavailableError,
   );
+  assert.equal(getRecordedPreview(), undefined);
+});
+
+test("message preview does not reopen a message that already has a recipient read receipt", async () => {
+  const { service, getRecordedPreview } = createPreviewService(true, true);
+
+  const preview = await service.previewMessage(message.id, message.recipientId);
+
+  assert.equal(preview, undefined);
+  assert.equal(getRecordedPreview(), undefined);
+});
+
+test("message preview cannot be used on the sender's own message", async () => {
+  const { service, getRecordedPreview } = createPreviewService(true);
+
+  const preview = await service.previewMessage(message.id, message.senderId);
+
+  assert.equal(preview, undefined);
   assert.equal(getRecordedPreview(), undefined);
 });

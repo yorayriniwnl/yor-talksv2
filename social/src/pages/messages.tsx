@@ -330,13 +330,13 @@ function ConversationItem({
   onSelect,
   onPreview,
 }: {
-  entry: { conv: any; user: any; lastMsg?: DirectMessage; unreadCount: number };
+  entry: { conv: any; user: any; lastMsg?: DirectMessage; previewMessage?: DirectMessage; unreadCount: number };
   active: boolean;
   isTyping: boolean;
   onSelect: (id: string) => void;
   onPreview: (message: DirectMessage) => void;
 }) {
-  const { conv, user, lastMsg, unreadCount } = entry;
+  const { conv, user, lastMsg, previewMessage, unreadCount } = entry;
   const displayName = user.displayName || user.username || 'User';
 
   return (
@@ -367,8 +367,8 @@ function ConversationItem({
         </span>
         {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
-      {lastMsg && (
-        <button type="button" className="operator-conversation-item__preview-action" onClick={() => onPreview(lastMsg)} aria-label={`Preview latest message from ${displayName}`} title="Preview without marking read">
+      {previewMessage && (
+        <button type="button" className="operator-conversation-item__preview-action" onClick={() => onPreview(previewMessage)} aria-label={`Preview unread message from ${displayName}`} title="Preview unread message without marking read">
           <Eye aria-hidden="true" />
         </button>
       )}
@@ -564,7 +564,9 @@ export default function Messages() {
           const msgs = messagesByConversation[conv.id] || [];
           const lastMsg = msgs[msgs.length - 1];
           const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+          const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+            || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
         }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
@@ -580,7 +582,9 @@ export default function Messages() {
         const msgs = messagesByConversation[conv.id] || [];
         const lastMsg = msgs[msgs.length - 1];
         const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+        const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+          || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
       })
       .sort((a, b) => (b.lastMsg?.createdAt ?? b.conv.updatedAt).localeCompare(a.lastMsg?.createdAt ?? a.conv.updatedAt));
   }, [conversations, users, currentUser?.id, messagesByConversation]);

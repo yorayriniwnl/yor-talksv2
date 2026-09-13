@@ -1,5 +1,5 @@
 import { eq, or, and, desc, inArray, isNull, gt, sql } from "drizzle-orm";
-import { messagesTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
@@ -54,6 +54,17 @@ export class MessageRepository {
       set: { previewedAt },
     });
     return this.findById(messageId);
+  }
+
+  async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
+    const [receipt] = await db.select({ messageId: messageReadsTable.messageId })
+      .from(messageReadsTable)
+      .where(and(
+        eq(messageReadsTable.messageId, messageId),
+        eq(messageReadsTable.userId, userId),
+      ))
+      .limit(1);
+    return Boolean(receipt);
   }
   
   async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
