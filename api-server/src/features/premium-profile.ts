@@ -22,6 +22,14 @@ export const PREMIUM_APP_ICONS = [
   { id: "monochrome", label: "Monochrome", platforms: ["web", "ios", "android"] },
 ] as const;
 
+export function isPremiumMessageStyle(value: string): boolean {
+  return PREMIUM_MESSAGE_STYLES.some((style) => style.id === value);
+}
+
+export function isPremiumStoryStyle(value: string): boolean {
+  return PREMIUM_STORY_STYLES.some((style) => style.id === value);
+}
+
 export type PremiumProfileSelection = {
   bioStyleId: string;
   messageFontId: string;

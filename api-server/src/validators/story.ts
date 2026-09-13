@@ -8,6 +8,7 @@ export const createStorySchema = z.object({
   type: z.enum(["image", "video", "text", "voice"]),
   textContent: z.string().optional(),
   backgroundGradient: z.string().optional(),
+  storyFontId: z.enum(["default", "cinematic", "mono"]).optional(),
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
   highlightId: z.string().uuid().optional(),

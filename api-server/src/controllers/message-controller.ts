@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
-import { InvalidMessageContentError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -11,15 +11,17 @@ export class MessageController {
     const conversationId = typeof req.body.conversationId === "string" ? req.body.conversationId : undefined;
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const replyToId = typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
+    const textStyleId = typeof req.body.textStyleId === "string" ? req.body.textStyleId : undefined;
+    const sendOptions = { ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) };
     
     try {
       let message;
       let actualConversationId;
       if (conversationId) {
-        message = await this.messageService.sendMessageToConversation(req.user?.id ?? "", conversationId, content, replyToId ? { replyToId } : undefined);
+        message = await this.messageService.sendMessageToConversation(req.user?.id ?? "", conversationId, content, sendOptions);
         actualConversationId = conversationId;
       } else if (recipientId) {
-        message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, replyToId ? { replyToId } : undefined);
+        message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, sendOptions);
         actualConversationId = message.conversationId;
       } else {
         return res.status(400).json(createResponse("Missing recipientId or conversationId", null, {}, ["Bad request"]));
@@ -44,6 +46,12 @@ export class MessageController {
       }
       if (error instanceof InvalidMessageContentError) {
         return res.status(400).json(createResponse("Invalid message", null, {}, [error.message]));
+      }
+      if (error instanceof InvalidMessageStyleError) {
+        return res.status(400).json(createResponse("Invalid message style", null, {}, [error.message]));
+      }
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
       return res.status(500).json(createResponse("Failed to send message", null, {}, ["Internal server error"]));
     }

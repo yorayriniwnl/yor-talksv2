@@ -371,7 +371,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 className="absolute inset-0 w-full h-full flex items-center justify-center p-8 text-center"
                 style={{ background: currentStory.backgroundGradient || 'linear-gradient(to bottom right, #4facfe, #00f2fe)' }}
               >
-                <p className="text-white text-2xl font-display font-black leading-snug whitespace-pre-wrap drop-shadow-xl">
+                <p className={cn("text-white text-2xl font-black leading-snug whitespace-pre-wrap drop-shadow-xl", currentStory.storyFontId === 'mono' ? 'font-mono' : currentStory.storyFontId === 'cinematic' ? 'font-serif' : 'font-display')}>
                   {currentStory.textContent}
                 </p>
               </div>

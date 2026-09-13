@@ -3,6 +3,8 @@ import { test } from "node:test";
 import {
   assertPremiumProfileSelection,
   canAddProfilePin,
+  isPremiumMessageStyle,
+  isPremiumStoryStyle,
   PREMIUM_APP_ICONS,
   PREMIUM_BIO_STYLES,
   PREMIUM_MESSAGE_STYLES,
@@ -31,6 +33,13 @@ test("premium profile styles come from a curated safe catalog", () => {
     appIconId: "crimson",
   });
   assert.throws(() => assertPremiumProfileSelection({ bioStyleId: "url(javascript:alert(1))" }), /unsupported/);
+});
+
+test("per-item typography accepts only catalog identifiers", () => {
+  assert.equal(isPremiumMessageStyle("mono"), true);
+  assert.equal(isPremiumMessageStyle("url(javascript:alert(1))"), false);
+  assert.equal(isPremiumStoryStyle("cinematic"), true);
+  assert.equal(isPremiumStoryStyle("remote-font"), false);
 });
 
 test("profile pin capacity stops at six without changing existing pin order", () => {

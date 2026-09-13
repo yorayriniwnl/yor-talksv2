@@ -13,6 +13,7 @@ import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { QueueService } from "./queue-service.js";
+import { isPremiumStoryStyle } from "../features/premium-profile.js";
 
 export class PremiumFeatureUnavailableError extends Error {}
 
@@ -40,6 +41,7 @@ export class StoryService {
     type: string;
     textContent?: string;
     backgroundGradient?: string;
+    storyFontId?: string;
     isHighlight: boolean;
     highlightTitle?: string;
     highlightId?: string;
@@ -55,12 +57,16 @@ export class StoryService {
   }): Promise<StoryRecord> {
     const audience = (input.audience ?? "followers") as AudienceKind;
     const advancedAudience = ["selected_people", "everyone_except", "custom"].includes(audience);
-    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight] = await Promise.all([
+    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight, hasStoryFont] = await Promise.all([
       this.entitlementService.hasFeature(input.authorId, "CUSTOM_STORY_AUDIENCE"),
       this.entitlementService.hasFeature(input.authorId, "EXTENDED_STORY"),
       this.entitlementService.hasFeature(input.authorId, "STORY_PRIORITY"),
       this.entitlementService.hasFeature(input.authorId, "DIRECT_HIGHLIGHT"),
+      this.entitlementService.hasFeature(input.authorId, "STORY_FONT"),
     ]);
+    const storyFontId = input.storyFontId ?? "default";
+    if (!isPremiumStoryStyle(storyFontId)) throw new Error("Story font is not supported");
+    if (storyFontId !== "default" && !hasStoryFont) throw new PremiumFeatureUnavailableError("Story fonts are not enabled for this account");
     if (advancedAudience && !hasCustomAudience) throw new PremiumFeatureUnavailableError("Custom story audiences are not enabled for this account");
     if (input.priority && !hasPriority) throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
     const publishMode = input.publishMode ?? "active";
@@ -98,6 +104,7 @@ export class StoryService {
       type: input.type,
       textContent: input.textContent || null,
       backgroundGradient: input.backgroundGradient || null,
+      storyFontId,
       createdAt: publishedAt,
       publishedAt,
       expiresAt,

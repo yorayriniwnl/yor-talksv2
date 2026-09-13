@@ -60,6 +60,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [publishMode, setPublishMode] = useState<'active' | 'highlight_only'>('active');
   const [durationHours, setDurationHours] = useState(24);
   const [priority, setPriority] = useState(false);
+  const [storyFontId, setStoryFontId] = useState<'default' | 'cinematic' | 'mono'>(currentUser?.storyFontId === 'cinematic' || currentUser?.storyFontId === 'mono' ? currentUser.storyFontId : 'default');
+  const [storyStyles, setStoryStyles] = useState<Awaited<ReturnType<typeof api.getPremiumProfileOptions>>['options']['storyStyles']>([]);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -78,6 +80,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       if (highlightResult.status === 'fulfilled') setHighlights(highlightResult.value);
       else setHighlights([]);
       if (profileResult.status === 'fulfilled') setPremiumFeatures(profileResult.value.enabledFeatures);
+      if (profileResult.status === 'fulfilled') setStoryStyles(profileResult.value.options.storyStyles);
     });
     return () => { active = false; };
   }, [currentUser, isOpen]);
@@ -113,6 +116,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setPublishMode('active');
     }
   }, [isHighlight]);
+
+  useEffect(() => {
+    const profileStyle = currentUser?.storyFontId;
+    if (profileStyle === 'cinematic' || profileStyle === 'mono' || profileStyle === 'default') setStoryFontId(profileStyle);
+  }, [currentUser?.id, currentUser?.storyFontId]);
 
   useEffect(() => () => {
     if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
@@ -257,6 +265,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         textContent: storyType === 'text' || storyType === 'voice' ? textContent.trim() || undefined : undefined,
         mediaUrl: storyType === 'image' || storyType === 'voice' ? mediaUrl : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
         backgroundGradient: selectedGradient.css,
+        storyFontId,
         contentCategory,
         contentRating,
         audience,
@@ -295,6 +304,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setPublishMode('active');
       setDurationHours(24);
       setPriority(false);
+      setStoryFontId(currentUser?.storyFontId === 'cinematic' || currentUser?.storyFontId === 'mono' ? currentUser.storyFontId : 'default');
       setPollOpen(false);
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -331,7 +341,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           {/* Canvas Center Preview */}
           <div className="flex-1 flex items-center justify-center text-center px-4 relative z-10">
             {storyType === 'text' ? (
-              <p className="text-white text-2xl md:text-3xl font-display font-extrabold drop-shadow-md leading-tight">
+                <p className={cn("text-white text-2xl md:text-3xl font-extrabold drop-shadow-md leading-tight", storyFontId === 'mono' ? 'font-mono' : storyFontId === 'cinematic' ? 'font-serif' : 'font-display')}>
                 {textContent || "Type your story caption..."}
               </p>
             ) : storyType === 'voice' ? (
@@ -464,6 +474,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
             {highlightDestination === 'new' && <input value={highlightTitle} onChange={(event) => setHighlightTitle(event.target.value)} placeholder="Highlight name (for example, Field notes)" maxLength={60} className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" aria-label="New Highlight name" />}
             <label className="block space-y-1.5 text-xs font-semibold"><span>Publish mode</span><select value={publishMode} onChange={(event) => setPublishMode(event.target.value as typeof publishMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="active">Active Story + Highlight</option><option value="highlight_only" disabled={highlightDestination === 'none'}>Highlight only · Premium</option></select></label>
             <div className="grid gap-2 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-semibold"><span>Duration</span><select value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value={24}>24 hours</option><option value={48}>48 hours · Advanced</option><option value={72}>72 hours · Advanced</option></select></label><label className="flex min-h-10 items-center gap-2 rounded-xl border border-border/50 bg-background/40 px-3 text-xs font-semibold"><input type="checkbox" checked={priority} onChange={(event) => setPriority(event.target.checked)} className="h-4 w-4 accent-primary" /><span><span className="block">Priority story</span><span className="block text-[0.65rem] font-normal text-muted-foreground">Capped ranking signal</span></span>{priority && <Check className="ml-auto h-4 w-4 text-primary" />}</label></div>
+            {storyStyles.length > 0 && <label className="block space-y-1.5 text-xs font-semibold"><span>Story typography</span><select value={storyFontId} onChange={(event) => setStoryFontId(event.target.value as typeof storyFontId)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">{storyStyles.map((style) => <option key={style.id} value={style.id} disabled={style.id !== 'default' && premiumFeatures?.STORY_FONT === false}>{style.label}{style.id !== 'default' && premiumFeatures?.STORY_FONT === false ? ' · locked' : ''}</option>)}</select><span className="block text-[0.68rem] font-normal text-muted-foreground">The selected curated style travels with this Story and never changes its text.</span></label>}
           </div>
 
           <div className="rounded-2xl border border-border/40 bg-background/30 p-3">

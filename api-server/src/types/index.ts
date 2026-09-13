@@ -164,6 +164,7 @@ export interface MessageRecord {
   senderId: string;
   recipientId: string;
   content: string;
+  textStyleId?: string;
   createdAt: string;
   seenAt: string | null;
   replyToId?: string | null;
@@ -423,6 +424,7 @@ export interface StoryRecord {
   type: string;
   textContent?: string | null;
   backgroundGradient?: string | null;
+  storyFontId?: string;
   createdAt: string;
   publishedAt?: string;
   expiresAt: string;

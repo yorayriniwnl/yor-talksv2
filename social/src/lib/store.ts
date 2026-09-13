@@ -130,6 +130,7 @@ export type Story = {
   type: 'image' | 'video' | 'text' | 'voice';
   textContent?: string;
   backgroundGradient?: string;
+  storyFontId?: 'default' | 'cinematic' | 'mono';
   viewed: boolean;
   createdAt: string;
   expiresAt: string;
@@ -171,6 +172,7 @@ export type Message = {
   conversationId: string;
   senderId: string;
   content: string;
+  textStyleId?: 'default' | 'mono' | 'rounded';
   createdAt: string;
   read: boolean;
   replyToId?: string | null;
@@ -407,6 +409,7 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     type: (s.type as Story['type']) || 'image',
     textContent: s.textContent ?? undefined,
     backgroundGradient: s.backgroundGradient ?? undefined,
+    storyFontId: s.storyFontId ?? 'default',
     viewed: currentUserId ? viewerIds.includes(currentUserId) : false,
     createdAt: s.createdAt || new Date().toISOString(),
     expiresAt: s.expiresAt || new Date(Date.now() + 86400000).toISOString(),
@@ -516,6 +519,7 @@ function mapMessage(m: BackendMessage): Message {
     conversationId: m.conversationId,
     senderId: m.senderId,
     content: m.content || '',
+    textStyleId: m.textStyleId ?? 'default',
     createdAt: m.createdAt ? utcTimestamp(m.createdAt) : new Date().toISOString(),
     read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
     replyToId: m.replyToId ?? null,
@@ -684,6 +688,7 @@ function mapShowcase(showcase: BackendShowcase): Showcase {
 export type MessageDraft = {
   message: string;
   imageAttachment: string;
+  textStyleId?: 'default' | 'mono' | 'rounded';
   replyTarget: { messageId: string; senderName: string; excerpt: string } | null;
   sending?: boolean;
 };
@@ -791,8 +796,8 @@ interface AppState {
   loadConversationMessages: (conversationId: string) => Promise<void>;
   previewDirectMessage: (messageId: string) => Promise<Message>;
   markDirectMessageSeen: (messageId: string) => Promise<void>;
-  sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
+  sendDirectMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
   createGroupChat: (memberIds: string[], title: string) => Promise<string>;
   setConversationVanishMode: (conversationId: string, enabled: boolean) => Promise<void>;
   editDirectMessage: (messageId: string, content: string) => Promise<void>;
@@ -824,7 +829,7 @@ interface AppState {
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { storyFontId?: Story['storyFontId']; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
@@ -1124,7 +1129,7 @@ export const useAppStore = create<AppState>()(
       messagesByConversation: {},
       messageDrafts: {},
       updateMessageDraft: (conversationId, patch) => set((state) => ({
-        messageDrafts: { ...state.messageDrafts, [conversationId]: { message: '', imageAttachment: '', replyTarget: null, ...state.messageDrafts[conversationId], ...patch } },
+        messageDrafts: { ...state.messageDrafts, [conversationId]: { message: '', imageAttachment: '', textStyleId: state.currentUser?.messageFontId === 'mono' || state.currentUser?.messageFontId === 'rounded' ? state.currentUser.messageFontId : 'default', replyTarget: null, ...state.messageDrafts[conversationId], ...patch } },
       })),
       aiMessages: [],
       privacy: {
@@ -1703,9 +1708,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendDirectMessage: async (recipientId, content, replyToId) => {
+      sendDirectMessage: async (recipientId, content, replyToId, textStyleId) => {
         try {
-          const created = await api.sendMessage(recipientId, content, replyToId);
+          const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
+          const created = await api.sendMessage(recipientId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default');
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1720,9 +1726,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendMessageToConversation: async (conversationId, content, replyToId) => {
+      sendMessageToConversation: async (conversationId, content, replyToId, textStyleId) => {
         try {
-          const created = await api.sendMessageToConversation(conversationId, content, replyToId);
+          const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
+          const created = await api.sendMessageToConversation(conversationId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default');
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -2110,6 +2117,7 @@ export const useAppStore = create<AppState>()(
           type: story.type,
           textContent: story.textContent,
           backgroundGradient: story.backgroundGradient,
+          storyFontId: story.storyFontId ?? 'default',
           viewed: false,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
