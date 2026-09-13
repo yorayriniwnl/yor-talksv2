@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, gt, desc, asc, and, inArray, or, sql, countDistinct } from "drizzle-orm";
+import { eq, gt, desc, asc, and, inArray, or, sql, count, countDistinct } from "drizzle-orm";
 import {
   highlightsTable,
   highlightItemsTable,
@@ -16,7 +16,7 @@ import {
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { HighlightRecord, StoryRecord } from "../types/index.js";
-import type { StoryAnalyticsSummary, StoryViewExposure } from "../services/story-analytics-service.js";
+import { calculateStoryReactionCounts, type StoryAnalyticsSummary, type StoryViewExposure } from "../services/story-analytics-service.js";
 
 export interface StoryViewerRow {
   viewerId: string;
@@ -215,6 +215,10 @@ export class StoryRepository {
       identifiedViews: sql<number>`count(*) filter (where ${storyViewEventsTable.exposure} = 'identified')`,
       privateViews: sql<number>`count(*) filter (where ${storyViewEventsTable.exposure} = 'private')`,
     }).from(storyViewEventsTable).where(eq(storyViewEventsTable.storyId, storyId));
+    const reactionRows = await db.select({
+      reactionType: storyReactionsTable.reactionType,
+      count: count(),
+    }).from(storyReactionsTable).where(eq(storyReactionsTable.storyId, storyId)).groupBy(storyReactionsTable.reactionType);
     const totalViews = Number(summary?.totalViews ?? 0);
     const uniqueViewers = Number(summary?.uniqueViewers ?? 0);
     const rewatches = Math.max(0, totalViews - uniqueViewers);
@@ -225,6 +229,7 @@ export class StoryRepository {
       rewatchRate: totalViews === 0 ? 0 : Number(((rewatches / totalViews) * 100).toFixed(1)),
       identifiedViews: Number(summary?.identifiedViews ?? 0),
       privateViews: Number(summary?.privateViews ?? 0),
+      reactionCounts: calculateStoryReactionCounts(reactionRows),
     };
   }
 

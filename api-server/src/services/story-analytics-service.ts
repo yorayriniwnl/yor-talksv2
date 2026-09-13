@@ -13,6 +13,14 @@ export interface StoryAnalyticsSummary {
   rewatchRate: number;
   identifiedViews: number;
   privateViews: number;
+  reactionCounts: StoryReactionCounts;
+}
+
+export interface StoryReactionCounts {
+  normalHeart: number;
+  superHeart: number;
+  custom: number;
+  total: number;
 }
 
 export interface StoryScoreInput {
@@ -48,7 +56,20 @@ export function calculateStoryAnalytics(events: StoryViewEventInput[]): StoryAna
     rewatchRate: totalViews === 0 ? 0 : Number(((rewatches / totalViews) * 100).toFixed(1)),
     identifiedViews,
     privateViews,
+    reactionCounts: { normalHeart: 0, superHeart: 0, custom: 0, total: 0 },
   };
+}
+
+export function calculateStoryReactionCounts(reactions: Array<{ reactionType?: string | null; count?: number }>): StoryReactionCounts {
+  const counts: StoryReactionCounts = { normalHeart: 0, superHeart: 0, custom: 0, total: 0 };
+  for (const reaction of reactions) {
+    const amount = Math.max(0, Number(reaction.count ?? 1));
+    if (reaction.reactionType === "NORMAL_HEART") counts.normalHeart += amount;
+    else if (reaction.reactionType === "SUPER_HEART") counts.superHeart += amount;
+    else counts.custom += amount;
+    counts.total += amount;
+  }
+  return counts;
 }
 
 export function selectViewerExposure(input: {

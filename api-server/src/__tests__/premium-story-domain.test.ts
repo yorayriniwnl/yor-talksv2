@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   calculateStoryAnalytics,
+  calculateStoryReactionCounts,
   calculateStoryScore,
   resolveStoryDurationHours,
   selectViewerExposure,
@@ -25,7 +26,22 @@ test("story analytics count every idempotent event, unique viewers, and rewatche
     rewatchRate: 25,
     identifiedViews: 2,
     privateViews: 2,
+    reactionCounts: { normalHeart: 0, superHeart: 0, custom: 0, total: 0 },
   });
+});
+
+test("story reaction counts keep Super Hearts distinct from normal and custom reactions", () => {
+  assert.deepEqual(calculateStoryReactionCounts([
+    { reactionType: "NORMAL_HEART" },
+    { reactionType: "SUPER_HEART" },
+    { reactionType: "SUPER_HEART" },
+    { reactionType: "CUSTOM" },
+    { reactionType: "UNKNOWN" },
+  ]), { normalHeart: 1, superHeart: 2, custom: 2, total: 5 });
+  assert.deepEqual(calculateStoryReactionCounts([
+    { reactionType: "SUPER_HEART", count: 3 },
+    { reactionType: "CUSTOM", count: "2" as unknown as number },
+  ]), { normalHeart: 0, superHeart: 3, custom: 2, total: 5 });
 });
 
 test("viewer exposure is selected from the viewer preference, not a client identity claim", () => {

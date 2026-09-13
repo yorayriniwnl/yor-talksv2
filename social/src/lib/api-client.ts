@@ -826,6 +826,12 @@ export interface BackendStoryAnalytics {
   rewatchRate: number;
   identifiedViews: number;
   privateViews: number;
+  reactionCounts: {
+    normalHeart: number;
+    superHeart: number;
+    custom: number;
+    total: number;
+  };
 }
 
 export interface BackendStoryViewer {

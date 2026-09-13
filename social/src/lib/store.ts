@@ -939,8 +939,19 @@ let followRequestSequence = 0;
 let activitySessionSequence = 0;
 const notificationReadRequests = new Map<string, Promise<void>>();
 const safetyRelationshipRequests = new Map<string, Promise<boolean>>();
+const storyReactionToastExpirations = new Map<string, number>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
+
+function shouldShowStoryReactionToast(key: string): boolean {
+  const now = Date.now();
+  for (const [cachedKey, expiresAt] of storyReactionToastExpirations) {
+    if (expiresAt <= now) storyReactionToastExpirations.delete(cachedKey);
+  }
+  if ((storyReactionToastExpirations.get(key) ?? 0) > now) return false;
+  storyReactionToastExpirations.set(key, now + 5_000);
+  return true;
+}
 
 function stopRealtime(): void {
   disconnectSocket();
@@ -970,6 +981,7 @@ function setupRealtime(
   socket.off('conversation:created');
   socket.off('conversation:vanish:update');
   socket.off('notification:new');
+  socket.off('story:reaction');
   socket.on('message:receive', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
     set((state) => {
@@ -1037,6 +1049,17 @@ function setupRealtime(
     set((state) => (state.notifications.some((n) => n.id === mapped.id) ? state : { notifications: [mapped, ...state.notifications].slice(0, 100) }));
     if (mapped.actorId) void get().loadUserProfile(mapped.actorId);
     if (mapped.type === 'follow_request') void get().loadFollowRequests();
+  });
+  socket.on('story:reaction', (payload: { storyId?: unknown; reactionType?: unknown; actorId?: unknown }) => {
+    if (payload?.reactionType !== 'SUPER_HEART' || typeof payload.storyId !== 'string') return;
+    const currentUserId = get().currentUser?.id;
+    const actorId = typeof payload.actorId === 'string' ? payload.actorId : undefined;
+    if (!currentUserId || actorId === currentUserId) return;
+    const toastKey = `${payload.storyId}:${actorId ?? 'unknown'}:SUPER_HEART`;
+    if (!shouldShowStoryReactionToast(toastKey)) return;
+    const actor = actorId ? get().users[actorId] : undefined;
+    toast.success(`${actor?.displayName || actor?.username || 'Someone'} sent a Super Heart on your Story ✨`);
+    if (actorId) void get().loadUserProfile(actorId);
   });
 }
 
