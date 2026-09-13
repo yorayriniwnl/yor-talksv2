@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { AuthService } from "../services/auth-service.js";
 import { StorageService } from "../services/storage-service.js";
-import { PremiumProfileFeatureUnavailableError, UserService } from "../services/user-service.js";
+import { PremiumProfileFeatureUnavailableError, PremiumStoryViewFeatureUnavailableError, UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
 import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
@@ -215,11 +215,18 @@ export class UserController {
   };
 
   settings = async (req: Request, res: Response) => {
-    const user = await this.userService.updateSettings(req.user?.id ?? "", req.body);
-    if (!user) {
-      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    try {
+      const user = await this.userService.updateSettings(req.user?.id ?? "", req.body);
+      if (!user) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("Settings updated", user.settings));
+    } catch (error) {
+      if (error instanceof PremiumStoryViewFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      }
+      throw error;
     }
-    return res.status(200).json(createResponse("Settings updated", user.settings));
   };
 
   updatePrivacy = async (req: Request, res: Response) => {

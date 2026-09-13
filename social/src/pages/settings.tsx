@@ -349,6 +349,7 @@ export default function Settings() {
   const privacySaving = useAppStore((s) => s.privacySaving);
   const updatePrivacySettings = useAppStore((s) => s.updatePrivacy);
   const updateNotificationPreference = useAppStore((s) => s.updateNotificationPreference);
+  const updateStoryViewMode = useAppStore((s) => s.updateStoryViewMode);
   const notificationsEnabled = currentUser?.notificationsEnabled ?? true;
   const [notificationSaving, setNotificationSaving] = useState(false);
   const notificationPending = useRef(false);
@@ -356,6 +357,8 @@ export default function Settings() {
   const [contentFilterSaving, setContentFilterSaving] = useState(false);
   const contentFilterPending = useRef(false);
   const [contentFilter, setContentFilter] = useState<ContentRating>(currentUser?.contentFilter ?? DEFAULT_CONTENT_RATING);
+  const [storyViewMode, setStoryViewMode] = useState<'identified' | 'private'>(currentUser?.storyViewMode ?? 'identified');
+  const [storyViewModeSaving, setStoryViewModeSaving] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
   const [twoFactorQr, setTwoFactorQr] = useState('');
@@ -371,8 +374,9 @@ export default function Settings() {
   useEffect(() => {
     if (!currentUser) return;
     setContentFilter(currentUser.contentFilter ?? DEFAULT_CONTENT_RATING);
+    setStoryViewMode(currentUser.storyViewMode ?? 'identified');
     setTwoFactorEnabled(Boolean(currentUser.twoFactorEnabled));
-  }, [currentUser?.id, currentUser?.contentFilter, currentUser?.twoFactorEnabled]);
+  }, [currentUser?.id, currentUser?.contentFilter, currentUser?.storyViewMode, currentUser?.twoFactorEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -423,6 +427,22 @@ export default function Settings() {
     } finally {
       contentFilterPending.current = false;
       setContentFilterSaving(false);
+    }
+  };
+
+  const handleStoryViewModeChange = async (value: 'identified' | 'private') => {
+    if (storyViewModeSaving) return;
+    const previous = storyViewMode;
+    setStoryViewMode(value);
+    setStoryViewModeSaving(true);
+    try {
+      await updateStoryViewMode(value);
+      toast.success('Story viewing privacy updated');
+    } catch (error) {
+      setStoryViewMode(previous);
+      toast.error(error instanceof Error ? error.message : 'Could not update story viewing privacy');
+    } finally {
+      setStoryViewModeSaving(false);
     }
   };
 
@@ -643,6 +663,20 @@ export default function Settings() {
                 <SelectItem value="child_safe">Child-safe only</SelectItem>
                 <SelectItem value="regular">Child-safe + Regular</SelectItem>
                 <SelectItem value="mature">All content</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Story viewing privacy</p>
+              <p className="text-xs text-muted-foreground">Choose whether creators see your account in viewer lists. Private mode still contributes to aggregate analytics.</p>
+            </div>
+            <Select value={storyViewMode} disabled={storyViewModeSaving} onValueChange={(value) => void handleStoryViewModeChange(value as 'identified' | 'private')}>
+              <SelectTrigger aria-label="Story viewing privacy" className="w-full shrink-0 rounded-xl font-medium sm:w-44"><SelectValue placeholder="Viewer identity" /></SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="identified">Identified</SelectItem>
+                <SelectItem value="private">Private · Advanced</SelectItem>
               </SelectContent>
             </Select>
           </div>

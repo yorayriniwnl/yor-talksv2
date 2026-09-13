@@ -3,7 +3,7 @@ import { AudioLines, BarChart2, Check, Image as ImageIcon, Mic, Sparkles, Square
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
-import { api } from '@/lib/api-client';
+import { api, type BackendUser } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
@@ -27,6 +27,8 @@ const STORY_GRADIENTS = [
   { id: 'cosmic', name: 'Deep Cosmic', css: 'from-fuchsia-600 via-purple-900 to-black' },
 ];
 
+type StoryAudience = 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
+
 export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }: StoryBuilderModalProps) {
   const addStory = useAppStore((s) => s.addStory);
   const currentUser = useAppStore((s) => s.currentUser);
@@ -45,7 +47,13 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [highlightTitle, setHighlightTitle] = useState('');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
-  const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('followers');
+  const [audience, setAudience] = useState<StoryAudience>('followers');
+  const [audienceMembers, setAudienceMembers] = useState<BackendUser[]>([]);
+  const [audienceExclusions, setAudienceExclusions] = useState<BackendUser[]>([]);
+  const [audienceSearch, setAudienceSearch] = useState('');
+  const [audienceResults, setAudienceResults] = useState<BackendUser[]>([]);
+  const [customListMode, setCustomListMode] = useState<'include' | 'exclude'>('include');
+  const [premiumFeatures, setPremiumFeatures] = useState<Record<string, boolean> | null>(null);
   const [highlightDestination, setHighlightDestination] = useState<'none' | 'existing' | 'new'>(isHighlight ? 'new' : 'none');
   const [highlightId, setHighlightId] = useState('');
   const [highlights, setHighlights] = useState<Awaited<ReturnType<typeof api.getHighlights>>>([]);
@@ -65,13 +73,39 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   useEffect(() => {
     if (!isOpen || !currentUser) return;
     let active = true;
-    void api.getHighlights().then((items) => {
-      if (active) setHighlights(items);
-    }).catch(() => {
-      if (active) setHighlights([]);
+    void Promise.allSettled([api.getHighlights(), api.getPremiumProfileOptions()]).then(([highlightResult, profileResult]) => {
+      if (!active) return;
+      if (highlightResult.status === 'fulfilled') setHighlights(highlightResult.value);
+      else setHighlights([]);
+      if (profileResult.status === 'fulfilled') setPremiumFeatures(profileResult.value.enabledFeatures);
     });
     return () => { active = false; };
   }, [currentUser, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !currentUser || audienceSearch.trim().length < 2) {
+      setAudienceResults([]);
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void api.searchUsers(audienceSearch.trim()).then((users) => {
+        if (active) setAudienceResults(users.filter((user) => user.id !== currentUser.id));
+      }).catch(() => {
+        if (active) setAudienceResults([]);
+      });
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [audienceSearch, currentUser, isOpen]);
+
+  useEffect(() => {
+    if (premiumFeatures && premiumFeatures.CUSTOM_STORY_AUDIENCE === false && ['selected_people', 'everyone_except', 'custom'].includes(audience)) {
+      setAudience('followers');
+    }
+  }, [audience, premiumFeatures]);
 
   useEffect(() => {
     if (isHighlight) {
@@ -186,6 +220,18 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       toast.error('Choose a Highlight before publishing Highlight-only content');
       return;
     }
+    if (audience === 'selected_people' && audienceMembers.length === 0) {
+      toast.error('Choose at least one person for this audience');
+      return;
+    }
+    if (audience === 'everyone_except' && audienceExclusions.length === 0) {
+      toast.error('Choose at least one person to exclude');
+      return;
+    }
+    if (audience === 'custom' && audienceMembers.length === 0 && audienceExclusions.length === 0) {
+      toast.error('Add at least one included or excluded person');
+      return;
+    }
 
     setPublishing(true);
     try {
@@ -214,6 +260,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         contentCategory,
         contentRating,
         audience,
+        ...(audienceMembers.length > 0 ? { audienceMemberIds: audienceMembers.map((person) => person.id) } : {}),
+        ...(audienceExclusions.length > 0 ? { audienceExclusionIds: audienceExclusions.map((person) => person.id) } : {}),
         isHighlight: isHighlight || Boolean(targetHighlightId),
         ...(targetHighlightTitle ? { highlightTitle: targetHighlightTitle } : {}),
         ...(targetHighlightId ? { highlightId: targetHighlightId } : {}),
@@ -237,6 +285,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setAudience('followers');
+      setAudienceMembers([]);
+      setAudienceExclusions([]);
+      setAudienceSearch('');
+      setAudienceResults([]);
+      setCustomListMode('include');
       setHighlightDestination(isHighlight ? 'new' : 'none');
       setHighlightId('');
       setPublishMode('active');
@@ -295,7 +348,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           </div>
 
           <div className="text-[0.68rem] text-white/80 font-mono text-center relative z-10">
-                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : 'followers'} for {durationHours} hours{publishMode === 'highlight_only' ? ' · Highlight only' : ''}
+                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : audience === 'selected_people' ? `${audienceMembers.length} selected people` : audience === 'everyone_except' ? `everyone except ${audienceExclusions.length}` : audience === 'custom' ? 'custom audience' : 'followers'} for {durationHours} hours{publishMode === 'highlight_only' ? ' · Highlight only' : ''}
           </div>
         </div>
 
@@ -368,13 +421,41 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
           <label className="space-y-1.5 text-xs font-semibold">
             <span>Audience</span>
-            <select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+            <select value={audience} onChange={(event) => setAudience(event.target.value as StoryAudience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
               <option value="followers">Followers</option>
               <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends ({closeFriends.length})</option>
               <option value="public">Public</option>
+              <option value="selected_people" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Selected people · Advanced</option>
+              <option value="everyone_except" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Everyone except · Advanced</option>
+              <option value="custom" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Custom include/exclude · Advanced</option>
             </select>
             {audience === 'close_friends' && closeFriends.length === 0 && <span className="block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
           </label>
+
+          {['selected_people', 'everyone_except', 'custom'].includes(audience) && (
+            <div className="space-y-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
+              <div className="flex items-start gap-2">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-xs font-bold">Private audience controls</p>
+                  <p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Search by username or name. The server re-checks your entitlement and verifies every selected account before publishing.</p>
+                </div>
+              </div>
+              {audience === 'custom' && <label className="block space-y-1.5 text-xs font-semibold"><span>Editing list</span><select value={customListMode} onChange={(event) => setCustomListMode(event.target.value as typeof customListMode)} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="include">Include these people</option><option value="exclude">Exclude these people</option></select></label>}
+              <input value={audienceSearch} onChange={(event) => setAudienceSearch(event.target.value)} placeholder="Search people to add…" aria-label="Search people for story audience" className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+              {audienceSearch.trim().length > 0 && audienceSearch.trim().length < 2 && <p className="text-[0.68rem] text-muted-foreground">Type at least two characters to search.</p>}
+              {audienceResults.length > 0 && <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-border/40 bg-background/40 p-1">{audienceResults.map((person) => {
+                const targetList = audience === 'everyone_except' || (audience === 'custom' && customListMode === 'exclude') ? audienceExclusions : audienceMembers;
+                const selected = targetList.some((item) => item.id === person.id);
+                return <button key={person.id} type="button" onClick={() => {
+                  const useExclusions = audience === 'everyone_except' || (audience === 'custom' && customListMode === 'exclude');
+                  const setter = useExclusions ? setAudienceExclusions : setAudienceMembers;
+                  setter((items) => selected ? items.filter((item) => item.id !== person.id) : [...items, person]);
+                }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs hover:bg-primary/10"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">{(person.fullName || person.username || 'U').charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{person.fullName || person.username}</span><span className="block truncate text-[0.65rem] text-muted-foreground">@{person.username}</span></span><span className={cn('text-[0.65rem] font-bold', selected ? 'text-primary' : 'text-muted-foreground')}>{selected ? 'Added' : 'Add'}</span></button>;
+              })}</div>}
+              {(audienceMembers.length > 0 || audienceExclusions.length > 0) && <div className="flex flex-wrap gap-1.5">{audienceMembers.map((person) => <button key={`include-${person.id}`} type="button" onClick={() => setAudienceMembers((items) => items.filter((item) => item.id !== person.id))} className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[0.65rem] font-semibold text-primary">+ @{person.username} ×</button>)}{audienceExclusions.map((person) => <button key={`exclude-${person.id}`} type="button" onClick={() => setAudienceExclusions((items) => items.filter((item) => item.id !== person.id))} className="rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-1 text-[0.65rem] font-semibold text-destructive">− @{person.username} ×</button>)}</div>}
+            </div>
+          )}
 
           <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
             <div className="flex items-start gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-xs font-bold">Advanced delivery</p><p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Keep a story in the active tray, save it to a Highlight, or publish directly to an archive.</p></div></div>

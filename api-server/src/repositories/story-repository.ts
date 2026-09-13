@@ -176,6 +176,14 @@ export class StoryRepository {
     return this.findActiveById(id, userId);
   }
 
+  async findReaction(id: string, userId: string): Promise<{ emoji: string; reactionType: "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM" } | undefined> {
+    const [reaction] = await db.select({ emoji: storyReactionsTable.emoji, reactionType: storyReactionsTable.reactionType })
+      .from(storyReactionsTable)
+      .where(and(eq(storyReactionsTable.storyId, id), eq(storyReactionsTable.userId, userId)))
+      .limit(1);
+    return reaction as { emoji: string; reactionType: "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM" } | undefined;
+  }
+
   async isAudienceMember(storyId: string, userId: string): Promise<boolean> {
     const [member] = await db.select({ userId: storyAudienceMembersTable.userId })
       .from(storyAudienceMembersTable)

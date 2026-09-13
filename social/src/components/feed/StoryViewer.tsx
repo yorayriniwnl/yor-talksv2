@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { useAppStore, type Story } from '@/lib/store';
-import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2 } from 'lucide-react';
+import { api, type BackendStoryAnalytics, type BackendStoryViewer } from '@/lib/api-client';
+import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2, Search, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
@@ -40,6 +41,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   
   // Creator tip modal
   const [tippingOpen, setTippingOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
+  const [analytics, setAnalytics] = useState<BackendStoryAnalytics | null>(null);
+  const [viewers, setViewers] = useState<BackendStoryViewer[]>([]);
+  const [viewerQuery, setViewerQuery] = useState('');
+  const [viewerCursor, setViewerCursor] = useState<string | null>(null);
+  const [hasMoreViewers, setHasMoreViewers] = useState(false);
+  const [superHeartEnabled, setSuperHeartEnabled] = useState(false);
+  const [superHeartBusy, setSuperHeartBusy] = useState(false);
 
   const currentAuthorId = authors[authorIndex];
   const currentStories = groupedStories[currentAuthorId] || [];
@@ -69,6 +80,57 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     setProgress(0);
     setIsPaused(currentStory?.type === 'voice');
   }, [currentStory?.id, currentStory?.type]);
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUser) return () => { active = false; };
+    void api.getPremiumProfileOptions().then((result) => {
+      if (active) setSuperHeartEnabled(result.enabledFeatures.SUPER_HEART === true);
+    }).catch(() => {
+      if (active) setSuperHeartEnabled(false);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    setInsightsOpen(false);
+    setViewerQuery('');
+    setViewerCursor(null);
+    setViewers([]);
+    setAnalytics(null);
+    setInsightsError('');
+  }, [currentStory?.id]);
+
+  useEffect(() => {
+    if (!insightsOpen || currentAuthorId !== currentUser?.id || !currentStory) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setInsightsLoading(true);
+      setInsightsError('');
+      setViewerCursor(null);
+      void Promise.allSettled([
+        api.getStoryAnalytics(currentStory.id),
+        api.getStoryViewers(currentStory.id, viewerQuery),
+      ]).then(([analyticsResult, viewersResult]) => {
+        if (!active) return;
+        if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
+        if (viewersResult.status === 'fulfilled') {
+          setViewers(viewersResult.value.viewers);
+          setViewerCursor(viewersResult.value.nextCursor);
+          setHasMoreViewers(Boolean(viewersResult.value.nextCursor));
+        }
+        if (analyticsResult.status === 'rejected' && viewersResult.status === 'rejected') {
+          setInsightsError('Story insights are not enabled for this account yet.');
+        }
+      }).finally(() => {
+        if (active) setInsightsLoading(false);
+      });
+    }, 180);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [currentAuthorId, currentStory?.id, currentUser?.id, insightsOpen, viewerQuery]);
 
   // Mark as viewed
   useEffect(() => {
@@ -124,6 +186,35 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
     if (currentStory) {
       reactToStory(currentStory.id, emoji).catch(console.error);
+    }
+  };
+
+  const handleSuperHeart = async () => {
+    if (!currentStory || !superHeartEnabled || superHeartBusy || currentAuthorId === currentUser?.id) return;
+    setSuperHeartBusy(true);
+    try {
+      sounds.playChime();
+      await reactToStory(currentStory.id, '💖', 'SUPER_HEART');
+      toast.success('Super Heart sent ✨');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Super Heart could not be sent');
+    } finally {
+      setSuperHeartBusy(false);
+    }
+  };
+
+  const loadMoreViewers = async () => {
+    if (!currentStory || !viewerCursor || insightsLoading) return;
+    setInsightsLoading(true);
+    try {
+      const result = await api.getStoryViewers(currentStory.id, viewerQuery, viewerCursor);
+      setViewers((current) => [...current, ...result.viewers]);
+      setViewerCursor(result.nextCursor);
+      setHasMoreViewers(Boolean(result.nextCursor));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load more viewers');
+    } finally {
+      setInsightsLoading(false);
     }
   };
 
@@ -198,6 +289,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             </div>
 
             <div className="flex items-center gap-2 story-controls">
+              {currentAuthorId === currentUser?.id && (
+                <button
+                  type="button"
+                  onClick={() => setInsightsOpen((open) => !open)}
+                  className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                  aria-pressed={insightsOpen}
+                >
+                  <BarChart2 className="h-3.5 w-3.5" /> Insights
+                </button>
+              )}
               {/* Tip Creator in Story */}
               {author && (
                 <button
@@ -220,6 +321,25 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               </button>
             </div>
           </div>
+
+          {insightsOpen && currentAuthorId === currentUser?.id && (
+            <div className="story-controls absolute inset-x-3 top-24 bottom-24 z-50 overflow-hidden rounded-3xl border border-white/15 bg-zinc-950/95 p-4 text-white shadow-2xl backdrop-blur-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3">
+                <div><p className="text-[0.62rem] font-mono font-bold uppercase tracking-[0.18em] text-primary">Yor Advanced</p><h3 className="mt-1 font-display text-lg font-bold">Story insights</h3><p className="mt-1 text-[0.68rem] leading-relaxed text-white/60">Private viewers remain aggregate-only. Identified viewers appear only to the story owner.</p></div>
+                <button type="button" onClick={() => setInsightsOpen(false)} className="rounded-full bg-white/10 p-2 text-white/70 hover:bg-white/20 hover:text-white" aria-label="Close story insights"><X className="h-4 w-4" /></button>
+              </div>
+              {analytics && <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['Views', analytics.totalViews], ['Unique', analytics.uniqueViewers], ['Rewatches', analytics.rewatches], ['Rewatch rate', `${analytics.rewatchRate}%`]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-white/10 bg-white/5 p-3"><p className="text-[0.58rem] font-bold uppercase tracking-[0.12em] text-white/50">{label}</p><p className="mt-1 font-display text-xl font-bold text-white">{value}</p></div>)}</div>}
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3"><Search className="h-4 w-4 text-white/50" /><input value={viewerQuery} onChange={(event) => setViewerQuery(event.target.value)} placeholder="Search identified viewers…" aria-label="Search identified viewers" className="h-10 min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/40" /></div>
+              {analytics && <p className="mt-2 text-[0.65rem] text-white/50">{analytics.identifiedViews} identified · {analytics.privateViews} private aggregate views</p>}
+              <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+                {insightsLoading && viewers.length === 0 && <p className="p-4 text-xs text-white/60">Loading viewer signal…</p>}
+                {!insightsLoading && viewers.length === 0 && !insightsError && <p className="p-4 text-xs text-white/60">No identified viewers match this search.</p>}
+                {viewers.map((viewer) => <div key={`${viewer.viewerId}-${viewer.viewedAt}`} className="flex items-center gap-3 border-b border-white/5 px-3 py-2.5 last:border-0"><Avatar className="h-8 w-8"><AvatarImage src={viewer.avatarUrl ?? undefined} /><AvatarFallback className="bg-white/10 text-xs">{(viewer.displayName || viewer.username || 'U').charAt(0).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{viewer.displayName || viewer.username}</p><p className="truncate text-[0.65rem] text-white/50">@{viewer.username}</p></div><span className="flex shrink-0 items-center gap-1 text-[0.62rem] text-white/50"><Clock className="h-3 w-3" /> {formatDistanceToNow(new Date(viewer.viewedAt), { addSuffix: true })}</span></div>)}
+              </div>
+              {hasMoreViewers && <button type="button" onClick={() => void loadMoreViewers()} className="mt-3 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-bold text-white/80 hover:bg-white/10">Load more identified viewers</button>}
+              {insightsError && <p role="status" className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-200">{insightsError}</p>}
+            </div>
+          )}
 
           {/* Floating Reaction Particles Stream */}
           <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
@@ -320,6 +440,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 </button>
               ))}
             </div>
+            {superHeartEnabled && currentAuthorId !== currentUser?.id && <button type="button" onClick={() => void handleSuperHeart()} disabled={superHeartBusy} className="flex w-full items-center justify-center gap-2 rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 py-2 text-xs font-bold text-fuchsia-100 transition-colors hover:bg-fuchsia-400/25 disabled:opacity-50"><Heart className="h-3.5 w-3.5 fill-current" /> {superHeartBusy ? 'Sending Super Heart…' : 'Send Super Heart'}</button>}
 
             {/* DM Reply Input */}
             <form onSubmit={handleSendReaction} className="flex items-center gap-2">

@@ -10,6 +10,7 @@ import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, PREMIUM_MESSAGE_STYLES, PREMIUM_STORY_STYLES, requiredPremiumFeatures, type PremiumProfileSelection } from "../features/premium-profile.js";
 
 export class PremiumProfileFeatureUnavailableError extends Error {}
+export class PremiumStoryViewFeatureUnavailableError extends Error {}
 
 export class UserService {
   constructor(
@@ -275,6 +276,9 @@ export class UserService {
   }
 
   async updateSettings(userId: string, settings: Partial<UserSettings>): Promise<UserRecord | undefined> {
+    if (settings.storyViewMode === "private" && !(await this.entitlementService.hasFeature(userId, "STORY_PRIVATE_VIEW"))) {
+      throw new PremiumStoryViewFeatureUnavailableError("Private story viewing is not enabled for this account");
+    }
     return this.userRepository.patchSettings(userId, settings);
   }
 

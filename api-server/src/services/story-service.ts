@@ -3,7 +3,7 @@ import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import { StoryRepository, type StoryViewerRow } from "../repositories/story-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import type { HighlightRecord, StoryRecord, StoryReactionType } from "../types/index.js";
+import type { HighlightRecord, StoryReaction, StoryRecord, StoryReactionType } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
@@ -18,6 +18,10 @@ export class PremiumFeatureUnavailableError extends Error {}
 
 const EXTENDED_STORY_MAX_HOURS = 72;
 const PRIORITY_BOOST = 20;
+
+export function shouldNotifySuperHeart(previous: Pick<StoryReaction, "emoji" | "reactionType"> | undefined, nextEmoji: string): boolean {
+  return !(previous?.reactionType === "SUPER_HEART" && previous.emoji === nextEmoji);
+}
 
 export class StoryService {
   constructor(
@@ -178,8 +182,13 @@ export class StoryService {
     if (reactionType === "SUPER_HEART" && !(await this.entitlementService.hasFeature(userId, "SUPER_HEART"))) {
       throw new PremiumFeatureUnavailableError("Super Heart is not enabled for this account");
     }
-    const updated = await this.storyRepository.react(storyId, userId, emoji.slice(0, 32), reactionType);
-    if (updated && reactionType === "SUPER_HEART" && updated.authorId !== userId) {
+    const normalizedEmoji = emoji.slice(0, 32);
+    const previousReaction = await this.storyRepository.findReaction(storyId, userId);
+    if (reactionType === "SUPER_HEART" && !shouldNotifySuperHeart(previousReaction, normalizedEmoji)) {
+      return this.hydrateStory(story, userId);
+    }
+    const updated = await this.storyRepository.react(storyId, userId, normalizedEmoji, reactionType);
+    if (updated && reactionType === "SUPER_HEART" && updated.authorId !== userId && shouldNotifySuperHeart(previousReaction, normalizedEmoji)) {
       await this.notifySuperHeart(updated, userId);
     }
     return updated ? this.hydrateStory(updated, userId) : undefined;

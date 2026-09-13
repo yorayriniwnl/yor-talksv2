@@ -337,6 +337,7 @@ export interface BackendUser {
     privateAccount?: boolean;
     theme?: 'light' | 'dark';
     contentFilter?: ContentRating;
+    storyViewMode?: 'identified' | 'private';
     onboardingCompleted?: boolean;
   };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
@@ -573,7 +574,7 @@ export const api = {
   getProfileShowcases: (userId: string) => request<BackendShowcase[]>(`/users/${encodeURIComponent(userId)}/showcases`),
   createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageUrl?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteProfileShowcase: (userId: string, showcaseId: string) => request<null>(`/users/${encodeURIComponent(userId)}/showcases/${encodeURIComponent(showcaseId)}`, { method: 'DELETE' }),
-  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
+  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating; storyViewMode?: 'identified' | 'private' }) =>
     request<NonNullable<BackendUser['settings']>>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>
     request<{ profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean }>('/users/me/privacy', { method: 'PUT', body: JSON.stringify(payload) }),
@@ -654,7 +655,9 @@ export const api = {
   createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
-  reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  reactToStory: (id: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji, ...(reactionType ? { reactionType } : {}) }) }),
+  getStoryAnalytics: (id: string) => request<BackendStoryAnalytics>(`/stories/${encodeURIComponent(id)}/analytics`),
+  getStoryViewers: (id: string, query = '', cursor?: string) => request<BackendStoryViewers>(`/stories/${encodeURIComponent(id)}/viewers?${new URLSearchParams({ ...(query.trim() ? { q: query.trim() } : {}), ...(cursor ? { cursor } : {}) }).toString()}`),
   voteStoryPoll: (id: string, optionId: string) => request<BackendStory>(`/stories/${id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
 
   // ---- Broadcast channels ----
@@ -810,6 +813,28 @@ export interface BackendHighlight {
   storyIds: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BackendStoryAnalytics {
+  totalViews: number;
+  uniqueViewers: number;
+  rewatches: number;
+  rewatchRate: number;
+  identifiedViews: number;
+  privateViews: number;
+}
+
+export interface BackendStoryViewer {
+  viewerId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  viewedAt: string;
+}
+
+export interface BackendStoryViewers {
+  viewers: BackendStoryViewer[];
+  nextCursor: string | null;
 }
 
 export interface BackendNote {

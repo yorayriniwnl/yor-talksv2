@@ -116,3 +116,4 @@ export const grievanceSubmitRateLimiter = createLimiter("yor:rate:grievance-subm
 export const grievanceStatusRateLimiter = createLimiter("yor:rate:grievance-status:", 15 * 60 * 1000, 30);
 export const reportRateLimiter = createLimiter("yor:rate:report:", 15 * 60 * 1000, 20);
 export const mediaRateLimiter = createLimiter("yor:rate:media:", 15 * 60 * 1000, 30);
+export const storyReactionRateLimiter = createLimiter("yor:rate:story-reaction:", 60 * 1000, 60);

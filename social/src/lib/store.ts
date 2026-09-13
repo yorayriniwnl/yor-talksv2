@@ -67,6 +67,7 @@ export type User = {
   twoFactorEnabled?: boolean;
   notificationsEnabled?: boolean;
   contentFilter?: ContentRating;
+  storyViewMode?: 'identified' | 'private';
   onboardingCompleted?: boolean;
 };
 
@@ -363,6 +364,7 @@ function mapUser(u: BackendUser): User {
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
     notificationsEnabled: u.settings?.notificationsEnabled !== false,
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
+    storyViewMode: u.settings?.storyViewMode ?? 'identified',
     onboardingCompleted: u.settings?.onboardingCompleted,
   };
 }
@@ -824,13 +826,14 @@ interface AppState {
 
   addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
-  reactToStory: (storyId: string, emoji: string) => Promise<void>;
+  reactToStory: (storyId: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
 
   loadStreams: () => Promise<void>;
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
+  updateStoryViewMode: (storyViewMode: 'identified' | 'private') => Promise<void>;
   updateNotificationPreference: (enabled: boolean) => Promise<void>;
   toggleSaveProduct: (productId: string) => Promise<void>;
   sendAIMessage: (content: string) => Promise<void>;
@@ -2066,7 +2069,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      reactToStory: async (storyId, emoji) => {
+      reactToStory: async (storyId, emoji, reactionType = 'CUSTOM') => {
         const uid = get().currentUser?.id;
         if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
@@ -2078,10 +2081,11 @@ export const useAppStore = create<AppState>()(
           )
         }));
         try {
-          const updated = await api.reactToStory(storyId, emoji);
+          const updated = await api.reactToStory(storyId, emoji, reactionType);
           set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
-        } catch {
+        } catch (error) {
           if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
+          throw error;
         }
       },
 
@@ -2384,6 +2388,13 @@ export const useAppStore = create<AppState>()(
           get().loadVideos(),
           get().loadStreams(),
         ]);
+      },
+
+      updateStoryViewMode: async (storyViewMode) => {
+        const settings = await api.updateSettings({ storyViewMode });
+        set((state) => ({
+          currentUser: state.currentUser ? { ...state.currentUser, storyViewMode: settings.storyViewMode ?? storyViewMode } : state.currentUser,
+        }));
       },
 
       updateNotificationPreference: async (enabled) => {

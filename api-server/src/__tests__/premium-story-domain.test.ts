@@ -7,7 +7,7 @@ import {
   selectViewerExposure,
   type StoryViewEventInput,
 } from "../services/story-analytics-service.js";
-import { StoryService } from "../services/story-service.js";
+import { shouldNotifySuperHeart, StoryService } from "../services/story-service.js";
 import type { StoryRepository } from "../repositories/story-repository.js";
 
 test("story analytics count every idempotent event, unique viewers, and rewatches", () => {
@@ -40,6 +40,12 @@ test("story duration is limited to the entitlement ceiling and ranking boost is 
   assert.throws(() => resolveStoryDurationHours(72, false, 72), /entitlement/i);
   assert.throws(() => resolveStoryDurationHours(168, true, 72), /maximum/i);
   assert.equal(calculateStoryScore({ relationshipScore: 12, recencyScore: 30, engagementScore: 5, priorityBoost: 99 }), 67);
+});
+
+test("duplicate Super Hearts are idempotent while a changed reaction can notify again", () => {
+  assert.equal(shouldNotifySuperHeart({ emoji: "💖", reactionType: "SUPER_HEART" }, "💖"), false);
+  assert.equal(shouldNotifySuperHeart({ emoji: "💖", reactionType: "SUPER_HEART" }, "💘"), true);
+  assert.equal(shouldNotifySuperHeart({ emoji: "❤️", reactionType: "NORMAL_HEART" }, "💖"), true);
 });
 
 test("highlight management stays owner-scoped and preserves ordered story ids", async () => {
