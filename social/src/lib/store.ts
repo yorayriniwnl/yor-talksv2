@@ -37,6 +37,7 @@ import { reconcileFollowRequests, reconcileNotifications } from '@/lib/activity-
 import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { DEFAULT_STORY_TEXT_STYLE, type StoryTextStyle } from '@/lib/story-text-style';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -131,6 +132,7 @@ export type Story = {
   textContent?: string;
   backgroundGradient?: string;
   storyFontId?: 'default' | 'cinematic' | 'mono';
+  storyTextStyle?: StoryTextStyle;
   viewed: boolean;
   createdAt: string;
   expiresAt: string;
@@ -410,6 +412,7 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     textContent: s.textContent ?? undefined,
     backgroundGradient: s.backgroundGradient ?? undefined,
     storyFontId: s.storyFontId ?? 'default',
+    storyTextStyle: s.storyTextStyle ?? DEFAULT_STORY_TEXT_STYLE,
     viewed: currentUserId ? viewerIds.includes(currentUserId) : false,
     createdAt: s.createdAt || new Date().toISOString(),
     expiresAt: s.expiresAt || new Date(Date.now() + 86400000).toISOString(),
@@ -829,7 +832,7 @@ interface AppState {
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { storyFontId?: Story['storyFontId']; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { storyFontId?: Story['storyFontId']; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
@@ -2118,6 +2121,7 @@ export const useAppStore = create<AppState>()(
           textContent: story.textContent,
           backgroundGradient: story.backgroundGradient,
           storyFontId: story.storyFontId ?? 'default',
+          storyTextStyle: story.storyTextStyle ?? DEFAULT_STORY_TEXT_STYLE,
           viewed: false,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 86400000).toISOString(),

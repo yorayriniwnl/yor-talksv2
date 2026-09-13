@@ -3,6 +3,8 @@
 // A Vercel frontend can point at a separately hosted API with
 // VITE_API_BASE_URL without changing application code.
 
+import type { StoryTextStyle } from '@/lib/story-text-style';
+
 export interface Tokens {
   accessToken: string;
   /** Refresh tokens are HttpOnly cookies and are never available to JS. */
@@ -652,7 +654,7 @@ export const api = {
   getHighlights: () => request<BackendHighlight[]>('/highlights'),
   createHighlight: (payload: { title: string; coverUrl?: string }) => request<BackendHighlight>('/highlights', { method: 'POST', body: JSON.stringify(payload) }),
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; storyFontId?: 'default' | 'cinematic' | 'mono'; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; storyFontId?: 'default' | 'cinematic' | 'mono'; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji, ...(reactionType ? { reactionType } : {}) }) }),
@@ -786,6 +788,7 @@ export interface BackendStory {
   textContent: string | null;
   backgroundGradient: string | null;
   storyFontId?: 'default' | 'cinematic' | 'mono';
+  storyTextStyle?: StoryTextStyle | null;
   createdAt: string;
   expiresAt: string;
   viewerIds: string[];

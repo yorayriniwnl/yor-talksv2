@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { contentCategorySchema } from "../utils/content-category.js";
+import { storyTextStyleSchema } from "../features/story-text-style.js";
 
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
@@ -9,6 +10,7 @@ export const createStorySchema = z.object({
   textContent: z.string().optional(),
   backgroundGradient: z.string().optional(),
   storyFontId: z.enum(["default", "cinematic", "mono"]).optional(),
+  storyTextStyle: storyTextStyleSchema.optional(),
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
   highlightId: z.string().uuid().optional(),

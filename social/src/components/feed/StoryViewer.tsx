@@ -10,6 +10,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { toast } from 'sonner';
+import { storyTextStyleToCss } from '@/lib/story-text-style';
+import { storyBackgroundToCss } from '@/lib/story-background';
 
 interface StoryViewerProps {
   initialAuthorId: string;
@@ -369,9 +371,9 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             {currentStory.type === 'text' && (
               <div 
                 className="absolute inset-0 w-full h-full flex items-center justify-center p-8 text-center"
-                style={{ background: currentStory.backgroundGradient || 'linear-gradient(to bottom right, #4facfe, #00f2fe)' }}
+                style={storyBackgroundToCss(currentStory.backgroundGradient)}
               >
-                <p className={cn("text-white text-2xl font-black leading-snug whitespace-pre-wrap drop-shadow-xl", currentStory.storyFontId === 'mono' ? 'font-mono' : currentStory.storyFontId === 'cinematic' ? 'font-serif' : 'font-display')}>
+                <p style={storyTextStyleToCss(currentStory.storyTextStyle)} className={cn("text-white drop-shadow-xl", currentStory.storyFontId === 'mono' ? 'font-mono' : currentStory.storyFontId === 'cinematic' ? 'font-serif' : 'font-display')}>
                   {currentStory.textContent}
                 </p>
               </div>

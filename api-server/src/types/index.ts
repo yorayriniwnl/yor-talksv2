@@ -1,5 +1,6 @@
 export type UserRole = "user" | "moderator" | "admin";
 import type { ContentRating } from "../utils/content-safety.js";
+import type { StoryTextStyle } from "../features/story-text-style.js";
 
 export interface UserRecord {
   id: string;
@@ -425,6 +426,7 @@ export interface StoryRecord {
   textContent?: string | null;
   backgroundGradient?: string | null;
   storyFontId?: string;
+  storyTextStyle?: StoryTextStyle | null;
   createdAt: string;
   publishedAt?: string;
   expiresAt: string;

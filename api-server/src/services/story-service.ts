@@ -14,6 +14,7 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { QueueService } from "./queue-service.js";
 import { isPremiumStoryStyle } from "../features/premium-profile.js";
+import { isAdvancedStoryTextStyle, normalizeStoryTextStyle, type StoryTextStyle } from "../features/story-text-style.js";
 
 export class PremiumFeatureUnavailableError extends Error {}
 
@@ -42,6 +43,7 @@ export class StoryService {
     textContent?: string;
     backgroundGradient?: string;
     storyFontId?: string;
+    storyTextStyle?: StoryTextStyle;
     isHighlight: boolean;
     highlightTitle?: string;
     highlightId?: string;
@@ -65,8 +67,10 @@ export class StoryService {
       this.entitlementService.hasFeature(input.authorId, "STORY_FONT"),
     ]);
     const storyFontId = input.storyFontId ?? "default";
+    const storyTextStyle = normalizeStoryTextStyle(input.storyTextStyle);
     if (!isPremiumStoryStyle(storyFontId)) throw new Error("Story font is not supported");
     if (storyFontId !== "default" && !hasStoryFont) throw new PremiumFeatureUnavailableError("Story fonts are not enabled for this account");
+    if (isAdvancedStoryTextStyle(storyTextStyle) && !hasStoryFont) throw new PremiumFeatureUnavailableError("Advanced story text styling is not enabled for this account");
     if (advancedAudience && !hasCustomAudience) throw new PremiumFeatureUnavailableError("Custom story audiences are not enabled for this account");
     if (input.priority && !hasPriority) throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
     const publishMode = input.publishMode ?? "active";
@@ -105,6 +109,7 @@ export class StoryService {
       textContent: input.textContent || null,
       backgroundGradient: input.backgroundGradient || null,
       storyFontId,
+      storyTextStyle,
       createdAt: publishedAt,
       publishedAt,
       expiresAt,
