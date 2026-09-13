@@ -50,3 +50,8 @@ export const storyViewerQuerySchema = z.object({
 export const storyPollVoteSchema = z.object({
   optionId: z.string().uuid("Invalid story poll option ID"),
 });
+
+export const createHighlightSchema = z.object({
+  title: z.string().trim().min(1).max(60),
+  coverUrl: z.string().url().max(2_000).optional(),
+});

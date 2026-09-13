@@ -7,6 +7,8 @@ import {
   selectViewerExposure,
   type StoryViewEventInput,
 } from "../services/story-analytics-service.js";
+import { StoryService } from "../services/story-service.js";
+import type { StoryRepository } from "../repositories/story-repository.js";
 
 test("story analytics count every idempotent event, unique viewers, and rewatches", () => {
   const events: StoryViewEventInput[] = [
@@ -38,4 +40,27 @@ test("story duration is limited to the entitlement ceiling and ranking boost is 
   assert.throws(() => resolveStoryDurationHours(72, false, 72), /entitlement/i);
   assert.throws(() => resolveStoryDurationHours(168, true, 72), /maximum/i);
   assert.equal(calculateStoryScore({ relationshipScore: 12, recencyScore: 30, engagementScore: 5, priorityBoost: 99 }), 67);
+});
+
+test("highlight management stays owner-scoped and preserves ordered story ids", async () => {
+  const highlight = {
+    id: "33333333-3333-4333-8333-333333333333",
+    ownerId: "11111111-1111-4111-8111-111111111111",
+    title: "Field notes",
+    coverUrl: null,
+    storyIds: ["44444444-4444-4444-8444-444444444444"],
+    createdAt: "2026-09-13T00:00:00.000Z",
+    updatedAt: "2026-09-13T00:00:00.000Z",
+  };
+  let createdOwner = "";
+  const repository = {
+    listHighlights: async (ownerId: string) => ownerId === highlight.ownerId ? [highlight] : [],
+    createHighlight: async (ownerId: string, title: string) => { createdOwner = ownerId; return { ...highlight, ownerId, title, storyIds: [] }; },
+  } as unknown as StoryRepository;
+  const service = new StoryService(repository);
+
+  assert.deepEqual(await service.listHighlights(highlight.ownerId), [highlight]);
+  assert.deepEqual(await service.listHighlights("55555555-5555-4555-8555-555555555555"), []);
+  assert.equal((await service.createHighlight(highlight.ownerId, "  New signal  ")).title, "New signal");
+  assert.equal(createdOwner, highlight.ownerId);
 });

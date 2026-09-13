@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
   UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff,
-  ChevronDown, Layers3
+  ChevronDown, Layers3, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -101,7 +101,7 @@ export function AppShell({ children }: AppShellProps) {
     },
     {
       label: 'Account',
-      items: [{ icon: Settings, label: 'Settings', path: '/settings' }],
+      items: [{ icon: Sparkles, label: 'Yor Advanced', path: '/advanced' }, { icon: Settings, label: 'Settings', path: '/settings' }],
     },
   ];
 

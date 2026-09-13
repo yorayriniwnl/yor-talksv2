@@ -648,8 +648,10 @@ export const api = {
     request<null>(`/projects/${projectId}/collaborators`, { method: 'POST', body: JSON.stringify({ userId, role }) }),
 
   // ---- Stories ----
+  getHighlights: () => request<BackendHighlight[]>('/highlights'),
+  createHighlight: (payload: { title: string; coverUrl?: string }) => request<BackendHighlight>('/highlights', { method: 'POST', body: JSON.stringify(payload) }),
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
@@ -786,7 +788,9 @@ export interface BackendStory {
   reactions: { userId: string; emoji: string }[];
   isHighlight: boolean;
   highlightTitle: string | null;
-  audience?: 'followers' | 'close_friends' | 'public';
+  highlightId?: string | null;
+  publishMode?: 'active' | 'highlight_only';
+  audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
   poll?: {
@@ -796,6 +800,16 @@ export interface BackendStory {
     totalVotes: number;
     votedOptionId?: string;
   };
+}
+
+export interface BackendHighlight {
+  id: string;
+  ownerId: string;
+  title: string;
+  coverUrl?: string | null;
+  storyIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BackendNote {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, gt, desc, and, inArray, or, sql, countDistinct } from "drizzle-orm";
+import { eq, gt, desc, asc, and, inArray, or, sql, countDistinct } from "drizzle-orm";
 import {
   highlightsTable,
   highlightItemsTable,
@@ -15,7 +15,7 @@ import {
   usersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
-import type { StoryRecord } from "../types/index.js";
+import type { HighlightRecord, StoryRecord } from "../types/index.js";
 import type { StoryAnalyticsSummary, StoryViewExposure } from "../services/story-analytics-service.js";
 
 export interface StoryViewerRow {
@@ -42,6 +42,44 @@ function decodeStoryViewerCursor(value: string | undefined): StoryViewerCursor |
 }
 
 export class StoryRepository {
+  async listHighlights(ownerId: string): Promise<HighlightRecord[]> {
+    const highlights = await db.select().from(highlightsTable)
+      .where(eq(highlightsTable.ownerId, ownerId))
+      .orderBy(desc(highlightsTable.updatedAt), desc(highlightsTable.createdAt));
+    if (highlights.length === 0) return [];
+    const items = await db.select().from(highlightItemsTable)
+      .where(inArray(highlightItemsTable.highlightId, highlights.map((highlight) => highlight.id)))
+      .orderBy(asc(highlightItemsTable.position), asc(highlightItemsTable.createdAt));
+    const storyIdsByHighlight = new Map<string, string[]>();
+    for (const item of items) {
+      const storyIds = storyIdsByHighlight.get(item.highlightId) ?? [];
+      storyIds.push(item.storyId);
+      storyIdsByHighlight.set(item.highlightId, storyIds);
+    }
+    return highlights.map((highlight) => ({
+      id: highlight.id,
+      ownerId: highlight.ownerId,
+      title: highlight.title,
+      coverUrl: highlight.coverUrl,
+      storyIds: storyIdsByHighlight.get(highlight.id) ?? [],
+      createdAt: highlight.createdAt,
+      updatedAt: highlight.updatedAt,
+    }));
+  }
+
+  async createHighlight(ownerId: string, title: string, coverUrl?: string): Promise<HighlightRecord> {
+    const now = new Date().toISOString();
+    const [created] = await db.insert(highlightsTable).values({
+      id: randomUUID(),
+      ownerId,
+      title,
+      coverUrl: coverUrl || null,
+      createdAt: now,
+      updatedAt: now,
+    }).returning();
+    return { ...created, storyIds: [] };
+  }
+
   async create(
     story: StoryRecord,
     poll?: { id: string; question: string; options: Array<{ id: string; text: string; position: number }> },

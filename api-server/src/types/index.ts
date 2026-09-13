@@ -440,6 +440,16 @@ export interface StoryRecord {
   poll?: StoryPoll;
 }
 
+export interface HighlightRecord {
+  id: string;
+  ownerId: string;
+  title: string;
+  coverUrl?: string | null;
+  storyIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type StoryAudience = "followers" | "close_friends" | "public" | "selected_people" | "everyone_except" | "custom";
 export type NoteAudience = "followers" | "close_friends" | "public";
 export type StoryReactionType = "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM";

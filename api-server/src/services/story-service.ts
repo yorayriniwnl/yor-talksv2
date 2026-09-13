@@ -3,7 +3,7 @@ import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import { StoryRepository, type StoryViewerRow } from "../repositories/story-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import type { StoryRecord, StoryReactionType } from "../types/index.js";
+import type { HighlightRecord, StoryRecord, StoryReactionType } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
@@ -120,6 +120,16 @@ export class StoryService {
       highlightId: input.highlightId,
     });
     return this.hydrateStory(created, input.authorId);
+  }
+
+  async listHighlights(ownerId: string): Promise<HighlightRecord[]> {
+    return this.storyRepository.listHighlights(ownerId);
+  }
+
+  async createHighlight(ownerId: string, title: string, coverUrl?: string): Promise<HighlightRecord> {
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) throw new Error("Highlight title is required");
+    return this.storyRepository.createHighlight(ownerId, normalizedTitle, coverUrl?.trim() || undefined);
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {

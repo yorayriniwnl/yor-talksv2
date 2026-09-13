@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AudioLines, BarChart2, Image as ImageIcon, Mic, Square, Type, Send, X, Upload } from 'lucide-react';
+import { AudioLines, BarChart2, Check, Image as ImageIcon, Mic, Sparkles, Square, Type, Send, X, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
@@ -46,6 +46,12 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('followers');
+  const [highlightDestination, setHighlightDestination] = useState<'none' | 'existing' | 'new'>(isHighlight ? 'new' : 'none');
+  const [highlightId, setHighlightId] = useState('');
+  const [highlights, setHighlights] = useState<Awaited<ReturnType<typeof api.getHighlights>>>([]);
+  const [publishMode, setPublishMode] = useState<'active' | 'highlight_only'>('active');
+  const [durationHours, setDurationHours] = useState(24);
+  const [priority, setPriority] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -55,6 +61,24 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef(0);
+
+  useEffect(() => {
+    if (!isOpen || !currentUser) return;
+    let active = true;
+    void api.getHighlights().then((items) => {
+      if (active) setHighlights(items);
+    }).catch(() => {
+      if (active) setHighlights([]);
+    });
+    return () => { active = false; };
+  }, [currentUser, isOpen]);
+
+  useEffect(() => {
+    if (isHighlight) {
+      setHighlightDestination('new');
+      setPublishMode('active');
+    }
+  }, [isHighlight]);
 
   useEffect(() => () => {
     if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
@@ -154,6 +178,14 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
     if (!contentCategory) return;
     const normalizedPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
     if (pollOpen && (!pollQuestion.trim() || normalizedPollOptions.length < 2)) return;
+    if (highlightDestination === 'existing' && !highlightId) {
+      toast.error('Choose an existing Highlight before publishing');
+      return;
+    }
+    if (publishMode === 'highlight_only' && highlightDestination === 'none') {
+      toast.error('Choose a Highlight before publishing Highlight-only content');
+      return;
+    }
 
     setPublishing(true);
     try {
@@ -166,6 +198,14 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         const uploaded = await api.uploadMedia(voiceFile);
         mediaUrl = uploaded.url;
       }
+      let targetHighlightId = highlightDestination === 'existing' ? highlightId : undefined;
+      let targetHighlightTitle = highlightTitle.trim();
+      if (highlightDestination === 'new') {
+        const createdHighlight = await api.createHighlight({ title: targetHighlightTitle || 'Highlights' });
+        targetHighlightId = createdHighlight.id;
+        targetHighlightTitle = createdHighlight.title;
+        setHighlights((items) => [createdHighlight, ...items]);
+      }
       await addStory({
         type: storyType,
         textContent: storyType === 'text' || storyType === 'voice' ? textContent.trim() || undefined : undefined,
@@ -174,8 +214,12 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         contentCategory,
         contentRating,
         audience,
-        isHighlight,
-        ...(isHighlight ? { highlightTitle: highlightTitle.trim() || 'Highlights' } : {}),
+        isHighlight: isHighlight || Boolean(targetHighlightId),
+        ...(targetHighlightTitle ? { highlightTitle: targetHighlightTitle } : {}),
+        ...(targetHighlightId ? { highlightId: targetHighlightId } : {}),
+        publishMode,
+        ...(durationHours > 24 ? { durationHours } : {}),
+        ...(priority ? { priority } : {}),
         ...(pollOpen ? { poll: { question: pollQuestion.trim(), options: normalizedPollOptions.map((text) => ({ text })) } } : {}),
       });
       sounds.playChime();
@@ -193,6 +237,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setAudience('followers');
+      setHighlightDestination(isHighlight ? 'new' : 'none');
+      setHighlightId('');
+      setPublishMode('active');
+      setDurationHours(24);
+      setPriority(false);
       setPollOpen(false);
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -246,7 +295,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           </div>
 
           <div className="text-[0.68rem] text-white/80 font-mono text-center relative z-10">
-                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : 'followers'} for 24 hours
+                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : 'followers'} for {durationHours} hours{publishMode === 'highlight_only' ? ' · Highlight only' : ''}
           </div>
         </div>
 
@@ -327,16 +376,14 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
             {audience === 'close_friends' && closeFriends.length === 0 && <span className="block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
           </label>
 
-          {isHighlight && (
-            <input
-              value={highlightTitle}
-              onChange={(event) => setHighlightTitle(event.target.value)}
-              placeholder="Highlight name (for example, Travel)"
-              maxLength={40}
-              className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50"
-              aria-label="Highlight name"
-            />
-          )}
+          <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-start gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-xs font-bold">Advanced delivery</p><p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Keep a story in the active tray, save it to a Highlight, or publish directly to an archive.</p></div></div>
+            <label className="block space-y-1.5 text-xs font-semibold"><span>Highlight destination</span><select value={highlightDestination} onChange={(event) => setHighlightDestination(event.target.value as typeof highlightDestination)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="none">No Highlight</option>{highlights.length > 0 && <option value="existing">Existing Highlight</option>}<option value="new">Create a new Highlight</option></select></label>
+            {highlightDestination === 'existing' && <label className="block space-y-1.5 text-xs font-semibold"><span>Choose a Highlight</span><select value={highlightId} onChange={(event) => setHighlightId(event.target.value)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="">Select a collection…</option>{highlights.map((highlight) => <option key={highlight.id} value={highlight.id}>{highlight.title} · {highlight.storyIds.length} items</option>)}</select></label>}
+            {highlightDestination === 'new' && <input value={highlightTitle} onChange={(event) => setHighlightTitle(event.target.value)} placeholder="Highlight name (for example, Field notes)" maxLength={60} className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" aria-label="New Highlight name" />}
+            <label className="block space-y-1.5 text-xs font-semibold"><span>Publish mode</span><select value={publishMode} onChange={(event) => setPublishMode(event.target.value as typeof publishMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="active">Active Story + Highlight</option><option value="highlight_only" disabled={highlightDestination === 'none'}>Highlight only · Premium</option></select></label>
+            <div className="grid gap-2 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-semibold"><span>Duration</span><select value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value={24}>24 hours</option><option value={48}>48 hours · Advanced</option><option value={72}>72 hours · Advanced</option></select></label><label className="flex min-h-10 items-center gap-2 rounded-xl border border-border/50 bg-background/40 px-3 text-xs font-semibold"><input type="checkbox" checked={priority} onChange={(event) => setPriority(event.target.checked)} className="h-4 w-4 accent-primary" /><span><span className="block">Priority story</span><span className="block text-[0.65rem] font-normal text-muted-foreground">Capped ranking signal</span></span>{priority && <Check className="ml-auto h-4 w-4 text-primary" />}</label></div>
+          </div>
 
           <div className="rounded-2xl border border-border/40 bg-background/30 p-3">
             <button type="button" onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">

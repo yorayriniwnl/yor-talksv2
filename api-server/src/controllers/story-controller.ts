@@ -19,6 +19,23 @@ function viewStory(story: Awaited<ReturnType<StoryService["listActiveStories"]>>
 export class StoryController {
   constructor(private readonly storyService: StoryService) {}
 
+  listHighlights = async (req: Request, res: Response) => {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    return res.status(200).json(createResponse("Highlights loaded", await this.storyService.listHighlights(ownerId)));
+  };
+
+  createHighlight = async (req: Request, res: Response) => {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
+    try {
+      const highlight = await this.storyService.createHighlight(ownerId, req.body.title, req.body.coverUrl);
+      return res.status(201).json(createResponse("Highlight created", highlight));
+    } catch (error) {
+      return res.status(400).json(createResponse("Could not create Highlight", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+    }
+  };
+
   create = async (req: Request, res: Response) => {
     const authorId = req.user?.id;
     if (!authorId) {

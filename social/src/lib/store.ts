@@ -142,7 +142,9 @@ export type Story = {
   };
   isHighlight?: boolean;
   highlightTitle?: string;
-  audience: 'followers' | 'close_friends' | 'public';
+  highlightId?: string;
+  publishMode?: 'active' | 'highlight_only';
+  audience: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
   contentCategory: string;
   contentRating: ContentRating;
 };
@@ -416,7 +418,9 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     } : undefined,
     isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
-    audience: s.audience === 'public' || s.audience === 'close_friends' ? s.audience : 'followers',
+    highlightId: s.highlightId ?? undefined,
+    publishMode: s.publishMode,
+    audience: s.audience === 'public' || s.audience === 'close_friends' || s.audience === 'selected_people' || s.audience === 'everyone_except' || s.audience === 'custom' ? s.audience : 'followers',
     contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: s.contentRating ?? DEFAULT_CONTENT_RATING,
   };
@@ -818,7 +822,7 @@ interface AppState {
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; audience?: Story['audience']; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string) => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
@@ -2109,6 +2113,8 @@ export const useAppStore = create<AppState>()(
           reactions: [],
           isHighlight: Boolean(story.isHighlight),
           highlightTitle: story.highlightTitle,
+          highlightId: story.highlightId,
+          publishMode: story.publishMode,
           audience: story.audience ?? 'followers',
           poll: story.poll ? {
             question: story.poll.question,
