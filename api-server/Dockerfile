@@ -1,11 +1,11 @@
 FROM node:24-alpine
 WORKDIR /app
-ENV COREPACK_HOME=/usr/local/share/corepack
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN mkdir -p "$COREPACK_HOME" \
-    && corepack enable \
-    && corepack install --global pnpm@9.15.4 \
-    && chmod -R a+rX "$COREPACK_HOME" \
+# Install the pinned CLI as a concrete global binary. A Corepack shim can
+# still try to download pnpm when the non-root runtime user starts the
+# migration service, which makes an otherwise self-contained image depend on
+# registry access at runtime.
+RUN npm install --global pnpm@9.15.4 --no-audit --no-fund \
     && pnpm fetch
 COPY . .
 RUN pnpm install --frozen-lockfile --offline

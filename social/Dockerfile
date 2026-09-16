@@ -1,7 +1,7 @@
 FROM node:24-alpine AS build
 
 WORKDIR /app
-RUN corepack enable
+RUN npm install --global pnpm@9.15.4 --no-audit --no-fund
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api-server/package.json api-server/package.json
