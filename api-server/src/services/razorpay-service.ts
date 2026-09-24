@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { env } from "../config/env.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { MAX_LEDGER_AMOUNT_MINOR } from "../lib/money.js";
 
 const RAZORPAY_API = "https://api.razorpay.com/v1";
 
@@ -73,6 +74,9 @@ export class RazorpayService {
 
   async createOrder(input: { amountMinor: number; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder> {
     this.assertConfigured();
+    if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor < 100 || input.amountMinor > MAX_LEDGER_AMOUNT_MINOR) {
+      throw new PaymentProviderError("The requested payment amount is outside the supported range");
+    }
     const response = await fetchWithTimeout(`${RAZORPAY_API}/orders`, {
       method: "POST",
       headers: {
@@ -86,7 +90,12 @@ export class RazorpayService {
         notes: input.notes,
       }),
     }, 12_000);
-    return parseProviderResponse<RazorpayOrder>(response);
+    const order = await parseProviderResponse<RazorpayOrder>(response);
+    if (!order || typeof order.id !== "string" || !order.id || order.amount !== input.amountMinor
+      || order.currency !== "INR" || order.status !== "created") {
+      throw new PaymentProviderError("Razorpay returned an invalid order response");
+    }
+    return order;
   }
 
   async getPayment(paymentId: string): Promise<RazorpayPayment> {

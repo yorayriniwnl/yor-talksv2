@@ -104,6 +104,80 @@ test('an expired access token refreshes once and retries with the new bearer', a
   assert.equal(fetchMock.mock.callCount(), 3);
 });
 
+test('authenticated auth actions refresh and retry while credential establishment stays isolated', async (t) => {
+  const { api, setStoredTokens } = await client(t);
+  setStoredTokens({ accessToken: 'expired-token' });
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url.endsWith('/auth/refresh')) return ok({ accessToken: 'rotated-token' });
+    if (url.endsWith('/auth/2fa/setup') && options.headers.Authorization === 'Bearer rotated-token') {
+      return ok({ secret: 'secret', otpauthUrl: 'otpauth://totp/test' });
+    }
+    return Response.json({ success: false }, { status: 401 });
+  });
+  assert.deepEqual(await api.setupTwoFactor(), { secret: 'secret', otpauthUrl: 'otpauth://totp/test' });
+  assert.equal(fetchMock.mock.callCount(), 3);
+});
+
+test('logout is cookie-backed and prevents refresh from restoring the session', async (t) => {
+  const { api, setStoredTokens, getStoredTokens } = await client(t);
+  setStoredTokens({ accessToken: 'expired-token' });
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    assert.equal(options.headers.Authorization, undefined);
+    return ok(null);
+  });
+  await api.logout();
+  assert.equal(getStoredTokens(), null);
+  assert.equal(await api.refreshSession(), null);
+  assert.equal(fetchMock.mock.callCount(), 1);
+});
+
+test('an explicit logout marker survives client reinitialization until the next login', async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const storage = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, String(value)),
+      removeItem: (key) => storage.delete(key),
+    },
+  });
+  t.after(() => previous ? Object.defineProperty(globalThis, 'localStorage', previous) : Reflect.deleteProperty(globalThis, 'localStorage'));
+  const loadClient = async () => {
+    const source = `${bundle.outputFiles[0].text}\n// ${randomUUID()}\n//# sourceURL=api-client-reload-test.js`;
+    return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  };
+  const first = await loadClient();
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url.endsWith('/auth/logout')) {
+      assert.equal(options.headers.Authorization, undefined);
+      return ok(null);
+    }
+    return ok({ accessToken: 'restored-session' });
+  });
+  first.setStoredTokens({ accessToken: 'expired-token' });
+  await first.api.logout();
+  assert.equal(storage.get('yortalks-logged-out'), '1');
+
+  const reloaded = await loadClient();
+  assert.equal(await reloaded.api.refreshSession(), null);
+  assert.equal(fetchMock.mock.callCount(), 1);
+  reloaded.setStoredTokens({ accessToken: 'new-login' });
+  assert.equal(storage.has('yortalks-logged-out'), false);
+  assert.equal((await reloaded.api.refreshSession()).accessToken, 'restored-session');
+  assert.equal(fetchMock.mock.callCount(), 2);
+});
+
+test('a temporary refresh outage preserves the session token and returns a retryable error', async (t) => {
+  const { api, setStoredTokens, getStoredTokens } = await client(t);
+  setStoredTokens({ accessToken: 'expired-token' });
+  t.mock.method(globalThis, 'fetch', async (url) => url.endsWith('/auth/refresh')
+    ? Response.json({ success: false, message: 'Unavailable' }, { status: 503 })
+    : Response.json({ success: false }, { status: 401 }));
+  await assert.rejects(api.getCurrentUser(), /Could not verify your session/);
+  assert.equal(getStoredTokens()?.accessToken, 'expired-token');
+});
+
 test('paginated private data obeys the same session boundary', async (t) => {
   const { api, setStoredTokens } = await client(t);
   setStoredTokens({ accessToken: 'previous-account' });

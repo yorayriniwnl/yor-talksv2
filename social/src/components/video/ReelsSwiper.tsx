@@ -50,6 +50,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   const unfollowUser = useAppStore((s) => s.unfollowUser);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const commentsRequestSequence = useRef(0);
   const [playingIndex, setPlayingIndex] = useState(initialIndex);
   const [isMuted, setIsMuted] = useState(false);
   const [likedVideos, setLikedVideos] = useState<Record<string, boolean>>({});
@@ -63,6 +65,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   // Comments drawer & share modal
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentItem[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Pro Playback & Studio Controls
@@ -79,20 +83,45 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     setPlayingIndex(boundedIndex);
   }, [videos.length]);
 
+  const loadVideoComments = useCallback(async (videoId: string) => {
+    const requestId = ++commentsRequestSequence.current;
+    setCommentsLoading(true);
+    setCommentsError(false);
+    try {
+      const items = await api.getVideoComments(videoId);
+      if (requestId === commentsRequestSequence.current) setComments(items.map(mapVideoComment));
+    } catch {
+      if (requestId === commentsRequestSequence.current) {
+        setComments([]);
+        setCommentsError(true);
+      }
+    } finally {
+      if (requestId === commentsRequestSequence.current) setCommentsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previousOverflow; };
   }, []);
 
+  useEffect(() => {
+    viewerRef.current?.focus({ preventScroll: true });
+  }, []);
+
   // Keyboard navigation for reels
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+      const target = e.target instanceof Element ? e.target : null;
+      const isEditable = Boolean(target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]'));
+      const activeElement = document.activeElement;
+      const focusWithinViewer = activeElement === document.body || Boolean(viewerRef.current?.contains(activeElement));
+      if (e.key === 'ArrowDown' && !isEditable && focusWithinViewer) {
         e.preventDefault();
         goToIndex(playingIndex + 1);
         sounds.playSwoosh();
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp' && !isEditable && focusWithinViewer) {
         e.preventDefault();
         goToIndex(playingIndex - 1);
         sounds.playSwoosh();
@@ -137,17 +166,16 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   useEffect(() => {
     const video = videos[playingIndex];
     if (!video) {
+      commentsRequestSequence.current += 1;
       setComments([]);
+      setCommentsLoading(false);
+      setCommentsError(false);
       return;
     }
-    let active = true;
-    void api.getVideoComments(video.id).then((items) => {
-      if (active) setComments(items.map(mapVideoComment));
-    }).catch(() => {
-      if (active) setComments([]);
-    });
-    return () => { active = false; };
-  }, [playingIndex, videos]);
+    setComments([]);
+    void loadVideoComments(video.id);
+    return () => { commentsRequestSequence.current += 1; };
+  }, [playingIndex, videos, loadVideoComments]);
 
   useEffect(() => {
     const players = containerRef.current?.querySelectorAll('video');
@@ -253,6 +281,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="operator-reels-viewer"
+        ref={viewerRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Video viewer"
@@ -401,7 +431,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                     >
                       <MessageCircle aria-hidden="true" />
                     </button>
-                    <span>{comments.length}</span>
+                    <span>{commentsLoading || commentsError ? '–' : comments.length}</span>
                   </div>
 
                   <div>
@@ -515,14 +545,26 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
               className="operator-reels-comments"
             >
               <div className="operator-reels-comments__head">
-                <span><small>Conversation</small><h4>Comments ({comments.length})</h4></span>
-                <button onClick={() => setShowComments(false)} aria-label="Close comments">
+                <span><small>Conversation</small><h4>{commentsLoading || commentsError ? 'Comments' : `Comments (${comments.length})`}</h4></span>
+                <button type="button" onClick={() => setShowComments(false)} aria-label="Close comments">
                   <X aria-hidden="true" />
                 </button>
               </div>
 
               <div className="operator-reels-comments__list">
-                <RichCommentList comments={comments} onLikeComment={handleLikeComment} />
+                {commentsLoading ? (
+                  <p role="status" aria-live="polite">Loading comments…</p>
+                ) : commentsError ? (
+                  <div role="alert">
+                    <p>Comments could not load.</p>
+                    <button type="button" onClick={() => {
+                      const videoId = videos[playingIndex]?.id;
+                      if (videoId) void loadVideoComments(videoId);
+                    }}>Retry comments</button>
+                  </div>
+                ) : (
+                  <RichCommentList comments={comments} onLikeComment={handleLikeComment} />
+                )}
               </div>
 
               <div className="operator-reels-comments__composer">

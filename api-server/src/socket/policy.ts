@@ -5,7 +5,14 @@ const conversation = z.object({ conversationId: id }).strict();
 const stream = z.object({ streamId: id }).strict();
 const callId = z.string().min(8).max(80);
 const call = z.object({ callId }).strict();
-const signal = z.record(z.unknown());
+const offer = z.object({ type: z.literal("offer"), sdp: z.string().min(1).max(56 * 1024) }).strict();
+const answer = z.object({ type: z.literal("answer"), sdp: z.string().min(1).max(56 * 1024) }).strict();
+const candidate = z.object({
+  candidate: z.string().max(4096),
+  sdpMid: z.string().max(256).nullable().optional(),
+  sdpMLineIndex: z.number().int().min(0).max(65_535).nullable().optional(),
+  usernameFragment: z.string().max(256).nullable().optional(),
+}).strict();
 const peer = { streamId: id, targetSocketId: z.string().min(1).max(128) };
 
 const schemas: Record<string, z.ZodTypeAny> = {
@@ -16,19 +23,20 @@ const schemas: Record<string, z.ZodTypeAny> = {
   "message:send": z.object({
     recipientId: id.optional(), conversationId: id.optional(),
     content: z.string().trim().min(1).max(4000),
+    idempotencyKey: id.optional(),
   }).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId)),
   "message:seen": z.object({ messageId: id }).strict(),
   "stream:join": stream,
   "stream:leave": stream,
-  "webrtc:offer": z.object({ ...peer, offer: signal }).strict(),
-  "webrtc:answer": z.object({ ...peer, answer: signal }).strict(),
-  "webrtc:ice-candidate": z.object({ ...peer, candidate: signal }).strict(),
-  "call:invite": z.object({ callId, targetUserId: id, callType: z.enum(["audio", "video"]), offer: signal }).strict(),
+  "webrtc:offer": z.object({ ...peer, offer }).strict(),
+  "webrtc:answer": z.object({ ...peer, answer }).strict(),
+  "webrtc:ice-candidate": z.object({ ...peer, candidate }).strict(),
+  "call:invite": z.object({ callId, targetUserId: id, callType: z.enum(["audio", "video"]), offer }).strict(),
   "call:accept": call,
   "call:reject": call,
   "call:end": call,
-  "call:answer": z.object({ callId, answer: signal }).strict(),
-  "call:ice": z.object({ callId, candidate: signal }).strict(),
+  "call:answer": z.object({ callId, answer }).strict(),
+  "call:ice": z.object({ callId, candidate }).strict(),
 };
 
 export function parseSocketPayload(event: string, payload: unknown) {

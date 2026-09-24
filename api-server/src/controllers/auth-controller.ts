@@ -276,12 +276,19 @@ export class AuthController {
   };
 
   logout = async (req: Request, res: Response) => {
-    const refreshToken = req.cookies?.refreshToken;
-    if (refreshToken) {
-      await this.authService.logoutByToken(refreshToken);
+    try {
+      const refreshToken = req.cookies?.refreshToken;
+      if (refreshToken) {
+        await this.authService.logoutByToken(refreshToken);
+      }
+      return res.status(200).json(createResponse("Logged out", null));
+    } catch {
+      return res.status(500).json(createResponse("Could not fully revoke the session", null, {}, ["Session revocation is temporarily unavailable"]));
+    } finally {
+      // Clear the browser credential even if the backing revocation service is
+      // temporarily unavailable; the client also keeps an explicit logout mark.
+      this.clearRefreshCookie(res);
     }
-    this.clearRefreshCookie(res);
-    return res.status(200).json(createResponse("Logged out", null));
   };
 
   resendVerificationEmailPublic = async (req: Request, res: Response) => {

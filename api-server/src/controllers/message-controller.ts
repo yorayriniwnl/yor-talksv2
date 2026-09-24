@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
 import { InvalidMessageContentError, InvalidReplyTargetError, MessageBlockedError, MessageService, UnauthorizedError } from "../services/message-service.js";
+import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -11,15 +12,17 @@ export class MessageController {
     const conversationId = typeof req.body.conversationId === "string" ? req.body.conversationId : undefined;
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const replyToId = typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
+    const idempotencyKey = typeof req.body.idempotencyKey === "string" ? req.body.idempotencyKey : undefined;
+    const options = { ...(replyToId ? { replyToId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) };
     
     try {
       let message;
       let actualConversationId;
       if (conversationId) {
-        message = await this.messageService.sendMessageToConversation(req.user?.id ?? "", conversationId, content, replyToId ? { replyToId } : undefined);
+        message = await this.messageService.sendMessageToConversation(req.user?.id ?? "", conversationId, content, options);
         actualConversationId = conversationId;
       } else if (recipientId) {
-        message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, replyToId ? { replyToId } : undefined);
+        message = await this.messageService.sendMessage(req.user?.id ?? "", recipientId, content, options);
         actualConversationId = message.conversationId;
       } else {
         return res.status(400).json(createResponse("Missing recipientId or conversationId", null, {}, ["Bad request"]));
@@ -78,7 +81,13 @@ export class MessageController {
 
   listConversation = async (req: Request, res: Response) => {
     const conversationId = typeof req.params.conversationId === "string" ? req.params.conversationId : "";
-    const messages = await this.messageService.listConversation(conversationId, req.user?.id ?? "");
+    const query = conversationMessagesQuerySchema.parse(req.query);
+    const messages = await this.messageService.listConversationPage(conversationId, req.user?.id ?? "", {
+      direction: query.direction ?? "latest",
+      cursorAt: query.cursorAt,
+      cursorId: query.cursorId,
+      limit: query.limit ?? 200,
+    });
     return res.status(200).json(createResponse("Conversation loaded", messages));
   };
 

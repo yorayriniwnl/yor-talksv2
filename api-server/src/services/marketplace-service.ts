@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, like, lt, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { ledgerTransactionsTable, marketplaceOrdersTable, productsTable, usersTable } from "@workspace/db/schema";
@@ -6,6 +6,8 @@ import type { MarketplaceOrderRecord } from "../types/index.js";
 import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { toMinorUnits } from "../lib/money.js";
+import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 
 export class MarketplaceRequestError extends Error {}
 export class MarketplaceOrderNotFoundError extends Error {}
@@ -46,6 +48,7 @@ export class MarketplaceService {
     shippingAddress: string;
     shippingPhone?: string;
   }) {
+    this.razorpay.assertConfigured();
     await this.releaseExpiredReservations();
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, input.productId));
     if (!product) throw new MarketplaceRequestError("Product not found");
@@ -61,8 +64,8 @@ export class MarketplaceService {
     ]);
     if (!buyer[0] || !seller[0]) throw new MarketplaceRequestError("The buyer or seller account was not found");
 
-    const amountMinor = Math.round(Number(product.price) * 100);
-    if (!Number.isSafeInteger(amountMinor) || amountMinor < 100) throw new MarketplaceRequestError("This listing has an invalid price");
+    const amountMinor = toMinorUnits(Number(product.price));
+    if (!amountMinor || amountMinor < 100) throw new MarketplaceRequestError("This listing has an invalid price");
 
     const orderId = randomUUID();
     const pendingProviderOrderId = `pending_${orderId.replaceAll("-", "")}`;
@@ -132,52 +135,160 @@ export class MarketplaceService {
       throw new MarketplaceRequestError("The marketplace payment was not captured for this order");
     }
 
-    const paidAt = new Date().toISOString();
-    let settled: MarketplaceOrderRecord | undefined;
+    return this.settleCapturedOrder(order.id, input.paymentId, input.signature);
+  }
+
+  async hasProviderOrder(orderId: string): Promise<boolean> {
+    const [order] = await db.select({ id: marketplaceOrdersTable.id }).from(marketplaceOrdersTable)
+      .where(and(eq(marketplaceOrdersTable.provider, "razorpay"), eq(marketplaceOrdersTable.providerOrderId, orderId)));
+    return Boolean(order);
+  }
+
+  async hasProviderPayment(paymentId: string): Promise<boolean> {
+    const [order] = await db.select({ id: marketplaceOrdersTable.id }).from(marketplaceOrdersTable)
+      .where(and(eq(marketplaceOrdersTable.provider, "razorpay"), eq(marketplaceOrdersTable.providerPaymentId, paymentId)));
+    return Boolean(order);
+  }
+
+  async reconcileCapturedPayment(input: CapturedPaymentInput) {
+    this.razorpay.assertConfigured();
+    const [order] = await db.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.providerOrderId, input.orderId));
+    if (!order) throw new MarketplaceOrderNotFoundError("Marketplace payment order not found");
+    const payment = await this.razorpay.getPayment(input.paymentId);
+    if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
+      || payment.currency !== order.currency || !["captured", "refunded"].includes(payment.status)) {
+      throw new MarketplaceRequestError("The marketplace payment was not captured for this order");
+    }
+    return this.settleCapturedOrder(order.id, input.paymentId);
+  }
+
+  async reconcileRefund(input: ProcessedRefundInput): Promise<boolean> {
+    const [order] = await db.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.providerPaymentId, input.paymentId));
+    if (!order) return false;
+    if (!this.isValidRefund(input, order.amountMinor, order.currency)) throw new MarketplaceRequestError("Refund details do not match the marketplace order");
+
     await db.transaction(async (tx) => {
-      const [updatedOrder] = await tx.update(marketplaceOrdersTable).set({
-        providerPaymentId: input.paymentId,
-        providerSignature: input.signature,
-        status: "paid",
-        paidAt,
-      }).where(and(eq(marketplaceOrdersTable.id, order.id), eq(marketplaceOrdersTable.status, "created"))).returning();
-      if (!updatedOrder) {
-        const [current] = await tx.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.id, order.id));
-        settled = current as MarketplaceOrderRecord | undefined;
+      const [lockedOrder] = await tx.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.id, order.id)).for("update");
+      if (!lockedOrder || lockedOrder.providerPaymentId !== input.paymentId) throw new MarketplaceRequestError("Refund payment does not match the marketplace order");
+      const prefix = `marketplace:refund:${input.paymentId}:`;
+      const referenceId = `${prefix}${input.id}`;
+      const [existingRefund] = await tx.select({ id: ledgerTransactionsTable.id, amountMinor: ledgerTransactionsTable.amountMinor })
+        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existingRefund) {
+        if (existingRefund.amountMinor !== input.amountMinor) throw new MarketplaceRequestError("Refund id was already recorded with a different amount");
         return;
       }
+      if (!(["paid", "fulfilled", "refund_required", "refunded"] as string[]).includes(lockedOrder.status)) {
+        throw new MarketplaceRequestError("Only a settled marketplace order can be refunded");
+      }
+      const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
+        .from(ledgerTransactionsTable)
+        .where(like(ledgerTransactionsTable.referenceId, `${prefix}%`));
+      const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
+      if (nextRefundedTotal > lockedOrder.amountMinor) throw new MarketplaceRequestError("Refunds exceed the original marketplace amount");
+
+      await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(),
+        creditAccountId: null,
+        debitAccountId: lockedOrder.status === "refund_required" ? null : lockedOrder.sellerId,
+        amountMinor: input.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
+      });
+      if (nextRefundedTotal === lockedOrder.amountMinor) {
+        await tx.update(marketplaceOrdersTable).set({ status: "refunded" }).where(and(
+          eq(marketplaceOrdersTable.id, lockedOrder.id),
+          inArray(marketplaceOrdersTable.status, ["paid", "fulfilled", "refund_required"]),
+        ));
+      }
+    });
+    return true;
+  }
+
+  private isValidRefund(input: ProcessedRefundInput, amountMinor: number, currency: string): boolean {
+    return Number.isSafeInteger(input.amountMinor) && input.amountMinor > 0
+      && input.amountMinor <= amountMinor && (!input.currency || input.currency === currency);
+  }
+
+  private async settleCapturedOrder(orderId: string, paymentId: string, signature?: string): Promise<MarketplaceOrderRecord> {
+    return db.transaction(async (tx) => {
+      const [lockedOrder] = await tx.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.id, orderId)).for("update");
+      if (!lockedOrder) throw new MarketplaceOrderNotFoundError("Marketplace payment order not found");
+      const referenceId = `marketplace:${lockedOrder.providerOrderId}`;
+      const [existing] = await tx.select({ id: ledgerTransactionsTable.id }).from(ledgerTransactionsTable)
+        .where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existing) {
+        if (lockedOrder.providerPaymentId && lockedOrder.providerPaymentId !== paymentId) {
+          throw new MarketplaceRequestError("Another payment has already been linked to this marketplace order");
+        }
+        return lockedOrder as MarketplaceOrderRecord;
+      }
+      if (lockedOrder.status === "refund_required" && lockedOrder.providerPaymentId === paymentId) {
+        return lockedOrder as MarketplaceOrderRecord;
+      }
+      if (lockedOrder.status === "cancelled" || lockedOrder.status === "failed") {
+        const [latePayment] = await tx.update(marketplaceOrdersTable).set({
+          providerPaymentId: paymentId,
+          providerSignature: signature ?? null,
+          status: "refund_required",
+          paidAt: new Date().toISOString(),
+        }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), inArray(marketplaceOrdersTable.status, ["cancelled", "failed"])))
+          .returning();
+        if (!latePayment) throw new MarketplaceRequestError("Late marketplace payment could not be queued for refund");
+        return latePayment as MarketplaceOrderRecord;
+      }
+      if (lockedOrder.status !== "created") throw new MarketplaceRequestError("This marketplace payment is no longer payable");
+
+      const paidAt = new Date().toISOString();
+      const [updatedOrder] = await tx.update(marketplaceOrdersTable).set({
+        providerPaymentId: paymentId,
+        providerSignature: signature ?? null,
+        status: "paid",
+        paidAt,
+      }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), eq(marketplaceOrdersTable.status, "created"))).returning();
+      if (!updatedOrder) throw new MarketplaceRequestError("This marketplace payment is no longer payable");
 
       const [sold] = await tx.update(productsTable).set({ availability: "sold" }).where(and(
-        eq(productsTable.id, order.productId),
+        eq(productsTable.id, lockedOrder.productId),
         eq(productsTable.availability, "reserved"),
       )).returning({ id: productsTable.id });
       if (!sold) throw new MarketplaceRequestError("The listing reservation expired before payment settlement");
-
-      const referenceId = `marketplace:${order.providerOrderId}`;
-      const [existingLedger] = await tx.select({ id: ledgerTransactionsTable.id }).from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
-      if (!existingLedger) {
-        await tx.insert(ledgerTransactionsTable).values({
-          id: randomUUID(),
-          creditAccountId: order.sellerId,
-          debitAccountId: order.buyerId,
-          amountMinor: order.amountMinor,
-          currency: order.currency,
-          referenceId,
-          status: "completed",
-        });
-      }
-      settled = updatedOrder as MarketplaceOrderRecord;
+      await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(),
+        creditAccountId: lockedOrder.sellerId,
+        debitAccountId: null,
+        amountMinor: lockedOrder.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
+      });
+      return updatedOrder as MarketplaceOrderRecord;
     });
-    if (!settled) throw new MarketplaceRequestError("Marketplace payment settlement could not be completed");
-    return settled;
   }
 
   async listOrders(userId: string) {
     await this.releaseExpiredReservations();
-    return (await db.select().from(marketplaceOrdersTable).where(or(
+    const orders = await db.select().from(marketplaceOrdersTable).where(or(
       eq(marketplaceOrdersTable.buyerId, userId),
       eq(marketplaceOrdersTable.sellerId, userId),
-    )).orderBy(desc(marketplaceOrdersTable.createdAt)).limit(100)) as MarketplaceOrderRecord[];
+    )).orderBy(desc(marketplaceOrdersTable.createdAt)).limit(100);
+    const paymentIds = orders.map((order) => order.providerPaymentId).filter((id): id is string => Boolean(id));
+    if (!paymentIds.length) return orders as MarketplaceOrderRecord[];
+    const refundRows = await db.select({
+      paymentId: sql<string>`split_part(${ledgerTransactionsTable.referenceId}, ':', 3)`,
+      total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)`,
+    }).from(ledgerTransactionsTable).where(and(
+      eq(ledgerTransactionsTable.status, "completed"),
+      eq(ledgerTransactionsTable.currency, "INR"),
+      like(ledgerTransactionsTable.referenceId, "marketplace:refund:%"),
+      inArray(sql<string>`split_part(${ledgerTransactionsTable.referenceId}, ':', 3)`, paymentIds),
+    )).groupBy(sql`split_part(${ledgerTransactionsTable.referenceId}, ':', 3)`);
+    const refundsByPayment = new Map(refundRows.map((row) => [row.paymentId, Number(row.total ?? 0)]));
+    return orders.map((order) => ({
+      ...order,
+      refundedAmountMinor: order.providerPaymentId ? refundsByPayment.get(order.providerPaymentId) ?? 0 : 0,
+    })) as MarketplaceOrderRecord[];
   }
 
   async cancelOrder(orderId: string, buyerId: string) {

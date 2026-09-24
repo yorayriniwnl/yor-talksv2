@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   entitlementsTable,
@@ -10,6 +10,7 @@ import {
 import { db } from "@workspace/db";
 import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
+import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 
 export const SUBSCRIPTION_TIERS = [
   {
@@ -173,58 +174,148 @@ export class SubscriptionService {
       throw new SubscriptionRequestError("The membership payment was not captured for this order");
     }
 
+    return this.settleCapturedOrder(order.id, input.paymentId, input.signature);
+  }
+
+  async hasProviderOrder(orderId: string): Promise<boolean> {
+    const [order] = await db.select({ id: subscriptionOrdersTable.id }).from(subscriptionOrdersTable)
+      .where(and(eq(subscriptionOrdersTable.provider, "razorpay"), eq(subscriptionOrdersTable.providerOrderId, orderId)));
+    return Boolean(order);
+  }
+
+  async hasProviderPayment(paymentId: string): Promise<boolean> {
+    const [order] = await db.select({ id: subscriptionOrdersTable.id }).from(subscriptionOrdersTable)
+      .where(and(eq(subscriptionOrdersTable.provider, "razorpay"), eq(subscriptionOrdersTable.providerPaymentId, paymentId)));
+    return Boolean(order);
+  }
+
+  async reconcileCapturedPayment(input: CapturedPaymentInput) {
+    this.razorpay.assertConfigured();
+    const [order] = await db.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.providerOrderId, input.orderId));
+    if (!order) throw new SubscriptionOrderNotFoundError("Membership payment order not found");
+    const payment = await this.razorpay.getPayment(input.paymentId);
+    if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
+      || payment.currency !== order.currency || !["captured", "refunded"].includes(payment.status)) {
+      throw new SubscriptionRequestError("The membership payment was not captured for this order");
+    }
+    return this.settleCapturedOrder(order.id, input.paymentId);
+  }
+
+  async reconcileRefund(input: ProcessedRefundInput): Promise<boolean> {
+    const [order] = await db.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.providerPaymentId, input.paymentId));
+    if (!order) return false;
+    if (!this.isValidRefund(input, order.amountMinor, order.currency)) throw new SubscriptionRequestError("Refund details do not match the membership order");
+
+    await db.transaction(async (tx) => {
+      const [lockedOrder] = await tx.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.id, order.id)).for("update");
+      if (!lockedOrder || lockedOrder.providerPaymentId !== input.paymentId) throw new SubscriptionRequestError("Refund payment does not match the membership order");
+      const prefix = `subscription:refund:${input.paymentId}:`;
+      const referenceId = `${prefix}${input.id}`;
+      const [existingRefund] = await tx.select({ id: ledgerTransactionsTable.id, amountMinor: ledgerTransactionsTable.amountMinor })
+        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existingRefund) {
+        if (existingRefund.amountMinor !== input.amountMinor) throw new SubscriptionRequestError("Refund id was already recorded with a different amount");
+        return;
+      }
+      if (lockedOrder.status !== "paid" && lockedOrder.status !== "refunded") throw new SubscriptionRequestError("Only a settled membership can be refunded");
+      const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
+        .from(ledgerTransactionsTable)
+        .where(and(eq(ledgerTransactionsTable.debitAccountId, lockedOrder.creatorId), like(ledgerTransactionsTable.referenceId, `${prefix}%`)));
+      const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
+      if (nextRefundedTotal > lockedOrder.amountMinor) throw new SubscriptionRequestError("Refunds exceed the original membership amount");
+
+      await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(),
+        creditAccountId: null,
+        debitAccountId: lockedOrder.creatorId,
+        amountMinor: input.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
+      });
+      if (nextRefundedTotal === lockedOrder.amountMinor) {
+        await tx.update(subscriptionOrdersTable).set({ status: "refunded" })
+          .where(and(eq(subscriptionOrdersTable.id, lockedOrder.id), eq(subscriptionOrdersTable.status, "paid")));
+        await tx.update(subscriptionsTable).set({ status: "cancelled" }).where(and(
+          eq(subscriptionsTable.id, lockedOrder.subscriptionId),
+          eq(subscriptionsTable.status, "active"),
+        ));
+        await tx.update(entitlementsTable).set({ status: "revoked" }).where(and(
+          eq(entitlementsTable.userId, lockedOrder.subscriberId),
+          eq(entitlementsTable.entityType, "subscription"),
+          eq(entitlementsTable.entityId, lockedOrder.subscriptionId),
+          eq(entitlementsTable.status, "active"),
+        ));
+      }
+    });
+    return true;
+  }
+
+  private isValidRefund(input: ProcessedRefundInput, amountMinor: number, currency: string): boolean {
+    return Number.isSafeInteger(input.amountMinor) && input.amountMinor > 0
+      && input.amountMinor <= amountMinor && (!input.currency || input.currency === currency);
+  }
+
+  private async settleCapturedOrder(orderId: string, paymentId: string, signature?: string) {
     const startedAt = new Date();
     const expiresAt = addMembershipPeriod(startedAt);
-    await db.transaction(async (tx) => {
+    return db.transaction(async (tx) => {
+      const [lockedOrder] = await tx.select().from(subscriptionOrdersTable).where(eq(subscriptionOrdersTable.id, orderId)).for("update");
+      if (!lockedOrder) throw new SubscriptionOrderNotFoundError("Membership payment order not found");
+      const referenceId = `subscription:${lockedOrder.providerOrderId}`;
+      const [existing] = await tx.select({ id: ledgerTransactionsTable.id })
+        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existing) {
+        if (lockedOrder.providerPaymentId && lockedOrder.providerPaymentId !== paymentId) {
+          throw new SubscriptionRequestError("Another payment has already been linked to this membership order");
+        }
+        const [subscription] = await tx.select({ expiresAt: subscriptionsTable.expiresAt })
+          .from(subscriptionsTable).where(eq(subscriptionsTable.id, lockedOrder.subscriptionId));
+        return { subscriptionId: lockedOrder.subscriptionId, status: "active" as const, expiresAt: subscription?.expiresAt ?? null };
+      }
+      if (lockedOrder.status !== "created") throw new SubscriptionRequestError("This membership payment is no longer payable");
+
       const [updatedOrder] = await tx.update(subscriptionOrdersTable).set({
-        providerPaymentId: input.paymentId,
-        providerSignature: input.signature,
+        providerPaymentId: paymentId,
+        providerSignature: signature ?? null,
         status: "paid",
         paidAt: startedAt.toISOString(),
-      }).where(and(eq(subscriptionOrdersTable.id, order.id), eq(subscriptionOrdersTable.status, "created"))).returning({ id: subscriptionOrdersTable.id });
-      if (!updatedOrder) return;
+      }).where(and(eq(subscriptionOrdersTable.id, lockedOrder.id), eq(subscriptionOrdersTable.status, "created")))
+        .returning({ id: subscriptionOrdersTable.id });
+      if (!updatedOrder) throw new SubscriptionRequestError("This membership payment is no longer payable");
 
-      await tx.update(subscriptionsTable).set({
-        status: "active",
-        startedAt: startedAt.toISOString(),
-        expiresAt,
-      }).where(eq(subscriptionsTable.id, order.subscriptionId));
-
+      await tx.update(subscriptionsTable).set({ status: "active", startedAt: startedAt.toISOString(), expiresAt })
+        .where(eq(subscriptionsTable.id, lockedOrder.subscriptionId));
       const [existingEntitlement] = await tx.select({ id: entitlementsTable.id }).from(entitlementsTable).where(and(
-        eq(entitlementsTable.userId, order.subscriberId),
+        eq(entitlementsTable.userId, lockedOrder.subscriberId),
         eq(entitlementsTable.entityType, "subscription"),
-        eq(entitlementsTable.entityId, order.subscriptionId),
+        eq(entitlementsTable.entityId, lockedOrder.subscriptionId),
       ));
       if (existingEntitlement) {
-        await tx.update(entitlementsTable).set({ status: "active", grantedAt: startedAt.toISOString(), expiresAt }).where(eq(entitlementsTable.id, existingEntitlement.id));
+        await tx.update(entitlementsTable).set({ status: "active", grantedAt: startedAt.toISOString(), expiresAt })
+          .where(eq(entitlementsTable.id, existingEntitlement.id));
       } else {
         await tx.insert(entitlementsTable).values({
           id: randomUUID(),
-          userId: order.subscriberId,
+          userId: lockedOrder.subscriberId,
           entityType: "subscription",
-          entityId: order.subscriptionId,
+          entityId: lockedOrder.subscriptionId,
           status: "active",
           grantedAt: startedAt.toISOString(),
           expiresAt,
         });
       }
-
-      const referenceId = `subscription:${order.providerOrderId}`;
-      const [existingLedger] = await tx.select({ id: ledgerTransactionsTable.id }).from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
-      if (!existingLedger) {
-        await tx.insert(ledgerTransactionsTable).values({
-          id: randomUUID(),
-          creditAccountId: order.creatorId,
-          debitAccountId: order.subscriberId,
-          amountMinor: order.amountMinor,
-          currency: order.currency,
-          referenceId,
-          status: "completed",
-        });
-      }
+      await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(),
+        creditAccountId: lockedOrder.creatorId,
+        debitAccountId: null,
+        amountMinor: lockedOrder.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
+      });
+      return { subscriptionId: lockedOrder.subscriptionId, status: "active" as const, expiresAt };
     });
-
-    return { subscriptionId: order.subscriptionId, status: "active" as const, expiresAt };
   }
 
   async listForSubscriber(subscriberId: string) {

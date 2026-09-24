@@ -121,6 +121,9 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BackendUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [selected, setSelected] = useState<BackendUser | null>(null);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
@@ -128,16 +131,29 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [sendError, setSendError] = useState('');
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults([]);
+      setSearchLoading(false);
+      setSearchError('');
+      return;
+    }
     let active = true;
+    setResults([]);
+    setSearchLoading(true);
+    setSearchError('');
     const handle = setTimeout(async () => {
       try {
-        const users = await api.searchUsers(query.trim());
+        const users = await api.searchUsers(term);
         if (active) setResults(users.filter((u) => u.id !== currentUser?.id));
-      } catch { /* ignore transient search errors */ }
+      } catch {
+        if (active) setSearchError('People could not load. Check your connection and retry.');
+      } finally {
+        if (active) setSearchLoading(false);
+      }
     }, 250);
     return () => { active = false; clearTimeout(handle); };
-  }, [query, currentUser?.id]);
+  }, [query, currentUser?.id, searchAttempt]);
 
   const handleSend = async () => {
     if (!selected || !content.trim() || sendingRef.current) return;
@@ -172,13 +188,20 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
             </div>
             <div className="max-h-64 overflow-y-auto space-y-1 thin-scrollbar">
               {results.map((u) => (
-                <button key={u.id} onClick={() => setSelected(u)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 text-left transition-colors cursor-pointer">
+                <button type="button" key={u.id} onClick={() => setSelected(u)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 text-left transition-colors cursor-pointer">
                   <Avatar className="w-9 h-9"><AvatarImage src={u.avatarUrl ?? undefined} /><AvatarFallback>{(u.fullName || u.username).charAt(0)}</AvatarFallback></Avatar>
                   <div><p className="text-sm font-medium">{u.fullName || u.username}</p><p className="text-xs text-muted-foreground">@{u.username}</p></div>
                 </button>
               ))}
-              {query.length >= 2 && results.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-4">No users found.</p>
+              {searchLoading && <p role="status" className="text-center text-sm text-muted-foreground py-4">Searching people…</p>}
+              {searchError && (
+                <div role="alert" className="text-center text-sm text-muted-foreground py-4">
+                  <p>{searchError}</p>
+                  <button type="button" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>Retry people search</button>
+                </div>
+              )}
+              {query.trim().length >= 2 && !searchLoading && !searchError && results.length === 0 && (
+                <p role="status" className="text-center text-sm text-muted-foreground py-4">No users found.</p>
               )}
             </div>
           </div>
@@ -208,21 +231,37 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   const createGroupChat = useAppStore((s) => s.createGroupChat);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BackendUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [selected, setSelected] = useState<BackendUser[]>([]);
   const [title, setTitle] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults([]);
+      setSearchLoading(false);
+      setSearchError('');
+      return;
+    }
     let active = true;
+    setResults([]);
+    setSearchLoading(true);
+    setSearchError('');
     const handle = setTimeout(async () => {
       try {
-        const users = await api.searchUsers(query.trim());
+        const users = await api.searchUsers(term);
         if (active) setResults(users.filter((user) => user.id !== currentUser?.id));
-      } catch { /* ignore transient search errors */ }
+      } catch {
+        if (active) setSearchError('Group members could not load. Check your connection and retry.');
+      } finally {
+        if (active) setSearchLoading(false);
+      }
     }, 250);
     return () => { active = false; clearTimeout(handle); };
-  }, [query, currentUser?.id]);
+  }, [query, currentUser?.id, searchAttempt]);
 
   const toggleMember = (user: BackendUser) => {
     setSelected((members) => members.some((member) => member.id === user.id)
@@ -255,7 +294,7 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
           <Input value={title} onChange={(event) => setTitle(event.target.value.slice(0, 120))} placeholder="Group name" className="rounded-xl" autoFocus />
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Add people" value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9 surface-1 border-none rounded-xl" />
+            <Input placeholder="Add people" aria-label="Search people to add" value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9 surface-1 border-none rounded-xl" />
           </div>
           {selected.length > 0 && (
             <div className="flex flex-wrap gap-2" aria-label="Selected group members">
@@ -277,7 +316,14 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 </button>
               );
             })}
-            {query.length >= 2 && results.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No people found.</p>}
+            {searchLoading && <p role="status" className="text-center text-sm text-muted-foreground py-4">Searching people…</p>}
+            {searchError && (
+              <div role="alert" className="text-center text-sm text-muted-foreground py-4">
+                <p>{searchError}</p>
+                <button type="button" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>Retry member search</button>
+              </div>
+            )}
+            {query.trim().length >= 2 && !searchLoading && !searchError && results.length === 0 && <p role="status" className="text-center text-sm text-muted-foreground py-4">No people found.</p>}
           </div>
           <Button onClick={() => void handleCreate()} disabled={selected.length === 0 || !title.trim() || creating} className="w-full rounded-xl py-5">{creating ? 'Creating…' : `Create group · ${selected.length + 1} people`}</Button>
         </div>
@@ -343,6 +389,8 @@ export default function Messages() {
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
+  const loadOlderConversationMessages = useAppStore((s) => s.loadOlderConversationMessages);
+  const syncConversationMessages = useAppStore((s) => s.syncConversationMessages);
   const markDirectMessageSeen = useAppStore((s) => s.markDirectMessageSeen);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
@@ -374,6 +422,8 @@ export default function Messages() {
   const [realtimeConnected, setRealtimeConnected] = useState(() => Boolean(getSocket()?.connected));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState<boolean | null>(null);
   
   // Direct Messaging 2.0 Pro Features
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -389,9 +439,11 @@ export default function Messages() {
   const [editingText, setEditingText] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const threadFlowRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingStopTimeoutRef = useRef<number | null>(null);
   const typingConversationIdRef = useRef<string | null>(null);
+  const remoteTypingTimers = useRef(new Map<string, number>());
   const messageRequestSequence = useRef(0);
   const requestedProfiles = useRef(new Set<string>());
 
@@ -433,7 +485,15 @@ export default function Messages() {
 
   useEffect(() => {
     const socket = getSocket();
-    const update = () => { setRealtimeConnected(Boolean(socket?.connected)); setOnline(navigator.onLine); };
+    const update = () => {
+      setRealtimeConnected(Boolean(socket?.connected));
+      setOnline(navigator.onLine);
+      if (socket?.connected && id) {
+        void syncConversationMessages(id).catch(() => {
+          toast.error('Realtime restored. This conversation could not finish syncing yet.');
+        });
+      }
+    };
     update();
     socket?.on('connect', update);
     socket?.on('disconnect', update);
@@ -447,7 +507,7 @@ export default function Messages() {
       window.removeEventListener('online', update);
       window.removeEventListener('offline', update);
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, id, syncConversationMessages]);
 
   const requestConversationMessages = useCallback(async (conversationId: string) => {
     const sequence = ++messageRequestSequence.current;
@@ -550,6 +610,60 @@ export default function Messages() {
   }, [activeMessages, currentUser?.id, id, markDirectMessageSeen]);
 
   const isPeerTyping = Boolean(id && typingConversationIds[id]);
+
+  useEffect(() => {
+    setHasOlderMessages(null);
+    setPeerOnline(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !activeConv) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onTypingStart = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser?.id || payload.conversationId !== id) return;
+      setTypingConversationIds((current) => ({ ...current, [id]: true }));
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.set(id, window.setTimeout(() => {
+        setTypingConversationIds((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        remoteTypingTimers.current.delete(id);
+      }, 5000));
+    };
+    const onTypingEnd = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser?.id || payload.conversationId !== id) return;
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.delete(id);
+      setTypingConversationIds((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    };
+    const onPresence = (payload: { userId?: unknown; online?: unknown }) => {
+      if (typeof payload.userId !== 'string' || payload.userId === currentUser?.id) return;
+      if (!activeConv.conv.participantIds.includes(payload.userId)) return;
+      if (!activeConv.conv.isGroup && payload.userId === activeConv.user.id) setPeerOnline(payload.online === true);
+    };
+    socket.on('typing:start', onTypingStart);
+    socket.on('typing:end', onTypingEnd);
+    socket.on('presence:update', onPresence);
+    socket.emit('conversation:join', { conversationId: id });
+    return () => {
+      socket.off('typing:start', onTypingStart);
+      socket.off('typing:end', onTypingEnd);
+      socket.off('presence:update', onPresence);
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.delete(id);
+    };
+  }, [id, activeConv?.user.id, activeConv?.conv.isGroup, activeConv?.conv.participantIds, currentUser?.id]);
 
   const handleSend = async () => {
     if ((!message.trim() && !imageAttachment.trim()) || !activeConv || sending || sendingRef.current) return;
@@ -714,7 +828,7 @@ export default function Messages() {
                   <div className="operator-thread__identity-copy">
                     <h2>{activeConv.user.displayName}</h2>
                     <span data-typing={isPeerTyping || undefined}>
-                      {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : `@${activeConv.user.username}`}
+                      {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : peerOnline ? `@${activeConv.user.username} · online` : `@${activeConv.user.username}`}
                     </span>
                   </div>
                 </div>
@@ -750,7 +864,7 @@ export default function Messages() {
                 </div>
               </header>
 
-              <div className="operator-thread__flow" data-vanish={vanishMode || undefined}>
+              <div ref={threadFlowRef} className="operator-thread__flow" data-vanish={vanishMode || undefined}>
                 {loadingMessages && activeMessages.length === 0 ? (
                   <div className="operator-thread__loading" role="status" aria-live="polite">
                     <span className="operator-thread__loading-mark"><LoaderCircle aria-hidden="true" /></span>
@@ -786,6 +900,29 @@ export default function Messages() {
                 )}
 
                 <div className="operator-thread__messages">
+                  {(hasOlderMessages === true || (hasOlderMessages === null && activeMessages.length >= 200)) && (
+                    <button
+                      type="button"
+                      className="operator-thread__load-older"
+                      disabled={loadingMessages}
+                      onClick={async () => {
+                        const flow = threadFlowRef.current;
+                        const previousHeight = flow?.scrollHeight ?? 0;
+                        const previousTop = flow?.scrollTop ?? 0;
+                        try {
+                          const count = await loadOlderConversationMessages(activeConv.conv.id);
+                          setHasOlderMessages(count === 100);
+                          requestAnimationFrame(() => {
+                            if (flow) flow.scrollTop = previousTop + (flow.scrollHeight - previousHeight);
+                          });
+                        } catch {
+                          toast.error('Could not load earlier messages. Try again.');
+                        }
+                      }}
+                    >
+                      Load earlier messages
+                    </button>
+                  )}
                   {activeMessages.map((msg, index) => {
                     const isMine = msg.senderId === currentUser?.id;
                     const senderName = isMine ? 'You' : users[msg.senderId]?.displayName || activeConv.user.displayName;

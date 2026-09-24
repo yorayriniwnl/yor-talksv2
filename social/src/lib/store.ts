@@ -7,6 +7,7 @@ import {
   api,
   ApiError,
   getStoredTokens,
+  onSessionExpired,
   setStoredTokens,
   type BackendUser,
   type BackendFollowRequest,
@@ -685,6 +686,9 @@ interface AppState {
   products: Product[];
   articles: Article[];
   videos: Video[];
+  videosLoaded: boolean;
+  videosLoading: boolean;
+  videosError: string | null;
   achievements: Achievement[];
   notifications: Notification[];
   notificationsLoaded: boolean;
@@ -714,6 +718,7 @@ interface AppState {
   register: (username: string, email: string, password: string, fullName: string, acceptedTerms: boolean, confirmedAge: boolean) => Promise<void>;
   acceptCurrentTerms: () => Promise<void>;
   logout: () => Promise<void>;
+  expireSession: () => void;
   requestPasswordReset: (email: string) => Promise<void>;
   initialize: () => Promise<void>;
   loadWorldPreferences: () => Promise<void>;
@@ -758,6 +763,8 @@ interface AppState {
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
+  loadOlderConversationMessages: (conversationId: string) => Promise<number>;
+  syncConversationMessages: (conversationId: string) => Promise<void>;
   markDirectMessageSeen: (messageId: string) => Promise<void>;
   sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
   sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
@@ -820,6 +827,7 @@ function clearPrivateSessionState(
   privacyRequestSequence += 1;
   notificationRequestSequence += 1;
   followRequestSequence += 1;
+  videoRequestSequence += 1;
   activitySessionSequence += 1;
   notificationReadRequests.clear();
   profileRequests.clear();
@@ -846,6 +854,9 @@ function clearPrivateSessionState(
     products: [],
     articles: [],
     videos: [],
+    videosLoaded: false,
+    videosLoading: false,
+    videosError: null,
     achievements: [],
     notifications: [],
     notificationsLoaded: false,
@@ -889,15 +900,32 @@ function hydrateSessionData(get: () => AppState): void {
 }
 
 let realtimePollingTimer: number | null = null;
+let realtimeReconnectHandler: (() => void) | null = null;
 let feedRequestSequence = 0;
 let conversationRequestSequence = 0;
 let privacyRequestSequence = 0;
 let notificationRequestSequence = 0;
 let followRequestSequence = 0;
+let videoRequestSequence = 0;
 let activitySessionSequence = 0;
 const notificationReadRequests = new Map<string, Promise<void>>();
+const pendingMessageIdempotencyKeys = new Map<string, string>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
+
+function getPendingMessageKey(userId: string, destination: string, content: string, replyToId?: string): { fingerprint: string; key: string } {
+  const fingerprint = JSON.stringify([userId, destination, content, replyToId ?? null]);
+  let key = pendingMessageIdempotencyKeys.get(fingerprint);
+  if (!key) {
+    if (pendingMessageIdempotencyKeys.size >= 100) {
+      const oldest = pendingMessageIdempotencyKeys.keys().next().value;
+      if (oldest) pendingMessageIdempotencyKeys.delete(oldest);
+    }
+    key = crypto.randomUUID();
+    pendingMessageIdempotencyKeys.set(fingerprint, key);
+  }
+  return { fingerprint, key };
+}
 
 function stopRealtime(): void {
   disconnectSocket();
@@ -944,6 +972,16 @@ function setupRealtime(
       get().loadConversations();
     }
   });
+  if (realtimeReconnectHandler) socket.off('connect', realtimeReconnectHandler);
+  realtimeReconnectHandler = () => {
+    void get().loadConversations();
+    for (const conversationId of Object.keys(get().messagesByConversation)) {
+      void get().syncConversationMessages(conversationId).catch(() => {
+        // The next reconnect or explicit refresh retries persisted catch-up.
+      });
+    }
+  };
+  socket.on('connect', realtimeReconnectHandler);
   socket.on('message:seen:update', ({ messageId, userId, seenAt }: { messageId?: string; userId?: string; seenAt?: string | null }) => {
     if (!messageId) return;
     set((state) => {
@@ -1024,6 +1062,9 @@ export const useAppStore = create<AppState>()(
       products: [],
       articles: [],
       videos: [],
+      videosLoaded: false,
+      videosLoading: false,
+      videosError: null,
       achievements: [],
       notifications: [],
       notificationsLoaded: false,
@@ -1171,6 +1212,11 @@ export const useAppStore = create<AppState>()(
         }
         stopRealtime();
         setStoredTokens(null);
+        clearPrivateSessionState(set);
+      },
+
+      expireSession: () => {
+        stopRealtime();
         clearPrivateSessionState(set);
       },
 
@@ -1575,6 +1621,44 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      loadOlderConversationMessages: async (conversationId) => {
+        const current = get().messagesByConversation[conversationId] ?? [];
+        const first = current[0];
+        if (!first) return 0;
+        const page = await api.getConversationMessages(conversationId, {
+          direction: 'older', cursorAt: first.createdAt, cursorId: first.id, limit: 100,
+        });
+        const mapped = page.map(mapMessage);
+        set((state) => {
+          const existing = state.messagesByConversation[conversationId] ?? [];
+          const merged = mapped.reduce(upsertMessage, existing);
+          return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
+        });
+        return page.length;
+      },
+
+      syncConversationMessages: async (conversationId) => {
+        let latest = (get().messagesByConversation[conversationId] ?? []).at(-1);
+        if (!latest) {
+          await get().loadConversationMessages(conversationId);
+          return;
+        }
+        while (true) {
+          const page = await api.getConversationMessages(conversationId, {
+            direction: 'newer', cursorAt: latest.createdAt, cursorId: latest.id, limit: 100,
+          });
+          if (page.length === 0) return;
+          const mapped = page.map(mapMessage);
+          set((state) => {
+            const existing = state.messagesByConversation[conversationId] ?? [];
+            const merged = mapped.reduce(upsertMessage, existing);
+            return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
+          });
+          latest = mapped[mapped.length - 1];
+          if (page.length < 100) return;
+        }
+      },
+
       markDirectMessageSeen: async (messageId) => {
         try {
           const updated = mapMessage(await api.markMessageSeen(messageId));
@@ -1598,8 +1682,11 @@ export const useAppStore = create<AppState>()(
       },
 
       sendDirectMessage: async (recipientId, content, replyToId) => {
+        const userId = get().currentUser?.id ?? '';
+        const pending = getPendingMessageKey(userId, `user:${recipientId}`, content, replyToId);
         try {
-          const created = await api.sendMessage(recipientId, content, replyToId);
+          const created = await api.sendMessage(recipientId, content, replyToId, pending.key);
+          pendingMessageIdempotencyKeys.delete(pending.fingerprint);
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1615,8 +1702,11 @@ export const useAppStore = create<AppState>()(
       },
 
       sendMessageToConversation: async (conversationId, content, replyToId) => {
+        const userId = get().currentUser?.id ?? '';
+        const pending = getPendingMessageKey(userId, `conversation:${conversationId}`, content, replyToId);
         try {
-          const created = await api.sendMessageToConversation(conversationId, content, replyToId);
+          const created = await api.sendMessageToConversation(conversationId, content, replyToId, pending.key);
+          pendingMessageIdempotencyKeys.delete(pending.fingerprint);
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -2155,12 +2245,18 @@ export const useAppStore = create<AppState>()(
       },
 
       loadVideos: async () => {
+        const requestId = ++videoRequestSequence;
+        set({ videosLoading: true, videosError: null });
         try {
           const backendVideos = await api.getVideos();
-          set({ videos: backendVideos.map(mapVideo) });
+          if (requestId === videoRequestSequence) {
+            set({ videos: backendVideos.map(mapVideo), videosLoaded: true, videosLoading: false, videosError: null });
+          }
           return;
         } catch {
-          // Keep the last successful snapshot during a transient outage.
+          if (requestId === videoRequestSequence) {
+            set({ videosLoading: false, videosError: 'Videos could not load. Check your connection and retry.' });
+          }
         }
       },
 
@@ -2178,7 +2274,7 @@ export const useAppStore = create<AppState>()(
           contentCategory: input.contentCategory,
           contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
         };
-        set((state) => ({ videos: [newVideo, ...state.videos] }));
+        set((state) => ({ videos: [newVideo, ...state.videos], videosLoaded: true, videosError: null }));
         try {
           const created = await api.createVideo(input);
           set((state) => ({ videos: state.videos.map((video) => video.id === optimisticId ? mapVideo(created) : video) }));
@@ -2480,3 +2576,5 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+onSessionExpired(() => useAppStore.getState().expireSession());

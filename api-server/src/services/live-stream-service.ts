@@ -16,6 +16,7 @@ type StreamStatus = (typeof VALID_STATUSES)[number];
 
 export class LiveStreamNotFoundError extends Error {}
 export class LiveStreamNotLiveError extends Error {}
+export class LiveStreamRoomCleanupError extends Error {}
 
 export class LiveStreamService {
   constructor(
@@ -68,7 +69,18 @@ export class LiveStreamService {
     if (!stream || stream.hostId !== hostId) {
       return undefined;
     }
-    return this.liveStreamRepository.update(id, { status });
+    if (stream.status === "ended" && status !== "ended") {
+      throw new LiveStreamNotLiveError("An ended stream cannot be reopened");
+    }
+    const updated = await this.liveStreamRepository.update(id, { status });
+    if (status === "ended" && updated) {
+      try {
+        await this.liveKitService.endRoom(id);
+      } catch (error) {
+        throw new LiveStreamRoomCleanupError("The stream was ended, but its LiveKit room could not be closed");
+      }
+    }
+    return updated;
   }
 
   async getRoomAccessToken(id: string, userId: string) {
@@ -86,6 +98,9 @@ export class LiveStreamService {
       throw new LiveStreamNotFoundError("Stream not found");
     }
     const isHost = stream.hostId === userId;
+    if (stream.status === "ended") {
+      throw new LiveStreamNotLiveError("This stream has ended");
+    }
     if (!isHost && stream.status !== "live") {
       throw new LiveStreamNotLiveError("This stream is not live yet");
     }

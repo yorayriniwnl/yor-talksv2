@@ -124,7 +124,7 @@ export default function BusinessDashboard() {
               {(() => {
                 const ownedProducts = products.filter((product) => product.sellerId === currentUser?.id);
                 const ownedOrders = orders.filter((order) => order.sellerId === currentUser?.id && ['paid', 'fulfilled'].includes(order.status));
-                const revenueMinor = ownedOrders.reduce((total, order) => total + Number(order.amountMinor || 0), 0);
+                const revenueMinor = ownedOrders.reduce((total, order) => total + Math.max(0, Number(order.amountMinor || 0) - Number(order.refundedAmountMinor || 0)), 0);
                 return <div className="mt-8 grid grid-cols-3 gap-4">
                 <div className="bg-background rounded-xl p-3 border border-border/40">
                   <HandCoins className="w-4 h-4 text-emerald-400 mb-2" />

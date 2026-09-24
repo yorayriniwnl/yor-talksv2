@@ -1,4 +1,4 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { env } from "../config/env.js";
 
 export class LiveKitNotConfiguredError extends Error {
@@ -27,14 +27,14 @@ export class LiveKitService {
     const accessToken = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
       identity: input.userId,
       name: input.displayName,
-      ttl: "2h",
+      ttl: "15m",
     });
     accessToken.addGrant({
       roomJoin: true,
       room: roomName,
       canPublish: input.canPublish,
       canSubscribe: true,
-      canPublishData: true,
+      canPublishData: input.canPublish,
     });
 
     return {
@@ -42,5 +42,12 @@ export class LiveKitService {
       wsUrl: env.LIVEKIT_URL,
       roomName,
     };
+  }
+
+  async endRoom(streamId: string): Promise<void> {
+    if (!this.isConfigured()) throw new LiveKitNotConfiguredError();
+    const roomName = `yor-talks-${streamId}`;
+    const rooms = new RoomServiceClient(env.LIVEKIT_URL, env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET);
+    await rooms.deleteRoom(roomName);
   }
 }

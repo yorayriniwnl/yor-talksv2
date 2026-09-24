@@ -9,13 +9,20 @@ import {
   PaymentRequestError,
   PaymentService,
 } from "../services/payment-service.js";
-import { PaymentsNotConfiguredError, PaymentProviderError } from "../services/razorpay-service.js";
+import { PaymentsNotConfiguredError, PaymentProviderError, RazorpayService } from "../services/razorpay-service.js";
 import { createResponse } from "../utils/response.js";
 import { CreatorAnalyticsService } from "../services/creator-analytics-service.js";
+import { MarketplaceOrderNotFoundError, MarketplaceRequestError, MarketplaceService } from "../services/marketplace-service.js";
+import { SubscriptionOrderNotFoundError, SubscriptionRequestError, SubscriptionService } from "../services/subscription-service.js";
+import { PaymentWebhookNotFoundError, PaymentWebhookRequestError, PaymentWebhookService, PaymentWebhookSignatureError } from "../services/payment-webhook-service.js";
 
 const router = Router();
 const economyService = new EconomyService();
-const paymentService = new PaymentService();
+const razorpayService = new RazorpayService();
+const paymentService = new PaymentService(razorpayService);
+const subscriptionService = new SubscriptionService(razorpayService);
+const marketplaceService = new MarketplaceService(razorpayService);
+const paymentWebhookService = new PaymentWebhookService(razorpayService, [paymentService, subscriptionService, marketplaceService]);
 const creatorAnalyticsService = new CreatorAnalyticsService();
 
 router.get("/wallet", authenticate, async (req, res) => {
@@ -93,19 +100,22 @@ router.post("/orders/:orderId/verify", authenticate, validateBody(verifyTipPayme
 
 router.post("/webhooks/razorpay", async (req: Request & { rawBody?: Buffer }, res) => {
   const signature = typeof req.headers["x-razorpay-signature"] === "string" ? req.headers["x-razorpay-signature"] : "";
-  if (!req.rawBody || !paymentService.verifyWebhookSignature(req.rawBody, signature)) {
-    return res.status(401).json(createResponse("Invalid webhook signature", null, {}, ["invalid_signature"]));
-  }
   try {
-    const payload = req.body as { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string } } } };
-    if (payload.event !== "payment.captured") return res.status(200).json({ received: true });
-    const entity = payload.payload?.payment?.entity;
-    if (!entity?.id || !entity.order_id) return res.status(400).json(createResponse("Invalid payment event", null, {}, ["invalid_event"]));
-    await paymentService.reconcileCapturedPayment({ orderId: entity.order_id, paymentId: entity.id });
+    if (!req.rawBody) throw new PaymentWebhookSignatureError("Invalid webhook signature");
+    await paymentWebhookService.handle(req.body, req.rawBody, signature);
     return res.status(200).json({ received: true });
   } catch (error) {
-    if (error instanceof PaymentOrderNotFoundError) return res.status(404).json(createResponse("Payment order not found", null, {}, [error.message]));
-    if (error instanceof PaymentRequestError) return res.status(400).json(createResponse("Payment reconciliation failed", null, {}, [error.message]));
+    if (error instanceof PaymentWebhookSignatureError) return res.status(401).json(createResponse("Invalid webhook signature", null, {}, ["invalid_signature"]));
+    if (error instanceof PaymentWebhookNotFoundError || error instanceof PaymentOrderNotFoundError
+      || error instanceof MarketplaceOrderNotFoundError || error instanceof SubscriptionOrderNotFoundError) {
+      return res.status(404).json(createResponse("Payment reference not found", null, {}, [error.message]));
+    }
+    if (error instanceof PaymentWebhookRequestError || error instanceof PaymentRequestError
+      || error instanceof MarketplaceRequestError || error instanceof SubscriptionRequestError) {
+      return res.status(400).json(createResponse("Payment reconciliation failed", null, {}, [error.message]));
+    }
+    if (error instanceof PaymentsNotConfiguredError) return res.status(503).json(createResponse("Payments are unavailable", null, {}, [error.message]));
+    if (error instanceof PaymentProviderError) return res.status(502).json(createResponse("Payment reconciliation could not be completed", null, {}, [error.message]));
     console.error(error);
     return res.status(500).json(createResponse("Payment reconciliation failed", null, {}, ["Internal server error"]));
   }

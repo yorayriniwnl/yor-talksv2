@@ -124,8 +124,11 @@ the four optional feature flags disabled until separately approved and tested.
   `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`, and
   test Checkout in an isolated provider test environment.
   The API fetches and verifies the captured payment before crediting the
-  creator wallet. Bank withdrawals/payouts are intentionally not enabled for
-  this deployment because they require a separately verified RazorpayX/KYC
+  creator wallet. Configure the webhook URL for `payment.captured` and
+  `refund.processed`; the handler verifies the raw-body signature, settles
+  tips, memberships, and marketplace orders, and applies processed refunds to
+  the ledger. Bank withdrawals/payouts are intentionally not enabled for this
+  deployment because they require a separately verified RazorpayX/KYC
   settlement setup.
 - LiveKit Cloud: create a project and set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
   `LIVEKIT_API_SECRET`. The server issues short-lived room tokens; the secret
@@ -136,7 +139,13 @@ the four optional feature flags disabled until separately approved and tested.
   production TURN server (STUN alone is not reliable across carrier NATs).
   If the frontend is on Vercel and the API is elsewhere, set `NODE_ENV=production`
   on the API and set `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter
-  must point to a long-lived Socket.IO process.
+  must point to a long-lived Socket.IO process. The Vercel `api/index.ts`
+  function is HTTP-only: it does not start Socket.IO or background workers.
+  If REST requests use that function, deploy a separate persistent notification
+  worker with the same `DATABASE_URL` and `REDIS_URL` using
+  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` checks the
+  worker's Redis heartbeat and stays unhealthy until that process is running.
+  A Vercel function alone is not a supported realtime or push-delivery setup.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
   then set the same client ID in both `GOOGLE_CLIENT_ID` and

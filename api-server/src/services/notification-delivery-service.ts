@@ -20,6 +20,7 @@ export class NotificationDeliveryService {
 
     webpush.setVapidDetails(env.WEB_PUSH_VAPID_SUBJECT, env.WEB_PUSH_VAPID_PUBLIC_KEY, env.WEB_PUSH_VAPID_PRIVATE_KEY);
     const subscriptions = await this.pushSubscriptionRepository.listForUser(notification.recipientId);
+    const failures: unknown[] = [];
     await Promise.all(subscriptions.map(async (subscription) => {
       try {
         await webpush.sendNotification({
@@ -30,7 +31,11 @@ export class NotificationDeliveryService {
           body: notification.message,
           icon: "/favicon.ico",
           badge: "/favicon.ico",
-          data: { url: notification.relatedId ? `/post/${notification.relatedId}` : "/notifications" },
+          data: {
+            url: notification.type === "broadcast_channel"
+              ? "/channels"
+              : notification.relatedId ? `/post/${notification.relatedId}` : "/notifications",
+          },
         }));
         await this.pushSubscriptionRepository.markUsed(subscription.id);
       } catch (error: any) {
@@ -41,8 +46,12 @@ export class NotificationDeliveryService {
           return;
         }
         logger.warn({ err: error, subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
+        failures.push(error);
       }
     }));
+    if (failures.length > 0) {
+      throw new Error(`Web Push delivery failed for ${failures.length} subscription(s)`);
+    }
     return notification;
   }
 }

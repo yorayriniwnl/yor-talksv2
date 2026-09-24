@@ -214,7 +214,7 @@ export const apiRouteCatalog = [
     "operationId": "postAuthLogout",
     "tag": "auth",
     "summary": "Post /auth/logout",
-    "authenticated": true,
+    "authenticated": false,
     "roles": []
   },
   {
@@ -539,7 +539,9 @@ export const apiRouteCatalog = [
     "tag": "diagnostics",
     "summary": "Get /diagnostics",
     "authenticated": true,
-    "roles": []
+    "roles": [
+      "admin"
+    ]
   },
   {
     "method": "get",

@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
-import { isNotificationWorkerHealthy } from "../lib/worker-health.js";
+import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
 
 const router = Router();
 
@@ -38,7 +38,7 @@ const readinessHandler = async (_req: Request, res: Response) => {
       details.redisVersion = redis.version;
     }
 
-    if (!isNotificationWorkerHealthy()) {
+    if (!(await hasHealthyNotificationWorker())) {
       throw new Error("Required notification worker is not ready");
     }
     services.worker = "up";
@@ -68,4 +68,3 @@ router.get("/livez", liveHandler);
 
 export const healthRoutes = router;
 export default router;
-
