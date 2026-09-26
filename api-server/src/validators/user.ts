@@ -17,6 +17,14 @@ export const settingsSchema = z.object({
   notificationsEnabled: z.boolean().optional(),
   privateAccount: z.boolean().optional(),
   contentFilter: contentRatingSchema.optional(),
+  storyViewMode: z.enum(["identified", "private"]).optional(),
+});
+
+export const premiumProfileSchema = z.object({
+  bioStyleId: z.string().trim().min(1).max(40).optional(),
+  messageFontId: z.string().trim().min(1).max(40).optional(),
+  storyFontId: z.string().trim().min(1).max(40).optional(),
+  appIconId: z.string().trim().min(1).max(40).optional(),
 });
 
 export const privacySchema = z.object({

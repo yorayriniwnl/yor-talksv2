@@ -32,16 +32,16 @@ export default function NotFound() {
         </p>
 
         <div className="flex items-center gap-3">
-          <Link href="/">
-            <Button className="rounded-2xl font-bold text-xs glow-neon-primary">
+          <Button asChild className="rounded-2xl font-bold text-xs glow-neon-primary">
+            <Link href="/">
               <Home className="w-4 h-4 mr-2" /> Go Home
-            </Button>
-          </Link>
-          <Link href="/explore">
-            <Button variant="outline" className="rounded-2xl font-bold text-xs">
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-2xl font-bold text-xs">
+            <Link href="/explore">
               <Compass className="w-4 h-4 mr-2" /> Explore
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </motion.div>
     </div>

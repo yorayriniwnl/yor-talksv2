@@ -6,7 +6,7 @@ import { logger } from "../lib/logger.js";
 import { setIo } from "../lib/realtime.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidMessageStyleError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError } from "../services/message-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
@@ -175,8 +175,8 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     // Modified to support group chats via conversationId
-    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown } = {}) => {
-      const { recipientId, conversationId, content } = payload;
+    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; textStyleId?: unknown } = {}) => {
+      const { recipientId, conversationId, content, textStyleId } = payload;
       if (typeof content !== "string" || !content.trim()) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
@@ -186,9 +186,9 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         let actualConversationId = conversationId;
 
         if (typeof conversationId === "string" && conversationId) {
-          message = await messageService.sendMessageToConversation(userId, conversationId, content);
+          message = await messageService.sendMessageToConversation(userId, conversationId, content, typeof textStyleId === "string" ? { textStyleId } : undefined);
         } else if (typeof recipientId === "string" && recipientId) {
-          message = await messageService.sendMessage(userId, recipientId, content);
+          message = await messageService.sendMessage(userId, recipientId, content, typeof textStyleId === "string" ? { textStyleId } : undefined);
           actualConversationId = message.conversationId;
           
           // Join every connected device of both members before the first emit.
@@ -204,7 +204,7 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       } catch (err) {
         if (err instanceof MessageBlockedError) {
           socket.emit("message:error", { error: err.message });
-        } else if (err instanceof InvalidMessageContentError) {
+        } else if (err instanceof InvalidMessageContentError || err instanceof InvalidMessageStyleError || err instanceof PremiumFeatureUnavailableError) {
           socket.emit("message:error", { error: err.message });
         } else {
           logger.error({ err, userId, recipientId, conversationId }, "Failed to persist socket message");

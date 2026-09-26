@@ -68,6 +68,8 @@ export default function Auth() {
   const [readiness, setReadiness] = useState<'checking' | 'operational' | 'unavailable'>('checking');
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleCredentialRef = useRef<string | null>(null);
+  const [googleStatus, setGoogleStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [googleRetry, setGoogleRetry] = useState(0);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
 
@@ -95,64 +97,83 @@ export default function Auth() {
     if (mode !== 'login' || !googleClientId || !googleButtonRef.current) return;
 
     let cancelled = false;
+    let script: HTMLScriptElement | null = null;
+    setGoogleStatus('loading');
+    const unavailable = () => { if (!cancelled) setGoogleStatus('unavailable'); };
+    const timeout = window.setTimeout(unavailable, 10_000);
     const renderGoogleButton = () => {
-      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) return;
+      if (cancelled || !googleButtonRef.current) return;
+      if (!window.google?.accounts?.id) { unavailable(); return; }
       googleButtonRef.current.replaceChildren();
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        ux_mode: 'popup',
-        use_fedcm_for_prompt: true,
-        callback: (response) => {
-          googleCredentialRef.current = response.credential;
-          setErrorMsg('');
-          setFieldErrors({});
-          setLoading(true);
-          void loginWithGoogle(response.credential)
-            .then((challenge) => {
-              if (cancelled) return;
-              if (challenge) {
-                setTwoFactorChallenge(challenge);
-                setTwoFactorFallback(false);
-                setTwoFactorFallbackCode('');
-                setApprovalBusy(false);
-              } else {
-                googleCredentialRef.current = null;
-              }
-            })
-            .catch((error) => {
-              if (!cancelled) setErrorMsg(error instanceof Error ? error.message : 'Google sign-in failed.');
-            })
-            .finally(() => {
-              if (!cancelled) setLoading(false);
-            });
-        },
-      });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        width: 360,
-      });
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          ux_mode: 'popup',
+          use_fedcm_for_prompt: true,
+          callback: (response) => {
+            googleCredentialRef.current = response.credential;
+            setErrorMsg('');
+            setFieldErrors({});
+            setLoading(true);
+            void loginWithGoogle(response.credential)
+              .then((challenge) => {
+                if (cancelled) return;
+                if (challenge) {
+                  setTwoFactorChallenge(challenge);
+                  setTwoFactorFallback(false);
+                  setTwoFactorFallbackCode('');
+                  setApprovalBusy(false);
+                } else {
+                  googleCredentialRef.current = null;
+                }
+              })
+              .catch((error) => {
+                if (!cancelled) setErrorMsg(error instanceof Error ? error.message : 'Google sign-in failed.');
+              })
+              .finally(() => {
+                if (!cancelled) setLoading(false);
+              });
+          },
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width: 360,
+        });
+        window.clearTimeout(timeout);
+        setGoogleStatus('ready');
+      } catch {
+        unavailable();
+      }
     };
 
     if (window.google?.accounts?.id) {
       renderGoogleButton();
     } else {
-      const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
-      const script = existingScript ?? document.createElement('script');
+      let existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+      if (googleRetry > 0) {
+        existingScript?.remove();
+        existingScript = null;
+      }
+      script = existingScript ?? document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
       script.addEventListener('load', renderGoogleButton, { once: true });
+      script.addEventListener('error', unavailable, { once: true });
       if (!existingScript) document.head.appendChild(script);
     }
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
+      script?.removeEventListener('load', renderGoogleButton);
+      script?.removeEventListener('error', unavailable);
       googleButtonRef.current?.replaceChildren();
     };
-  }, [googleClientId, loginWithGoogle, mode]);
+  }, [googleClientId, googleRetry, loginWithGoogle, mode]);
 
   useEffect(() => {
     if (!twoFactorChallenge || twoFactorFallback || approvalBusy) return;
@@ -421,8 +442,13 @@ export default function Auth() {
           </header>
 
           {mode === 'login' && googleClientId && (
-            <div className="operator-google-access">
-              <div ref={googleButtonRef} className="operator-google-access__button" aria-label="Sign in with Google" />
+            <div className="operator-google-access" role="group" aria-label="Google sign-in">
+              <div ref={googleButtonRef} className="operator-google-access__button" />
+              {googleStatus === 'loading' && <p role="status" className="text-center text-sm text-muted-foreground">Loading Google sign-in…</p>}
+              {googleStatus === 'unavailable' && <div className="rounded-xl border border-border/50 p-3 text-center">
+                <p role="status" className="text-sm leading-6 text-muted-foreground">Google sign-in couldn’t load. Password and email code are still available.</p>
+                <button type="button" className="mt-2 min-h-11 rounded-lg border border-border px-4 text-sm font-semibold text-foreground" onClick={() => setGoogleRetry((attempt) => attempt + 1)}>Retry Google sign-in</button>
+              </div>}
               <div className="operator-access-divider"><span>or use Yor access</span></div>
             </div>
           )}

@@ -26,7 +26,8 @@ import {
   type BackendLiveStream,
   type AuthTokens,
   type TwoFactorChallenge,
-  type FeedMode
+  type FeedMode,
+  type PremiumProfileSelection
 } from '@/lib/api-client';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { DEFAULT_CONTENT_CATEGORY, type ContentCategory } from '@/lib/content-category';
@@ -36,6 +37,7 @@ import { reconcileFollowRequests, reconcileNotifications } from '@/lib/activity-
 import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { DEFAULT_STORY_TEXT_STYLE, type StoryTextStyle } from '@/lib/story-text-style';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -51,6 +53,10 @@ export type User = {
   avatarUrl: string;
   coverUrl?: string;
   bio?: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   verified?: boolean;
   followers: number;
   following: number;
@@ -62,8 +68,14 @@ export type User = {
   twoFactorEnabled?: boolean;
   notificationsEnabled?: boolean;
   contentFilter?: ContentRating;
+  storyViewMode?: 'identified' | 'private';
   onboardingCompleted?: boolean;
 };
+
+function visibleSocialItems<T extends { authorId: string }>(items: T[], viewer: User | null): T[] {
+  const hidden = new Set([...(viewer?.blockedUserIds ?? []), ...(viewer?.mutedUserIds ?? [])]);
+  return items.filter((item) => !hidden.has(item.authorId));
+}
 
 export type ProfileComment = {
   id: string;
@@ -100,6 +112,8 @@ export type Post = {
   savedByMe?: boolean;
   repostedByMe?: boolean;
   audience: 'followers' | 'close_friends' | 'public';
+  distributionMode: 'feed_and_profile' | 'profile_only';
+  pinnedPosition?: number | null;
   contentCategory: string;
   contentRating: ContentRating;
   poll?: {
@@ -117,6 +131,8 @@ export type Story = {
   type: 'image' | 'video' | 'text' | 'voice';
   textContent?: string;
   backgroundGradient?: string;
+  storyFontId?: 'default' | 'cinematic' | 'mono';
+  storyTextStyle?: StoryTextStyle;
   viewed: boolean;
   createdAt: string;
   expiresAt: string;
@@ -130,7 +146,9 @@ export type Story = {
   };
   isHighlight?: boolean;
   highlightTitle?: string;
-  audience: 'followers' | 'close_friends' | 'public';
+  highlightId?: string;
+  publishMode?: 'active' | 'highlight_only';
+  audience: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
   contentCategory: string;
   contentRating: ContentRating;
 };
@@ -156,6 +174,7 @@ export type Message = {
   conversationId: string;
   senderId: string;
   content: string;
+  textStyleId?: 'default' | 'mono' | 'rounded';
   createdAt: string;
   read: boolean;
   replyToId?: string | null;
@@ -164,6 +183,8 @@ export type Message = {
   expiresAt?: string | null;
   reactions?: Record<string, string[]>;
   pinned?: boolean;
+  messageState?: 'MESSAGE_DELIVERED' | 'MESSAGE_PREVIEWED' | 'MESSAGE_OPENED' | 'MESSAGE_READ';
+  previewedAt?: string | null;
 };
 
 export type Conversation = {
@@ -332,6 +353,10 @@ function mapUser(u: BackendUser): User {
     displayName: u.fullName || u.username || 'User',
     avatarUrl: u.avatarUrl || '',
     bio: u.bio || '',
+    bioStyleId: u.bioStyleId,
+    messageFontId: u.messageFontId,
+    storyFontId: u.storyFontId,
+    appIconId: u.appIconId,
     verified: Boolean(u.role === 'admin' || (u as any).verified),
     followers: Array.isArray(u.followers) ? u.followers.length : (u.followerCount ?? 0),
     following: Array.isArray(u.following) ? u.following.length : (u.followingCount ?? 0),
@@ -343,6 +368,7 @@ function mapUser(u: BackendUser): User {
     twoFactorEnabled: Boolean(u.twoFactorEnabled),
     notificationsEnabled: u.settings?.notificationsEnabled !== false,
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
+    storyViewMode: u.settings?.storyViewMode ?? 'identified',
     onboardingCompleted: u.settings?.onboardingCompleted,
   };
 }
@@ -385,6 +411,8 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     type: (s.type as Story['type']) || 'image',
     textContent: s.textContent ?? undefined,
     backgroundGradient: s.backgroundGradient ?? undefined,
+    storyFontId: s.storyFontId ?? 'default',
+    storyTextStyle: s.storyTextStyle ?? DEFAULT_STORY_TEXT_STYLE,
     viewed: currentUserId ? viewerIds.includes(currentUserId) : false,
     createdAt: s.createdAt || new Date().toISOString(),
     expiresAt: s.expiresAt || new Date(Date.now() + 86400000).toISOString(),
@@ -398,7 +426,9 @@ function mapStory(s: BackendStory, currentUserId?: string): Story {
     } : undefined,
     isHighlight: Boolean(s.isHighlight),
     highlightTitle: s.highlightTitle ?? undefined,
-    audience: s.audience === 'public' || s.audience === 'close_friends' ? s.audience : 'followers',
+    highlightId: s.highlightId ?? undefined,
+    publishMode: s.publishMode,
+    audience: s.audience === 'public' || s.audience === 'close_friends' || s.audience === 'selected_people' || s.audience === 'everyone_except' || s.audience === 'custom' ? s.audience : 'followers',
     contentCategory: s.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: s.contentRating ?? DEFAULT_CONTENT_RATING,
   };
@@ -454,6 +484,8 @@ export function mapPost(p: BackendPost, currentUserId?: string): Post {
     savedByMe: !!(p as any).savedByMe,
     repostedByMe: !!p.repostedByMe,
     audience: p.audience === 'followers' || p.audience === 'close_friends' ? p.audience : 'public',
+    distributionMode: p.distributionMode === 'profile_only' ? 'profile_only' : 'feed_and_profile',
+    pinnedPosition: p.pinnedPosition ?? null,
     contentCategory: p.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
     contentRating: p.contentRating ?? DEFAULT_CONTENT_RATING,
     poll: p.poll ? {
@@ -490,6 +522,7 @@ function mapMessage(m: BackendMessage): Message {
     conversationId: m.conversationId,
     senderId: m.senderId,
     content: m.content || '',
+    textStyleId: m.textStyleId ?? 'default',
     createdAt: m.createdAt ? utcTimestamp(m.createdAt) : new Date().toISOString(),
     read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
     replyToId: m.replyToId ?? null,
@@ -498,6 +531,8 @@ function mapMessage(m: BackendMessage): Message {
     expiresAt: m.expiresAt ?? null,
     reactions: m.reactions ?? {},
     pinned: Boolean(m.pinned),
+    messageState: m.messageState,
+    previewedAt: m.previewedAt ?? null,
   };
 }
 
@@ -656,6 +691,7 @@ function mapShowcase(showcase: BackendShowcase): Showcase {
 export type MessageDraft = {
   message: string;
   imageAttachment: string;
+  textStyleId?: 'default' | 'mono' | 'rounded';
   replyTarget: { messageId: string; senderName: string; excerpt: string } | null;
   sending?: boolean;
 };
@@ -733,8 +769,11 @@ interface AppState {
   loadPost: (postId: string) => Promise<void>;
   syncPostFromBackend: (post: BackendPost) => void;
   likePost: (postId: string) => Promise<void>;
-  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience']) => Promise<void>;
+  addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience'], distributionMode?: Post['distributionMode']) => Promise<void>;
   updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
+  updatePremiumProfile: (updates: Partial<PremiumProfileSelection>) => Promise<void>;
+  pinPost: (postId: string) => Promise<void>;
+  unpinPost: (postId: string) => Promise<void>;
   toggleSavePost: (postId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
   toggleRepost: (postId: string) => Promise<void>;
@@ -758,9 +797,10 @@ interface AppState {
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
+  previewDirectMessage: (messageId: string) => Promise<Message>;
   markDirectMessageSeen: (messageId: string) => Promise<void>;
-  sendDirectMessage: (recipientId: string, content: string, replyToId?: string) => Promise<void>;
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => Promise<void>;
+  sendDirectMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
   createGroupChat: (memberIds: string[], title: string) => Promise<string>;
   setConversationVanishMode: (conversationId: string, enabled: boolean) => Promise<void>;
   editDirectMessage: (messageId: string, content: string) => Promise<void>;
@@ -792,21 +832,22 @@ interface AppState {
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { isHighlight?: boolean; highlightTitle?: string; audience?: Story['audience']; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { storyFontId?: Story['storyFontId']; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
-  reactToStory: (storyId: string, emoji: string) => Promise<void>;
+  reactToStory: (storyId: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
 
   loadStreams: () => Promise<void>;
   createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
+  updateStoryViewMode: (storyViewMode: 'identified' | 'private') => Promise<void>;
   updateNotificationPreference: (enabled: boolean) => Promise<void>;
   toggleSaveProduct: (productId: string) => Promise<void>;
   sendAIMessage: (content: string) => Promise<void>;
   updatePrivacy: (patch: Partial<Omit<PrivacySettings, 'twoFactorEnabled'>>) => Promise<void>;
-  toggleBlockUser: (userId: string) => Promise<void>;
-  toggleMuteUser: (userId: string) => Promise<void>;
+  toggleBlockUser: (userId: string) => Promise<boolean>;
+  toggleMuteUser: (userId: string) => Promise<boolean>;
   setTwoFactorEnabled: (enabled: boolean) => void;
   updateWorldPreferences: (patch: Partial<WorldPreferences>) => void;
   switchAccount: (userId: string) => void;
@@ -822,6 +863,7 @@ function clearPrivateSessionState(
   followRequestSequence += 1;
   activitySessionSequence += 1;
   notificationReadRequests.clear();
+  safetyRelationshipRequests.clear();
   profileRequests.clear();
   set({
     currentUser: null,
@@ -896,8 +938,20 @@ let notificationRequestSequence = 0;
 let followRequestSequence = 0;
 let activitySessionSequence = 0;
 const notificationReadRequests = new Map<string, Promise<void>>();
+const safetyRelationshipRequests = new Map<string, Promise<boolean>>();
+const storyReactionToastExpirations = new Map<string, number>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
+
+function shouldShowStoryReactionToast(key: string): boolean {
+  const now = Date.now();
+  for (const [cachedKey, expiresAt] of storyReactionToastExpirations) {
+    if (expiresAt <= now) storyReactionToastExpirations.delete(cachedKey);
+  }
+  if ((storyReactionToastExpirations.get(key) ?? 0) > now) return false;
+  storyReactionToastExpirations.set(key, now + 5_000);
+  return true;
+}
 
 function stopRealtime(): void {
   disconnectSocket();
@@ -927,6 +981,7 @@ function setupRealtime(
   socket.off('conversation:created');
   socket.off('conversation:vanish:update');
   socket.off('notification:new');
+  socket.off('story:reaction');
   socket.on('message:receive', (raw: BackendMessage) => {
     const mapped = mapMessage(raw);
     set((state) => {
@@ -995,6 +1050,66 @@ function setupRealtime(
     if (mapped.actorId) void get().loadUserProfile(mapped.actorId);
     if (mapped.type === 'follow_request') void get().loadFollowRequests();
   });
+  socket.on('story:reaction', (payload: { storyId?: unknown; reactionType?: unknown; actorId?: unknown }) => {
+    if (payload?.reactionType !== 'SUPER_HEART' || typeof payload.storyId !== 'string') return;
+    const currentUserId = get().currentUser?.id;
+    const actorId = typeof payload.actorId === 'string' ? payload.actorId : undefined;
+    if (!currentUserId || actorId === currentUserId) return;
+    const toastKey = `${payload.storyId}:${actorId ?? 'unknown'}:SUPER_HEART`;
+    if (!shouldShowStoryReactionToast(toastKey)) return;
+    const actor = actorId ? get().users[actorId] : undefined;
+    toast.success(`${actor?.displayName || actor?.username || 'Someone'} sent a Super Heart on your Story ✨`);
+    if (actorId) void get().loadUserProfile(actorId);
+  });
+}
+
+function toggleSafetyRelationship(
+  kind: 'block' | 'mute', userId: string,
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
+  get: () => AppState,
+): Promise<boolean> {
+  const currentUser = get().currentUser;
+  if (!currentUser || currentUser.id === userId) return Promise.resolve(false);
+  const key = `${currentUser.id}:${kind}:${userId}`;
+  const pending = safetyRelationshipRequests.get(key);
+  if (pending) return pending;
+  const field = kind === 'block' ? 'blockedUserIds' : 'mutedUserIds';
+  const removing = currentUser[field]?.includes(userId) === true;
+  const session = activitySessionSequence;
+  const request = (async () => {
+    try {
+      const action = kind === 'block'
+        ? removing ? api.unblockUser : api.blockUser
+        : removing ? api.unmuteUser : api.muteUser;
+      await action(userId);
+      if (session !== activitySessionSequence) return false;
+      set((state) => {
+        if (state.currentUser?.id !== currentUser.id) return {};
+        // Apply only the acknowledged target; a response snapshot can predate
+        // another successful block/mute even though both writes are atomic.
+        const ids = new Set(state.currentUser[field] ?? []);
+        if (removing) ids.delete(userId);
+        else ids.add(userId);
+        const posts = removing ? state.posts : state.posts.filter((post) => post.authorId !== userId);
+        const postIds = new Set(posts.map((post) => post.id));
+        return {
+          currentUser: { ...state.currentUser, [field]: [...ids] },
+          posts,
+          feedPostIds: state.feedPostIds.filter((id) => postIds.has(id)),
+          stories: removing ? state.stories : state.stories.filter((story) => story.authorId !== userId),
+          notes: removing ? state.notes : state.notes.filter((note) => note.authorId !== userId),
+        };
+      });
+      return true;
+    } catch (error) {
+      if (session === activitySessionSequence) toast.error(error instanceof Error ? error.message : `Could not update ${kind === 'block' ? 'blocked' : 'muted'} users`);
+      return false;
+    }
+  })().finally(() => {
+    if (safetyRelationshipRequests.get(key) === request) safetyRelationshipRequests.delete(key);
+  });
+  safetyRelationshipRequests.set(key, request);
+  return request;
 }
 
 export const useAppStore = create<AppState>()(
@@ -1040,7 +1155,7 @@ export const useAppStore = create<AppState>()(
       messagesByConversation: {},
       messageDrafts: {},
       updateMessageDraft: (conversationId, patch) => set((state) => ({
-        messageDrafts: { ...state.messageDrafts, [conversationId]: { message: '', imageAttachment: '', replyTarget: null, ...state.messageDrafts[conversationId], ...patch } },
+        messageDrafts: { ...state.messageDrafts, [conversationId]: { message: '', imageAttachment: '', textStyleId: state.currentUser?.messageFontId === 'mono' || state.currentUser?.messageFontId === 'rounded' ? state.currentUser.messageFontId : 'default', replyTarget: null, ...state.messageDrafts[conversationId], ...patch } },
       })),
       aiMessages: [],
       privacy: {
@@ -1244,7 +1359,7 @@ export const useAppStore = create<AppState>()(
         try {
           const res = await api.getFeed(mode);
           if (requestSequence !== feedRequestSequence || get().feedMode !== mode) return;
-          const backendPosts = res.data;
+          const backendPosts = visibleSocialItems(res.data, get().currentUser);
           const currentUserId = get().currentUser?.id;
           const ids = new Set(backendPosts.map((post) => post.id));
           set((state) => ({
@@ -1271,7 +1386,7 @@ export const useAppStore = create<AppState>()(
           const res = await api.getFeed(requestedMode, state.feedCursor);
           if (requestSequence !== feedRequestSequence || get().feedMode !== requestedMode) return;
           const currentUserId = get().currentUser?.id;
-          const nextPosts = res.data.map((post) => mapPost(post, currentUserId));
+          const nextPosts = visibleSocialItems(res.data, get().currentUser).map((post) => mapPost(post, currentUserId));
           const seenIds = new Set(get().posts.map((post) => post.id));
           set((current) => ({
             posts: [...current.posts, ...nextPosts.filter((post) => !seenIds.has(post.id))],
@@ -1401,19 +1516,39 @@ export const useAppStore = create<AppState>()(
           users: { ...state.users, [mapped.id]: mapped },
         }));
       },
-      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public') => {
+      updatePremiumProfile: async (updates) => {
+        const updated = await api.updatePremiumProfile(updates);
+        const mapped = mapOwnProfile(updated, get().currentUser);
+        set((state) => ({
+          currentUser: mapped,
+          users: { ...state.users, [mapped.id]: mapped },
+        }));
+      },
+      addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public', distributionMode = 'feed_and_profile') => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
           toast.error('Verify your email before posting');
           return;
         }
         try {
-          const created = await api.createPost({ content, images: media, audience, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
+          const created = await api.createPost({ content, images: media, audience, distributionMode, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts], feedPostIds: [created.id, ...state.feedPostIds] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
           throw error;
         }
+      },
+
+      pinPost: async (postId) => {
+        const updated = await api.pinPost(postId);
+        const currentUserId = get().currentUser?.id;
+        set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
+      },
+
+      unpinPost: async (postId) => {
+        const updated = await api.unpinPost(postId);
+        const currentUserId = get().currentUser?.id;
+        set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
       },
 
       toggleSavePost: async (postId) => {
@@ -1575,6 +1710,8 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      previewDirectMessage: async (messageId) => mapMessage(await api.previewMessage(messageId)),
+
       markDirectMessageSeen: async (messageId) => {
         try {
           const updated = mapMessage(await api.markMessageSeen(messageId));
@@ -1597,9 +1734,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendDirectMessage: async (recipientId, content, replyToId) => {
+      sendDirectMessage: async (recipientId, content, replyToId, textStyleId) => {
         try {
-          const created = await api.sendMessage(recipientId, content, replyToId);
+          const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
+          const created = await api.sendMessage(recipientId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default');
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1614,9 +1752,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendMessageToConversation: async (conversationId, content, replyToId) => {
+      sendMessageToConversation: async (conversationId, content, replyToId, textStyleId) => {
         try {
-          const created = await api.sendMessageToConversation(conversationId, content, replyToId);
+          const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
+          const created = await api.sendMessageToConversation(conversationId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default');
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1876,23 +2015,25 @@ export const useAppStore = create<AppState>()(
       },
 
       loadStories: async () => {
+        const session = activitySessionSequence;
         try {
           const backendStories = await api.getStories();
+          if (session !== activitySessionSequence) return;
           const currentUserId = get().currentUser?.id;
           if (backendStories && backendStories.length > 0) {
-            set({ stories: backendStories.map((s) => mapStory(s, currentUserId)) });
+            set({ stories: visibleSocialItems(backendStories, get().currentUser).map((s) => mapStory(s, currentUserId)) });
             return;
           }
         } catch {
           // fallback
         }
-        set({ stories: [] });
+        if (session === activitySessionSequence) set({ stories: [] });
       },
 
       loadNotes: async () => {
         try {
           const backendNotes = await api.getNotes();
-          set({ notes: backendNotes.map(mapNote) });
+          set({ notes: visibleSocialItems(backendNotes, get().currentUser).map(mapNote) });
         } catch {
           // Keep the last successful snapshot during a transient outage.
         }
@@ -1961,7 +2102,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      reactToStory: async (storyId, emoji) => {
+      reactToStory: async (storyId, emoji, reactionType = 'CUSTOM') => {
         const uid = get().currentUser?.id;
         if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
@@ -1973,10 +2114,11 @@ export const useAppStore = create<AppState>()(
           )
         }));
         try {
-          const updated = await api.reactToStory(storyId, emoji);
+          const updated = await api.reactToStory(storyId, emoji, reactionType);
           set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
-        } catch {
+        } catch (error) {
           if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
+          throw error;
         }
       },
 
@@ -2001,6 +2143,8 @@ export const useAppStore = create<AppState>()(
           type: story.type,
           textContent: story.textContent,
           backgroundGradient: story.backgroundGradient,
+          storyFontId: story.storyFontId ?? 'default',
+          storyTextStyle: story.storyTextStyle ?? DEFAULT_STORY_TEXT_STYLE,
           viewed: false,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
@@ -2008,6 +2152,8 @@ export const useAppStore = create<AppState>()(
           reactions: [],
           isHighlight: Boolean(story.isHighlight),
           highlightTitle: story.highlightTitle,
+          highlightId: story.highlightId,
+          publishMode: story.publishMode,
           audience: story.audience ?? 'followers',
           poll: story.poll ? {
             question: story.poll.question,
@@ -2279,6 +2425,13 @@ export const useAppStore = create<AppState>()(
         ]);
       },
 
+      updateStoryViewMode: async (storyViewMode) => {
+        const settings = await api.updateSettings({ storyViewMode });
+        set((state) => ({
+          currentUser: state.currentUser ? { ...state.currentUser, storyViewMode: settings.storyViewMode ?? storyViewMode } : state.currentUser,
+        }));
+      },
+
       updateNotificationPreference: async (enabled) => {
         const settings = await api.updateSettings({ notificationsEnabled: enabled });
         set((state) => ({
@@ -2339,60 +2492,9 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      toggleBlockUser: async (userId) => {
-        const isBlocked = get().currentUser?.blockedUserIds?.includes(userId);
-        set((state) => {
-          if (!state.currentUser) return state;
-          const blockedUserIds = isBlocked
-            ? (state.currentUser.blockedUserIds || []).filter(id => id !== userId)
-            : [...(state.currentUser.blockedUserIds || []), userId];
-          return { currentUser: { ...state.currentUser, blockedUserIds } };
-        });
-        try {
-          if (isBlocked) {
-            await api.unblockUser(userId);
-          } else {
-            await api.blockUser(userId);
-            set((state) => ({ posts: state.posts.filter((post) => post.authorId !== userId) }));
-          }
-        } catch (error) {
-          set((state) => {
-            if (!state.currentUser) return state;
-            const blockedUserIds = isBlocked
-              ? [...(state.currentUser.blockedUserIds || []), userId]
-              : (state.currentUser.blockedUserIds || []).filter(id => id !== userId);
-            return { currentUser: { ...state.currentUser, blockedUserIds } };
-          });
-          toast.error(error instanceof Error ? error.message : 'Could not update blocked users');
-        }
-      },
+      toggleBlockUser: (userId) => toggleSafetyRelationship('block', userId, set, get),
 
-      toggleMuteUser: async (userId) => {
-        const isMuted = get().currentUser?.mutedUserIds?.includes(userId);
-        set((state) => {
-          if (!state.currentUser) return state;
-          const mutedUserIds = isMuted
-            ? (state.currentUser.mutedUserIds || []).filter(id => id !== userId)
-            : [...(state.currentUser.mutedUserIds || []), userId];
-          return { currentUser: { ...state.currentUser, mutedUserIds } };
-        });
-        try {
-          if (isMuted) {
-            await api.unmuteUser(userId);
-          } else {
-            await api.muteUser(userId);
-          }
-        } catch (error) {
-          set((state) => {
-            if (!state.currentUser) return state;
-            const mutedUserIds = isMuted
-              ? [...(state.currentUser.mutedUserIds || []), userId]
-              : (state.currentUser.mutedUserIds || []).filter(id => id !== userId);
-            return { currentUser: { ...state.currentUser, mutedUserIds } };
-          });
-          toast.error(error instanceof Error ? error.message : 'Could not update muted users');
-        }
-      },
+      toggleMuteUser: (userId) => toggleSafetyRelationship('mute', userId, set, get),
 
       setTwoFactorEnabled: (enabled) => {
         set((state) => ({

@@ -59,6 +59,7 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
   { match: '/rooms', title: 'Custom Rooms', kicker: 'Make a space of your own' },
   { match: '/podcasts', title: 'Podcasts', kicker: 'Give the conversation room' },
   { match: '/settings', title: 'Settings', kicker: 'Make Yor yours' },
+  { match: '/advanced', title: 'Yor Advanced', kicker: 'Your signal, with intent' },
 ];
 
 function getPageLabel(location: string) {

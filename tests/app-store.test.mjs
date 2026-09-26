@@ -104,3 +104,72 @@ test('notification failures are distinguishable from empty success and can retry
   assert.equal(useAppStore.getState().notificationsLoaded, true);
   assert.equal(useAppStore.getState().notificationsError, null);
 });
+
+for (const kind of ['Block', 'Mute']) {
+  const field = kind === 'Block' ? 'blockedUserIds' : 'mutedUserIds';
+  const action = `toggle${kind}User`;
+  const method = `${kind.toLowerCase()}User`;
+  test(`failed ${kind.toLowerCase()} actions never claim success or change confirmed preferences`, async (t) => {
+    const { useAppStore, api } = await store(t);
+    const post = { id: 'post', authorId: 'target' };
+    useAppStore.setState({ posts: [post] });
+    t.mock.method(api, method, async () => { throw new Error('Offline'); });
+    assert.equal(await useAppStore.getState()[action]('target'), false);
+    assert.deepEqual(useAppStore.getState().currentUser[field] ?? [], []);
+    assert.deepEqual(useAppStore.getState().posts, [post]);
+  });
+
+  test(`${kind.toLowerCase()} updates coalesce duplicates and preserve other targets across reordered responses`, async (t) => {
+    const { useAppStore, api } = await store(t);
+    const posts = ['first', 'second', 'other'].map((authorId) => ({ id: authorId, authorId }));
+    useAppStore.setState({ posts, stories: posts, notes: posts, feedPostIds: posts.map((post) => post.id) });
+    const releases = new Map();
+    const call = t.mock.method(api, method, (id) => new Promise((resolve) => { releases.set(id, resolve); }));
+    const first = useAppStore.getState()[action]('first');
+    const duplicate = useAppStore.getState()[action]('first');
+    const second = useAppStore.getState()[action]('second');
+    assert.equal(call.mock.callCount(), 2);
+    assert.deepEqual(useAppStore.getState().currentUser[field] ?? [], []);
+    releases.get('second')({});
+    await second;
+    releases.get('first')({});
+    assert.equal(await first, true);
+    assert.equal(await duplicate, true);
+    assert.deepEqual(new Set(useAppStore.getState().currentUser[field]), new Set(['first', 'second']));
+    assert.deepEqual(useAppStore.getState().feedPostIds, ['other']);
+    assert.equal(useAppStore.getState().stories.length, 1);
+    assert.equal(useAppStore.getState().notes.length, 1);
+  });
+}
+
+test('a previous-session block acknowledgement cannot change the next account', async (t) => {
+  const { useAppStore, api } = await store(t);
+  let release;
+  t.mock.method(api, 'blockUser', () => new Promise((resolve) => { release = resolve; }));
+  const blocking = useAppStore.getState().toggleBlockUser('target');
+  t.mock.method(api, 'logout', async () => {});
+  await useAppStore.getState().logout();
+  useAppStore.setState({ currentUser: { id: 'next-user', blockedUserIds: ['keep-this-block'] } });
+  release({ blockedUsers: ['target'] });
+  assert.equal(await blocking, false);
+  assert.deepEqual(useAppStore.getState().currentUser.blockedUserIds, ['keep-this-block']);
+});
+
+test('in-flight social snapshots cannot restore a newly blocked creator', async (t) => {
+  const { useAppStore, api } = await store(t);
+  const releases = new Map();
+  for (const method of ['getFeed', 'getStories', 'getNotes']) {
+    t.mock.method(api, method, () => new Promise((resolve) => { releases.set(method, resolve); }));
+  }
+  const loading = Promise.all(['loadFeed', 'loadStories', 'loadNotes'].map((method) => useAppStore.getState()[method]()));
+  t.mock.method(api, 'blockUser', async () => ({}));
+  assert.equal(await useAppStore.getState().toggleBlockUser('target'), true);
+  const stale = { id: 'stale', authorId: 'target', content: 'Old snapshot', createdAt: '2026-08-31T00:00:00Z' };
+  releases.get('getFeed')({ data: [stale], nextCursor: null, hasMore: false });
+  releases.get('getStories')([stale]);
+  releases.get('getNotes')([stale]);
+  await loading;
+  assert.deepEqual(useAppStore.getState().posts, []);
+  assert.deepEqual(useAppStore.getState().stories, []);
+  assert.deepEqual(useAppStore.getState().notes, []);
+});

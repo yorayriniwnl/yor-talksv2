@@ -7,6 +7,7 @@ import { attachSocketServer } from "./socket/index.js";
 import { startNotificationWorker } from "./workers/notification-worker.js";
 import { startFeedWorker } from "./workers/feed-worker.js";
 import { env } from "./config/env.js";
+import { closeRateLimitRedis } from "./middlewares/rate-limit.js";
 
 async function ensureProductionDependencies(): Promise<void> {
   if (env.NODE_ENV !== "production") return;
@@ -71,6 +72,7 @@ async function main() {
       });
       await notificationWorker?.close();
       await feedWorker?.close();
+      await closeRateLimitRedis();
       await pool.end();
       logger.info("Shutdown complete");
       process.exit(0);

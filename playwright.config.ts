@@ -1,5 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const requestedPort = process.env.PLAYWRIGHT_PORT || "4173";
+if (!/^\d+$/.test(requestedPort)) {
+  throw new Error("PLAYWRIGHT_PORT must be an integer between 1024 and 65535");
+}
+const previewPort = Number(requestedPort);
+if (previewPort < 1024 || previewPort > 65535) {
+  throw new Error("PLAYWRIGHT_PORT must be an integer between 1024 and 65535");
+}
+const previewUrl = `http://127.0.0.1:${previewPort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   // Exercise production chunks; dev-server transformation time is not an E2E
@@ -11,14 +21,14 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: previewUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
   webServer: {
-    command: "pnpm --filter @workspace/social exec vite build --outDir dist/e2e && pnpm --filter @workspace/social exec vite preview --outDir dist/e2e --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
+    command: `pnpm --filter @workspace/social exec vite build --outDir dist/e2e && pnpm --filter @workspace/social exec vite preview --outDir dist/e2e --host 127.0.0.1 --port ${previewPort}`,
+    url: previewUrl,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {

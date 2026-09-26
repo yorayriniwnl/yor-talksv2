@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
   Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft, LoaderCircle,
   Reply, X, Video, Phone, Mic, Zap, EyeOff, Image as ImageIcon, Pencil, Trash2, Pin, Smile,
-  ArrowLeftRight, LockKeyhole, Inbox
+  ArrowLeftRight, LockKeyhole, Inbox, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
@@ -51,13 +51,18 @@ function parseReply(content: string): ParsedReply | null {
 
 type ReplyPreview = Pick<ParsedReply, 'senderName' | 'excerpt'>;
 
-function MessageContent({ content, isMine, reply: structuredReply }: { content: string; isMine: boolean; reply?: ReplyPreview | null }) {
+function MessageContent({ content, isMine, textStyleId = 'default', reply: structuredReply }: { content: string; isMine: boolean; textStyleId?: DirectMessage['textStyleId']; reply?: ReplyPreview | null }) {
   const legacyReply = parseReply(content);
   const reply = structuredReply ?? legacyReply;
   const body = legacyReply?.body ?? content;
   const imageMatch = body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/);
   const imageUrl = imageMatch?.[1];
   const textBody = imageMatch ? body.slice(0, imageMatch.index).trim() : body;
+  const textStyle = textStyleId === 'mono'
+    ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }
+    : textStyleId === 'rounded'
+      ? { fontFamily: 'ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif' }
+      : undefined;
 
   const replyMarkup = reply ? (
     <div className="operator-message-reply" data-mine={isMine || undefined}>
@@ -86,7 +91,7 @@ function MessageContent({ content, isMine, reply: structuredReply }: { content: 
   return (
     <>
       {replyMarkup}
-      {textBody && <span className="operator-message-text">{textBody}</span>}
+      {textBody && <span className="operator-message-text" style={textStyle}>{textBody}</span>}
       {imageUrl && <img className="operator-message-image" src={imageUrl} alt="Shared attachment" loading="lazy" />}
     </>
   );
@@ -286,49 +291,88 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   );
 }
 
+function MessagePreviewDialog({
+  message,
+  senderName,
+  open,
+  onOpenChange,
+}: {
+  message: DirectMessage | null;
+  senderName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="operator-message-dialog">
+        <DialogHeader><DialogTitle>Preview from {senderName}</DialogTitle></DialogHeader>
+        {message ? (
+          <div className="space-y-3">
+            <div className="operator-message-preview-card">
+              <MessageContent content={message.content} isMine={false} textStyleId={message.textStyleId} />
+              <time dateTime={message.createdAt}>{format(new Date(message.createdAt), 'MMM d, h:mm a')}</time>
+            </div>
+            <p className="flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
+              <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Preview only — opening this sheet does not send a read receipt.
+            </p>
+          </div>
+        ) : <p role="status" className="text-sm text-muted-foreground">Loading preview…</p>}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ConversationItem({
   entry,
   active,
   isTyping,
   onSelect,
+  onPreview,
 }: {
-  entry: { conv: any; user: any; lastMsg?: DirectMessage; unreadCount: number };
+  entry: { conv: any; user: any; lastMsg?: DirectMessage; previewMessage?: DirectMessage; unreadCount: number };
   active: boolean;
   isTyping: boolean;
   onSelect: (id: string) => void;
+  onPreview: (message: DirectMessage) => void;
 }) {
-  const { conv, user, lastMsg, unreadCount } = entry;
+  const { conv, user, lastMsg, previewMessage, unreadCount } = entry;
   const displayName = user.displayName || user.username || 'User';
 
   return (
-    <button
-      onClick={() => onSelect(conv.id)}
+    <div
       className="operator-conversation-item"
       data-active={active || undefined}
       data-unread={unreadCount > 0 || undefined}
-      aria-current={active ? 'page' : undefined}
     >
-      <span className="operator-conversation-item__avatar">
-      <Avatar>
-        <AvatarImage src={user.avatarUrl} />
-        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-      </Avatar>
-      </span>
-      <span className="operator-conversation-item__body">
-        <span className="operator-conversation-item__head">
-          <strong>{displayName}</strong>
-          {lastMsg && (
-            <time dateTime={lastMsg.createdAt}>
-              {formatDistanceToNow(new Date(lastMsg.createdAt))}
-            </time>
-          )}
+      <button type="button" onClick={() => onSelect(conv.id)} className="operator-conversation-item__select" aria-current={active ? 'page' : undefined}>
+        <span className="operator-conversation-item__avatar">
+          <Avatar>
+            <AvatarImage src={user.avatarUrl} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+          </Avatar>
         </span>
-        <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
-          {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+        <span className="operator-conversation-item__body">
+          <span className="operator-conversation-item__head">
+            <strong>{displayName}</strong>
+            {lastMsg && (
+              <time dateTime={lastMsg.createdAt}>
+                {formatDistanceToNow(new Date(lastMsg.createdAt))}
+              </time>
+            )}
+          </span>
+          <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
+            {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+          </span>
         </span>
-      </span>
-      {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-    </button>
+        {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+      </button>
+      {previewMessage && (
+        <button type="button" className="operator-conversation-item__preview-action" onClick={() => onPreview(previewMessage)} aria-label={`Preview unread message from ${displayName}`} title="Preview unread message without marking read">
+          <Eye aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -343,6 +387,7 @@ export default function Messages() {
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
+  const previewDirectMessage = useAppStore((s) => s.previewDirectMessage);
   const markDirectMessageSeen = useAppStore((s) => s.markDirectMessageSeen);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
@@ -351,6 +396,7 @@ export default function Messages() {
   const draft = useAppStore((state) => state.messageDrafts[id ?? '']);
   const updateMessageDraft = useAppStore((state) => state.updateMessageDraft);
   const message = draft?.message ?? '';
+  const textStyleId = draft?.textStyleId ?? (currentUser?.messageFontId === 'mono' || currentUser?.messageFontId === 'rounded' ? currentUser.messageFontId : 'default');
   const imageAttachment = draft?.imageAttachment ?? '';
   const replyTarget = draft?.replyTarget ?? null;
   const updateDraft = useCallback((patch: Partial<MessageDraft>) => {
@@ -358,6 +404,7 @@ export default function Messages() {
     updateMessageDraft(id, patch);
   }, [id, currentUser?.id, updateMessageDraft]);
   const setMessage = (value: string) => updateDraft({ message: value });
+  const setTextStyleId = (value: DirectMessage['textStyleId']) => updateDraft({ textStyleId: value ?? 'default' });
   const setImageAttachment = (value: string) => updateDraft({ imageAttachment: value });
   const setReplyTarget = (value: ReplyTarget | null) => updateDraft({ replyTarget: value });
   const [showImageInput, setShowImageInput] = useState(false);
@@ -369,11 +416,15 @@ export default function Messages() {
   const [sendError, setSendError] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageLoadError, setMessageLoadError] = useState('');
+  const [messageFontEnabled, setMessageFontEnabled] = useState(false);
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [realtimeConnected, setRealtimeConnected] = useState(() => Boolean(getSocket()?.connected));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
+  const [previewMessage, setPreviewMessage] = useState<DirectMessage | null>(null);
+  const [previewSenderName, setPreviewSenderName] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   
   // Direct Messaging 2.0 Pro Features
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -394,6 +445,20 @@ export default function Messages() {
   const typingConversationIdRef = useRef<string | null>(null);
   const messageRequestSequence = useRef(0);
   const requestedProfiles = useRef(new Set<string>());
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUser) {
+      setMessageFontEnabled(false);
+      return () => { active = false; };
+    }
+    void api.getPremiumProfileOptions().then((result) => {
+      if (active) setMessageFontEnabled(result.enabledFeatures.MESSAGE_FONT === true);
+    }).catch(() => {
+      if (active) setMessageFontEnabled(false);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
 
   const stopTyping = useCallback(() => {
     if (typingStopTimeoutRef.current !== null) {
@@ -499,7 +564,9 @@ export default function Messages() {
           const msgs = messagesByConversation[conv.id] || [];
           const lastMsg = msgs[msgs.length - 1];
           const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+          const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+            || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
         }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
@@ -515,7 +582,9 @@ export default function Messages() {
         const msgs = messagesByConversation[conv.id] || [];
         const lastMsg = msgs[msgs.length - 1];
         const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+        const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+          || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
       })
       .sort((a, b) => (b.lastMsg?.createdAt ?? b.conv.updatedAt).localeCompare(a.lastMsg?.createdAt ?? a.conv.updatedAt));
   }, [conversations, users, currentUser?.id, messagesByConversation]);
@@ -569,8 +638,8 @@ export default function Messages() {
     sounds.playPop();
 
     try {
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId);
-      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId);
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId);
+      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId);
       setMessage('');
       setImageAttachment('');
       setShowImageInput(false);
@@ -638,6 +707,19 @@ export default function Messages() {
     }
   };
 
+  const handlePreviewMessage = async (message: DirectMessage, senderName: string) => {
+    setPreviewLoading(true);
+    try {
+      const preview = await previewDirectMessage(message.id);
+      setPreviewMessage(preview);
+      setPreviewSenderName(senderName);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not preview this message');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <div className="messages-page operator-messages-page">
       <div className="operator-messages-shell">
@@ -691,6 +773,7 @@ export default function Messages() {
                   active={activeConv?.conv.id === entry.conv.id} 
                   isTyping={Boolean(typingConversationIds[entry.conv.id])} 
                   onSelect={(convId) => setLocation(`/messages/${convId}`)} 
+                  onPreview={(message) => void handlePreviewMessage(message, entry.user.displayName || entry.user.username || 'User')}
                 />
               ))
             )}
@@ -824,7 +907,7 @@ export default function Messages() {
                                 <button type="button" onClick={() => void handleEditMessage()}>Save</button>
                               </div>
                             ) : (
-                              <MessageContent content={msg.content} isMine={isMine} reply={replyPreview} />
+                              <MessageContent content={msg.content} isMine={isMine} textStyleId={msg.textStyleId} reply={replyPreview} />
                             )}
                             <time dateTime={msg.createdAt}>{format(new Date(msg.createdAt), 'h:mm a')}{msg.editedAt ? ' · edited' : ''}</time>
                           </div>
@@ -930,6 +1013,12 @@ export default function Messages() {
                         aria-describedby={sendError ? 'operator-composer-error' : undefined}
                       />
 
+                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-[0.65rem] font-semibold text-muted-foreground outline-none focus:border-primary/50">
+                        <option value="default">YOR</option>
+                        <option value="mono" disabled={!messageFontEnabled}>Mono · Advanced</option>
+                        <option value="rounded" disabled={!messageFontEnabled}>Round · Advanced</option>
+                      </select>
+
                       <Button
                         size="icon"
                         disabled={(!message.trim() && !imageAttachment.trim()) || sending}
@@ -995,6 +1084,12 @@ export default function Messages() {
 
         <NewMessageDialog open={newMessageOpen} onOpenChange={setNewMessageOpen} />
         <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} />
+        <MessagePreviewDialog
+          message={previewMessage}
+          senderName={previewSenderName}
+          open={Boolean(previewMessage) || previewLoading}
+          onOpenChange={(open) => { if (!open) setPreviewMessage(null); }}
+        />
       </div>
     </div>
   );

@@ -1,0 +1,726 @@
+{
+  "auditedAt": "2026-09-26T07:28:56.3844708+05:30",
+  "source": "pnpm audit registry responses; advisory counts are not proven exploit counts",
+  "production": {
+    "info": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 3,
+    "critical": 0
+  },
+  "allDependencies": {
+    "info": 0,
+    "low": 2,
+    "moderate": 6,
+    "high": 18,
+    "critical": 11
+  },
+  "advisories": [
+    {
+      "id": "GHSA-67mh-4wv8-2f99",
+      "package": "esbuild",
+      "severity": "moderate",
+      "title": "esbuild enables any website to send any requests to the development server and read the response",
+      "affected": "<=0.24.2",
+      "patched": ">=0.25.0",
+      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+      "findings": [
+        {
+          "version": "0.18.20",
+          "paths": [
+            "lib\\db > drizzle-kit@0.31.10 > @esbuild-kit/esm-loader@2.6.5 > @esbuild-kit/core-utils@3.3.2 > esbuild@0.18.20"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-w5hq-g745-h8pq",
+      "package": "uuid",
+      "severity": "moderate",
+      "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+      "affected": "<11.1.1",
+      "patched": ">=11.1.1",
+      "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+      "findings": [
+        {
+          "version": "7.0.3",
+          "paths": [
+            "social > @capacitor/cli@8.5.0 > xcode@3.0.1 > uuid@7.0.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-g7r4-m6w7-qqqr",
+      "package": "esbuild",
+      "severity": "low",
+      "title": "esbuild allows arbitrary file read when running the development server on Windows",
+      "affected": ">=0.27.3 <0.28.1",
+      "patched": ">=0.28.1",
+      "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
+      "findings": [
+        {
+          "version": "0.27.3",
+          "paths": [
+            "api-server > esbuild@0.27.3",
+            "api-server > esbuild-plugin-pino@2.3.3 > esbuild@0.27.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-52cp-r559-cp3m",
+      "package": "js-yaml",
+      "severity": "high",
+      "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+      "affected": ">=4.0.0 <4.3.0",
+      "patched": ">=4.3.0",
+      "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m",
+      "findings": [
+        {
+          "version": "4.2.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > js-yaml@4.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-v2hh-gcrm-f6hx",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter",
+      "affected": ">=3.0.0 <=3.1.3",
+      "patched": ">=3.1.4",
+      "url": "https://github.com/advisories/GHSA-v2hh-gcrm-f6hx",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-mh99-v99m-4gvg",
+      "package": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+      "affected": ">=4.0.0 <5.0.8",
+      "patched": ">=5.0.8",
+      "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+      "findings": [
+        {
+          "version": "5.0.7",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @orval/angular@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/axios@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/effect@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/hono@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/hono@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mock@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/query@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/query@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/solid-start@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/swr@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/swr@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc-plugin-coverage@4.0.3 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc-plugin-markdown@4.12.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "social > @capacitor/cli@8.5.0 > rimraf@6.1.3 > glob@13.0.6 > minimatch@10.2.5 > brace-expansion@5.0.7"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-fxqj-rqcc-2cmp",
+      "package": "postcss",
+      "severity": "moderate",
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "affected": "<=8.5.22",
+      "patched": ">=8.5.23",
+      "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+      "findings": [
+        {
+          "version": "8.5.20",
+          "paths": [
+            "social > @tailwindcss/vite@4.3.3 > vite@7.3.6 > postcss@8.5.20",
+            "social > @vitejs/plugin-react@5.2.0 > vite@7.3.6 > postcss@8.5.20",
+            "social > vite@7.3.6 > postcss@8.5.20"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-7p8r-x3mc-p8w7",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via backslash authority introducer",
+      "affected": ">=3.0.0 <3.1.5",
+      "patched": ">=3.1.5",
+      "url": "https://github.com/advisories/GHSA-7p8r-x3mc-p8w7",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-rgw5-rvv9-x895",
+      "package": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+      "affected": ">=4.0.0 <5.0.9",
+      "patched": ">=5.0.9",
+      "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+      "findings": [
+        {
+          "version": "5.0.7",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @orval/angular@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/axios@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/effect@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/hono@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/hono@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mcp@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/mock@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/query@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/query@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/solid-start@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/swr@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/swr@8.20.0 > @orval/fetch@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > @orval/zod@8.20.0 > @orval/core@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc-plugin-coverage@4.0.3 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "lib\\api-spec > orval@8.20.0 > typedoc-plugin-markdown@4.12.0 > typedoc@0.28.19 > minimatch@10.2.5 > brace-expansion@5.0.7",
+            "social > @capacitor/cli@8.5.0 > rimraf@6.1.3 > glob@13.0.6 > minimatch@10.2.5 > brace-expansion@5.0.7"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5p4m-2wfm-xmqj",
+      "package": "js-yaml",
+      "severity": "high",
+      "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported",
+      "affected": ">=4.0.0 <4.3.1",
+      "patched": ">=4.3.1",
+      "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+      "findings": [
+        {
+          "version": "4.2.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > js-yaml@4.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-2v37-7h3g-55p8",
+      "package": "nanoid",
+      "severity": "high",
+      "title": "nanoid: custom generators can loop indefinitely when size is zero",
+      "affected": "<3.3.18",
+      "patched": ">=3.3.18",
+      "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+      "findings": [
+        {
+          "version": "3.3.16",
+          "paths": [
+            "social > @tailwindcss/vite@4.3.3 > vite@7.3.6 > postcss@8.5.20 > nanoid@3.3.16",
+            "social > @vitejs/plugin-react@5.2.0 > vite@7.3.6 > postcss@8.5.20 > nanoid@3.3.16",
+            "social > vite@7.3.6 > postcss@8.5.20 > nanoid@3.3.16"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-c83g-rgw3-j3cx",
+      "package": "browserslist",
+      "severity": "high",
+      "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+      "affected": "<=4.28.6",
+      "patched": ">=4.28.7",
+      "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx",
+      "findings": [
+        {
+          "version": "4.28.6",
+          "paths": [
+            "social > @vitejs/plugin-react@5.2.0 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-self@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-source@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-73wf-gq98-2v4g",
+      "package": "browserslist",
+      "severity": "high",
+      "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+      "affected": "<=4.28.6",
+      "patched": ">=4.28.7",
+      "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g",
+      "findings": [
+        {
+          "version": "4.28.6",
+          "paths": [
+            "social > @vitejs/plugin-react@5.2.0 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-self@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-source@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > update-browserslist-db@1.2.3 > browserslist@4.28.6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-cxq5-97v7-87j8",
+      "package": "orval",
+      "severity": "high",
+      "title": "Orval: Generation-time SSRF + remote/local file inclusion via unrestricted $ref",
+      "affected": "<8.22.0",
+      "patched": ">=8.22.0",
+      "url": "https://github.com/advisories/GHSA-cxq5-97v7-87j8",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-p4cg-3328-rvfg",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via query-parameter default -> zod module-level template literal",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-p4cg-3328-rvfg",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-6mr6-jvcr-2f25",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via schema property name -> computed-property-key injection in the zod client",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-6mr6-jvcr-2f25",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-x5fp-wj9c-mxmx",
+      "package": "qs",
+      "severity": "moderate",
+      "title": "qs array-limit bypass via bracket-key comma parsing",
+      "affected": ">=6.14.2 <=6.15.3",
+      "patched": ">=6.16.0",
+      "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx",
+      "findings": [
+        {
+          "version": "6.15.3",
+          "paths": [
+            ". > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            ". > express@5.2.1 > qs@6.15.3",
+            "api-server > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > express@5.2.1 > qs@6.15.3",
+            "api-server > express-rate-limit@8.6.2 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > express-rate-limit@8.6.2 > express@5.2.1 > qs@6.15.3",
+            "api-server > rate-limit-redis@6.0.1 > express-rate-limit@8.6.2 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > rate-limit-redis@6.0.1 > express-rate-limit@8.6.2 > express@5.2.1 > qs@6.15.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-4mjr-xmp4-gh2g",
+      "package": "qs",
+      "severity": "moderate",
+      "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+      "affected": ">=2.2.5 <6.16.0",
+      "patched": ">=6.16.0",
+      "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g",
+      "findings": [
+        {
+          "version": "6.15.3",
+          "paths": [
+            ". > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            ". > express@5.2.1 > qs@6.15.3",
+            "api-server > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > express@5.2.1 > qs@6.15.3",
+            "api-server > express-rate-limit@8.6.2 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > express-rate-limit@8.6.2 > express@5.2.1 > qs@6.15.3",
+            "api-server > rate-limit-redis@6.0.1 > express-rate-limit@8.6.2 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3",
+            "api-server > rate-limit-redis@6.0.1 > express-rate-limit@8.6.2 > express@5.2.1 > qs@6.15.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5jgf-p345-68v8",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via skipped IDN canonicalization on scheme-relative references",
+      "affected": ">=3.1.3 <3.1.6",
+      "patched": ">=3.1.6",
+      "url": "https://github.com/advisories/GHSA-5jgf-p345-68v8",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-f65p-4m7j-42xc",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to server-side request forgery via malformed IPv6 normalization",
+      "affected": ">=3.0.0 <3.1.6",
+      "patched": ">=3.1.6",
+      "url": "https://github.com/advisories/GHSA-f65p-4m7j-42xc",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-fph4-wmhf-6fwf",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to server-side request forgery via repeated hostname percent-decoding",
+      "affected": ">=3.1.2 <3.1.6",
+      "patched": ">=3.1.6",
+      "url": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-jqff-g426-hqxp",
+      "package": "fast-uri",
+      "severity": "high",
+      "title": "fast-uri vulnerable to host confusion via percent-encoded scheme normalization",
+      "affected": ">=3.0.0 <3.1.6",
+      "patched": ">=3.1.6",
+      "url": "https://github.com/advisories/GHSA-jqff-g426-hqxp",
+      "findings": [
+        {
+          "version": "3.1.3",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-draft-04@1.0.0 > ajv@8.20.0 > fast-uri@3.1.3",
+            "lib\\api-spec > orval@8.20.0 > @scalar/openapi-parser@0.28.8 > ajv-formats@3.0.1 > ajv@8.20.0 > fast-uri@3.1.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-6437-gxhq-pqv8",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via header parameter name -> computed-property-key injection in the zod client",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-6437-gxhq-pqv8",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-2w86-xfrc-g85r",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: RCE via schema property name -> computed-property-key injection in the MSW mock generator",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-2w86-xfrc-g85r",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-3575-w9fc-c2j6",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via enum-typed default -> zod module-level template literal",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-3575-w9fc-c2j6",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-653q-5476-x79g",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via query parameter name -> computed-property-key injection in the zod cli",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-653q-5476-x79g",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-2h9g-j24r-h63g",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via array-items default -> zod module-level template literal",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-2h9g-j24r-h63g",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-8j6p-r8jg-mxqh",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via header-parameter default -> zod module-level template literal",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-8j6p-r8jg-mxqh",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-88f2-fpv8-89q2",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: RCE via servers[].url -> unescaped request-URL template literal (with getBaseUrlFromSpecification)",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-88f2-fpv8-89q2",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-w727-8j6c-2rj4",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: Import-time RCE via schema default -> zod module-level template literal",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-w727-8j6c-2rj4",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-fg9p-mrxr-hvq7",
+      "package": "orval",
+      "severity": "critical",
+      "title": "Orval: RCE via OpenAPI path -> unescaped request-URL template literal (backtick breakout)",
+      "affected": "<8.21.0",
+      "patched": ">=8.21.0",
+      "url": "https://github.com/advisories/GHSA-fg9p-mrxr-hvq7",
+      "findings": [
+        {
+          "version": "8.20.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-w5vr-8v7q-w6rv",
+      "package": "baseline-browser-mapping",
+      "severity": "moderate",
+      "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+      "affected": ">=2.0.0 <2.11.0",
+      "patched": ">=2.11.0",
+      "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+      "findings": [
+        {
+          "version": "2.10.43",
+          "paths": [
+            "social > @vitejs/plugin-react@5.2.0 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > baseline-browser-mapping@2.10.43",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-self@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > baseline-browser-mapping@2.10.43",
+            "social > @vitejs/plugin-react@5.2.0 > @babel/plugin-transform-react-jsx-source@7.29.7 > @babel/core@7.29.7 > @babel/helper-compilation-targets@7.29.7 > browserslist@4.28.6 > baseline-browser-mapping@2.10.43"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-2883-xcg3-v3hh",
+      "package": "js-yaml",
+      "severity": "high",
+      "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+      "affected": ">=4.0.0 <4.3.2",
+      "patched": ">=4.3.2",
+      "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh",
+      "findings": [
+        {
+          "version": "4.2.0",
+          "paths": [
+            "lib\\api-spec > orval@8.20.0 > js-yaml@4.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-wc9g-mqfw-jrwm",
+      "package": "multer",
+      "severity": "high",
+      "title": "multer vulnerable to Denial of Service via crafted multipart field names",
+      "affected": "<2.3.0",
+      "patched": ">=2.3.0",
+      "url": "https://github.com/advisories/GHSA-wc9g-mqfw-jrwm",
+      "findings": [
+        {
+          "version": "2.2.0",
+          "paths": [
+            "api-server > multer@2.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-qfvm-cv95-jqjf",
+      "package": "multer",
+      "severity": "high",
+      "title": "multer vulnerable to Denial of Service via file descriptor leak on aborted uploads",
+      "affected": "=2.2.0",
+      "patched": ">=2.3.0",
+      "url": "https://github.com/advisories/GHSA-qfvm-cv95-jqjf",
+      "findings": [
+        {
+          "version": "2.2.0",
+          "paths": [
+            "api-server > multer@2.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-qvfw-j98x-7q72",
+      "package": "multer",
+      "severity": "low",
+      "title": "multer vulnerable to file size limit bypass via async fileFilter race condition",
+      "affected": "<2.3.0",
+      "patched": ">=2.3.0",
+      "url": "https://github.com/advisories/GHSA-qvfw-j98x-7q72",
+      "findings": [
+        {
+          "version": "2.2.0",
+          "paths": [
+            "api-server > multer@2.2.0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GHSA-535w-7cp7-47q4",
+      "package": "multer",
+      "severity": "high",
+      "title": "multer vulnerable to Denial of Service via oversized array index in field names",
+      "affected": "<2.3.0",
+      "patched": ">=2.3.0",
+      "url": "https://github.com/advisories/GHSA-535w-7cp7-47q4",
+      "findings": [
+        {
+          "version": "2.2.0",
+          "paths": [
+            "api-server > multer@2.2.0"
+          ]
+        }
+      ]
+    }
+  ]
+}

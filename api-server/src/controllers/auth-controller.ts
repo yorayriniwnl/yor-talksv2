@@ -4,6 +4,7 @@ import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, Goog
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
+import { isDatabaseUnavailableError } from "../utils/database-error.js";
 
 export class AuthController {
   private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
@@ -91,6 +92,9 @@ export class AuthController {
       }
       if (error instanceof EmailVerificationRequiredError) {
         return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
+      }
+      if (isDatabaseUnavailableError(error)) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["auth_service_unavailable"]));
       }
       return res.status(401).json(createResponse("Login failed", null, {}, ["Invalid credentials"]));
     }

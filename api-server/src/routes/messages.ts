@@ -18,6 +18,7 @@ router.post("/conversations/group", authenticate, validateBody(createGroupChatSc
 router.get("/conversations", authenticate, messageController.listConversations);
 router.put("/conversations/:conversationId/vanish", authenticate, validateParams(conversationIdParamSchema), validateBody(z.object({ enabled: z.boolean() })), messageController.setVanishMode);
 router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), messageController.listConversation);
+router.post("/messages/:messageId/preview", authenticate, validateParams(messageIdParamSchema), messageController.preview);
 router.post("/messages/:messageId/seen", authenticate, validateParams(messageIdParamSchema), messageController.markSeen);
 router.put("/messages/:messageId", authenticate, validateParams(messageIdParamSchema), validateBody(z.object({ content: z.string().trim().min(1).max(4000) })), messageController.editMessage);
 router.delete("/messages/:messageId", authenticate, validateParams(messageIdParamSchema), messageController.deleteMessage);

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { AudioLines, BarChart2, Image as ImageIcon, Mic, Square, Type, Send, X, Upload } from 'lucide-react';
+import { AudioLines, BarChart2, Check, Image as ImageIcon, Mic, Sparkles, Square, Type, Send, X, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
-import { api } from '@/lib/api-client';
+import { api, type BackendUser } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
@@ -12,6 +12,14 @@ import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
+import {
+  DEFAULT_STORY_TEXT_STYLE,
+  STORY_TEXT_BACKGROUND_OPTIONS,
+  STORY_TEXT_SIZE_OPTIONS,
+  STORY_TEXT_WEIGHT_OPTIONS,
+  storyTextStyleToCss,
+  type StoryTextStyle,
+} from '@/lib/story-text-style';
 
 interface StoryBuilderModalProps {
   isOpen: boolean;
@@ -26,6 +34,8 @@ const STORY_GRADIENTS = [
   { id: 'emerald', name: 'Aurora Green', css: 'from-emerald-400 via-teal-600 to-blue-700' },
   { id: 'cosmic', name: 'Deep Cosmic', css: 'from-fuchsia-600 via-purple-900 to-black' },
 ];
+
+type StoryAudience = 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
 
 export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }: StoryBuilderModalProps) {
   const addStory = useAppStore((s) => s.addStory);
@@ -45,7 +55,22 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [highlightTitle, setHighlightTitle] = useState('');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
-  const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('followers');
+  const [audience, setAudience] = useState<StoryAudience>('followers');
+  const [audienceMembers, setAudienceMembers] = useState<BackendUser[]>([]);
+  const [audienceExclusions, setAudienceExclusions] = useState<BackendUser[]>([]);
+  const [audienceSearch, setAudienceSearch] = useState('');
+  const [audienceResults, setAudienceResults] = useState<BackendUser[]>([]);
+  const [customListMode, setCustomListMode] = useState<'include' | 'exclude'>('include');
+  const [premiumFeatures, setPremiumFeatures] = useState<Record<string, boolean> | null>(null);
+  const [highlightDestination, setHighlightDestination] = useState<'none' | 'existing' | 'new'>(isHighlight ? 'new' : 'none');
+  const [highlightId, setHighlightId] = useState('');
+  const [highlights, setHighlights] = useState<Awaited<ReturnType<typeof api.getHighlights>>>([]);
+  const [publishMode, setPublishMode] = useState<'active' | 'highlight_only'>('active');
+  const [durationHours, setDurationHours] = useState(24);
+  const [priority, setPriority] = useState(false);
+  const [storyFontId, setStoryFontId] = useState<'default' | 'cinematic' | 'mono'>(currentUser?.storyFontId === 'cinematic' || currentUser?.storyFontId === 'mono' ? currentUser.storyFontId : 'default');
+  const [storyTextStyle, setStoryTextStyle] = useState<StoryTextStyle>(DEFAULT_STORY_TEXT_STYLE);
+  const [storyStyles, setStoryStyles] = useState<Awaited<ReturnType<typeof api.getPremiumProfileOptions>>['options']['storyStyles']>([]);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -55,6 +80,62 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef(0);
+
+  const storyTextControlsLocked = premiumFeatures?.STORY_FONT === false;
+  const storyTextContrastWarning = selectedGradient.id === 'gold' && storyTextStyle.background === 'none';
+  const updateStoryTextStyle = <K extends keyof StoryTextStyle>(field: K, value: StoryTextStyle[K]) => {
+    setStoryTextStyle((current) => ({ ...current, [field]: value }));
+  };
+
+  useEffect(() => {
+    if (!isOpen || !currentUser) return;
+    let active = true;
+    void Promise.allSettled([api.getHighlights(), api.getPremiumProfileOptions()]).then(([highlightResult, profileResult]) => {
+      if (!active) return;
+      if (highlightResult.status === 'fulfilled') setHighlights(highlightResult.value);
+      else setHighlights([]);
+      if (profileResult.status === 'fulfilled') setPremiumFeatures(profileResult.value.enabledFeatures);
+      if (profileResult.status === 'fulfilled') setStoryStyles(profileResult.value.options.storyStyles);
+    });
+    return () => { active = false; };
+  }, [currentUser, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !currentUser || audienceSearch.trim().length < 2) {
+      setAudienceResults([]);
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void api.searchUsers(audienceSearch.trim()).then((users) => {
+        if (active) setAudienceResults(users.filter((user) => user.id !== currentUser.id));
+      }).catch(() => {
+        if (active) setAudienceResults([]);
+      });
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [audienceSearch, currentUser, isOpen]);
+
+  useEffect(() => {
+    if (premiumFeatures && premiumFeatures.CUSTOM_STORY_AUDIENCE === false && ['selected_people', 'everyone_except', 'custom'].includes(audience)) {
+      setAudience('followers');
+    }
+  }, [audience, premiumFeatures]);
+
+  useEffect(() => {
+    if (isHighlight) {
+      setHighlightDestination('new');
+      setPublishMode('active');
+    }
+  }, [isHighlight]);
+
+  useEffect(() => {
+    const profileStyle = currentUser?.storyFontId;
+    if (profileStyle === 'cinematic' || profileStyle === 'mono' || profileStyle === 'default') setStoryFontId(profileStyle);
+  }, [currentUser?.id, currentUser?.storyFontId]);
 
   useEffect(() => () => {
     if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
@@ -154,6 +235,26 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
     if (!contentCategory) return;
     const normalizedPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
     if (pollOpen && (!pollQuestion.trim() || normalizedPollOptions.length < 2)) return;
+    if (highlightDestination === 'existing' && !highlightId) {
+      toast.error('Choose an existing Highlight before publishing');
+      return;
+    }
+    if (publishMode === 'highlight_only' && highlightDestination === 'none') {
+      toast.error('Choose a Highlight before publishing Highlight-only content');
+      return;
+    }
+    if (audience === 'selected_people' && audienceMembers.length === 0) {
+      toast.error('Choose at least one person for this audience');
+      return;
+    }
+    if (audience === 'everyone_except' && audienceExclusions.length === 0) {
+      toast.error('Choose at least one person to exclude');
+      return;
+    }
+    if (audience === 'custom' && audienceMembers.length === 0 && audienceExclusions.length === 0) {
+      toast.error('Add at least one included or excluded person');
+      return;
+    }
 
     setPublishing(true);
     try {
@@ -166,16 +267,32 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         const uploaded = await api.uploadMedia(voiceFile);
         mediaUrl = uploaded.url;
       }
+      let targetHighlightId = highlightDestination === 'existing' ? highlightId : undefined;
+      let targetHighlightTitle = highlightTitle.trim();
+      if (highlightDestination === 'new') {
+        const createdHighlight = await api.createHighlight({ title: targetHighlightTitle || 'Highlights' });
+        targetHighlightId = createdHighlight.id;
+        targetHighlightTitle = createdHighlight.title;
+        setHighlights((items) => [createdHighlight, ...items]);
+      }
       await addStory({
         type: storyType,
         textContent: storyType === 'text' || storyType === 'voice' ? textContent.trim() || undefined : undefined,
         mediaUrl: storyType === 'image' || storyType === 'voice' ? mediaUrl : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
         backgroundGradient: selectedGradient.css,
+        storyFontId,
+        storyTextStyle,
         contentCategory,
         contentRating,
         audience,
-        isHighlight,
-        ...(isHighlight ? { highlightTitle: highlightTitle.trim() || 'Highlights' } : {}),
+        ...(audienceMembers.length > 0 ? { audienceMemberIds: audienceMembers.map((person) => person.id) } : {}),
+        ...(audienceExclusions.length > 0 ? { audienceExclusionIds: audienceExclusions.map((person) => person.id) } : {}),
+        isHighlight: isHighlight || Boolean(targetHighlightId),
+        ...(targetHighlightTitle ? { highlightTitle: targetHighlightTitle } : {}),
+        ...(targetHighlightId ? { highlightId: targetHighlightId } : {}),
+        publishMode,
+        ...(durationHours > 24 ? { durationHours } : {}),
+        ...(priority ? { priority } : {}),
         ...(pollOpen ? { poll: { question: pollQuestion.trim(), options: normalizedPollOptions.map((text) => ({ text })) } } : {}),
       });
       sounds.playChime();
@@ -193,6 +310,18 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setAudience('followers');
+      setAudienceMembers([]);
+      setAudienceExclusions([]);
+      setAudienceSearch('');
+      setAudienceResults([]);
+      setCustomListMode('include');
+      setHighlightDestination(isHighlight ? 'new' : 'none');
+      setHighlightId('');
+      setPublishMode('active');
+      setDurationHours(24);
+      setPriority(false);
+      setStoryFontId(currentUser?.storyFontId === 'cinematic' || currentUser?.storyFontId === 'mono' ? currentUser.storyFontId : 'default');
+      setStoryTextStyle(DEFAULT_STORY_TEXT_STYLE);
       setPollOpen(false);
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -229,7 +358,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           {/* Canvas Center Preview */}
           <div className="flex-1 flex items-center justify-center text-center px-4 relative z-10">
             {storyType === 'text' ? (
-              <p className="text-white text-2xl md:text-3xl font-display font-extrabold drop-shadow-md leading-tight">
+                <p style={storyTextStyleToCss(storyTextStyle)} className={cn("text-white drop-shadow-md", storyFontId === 'mono' ? 'font-mono' : storyFontId === 'cinematic' ? 'font-serif' : 'font-display')}>
                 {textContent || "Type your story caption..."}
               </p>
             ) : storyType === 'voice' ? (
@@ -246,7 +375,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           </div>
 
           <div className="text-[0.68rem] text-white/80 font-mono text-center relative z-10">
-                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : 'followers'} for 24 hours
+                Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : audience === 'selected_people' ? `${audienceMembers.length} selected people` : audience === 'everyone_except' ? `everyone except ${audienceExclusions.length}` : audience === 'custom' ? 'custom audience' : 'followers'} for {durationHours} hours{publishMode === 'highlight_only' ? ' · Highlight only' : ''}
           </div>
         </div>
 
@@ -319,24 +448,69 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
           <label className="space-y-1.5 text-xs font-semibold">
             <span>Audience</span>
-            <select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+            <select value={audience} onChange={(event) => setAudience(event.target.value as StoryAudience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
               <option value="followers">Followers</option>
               <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends ({closeFriends.length})</option>
               <option value="public">Public</option>
+              <option value="selected_people" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Selected people · Advanced</option>
+              <option value="everyone_except" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Everyone except · Advanced</option>
+              <option value="custom" disabled={premiumFeatures?.CUSTOM_STORY_AUDIENCE === false}>Custom include/exclude · Advanced</option>
             </select>
             {audience === 'close_friends' && closeFriends.length === 0 && <span className="block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
           </label>
 
-          {isHighlight && (
-            <input
-              value={highlightTitle}
-              onChange={(event) => setHighlightTitle(event.target.value)}
-              placeholder="Highlight name (for example, Travel)"
-              maxLength={40}
-              className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50"
-              aria-label="Highlight name"
-            />
+          {['selected_people', 'everyone_except', 'custom'].includes(audience) && (
+            <div className="space-y-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
+              <div className="flex items-start gap-2">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-xs font-bold">Private audience controls</p>
+                  <p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Search by username or name. The server re-checks your entitlement and verifies every selected account before publishing.</p>
+                </div>
+              </div>
+              {audience === 'custom' && <label className="block space-y-1.5 text-xs font-semibold"><span>Editing list</span><select value={customListMode} onChange={(event) => setCustomListMode(event.target.value as typeof customListMode)} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="include">Include these people</option><option value="exclude">Exclude these people</option></select></label>}
+              <input value={audienceSearch} onChange={(event) => setAudienceSearch(event.target.value)} placeholder="Search people to add…" aria-label="Search people for story audience" className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+              {audienceSearch.trim().length > 0 && audienceSearch.trim().length < 2 && <p className="text-[0.68rem] text-muted-foreground">Type at least two characters to search.</p>}
+              {audienceResults.length > 0 && <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-border/40 bg-background/40 p-1">{audienceResults.map((person) => {
+                const targetList = audience === 'everyone_except' || (audience === 'custom' && customListMode === 'exclude') ? audienceExclusions : audienceMembers;
+                const selected = targetList.some((item) => item.id === person.id);
+                return <button key={person.id} type="button" onClick={() => {
+                  const useExclusions = audience === 'everyone_except' || (audience === 'custom' && customListMode === 'exclude');
+                  const setter = useExclusions ? setAudienceExclusions : setAudienceMembers;
+                  setter((items) => selected ? items.filter((item) => item.id !== person.id) : [...items, person]);
+                }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs hover:bg-primary/10"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">{(person.fullName || person.username || 'U').charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{person.fullName || person.username}</span><span className="block truncate text-[0.65rem] text-muted-foreground">@{person.username}</span></span><span className={cn('text-[0.65rem] font-bold', selected ? 'text-primary' : 'text-muted-foreground')}>{selected ? 'Added' : 'Add'}</span></button>;
+              })}</div>}
+              {(audienceMembers.length > 0 || audienceExclusions.length > 0) && <div className="flex flex-wrap gap-1.5">{audienceMembers.map((person) => <button key={`include-${person.id}`} type="button" onClick={() => setAudienceMembers((items) => items.filter((item) => item.id !== person.id))} className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[0.65rem] font-semibold text-primary">+ @{person.username} ×</button>)}{audienceExclusions.map((person) => <button key={`exclude-${person.id}`} type="button" onClick={() => setAudienceExclusions((items) => items.filter((item) => item.id !== person.id))} className="rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-1 text-[0.65rem] font-semibold text-destructive">− @{person.username} ×</button>)}</div>}
+            </div>
           )}
+
+          <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-start gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-xs font-bold">Advanced delivery</p><p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Keep a story in the active tray, save it to a Highlight, or publish directly to an archive.</p></div></div>
+            <label className="block space-y-1.5 text-xs font-semibold"><span>Highlight destination</span><select value={highlightDestination} onChange={(event) => setHighlightDestination(event.target.value as typeof highlightDestination)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="none">No Highlight</option>{highlights.length > 0 && <option value="existing">Existing Highlight</option>}<option value="new">Create a new Highlight</option></select></label>
+            {highlightDestination === 'existing' && <label className="block space-y-1.5 text-xs font-semibold"><span>Choose a Highlight</span><select value={highlightId} onChange={(event) => setHighlightId(event.target.value)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="">Select a collection…</option>{highlights.map((highlight) => <option key={highlight.id} value={highlight.id}>{highlight.title} · {highlight.storyIds.length} items</option>)}</select></label>}
+            {highlightDestination === 'new' && <input value={highlightTitle} onChange={(event) => setHighlightTitle(event.target.value)} placeholder="Highlight name (for example, Field notes)" maxLength={60} className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" aria-label="New Highlight name" />}
+            <label className="block space-y-1.5 text-xs font-semibold"><span>Publish mode</span><select value={publishMode} onChange={(event) => setPublishMode(event.target.value as typeof publishMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="active">Active Story + Highlight</option><option value="highlight_only" disabled={highlightDestination === 'none'}>Highlight only · Premium</option></select></label>
+            <div className="grid gap-2 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-semibold"><span>Duration</span><select value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value={24}>24 hours</option><option value={48}>48 hours · Advanced</option><option value={72}>72 hours · Advanced</option></select></label><label className="flex min-h-10 items-center gap-2 rounded-xl border border-border/50 bg-background/40 px-3 text-xs font-semibold"><input type="checkbox" checked={priority} onChange={(event) => setPriority(event.target.checked)} className="h-4 w-4 accent-primary" /><span><span className="block">Priority story</span><span className="block text-[0.65rem] font-normal text-muted-foreground">Capped ranking signal</span></span>{priority && <Check className="ml-auto h-4 w-4 text-primary" />}</label></div>
+            {storyStyles.length > 0 && <label className="block space-y-1.5 text-xs font-semibold"><span>Story typography</span><select value={storyFontId} onChange={(event) => setStoryFontId(event.target.value as typeof storyFontId)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">{storyStyles.map((style) => <option key={style.id} value={style.id} disabled={style.id !== 'default' && premiumFeatures?.STORY_FONT === false}>{style.label}{style.id !== 'default' && premiumFeatures?.STORY_FONT === false ? ' · locked' : ''}</option>)}</select><span className="block text-[0.68rem] font-normal text-muted-foreground">The selected curated style travels with this Story and never changes its text.</span></label>}
+            <div className="space-y-3 rounded-xl border border-border/40 bg-background/30 p-3">
+              <div className="flex items-start gap-2"><Type className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-xs font-bold">Text layout · Advanced</p><p className="mt-1 text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Tune the text canvas without changing the raw characters. Safe-area limits keep the caption readable on small screens.</p></div></div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="block space-y-1.5 text-xs font-semibold"><span>Text size</span><select value={storyTextStyle.size} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('size', event.target.value as StoryTextStyle['size'])} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm">{STORY_TEXT_SIZE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span>Weight</span><select value={storyTextStyle.weight} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('weight', event.target.value as StoryTextStyle['weight'])} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm">{STORY_TEXT_WEIGHT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span>Alignment</span><select value={storyTextStyle.align} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('align', event.target.value as StoryTextStyle['align'])} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span>Text panel</span><select value={storyTextStyle.background} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => { const background = event.target.value as StoryTextStyle['background']; setStoryTextStyle((current) => ({ ...current, background, backgroundOpacity: background === 'none' ? 0 : Math.max(55, current.backgroundOpacity) })); }} className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm">{STORY_TEXT_BACKGROUND_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1.5 text-xs font-semibold"><span className="flex justify-between"><span>Horizontal position</span><span className="font-mono text-muted-foreground">{storyTextStyle.positionX}%</span></span><input type="range" min="12" max="88" step="1" value={storyTextStyle.positionX} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('positionX', Number(event.target.value))} className="w-full accent-primary" /></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span className="flex justify-between"><span>Vertical position</span><span className="font-mono text-muted-foreground">{storyTextStyle.positionY}%</span></span><input type="range" min="14" max="86" step="1" value={storyTextStyle.positionY} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('positionY', Number(event.target.value))} className="w-full accent-primary" /></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span className="flex justify-between"><span>Panel opacity</span><span className="font-mono text-muted-foreground">{storyTextStyle.backgroundOpacity}%</span></span><input type="range" min="0" max="100" step="5" value={storyTextStyle.backgroundOpacity} disabled={storyTextControlsLocked || storyType !== 'text' || storyTextStyle.background === 'none'} onChange={(event) => updateStoryTextStyle('backgroundOpacity', Number(event.target.value))} className="w-full accent-primary" /></label>
+                <label className="block space-y-1.5 text-xs font-semibold"><span className="flex justify-between"><span>Rotation</span><span className="font-mono text-muted-foreground">{storyTextStyle.rotation}°</span></span><input type="range" min="-12" max="12" step="1" value={storyTextStyle.rotation} disabled={storyTextControlsLocked || storyType !== 'text'} onChange={(event) => updateStoryTextStyle('rotation', Number(event.target.value))} className="w-full accent-primary" /></label>
+              </div>
+              {storyTextControlsLocked && <p className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-2 text-[0.68rem] font-normal leading-relaxed text-amber-200">Advanced text layout is currently locked for this account. The default canvas remains available.</p>}
+              {storyType !== 'text' && <p className="text-[0.68rem] font-normal leading-relaxed text-muted-foreground">Text layout controls apply to text Stories. Photo and voice canvases keep their dedicated media treatment.</p>}
+              {storyTextContrastWarning && <p role="status" className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-2 text-[0.68rem] font-normal leading-relaxed text-amber-200">Solar Gold has a bright midtone. Add a Glass or Solid panel, or choose a darker canvas, to keep white text high-contrast.</p>}
+            </div>
+          </div>
 
           <div className="rounded-2xl border border-border/40 bg-background/30 p-3">
             <button type="button" onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">

@@ -8,6 +8,7 @@ import {
   postPollsTable,
   postPollOptionsTable,
   postPollVotesTable,
+  profilePostPinsTable,
 } from "@workspace/db/schema";
 import { db, pool } from "@workspace/db";
 import type { PostRecord } from "../types/index.js";
@@ -17,6 +18,9 @@ import type { ContentRating } from "../utils/content-safety.js";
 
 type PostCursor = { createdAt: string; id: string };
 type TrendingCursor = { score: number; createdAt: string; id: string };
+
+export class ProfilePinLimitError extends Error {}
+export class ProfilePinOrderError extends Error {}
 
 export function encodePostCursor(post: Pick<PostRecord, "id" | "createdAt">): string {
   return Buffer.from(JSON.stringify({ createdAt: post.createdAt, id: post.id }), "utf8").toString("base64url");
@@ -45,6 +49,76 @@ function decodeTrendingCursor(value: string | undefined): TrendingCursor | undef
 }
 
 export class PostRepository {
+
+  async pinPost(postId: string, userId: string, maximum = 6): Promise<PostRecord | undefined> {
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`profile-pins:${userId}`}, 0))`);
+      const [existing] = await tx.select({ postId: profilePostPinsTable.postId, position: profilePostPinsTable.position })
+        .from(profilePostPinsTable)
+        .where(and(eq(profilePostPinsTable.userId, userId), eq(profilePostPinsTable.postId, postId)))
+        .limit(1);
+      let position = existing?.position ?? null;
+      if (!existing) {
+        const [{ pinCount }] = await tx.select({ pinCount: sql<number>`count(*)` })
+          .from(profilePostPinsTable)
+          .where(eq(profilePostPinsTable.userId, userId));
+        if (Number(pinCount) >= maximum) throw new ProfilePinLimitError(`You can pin up to ${maximum} posts`);
+        const [{ maxPosition }] = await tx.select({ maxPosition: sql<number>`coalesce(max(${profilePostPinsTable.position}), -1)` })
+          .from(profilePostPinsTable)
+          .where(eq(profilePostPinsTable.userId, userId));
+        position = Number(maxPosition) + 1;
+        await tx.insert(profilePostPinsTable).values({ userId, postId, position });
+      }
+      const [post] = await tx.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+      return post ? { ...post, pinnedPosition: position } as PostRecord : undefined;
+    });
+  }
+
+  async unpinPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    await db.delete(profilePostPinsTable).where(and(
+      eq(profilePostPinsTable.userId, userId),
+      eq(profilePostPinsTable.postId, postId),
+    ));
+    return this.findById(postId);
+  }
+
+  async reorderPinnedPosts(postIds: string[], userId: string): Promise<PostRecord[]> {
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`profile-pins:${userId}`}, 0))`);
+      const pins = await tx.select({ postId: profilePostPinsTable.postId, position: profilePostPinsTable.position })
+        .from(profilePostPinsTable)
+        .where(eq(profilePostPinsTable.userId, userId));
+      const requestedIds = [...new Set(postIds)];
+      const pinnedIds = new Set(pins.map((pin) => pin.postId));
+      if (requestedIds.length !== postIds.length || requestedIds.length !== pins.length || requestedIds.some((postId) => !pinnedIds.has(postId))) {
+        throw new ProfilePinOrderError("Pinned post order must include each pinned post exactly once");
+      }
+      if (pins.length === 0) return [];
+
+      // Move every row above the current range first so the unique
+      // (user_id, position) index cannot reject an in-place swap.
+      const maxPosition = Math.max(...pins.map((pin) => pin.position), -1);
+      const temporaryOffset = maxPosition + pins.length + 1;
+      await tx.update(profilePostPinsTable)
+        .set({ position: sql`${profilePostPinsTable.position} + ${temporaryOffset}` })
+        .where(eq(profilePostPinsTable.userId, userId));
+      for (const [position, postId] of requestedIds.entries()) {
+        await tx.update(profilePostPinsTable)
+          .set({ position })
+          .where(and(eq(profilePostPinsTable.userId, userId), eq(profilePostPinsTable.postId, postId)));
+      }
+
+      const rows = await tx.select({ post: postsTable, pinnedPosition: profilePostPinsTable.position })
+        .from(profilePostPinsTable)
+        .innerJoin(postsTable, eq(postsTable.id, profilePostPinsTable.postId))
+        .where(and(eq(profilePostPinsTable.userId, userId), inArray(profilePostPinsTable.postId, requestedIds)));
+      const byId = new Map(rows.map(({ post, pinnedPosition }) => [post.id, { ...post, pinnedPosition } as PostRecord]));
+      return requestedIds.flatMap((postId) => {
+        const post = byId.get(postId);
+        return post ? [post] : [];
+      });
+    });
+  }
 
   async likePost(postId: string, userId: string): Promise<void> {
     const inserted = await db.insert(postLikesTable).values({ postId, userId }).onConflictDoNothing().returning({ postId: postLikesTable.postId });
@@ -264,7 +338,16 @@ export class PostRepository {
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
-    return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
+    const rows = await db.select({ post: postsTable, pinnedPosition: profilePostPinsTable.position })
+      .from(postsTable)
+      .leftJoin(profilePostPinsTable, and(
+        eq(profilePostPinsTable.postId, postsTable.id),
+        eq(profilePostPinsTable.userId, userId),
+      ))
+      .where(and(...filters))
+      .orderBy(sql`${profilePostPinsTable.position} asc nulls last`, desc(postsTable.createdAt))
+      .limit(limit);
+    return rows.map(({ post, pinnedPosition }) => ({ ...post, pinnedPosition })) as PostRecord[];
   }
 
   async listByAuthors(authorIds: string[], cursor?: string, limit: number = 20, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
@@ -278,6 +361,7 @@ export class PostRepository {
       ));
     }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
@@ -288,6 +372,7 @@ export class PostRepository {
     const parsedCursor = decodeCursor(cursor);
     if (parsedCursor) filters.push(or(lt(postsTable.createdAt, parsedCursor.createdAt), and(eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id))));
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     let q = db.select().from(postsTable).$dynamic();
@@ -306,6 +391,7 @@ export class PostRepository {
       ));
     }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     let q = db.select().from(postsTable).$dynamic();
@@ -335,6 +421,7 @@ export class PostRepository {
 
       const recentFilters: any[] = [ilike(recentPosts.content, `%${query}%`)];
       if (excludedAuthorIds.length > 0) recentFilters.push(notInArray(recentPosts.authorId, excludedAuthorIds));
+      recentFilters.push(eq(recentPosts.distributionMode, "feed_and_profile"));
       if (contentFilter === "child_safe") recentFilters.push(eq(recentPosts.contentRating, "child_safe"));
       if (contentFilter === "regular") recentFilters.push(inArray(recentPosts.contentRating, ["child_safe", "regular"]));
       return (await db
@@ -347,6 +434,7 @@ export class PostRepository {
 
     const filters: any[] = [ilike(postsTable.content, `%${query}%`)];
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
     if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
     if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     return (await db

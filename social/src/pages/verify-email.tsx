@@ -48,9 +48,9 @@ export default function VerifyEmail() {
         <div className="operator-access-state-card__status">
           <span><i /> Email ownership</span><b>{state === 'success' ? 'VERIFIED' : state === 'error' ? 'ACTION NEEDED' : 'CHECKING'}</b>
         </div>
-        <Link href="/auth">
-          <Button>Continue to sign in <span>→</span></Button>
-        </Link>
+        <Button asChild>
+          <Link href="/auth">Continue to sign in <span>→</span></Link>
+        </Button>
       </section>
     </main>
   );

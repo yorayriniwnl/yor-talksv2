@@ -91,6 +91,9 @@ async function seedDatabase() {
         bio: u.bio,
         avatarUrl: u.avatarUrl,
         role: u.role,
+        // Local demo accounts must be usable immediately after seeding. This
+        // script is never intended for a public deployment.
+        emailVerified: true,
         permissions: ["read:profile", "write:post", "moderate:community"],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

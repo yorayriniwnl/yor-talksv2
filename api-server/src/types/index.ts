@@ -1,5 +1,6 @@
 export type UserRole = "user" | "moderator" | "admin";
 import type { ContentRating } from "../utils/content-safety.js";
+import type { StoryTextStyle } from "../features/story-text-style.js";
 
 export interface UserRecord {
   id: string;
@@ -12,6 +13,10 @@ export interface UserRecord {
   ageConfirmedAt?: string | null;
   fullName: string;
   bio: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   avatarUrl: string | null;
   role: UserRole;
   permissions: string[];
@@ -48,6 +53,8 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   privateAccount: boolean;
   allowMentions?: boolean;
+  /** Whether story views should be aggregate-only for the viewer. */
+  storyViewMode?: "identified" | "private";
   /** Highest content rating this viewer wants to see. */
   contentFilter?: ContentRating;
   /** Explicitly false for new accounts until the guided setup is saved. */
@@ -61,6 +68,7 @@ export interface PrivacySettings {
 }
 
 export type PostAudience = "followers" | "close_friends" | "public";
+export type PostDistributionMode = "feed_and_profile" | "profile_only";
 
 export interface PostRecord {
   id: string;
@@ -81,6 +89,8 @@ export interface PostRecord {
   mentions?: string[];
   score?: number;
   audience?: PostAudience;
+  distributionMode?: PostDistributionMode;
+  pinnedPosition?: number | null;
   /** Legacy compatibility fields; likes, bookmarks, and comments are relational. */
   likedBy?: string[];
   bookmarkedBy?: string[];
@@ -155,6 +165,7 @@ export interface MessageRecord {
   senderId: string;
   recipientId: string;
   content: string;
+  textStyleId?: string;
   createdAt: string;
   seenAt: string | null;
   replyToId?: string | null;
@@ -164,7 +175,11 @@ export interface MessageRecord {
   deletedAt?: string | null;
   expiresAt?: string | null;
   pinned?: boolean;
+  messageState?: MessageLifecycleState;
+  previewedAt?: string | null;
 }
+
+export type MessageLifecycleState = "MESSAGE_DELIVERED" | "MESSAGE_PREVIEWED" | "MESSAGE_OPENED" | "MESSAGE_READ";
 
 export interface ConversationRecord {
   id: string;
@@ -385,6 +400,7 @@ export interface LiveStreamRecord {
 export interface StoryReaction {
   userId: string;
   emoji: string;
+  reactionType?: "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM";
 }
 
 export interface StoryPollOption {
@@ -409,20 +425,38 @@ export interface StoryRecord {
   type: string;
   textContent?: string | null;
   backgroundGradient?: string | null;
+  storyFontId?: string;
+  storyTextStyle?: StoryTextStyle | null;
   createdAt: string;
+  publishedAt?: string;
   expiresAt: string;
   viewerIds: string[];
   reactions: StoryReaction[];
   isHighlight: boolean;
   highlightTitle?: string | null;
+  highlightId?: string | null;
+  publishMode?: "active" | "highlight_only";
+  priorityBoost?: number;
+  engagementScore?: number;
   audience?: StoryAudience;
   contentCategory?: string;
   contentRating?: ContentRating;
   poll?: StoryPoll;
 }
 
-export type StoryAudience = "followers" | "close_friends" | "public";
+export interface HighlightRecord {
+  id: string;
+  ownerId: string;
+  title: string;
+  coverUrl?: string | null;
+  storyIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StoryAudience = "followers" | "close_friends" | "public" | "selected_people" | "everyone_except" | "custom";
 export type NoteAudience = "followers" | "close_friends" | "public";
+export type StoryReactionType = "NORMAL_HEART" | "SUPER_HEART" | "CUSTOM";
 
 export interface NoteRecord {
   id: string;

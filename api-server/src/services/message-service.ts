@@ -7,13 +7,17 @@ import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { isPremiumMessageStyle } from "../features/premium-profile.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
 export class InvalidMessageContentError extends Error {}
+export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
+export class PremiumFeatureUnavailableError extends Error {}
 
-type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId">;
+type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId">;
 
 const normalizeMessageContent = (content: string): string => {
   if (typeof content !== "string") throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
@@ -30,6 +34,7 @@ export class MessageService {
     private readonly messageRepository: MessageRepository,
     private readonly userRepository?: UserRepository,
     private readonly aiService: AIService = new AIService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
@@ -92,11 +97,13 @@ export class MessageService {
       throw new UnauthorizedError("You are not a member of this conversation");
     }
 
+    let senderProfile: UserRecord | undefined;
     if (this.userRepository) {
       const participants = await Promise.all(
         members.filter((memberId) => memberId !== senderId).map((memberId) => this.userRepository!.findById(memberId)),
       );
       const sender = await this.userRepository.findById(senderId);
+      senderProfile = sender;
       if (!sender || participants.some((recipient) => !recipient || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipient.id))) {
         throw new MessageBlockedError("You can't message this user");
       }
@@ -109,6 +116,14 @@ export class MessageService {
     // moderation provider. This prevents unauthorized requests from spending
     // moderation quota on arbitrary conversations.
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
+
+    const textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
+    if (!isPremiumMessageStyle(textStyleId)) {
+      throw new InvalidMessageStyleError("Message style is not supported");
+    }
+    if (textStyleId !== "default" && !(await this.entitlementService.hasFeature(senderId, "MESSAGE_FONT"))) {
+      throw new PremiumFeatureUnavailableError("Message fonts are not enabled for this account");
+    }
 
     const replyToId = options?.replyToId ?? null;
     if (replyToId) {
@@ -124,6 +139,7 @@ export class MessageService {
       senderId,
       recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
       content: normalizedContent,
+      textStyleId,
       createdAt: createdAt.toISOString(),
       seenAt: null,
       replyToId,
@@ -145,6 +161,26 @@ export class MessageService {
     }
     const messages = await this.messageRepository.listConversation(conversationId);
     return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+  }
+
+  async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt) return undefined;
+    const members = await this.conversationRepository.getMembers(message.conversationId);
+    if (!members.includes(userId)) return undefined;
+    if (message.senderId === userId) return undefined;
+    if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
+      throw new PremiumFeatureUnavailableError("Unread message previews are not enabled for this account");
+    }
+    // Direct messages retain a legacy single-recipient timestamp while group
+    // conversations use the per-user message_reads table. Check both so a
+    // preview can never be used to reopen an already-read message.
+    if ((message.recipientId === userId && message.seenAt !== null) || await this.messageRepository.hasReadReceipt(messageId, userId)) {
+      return undefined;
+    }
+    const previewedAt = new Date().toISOString();
+    const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
+    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {

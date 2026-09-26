@@ -25,6 +25,7 @@ tags:
   - name: events
   - name: feed
   - name: healthz
+  - name: highlights
   - name: invites
   - name: livez
   - name: media
@@ -1777,6 +1778,48 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /highlights:
+    get:
+      operationId: getHighlights
+      summary: Get /highlights
+      tags: [highlights]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    post:
+      operationId: postHighlights
+      summary: Post /highlights
+      tags: [highlights]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /invites/claim:
     post:
       operationId: postInvitesClaim
@@ -1996,6 +2039,37 @@ paths:
     post:
       operationId: postMessagesByMessageIdPin
       summary: Post /messages/{messageId}/pin
+      tags: [messages]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /messages/{messageId}/preview:
+    post:
+      operationId: postMessagesByMessageIdPreview
+      summary: Post /messages/{messageId}/preview
       tags: [messages]
       security:
         - bearerAuth: []
@@ -2609,6 +2683,60 @@ paths:
             schema:
               type: object
               additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /posts/{postId}/pin:
+    post:
+      operationId: postPostsByPostIdPin
+      summary: Post /posts/{postId}/pin
+      tags: [posts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    delete:
+      operationId: deletePostsByPostIdPin
+      summary: Delete /posts/{postId}/pin
+      tags: [posts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Successful response
@@ -3452,10 +3580,65 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /stories/{id}/analytics:
+    get:
+      operationId: getStoriesByIdAnalytics
+      summary: Get /stories/{id}/analytics
+      tags: [stories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /stories/{id}/poll/vote:
     post:
       operationId: postStoriesByIdPollVote
       summary: Post /stories/{id}/poll/vote
+      tags: [stories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /stories/{id}/priority:
+    patch:
+      operationId: patchStoriesByIdPriority
+      summary: Patch /stories/{id}/priority
       tags: [stories]
       security:
         - bearerAuth: []
@@ -3534,6 +3717,30 @@ paths:
             schema:
               type: object
               additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /stories/{id}/viewers:
+    get:
+      operationId: getStoriesByIdViewers
+      summary: Get /stories/{id}/viewers
+      tags: [stories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Successful response
@@ -4650,6 +4857,48 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /users/me/premium-profile:
+    get:
+      operationId: getUsersMePremiumProfile
+      summary: Get /users/me/premium-profile
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    put:
+      operationId: putUsersMePremiumProfile
+      summary: Put /users/me/premium-profile
+      tags: [users]
+      security:
+        - bearerAuth: []
       requestBody:
         required: false
         content:

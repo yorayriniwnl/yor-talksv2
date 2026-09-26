@@ -3,6 +3,8 @@
 // A Vercel frontend can point at a separately hosted API with
 // VITE_API_BASE_URL without changing application code.
 
+import type { StoryTextStyle } from '@/lib/story-text-style';
+
 export interface Tokens {
   accessToken: string;
   /** Refresh tokens are HttpOnly cookies and are never available to JS. */
@@ -312,6 +314,10 @@ export interface BackendUser {
   email: string;
   fullName: string;
   bio: string;
+  bioStyleId?: string;
+  messageFontId?: string;
+  storyFontId?: string;
+  appIconId?: string;
   avatarUrl: string | null;
   role: string;
   followers?: string[];
@@ -333,6 +339,7 @@ export interface BackendUser {
     privateAccount?: boolean;
     theme?: 'light' | 'dark';
     contentFilter?: ContentRating;
+    storyViewMode?: 'identified' | 'private';
     onboardingCompleted?: boolean;
   };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
@@ -387,6 +394,31 @@ export interface BackendShowcase {
   customImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PremiumProfileSelection {
+  bioStyleId: string;
+  messageFontId: string;
+  storyFontId: string;
+  appIconId: string;
+}
+
+export interface PremiumProfileOption {
+  id: string;
+  label: string;
+  cssFamily?: string;
+  platforms?: string[];
+}
+
+export interface PremiumProfileOptions {
+  selection: PremiumProfileSelection;
+  options: {
+    bioStyles: PremiumProfileOption[];
+    messageStyles: PremiumProfileOption[];
+    storyStyles: PremiumProfileOption[];
+    appIcons: PremiumProfileOption[];
+  };
+  enabledFeatures: Record<string, boolean>;
 }
 
 export type CreatorWorkspaceKind = 'draft' | 'scheduled' | 'collection' | 'collaboration' | 'quest' | 'preference';
@@ -507,6 +539,9 @@ export const api = {
   getProfileByUsername: (username: string) => request<BackendUser>(`/users/by-username/${encodeURIComponent(username)}`),
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  updatePremiumProfile: (payload: Partial<PremiumProfileSelection>) =>
+    request<BackendUser>('/users/me/premium-profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: async (file: File) => {
     const directUpload = await uploadDirectToCloudinary(file, 'avatar');
     if (directUpload) {
@@ -541,7 +576,7 @@ export const api = {
   getProfileShowcases: (userId: string) => request<BackendShowcase[]>(`/users/${encodeURIComponent(userId)}/showcases`),
   createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageUrl?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteProfileShowcase: (userId: string, showcaseId: string) => request<null>(`/users/${encodeURIComponent(userId)}/showcases/${encodeURIComponent(showcaseId)}`, { method: 'DELETE' }),
-  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating }) =>
+  updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating; storyViewMode?: 'identified' | 'private' }) =>
     request<NonNullable<BackendUser['settings']>>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
   updatePrivacy: (payload: { profileVisibility?: 'public' | 'private' | 'followers'; messageRequests?: boolean; allowDmFromStrangers?: boolean }) =>
     request<{ profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean }>('/users/me/privacy', { method: 'PUT', body: JSON.stringify(payload) }),
@@ -575,7 +610,7 @@ export const api = {
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string, contentCategory?: ContentCategory, contentRating?: ContentRating) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content, ...(contentCategory ? { contentCategory } : {}), ...(contentRating ? { contentRating } : {}) }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -583,6 +618,8 @@ export const api = {
   unlikePost: (postId: string) => request<BackendPost>(`/posts/${postId}/unlike`, { method: 'POST' }),
   bookmarkPost: (postId: string) => request<BackendPost>(`/posts/${postId}/bookmark`, { method: 'POST' }),
   sharePost: (postId: string) => request<BackendPost>(`/posts/${postId}/share`, { method: 'POST' }),
+  pinPost: (postId: string) => request<BackendPost>(`/posts/${encodeURIComponent(postId)}/pin`, { method: 'POST' }),
+  unpinPost: (postId: string) => request<BackendPost>(`/posts/${encodeURIComponent(postId)}/pin`, { method: 'DELETE' }),
   repostPost: (postId: string, note?: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) }),
   unrepostPost: (postId: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'DELETE' }),
   votePostPoll: (postId: string, optionId: string) => request<BackendPost>(`/posts/${postId}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
@@ -614,11 +651,15 @@ export const api = {
     request<null>(`/projects/${projectId}/collaborators`, { method: 'POST', body: JSON.stringify({ userId, role }) }),
 
   // ---- Stories ----
+  getHighlights: () => request<BackendHighlight[]>('/highlights'),
+  createHighlight: (payload: { title: string; coverUrl?: string }) => request<BackendHighlight>('/highlights', { method: 'POST', body: JSON.stringify(payload) }),
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; isHighlight?: boolean; highlightTitle?: string; audience?: 'followers' | 'close_friends' | 'public'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
+  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; storyFontId?: 'default' | 'cinematic' | 'mono'; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
-  reactToStory: (id: string, emoji: string) => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  reactToStory: (id: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji, ...(reactionType ? { reactionType } : {}) }) }),
+  getStoryAnalytics: (id: string) => request<BackendStoryAnalytics>(`/stories/${encodeURIComponent(id)}/analytics`),
+  getStoryViewers: (id: string, query = '', cursor?: string) => request<BackendStoryViewers>(`/stories/${encodeURIComponent(id)}/viewers?${new URLSearchParams({ ...(query.trim() ? { q: query.trim() } : {}), ...(cursor ? { cursor } : {}) }).toString()}`),
   voteStoryPoll: (id: string, optionId: string) => request<BackendStory>(`/stories/${id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
 
   // ---- Broadcast channels ----
@@ -659,12 +700,13 @@ export const api = {
   cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
   // ---- Messages ----
-  sendMessage: (recipientId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}) }) }),
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}) }) }),
+  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
   createGroupChat: (payload: { memberIds: string[]; title: string }) => request<BackendConversation>('/conversations/group', { method: 'POST', body: JSON.stringify(payload) }),
   setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
   getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
+  previewMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/preview`, { method: 'POST' }),
   markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
   editMessage: (messageId: string, content: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'PUT', body: JSON.stringify({ content }) }),
   deleteMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'DELETE' }),
@@ -745,13 +787,17 @@ export interface BackendStory {
   type: string;
   textContent: string | null;
   backgroundGradient: string | null;
+  storyFontId?: 'default' | 'cinematic' | 'mono';
+  storyTextStyle?: StoryTextStyle | null;
   createdAt: string;
   expiresAt: string;
   viewerIds: string[];
   reactions: { userId: string; emoji: string }[];
   isHighlight: boolean;
   highlightTitle: string | null;
-  audience?: 'followers' | 'close_friends' | 'public';
+  highlightId?: string | null;
+  publishMode?: 'active' | 'highlight_only';
+  audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom';
   contentCategory?: ContentCategory;
   contentRating?: ContentRating;
   poll?: {
@@ -761,6 +807,44 @@ export interface BackendStory {
     totalVotes: number;
     votedOptionId?: string;
   };
+}
+
+export interface BackendHighlight {
+  id: string;
+  ownerId: string;
+  title: string;
+  coverUrl?: string | null;
+  storyIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BackendStoryAnalytics {
+  totalViews: number;
+  uniqueViewers: number;
+  rewatches: number;
+  rewatchRate: number;
+  identifiedViews: number;
+  privateViews: number;
+  reactionCounts: {
+    normalHeart: number;
+    superHeart: number;
+    custom: number;
+    total: number;
+  };
+}
+
+export interface BackendStoryViewer {
+  viewerId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  viewedAt: string;
+}
+
+export interface BackendStoryViewers {
+  viewers: BackendStoryViewer[];
+  nextCursor: string | null;
 }
 
 export interface BackendNote {
@@ -807,6 +891,8 @@ export interface BackendPost {
   content: string;
   images: string[];
   audience?: 'followers' | 'close_friends' | 'public';
+  distributionMode?: 'feed_and_profile' | 'profile_only';
+  pinnedPosition?: number | null;
   createdAt: string;
   likedBy?: string[];
   comments?: { id: string; authorId: string; content: string; createdAt: string }[];
@@ -987,6 +1073,7 @@ export interface BackendMessage {
   senderId: string;
   recipientId: string;
   content: string;
+  textStyleId?: 'default' | 'mono' | 'rounded';
   createdAt: string;
   seenAt: string | null;
   editedAt: string | null;
@@ -995,6 +1082,8 @@ export interface BackendMessage {
   replyToId?: string | null;
   reactions?: Record<string, string[]> | null;
   pinned?: boolean | null;
+  messageState?: 'MESSAGE_DELIVERED' | 'MESSAGE_PREVIEWED' | 'MESSAGE_OPENED' | 'MESSAGE_READ';
+  previewedAt?: string | null;
 }
 
 export interface BackendNotification {

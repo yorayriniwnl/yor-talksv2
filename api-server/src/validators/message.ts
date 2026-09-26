@@ -5,6 +5,7 @@ export const messageSchema = z.object({
   conversationId: z.string().uuid().optional(),
   content: z.string().trim().min(1).max(4000),
   replyToId: z.string().uuid().optional(),
+  textStyleId: z.enum(["default", "mono", "rounded"]).optional(),
 }).refine((value) => Boolean(value.recipientId || value.conversationId), {
   message: "recipientId or conversationId is required",
 });

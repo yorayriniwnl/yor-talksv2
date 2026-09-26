@@ -121,6 +121,24 @@ test('feed failures show a retry, never a false empty-success state', async ({ p
   await expect(page.getByRole('article').getByText('The recovered feed is here.')).toBeVisible();
 });
 
+test('feed loading is announced while the first response is pending', async ({ page }) => {
+  await installApiBoundary(page);
+  let releaseFeed!: () => void;
+  const feedPending = new Promise<void>((resolve) => { releaseFeed = resolve; });
+  await page.route('**/api/feed?*', async (route) => {
+    await feedPending;
+    return json(route, [post('The delayed feed arrived.', 'delayed-feed-post')]);
+  });
+
+  await page.goto('/');
+  try {
+    await expect(page.getByRole('status', { name: 'Loading feed' })).toBeVisible();
+  } finally {
+    releaseFeed();
+  }
+  await expect(page.getByRole('article').getByText('The delayed feed arrived.')).toBeVisible();
+});
+
 test('posts survive unavailable author profiles and recover without hook errors', async ({ page }) => {
   await installApiBoundary(page);
   const authorId = '10000000-0000-4000-8000-000000000007';
@@ -173,6 +191,8 @@ test(`mobile home is readable and keyboard-operable in ${colorScheme} mode`, asy
 test('sign-in preserves password and email-code paths with accessible controls', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installApiBoundary(page);
+  // Core auth accessibility must not depend on the live Google CDN completing.
+  await page.route('https://accounts.google.com/gsi/client', (route) => route.abort());
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
@@ -181,6 +201,26 @@ test('sign-in preserves password and email-code paths with accessible controls',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('Google script failure has an accessible retry without disabling other sign-in methods', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  let attempts = 0;
+  await page.route('https://accounts.google.com/gsi/client', (route) => {
+    attempts++;
+    if (attempts === 1) return route.abort();
+    // SDK-shaped rendering fixture only; this is not a live OAuth acceptance test.
+    return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
+  });
+  await page.goto('/auth');
+  await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeEnabled();
+  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Retry Google sign-in' }).click();
+  await expect(page.getByRole('group', { name: 'Google sign-in', exact: true }).getByRole('button', { name: 'Sign in with Google', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry Google sign-in' })).toHaveCount(0);
+  expect(attempts).toBe(2);
 });
 
 test('discovery loads beyond an empty following feed without changing the selected home feed', async ({ page }) => {
@@ -204,6 +244,9 @@ test("public beta legal pages show configured, dated policy content", async ({ p
   await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
   await expect(page.getByText("test-public-beta-1", { exact: false })).toBeVisible();
   await expect(page.getByText(/draft|not configured/i)).toHaveCount(0);
+  await expect(page.locator('a button, button a')).toHaveCount(0);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
 });
 
 test("public beta requires consent before opening protected social routes", async ({ page }) => {
@@ -511,4 +554,35 @@ test('follow decisions prevent duplicate actions and activity read-all handles f
   await page.getByRole('button', { name: 'Mark all read' }).click();
   await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).not.toHaveAttribute('data-unread', 'true');
   expect(readAttempts).toBe(2);
+});
+
+test('failed blocking never announces success or hides the post, and retry persists', async ({ page }) => {
+  const profile = { ...user, blockedUsers: [] as string[] };
+  await installApiBoundary(page, profile);
+  const creator = { ...user, id: '10000000-0000-4000-8000-000000000090', username: 'block_fixture', fullName: 'Safety Test Creator' };
+  const item = { ...post('Keep this visible until blocking is confirmed.', 'block-post'), authorId: creator.id };
+  await page.route(`**/api/users/${creator.id}`, (route) => json(route, creator));
+  await page.route('**/api/feed?*', (route) => json(route, profile.blockedUsers.length ? [] : [item]));
+  let attempts = 0;
+  await page.route(`**/api/users/${creator.id}/block`, (route) => {
+    attempts++;
+    if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Blocking could not be saved' }) });
+    profile.blockedUsers.push(creator.id);
+    return json(route, { blockedUsers: profile.blockedUsers });
+  });
+  await page.goto('/');
+  const itemCard = page.getByRole('article').filter({ hasText: item.content });
+  await expect(itemCard.getByRole('link', { name: creator.fullName, exact: true })).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(page.getByText('Blocking could not be saved', { exact: true })).toBeVisible();
+  await expect(page.getByText('User blocked', { exact: true })).toHaveCount(0);
+  await expect(itemCard).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(itemCard).toHaveCount(0);
+  expect(attempts).toBe(2);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(itemCard).toHaveCount(0);
 });

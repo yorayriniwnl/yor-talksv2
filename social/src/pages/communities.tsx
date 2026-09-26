@@ -515,11 +515,11 @@ export default function Communities() {
                         <span>{community.members.toLocaleString()}</span>
                       </div>
                       <div className="flex gap-2">
-                        <Link href={`/communities/${community.id}`}>
-                          <Button size="sm" className="rounded-xl font-bold text-xs glow-neon-primary bg-primary">
+                        <Button asChild size="sm" className="rounded-xl font-bold text-xs glow-neon-primary bg-primary">
+                          <Link href={`/communities/${community.id}`}>
                             Enter Hub
-                          </Button>
-                        </Link>
+                          </Link>
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => leaveCommunity(community.id)} className="rounded-xl font-bold text-xs border-border/60 hover:bg-destructive/10 hover:text-destructive">
                           Leave
                         </Button>

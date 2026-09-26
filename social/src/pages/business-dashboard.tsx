@@ -145,8 +145,8 @@ export default function BusinessDashboard() {
               })()}
 
               <div className="mt-6 flex flex-wrap gap-2 border-t border-border/30 pt-5">
-                <a href="/marketplace"><Button size="sm" variant="outline" className="rounded-xl text-xs font-bold"><ShoppingBag className="mr-1.5 h-3.5 w-3.5" />Publish listing</Button></a>
-                <a href="/store"><Button size="sm" variant="outline" className="rounded-xl text-xs font-bold"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />View storefront</Button></a>
+                <Button asChild size="sm" variant="outline" className="rounded-xl text-xs font-bold"><a href="/marketplace"><ShoppingBag className="mr-1.5 h-3.5 w-3.5" />Publish listing</a></Button>
+                <Button asChild size="sm" variant="outline" className="rounded-xl text-xs font-bold"><a href="/store"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />View storefront</a></Button>
               </div>
             </div>
           ))}
