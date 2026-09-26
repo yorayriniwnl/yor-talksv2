@@ -45,6 +45,30 @@ test("pinning is entitlement-gated before a profile mutation is attempted", asyn
   assert.equal(pinAttempted, false);
 });
 
+test("reordering profile pins is entitlement-gated before persistence", async () => {
+  let reorderAttempted = false;
+  const postRepository = {
+    reorderPinnedPosts: async () => { reorderAttempted = true; return [post]; },
+  } as unknown as PostRepository;
+  const entitlementService = {
+    hasFeature: async () => false,
+  } as unknown as FeatureEntitlementService;
+  const service = new PostService(
+    postRepository,
+    {} as UserRepository,
+    {} as NotificationRepository,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    entitlementService,
+  );
+
+  await assert.rejects(() => service.reorderPinnedPosts([post.id], post.authorId), PremiumFeatureUnavailableError);
+  assert.equal(reorderAttempted, false);
+});
+
 test("profile-only posts are entitlement-gated before persistence", async () => {
   let createAttempted = false;
   const postRepository = {

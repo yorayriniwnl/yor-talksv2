@@ -20,6 +20,7 @@ type PostCursor = { createdAt: string; id: string };
 type TrendingCursor = { score: number; createdAt: string; id: string };
 
 export class ProfilePinLimitError extends Error {}
+export class ProfilePinOrderError extends Error {}
 
 export function encodePostCursor(post: Pick<PostRecord, "id" | "createdAt">): string {
   return Buffer.from(JSON.stringify({ createdAt: post.createdAt, id: post.id }), "utf8").toString("base64url");
@@ -79,6 +80,44 @@ export class PostRepository {
       eq(profilePostPinsTable.postId, postId),
     ));
     return this.findById(postId);
+  }
+
+  async reorderPinnedPosts(postIds: string[], userId: string): Promise<PostRecord[]> {
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`profile-pins:${userId}`}, 0))`);
+      const pins = await tx.select({ postId: profilePostPinsTable.postId, position: profilePostPinsTable.position })
+        .from(profilePostPinsTable)
+        .where(eq(profilePostPinsTable.userId, userId));
+      const requestedIds = [...new Set(postIds)];
+      const pinnedIds = new Set(pins.map((pin) => pin.postId));
+      if (requestedIds.length !== postIds.length || requestedIds.length !== pins.length || requestedIds.some((postId) => !pinnedIds.has(postId))) {
+        throw new ProfilePinOrderError("Pinned post order must include each pinned post exactly once");
+      }
+      if (pins.length === 0) return [];
+
+      // Move every row above the current range first so the unique
+      // (user_id, position) index cannot reject an in-place swap.
+      const maxPosition = Math.max(...pins.map((pin) => pin.position), -1);
+      const temporaryOffset = maxPosition + pins.length + 1;
+      await tx.update(profilePostPinsTable)
+        .set({ position: sql`${profilePostPinsTable.position} + ${temporaryOffset}` })
+        .where(eq(profilePostPinsTable.userId, userId));
+      for (const [position, postId] of requestedIds.entries()) {
+        await tx.update(profilePostPinsTable)
+          .set({ position })
+          .where(and(eq(profilePostPinsTable.userId, userId), eq(profilePostPinsTable.postId, postId)));
+      }
+
+      const rows = await tx.select({ post: postsTable, pinnedPosition: profilePostPinsTable.position })
+        .from(profilePostPinsTable)
+        .innerJoin(postsTable, eq(postsTable.id, profilePostPinsTable.postId))
+        .where(and(eq(profilePostPinsTable.userId, userId), inArray(profilePostPinsTable.postId, requestedIds)));
+      const byId = new Map(rows.map(({ post, pinnedPosition }) => [post.id, { ...post, pinnedPosition } as PostRecord]));
+      return requestedIds.flatMap((postId) => {
+        const post = byId.get(postId);
+        return post ? [post] : [];
+      });
+    });
   }
 
   async likePost(postId: string, userId: string): Promise<void> {

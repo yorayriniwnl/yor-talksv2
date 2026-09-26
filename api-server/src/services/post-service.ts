@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
-import { encodePostCursor, encodeTrendingCursor, PostRepository, ProfilePinLimitError } from "../repositories/post-repository.js";
+import { encodePostCursor, encodeTrendingCursor, PostRepository, ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
@@ -21,7 +21,7 @@ import { logger } from "../lib/logger.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
-export { ProfilePinLimitError } from "../repositories/post-repository.js";
+export { ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
 
 export class PremiumFeatureUnavailableError extends Error {}
 
@@ -155,6 +155,13 @@ export class PostService {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return undefined;
     return this.postRepository.unpinPost(postId, userId);
+  }
+
+  async reorderPinnedPosts(postIds: string[], userId: string): Promise<PostRecord[]> {
+    if (!(await this.entitlementService.hasFeature(userId, "SIX_PINNED_POSTS"))) {
+      throw new PremiumFeatureUnavailableError("Six pinned posts are not enabled for this account");
+    }
+    return this.postRepository.reorderPinnedPosts(postIds, userId);
   }
 
   async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"], contentCategory?: PostRecord["contentCategory"]): Promise<PostRecord | undefined> {
