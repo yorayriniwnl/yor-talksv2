@@ -79,6 +79,19 @@ before restoring an older application image.
 
 ## Evidence log
 
+- F02/F12: shared current-record policy now enforces post audience, public/private
+  account, mutual blocks, account suspension/deactivation and content rating.
+  Mutes apply to discovery; profile-only posts remain available through authorized
+  profile/detail/bookmark access and excluded from ordinary search/feed.
+  Search hits re-query SQL; trending caches store only candidate IDs/rank and
+  re-fetch records. Invalidated rank/deletion pages are re-queried. Bounded feed
+  scans retain a continuation cursor even when a full scan produces no visible rows.
+  SQL-backed auto/index and fallback search, warm-cache edits/restrictions/deletion,
+  eligible viewers and keyset pagination: 9/9 focused tests passed. Measured 50
+  candidates: two SQL queries, 2.7 ms on local PostgreSQL; this is a single local
+  observation, not a capacity or p95/p99 claim. Remaining broad load/staging gates
+  stay open. Test `api-server/src/__tests__/audience-regression.test.ts`.
+
 - Baseline frozen-lockfile installation completed in the isolated checkout.
 - Initial typecheck before building the DB references failed (TS6305). After DB
   build, three API and one frontend errors in the candidate hardening code were

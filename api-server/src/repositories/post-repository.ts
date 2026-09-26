@@ -49,6 +49,12 @@ function decodeTrendingCursor(value: string | undefined): TrendingCursor | undef
 }
 
 export class PostRepository {
+  constructor(private readonly searchMode: 'auto' | 'fallback' = 'auto') {}
+
+  async findByIds(ids: string[]): Promise<PostRecord[]> {
+    if (!ids.length) return [];
+    return await db.select().from(postsTable).where(inArray(postsTable.id, ids)) as PostRecord[];
+  }
 
   async pinPost(postId: string, userId: string, maximum = 6): Promise<PostRecord | undefined> {
     return db.transaction(async (tx) => {
@@ -411,7 +417,7 @@ export class PostRepository {
       ) AS is_ready
     `);
 
-    if (!indexState.rows[0]?.is_ready) {
+    if (this.searchMode === 'fallback' || !indexState.rows[0]?.is_ready) {
       const recentPosts = db
         .select()
         .from(postsTable)

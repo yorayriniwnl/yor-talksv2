@@ -263,33 +263,15 @@ export class StoryService {
     return poll ? { ...story, poll } : story;
   }
 
-  private async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
-    if (!story || !(await this.contentSafetyService.isVisible(story, viewerId, story.authorId))) return false;
-    if (!viewerId && story.audience === "public") return true;
-    const author = await this.userRepository.findById(story.authorId);
-    const viewer = viewerId ? await this.userRepository.findById(viewerId) : undefined;
-    if (!author) return false;
-    const blocked = Boolean(viewerId && (
-      author.blockedUsers?.includes(viewerId)
-      || viewer?.blockedUsers?.includes(story.authorId)
-    ));
-    const [isFollowing, isCloseFriend, selectedMember, excluded] = viewerId
-      ? await Promise.all([
-        this.userRepository.isFollowing(viewerId, story.authorId),
-        this.userRepository.isCloseFriend(story.authorId, viewerId),
-        this.storyRepository.isAudienceMember(story.id, viewerId),
-        this.storyRepository.isAudienceExcluded(story.id, viewerId),
-      ])
-      : [false, false, false, false];
-    return evaluateAudience({
-      ownerId: story.authorId,
-      viewerId,
-      audience: (story.audience ?? "followers") as AudienceKind,
-      isFollowing,
-      isCloseFriend,
-      selectedMember,
-      excluded,
-      blocked,
-    }).allowed;
+  public async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
+    if (!story) return false;
+    const [selected, excluded] = viewerId ? await Promise.all([
+      this.storyRepository.isAudienceMember(story.id, viewerId),
+      this.storyRepository.isAudienceExcluded(story.id, viewerId),
+    ]) : [false, false];
+    return this.contentSafetyService.isVisible({ ...story,
+      selectedMemberIds: selected && viewerId ? [viewerId] : [],
+      excludedViewerIds: excluded && viewerId ? [viewerId] : [],
+    }, viewerId, story.authorId);
   }
 }

@@ -30,11 +30,10 @@ export interface AudienceDecision {
 export function evaluateAudience(input: AudiencePolicyInput): AudienceDecision {
   if (input.blocked) return { allowed: false, reason: "blocked" };
   if (input.ownerId === input.viewerId) return { allowed: true, reason: "owner" };
+  if (input.audience === "public") return { allowed: true, reason: "public" };
   if (!input.viewerId) return { allowed: false, reason: "not_authenticated" };
 
   switch (input.audience) {
-    case "public":
-      return { allowed: true, reason: "public" };
     case "followers":
       return input.isFollowing
         ? { allowed: true, reason: "follower" }

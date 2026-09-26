@@ -29,13 +29,12 @@ export class SearchController {
       const viewerId = req.user?.id ?? "anonymous";
       const cacheKey = `search:${viewerId}:${query.toLowerCase()}`;
       const cached = await this.cacheService.get<Awaited<ReturnType<SearchService["search"]>>>(cacheKey);
-      if (cached) {
-        return res.status(200).json(createResponse("Search results", this.safeResults(cached), { cached: true }));
-      }
+      // Always re-query current records: a result cache cannot authorize a later request.
       const results = await this.searchService.search(query, req.user?.id);
       const safeResults = this.safeResults(results);
-      await this.cacheService.set(cacheKey, safeResults, SEARCH_CACHE_TTL_SECONDS);
-      return res.status(200).json(createResponse("Search results", safeResults, { cached: false }));
+      await this.cacheService.set(cacheKey, { postIds: safeResults.posts.map(post => post.id) }, SEARCH_CACHE_TTL_SECONDS);
+      res.setHeader("Cache-Control", "private, no-store");
+      return res.status(200).json(createResponse("Search results", safeResults, { cached: Boolean(cached) }));
     } catch {
       return res.status(500).json(createResponse("Search failed", null, {}, ["Internal server error"]));
     }
