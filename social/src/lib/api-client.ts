@@ -169,8 +169,9 @@ async function tryRefresh(): Promise<RefreshOutcome> {
   const epoch = sessionEpoch;
   if (!refreshInFlight || refreshEpoch !== epoch) {
     refreshEpoch = epoch;
-    refreshInFlight = (async () => {
+    const rotate = async (): Promise<RefreshOutcome> => {
       try {
+        if (epoch !== sessionEpoch || hasExplicitLogoutIntent()) return { kind: 'changed' };
         const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -185,10 +186,15 @@ async function tryRefresh(): Promise<RefreshOutcome> {
           : { kind: 'unavailable' };
       } catch {
         return { kind: 'unavailable' };
-      } finally {
-        if (refreshEpoch === epoch) refreshInFlight = null;
       }
-    })();
+    };
+    // HttpOnly cookies are shared across tabs. Serialize rotation across this
+    // origin so every request uses the cookie installed by its predecessor.
+    refreshInFlight = (typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('yor-session-refresh', { signal: AbortSignal.timeout(25_000) }, rotate)
+      : rotate()).catch((): RefreshOutcome => ({ kind: 'unavailable' })).finally(() => {
+        if (refreshEpoch === epoch) refreshInFlight = null;
+      });
   }
   return refreshInFlight;
 }

@@ -275,7 +275,7 @@ export class AuthController {
       this.setRefreshCookie(res, tokens.refreshToken);
       return res.status(200).json(createResponse("Token refreshed", this.clientTokens(tokens), { authenticated: true }));
     } catch (error) {
-      return res.status(500).json(createResponse("Token refresh failed", null, {}, ["Token refresh is temporarily unavailable"]));
+      return res.status(503).json(createResponse("Token refresh failed", null, {}, ["Token refresh is temporarily unavailable"]));
     }
   };
 

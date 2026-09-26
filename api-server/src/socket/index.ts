@@ -63,8 +63,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       return next(new Error("Authentication error"));
     }
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as { sub?: string; deviceId?: string; exp?: number };
-      if (typeof decoded.sub !== "string" || typeof decoded.deviceId !== "string" || typeof decoded.exp !== "number") {
+      const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string; deviceId?: string; exp?: number; authVersion?: number; type?: string };
+      if (typeof decoded.sub !== "string" || typeof decoded.deviceId !== "string" || typeof decoded.exp !== "number" || (decoded.type && decoded.type !== 'access')) {
         return next(new Error("Authentication error"));
       }
       if (!(await redisRepository.consumeBudgetStrict(`socket:connect:${decoded.sub}`, 30, 60))) {
@@ -74,13 +74,14 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`),
         userRepository.findById(decoded.sub),
       ]);
-      if (!session || !user || user.accountStatus === "suspended" || user.accountStatus === "deactivated") {
+      if (!session || !user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || ['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
         return next(new Error("Session revoked"));
       }
       if (!hasCurrentConsent(user)) return next(new Error("Current terms acceptance required"));
       socket.data.userId = decoded.sub;
       socket.data.deviceId = decoded.deviceId;
       socket.data.expiresAt = decoded.exp * 1000;
+      socket.data.authVersion = decoded.authVersion ?? 0;
       next();
     } catch {
       next(new Error("Authentication error"));
@@ -101,7 +102,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           userRepository.findById(userId),
         ]);
         if (Date.now() < socket.data.expiresAt && session && user && hasCurrentConsent(user)
-          && user.accountStatus !== "suspended" && user.accountStatus !== "deactivated") return true;
+          && (user.authVersion ?? 0) === socket.data.authVersion && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) return true;
       } catch (error) {
         logger.warn({ error, userId }, "Could not validate socket session");
       }
@@ -227,7 +228,11 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         }
 
         // Multicast to all conversation members (including the sender's other devices via the room)
-        io.to(`conversation:${actualConversationId}`).emit("message:receive", message);
+        // Personal rooms exist from connection time. Include them for direct
+        // messages: a Redis adapter's remote room join may arrive after this emit.
+        const deliveryRooms = [`conversation:${actualConversationId}`];
+        if (typeof recipientId === 'string') deliveryRooms.push(userId, recipientId);
+        io.to(deliveryRooms).emit("message:receive", message);
         socket.emit("message:sent", message); // Confirm to sender's current device
       } catch (err) {
         if (err instanceof MessageBlockedError) {

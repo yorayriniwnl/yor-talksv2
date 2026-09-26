@@ -184,8 +184,8 @@ export class RedisRepository {
         if not raw then return false end
         local call = cjson.decode(raw)
         redis.call('DEL', KEYS[1])
-        local callerKey = ARGV[2] .. call.callerId
-        local recipientKey = ARGV[2] .. call.recipientId
+        local callerKey = ARGV[1] .. call.callerId
+        local recipientKey = ARGV[1] .. call.recipientId
         if redis.call('GET', callerKey) == call.id then redis.call('DEL', callerKey) end
         if redis.call('GET', recipientKey) == call.id then redis.call('DEL', recipientKey) end
         return raw

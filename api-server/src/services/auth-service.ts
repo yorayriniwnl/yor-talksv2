@@ -26,6 +26,7 @@ export type LoginApprovalChallenge = {
 
 type StoredLoginApprovalChallenge = LoginApprovalChallenge & {
   userId: string;
+  authVersion: number;
   status: "pending" | "approved";
   attempts: number;
   createdAt: string;
@@ -184,7 +185,7 @@ export class AuthService {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(user.id),
+          await this.createLoginApprovalChallenge(user),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
@@ -241,7 +242,7 @@ export class AuthService {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(finalUser.id),
+          await this.createLoginApprovalChallenge(finalUser),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
@@ -330,7 +331,7 @@ export class AuthService {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(user.id, key),
+          await this.createLoginApprovalChallenge(user, key),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
@@ -429,17 +430,24 @@ export class AuthService {
     if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
 
     const user = await this.userRepository.findById(challenge.userId);
-    if (!user || !this.isAccountActive(user) || !(await this.readTotpSecret(user))) return undefined;
+    if (!user || !this.isAccountActive(user) || (user.authVersion ?? 0) !== (challenge.authVersion ?? 0) || !(await this.readTotpSecret(user))) return undefined;
     return this.createSession(user, { emailVerified: true });
   }
 
   async logoutAllDevices(userId: string): Promise<void> {
-    // We would need a way to list and delete all keys, but for now we can rely on standard del if redis supports pattern matching or we can just leave it as is if redis doesn't.
-    // Wait, with multiple devices we can't just del `session:${userId}`. 
-    // We can fetch all keys `session:${userId}:*` and delete them.
-    const keys = await this.redisRepository.scanStrict(`session:${userId}:*`);
-    if (keys.length > 0) {
+    // The database epoch is the revocation boundary. Cleanup failure cannot
+    // restore an old session or an approved login challenge.
+    await this.userRepository.revokeAllCredentials(userId);
+    await this.cleanRevokedCredentials(userId);
+  }
+
+  private async cleanRevokedCredentials(userId: string): Promise<void> {
+    try {
+      const keys = await this.redisRepository.scanStrict(`session:${userId}:*`);
       await Promise.all(keys.map(key => this.redisRepository.delStrict(key)));
+      await this.invalidateLoginApprovalChallenges(userId);
+    } catch {
+      logger.warn({ userId }, 'Revoked credentials await Redis expiry; database epoch prevents access');
     }
   }
 
@@ -448,26 +456,31 @@ export class AuthService {
   }
 
   async logoutByToken(refreshToken: string): Promise<void> {
+    let payload: jwt.JwtPayload;
     try {
-      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string, deviceId?: string };
-      if (payload.sub && payload.deviceId) {
-        await this.logout(payload.sub, payload.deviceId);
-      }
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] }) as jwt.JwtPayload;
     } catch {
-      // ignore
+      return;
+    }
+    if (payload.type === 'refresh' && payload.sub && typeof payload.deviceId === 'string') {
+      await this.logout(payload.sub, payload.deviceId);
     }
   }
 
   async refreshAccessToken(refreshToken: string): Promise<AuthTokens | undefined> {
+    let payload: jwt.JwtPayload;
     try {
-      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { sub?: string, deviceId?: string };
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] }) as jwt.JwtPayload;
+    } catch {
+      return undefined;
+    }
       const userId = payload.sub;
       const deviceId = payload.deviceId;
-      if (!userId || !deviceId) {
+      if (!userId || typeof deviceId !== 'string' || payload.type !== 'refresh') {
         return undefined;
       }
       const user = await this.userRepository.findById(userId);
-      if (!user || !this.isAccountActive(user)) {
+      if (!user || !this.isAccountActive(user) || (payload.authVersion ?? 0) !== (user.authVersion ?? 0)) {
         return undefined;
       }
       const storedTokenHash = await this.redisRepository.getStrict(`session:${user.id}:${deviceId}`);
@@ -485,9 +498,6 @@ export class AuthService {
       );
       if (!rotated) return undefined;
       return this.issueTokens(user, nextRefreshToken, deviceId);
-    } catch {
-      return undefined;
-    }
   }
 
   /** Generates a single-use, expiring reset token and dispatches it by email. */
@@ -505,20 +515,16 @@ export class AuthService {
     // Prevent email bombing: at most one reset dispatch per email per 2 minutes.
     const throttleHash = await this.redisRepository.hashToken(normalizedEmail);
     const throttleKey = `password-reset-throttle:${throttleHash}`;
-    if (await this.redisRepository.getStrict(throttleKey)) {
+    if (!(await this.redisRepository.consumeBudgetStrict(throttleKey, 1, 120))) {
       throw new TooManyAttemptsError("A password reset email was already sent. Please wait before requesting another.");
     }
-    await this.redisRepository.setStrict(throttleKey, "1", 120);
-
     const token = randomBytes(32).toString("hex");
     const hashed = await this.redisRepository.hashToken(token);
-    await this.redisRepository.setStrict(`password-reset:${hashed}`, user.id, 60 * 60);
-    await this.userRepository.update(user.id, { passwordResetRequired: true });
+    await this.userRepository.savePasswordReset(hashed, user);
     try {
       await this.emailService.sendPasswordResetEmail(user.email, token);
     } catch (error) {
-      await this.redisRepository.delStrict(`password-reset:${hashed}`);
-      await this.userRepository.update(user.id, { passwordResetRequired: false });
+      await this.userRepository.cancelPasswordReset(hashed);
       throw error;
     }
     logger.info({ userId: user.id }, "Password reset requested and email dispatched");
@@ -527,20 +533,10 @@ export class AuthService {
 
   async confirmPasswordReset(token: string, newPassword: string): Promise<boolean> {
     const hashed = await this.redisRepository.hashToken(token);
-    const key = `password-reset:${hashed}`;
-    const userId = await this.redisRepository.getStrict(key);
-    if (!userId) {
-      return false;
-    }
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.userRepository.update(userId, { passwordHash, passwordResetRequired: false });
-    await this.redisRepository.delStrict(key);
-    // A password reset is a meaningful security event — invalidate every existing
-    // session (including any an attacker might hold) and require fresh logins.
-    await this.logoutAllDevices(userId);
-    // Also invalidate any pending login-approval challenges so a pre-staged
-    // two-factor challenge cannot be completed after the password changes.
-    await this.invalidateLoginApprovalChallenges(userId);
+    const userId = await this.userRepository.redeemPasswordReset(hashed, passwordHash);
+    if (!userId) return false;
+    await this.cleanRevokedCredentials(userId);
     return true;
   }
 
@@ -675,7 +671,8 @@ export class AuthService {
     return decrypted.secret;
   }
 
-  private async createLoginApprovalChallenge(userId: string, emailOtpKey?: string): Promise<LoginApprovalChallenge> {
+  private async createLoginApprovalChallenge(user: UserRecord, emailOtpKey?: string): Promise<LoginApprovalChallenge> {
+    const userId = user.id;
     const challengeId = randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const challenge: StoredLoginApprovalChallenge = {
@@ -683,6 +680,7 @@ export class AuthService {
       matchingNumber: randomInt(1, 100),
       expiresAt,
       userId,
+      authVersion: user.authVersion ?? 0,
       status: "pending",
       attempts: 0,
       createdAt: new Date().toISOString(),
@@ -750,6 +748,8 @@ export class AuthService {
     updates: Partial<Pick<UserRecord, "emailVerified">> = {},
   ): Promise<{ user: UserRecord; tokens: AuthTokens }> {
     this.assertAccountActive(user);
+    const updatedUser = await this.userRepository.recordLogin(user, updates);
+    if (!updatedUser) throw new Error('Credentials changed; sign in again');
     const deviceId = randomUUID();
     const refreshToken = this.issueRefreshToken(user, deviceId);
     await this.redisRepository.setStrict(
@@ -757,26 +757,25 @@ export class AuthService {
       await this.redisRepository.hashToken(refreshToken),
       7 * 24 * 60 * 60,
     );
-    const updatedUser = await this.userRepository.update(user.id, { ...updates, lastLoginAt: new Date().toISOString() });
-    const finalUser = { ...(updatedUser ?? user), ...(await this.userRepository.getOwnRelationships(user.id)) };
+    const finalUser = { ...updatedUser, ...(await this.userRepository.getOwnRelationships(user.id)) };
     return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
   }
 
   private issueTokens(user: UserRecord, refreshToken: string, deviceId: string): AuthTokens {
-    const accessToken = jwt.sign({ sub: user.id, role: user.role, permissions: user.permissions, deviceId }, env.JWT_SECRET, {
+    const accessToken = jwt.sign({ sub: user.id, type: 'access', authVersion: user.authVersion ?? 0, role: user.role, permissions: user.permissions, deviceId }, env.JWT_SECRET, {
       expiresIn: "15m",
     });
     return { accessToken, refreshToken, expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() };
   }
 
   private issueRefreshToken(user: UserRecord, deviceId: string): string {
-    return jwt.sign({ sub: user.id, type: "refresh", deviceId }, env.JWT_REFRESH_SECRET, {
+    return jwt.sign({ sub: user.id, type: "refresh", authVersion: user.authVersion ?? 0, deviceId, jti: randomUUID() }, env.JWT_REFRESH_SECRET, {
       expiresIn: "7d",
     });
   }
 
   private isAccountActive(user: UserRecord): boolean {
-    return user.accountStatus !== "suspended" && user.accountStatus !== "deactivated";
+    return !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active');
   }
 
   private assertAccountActive(user: UserRecord): void {

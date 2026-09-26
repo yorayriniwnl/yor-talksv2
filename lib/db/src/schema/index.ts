@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   googleSubject: text("google_subject").unique(),
   passwordHash: text("password_hash").notNull(),
+  authVersion: integer("auth_version").notNull().default(0),
   termsVersion: text("terms_version"),
   termsAcceptedAt: timestamp("terms_accepted_at", { mode: "string" }),
   ageConfirmedAt: timestamp("age_confirmed_at", { mode: "string" }),

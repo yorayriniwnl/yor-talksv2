@@ -57,7 +57,7 @@ production evidence are separate categories.
 | F07 deletion/ledger | Historical counterparty attribution defect requires fresh regression | Transactional identity anonymization and retryable cleanup | Pending | Retention policy owner decision |
 | F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
-| F10 sessions | Refresh JWT lacks random jti; logout-all omits challenges; reset non-atomic | Atomic rotation/reset/revocation and concurrent-client regression | Pending | Redis/DB failure and real session journeys |
+| F10 sessions | Same-second JWT repeats; old approved challenges survive revocation; reset read/update/delete races | Random jti + Redis CAS; database auth epoch on HTTP/socket/refresh/challenges; transactional reset redemption; cross-tab Web Lock | 21/21 focused tests with real PostgreSQL/Redis; 44/44 state tests; API/frontend typechecks | Hosted authenticated journeys; cross-tab browser case runs in full suite |
 | F11 export | Export omits supported persisted surfaces | Bounded ownership-bound jobs, matrix, protected expiry/download | Pending | Rich/large/deletion-race acceptance |
 | F12 queries | Per-item author/viewer reads and per-flag overrides | Batch users/relationships/entitlements; measured SQL counts | Pending | Representative query and latency evidence |
 | F13 budgets | 300/IP/15m conflicts with fallback polling | Separate verified-user/IP budgets, backoff/jitter/visibility | Pending | NAT, tabs and outage regression |
@@ -78,6 +78,21 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F10: release migration `20260926-auth-1` adds `users.auth_version`, durable
+  hashed reset credentials and a schema-version ledger. Token consumption,
+  password replacement and epoch increment commit together. Logout-all increments
+  the epoch before Redis cleanup. HTTP and socket requests reject a stale epoch;
+  dependency outages return unavailable without converting them into an expired
+  browser session. Approved challenges retain the epoch at credential verification.
+  Tests include 20 concurrent refresh attempts (one winner), same-second jti,
+  replay, cleanup outage, HTTP epoch checks with stale Redis sessions, active socket
+  revocation, concurrent reset, expired reset and rollback after database failure.
+  A Redis call-release argument defect and first-message adapter race were also
+  repaired while exercising session/realtime compatibility.
+  Migration ran successfully on the existing isolated database. Application
+  rollback to a version that ignores auth_version requires draining/revoking all
+  old Redis sessions/challenges first; retain the additive schema and reset ledger.
 
 - F01: preview `yor-talks-g3xwex9et-yorayriniwnl-1218s-projects.vercel.app`
   (source `ae51d4b`) reaches application configuration after the ESM repair.

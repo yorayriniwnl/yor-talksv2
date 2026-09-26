@@ -8,6 +8,7 @@ export interface UserRecord {
   email: string;
   googleSubject?: string | null;
   passwordHash: string;
+  authVersion?: number;
   termsVersion?: string | null;
   termsAcceptedAt?: string | null;
   ageConfirmedAt?: string | null;

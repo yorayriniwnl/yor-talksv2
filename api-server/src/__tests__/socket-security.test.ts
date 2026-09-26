@@ -27,12 +27,12 @@ async function fixture(t: TestContext) {
   const original = { PUBLIC_BETA: env.PUBLIC_BETA, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
   Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false });
   t.after(() => Object.assign(env, original));
-  const state = { consent: true, active: true, budget: true, joinsFail: false, sent: 0, lookups: 0 };
+  const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0 };
   t.mock.method(RedisRepository.prototype, "getStrict", async () => state.active ? "session" : null);
   t.mock.method(RedisRepository.prototype, "consumeBudgetStrict", async () => state.budget);
   t.mock.method(UserRepository.prototype, "findById", async (id: string) => {
     state.lookups++;
-    return { id, accountStatus: "active", termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
+    return { id, authVersion: state.authVersion, accountStatus: "active", termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
   });
   t.mock.method(ConversationRepository.prototype, "listForUser", async () => []);
   t.mock.method(ConversationRepository.prototype, "getMembers", async () => {
@@ -129,7 +129,7 @@ test("new direct messages reach the recipient's connected devices on the first e
   const sender = await connect();
   const recipient = await connect(recipientId);
   const received = event(recipient, "message:receive");
-  sender.emit("message:send", { recipientId, content: "First message" });
+  sender.emit("message:send", { recipientId, content: "First message", textStyleId: 'mono' });
   assert.equal((await received).content, "First message");
   assert.equal(state.sent, 1);
 });
@@ -141,6 +141,17 @@ test("socket live and call gates stay disabled", async (t) => {
   client.emit("stream:join", { streamId: conversationId });
   assert.match((await stream).error, /disabled/);
   const call = event(client, "call:error");
-  client.emit("call:invite", { callId: "test-call-123", targetUserId: recipientId, callType: "audio", offer: {} });
+  client.emit("call:invite", { callId: "test-call-123", targetUserId: recipientId, callType: "audio", offer: { type: 'offer', sdp: 'synthetic-sdp' } });
   assert.match((await call).error, /disabled/);
+});
+
+test('connected sockets reject a revoked database epoch even if Redis still has the session', async t => {
+  const { state, connect } = await fixture(t);
+  const client = await connect();
+  const disconnected = event(client, 'disconnect');
+  state.authVersion = 1;
+  client.emit('typing:start', { conversationId });
+  await disconnected;
+  assert.equal(state.active, true);
+  assert.equal(client.connected, false);
 });

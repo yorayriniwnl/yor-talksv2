@@ -8,15 +8,15 @@ test("public profiles allowlist identity fields and exclude consent, email and f
     id: "creator", username: "creator", fullName: "Creator", bio: "A public bio", avatarUrl: null,
     role: "user", createdAt: "2026-08-31T00:00:00Z", updatedAt: "2026-08-31T00:00:00Z",
     followerCount: 2, followingCount: 3, email: "private@example.test", passwordHash: "hash",
-    totpSecret: "secret", googleSubject: "subject", contactIdentityDigest: "digest",
+    totpSecret: "secret", googleSubject: "subject", contactIdentityDigest: "digest", authVersion: 7,
     termsVersion: "private-version", termsAcceptedAt: "private-time", ageConfirmedAt: "private-time",
     permissions: [], settings: {}, following: ["private-relationship"], pendingFollowIds: ["pending"], favoriteCreatorIds: ["favorite"], futurePrivateField: "private",
   } as unknown as UserRecord;
   const view = toPublicUser(user);
-  assert.deepEqual(Object.keys(view).sort(), ["id", "username", "fullName", "bio", "avatarUrl", "role", "createdAt", "updatedAt", "followerCount", "followingCount"].sort());
+  assert.deepEqual(Object.keys(view).sort(), ["id", "username", "fullName", "bio", "bioStyleId", "avatarUrl", "role", "createdAt", "updatedAt", "followerCount", "followingCount"].sort());
   assert.equal(view.fullName, "Creator");
   const own = toOwnUser(user);
   assert.equal(own.termsVersion, "private-version");
   assert.equal(own.twoFactorEnabled, true);
-  for (const key of ["passwordHash", "totpSecret", "googleSubject", "contactIdentityDigest"]) assert.equal(key in own, false);
+  for (const key of ["passwordHash", "totpSecret", "googleSubject", "contactIdentityDigest", "authVersion"]) assert.equal(key in own, false);
 });

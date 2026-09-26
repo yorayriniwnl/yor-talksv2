@@ -23,6 +23,7 @@ const schemas: Record<string, z.ZodTypeAny> = {
   "message:send": z.object({
     recipientId: id.optional(), conversationId: id.optional(),
     content: z.string().trim().min(1).max(4000),
+    textStyleId: z.enum(['default', 'mono', 'rounded']).optional(),
     idempotencyKey: id.optional(),
   }).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId)),
   "message:seen": z.object({ messageId: id }).strict(),
