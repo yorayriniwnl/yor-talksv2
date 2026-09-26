@@ -110,7 +110,7 @@ test("processed refund webhooks validate amount and route using provider payment
   };
 
   await service.handle(event, Buffer.from(JSON.stringify(event)), "signed");
-  assert.deepEqual(received, [{ id: "rfnd_1", paymentId: "pay_2", amountMinor: 250 }]);
+  assert.deepEqual(received, [{ id: "rfnd_1", paymentId: "pay_2", amountMinor: 250, currency: "INR" }]);
   await assert.rejects(() => service.handle({
     ...event,
     payload: { refund: { entity: { ...event.payload.refund.entity, amount: 0 } } },

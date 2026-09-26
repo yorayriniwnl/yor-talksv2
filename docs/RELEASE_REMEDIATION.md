@@ -79,6 +79,13 @@ before restoring an older application image.
 
 ## Evidence log
 
+- Full API checkpoint after `2407974`: 125/125 tests passed against isolated
+  PostgreSQL 16 / Redis 7, Node 24.14.0. Updated the disabled-provider fixture to
+  mock the strict session read and retained the refund currency in its assertion.
+  The run uses `node --import tsx --test --test-concurrency=1 --test-timeout=45000
+  src/__tests__/*.test.ts` from api-server. Later feature changes require a fresh
+  complete run; this checkpoint does not cover unimplemented Premium/media/export.
+
 - F07/F14: `20260926-lifecycle-2` retains payment/membership/marketplace order
   references independently of deleted identities. Only the deleted ledger party
   is anonymized; counterparties and ledger event IDs remain intact. Identity,
