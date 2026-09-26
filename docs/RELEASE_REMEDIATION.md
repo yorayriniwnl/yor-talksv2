@@ -17,7 +17,9 @@ unchanged. Those probes are not release tests. No public/paid launch is approved
   Messaging conflicts combine Premium typography/read-preview with idempotent
   sending, pagination and reconnect recovery. Google auth retains failure/retry
   handling plus responsive rendering. Both sets of regression tests are retained.
-- Candidate SHA and PR: pending verification and publication.
+- Integration commit: `fe356ef5ae007381f1bc38fefca9a87270348e79`, pushed with exact
+  remote SHA match. API/frontend typechecks and 43/43 state tests passed;
+  API integration tests and final candidate verification remain in progress.
 
 ## Live state, freshly observed
 
@@ -25,7 +27,10 @@ unchanged. Those probes are not release tests. No public/paid launch is approved
   production deployment `dpl_8uLzjCLpBsv4rSo64ojUKxbAv4VL`, source `f93a061`.
 - `https://yor-talks.vercel.app/`: 200; `/api/livez`, `/api/readyz`,
   `/api/healthz`: 500. Platform build status is Ready; API runtime is not healthy.
-  Runtime log investigation is in progress. Persistent backend/staging host not
+  Runtime logs show `SyntaxError: Cannot use import statement outside a module`
+  at `/var/task/api/index.js:2`: the generated ESM entry had no ESM package
+  marker. The root package now declares `type: module`; API bundles remain
+  explicitly `.cjs`. Persistent backend/staging host not
   yet identified. No production configuration has been changed.
 - GitHub credential manager permits API access. Latest main CI run
   `36212481391` was in progress; historical billing failure is not assumed current.

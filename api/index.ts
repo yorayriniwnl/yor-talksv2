@@ -24,7 +24,7 @@ export function resolveExpressHandler(moduleValue: unknown): ExpressHandler {
     }
     break;
   }
-  return ((_req: any, res: any) => res.end()) as ExpressHandler;
+  throw new TypeError("The API bundle does not export an Express handler");
 }
 
 const app = resolveExpressHandler(appModule);
