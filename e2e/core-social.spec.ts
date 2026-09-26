@@ -196,8 +196,8 @@ test('sign-in preserves password and email-code paths with accessible controls',
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Password', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Email code', exact: true })).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
@@ -215,12 +215,164 @@ test('Google script failure has an accessible retry without disabling other sign
   });
   await page.goto('/auth');
   await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeEnabled();
-  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Retry Google sign-in' }).click();
   await expect(page.getByRole('group', { name: 'Google sign-in', exact: true }).getByRole('button', { name: 'Sign in with Google', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry Google sign-in' })).toHaveCount(0);
   expect(attempts).toBe(2);
+});
+
+test('sign-in validation focuses and describes the first invalid field', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/auth');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+  const identifier = page.getByLabel('Username or email');
+  await expect(identifier).toBeFocused();
+  await expect(identifier).toHaveAttribute('aria-invalid', 'true');
+  const describedBy = await identifier.getAttribute('aria-describedby');
+  expect(describedBy).toBeTruthy();
+  await expect(page.locator(`#${describedBy}`)).toContainText('Enter your username or email.');
+  const password = page.getByLabel('Password', { exact: true });
+  await expect(password).toHaveAttribute('aria-describedby', /password-error/);
+});
+
+test('expired bearer logout revokes refresh session before a reload can restore it', async ({ page }) => {
+  let refreshAllowed = true;
+  let logoutAttempts = 0;
+  await page.route('**/socket.io/**', (route) => route.abort());
+  await page.route('**/api/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace(/^\/api/, '');
+    if (path === '/auth/refresh') {
+      return refreshAllowed
+        ? json(route, { accessToken: 'access-before-expiry' })
+        : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Invalid refresh token' }) });
+    }
+    if (path === '/users/me') return json(route, user);
+    if (path === '/auth/logout') {
+      logoutAttempts++;
+      if (request.headers().authorization) {
+        return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired access token' }) });
+      }
+      refreshAllowed = false;
+      return json(route, null);
+    }
+    if (path === '/readyz') return json(route, { status: 'ready' });
+    return json(route, []);
+  });
+
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await expect(page).toHaveURL(/\/auth/);
+  expect(logoutAttempts).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+});
+
+test('narrow Google sign-in stays within its panel as the viewport changes', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await installApiBoundary(page);
+  await page.route('https://accounts.google.com/gsi/client', (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: `window.google={accounts:{id:{initialize(){},renderButton(parent,options){const button=document.createElement('button');button.dataset.renderedWidth=String(options.width);button.style.width=options.width+'px';button.textContent='Sign in with Google';parent.append(button)}}}};`,
+  }));
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/auth');
+  const button = page.locator('.operator-google-access__button button');
+  await expect(button).toBeVisible();
+  const widthAt320 = Number(await button.getAttribute('data-rendered-width'));
+  const panelWidthAt320 = await page.locator('.operator-google-access__button').evaluate((element) => element.clientWidth);
+  expect(widthAt320).toBeLessThanOrEqual(panelWidthAt320);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => Number(await button.getAttribute('data-rendered-width'))).toBeLessThanOrEqual(await page.locator('.operator-google-access__button').evaluate((element) => element.clientWidth));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test('video load failures show a retry instead of a false empty queue', async ({ page }) => {
+  await installApiBoundary(page);
+  let unavailable = true;
+  await page.route('**/api/videos', (route) => unavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+    : json(route, []));
+  await page.goto('/videos');
+  await expect(page.getByRole('alert').filter({ hasText: 'Videos could not load' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your queue is empty' })).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry videos' }).click();
+  await expect(page.getByRole('heading', { name: 'Your queue is empty' })).toBeVisible();
+});
+
+test('direct-message and group-member search failures can retry without claiming no matches', async ({ page }) => {
+  await installApiBoundary(page);
+  const candidate = { ...user, id: '10000000-0000-4000-8000-000000000091', username: 'grace', fullName: 'Grace Hopper' };
+  let attempts = 0;
+  await page.route('**/api/users/search*', (route) => {
+    attempts++;
+    return attempts === 1 || attempts === 3
+      ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+      : json(route, [candidate]);
+  });
+  await page.goto('/messages');
+
+  await page.getByRole('button', { name: 'Start a new conversation' }).click();
+  const directDialog = page.getByRole('dialog', { name: 'Start a conversation' });
+  await directDialog.getByRole('textbox', { name: 'Search people to message' }).fill('grace');
+  await expect(directDialog.getByRole('alert').filter({ hasText: 'People could not load' })).toBeVisible();
+  await expect(directDialog.getByText('No users found.')).toHaveCount(0);
+  await directDialog.getByRole('button', { name: 'Retry people search' }).click();
+  await expect(directDialog.getByRole('button', { name: /Grace Hopper/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Create a group chat' }).click();
+  const groupDialog = page.getByRole('dialog', { name: 'Create a group conversation' });
+  await groupDialog.getByRole('textbox', { name: 'Search people to add' }).fill('grace');
+  await expect(groupDialog.getByRole('alert').filter({ hasText: 'Group members could not load' })).toBeVisible();
+  await expect(groupDialog.getByText('No people found.')).toHaveCount(0);
+  await groupDialog.getByRole('button', { name: 'Retry member search' }).click();
+  await expect(groupDialog.getByRole('button', { name: /Grace Hopper/ })).toBeVisible();
+  expect(attempts).toBe(4);
+});
+
+test('reel comments expose a retry and arrow keys in the comment field do not change reels', async ({ page }) => {
+  await installApiBoundary(page);
+  const videos = ['First reel', 'Second reel'].map((title, index) => ({
+    id: `30000000-0000-4000-8000-00000000000${index + 1}`,
+    authorId: user.id,
+    videoUrl: 'https://example.test/reel.mp4',
+    thumbnailUrl: 'https://example.test/reel.jpg',
+    title,
+    views: 0,
+    likes: 0,
+    createdAt: user.createdAt,
+    type: 'short',
+  }));
+  await page.route('**/api/videos', (route) => json(route, videos));
+  let commentsUnavailable = true;
+  await page.route(`**/api/videos/${videos[0].id}/comments`, (route) => commentsUnavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+    : json(route, []));
+  await page.route(`**/api/videos/${videos[1].id}/comments`, (route) => json(route, []));
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch First reel' }).click();
+  await page.getByRole('button', { name: 'Open comments' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Comments could not load' })).toBeVisible();
+  commentsUnavailable = false;
+  await page.getByRole('button', { name: 'Retry comments' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Comments could not load' })).toHaveCount(0);
+
+  const comment = page.getByRole('textbox', { name: 'Write a comment' });
+  await comment.fill('A comment draft');
+  await comment.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  await comment.press('ArrowUp');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
 });
 
 test('discovery loads beyond an empty following feed without changing the selected home feed', async ({ page }) => {

@@ -17,7 +17,7 @@ export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
 
-type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId">;
+type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string };
 
 const normalizeMessageContent = (content: string): string => {
   if (typeof content !== "string") throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
@@ -98,6 +98,19 @@ export class MessageService {
     }
 
     let senderProfile: UserRecord | undefined;
+    // A request can time out after the database committed. Reusing the same
+    // client key returns that exact row without invoking moderation or writing
+    // a second message.
+    if (options?.idempotencyKey) {
+      const existing = await this.messageRepository.findById(options.idempotencyKey);
+      if (existing) {
+        if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
+          throw new UnauthorizedError("This message key is already in use");
+        }
+        return existing;
+      }
+    }
+
     if (this.userRepository) {
       const participants = await Promise.all(
         members.filter((memberId) => memberId !== senderId).map((memberId) => this.userRepository!.findById(memberId)),
@@ -134,7 +147,7 @@ export class MessageService {
     }
     const createdAt = new Date();
     const message: MessageRecord = {
-      id: randomUUID(),
+      id: options?.idempotencyKey ?? randomUUID(),
       conversationId,
       senderId,
       recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
@@ -150,16 +163,28 @@ export class MessageService {
       expiresAt: conversation.vanishMode ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
       pinned: false,
     };
-    await this.messageRepository.create(message);
-    return message;
+    const persisted = await this.messageRepository.create(message);
+    if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
+      throw new UnauthorizedError("This message key is already in use");
+    }
+    return persisted;
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
+    return this.listConversationPage(conversationId, userId, { direction: "latest", limit: 200 });
+  }
+
+  async listConversationPage(conversationId: string, userId: string, options: {
+    direction?: "latest" | "older" | "newer";
+    cursorAt?: string;
+    cursorId?: string;
+    limit?: number;
+  }): Promise<MessageRecord[]> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) {
       return [];
     }
-    const messages = await this.messageRepository.listConversation(conversationId);
+    const messages = await this.messageRepository.listConversation(conversationId, options);
     return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
   }
 

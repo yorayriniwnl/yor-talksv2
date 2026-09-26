@@ -68,7 +68,11 @@ export class QueueService {
     const jobId = typeof payload === "object" && payload !== null && "id" in payload
       ? String((payload as { id: unknown }).id)
       : undefined;
-    return queue.add(type, payload, jobId ? { jobId, removeOnComplete: false } : undefined);
+    const options = {
+      ...(jobId ? { jobId, removeOnComplete: false } : {}),
+      ...(type === "notification:deliver" ? { attempts: 5, backoff: { type: "exponential" as const, delay: 30_000 } } : {}),
+    };
+    return queue.add(type, payload, options);
   }
 
   /** Removes and returns the next waiting job for administrative/manual processing. */

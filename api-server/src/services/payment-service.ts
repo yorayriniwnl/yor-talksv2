@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@workspace/db/schema";
 import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
+import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 
 export class PaymentOrderNotFoundError extends Error {}
 export class PaymentOrderForbiddenError extends Error {}
@@ -91,6 +92,7 @@ export class PaymentService {
     if (order.payerId !== input.payerId) {
       throw new PaymentOrderForbiddenError("This payment order belongs to another account");
     }
+    if (order.status === "refunded") throw new PaymentRequestError("This payment has been refunded");
 
     const referenceId = `razorpay:${order.providerOrderId}`;
     const [existingLedger] = await db.select({ id: ledgerTransactionsTable.id })
@@ -114,69 +116,115 @@ export class PaymentService {
       throw new PaymentRequestError("The payment was not captured for this order");
     }
 
-    const transactionId = await db.transaction(async (tx) => {
-      const [alreadySettled] = await tx.select({ id: ledgerTransactionsTable.id })
-        .from(ledgerTransactionsTable)
-        .where(eq(ledgerTransactionsTable.referenceId, referenceId));
-      if (alreadySettled) {
-        return alreadySettled.id;
-      }
-
-      const [settledOrder] = await tx.update(paymentOrdersTable)
-        .set({
-          providerPaymentId: input.paymentId,
-          providerSignature: input.signature,
-          status: "paid",
-          paidAt: new Date().toISOString(),
-        })
-        .where(and(eq(paymentOrdersTable.id, order.id), eq(paymentOrdersTable.status, "created")))
-        .returning({ id: paymentOrdersTable.id });
-      if (!settledOrder) {
-        throw new PaymentRequestError("This payment order has already been settled or cancelled");
-      }
-
-      const [ledger] = await tx.insert(ledgerTransactionsTable).values({
-        id: randomUUID(),
-        creditAccountId: order.creatorId,
-        debitAccountId: order.payerId,
-        amountMinor: order.amountMinor,
-        currency: order.currency,
-        referenceId,
-        status: "completed",
-      }).returning({ id: ledgerTransactionsTable.id });
-      return ledger.id;
-    });
+    const transactionId = await this.settleCapturedOrder(order.id, input.paymentId, input.signature);
 
     return { transactionId, status: "paid" as const };
   }
 
-  async reconcileCapturedPayment(input: { orderId: string; paymentId: string }) {
+  async hasProviderOrder(orderId: string): Promise<boolean> {
+    const [order] = await db.select({ id: paymentOrdersTable.id }).from(paymentOrdersTable)
+      .where(and(eq(paymentOrdersTable.provider, "razorpay"), eq(paymentOrdersTable.providerOrderId, orderId)));
+    return Boolean(order);
+  }
+
+  async hasProviderPayment(paymentId: string): Promise<boolean> {
+    const [order] = await db.select({ id: paymentOrdersTable.id }).from(paymentOrdersTable)
+      .where(and(eq(paymentOrdersTable.provider, "razorpay"), eq(paymentOrdersTable.providerPaymentId, paymentId)));
+    return Boolean(order);
+  }
+
+  async reconcileCapturedPayment(input: CapturedPaymentInput) {
     this.razorpay.assertConfigured();
     const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerOrderId, input.orderId));
     if (!order) throw new PaymentOrderNotFoundError("Payment order not found");
     const payment = await this.razorpay.getPayment(input.paymentId);
     if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
-      || payment.currency !== order.currency || payment.status !== "captured") {
+      || payment.currency !== order.currency || !["captured", "refunded"].includes(payment.status)) {
       throw new PaymentRequestError("The payment was not captured for this order");
     }
+    const transactionId = await this.settleCapturedOrder(order.id, input.paymentId);
+    return { transactionId, status: "paid" as const };
+  }
 
-    const referenceId = `razorpay:${order.providerOrderId}`;
-    const transactionId = await db.transaction(async (tx) => {
+  async reconcileRefund(input: ProcessedRefundInput): Promise<boolean> {
+    const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerPaymentId, input.paymentId));
+    if (!order) return false;
+    if (!this.isValidRefund(input, order.amountMinor, order.currency)) throw new PaymentRequestError("Refund details do not match the payment order");
+
+    await db.transaction(async (tx) => {
+      const [lockedOrder] = await tx.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.id, order.id)).for("update");
+      if (!lockedOrder || lockedOrder.providerPaymentId !== input.paymentId) throw new PaymentRequestError("Refund payment does not match the payment order");
+      const prefix = `razorpay:refund:${input.paymentId}:`;
+      const referenceId = `${prefix}${input.id}`;
+      const [existingRefund] = await tx.select({ id: ledgerTransactionsTable.id, amountMinor: ledgerTransactionsTable.amountMinor })
+        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existingRefund) {
+        if (existingRefund.amountMinor !== input.amountMinor) throw new PaymentRequestError("Refund id was already recorded with a different amount");
+        return;
+      }
+      if (lockedOrder.status !== "paid" && lockedOrder.status !== "refunded") throw new PaymentRequestError("Only a settled payment can be refunded");
+      const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
+        .from(ledgerTransactionsTable)
+        .where(and(eq(ledgerTransactionsTable.debitAccountId, lockedOrder.creatorId), like(ledgerTransactionsTable.referenceId, `${prefix}%`)));
+      const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
+      if (nextRefundedTotal > lockedOrder.amountMinor) throw new PaymentRequestError("Refunds exceed the original payment amount");
+
+      await tx.insert(ledgerTransactionsTable).values({
+        id: randomUUID(),
+        creditAccountId: null,
+        debitAccountId: lockedOrder.creatorId,
+        amountMinor: input.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
+      });
+      if (nextRefundedTotal === lockedOrder.amountMinor) {
+        await tx.update(paymentOrdersTable).set({ status: "refunded" })
+          .where(and(eq(paymentOrdersTable.id, lockedOrder.id), eq(paymentOrdersTable.status, "paid")));
+      }
+    });
+    return true;
+  }
+
+  private isValidRefund(input: ProcessedRefundInput, amountMinor: number, currency: string): boolean {
+    return Number.isSafeInteger(input.amountMinor) && input.amountMinor > 0
+      && input.amountMinor <= amountMinor && (!input.currency || input.currency === currency);
+  }
+
+  private async settleCapturedOrder(orderId: string, paymentId: string, signature?: string): Promise<string> {
+    const referenceId = `razorpay:${orderId}`;
+    return db.transaction(async (tx) => {
+      const [lockedOrder] = await tx.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.id, orderId)).for("update");
+      if (!lockedOrder) throw new PaymentRequestError("Payment order no longer exists");
       const [existing] = await tx.select({ id: ledgerTransactionsTable.id })
         .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
-      if (existing) return existing.id;
-      const [updated] = await tx.update(paymentOrdersTable).set({
-        providerPaymentId: input.paymentId,
+      if (existing) {
+        if (lockedOrder.providerPaymentId && lockedOrder.providerPaymentId !== paymentId) {
+          throw new PaymentRequestError("Another payment has already been linked to this order");
+        }
+        return existing.id;
+      }
+      if (lockedOrder.status !== "created") throw new PaymentRequestError("This payment order has already been settled or cancelled");
+
+      const [settledOrder] = await tx.update(paymentOrdersTable).set({
+        providerPaymentId: paymentId,
+        providerSignature: signature ?? null,
         status: "paid",
         paidAt: new Date().toISOString(),
-      }).where(and(eq(paymentOrdersTable.id, order.id), eq(paymentOrdersTable.status, "created"))).returning({ id: paymentOrdersTable.id });
-      if (!updated) throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      }).where(and(eq(paymentOrdersTable.id, lockedOrder.id), eq(paymentOrdersTable.status, "created")))
+        .returning({ id: paymentOrdersTable.id });
+      if (!settledOrder) throw new PaymentRequestError("This payment order has already been settled or cancelled");
+
       const [ledger] = await tx.insert(ledgerTransactionsTable).values({
-        id: randomUUID(), creditAccountId: order.creatorId, debitAccountId: order.payerId,
-        amountMinor: order.amountMinor, currency: order.currency, referenceId, status: "completed",
+        id: randomUUID(),
+        creditAccountId: lockedOrder.creatorId,
+        debitAccountId: null,
+        amountMinor: lockedOrder.amountMinor,
+        currency: lockedOrder.currency,
+        referenceId,
+        status: "completed",
       }).returning({ id: ledgerTransactionsTable.id });
       return ledger.id;
     });
-    return { transactionId, status: "paid" as const };
   }
 }

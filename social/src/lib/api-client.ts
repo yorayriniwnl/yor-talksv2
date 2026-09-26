@@ -41,11 +41,13 @@ export type TwoFactorChallengeStatus = {
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
+const EXPLICIT_LOGOUT_KEY = 'yortalks-logged-out';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
 import { normalizeApiTimestamps } from './timestamps';
 let memoryAccessToken: string | null = null;
+let explicitLogoutIntent = false;
 let sessionEpoch = 0;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 let tokenChangeListener: ((token: string | null) => void) | null = null;
@@ -68,10 +70,38 @@ export function getStoredTokens(): Tokens | null {
 }
 
 export function setStoredTokens(tokens: Tokens | null): void {
+  if (tokens?.accessToken) clearExplicitLogoutIntent();
   // Login, account changes, and logout invalidate all previous in-flight data.
   // Token rotation within one session deliberately does not advance this epoch.
   sessionEpoch++;
   updateMemoryTokens(tokens);
+}
+
+function markExplicitLogoutIntent(): void {
+  explicitLogoutIntent = true;
+  try {
+    localStorage.setItem(EXPLICIT_LOGOUT_KEY, '1');
+  } catch {
+    // Keep the marker in memory when browser storage is unavailable.
+  }
+}
+
+function clearExplicitLogoutIntent(): void {
+  explicitLogoutIntent = false;
+  try {
+    localStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+  } catch {
+    // A restricted storage context must not prevent a successful login.
+  }
+}
+
+function hasExplicitLogoutIntent(): boolean {
+  if (explicitLogoutIntent) return true;
+  try {
+    return localStorage.getItem(EXPLICIT_LOGOUT_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 function updateMemoryTokens(tokens: Tokens | null): void {
@@ -114,10 +144,26 @@ interface ApiEnvelope<T> {
   meta: Record<string, unknown>;
 }
 
-let refreshInFlight: Promise<Tokens | null> | null = null;
-let refreshEpoch = -1;
+type RefreshOutcome =
+  | { kind: 'refreshed'; tokens: Tokens }
+  | { kind: 'expired' }
+  | { kind: 'unavailable' }
+  | { kind: 'changed' };
 
-async function tryRefresh(): Promise<Tokens | null> {
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+let refreshEpoch = -1;
+const sessionExpiredListeners = new Set<() => void>();
+
+export function onSessionExpired(listener: () => void): () => void {
+  sessionExpiredListeners.add(listener);
+  return () => sessionExpiredListeners.delete(listener);
+}
+
+function notifySessionExpired(): void {
+  for (const listener of sessionExpiredListeners) listener();
+}
+
+async function tryRefresh(): Promise<RefreshOutcome> {
   // Coalesce concurrent refreshes (e.g. several components hitting a 401 at once)
   // into a single request instead of racing multiple refresh calls.
   const epoch = sessionEpoch;
@@ -131,12 +177,14 @@ async function tryRefresh(): Promise<Tokens | null> {
           credentials: 'include',
           signal: AbortSignal.timeout(20_000),
         });
-        if (!res.ok) return null;
+        if (!res.ok) return res.status === 401 ? { kind: 'expired' } : { kind: 'unavailable' };
         const json = (await res.json()) as ApiEnvelope<Tokens>;
-        return epoch === sessionEpoch && json.success && typeof json.data?.accessToken === 'string' && json.data.accessToken
-          ? json.data : null;
+        if (epoch !== sessionEpoch) return { kind: 'changed' };
+        return json.success && typeof json.data?.accessToken === 'string' && json.data.accessToken
+          ? { kind: 'refreshed', tokens: json.data }
+          : { kind: 'unavailable' };
       } catch {
-        return null;
+        return { kind: 'unavailable' };
       } finally {
         if (refreshEpoch === epoch) refreshInFlight = null;
       }
@@ -145,25 +193,70 @@ async function tryRefresh(): Promise<Tokens | null> {
   return refreshInFlight;
 }
 
-async function refreshSession(): Promise<Tokens | null> {
+async function refreshSessionOutcome(): Promise<RefreshOutcome> {
+  if (hasExplicitLogoutIntent()) {
+    if (getStoredTokens()) {
+      setStoredTokens(null);
+      notifySessionExpired();
+    }
+    return { kind: 'expired' };
+  }
   const epoch = sessionEpoch;
-  const refreshed = await tryRefresh();
-  if (epoch !== sessionEpoch) return null;
-  if (refreshed) updateMemoryTokens(refreshed);
-  return refreshed;
+  const outcome = await tryRefresh();
+  if (epoch !== sessionEpoch || outcome.kind === 'changed') return { kind: 'changed' };
+  if (outcome.kind === 'refreshed') {
+    updateMemoryTokens(outcome.tokens);
+    return outcome;
+  }
+  if (outcome.kind === 'expired') {
+    setStoredTokens(null);
+    notifySessionExpired();
+  }
+  return outcome;
 }
 
-async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch): Promise<ApiEnvelope<T>> {
+async function refreshSession(): Promise<Tokens | null> {
+  const outcome = await refreshSessionOutcome();
+  return outcome.kind === 'refreshed' ? outcome.tokens : null;
+}
+
+function isCredentialEstablishment(path: string, method?: string): boolean {
+  const pathname = path.split('?')[0];
+  const verb = (method ?? 'GET').toUpperCase();
+  const publicEndpoints = new Set([
+    'POST /auth/register',
+    'POST /auth/login',
+    'POST /auth/google',
+    'POST /auth/email-otp/send',
+    'POST /auth/email-otp/verify',
+    'POST /auth/otp/send',
+    'POST /auth/otp/verify',
+    'POST /auth/reset-password',
+    'POST /auth/reset-password/confirm',
+    'POST /auth/verify-email/resend-public',
+  ]);
+  return publicEndpoints.has(`${verb} ${pathname}`)
+    || (verb === 'GET' && pathname.startsWith('/auth/verify-email/'))
+    || (verb === 'GET' && /^\/auth\/2fa\/challenges\/[^/]+$/.test(pathname))
+    || (verb === 'POST' && /^\/auth\/2fa\/challenges\/[^/]+\/complete$/.test(pathname));
+}
+
+async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch, includeAuthorization = true): Promise<ApiEnvelope<T>> {
   const assertSession = () => {
     if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
   };
   assertSession();
   const tokens = getStoredTokens();
+  if (tokens && hasExplicitLogoutIntent()) {
+    setStoredTokens(null);
+    notifySessionExpired();
+    throw new ApiError('Your session expired. Please sign in again.', 401);
+  }
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  if (tokens) {
+  if (tokens && includeAuthorization) {
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
@@ -173,14 +266,18 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   assertSession();
 
   // A rejected sign-in must never authenticate through an unrelated cookie.
-  if (res.status === 401 && !isRetry && tokens && !path.startsWith('/auth/')) {
-    const refreshed = await refreshSession();
-    assertSession();
-    if (refreshed) {
-      return requestEnvelope<T>(path, options, true, epoch);
+  if (res.status === 401 && !isRetry && tokens && includeAuthorization && !isCredentialEstablishment(path, options.method)) {
+    const outcome = await refreshSessionOutcome();
+    if (outcome.kind === 'refreshed') {
+      assertSession();
+      return requestEnvelope<T>(path, options, true, epoch, includeAuthorization);
     }
-    setStoredTokens(null);
-    throw new ApiError('Your session expired. Please sign in again.', 401);
+    if (outcome.kind === 'expired') throw new ApiError('Your session expired. Please sign in again.', 401);
+    if (outcome.kind === 'changed') {
+      assertSession();
+      throw new ApiError('Your session changed. Please try again.', 409);
+    }
+    throw new ApiError('Could not verify your session. Check your connection and try again.', 503);
   }
 
   let json: ApiEnvelope<T> | null = null;
@@ -202,8 +299,8 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   return normalizeApiTimestamps(json);
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  return (await requestEnvelope<T>(path, options)).data;
+async function request<T>(path: string, options: RequestInit = {}, includeAuthorization = true): Promise<T> {
+  return (await requestEnvelope<T>(path, options, false, sessionEpoch, includeAuthorization)).data;
 }
 
 export interface PaginatedResult<T> {
@@ -500,7 +597,10 @@ export const api = {
     request<AuthLoginResult>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
-    return request<null>('/auth/logout', { method: 'POST' });
+    markExplicitLogoutIntent();
+    setStoredTokens(null);
+    notifySessionExpired();
+    return request<null>('/auth/logout', { method: 'POST' }, false);
   },
 
   requestPasswordReset: (email: string) =>
@@ -700,12 +800,19 @@ export const api = {
   cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
   // ---- Messages ----
-  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
+  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
   createGroupChat: (payload: { memberIds: string[]; title: string }) => request<BackendConversation>('/conversations/group', { method: 'POST', body: JSON.stringify(payload) }),
   setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
-  getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
+  getConversationMessages: (conversationId: string, options: { direction?: 'latest' | 'older' | 'newer'; cursorAt?: string; cursorId?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) query.set(key, String(value));
+    }
+    const suffix = query.size ? `?${query.toString()}` : '';
+    return request<BackendMessage[]>(`/conversations/${encodeURIComponent(conversationId)}/messages${suffix}`);
+  },
   previewMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/preview`, { method: 'POST' }),
   markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
   editMessage: (messageId: string, content: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'PUT', body: JSON.stringify({ content }) }),
@@ -1000,8 +1107,9 @@ export interface BackendMarketplaceOrder {
   sellerId: string;
   providerOrderId: string;
   amountMinor: number;
+  refundedAmountMinor?: number;
   currency: string;
-  status: 'provider_pending' | 'created' | 'paid' | 'fulfilled' | 'cancelled' | 'failed';
+  status: 'provider_pending' | 'created' | 'paid' | 'fulfilled' | 'refund_required' | 'refunded' | 'cancelled' | 'failed';
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

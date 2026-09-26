@@ -33,7 +33,7 @@ async function main() {
   await ensureProductionDependencies();
 
   const httpServer = createServer(app);
-  const io = attachSocketServer(httpServer);
+  const io = await attachSocketServer(httpServer);
   const feedWorker = await startFeedWorker().catch((err) => { logger.warn({ err }, "Feed worker failed to start"); return null; });
   const notificationWorker = await startNotificationWorker().catch((err) => {
     logger.warn({ err }, "Notification worker failed to start");
@@ -90,4 +90,3 @@ main().catch((err) => {
   logger.error(err);
   process.exit(1);
 });
-

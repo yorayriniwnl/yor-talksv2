@@ -36,4 +36,10 @@ export class NotificationRepository {
       .set({ readAt: new Date().toISOString() })
       .where(and(eq(notificationsTable.recipientId, recipientId), isNull(notificationsTable.readAt)));
   }
+
+  async markPushDelivered(id: string): Promise<void> {
+    await db.update(notificationsTable)
+      .set({ pushDeliveredAt: new Date().toISOString() })
+      .where(and(eq(notificationsTable.id, id), isNull(notificationsTable.pushDeliveredAt)));
+  }
 }

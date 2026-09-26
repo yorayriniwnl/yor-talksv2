@@ -44,7 +44,7 @@ async function fixture(t: TestContext) {
     return { id: "message", senderId, conversationId, content };
   });
   const server = createServer();
-  const sockets = attachSocketServer(server);
+  const sockets = await attachSocketServer(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.ok(address && typeof address !== "string");

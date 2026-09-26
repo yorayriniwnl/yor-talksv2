@@ -559,8 +559,7 @@ paths:
       operationId: postAuthLogout
       summary: Post /auth/logout
       tags: [auth]
-      security:
-        - bearerAuth: []
+      security: []
       requestBody:
         required: false
         content:
@@ -577,8 +576,6 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
-        "401":
-          description: Authentication required
   /auth/logout-all:
     post:
       operationId: postAuthLogoutAll
@@ -1459,6 +1456,8 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: "Required role: admin"
   /docs:
     get:
       operationId: getDocs

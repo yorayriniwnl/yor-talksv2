@@ -157,6 +157,7 @@ export interface NotificationRecord {
   readAt: string | null;
   channel?: "in_app" | "email" | "push";
   metadata?: Record<string, unknown>;
+  pushDeliveredAt?: string | null;
 }
 
 export interface MessageRecord {
@@ -304,8 +305,9 @@ export interface MarketplaceOrderRecord {
   providerPaymentId?: string | null;
   providerSignature?: string | null;
   amountMinor: number;
+  refundedAmountMinor?: number;
   currency: string;
-  status: "provider_pending" | "created" | "paid" | "fulfilled" | "cancelled" | "failed";
+  status: "provider_pending" | "created" | "paid" | "fulfilled" | "refund_required" | "refunded" | "cancelled" | "failed";
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

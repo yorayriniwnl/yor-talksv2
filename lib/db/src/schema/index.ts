@@ -235,6 +235,7 @@ export const notificationsTable = pgTable("notifications", {
   readAt: timestamp("read_at", { mode: "string" }),
   channel: text("channel").default("in_app"),
   metadata: jsonb("metadata").default({}),
+  pushDeliveredAt: timestamp("push_delivered_at", { mode: "string" }),
 }, (table) => ({
   recipIdx: index("notif_recip_idx").on(table.recipientId)
 }));

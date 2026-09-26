@@ -1,5 +1,7 @@
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "node:http";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { Redis } from "ioredis";
 import jwt from "jsonwebtoken";
 import { env, corsOrigins } from "../config/env.js";
 import { logger } from "../lib/logger.js";
@@ -14,7 +16,7 @@ import { hasCurrentConsent } from "../utils/consent.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
 import { parseSocketPayload, socketErrorEvent } from "./policy.js";
 
-export const attachSocketServer = (httpServer: HttpServer) => {
+export const attachSocketServer = async (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
     maxHttpBufferSize: 64 * 1024,
     // CORS alone does not protect the WebSocket transport.
@@ -24,6 +26,16 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       methods: ["GET", "POST"],
     },
   });
+  const pubClient = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: null });
+  const subClient = pubClient.duplicate({ lazyConnect: true, maxRetriesPerRequest: null });
+  try {
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+  } catch (error) {
+    pubClient.disconnect();
+    subClient.disconnect();
+    throw new Error("Socket.IO Redis adapter could not be initialized", { cause: error });
+  }
   setIo(io);
 
   const conversationRepository = new ConversationRepository();
@@ -32,8 +44,18 @@ export const attachSocketServer = (httpServer: HttpServer) => {
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const liveStreamRepository = new LiveStreamRepository();
   const contentSafetyService = new ContentSafetyService(userRepository);
-  const activeCalls = new Map<string, { callerId: string; recipientId: string; createdAt: number }>();
-  httpServer.once("close", () => void redisRepository.disconnect());
+  type ActiveCall = { id: string; callerId: string; recipientId: string; createdAt: number; status: "ringing" | "active" };
+  const callTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  const clearCallTimeout = (callId: string) => {
+    const timeout = callTimeouts.get(callId);
+    if (timeout) clearTimeout(timeout);
+    callTimeouts.delete(callId);
+  };
+  httpServer.once("close", () => {
+    pubClient.disconnect();
+    subClient.disconnect();
+    void redisRepository.disconnect();
+  });
 
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -71,7 +93,6 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     const joinedStreams = new Set<string>();
     socket.join(userId);
     logger.info({ userId }, "socket connected");
-    socket.emit("presence:update", { online: true, userId });
 
     const sessionIsActive = async (): Promise<boolean> => {
       try {
@@ -145,7 +166,14 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       const conversationId = payload.conversationId;
       if (typeof conversationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(conversationId)) return;
       const members = await conversationRepository.getMembers(conversationId);
-      if (members.includes(userId)) socket.join(`conversation:${conversationId}`);
+      if (!members.includes(userId)) return;
+      const room = `conversation:${conversationId}`;
+      await socket.join(room);
+      const participants = await io.in(room).fetchSockets();
+      const onlineUserIds = new Set(participants.map((participant) => participant.data.userId).filter((id): id is string => typeof id === "string"));
+      for (const participantId of onlineUserIds) {
+        socket.emit("presence:update", { online: true, userId: participantId });
+      }
     });
 
     on("conversation:leave", (payload: { conversationId?: unknown } = {}) => {
@@ -175,8 +203,8 @@ export const attachSocketServer = (httpServer: HttpServer) => {
     });
 
     // Modified to support group chats via conversationId
-    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; textStyleId?: unknown } = {}) => {
-      const { recipientId, conversationId, content, textStyleId } = payload;
+    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; textStyleId?: unknown; idempotencyKey?: unknown } = {}) => {
+      const { recipientId, conversationId, content, textStyleId, idempotencyKey } = payload;
       if (typeof content !== "string" || !content.trim()) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
@@ -186,9 +214,9 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         let actualConversationId = conversationId;
 
         if (typeof conversationId === "string" && conversationId) {
-          message = await messageService.sendMessageToConversation(userId, conversationId, content, typeof textStyleId === "string" ? { textStyleId } : undefined);
+          message = await messageService.sendMessageToConversation(userId, conversationId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
         } else if (typeof recipientId === "string" && recipientId) {
-          message = await messageService.sendMessage(userId, recipientId, content, typeof textStyleId === "string" ? { textStyleId } : undefined);
+          message = await messageService.sendMessage(userId, recipientId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
           actualConversationId = message.conversationId;
           
           // Join every connected device of both members before the first emit.
@@ -255,55 +283,62 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       }
 
       joinedStreams.add(streamId);
-      socket.join(`stream:${streamId}`);
+      await socket.join(`stream:${streamId}`);
       socket.to(`stream:${streamId}`).emit("stream:peer-joined", { userId, socketId: socket.id });
     });
 
-    on("stream:leave", (payload: { streamId?: unknown } = {}) => {
+    on("stream:leave", async (payload: { streamId?: unknown } = {}) => {
       if (!env.LIVE_ROOMS_ENABLED) return;
       const { streamId } = payload;
       if (typeof streamId === "string" && joinedStreams.delete(streamId)) {
-        socket.leave(`stream:${streamId}`);
+        await socket.leave(`stream:${streamId}`);
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
       }
     });
 
-    on("webrtc:offer", (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
+    on("webrtc:offer", async (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
       if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, offer, streamId } = payload;
-      if (typeof targetSocketId === "string" && offer && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const target = io.sockets.sockets.get(targetSocketId);
+      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && offer && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const [target] = await io.in(targetSocketId).fetchSockets();
         if (target?.rooms.has(`stream:${streamId}`)) {
-          target.emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
+          io.to(targetSocketId).emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
         }
       }
     });
 
-    on("webrtc:answer", (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
+    on("webrtc:answer", async (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
       if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, answer, streamId } = payload;
-      if (typeof targetSocketId === "string" && answer && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const target = io.sockets.sockets.get(targetSocketId);
+      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && answer && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const [target] = await io.in(targetSocketId).fetchSockets();
         if (target?.rooms.has(`stream:${streamId}`)) {
-          target.emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
+          io.to(targetSocketId).emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
         }
       }
     });
 
-    on("webrtc:ice-candidate", (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
+    on("webrtc:ice-candidate", async (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
       if (!env.LIVE_ROOMS_ENABLED) return;
       const { targetSocketId, candidate, streamId } = payload;
-      if (typeof targetSocketId === "string" && candidate && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const target = io.sockets.sockets.get(targetSocketId);
+      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && candidate && typeof streamId === "string" && joinedStreams.has(streamId)) {
+        const [target] = await io.in(targetSocketId).fetchSockets();
         if (target?.rooms.has(`stream:${streamId}`)) {
-          target.emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
+          io.to(targetSocketId).emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
         }
       }
     });
 
-    const callForParticipant = (callId: unknown) => {
+    const callForParticipant = async (callId: unknown): Promise<ActiveCall | undefined> => {
       if (typeof callId !== "string" || !callId || callId.length > 80) return undefined;
-      const call = activeCalls.get(callId);
+      const raw = await redisRepository.getSocketCallStrict(callId);
+      if (!raw) return undefined;
+      let call: ActiveCall;
+      try {
+        call = JSON.parse(raw) as ActiveCall;
+      } catch {
+        return undefined;
+      }
       if (!call || (call.callerId !== userId && call.recipientId !== userId)) return undefined;
       return call;
     };
@@ -345,21 +380,18 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         emitCallError("This account does not accept calls from strangers");
         return;
       }
-      if ([...activeCalls.values()].some((call) => call.callerId === targetUserId || call.recipientId === targetUserId || call.callerId === userId || call.recipientId === userId)) {
-        emitCallError("That account is already on another call");
-        return;
-      }
-      if (activeCalls.has(callId)) {
-        emitCallError("That call identifier is already in use");
-        return;
-      }
-      if (!io.sockets.adapter.rooms.get(targetUserId)?.size) {
+      const targetSockets = await io.in(targetUserId).fetchSockets();
+      if (targetSockets.length === 0) {
         emitCallError("That account is currently offline");
         return;
       }
 
       const createdAt = Date.now();
-      activeCalls.set(callId, { callerId: userId, recipientId: targetUserId, createdAt });
+      const call = { id: callId, callerId: userId, recipientId: targetUserId, createdAt, status: "ringing" as const };
+      if (!(await redisRepository.reserveSocketCallStrict(call, 90))) {
+        emitCallError("That account is already on another call or this call identifier is in use");
+        return;
+      }
       io.to(targetUserId).emit("call:invite", {
         callId,
         callType,
@@ -372,53 +404,63 @@ export const attachSocketServer = (httpServer: HttpServer) => {
         },
       });
       const timeout = setTimeout(() => {
-        const current = activeCalls.get(callId);
-        if (!current || current.createdAt !== createdAt) return;
-        activeCalls.delete(callId);
-        io.to(userId).emit("call:ended", { callId });
-        io.to(targetUserId).emit("call:ended", { callId });
+        callTimeouts.delete(callId);
+        void redisRepository.expireRingingSocketCallStrict(callId).then((expired) => {
+          if (!expired) return;
+          io.to(userId).emit("call:ended", { callId });
+          io.to(targetUserId).emit("call:ended", { callId });
+        }).catch((error) => logger.warn({ error, callId }, "Could not expire ringing call"));
       }, 90_000);
+      callTimeouts.set(callId, timeout);
       timeout.unref?.();
     });
 
-    on("call:accept", (payload: { callId?: unknown } = {}) => {
+    on("call:accept", async (payload: { callId?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
-      const call = callForParticipant(payload.callId);
+      const call = await callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId) {
         emitCallError("Call is no longer available");
         return;
       }
+      const updated = await redisRepository.acceptSocketCallStrict(call.id, userId, 6 * 60 * 60);
+      if (!updated) {
+        emitCallError("Call is no longer available");
+        return;
+      }
+      clearCallTimeout(payload.callId as string);
       io.to(call.callerId).emit("call:accepted", { callId: payload.callId });
     });
 
-    on("call:reject", (payload: { callId?: unknown } = {}) => {
+    on("call:reject", async (payload: { callId?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
-      const call = callForParticipant(payload.callId);
+      const call = await callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId) return;
-      activeCalls.delete(payload.callId as string);
+      clearCallTimeout(payload.callId as string);
+      await redisRepository.releaseSocketCallStrict(call.id);
       io.to(call.callerId).emit("call:rejected", { callId: payload.callId });
     });
 
-    on("call:answer", (payload: { callId?: unknown; answer?: unknown } = {}) => {
+    on("call:answer", async (payload: { callId?: unknown; answer?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
-      const call = callForParticipant(payload.callId);
+      const call = await callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId || !payload.answer || typeof payload.answer !== "object") return;
       io.to(call.callerId).emit("call:answer", { callId: payload.callId, answer: payload.answer });
     });
 
-    on("call:ice", (payload: { callId?: unknown; candidate?: unknown } = {}) => {
+    on("call:ice", async (payload: { callId?: unknown; candidate?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
-      const call = callForParticipant(payload.callId);
+      const call = await callForParticipant(payload.callId);
       if (!call || !payload.candidate || typeof payload.candidate !== "object") return;
       const peerId = call.callerId === userId ? call.recipientId : call.callerId;
       io.to(peerId).emit("call:ice", { callId: payload.callId, candidate: payload.candidate });
     });
 
-    on("call:end", (payload: { callId?: unknown } = {}) => {
+    on("call:end", async (payload: { callId?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
-      const call = callForParticipant(payload.callId);
+      const call = await callForParticipant(payload.callId);
       if (!call) return;
-      activeCalls.delete(payload.callId as string);
+      clearCallTimeout(payload.callId as string);
+      await redisRepository.releaseSocketCallStrict(call.id);
       const peerId = call.callerId === userId ? call.recipientId : call.callerId;
       io.to(peerId).emit("call:ended", { callId: payload.callId });
     });
@@ -429,21 +471,39 @@ export const attachSocketServer = (httpServer: HttpServer) => {
       for (const streamId of joinedStreams) {
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
       }
-      for (const [callId, call] of activeCalls) {
-        if (call.callerId === userId || call.recipientId === userId) {
-          activeCalls.delete(callId);
-          const peerId = call.callerId === userId ? call.recipientId : call.callerId;
-          io.to(peerId).emit("call:ended", { callId });
+      void (async () => {
+        const remainingSockets = await io.in(userId).fetchSockets();
+        if (remainingSockets.length === 0) {
+          const callId = await redisRepository.getSocketCallIdForUserStrict(userId);
+          if (callId) {
+            const raw = await redisRepository.releaseSocketCallStrict(callId);
+            if (raw) {
+              clearCallTimeout(callId);
+              const call = JSON.parse(raw) as ActiveCall;
+              const peerId = call.callerId === userId ? call.recipientId : call.callerId;
+              io.to(peerId).emit("call:ended", { callId });
+            }
+          }
         }
-      }
+        if (remainingSockets.length > 0) return;
+        const conversations = await conversationRepository.listForUser(userId);
+        for (const conversation of conversations) {
+          io.to(`conversation:${conversation.id}`).emit("presence:update", { online: false, userId });
+        }
+      })().catch((error) => logger.warn({ error, userId }, "Could not broadcast offline presence"));
       logger.info({ userId }, "socket disconnected");
     });
 
     // Register listeners before awaiting room hydration: clients may send their
     // first event immediately after the connection acknowledgement.
-    void conversationRepository.listForUser(userId).then((conversations) => {
+      void conversationRepository.listForUser(userId).then((conversations) => {
       if (!socket.connected) return;
-      for (const conv of conversations) void socket.join(`conversation:${conv.id}`);
+      for (const conv of conversations) {
+        void (async () => {
+          await socket.join(`conversation:${conv.id}`);
+          io.to(`conversation:${conv.id}`).emit("presence:update", { online: true, userId });
+        })().catch((error) => logger.warn({ error, userId, conversationId: conv.id }, "Could not broadcast online presence"));
+      }
     }).catch((err) => logger.error({ err, userId }, "Failed to join conversation rooms"));
   });
 

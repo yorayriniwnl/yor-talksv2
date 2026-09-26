@@ -7,6 +7,12 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
 
+type CapturedResponse = Response & {
+  statusCode: number;
+  body: unknown;
+  clearedCookie: { name: string; options: Record<string, unknown> } | null;
+};
+
 const redisRepository = new RedisRepository();
 after(async () => {
   await redisRepository.disconnect();
@@ -16,6 +22,7 @@ after(async () => {
 const makeResponse = () => {
   let statusCode = 200;
   let body: unknown;
+  let clearedCookie: { name: string; options: Record<string, unknown> } | null = null;
 
   const res = {
     get statusCode() {
@@ -26,6 +33,9 @@ const makeResponse = () => {
     },
     get body() {
       return body;
+    },
+    get clearedCookie() {
+      return clearedCookie;
     },
     set body(value: unknown) {
       body = value;
@@ -38,7 +48,11 @@ const makeResponse = () => {
       body = payload;
       return this;
     },
-  } as unknown as Response & { statusCode: number; body: unknown };
+    clearCookie(name: string, options: Record<string, unknown>) {
+      clearedCookie = { name, options };
+      return this;
+    },
+  } as unknown as CapturedResponse;
 
   return res;
 };
@@ -90,4 +104,18 @@ test("auth controller includes the number-matching details", async () => {
     matchingNumber: 42,
     expiresAt: "2099-01-01T00:00:00.000Z",
   });
+});
+
+test("auth controller clears the refresh cookie even if server-side revocation fails", async () => {
+  const controller = new AuthController({
+    logoutByToken: async () => { throw new Error("Redis unavailable"); },
+  } as unknown as AuthService);
+  const req = { cookies: { refreshToken: "refresh-cookie" } } as unknown as Request;
+  const res = makeResponse();
+
+  await controller.logout(req, res);
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(res.clearedCookie?.name, "refreshToken");
+  assert.equal(res.clearedCookie?.options.path, "/");
 });
