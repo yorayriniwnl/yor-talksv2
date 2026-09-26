@@ -59,7 +59,7 @@ production evidence are separate categories.
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
 | F10 sessions | Same-second JWT repeats; old approved challenges survive revocation; reset read/update/delete races | Random jti + Redis CAS; database auth epoch on HTTP/socket/refresh/challenges; transactional reset redemption; cross-tab Web Lock | 21/21 focused tests with real PostgreSQL/Redis; 44/44 state tests; API/frontend typechecks | Hosted authenticated journeys; cross-tab browser case runs in full suite |
 | F11 export | Export omits supported persisted surfaces | Bounded ownership-bound jobs, matrix, protected expiry/download | Pending | Rich/large/deletion-race acceptance |
-| F12 queries | Per-item author/viewer reads and per-flag overrides | Shared audience batches; entire Premium entitlement snapshot uses one SQL query | 50-candidate audience check uses two queries; all 15 feature decisions use one query | Remaining Story/profile batching and representative latency evidence |
+| F12 queries | Per-item author/viewer reads, Story ranking queries and per-flag overrides | Shared audience batches; SQL candidate reduction before limits; Story/Note/profile/comment batching; one-query Premium snapshot | 50 distinct authors: Story checks 245 -> complete list 7 queries; Notes 3; whole indexed/fallback search 10; 12/12 focused tests; `docs/DISCOVERY_PERFORMANCE.md` | Hosted load evidence; retain query checks as staff/media policy is added |
 | F13 budgets | 300/IP/15m conflicts with fallback polling | Separate verified-user/IP budgets, backoff/jitter/visibility | Pending | NAT, tabs and outage regression |
 | F14 reliability | Main checks dependencies; candidate adds heartbeat but schema/lag needed | Bounded providers/cache, readiness, worker supervision, restore/rollback | Fresh Docker engine and isolated services | Failure injection, fresh restore and host monitoring |
 | F15 release | Main contains Premium/pins; hardening had one unique commit | Intentional integration in isolated worktree | `fe356ef` merges both behavior sets; remote base and published branch verified | Final release SHA/PR, CI and complete verification matrix |
@@ -78,6 +78,13 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- Dispute chapter committed/pushed as `5f2bc5afe5f8f68708aa1a1fedf32cae2e84515b`;
+  the exact remote SHA matched. F12 now includes representative mixed-audience
+  fixtures, constant query-count assertions and diagnostic before/after timings.
+  API TypeScript passes, including the newly added regression fixtures.
+  The final F12 full API checkpoint passes 168/168 in 104.4 seconds against the
+  isolated PostgreSQL/Redis services. No schema migration is needed for batching.
 
 - F06 creator intent/recovery is committed and pushed as
   `38919c2f0c7f7d74b0b20b3388c1e1e07a37a524`; remote SHA matched.

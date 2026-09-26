@@ -15,6 +15,7 @@ import {
   usersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
+import { discoveryScope } from './discovery-scope.js';
 import type { HighlightRecord, StoryRecord } from "../types/index.js";
 import { calculateStoryReactionCounts, type StoryAnalyticsSummary, type StoryViewExposure } from "../services/story-analytics-service.js";
 
@@ -125,8 +126,9 @@ export class StoryRepository {
     return this.hydrateViewerInteractions((await db
       .select()
       .from(storiesTable)
-      .where(and(eq(storiesTable.publishMode, "active"), gt(storiesTable.expiresAt, new Date().toISOString())))
-      .orderBy(desc(storiesTable.publishedAt), desc(storiesTable.createdAt))
+      .where(and(eq(storiesTable.publishMode, "active"), gt(storiesTable.expiresAt, new Date().toISOString()),
+        discoveryScope({ ...storiesTable, storyId: storiesTable.id }, viewerId)))
+      .orderBy(desc(storiesTable.publishedAt), desc(storiesTable.createdAt), desc(storiesTable.id))
       .limit(100)) as StoryRecord[], viewerId);
   }
 
@@ -190,6 +192,18 @@ export class StoryRepository {
       .where(and(eq(storyAudienceMembersTable.storyId, storyId), eq(storyAudienceMembersTable.userId, userId)))
       .limit(1);
     return Boolean(member);
+  }
+
+  async audienceForViewer(storyIds: string[], viewerId?: string) {
+    const selected = new Set<string>(), excluded = new Set<string>();
+    if (!viewerId || !storyIds.length) return { selected, excluded };
+    const ids = sql.join(storyIds.map(id => sql`${id}`), sql`,`);
+    const result = await db.execute(sql`select story_id,'selected' as kind from story_audience_members
+      where user_id=${viewerId} and story_id in (${ids}) union all
+      select story_id,'excluded' as kind from story_audience_exclusions
+      where user_id=${viewerId} and story_id in (${ids})`);
+    for (const row of result.rows) (row.kind === 'selected' ? selected : excluded).add(String(row.story_id));
+    return { selected, excluded };
   }
 
   async isAudienceExcluded(storyId: string, userId: string): Promise<boolean> {

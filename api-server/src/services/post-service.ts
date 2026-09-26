@@ -343,8 +343,9 @@ export class PostService {
       .where(eq(commentsTable.postId, postId))
       .orderBy(asc(commentsTable.createdAt));
     const visibleRows = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
-    return Promise.all(visibleRows.filter((row) => !row.parentId).map(async (row) => {
-      const author = await this.userRepository.findById(row.authorId);
+    const authors = new Map((await this.userRepository.findByIds(visibleRows.filter(row => !row.parentId).map(row => row.authorId))).map(user => [user.id, user]));
+    return visibleRows.filter((row) => !row.parentId).map((row) => {
+      const author = authors.get(row.authorId);
       const likedBy = Array.isArray(row.likedBy) ? row.likedBy.filter((value): value is string => typeof value === "string") : [];
       const replies = visibleRows.filter((reply) => reply.parentId === row.id).map((reply) => ({
         id: reply.id,
@@ -374,7 +375,7 @@ export class PostService {
           avatarUrl: author?.avatarUrl ?? null,
         },
       };
-    }));
+    });
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {

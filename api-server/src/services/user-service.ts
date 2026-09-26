@@ -244,8 +244,8 @@ export class UserService {
   async listCloseFriends(userId: string): Promise<UserRecord[]> {
     const ids = await this.userRepository.listCloseFriendIds(userId);
     if (ids.length === 0) return [];
-    const users = await Promise.all(ids.map((id) => this.userRepository.findById(id)));
-    return users.filter((user): user is UserRecord => Boolean(user));
+    const users = new Map((await this.userRepository.findByIds(ids)).map(user => [user.id, user]));
+    return ids.flatMap(id => users.has(id) ? [users.get(id)!] : []);
   }
 
   async setCloseFriend(userId: string, friendId: string, enabled: boolean): Promise<{ friendId: string; closeFriend: boolean } | undefined> {

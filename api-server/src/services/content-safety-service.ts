@@ -23,6 +23,10 @@ export class ContentSafetyService {
   }
 
   async prepare(authorIds: string[], viewerId?: string, options: VisibilityOptions = {}) {
+    return (await this.prepareContext(authorIds, viewerId, options)).allows;
+  }
+
+  async prepareContext(authorIds: string[], viewerId?: string, options: VisibilityOptions = {}) {
     const authors = [...new Set(authorIds)];
     const ids = [...new Set([...authors, ...(viewerId ? [viewerId] : [])])];
     // The SQL repository executes one users query and one relationships query.
@@ -39,7 +43,7 @@ export class ContentSafetyService {
     const byId = new Map(users.filter(user => !!user).map(user => [user!.id, user!]));
     const viewer = viewerId ? byId.get(viewerId) : undefined;
     const viewerFilter = normalizeContentRating(viewer?.settings?.contentFilter);
-    return (item: RatedContent, authorId: string): boolean => {
+    const allows = (item: RatedContent, authorId: string): boolean => {
       const author = byId.get(authorId);
       if (!author || (viewerId && !viewer)) return false;
       if (item.deletedAt || ['removed', 'quarantined', 'rejected'].includes(item.moderationStatus ?? '')) return false;
@@ -57,6 +61,8 @@ export class ContentSafetyService {
         selectedMember: Boolean(viewerId && item.selectedMemberIds?.includes(viewerId)),
         excluded: Boolean(viewerId && item.excludedViewerIds?.includes(viewerId)), blocked: false }).allowed;
     };
+    return { allows, relationshipScore: (authorId: string) => !viewerId ? 0 : viewerId === authorId ? 40
+      : relationships.closeFriends.has(authorId) ? 30 : relationships.following.has(authorId) ? 20 : 0 };
   }
 
   async filterVisible<T extends RatedContent>(items: T[], viewerId?: string): Promise<T[]> {

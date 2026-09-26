@@ -6,7 +6,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import type { HighlightRecord, StoryReaction, StoryRecord, StoryReactionType } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
-import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
+import { type AudienceKind } from "../utils/audience-policy.js";
 import { calculateStoryScore, resolveStoryDurationHours, selectViewerExposure, type StoryAnalyticsSummary, type StoryViewExposure } from "./story-analytics-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
@@ -90,8 +90,9 @@ export class StoryService {
     const memberIds = [...new Set(input.audienceMemberIds ?? [])];
     const exclusionIds = [...new Set(input.audienceExclusionIds ?? [])];
     if (advancedAudience && [...memberIds, ...exclusionIds].length > 0) {
-      const users = await Promise.all([...memberIds, ...exclusionIds].map((userId) => this.userRepository.findById(userId)));
-      if (users.some((user) => !user)) throw new Error("Story audience contains an unknown account");
+      const audienceIds = [...new Set([...memberIds, ...exclusionIds])];
+      const users = await this.userRepository.findByIds(audienceIds);
+      if (users.length !== audienceIds.length) throw new Error("Story audience contains an unknown account");
     }
 
     await enforceTextContentPolicy([
@@ -152,18 +153,20 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await Promise.all((await this.storyRepository.listActive(viewerId)).map(async (story) => (
-      await this.canViewStory(story, viewerId) ? story : undefined
-    )));
-    const visibleStories = stories.filter((story): story is StoryRecord => Boolean(story));
+    const stories = await this.storyRepository.listActive(viewerId);
+    if (!stories.length) return [];
+    const [context, audience] = await Promise.all([
+      this.contentSafetyService.prepareContext(stories.map(story => story.authorId), viewerId, { discovery: true }),
+      this.storyRepository.audienceForViewer(stories.map(story => story.id), viewerId),
+    ]);
+    const visibleStories = stories.filter(story => context.allows({ ...story,
+      selectedMemberIds: viewerId && audience.selected.has(story.id) ? [viewerId] : [],
+      excludedViewerIds: viewerId && audience.excluded.has(story.id) ? [viewerId] : [],
+    }, story.authorId));
     const polls = await this.storyRepository.getPolls(visibleStories.map((story) => story.id), viewerId);
     const hydrated = visibleStories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
-    const ranked = await Promise.all(hydrated.map(async (story) => {
-      const relationshipScore = viewerId && story.authorId === viewerId
-        ? 40
-        : viewerId && await this.userRepository.isCloseFriend(story.authorId, viewerId)
-          ? 30
-          : viewerId && await this.userRepository.isFollowing(viewerId, story.authorId) ? 20 : 0;
+    const ranked = hydrated.map((story) => {
+      const relationshipScore = context.relationshipScore(story.authorId);
       const recencyScore = Math.max(0, 30 - ((Date.now() - new Date(story.publishedAt ?? story.createdAt).getTime()) / (60 * 60 * 1000)));
       return {
         story,
@@ -174,7 +177,7 @@ export class StoryService {
           priorityBoost: story.priorityBoost ?? 0,
         }),
       };
-    }));
+    });
     return ranked.sort((left, right) => right.score - left.score).map(({ story }) => story);
   }
 

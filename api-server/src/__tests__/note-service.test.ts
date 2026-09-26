@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NoteService } from "../services/note-service.js";
 import type { NoteRecord } from "../types/index.js";
+import { ContentSafetyService } from '../services/content-safety-service.js';
 
 test("note service trims content, applies a 24-hour expiry, and replaces the author status", async () => {
   let persisted: NoteRecord | undefined;
@@ -46,7 +47,10 @@ test("note service only exposes notes allowed by audience and content visibility
   const service = new NoteService(
     { listActive: async () => notes } as never,
     { isFollowing: async (viewerId: string, authorId: string) => viewerId === "viewer" && authorId === "follower" } as never,
-    { isVisible: async (_note: NoteRecord, _viewerId: string, authorId: string) => authorId !== "blocked" } as never,
+    new ContentSafetyService({
+      findByIds: async (ids: string[]) => ids.map(id => ({ id, blockedUsers: id === 'viewer' ? ['blocked'] : [] })),
+      audienceRelationships: async () => ({ following: new Set(['follower']), closeFriends: new Set() }),
+    } as never),
   );
 
   const visible = await service.listVisibleNotes("viewer");
