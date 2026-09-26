@@ -55,7 +55,7 @@ production evidence are separate categories.
 | F05 Premium | Rollout flags still stand in for subscription entitlement | Separate platform plan, billing/entitlements and customer journey | Pending | Final price/policy; provider test lifecycle |
 | F06 payments | Candidate webhook/refund fixes exist but are not a complete durable lifecycle | Integrate/revalidate; durable inbox, settlement/reconciliation, reversals | Pending | Provider test mode and financial fault tests |
 | F07 deletion/ledger | Historical counterparty attribution defect requires fresh regression | Transactional identity anonymization and retryable cleanup | Pending | Retention policy owner decision |
-| F08 dependencies | Main updated Multer/qs intent; complete current audit still needed | Refresh prod/all audits, patch reachable/tooling advisories, frozen install | Initial frozen install in isolated checkout | Exact remaining advisories and compatibility checks |
+| F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
 | F10 sessions | Refresh JWT lacks random jti; logout-all omits challenges; reset non-atomic | Atomic rotation/reset/revocation and concurrent-client regression | Pending | Redis/DB failure and real session journeys |
 | F11 export | Export omits supported persisted surfaces | Bounded ownership-bound jobs, matrix, protected expiry/download | Pending | Rich/large/deletion-race acceptance |
@@ -78,6 +78,21 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F01: preview `yor-talks-g3xwex9et-yorayriniwnl-1218s-projects.vercel.app`
+  (source `ae51d4b`) reaches application configuration after the ESM repair.
+  Authenticated platform probe still returns 500. Fresh runtime logs identify
+  `[Config Error] Production requires unique JWT secrets of at least 32 characters:
+  JWT_SECRET, JWT_REFRESH_SECRET`. This is a confirmed environment blocker;
+  validation remains enforced. No production settings or secrets were changed.
+
+- F08: production dependency audit was already clean on current main; the complete
+  workspace audit was not. Narrow dependency overrides and Orval 8.22 remove the
+  recorded advisories. Code generation now uses explicit output paths and a
+  namespaced TypeScript model export, avoiding duplicate exports on regeneration.
+  Node 24.14.0 / pnpm 9.15.4 frozen install, code generation, generated package
+  TypeScript and API/frontend production builds passed. Full snapshot evidence
+  includes advisory URLs and before/after counts; no blanket advisory suppression.
 
 - F02/F12: shared current-record policy now enforces post audience, public/private
   account, mutual blocks, account suspension/deactivation and content rating.
