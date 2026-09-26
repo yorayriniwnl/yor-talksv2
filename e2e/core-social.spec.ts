@@ -55,6 +55,8 @@ async function json(route: Route, data: unknown, meta: Record<string, unknown> =
 }
 
 async function installApiBoundary(page: Page, profile = user) {
+  const unhandled: string[] = [];
+  page.on('close', () => expect(unhandled, 'Every mocked API route must be explicit').toEqual([]));
   await page.route("**/socket.io/**", (route) => route.abort());
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -65,6 +67,11 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, { accessToken: "browser-smoke-access-token" });
     }
     if (path === "/users/me" && request.method() === "GET") return json(route, profile);
+    if (path === "/users/me/premium-profile" && request.method() === "GET") return json(route, {
+      selection: { bioStyleId: 'default', messageFontId: 'default', storyFontId: 'default', appIconId: 'yor-default' },
+      options: { bioStyles: [{ id: 'default', label: 'Default' }], messageStyles: [{ id: 'default', label: 'Default' }], storyStyles: [{ id: 'default', label: 'Default' }], appIcons: [{ id: 'yor-default', label: 'Yor', platforms: ['web'] }] },
+      enabledFeatures: {},
+    });
     if (path === `/users/${user.id}`) return json(route, profile);
     if (path === "/users/search") return json(route, [user]);
     if (path === "/search") return json(route, { users: [], posts: [] });
@@ -81,9 +88,55 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, post(payload.content, "292d72b6-6bd1-4693-91e8-b4dc32302c7c"));
     }
 
-    return json(route, []);
+    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/communities', '/creator/workspace', '/achievements/me', `/users/${user.id}/following`, `/users/${user.id}/followers`, `/users/${user.id}/feed`, `/users/${user.id}/showcases`, `/users/${user.id}/profile-comments`, `/users/${user.id}/pinned-posts`];
+    if (request.method() === 'GET' && emptyLists.includes(path)) return json(route, []);
+    if (request.method() === 'GET' && ['/posts/liked', '/posts/saved'].includes(path)) return json(route, [], { hasMore: false, nextCursor: null });
+    if (request.method() === 'GET' && path === `/users/${user.id}/posts`) return json(route, [], { hasMore: false, nextCursor: null });
+    unhandled.push(`${request.method()} ${path}`);
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });
+    throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
 }
+
+test('two tabs serialize HttpOnly cookie rotation without dropping either restored session', async ({ page, context, baseURL }) => {
+  const second = await context.newPage();
+  await installApiBoundary(page);
+  await installApiBoundary(second);
+  await context.addCookies([{ name: 'testRefreshVersion', value: '0', url: baseURL!, httpOnly: true, sameSite: 'Lax' }]);
+  let version = 0, active = 0, maximum = 0, rotations = 0;
+  const rotate = async (route: Route) => {
+    active++; maximum = Math.max(maximum, active);
+    try {
+      expect(route.request().headers().cookie).toContain(`testRefreshVersion=${version}`);
+      // Keep one real browser request pending while the other tab starts.
+      await new Promise(resolve => setTimeout(resolve, 150));
+      rotations++; version++;
+      await route.fulfill({ status: 200, contentType: 'application/json',
+        headers: { 'Set-Cookie': `testRefreshVersion=${version}; HttpOnly; SameSite=Lax; Path=/` },
+        body: JSON.stringify({ success: true, data: { accessToken: `synthetic-access-${version}` } }) });
+    } finally { active--; }
+  };
+  await page.route('**/api/auth/refresh', rotate);
+  await second.route('**/api/auth/refresh', rotate);
+  await Promise.all([page.goto('/'), second.goto('/')]);
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(second.getByRole('heading', { name: 'Home' })).toBeVisible();
+  expect(rotations).toBe(2);
+  expect(maximum).toBe(1);
+  await second.close();
+});
+
+test('malformed optional Premium catalog leaves privacy controls usable and supports retry', async ({ page }) => {
+  await installApiBoundary(page);
+  let malformed = true;
+  await page.route('**/api/users/me/premium-profile', route => malformed ? json(route, []) : route.fallback());
+  await page.goto('/settings');
+  await expect(page.getByText('Your privacy settings remain available.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  malformed = false;
+  await page.getByRole('button', { name: 'Retry Premium options' }).click();
+  await expect(page.getByRole('combobox', { name: 'Bio style' })).toBeVisible();
+});
 
 test("restores the social shell, publishes a post, and navigates discovery", async ({ page }) => {
   await installApiBoundary(page);
@@ -227,7 +280,7 @@ test('sign-in validation focuses and describes the first invalid field', async (
   await installApiBoundary(page);
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+  await page.locator('#auth-form-panel').getByRole('button', { name: /^Sign in/ }).click();
   const identifier = page.getByLabel('Username or email');
   await expect(identifier).toBeFocused();
   await expect(identifier).toHaveAttribute('aria-invalid', 'true');
@@ -371,6 +424,7 @@ test('reel comments expose a retry and arrow keys in the comment field do not ch
   await comment.press('ArrowUp');
   await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Close comments' })).toBeHidden();
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
 });
@@ -445,6 +499,11 @@ test('profile achievements use earned server progress and never invent mutual fo
   await page.route('**/api/feed?*', (route) => json(route, [{ ...post('A known friend is not automatically a mutual follower.', 'friend-post'), authorId: friend.id }]));
   await page.route(`**/api/users/${friend.id}`, (route) => json(route, friend));
   await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
+  for (const id of [target.id, friend.id]) {
+    for (const surface of ['followers', 'following', 'feed', 'showcases', 'pinned-posts']) {
+      await page.route(`**/api/users/${id}/${surface}*`, route => json(route, []));
+    }
+  }
   await page.route('**/api/users/*/profile-comments', (route) => json(route, [{ id: 'wall-note', targetUserId: target.id, authorId: friend.id, author: friend, content: 'A note from a known friend.', createdAt: user.createdAt }]));
   await page.goto(`/profile/${user.id}`);
   await page.getByRole('button', { name: 'View level 2 achievements' }).click();
@@ -503,6 +562,11 @@ test('pending follows preserve existing relationships and favorites across reloa
   await installApiBoundary(page, profile);
   await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
   await page.route(`**/api/users/${followed.id}`, (route) => json(route, followed));
+  for (const id of [target.id, followed.id]) {
+    for (const surface of ['followers', 'following', 'feed', 'showcases', 'profile-comments', 'pinned-posts']) {
+      await page.route(`**/api/users/${id}/${surface}*`, route => json(route, []));
+    }
+  }
   await page.route('**/api/users/me/favorites/creators', (route) => json(route, [target.id]));
   await page.route(`**/api/users/${user.id}/following`, (route) => json(route, [followed]));
   await page.route(`**/api/users/${target.id}/follow`, (route) => {
@@ -597,7 +661,7 @@ test('settings expose only available notifications with accessible mobile contro
   await installApiBoundary(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/settings');
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(page.getByText('Push notifications are off for this beta', { exact: true })).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Push notifications' })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Profile visibility' })).toBeEnabled();

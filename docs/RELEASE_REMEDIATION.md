@@ -63,7 +63,7 @@ production evidence are separate categories.
 | F13 budgets | 300/IP/15m conflicts with fallback polling | Separate verified-user/IP budgets, backoff/jitter/visibility | Pending | NAT, tabs and outage regression |
 | F14 reliability | Main checks dependencies; candidate adds heartbeat but schema/lag needed | Bounded providers/cache, readiness, worker supervision, restore/rollback | Fresh Docker engine and isolated services | Failure injection, fresh restore and host monitoring |
 | F15 release | Main now contains Premium/pins; hardening has one unique commit | Intentional integration in isolated worktree | Conflict resolution and typecheck underway | One verified pushed SHA/PR and working CI |
-| F16 coverage | Historical tests stale; optional catalog can crash Settings | Correct fixtures, fail unhandled mocks, contain catalog failures | Pending | Full local matrix, production container and staging |
+| F16 coverage | Catalog assumptions crash Settings; permissive mocks concealed missing contracts | Validate optional catalog, retry independently; explicit route fixtures fail unexpected requests; correct intentional public field fixture | 32/32 Chromium desktop/mobile tests; 44/44 state tests; two-tab rotation and malformed catalog regressions pass | Expanded new-feature coverage, full API/container/migration matrix and real staging remain open |
 
 ## Migration and rollback protocol
 
@@ -78,6 +78,12 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F16: the current mocked Chromium suite passes 32/32, including mobile light/dark,
+  keyboard/accessibility, save failure/retry, block failure/retry, messaging,
+  legal pages, optional Premium catalog recovery and two real tabs serializing
+  cookie rotation. Unexpected mocked API requests now fail. This result is browser
+  fixture evidence, not a provider-backed purchase or staging journey.
 
 - F10: release migration `20260926-auth-1` adds `users.auth_version`, durable
   hashed reset credentials and a schema-version ledger. Token consumption,
