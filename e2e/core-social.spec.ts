@@ -100,6 +100,41 @@ async function installApiBoundary(page: Page, profile = user) {
 
 const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
   features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
+
+for (const width of [390, 1280]) test(`Creator billing recovery and cancellation at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await installApiBoundary(page);
+  let items = [{ checkoutId: '1eb84e0d-9bdb-4fca-8fe4-12f5ea0d727b', product: 'membership', providerOrderId: null,
+    status: 'provider_pending', providerState: 'creation_unknown', lastPaymentStatus: null, amountMinor: 4900, currency: 'INR',
+    createdAt: '2026-09-26T12:00:00.000Z', subscriptionId: '8a8c7e60-9af3-40e5-ac25-1988b7980da2', keyId: 'rzp_test_browser' }];
+  let cancellations = 0;
+  await page.route('**/api/billing/checkouts**', async route => {
+    const path = new URL(route.request().url()).pathname, method = route.request().method();
+    if (path === '/api/billing/checkouts' && method === 'GET') return json(route, items);
+    if (path.endsWith('/recover') && method === 'POST') { items = items.map(item => ({ ...item, status: 'paid', providerState: 'created' })); return json(route, items); }
+    if (path.endsWith('/cancel') && method === 'POST') { cancellations++; return json(route, items); }
+    throw new Error(`Unexpected checkout fixture request: ${method} ${path}`);
+  });
+  await page.goto('/billing');
+  await expect(page.getByRole('heading', { name: 'Payment history', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue payment' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Recover payment status' }).click();
+  await expect(page.getByText('paid', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'End membership at expiry' }).click();
+  await expect.poll(() => cancellations).toBe(1);
+  await expect(page.getByRole('link', { name: 'Yor Premium plans and billing' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+});
+
+test('Creator billing contains malformed history and retries', async ({ page }) => {
+  await installApiBoundary(page); let calls = 0;
+  await page.route('**/api/billing/checkouts', route => json(route, ++calls === 1 ? [{ product: 'wrong' }] : []));
+  await page.goto('/billing');
+  await expect(page.getByRole('alert').filter({ hasText: 'could not load' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry history' }).click();
+  await expect(page.getByText('No creator payments yet.')).toBeVisible();
+});
 const premiumOrder = { id: '962a9d20-cbe9-45ef-873b-772eaa991670', providerOrderId: 'order_browserSynthetic', amountMinor: 19900, currency: 'INR',
   status: 'created', lastPaymentStatus: null as string | null, createdAt: '2026-09-26T00:00:00.000Z', paidAt: null as string | null, plan: premiumPlan, keyId: 'rzp_test_browser' };
 function premiumState(status: string) {

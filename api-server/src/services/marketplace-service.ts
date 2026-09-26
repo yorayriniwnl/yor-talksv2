@@ -8,6 +8,7 @@ import { RazorpayService } from "./razorpay-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { toMinorUnits } from "../lib/money.js";
 import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
+import { CheckoutIntentService, checkoutHash, lockPaymentParties, paymentTransaction } from './checkout-intent-service.js';
 
 export class MarketplaceRequestError extends Error {}
 export class MarketplaceOrderNotFoundError extends Error {}
@@ -23,7 +24,8 @@ export class MarketplaceService {
     const now = new Date().toISOString();
     const expired = await db.select({ id: marketplaceOrdersTable.id, productId: marketplaceOrdersTable.productId })
       .from(marketplaceOrdersTable)
-      .where(and(inArray(marketplaceOrdersTable.status, ["created", "provider_pending"]), lt(marketplaceOrdersTable.reservationExpiresAt, now)));
+      .where(and(inArray(marketplaceOrdersTable.status, ["created", "provider_pending"]), lt(marketplaceOrdersTable.reservationExpiresAt, now)))
+      .orderBy(marketplaceOrdersTable.reservationExpiresAt).limit(100);
     if (expired.length === 0) return;
     await db.transaction(async (tx) => {
       for (const order of expired) {
@@ -47,6 +49,7 @@ export class MarketplaceService {
     shippingName: string;
     shippingAddress: string;
     shippingPhone?: string;
+    idempotencyKey?: string;
   }) {
     this.razorpay.assertConfigured();
     await this.releaseExpiredReservations();
@@ -55,87 +58,36 @@ export class MarketplaceService {
     if (!(await this.contentSafetyService.isVisible(product, input.buyerId, product.sellerId))) {
       throw new MarketplaceRequestError("This listing is not available for your account");
     }
-    if (product.availability !== "active") throw new MarketplaceRequestError("This listing is no longer available");
     if (product.sellerId === input.buyerId) throw new MarketplaceRequestError("You cannot purchase your own listing");
-
-    const [buyer, seller] = await Promise.all([
-      db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, input.buyerId)),
-      db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, product.sellerId)),
-    ]);
-    if (!buyer[0] || !seller[0]) throw new MarketplaceRequestError("The buyer or seller account was not found");
 
     const amountMinor = toMinorUnits(Number(product.price));
     if (!amountMinor || amountMinor < 100) throw new MarketplaceRequestError("This listing has an invalid price");
 
-    const orderId = randomUUID();
-    const pendingProviderOrderId = `pending_${orderId.replaceAll("-", "")}`;
-    await db.transaction(async (tx) => {
-      const [reserved] = await tx.update(productsTable).set({ availability: "reserved" }).where(and(
-        eq(productsTable.id, input.productId),
-        eq(productsTable.availability, "active"),
-      )).returning({ id: productsTable.id });
-      if (!reserved) throw new MarketplaceRequestError("This listing was just reserved by another buyer");
-      await tx.insert(marketplaceOrdersTable).values({
-        id: orderId,
-        productId: input.productId,
-        buyerId: input.buyerId,
-        sellerId: product.sellerId,
-        provider: "razorpay",
-        providerOrderId: pendingProviderOrderId,
-        amountMinor,
-        currency: "INR",
-        status: "provider_pending",
-        shippingName: input.shippingName,
-        shippingAddress: input.shippingAddress,
-        shippingPhone: input.shippingPhone || null,
-        reservationExpiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      });
+    const intents = new CheckoutIntentService(this.razorpay), key = input.idempotencyKey ?? randomUUID();
+    const hash = checkoutHash([input.productId,input.shippingName,input.shippingAddress,input.shippingPhone ?? null]);
+    const reserved = await paymentTransaction(async client => {
+      await lockPaymentParties(client, [input.buyerId,product.sellerId]);
+      const existing = await intents.findRepeat(client, 'marketplace', input.buyerId, key, hash);
+      if (existing) return { intent: existing, created: false };
+      const reservation = await client.query(`UPDATE products SET availability='reserved' WHERE id=$1 AND availability='active' AND price=$2 AND seller_id=$3 RETURNING id`, [input.productId,product.price,product.sellerId]);
+      if (!reservation.rowCount) throw new MarketplaceRequestError('This listing was reserved or its price changed. Review it before retrying.');
+      const id = randomUUID();
+      await client.query(`INSERT INTO marketplace_orders(id,product_id,buyer_id,seller_id,provider_order_id,amount_minor,status,shipping_name,shipping_address,shipping_phone,reservation_expires_at,product_snapshot)
+        VALUES($1,$2,$3,$4,$5,$6,'provider_pending',$7,$8,$9,timezone('UTC',now())+interval '15 minutes',$10)`,
+      [id,input.productId,input.buyerId,product.sellerId,`pending_${id.replaceAll('-','')}`,amountMinor,input.shippingName,input.shippingAddress,input.shippingPhone ?? null,{ id: product.id, title: product.title }]);
+      return { intent: await intents.reserve(client, { id, product: 'marketplace', ownerId: input.buyerId, key, hash, amountMinor }), created: true };
     });
-
-    let providerOrder;
-    try {
-      providerOrder = await this.razorpay.createOrder({
-        amountMinor,
-        receipt: this.razorpay.createReceipt(),
-        notes: { type: "marketplace_purchase", orderId, productId: input.productId, buyerId: input.buyerId, sellerId: product.sellerId },
-      });
-    } catch (error) {
-      await db.transaction(async (tx) => {
-        await tx.update(marketplaceOrdersTable).set({ status: "failed" }).where(and(eq(marketplaceOrdersTable.id, orderId), eq(marketplaceOrdersTable.status, "provider_pending")));
-        await tx.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, input.productId), eq(productsTable.availability, "reserved")));
-      });
-      throw error;
-    }
-
-    await db.update(marketplaceOrdersTable).set({ providerOrderId: providerOrder.id, status: "created" }).where(and(
-      eq(marketplaceOrdersTable.id, orderId),
-      eq(marketplaceOrdersTable.providerOrderId, pendingProviderOrderId),
-      eq(marketplaceOrdersTable.status, "provider_pending"),
-    ));
-
-    return {
-      orderId,
-      providerOrderId: providerOrder.id,
-      amountMinor,
-      currency: "INR",
-      keyId: env.RAZORPAY_KEY_ID,
-    };
+    const intent = reserved.created ? await intents.createRemote(reserved.intent) : reserved.intent;
+    return { ...await intents.publicState(intent), orderId: intent.id };
   }
 
   async verifyPayment(input: { buyerId: string; providerOrderId: string; paymentId: string; signature: string }) {
+    this.razorpay.assertConfigured();
     const [order] = await db.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.providerOrderId, input.providerOrderId));
     if (!order) throw new MarketplaceOrderNotFoundError("Marketplace payment order not found");
     if (order.buyerId !== input.buyerId) throw new MarketplaceOrderForbiddenError("This marketplace payment is not yours");
-    if (order.status === "paid" || order.status === "fulfilled") return order as MarketplaceOrderRecord;
-    if (order.status !== "created") throw new MarketplaceRequestError("This marketplace payment is no longer payable");
-
     if (!this.razorpay.verifySignature(order.providerOrderId, input.paymentId, input.signature)) throw new MarketplaceRequestError("Marketplace payment signature could not be verified");
-    const payment = await this.razorpay.getPayment(input.paymentId);
-    if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor || payment.currency !== order.currency || payment.status !== "captured") {
-      throw new MarketplaceRequestError("The marketplace payment was not captured for this order");
-    }
-
-    return this.settleCapturedOrder(order.id, input.paymentId, input.signature);
+    return this.reconcileCapturedPayment({ orderId: input.providerOrderId, paymentId: input.paymentId });
   }
 
   async hasProviderOrder(orderId: string): Promise<boolean> {
@@ -152,15 +104,22 @@ export class MarketplaceService {
 
   async reconcileCapturedPayment(input: CapturedPaymentInput) {
     this.razorpay.assertConfigured();
+    await this.releaseExpiredReservations();
     const [order] = await db.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.providerOrderId, input.orderId));
     if (!order) throw new MarketplaceOrderNotFoundError("Marketplace payment order not found");
+    const intents = new CheckoutIntentService(this.razorpay);
+    await intents.ensureProviderOrder(await intents.get(order.id));
     const payment = await this.razorpay.getPayment(input.paymentId);
     if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
       || payment.currency !== order.currency || !["captured", "refunded"].includes(payment.status)) {
       throw new MarketplaceRequestError("The marketplace payment was not captured for this order");
     }
-    return this.settleCapturedOrder(order.id, input.paymentId);
+    return this.settleCapturedOrder(order.id, input.paymentId, payment.status === 'captured');
   }
+
+  async reconcileFailedPayment(input: CapturedPaymentInput) { return new CheckoutIntentService(this.razorpay).failedAttempt('marketplace', input); }
+
+  async recoverProviderOrder(order: Awaited<ReturnType<RazorpayService['getOrder']>>) { return new CheckoutIntentService(this.razorpay).recoverProviderOrder('marketplace', order); }
 
   async reconcileRefund(input: ProcessedRefundInput): Promise<boolean> {
     const [order] = await db.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.providerPaymentId, input.paymentId));
@@ -178,19 +137,20 @@ export class MarketplaceService {
         if (existingRefund.amountMinor !== input.amountMinor) throw new MarketplaceRequestError("Refund id was already recorded with a different amount");
         return;
       }
-      if (!(["paid", "fulfilled", "refund_required", "refunded"] as string[]).includes(lockedOrder.status)) {
+      if (!(["paid", "fulfilled", "refund_required", "refunded", "disputed"] as string[]).includes(lockedOrder.status)) {
         throw new MarketplaceRequestError("Only a settled marketplace order can be refunded");
       }
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
-        .where(like(ledgerTransactionsTable.referenceId, `${prefix}%`));
+        .where(sql`starts_with(${ledgerTransactionsTable.referenceId},${prefix})`);
       const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
       if (nextRefundedTotal > lockedOrder.amountMinor) throw new MarketplaceRequestError("Refunds exceed the original marketplace amount");
 
+      const [capturedLedger] = await tx.select({ credited: ledgerTransactionsTable.creditAccountId }).from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, `marketplace:${lockedOrder.providerOrderId}`));
       await tx.insert(ledgerTransactionsTable).values({
         id: randomUUID(),
         creditAccountId: null,
-        debitAccountId: lockedOrder.status === "refund_required" ? null : lockedOrder.sellerId,
+        debitAccountId: capturedLedger?.credited ?? null,
         amountMinor: input.amountMinor,
         currency: lockedOrder.currency,
         referenceId,
@@ -199,7 +159,7 @@ export class MarketplaceService {
       if (nextRefundedTotal === lockedOrder.amountMinor) {
         await tx.update(marketplaceOrdersTable).set({ status: "refunded" }).where(and(
           eq(marketplaceOrdersTable.id, lockedOrder.id),
-          inArray(marketplaceOrdersTable.status, ["paid", "fulfilled", "refund_required"]),
+          inArray(marketplaceOrdersTable.status, ["paid", "fulfilled", "refund_required", "disputed"]),
         ));
       }
     });
@@ -211,7 +171,7 @@ export class MarketplaceService {
       && input.amountMinor <= amountMinor && (!input.currency || input.currency === currency);
   }
 
-  private async settleCapturedOrder(orderId: string, paymentId: string, signature?: string): Promise<MarketplaceOrderRecord> {
+  private async settleCapturedOrder(orderId: string, paymentId: string, captured: boolean): Promise<MarketplaceOrderRecord> {
     return db.transaction(async (tx) => {
       const [lockedOrder] = await tx.select().from(marketplaceOrdersTable).where(eq(marketplaceOrdersTable.id, orderId)).for("update");
       if (!lockedOrder) throw new MarketplaceOrderNotFoundError("Marketplace payment order not found");
@@ -227,15 +187,19 @@ export class MarketplaceService {
       if (lockedOrder.status === "refund_required" && lockedOrder.providerPaymentId === paymentId) {
         return lockedOrder as MarketplaceOrderRecord;
       }
-      if (lockedOrder.status === "cancelled" || lockedOrder.status === "failed" || !lockedOrder.productId || !lockedOrder.sellerId || !lockedOrder.buyerId) {
+      if (!captured || lockedOrder.status === "cancelled" || lockedOrder.status === "failed" || !lockedOrder.productId || !lockedOrder.sellerId || !lockedOrder.buyerId) {
         const [latePayment] = await tx.update(marketplaceOrdersTable).set({
           providerPaymentId: paymentId,
-          providerSignature: signature ?? null,
+          providerSignature: null,
           status: "refund_required",
           paidAt: new Date().toISOString(),
         }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), inArray(marketplaceOrdersTable.status, ["created", "cancelled", "failed"])))
           .returning();
         if (!latePayment) throw new MarketplaceRequestError("Late marketplace payment could not be queued for refund");
+        await tx.insert(ledgerTransactionsTable).values({ id: randomUUID(), creditAccountId: null, debitAccountId: null,
+          amountMinor: lockedOrder.amountMinor, currency: lockedOrder.currency, referenceId, status: 'completed' });
+        // A cancelled order may now have a different buyer's reservation.
+        if (lockedOrder.status === 'created' && lockedOrder.productId) await tx.update(productsTable).set({ availability: 'active' }).where(and(eq(productsTable.id, lockedOrder.productId),eq(productsTable.availability,'reserved')));
         return latePayment as MarketplaceOrderRecord;
       }
       if (lockedOrder.status !== "created") throw new MarketplaceRequestError("This marketplace payment is no longer payable");
@@ -243,7 +207,7 @@ export class MarketplaceService {
       const paidAt = new Date().toISOString();
       const [updatedOrder] = await tx.update(marketplaceOrdersTable).set({
         providerPaymentId: paymentId,
-        providerSignature: signature ?? null,
+        providerSignature: null,
         status: "paid",
         paidAt,
       }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), eq(marketplaceOrdersTable.status, "created"))).returning();
@@ -292,14 +256,16 @@ export class MarketplaceService {
   }
 
   async cancelOrder(orderId: string, buyerId: string) {
-    const [order] = await db.update(marketplaceOrdersTable).set({ status: "cancelled" }).where(and(
-      eq(marketplaceOrdersTable.id, orderId),
-      eq(marketplaceOrdersTable.buyerId, buyerId),
-      eq(marketplaceOrdersTable.status, "created"),
-    )).returning();
-    if (!order) throw new MarketplaceRequestError("Only an unpaid order can be cancelled");
-    if (order.productId) await db.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, order.productId), eq(productsTable.availability, "reserved")));
-    return order as MarketplaceOrderRecord;
+    return db.transaction(async tx => {
+      const [current] = await tx.select().from(marketplaceOrdersTable).where(and(eq(marketplaceOrdersTable.id, orderId), eq(marketplaceOrdersTable.buyerId, buyerId))).for('update');
+      if (current?.status === 'cancelled') return current as MarketplaceOrderRecord;
+      const [order] = await tx.update(marketplaceOrdersTable).set({ status: "cancelled" }).where(and(
+        eq(marketplaceOrdersTable.id, orderId), eq(marketplaceOrdersTable.buyerId, buyerId), inArray(marketplaceOrdersTable.status, ['provider_pending','created']),
+      )).returning();
+      if (!order) throw new MarketplaceRequestError("Only an unpaid order can be cancelled");
+      if (order.productId) await tx.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, order.productId), eq(productsTable.availability, "reserved")));
+      return order as MarketplaceOrderRecord;
+    });
   }
 
   async fulfillOrder(orderId: string, sellerId: string) {

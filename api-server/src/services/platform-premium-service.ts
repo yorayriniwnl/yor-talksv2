@@ -17,6 +17,7 @@ interface PremiumOrder {
   provider_order_id: string | null; provider_payment_id: string | null; receipt: string;
   amount_minor: number; currency: string; status: string; created_at: Date; paid_at: Date | null;
   last_payment_status: string | null;
+  refund_cursor: number;
 }
 async function transaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
@@ -118,9 +119,10 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
     return this.state(userId);
   }
 
-  async reconcileOrder(id: string): Promise<boolean> {
+  async reconcileOrder(id: string): Promise<number> {
+    if (!env.PAYMENTS_ENABLED) return 3600;
     let order = (await pool.query<PremiumOrder>('SELECT * FROM premium_orders WHERE id=$1', [id])).rows[0];
-    if (!order || ['refunded','disputed','refund_required','expired'].includes(order.status)) return true;
+    if (!order) return 86400;
     if (!order.provider_order_id) {
       const provider = await this.razorpay.findOrderByReceipt(order.receipt);
       if (!provider) throw new PaymentProviderError('Provider creation is unresolved; retained for reconciliation');
@@ -129,13 +131,19 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
     }
     const payments = await this.razorpay.getOrderPayments(order.provider_order_id!);
     if (!payments.length) {
-      if (['paid','failed'].includes(order.status)) return true;
-      if (Date.now() - new Date(order.created_at).getTime() < 24 * 60 * 60 * 1000) return false;
+      if (['paid','failed'].includes(order.status)) return 86400;
+      if (Date.now() - new Date(order.created_at).getTime() < 24 * 60 * 60 * 1000) return 300;
       await pool.query(`UPDATE premium_orders SET status='expired',updated_at=now() WHERE id=$1 AND status IN ('created','cancelled')`, [id]);
-      return true;
+      return 86400;
     }
-    for (const payment of payments) await this.reconcileCapturedPayment({ orderId: order.provider_order_id!, paymentId: payment.id });
-    return true;
+    for (const payment of payments) {
+      await this.reconcileCapturedPayment({ orderId: order.provider_order_id!, paymentId: payment.id });
+      const refunds = await this.razorpay.getPaymentRefunds(payment.id, order.refund_cursor);
+      for (const refund of refunds) if (refund.status === 'processed') await this.reconcileRefund({ id: refund.id, paymentId: payment.id, amountMinor: refund.amount, currency: refund.currency });
+      await pool.query('UPDATE premium_orders SET refund_cursor=$2 WHERE id=$1 AND refund_cursor=$3', [order.id, refunds.length === 100 ? order.refund_cursor + 100 : 0, order.refund_cursor]);
+      if (refunds.length === 100) return 5;
+    }
+    return 86400;
   }
 
   async hasProviderOrder(orderId: string) { return (await pool.query('SELECT 1 FROM premium_orders WHERE provider_order_id=$1', [orderId])).rowCount === 1; }

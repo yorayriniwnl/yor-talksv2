@@ -36,6 +36,8 @@ export * from './postAuthResetPasswordBody';
 export * from './postAuthResetPasswordConfirmBody';
 export * from './postAuthVerifyEmailResendBody';
 export * from './postAuthVerifyEmailResendPublicBody';
+export * from './postBillingCheckoutsByCheckoutIdCancelBody';
+export * from './postBillingCheckoutsByCheckoutIdRecoverBody';
 export * from './postBroadcastChannelsBody';
 export * from './postBroadcastChannelsByIdJoinBody';
 export * from './postBroadcastChannelsByIdMessagesBody';

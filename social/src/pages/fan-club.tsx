@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
+import { loadRazorpayCheckout } from '@/lib/razorpay-checkout';
+import { useEffect, useRef, useState } from 'react';
+import { useSearch } from 'wouter';
 import { Crown, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -17,11 +18,7 @@ interface FanTier {
   popular?: boolean;
 }
 
-const FALLBACK_TIERS: FanTier[] = [
-  { id: 'chai', name: 'Desi Chai Club', price: 49, badge: '☕', color: 'from-amber-500 to-orange-500', perks: ['Custom member badge', 'Members-only posts', 'VIP live chat'] },
-  { id: 'elite', name: 'Squad Elite Warrior', price: 199, badge: '⚡', color: 'from-cyan-500 to-blue-600', popular: true, perks: ['Everything in Chai Club', 'Early access to creator drops', 'Vote on creator content'] },
-  { id: 'vip', name: 'Maha Maharaja VIP', price: 999, badge: '👑', color: 'from-purple-500 to-pink-600', perks: ['Everything in Elite Warrior', 'Priority community access', 'Monthly creator session'] },
-];
+const TIER_COLORS = ['from-amber-500 to-orange-500', 'from-cyan-500 to-blue-600', 'from-purple-500 to-pink-600'];
 
 function mergeTiers(remote: BackendSubscriptionTier[]): FanTier[] {
   return remote.map((tier, index) => ({
@@ -29,58 +26,33 @@ function mergeTiers(remote: BackendSubscriptionTier[]): FanTier[] {
     name: tier.name,
     price: tier.priceMinor / 100,
     badge: tier.badge,
-    color: FALLBACK_TIERS[index]?.color ?? 'from-violet-500 to-fuchsia-500',
+    color: TIER_COLORS[index] ?? 'from-violet-500 to-fuchsia-500',
     perks: tier.perks,
     popular: tier.id === 'elite',
   }));
 }
 
-type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
-
-function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
-  const existing = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-  if (existing) return Promise.resolve(existing);
-  return new Promise((resolve, reject) => {
-    const current = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
-    const finish = () => {
-      const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-      checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
-    };
-    if (current) {
-      current.addEventListener('load', finish, { once: true });
-      current.addEventListener('error', () => reject(new Error('Razorpay Checkout could not load')), { once: true });
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.dataset.razorpayCheckout = 'true';
-    script.onload = finish;
-    script.onerror = () => reject(new Error('Razorpay Checkout could not load'));
-    document.body.appendChild(script);
-  });
-}
 
 export default function FanClubSubscriptions() {
-  const [location] = useLocation();
-  const creatorId = new URLSearchParams(location.split('?')[1] ?? '').get('creatorId') ?? '';
+  const search = useSearch();
+  const creatorId = new URLSearchParams(search).get('creatorId') ?? '';
   const [creator, setCreator] = useState<BackendUser | null>(null);
-  const [tiers, setTiers] = useState<FanTier[]>(FALLBACK_TIERS);
+  const [tiers, setTiers] = useState<FanTier[]>([]);
   const [subscriptions, setSubscriptions] = useState<BackendSubscription[]>([]);
   const [payingTier, setPayingTier] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const checkoutKey = useRef(crypto.randomUUID());
 
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (!creatorId) {
-      setCreator(null);
-      return;
-    }
-    void Promise.all([
-      api.getProfile(creatorId).then(setCreator),
-      api.getSubscriptionTiers(creatorId).then((remote) => setTiers(mergeTiers(remote))).catch(() => setTiers(FALLBACK_TIERS)),
-      api.getMySubscriptions().then(setSubscriptions).catch(() => setSubscriptions([])),
-    ]);
-  }, [creatorId]);
+    let cancelled = false;
+    setTiers([]); setError('');
+    if (!creatorId) { setCreator(null); return; }
+    void Promise.all([api.getProfile(creatorId), api.getSubscriptionTiers(creatorId), api.getMySubscriptions()])
+      .then(([profile, remote, memberships]) => { if (!cancelled) { setCreator(profile); setTiers(mergeTiers(remote)); setSubscriptions(memberships); } })
+      .catch(() => { if (!cancelled) setError('Membership details could not load. Retry to see current prices and status.'); });
+    return () => { cancelled = true; };
+  }, [creatorId, attempt]);
 
   const activeMembership = subscriptions.find((subscription) => subscription.creatorId === creatorId && subscription.status === 'active' && (!subscription.expiresAt || new Date(subscription.expiresAt) > new Date()));
 
@@ -96,7 +68,8 @@ export default function FanClubSubscriptions() {
     setPayingTier(tier.id);
     setError('');
     try {
-      const order = await api.createSubscriptionOrder({ creatorId, tier: tier.id });
+      const order = await api.createSubscriptionOrder({ idempotencyKey: checkoutKey.current, creatorId, tier: tier.id });
+      if (!order.providerOrderId || order.status !== 'created') throw new Error('This checkout is saved. Open payment history to recover or cancel it before starting another payment.');
       const Razorpay = await loadRazorpayCheckout();
       const checkout = new Razorpay({
         key: order.keyId,
@@ -108,11 +81,13 @@ export default function FanClubSubscriptions() {
         theme: { color: '#8b5cf6' },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
-            await api.verifySubscriptionPayment(order.subscriptionId, {
+            const result = await api.verifySubscriptionPayment(order.subscriptionId, {
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
+            if (result.status !== 'active') throw new Error('Payment needs review. See payment history for its current status.');
+            checkoutKey.current = crypto.randomUUID();
             toast.success('Membership activated for 30 days');
             setSubscriptions(await api.getMySubscriptions());
           } catch (verificationError) {
@@ -125,6 +100,7 @@ export default function FanClubSubscriptions() {
         },
         modal: { ondismiss: () => setPayingTier(null) },
       });
+      checkout.on?.('payment.failed', () => { setError('Payment attempt failed. You can retry the same checkout or recover it in payment history.'); setPayingTier(null); });
       checkout.open();
     } catch (paymentError) {
       const message = paymentError instanceof Error ? paymentError.message : 'Membership payment could not be started';
@@ -139,7 +115,7 @@ export default function FanClubSubscriptions() {
     try {
       await api.cancelSubscription(activeMembership.id);
       setSubscriptions(await api.getMySubscriptions());
-      toast.success('Membership cancelled');
+      toast.success('Cancellation saved. Your paid membership lasts until its displayed expiry; it will not renew automatically.');
     } catch (cancelError) {
       toast.error(cancelError instanceof Error ? cancelError.message : 'Membership could not be cancelled');
     }
@@ -159,17 +135,18 @@ export default function FanClubSubscriptions() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+          <a href="/billing" className="text-sm text-primary underline">Payment history and recovery</a>
         {!creatorId && <div className="surface-1 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-sm">Open a creator profile and choose Fan Club to select who you want to support. Membership access is granted only after the payment provider confirms a captured payment.</div>}
         {!publicBetaConfig.paymentsEnabled && <div className="surface-1 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-sm text-amber-100">Membership checkout is paused for this beta while payment settlement and support operations are completed.</div>}
-        {error && <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
-        {activeMembership && <div className="surface-1 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-mono uppercase text-emerald-300">Active membership</p><p className="font-display font-bold">{activeMembership.tier} · valid until {new Date(activeMembership.expiresAt ?? '').toLocaleDateString()}</p></div><Button variant="outline" onClick={() => void cancelMembership()} className="rounded-xl text-xs font-bold">Cancel membership</Button></div>}
+        {error && <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{error} <button className="underline" onClick={() => setAttempt(value => value + 1)}>Retry details</button></div>}
+        {activeMembership && <div className="surface-1 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 p-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-mono uppercase text-emerald-300">Active membership</p><p className="font-display font-bold">{activeMembership.tier} · valid until {new Date(activeMembership.expiresAt ?? '').toLocaleDateString()}</p></div><Button variant="outline" disabled={activeMembership.cancelAtPeriodEnd} onClick={() => void cancelMembership()} className="rounded-xl text-xs font-bold">{activeMembership.cancelAtPeriodEnd ? 'Ends at expiry' : 'Cancel membership'}</Button></div>}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {tiers.map((tier) => <div key={tier.id} className={cn('surface-1 rounded-3xl p-6 sm:p-7 border flex flex-col justify-between shadow-xl relative transition-all border-border/40', tier.popular && 'border-primary ring-2 ring-primary/30')}>
-            {tier.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[0.65rem] font-mono font-bold bg-primary text-primary-foreground uppercase shadow-md">MOST POPULAR</span>}
+            {tier.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[0.65rem] font-mono font-bold bg-primary text-primary-foreground uppercase shadow-md">SUPPORT TIER</span>}
             <div className="space-y-4">
               <div className="flex items-center justify-between"><div className={cn('w-12 h-12 rounded-2xl bg-gradient-to-tr text-2xl flex items-center justify-center shadow-md', tier.color)}>{tier.badge}</div><div className="text-right"><span className="text-xs font-mono text-muted-foreground">30-day pass</span><div className="font-display font-black text-2xl">₹{tier.price}</div></div></div>
-              <div><h3 className="font-display font-bold text-lg">{tier.name}</h3><p className="text-xs text-muted-foreground font-mono mt-0.5">Cancel before the next purchase anytime</p></div>
+              <div><h3 className="font-display font-bold text-lg">{tier.name}</h3><p className="text-xs text-muted-foreground font-mono mt-0.5">One payment for 30 days. No automatic renewal.</p></div>
               <ul className="space-y-2.5 pt-4 border-t border-border/30 text-xs"><li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /><span>Access is granted only after server verification</span></li>{tier.perks.map((perk) => <li key={perk} className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /><span>{perk}</span></li>)}</ul>
             </div>
             <div className="pt-6"><Button onClick={() => void handleSubscribe(tier)} disabled={!publicBetaConfig.paymentsEnabled || Boolean(payingTier) || Boolean(activeMembership) || !creatorId} className={cn('w-full rounded-2xl font-bold text-xs h-11 shadow-lg', tier.popular ? 'bg-primary text-primary-foreground glow-neon-primary' : 'bg-muted/40 hover:bg-muted text-foreground')}>{payingTier === tier.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : activeMembership ? 'Membership active' : !publicBetaConfig.paymentsEnabled ? 'Payments paused' : creatorId ? `Join for ₹${tier.price}` : 'Select a creator first'}</Button></div>

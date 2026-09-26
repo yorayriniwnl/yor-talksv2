@@ -63,6 +63,10 @@ export type PostAuthVerifyEmailResendBody = { [key: string]: unknown };
 
 export type PostAuthVerifyEmailResendPublicBody = { [key: string]: unknown };
 
+export type PostBillingCheckoutsByCheckoutIdCancelBody = { [key: string]: unknown };
+
+export type PostBillingCheckoutsByCheckoutIdRecoverBody = { [key: string]: unknown };
+
 export type PostBroadcastChannelsBody = { [key: string]: unknown };
 
 export type PostBroadcastChannelsByIdJoinBody = { [key: string]: unknown };

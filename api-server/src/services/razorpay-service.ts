@@ -135,8 +135,19 @@ export class RazorpayService {
     this.assertConfigured();
     const response = await fetchWithTimeout(`${RAZORPAY_API}/orders/${encodeURIComponent(orderId)}/payments`, { headers: { Authorization: authorizationHeader() } }, 12_000);
     const result = await parseProviderResponse<{ items: RazorpayPayment[] }>(response);
-    if (!Array.isArray(result?.items)) throw new PaymentProviderError('Invalid provider payments list');
-    return result.items.filter(payment => payment.order_id === orderId && ['captured', 'refunded'].includes(payment.status));
+    if (!Array.isArray(result?.items) || result.items.some(payment => !payment || typeof payment.id !== 'string'
+      || payment.order_id !== orderId || !Number.isSafeInteger(payment.amount) || payment.amount < 0
+      || typeof payment.currency !== 'string' || typeof payment.status !== 'string')) throw new PaymentProviderError('Invalid provider payments list');
+    return result.items.filter(payment => ['captured', 'refunded'].includes(payment.status));
+  }
+
+  async getPaymentRefunds(paymentId: string, skip = 0): Promise<Array<{ id: string; payment_id: string; amount: number; currency: string; status: string }>> {
+    this.assertConfigured();
+    if (!Number.isSafeInteger(skip) || skip < 0) throw new PaymentProviderError('Invalid refund cursor');
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}/refunds?count=100&skip=${skip}`, { headers: { Authorization: authorizationHeader() } }, 12_000);
+    const result = await parseProviderResponse<{ items: Array<{ id: string; payment_id: string; amount: number; currency: string; status: string }> }>(response);
+    if (!Array.isArray(result?.items) || result.items.length > 100 || result.items.some(refund => !refund || typeof refund.id !== 'string' || refund.payment_id !== paymentId || !Number.isSafeInteger(refund.amount) || refund.amount <= 0 || refund.currency !== 'INR' || typeof refund.status !== 'string')) throw new PaymentProviderError('Invalid provider refund response');
+    return result.items;
   }
 
   verifySignature(orderId: string, paymentId: string, signature: string): boolean {

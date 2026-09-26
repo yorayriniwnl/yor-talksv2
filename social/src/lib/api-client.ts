@@ -5,6 +5,7 @@
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
 import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
+import { parseCheckoutHistory } from './checkout-contract';
 
 export interface Tokens {
   accessToken: string;
@@ -483,12 +484,19 @@ export interface BackendSubscriptionTier {
   perks: string[];
 }
 
+export interface CheckoutState {
+  checkoutId: string; product: 'tip' | 'membership' | 'marketplace'; providerOrderId: string | null;
+  status: string; providerState: string; lastPaymentStatus: string | null; amountMinor: number; currency: string; createdAt: string;
+  subscriptionId?: string | null; keyId: string;
+}
+
 export interface BackendSubscription {
   id: string;
   subscriberId: string;
   creatorId: string;
   tier: string;
-  status: 'pending' | 'active' | 'expired' | 'cancelled';
+  status: 'pending' | 'active' | 'expired' | 'cancelled' | 'refunded' | 'refund_required' | 'disputed';
+  cancelAtPeriodEnd: boolean;
   priceMinor: number;
   currency: string;
   startedAt: string;
@@ -811,20 +819,23 @@ export const api = {
   deleteNote: (id: string) => request<null>(`/notes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // ---- Economy ----
+  getCheckouts: () => request<CheckoutState[]>('/billing/checkouts').then(parseCheckoutHistory),
+  recoverCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/recover`, { method: 'POST' }).then(parseCheckoutHistory),
+  cancelCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/cancel`, { method: 'POST' }).then(parseCheckoutHistory),
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
-  createTipOrder: (payload: { creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
-    request<{ orderId: string; amountMinor: number; currency: string; keyId: string }>('/economy/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  createTipOrder: (payload: { idempotencyKey: string; creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
+    request<CheckoutState & { orderId: string | null }>('/economy/orders', { method: 'POST', body: JSON.stringify(payload) }),
   verifyTipPayment: (orderId: string, payload: { paymentId: string; signature: string }) =>
-    request<{ transactionId: string; status: 'paid' }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
-  sendSuperchat: (payload: { streamId: string; creatorId: string; amountMinor: number; message: string }) =>
-    request<{ transactionId: string }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
+    request<{ transactionId: string; status: string }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+  sendSuperchat: (payload: { idempotencyKey: string; streamId: string; creatorId: string; amountMinor: number; message: string }) =>
+    request<CheckoutState & { orderId: string | null }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
 
   // ---- Creator memberships ----
   getSubscriptionTiers: (creatorId: string) => request<BackendSubscriptionTier[]>(`/subscriptions/tiers/${encodeURIComponent(creatorId)}`),
-  createSubscriptionOrder: (payload: { creatorId: string; tier: BackendSubscriptionTier['id'] }) =>
-    request<{ subscriptionId: string; orderId: string; amountMinor: number; currency: string; keyId: string; tier: string }>('/subscriptions/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
+  createSubscriptionOrder: (payload: { idempotencyKey: string; creatorId: string; tier: BackendSubscriptionTier['id'] }) =>
+    request<CheckoutState & { subscriptionId: string; orderId: string | null; tier: string }>('/subscriptions/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
   verifySubscriptionPayment: (subscriptionId: string, payload: { orderId: string; paymentId: string; signature: string }) =>
-    request<{ subscriptionId: string; status: 'active'; expiresAt: string }>(`/subscriptions/${encodeURIComponent(subscriptionId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+    request<{ subscriptionId: string; status: string; expiresAt: string | null }>(`/subscriptions/${encodeURIComponent(subscriptionId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   getMySubscriptions: () => request<BackendSubscription[]>('/subscriptions/my-subscriptions'),
   cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
@@ -878,8 +889,8 @@ export const api = {
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
   saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
-  createMarketplaceOrder: (productId: string, payload: { shippingName: string; shippingAddress: string; shippingPhone?: string }) =>
-    request<{ orderId: string; providerOrderId: string; amountMinor: number; currency: string; keyId: string }>(`/products/${encodeURIComponent(productId)}/order`, { method: 'POST', body: JSON.stringify(payload) }),
+  createMarketplaceOrder: (productId: string, payload: { idempotencyKey: string; shippingName: string; shippingAddress: string; shippingPhone?: string }) =>
+    request<CheckoutState & { orderId: string }>(`/products/${encodeURIComponent(productId)}/order`, { method: 'POST', body: JSON.stringify(payload) }),
   verifyMarketplacePayment: (providerOrderId: string, payload: { paymentId: string; signature: string }) =>
     request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(providerOrderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   getMarketplaceOrders: () => request<BackendMarketplaceOrder[]>('/products/orders'),

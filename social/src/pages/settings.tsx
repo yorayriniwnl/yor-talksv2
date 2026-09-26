@@ -626,6 +626,7 @@ export default function Settings() {
 
         <PremiumProfilePanel />
         <a href="/premium" className="block rounded-2xl border border-primary/25 bg-primary/5 p-4 text-sm font-semibold text-primary">Yor Premium · plans, billing and payment recovery</a>
+        <a href="/billing" className="block rounded-2xl border border-border/50 p-4 text-sm font-semibold">Creator payments · history, cancellation and recovery</a>
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">

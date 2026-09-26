@@ -869,6 +869,7 @@ export const subscriptionsTable = pgTable("subscriptions", {
   currency: text("currency").notNull().default("INR"),
   startedAt: timestamp("started_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
 }, (t) => ({
   subCreatorIdx: index("sub_creator_idx").on(t.creatorId),
   subSubscriberIdx: index("sub_subscriber_idx").on(t.subscriberId),

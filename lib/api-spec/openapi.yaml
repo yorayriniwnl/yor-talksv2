@@ -14,6 +14,7 @@ tags:
   - name: ai
   - name: articles
   - name: auth
+  - name: billing
   - name: broadcast-channels
   - name: business
   - name: communities
@@ -802,6 +803,86 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /billing/checkouts:
+    get:
+      operationId: getBillingCheckouts
+      summary: Get /billing/checkouts
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /billing/checkouts/{checkoutId}/cancel:
+    post:
+      operationId: postBillingCheckoutsByCheckoutIdCancel
+      summary: Post /billing/checkouts/{checkoutId}/cancel
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /billing/checkouts/{checkoutId}/recover:
+    post:
+      operationId: postBillingCheckoutsByCheckoutIdRecover
+      summary: Post /billing/checkouts/{checkoutId}/recover
+      tags: [billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /broadcast-channels:
     get:
       operationId: getBroadcastChannels

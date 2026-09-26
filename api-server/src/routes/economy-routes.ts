@@ -1,3 +1,6 @@
+import { requireTrustedOrigin } from '../middlewares/trusted-origin.js';
+import { authRateLimiter } from '../middlewares/rate-limit.js';
+import { CheckoutRequestError } from '../services/checkout-intent-service.js';
 import { Router, type Request, type Response } from "express";
 import { EconomyService } from "../services/economy-service.js";
 import { authenticate } from "../middlewares/auth.js";
@@ -56,7 +59,7 @@ async function createTipOrder(req: Request, res: Response) {
     if (error instanceof PaymentProviderError) {
       return res.status(502).json(createResponse("Payment provider rejected the order", null, {}, [error.message]));
     }
-    if (error instanceof PaymentRequestError) {
+    if (error instanceof PaymentRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Payment order could not be created", null, {}, [error.message]));
     }
     console.error(error);
@@ -64,13 +67,13 @@ async function createTipOrder(req: Request, res: Response) {
   }
 }
 
-router.post("/orders", authenticate, validateBody(createTipOrderSchema), createTipOrder);
+router.post("/orders", authenticate, requireTrustedOrigin, authRateLimiter, validateBody(createTipOrderSchema), createTipOrder);
 // Kept as a compatibility alias for existing clients that used the original
 // superchat endpoint. It now creates a real Razorpay order and does not settle
 // anything until /orders/:orderId/verify succeeds.
-router.post("/superchat", authenticate, validateBody(createTipOrderSchema), createTipOrder);
+router.post("/superchat", authenticate, requireTrustedOrigin, authRateLimiter, validateBody(createTipOrderSchema), createTipOrder);
 
-router.post("/orders/:orderId/verify", authenticate, validateBody(verifyTipPaymentSchema.omit({ orderId: true })), async (req, res) => {
+router.post("/orders/:orderId/verify", authenticate, requireTrustedOrigin, authRateLimiter, validateBody(verifyTipPaymentSchema.omit({ orderId: true })), async (req, res) => {
   try {
     const result = await paymentService.verifyTipPayment({
       payerId: req.user!.id,
@@ -91,7 +94,7 @@ router.post("/orders/:orderId/verify", authenticate, validateBody(verifyTipPayme
     if (error instanceof PaymentOrderForbiddenError) {
       return res.status(403).json(createResponse("Payment order is not yours", null, {}, [error.message]));
     }
-    if (error instanceof PaymentRequestError) {
+    if (error instanceof PaymentRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Payment verification failed", null, {}, [error.message]));
     }
     console.error(error);
@@ -112,7 +115,7 @@ router.post("/webhooks/razorpay", async (req: Request & { rawBody?: Buffer }, re
       || error instanceof MarketplaceOrderNotFoundError || error instanceof SubscriptionOrderNotFoundError) {
       return res.status(404).json(createResponse("Payment reference not found", null, {}, [error.message]));
     }
-    if (error instanceof PaymentWebhookRequestError || error instanceof PaymentRequestError
+    if (error instanceof PaymentWebhookRequestError || error instanceof PaymentRequestError || error instanceof CheckoutRequestError
       || error instanceof MarketplaceRequestError || error instanceof SubscriptionRequestError) {
       return res.status(400).json(createResponse("Payment reconciliation failed", null, {}, [error.message]));
     }

@@ -46,6 +46,7 @@ const BroadcastChannels = lazyWithRetry(() => import('@/pages/broadcast-channels
 const Settings = lazyWithRetry(() => import('@/pages/settings'));
 const Advanced = lazyWithRetry(() => import('@/pages/advanced'));
 const Premium = lazyWithRetry(() => import('@/pages/premium'));
+const Billing = lazyWithRetry(() => import('@/pages/billing'));
 
 // Content & Discovery
 const Articles = lazyWithRetry(() => import('@/pages/articles'));
@@ -127,6 +128,7 @@ function ProtectedRoutes() {
                 <Route path="/settings" component={Settings} />
                 <Route path="/advanced" component={Advanced} />
                 <Route path="/premium" component={Premium} />
+                <Route path="/billing" component={Billing} />
 
                 {/* Content & Discovery */}
                 <Route path="/articles/:id?" component={Articles} />

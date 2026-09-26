@@ -49,6 +49,8 @@ import type {
   PostAuthResetPasswordConfirmBody,
   PostAuthVerifyEmailResendBody,
   PostAuthVerifyEmailResendPublicBody,
+  PostBillingCheckoutsByCheckoutIdCancelBody,
+  PostBillingCheckoutsByCheckoutIdRecoverBody,
   PostBroadcastChannelsBody,
   PostBroadcastChannelsByIdJoinBody,
   PostBroadcastChannelsByIdMessagesBody,
@@ -2564,6 +2566,227 @@ export const usePostAuthVerifyEmailResendPublic = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPostAuthVerifyEmailResendPublicMutationOptions(options));
+    }
+
+export const getGetBillingCheckoutsUrl = () => {
+
+
+
+
+  return `/api/billing/checkouts`
+}
+
+/**
+ * @summary Get /billing/checkouts
+ */
+export const getBillingCheckouts = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetBillingCheckoutsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBillingCheckoutsQueryKey = () => {
+    return [
+    `/api/billing/checkouts`
+    ] as const;
+    }
+
+
+export const getGetBillingCheckoutsQueryOptions = <TData = Awaited<ReturnType<typeof getBillingCheckouts>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingCheckouts>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBillingCheckoutsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBillingCheckouts>>> = ({ signal }) => getBillingCheckouts({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBillingCheckouts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBillingCheckoutsQueryResult = NonNullable<Awaited<ReturnType<typeof getBillingCheckouts>>>
+export type GetBillingCheckoutsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /billing/checkouts
+ */
+
+export function useGetBillingCheckouts<TData = Awaited<ReturnType<typeof getBillingCheckouts>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingCheckouts>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBillingCheckoutsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostBillingCheckoutsByCheckoutIdCancelUrl = (checkoutId: string,) => {
+
+
+
+
+  return `/api/billing/checkouts/${checkoutId}/cancel`
+}
+
+/**
+ * @summary Post /billing/checkouts/{checkoutId}/cancel
+ */
+export const postBillingCheckoutsByCheckoutIdCancel = async (checkoutId: string,
+    postBillingCheckoutsByCheckoutIdCancelBody?: PostBillingCheckoutsByCheckoutIdCancelBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostBillingCheckoutsByCheckoutIdCancelUrl(checkoutId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postBillingCheckoutsByCheckoutIdCancelBody)
+  }
+);}
+
+
+
+
+
+export const getPostBillingCheckoutsByCheckoutIdCancelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdCancelBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdCancelBody>}, TContext> => {
+
+const mutationKey = ['postBillingCheckoutsByCheckoutIdCancel'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>, {checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdCancelBody>}> = (props) => {
+          const {checkoutId,data} = props ?? {};
+
+          return  postBillingCheckoutsByCheckoutIdCancel(checkoutId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBillingCheckoutsByCheckoutIdCancelMutationResult = NonNullable<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>>
+    export type PostBillingCheckoutsByCheckoutIdCancelMutationBody = BodyType<PostBillingCheckoutsByCheckoutIdCancelBody> | undefined
+    export type PostBillingCheckoutsByCheckoutIdCancelMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /billing/checkouts/{checkoutId}/cancel
+ */
+export const usePostBillingCheckoutsByCheckoutIdCancel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdCancelBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdCancel>>,
+        TError,
+        {checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdCancelBody>},
+        TContext
+      > => {
+      return useMutation(getPostBillingCheckoutsByCheckoutIdCancelMutationOptions(options));
+    }
+
+export const getPostBillingCheckoutsByCheckoutIdRecoverUrl = (checkoutId: string,) => {
+
+
+
+
+  return `/api/billing/checkouts/${checkoutId}/recover`
+}
+
+/**
+ * @summary Post /billing/checkouts/{checkoutId}/recover
+ */
+export const postBillingCheckoutsByCheckoutIdRecover = async (checkoutId: string,
+    postBillingCheckoutsByCheckoutIdRecoverBody?: PostBillingCheckoutsByCheckoutIdRecoverBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostBillingCheckoutsByCheckoutIdRecoverUrl(checkoutId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postBillingCheckoutsByCheckoutIdRecoverBody)
+  }
+);}
+
+
+
+
+
+export const getPostBillingCheckoutsByCheckoutIdRecoverMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody>}, TContext> => {
+
+const mutationKey = ['postBillingCheckoutsByCheckoutIdRecover'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>, {checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody>}> = (props) => {
+          const {checkoutId,data} = props ?? {};
+
+          return  postBillingCheckoutsByCheckoutIdRecover(checkoutId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBillingCheckoutsByCheckoutIdRecoverMutationResult = NonNullable<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>>
+    export type PostBillingCheckoutsByCheckoutIdRecoverMutationBody = BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody> | undefined
+    export type PostBillingCheckoutsByCheckoutIdRecoverMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /billing/checkouts/{checkoutId}/recover
+ */
+export const usePostBillingCheckoutsByCheckoutIdRecover = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>, TError,{checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postBillingCheckoutsByCheckoutIdRecover>>,
+        TError,
+        {checkoutId: string;data?: BodyType<PostBillingCheckoutsByCheckoutIdRecoverBody>},
+        TContext
+      > => {
+      return useMutation(getPostBillingCheckoutsByCheckoutIdRecoverMutationOptions(options));
     }
 
 export const getGetBroadcastChannelsUrl = () => {

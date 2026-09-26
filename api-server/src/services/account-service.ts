@@ -77,6 +77,11 @@ export class AccountService {
       await tx.execute(sql`UPDATE entitlements SET status='revoked' WHERE entity_type='subscription'
         AND entity_id IN (SELECT id::text FROM subscriptions WHERE creator_id=${userId} OR subscriber_id=${userId})`);
       await tx.execute(sql`UPDATE subscriptions SET status='cancelled' WHERE creator_id=${userId} OR subscriber_id=${userId}`);
+      await tx.execute(sql`UPDATE payment_orders SET status='cancelled' WHERE (payer_id=${userId} OR creator_id=${userId}) AND status IN ('created','provider_pending')`);
+      await tx.execute(sql`UPDATE subscription_orders SET status='cancelled' WHERE (subscriber_id=${userId} OR creator_id=${userId}) AND status IN ('created','provider_pending')`);
+      await tx.execute(sql`UPDATE products SET availability='active' WHERE availability='reserved' AND id IN
+        (SELECT product_id FROM marketplace_orders WHERE (buyer_id=${userId} OR seller_id=${userId}) AND status IN ('created','provider_pending'))`);
+      await tx.execute(sql`UPDATE marketplace_orders SET status='cancelled' WHERE (buyer_id=${userId} OR seller_id=${userId}) AND status IN ('created','provider_pending')`);
       await tx.execute(sql`UPDATE premium_access SET status='revoked',updated_at=now() WHERE user_id=${userId}`);
       await tx.execute(sql`UPDATE premium_orders SET status='cancelled',updated_at=now() WHERE user_id=${userId} AND status IN ('provider_pending','creation_unknown','created')`);
       // Preserve ambiguous legacy media references for ownership review instead

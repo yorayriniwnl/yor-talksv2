@@ -309,6 +309,33 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/billing/checkouts",
+    "operationId": "getBillingCheckouts",
+    "tag": "billing",
+    "summary": "Get /billing/checkouts",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/cancel",
+    "operationId": "postBillingCheckoutsByCheckoutIdCancel",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/recover",
+    "operationId": "postBillingCheckoutsByCheckoutIdRecover",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/recover",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/broadcast-channels",
     "operationId": "getBroadcastChannels",
     "tag": "broadcast-channels",

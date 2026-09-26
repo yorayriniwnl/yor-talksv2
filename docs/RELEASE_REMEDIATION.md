@@ -48,12 +48,12 @@ production evidence are separate categories.
 
 | Finding | Revalidated behavior / root cause | Implementation and regression work | Evidence / commit | Remaining dependency or gate |
 | --- | --- | --- | --- | --- |
-| F01 runtime | Current production API still 500; exact exception under investigation | Integrate persistent API/worker runtime; verify packaging/configuration | Vercel source and four HTTP probes above | Intended backend host, complete deployment config, staging journeys |
-| F02 audience/cache | Search still uses author-only filtering; cached records bypass fresh policy | Shared batched post policy; current-record cache reauthorization; SQL-backed audience regression | Pending | Warm-cache and both search paths must pass |
+| F01 runtime | ESM entry failed, then preview exposed missing production JWT secrets | Root ESM marker repaired; startup validation remains enforced | `ae51d4b`; authenticated preview log identifies JWT config failure | Intended persistent backend host, complete deployment config, staging journeys |
+| F02 audience/cache | Search used author-only filtering; cached records bypassed fresh policy | Shared batched post policy; current-record cache reauthorization | `3b8519e`; 9 SQL audience/search/cache tests and 8 compatibility tests pass | Staff/media actions need propagation as F03/F09 are completed |
 | F03 media lifecycle | URL-only assets; production containment is not a lifecycle | Owned assets, moderation, protected delivery, cleanup and retries | Pending | Configured provider/moderation acceptance |
 | F04 upload controls | Signed grant metadata cannot enforce type/size | Controlled upload and durable reservations/quotas | Pending | Provider-backed limits and adversarial upload evidence |
 | F05 Premium | Rollout flags granted perks without a purchase; saved paid fonts could block core actions | Durable prepaid platform plans/orders/access; explicit temporary overrides; complete `/premium` journey; expiry preserves content and uses default new typography | 13 real PostgreSQL/Redis Premium tests, 10 strict Chromium cases, full API checkpoint 139/139; TypeScript/config checks and repeat migration pass | Final price/policy; actual provider test lifecycle; shared dispute work under F06 |
-| F06 payments | Candidate webhook/refund fixes existed without durable acceptance | Raw-body/account verified encrypted inbox plus atomic job enqueue; Premium intent before provider call, scheduled receipt recovery, refund/late-capture invariants | Premium concurrency, capture-before-bind, closed tab, timeout recovery, tamper, duplicate/out-of-order refund, transaction-failure tests pass | Remaining creator/marketplace intent recovery and disputes; actual Razorpay test-mode verification |
+| F06 payments | Checkout creation could lose provider association after timeout; old refund/status paths were unsafe | Durable intents for every checkout; raw-body/account verified encrypted inbox; scheduled receipt/capture/refund recovery; paid-through cancellation; `/billing` history | 11 new PostgreSQL/Redis creator checkout tests; 3 Chromium billing cases; Premium checkpoint `1da444d` | Disputes and operator controls remain in progress; actual Razorpay test-merchant verification required |
 | F07 deletion/ledger | Confirmed both ledger parties were erased, orders cascaded away, and operations lacked a transaction | Transactional party-specific anonymization; financial references SET NULL, product snapshot and shipping erasure; durable session cleanup | 5/5 database-backed account/job tests; retained refunds after both deletion orders; transaction rollback and retry fencing | Provider-owned media cleanup is tracked under F03; owner must approve financial retention duration |
 | F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
@@ -62,7 +62,7 @@ production evidence are separate categories.
 | F12 queries | Per-item author/viewer reads and per-flag overrides | Shared audience batches; entire Premium entitlement snapshot uses one SQL query | 50-candidate audience check uses two queries; all 15 feature decisions use one query | Remaining Story/profile batching and representative latency evidence |
 | F13 budgets | 300/IP/15m conflicts with fallback polling | Separate verified-user/IP budgets, backoff/jitter/visibility | Pending | NAT, tabs and outage regression |
 | F14 reliability | Main checks dependencies; candidate adds heartbeat but schema/lag needed | Bounded providers/cache, readiness, worker supervision, restore/rollback | Fresh Docker engine and isolated services | Failure injection, fresh restore and host monitoring |
-| F15 release | Main now contains Premium/pins; hardening has one unique commit | Intentional integration in isolated worktree | Conflict resolution and typecheck underway | One verified pushed SHA/PR and working CI |
+| F15 release | Main contains Premium/pins; hardening had one unique commit | Intentional integration in isolated worktree | `fe356ef` merges both behavior sets; remote base and published branch verified | Final release SHA/PR, CI and complete verification matrix |
 | F16 coverage | Catalog assumptions crash Settings; permissive mocks concealed missing contracts | Validate optional catalog, retry independently; explicit route fixtures fail unexpected requests; correct intentional public field fixture | 32/32 Chromium desktop/mobile tests; 44/44 state tests; two-tab rotation and malformed catalog regressions pass | Expanded new-feature coverage, full API/container/migration matrix and real staging remain open |
 
 ## Migration and rollback protocol
@@ -78,6 +78,19 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F06 creator checkout chapter: `docs/CREATOR_PAYMENT_LIFECYCLE.md` records the
+  intent, recovery, cancellation and migration contracts. The first focused run
+  passed 22/22 existing Premium plus new creator tests. Two additional creator
+  tests cover delayed failures and cancellation/capture races. Three strict
+  Chromium tests pass at desktop/mobile sizes, including axe and malformed-history
+  recovery. API/frontend TypeScript, 222-operation contract regeneration and
+  generated clients pass. Repeat migration `20260926-checkouts-4` succeeds on the
+  existing isolated database. Full API run: 149/150 initially; only the old disabled
+  feature fixture lacked the now-required idempotency key. Correcting the request
+  preserves its 503 and no-provider-call assertions; both focused tests pass.
+  Final full rerun passes 150/150 (88.9 seconds). These are provider simulations.
+
 
 - F05/F06: `docs/PREMIUM_BILLING.md` defines the free/paid matrix, prepaid billing,
   expiry/retention, cancellation, refund behavior, migration and external gates.

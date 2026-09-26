@@ -485,6 +485,54 @@ export const PostAuthVerifyEmailResendPublicResponse = zod.object({
 
 
 /**
+ * @summary Get /billing/checkouts
+ */
+export const GetBillingCheckoutsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /billing/checkouts/{checkoutId}/cancel
+ */
+export const PostBillingCheckoutsByCheckoutIdCancelParams = zod.object({
+  "checkoutId": zod.coerce.string()
+})
+
+export const PostBillingCheckoutsByCheckoutIdCancelBody = zod.record(zod.string(), zod.unknown())
+
+export const PostBillingCheckoutsByCheckoutIdCancelResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /billing/checkouts/{checkoutId}/recover
+ */
+export const PostBillingCheckoutsByCheckoutIdRecoverParams = zod.object({
+  "checkoutId": zod.coerce.string()
+})
+
+export const PostBillingCheckoutsByCheckoutIdRecoverBody = zod.record(zod.string(), zod.unknown())
+
+export const PostBillingCheckoutsByCheckoutIdRecoverResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /broadcast-channels
  */
 export const GetBroadcastChannelsResponse = zod.object({

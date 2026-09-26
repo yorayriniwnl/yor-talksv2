@@ -40,6 +40,7 @@ class Provider extends RazorpayService {
   override async findOrderByReceipt(receipt: string) { return [...this.orders.values()].find(order => order.receipt === receipt); }
   override async getPayment(id: string) { const payment = this.payments.get(id); assert.ok(payment); return payment; }
   override async getOrderPayments(id: string) { return [...this.payments.values()].filter(payment => payment.order_id === id && ['captured','refunded'].includes(payment.status)); }
+  override async getPaymentRefunds(_id: string) { return []; }
   capture(orderId: string, status = 'captured') {
     const order = this.orders.get(orderId)!;
     const payment = { id: `pay_${randomUUID().replaceAll('-', '')}`, order_id: orderId, amount: order.amount, currency: order.currency, status };

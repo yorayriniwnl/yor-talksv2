@@ -1,4 +1,4 @@
-import { and, eq, like, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
@@ -10,6 +10,7 @@ import {
 import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
 import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
+import { CheckoutIntentService, checkoutHash, lockPaymentParties, paymentTransaction } from './checkout-intent-service.js';
 
 export class PaymentOrderNotFoundError extends Error {}
 export class PaymentOrderForbiddenError extends Error {}
@@ -28,54 +29,28 @@ export class PaymentService {
     streamId?: string;
     amountMinor: number;
     message?: string;
+    idempotencyKey?: string;
   }) {
     this.razorpay.assertConfigured();
     if (input.payerId === input.creatorId) {
       throw new PaymentRequestError("You cannot send a tip to yourself");
     }
 
-    const [payer] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, input.payerId));
-    const [creator] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, input.creatorId));
-    if (!payer || !creator) {
-      throw new PaymentRequestError("The payer or creator account was not found");
-    }
-
-    if (input.streamId) {
-      const [stream] = await db.select({ id: liveStreamsTable.id }).from(liveStreamsTable).where(eq(liveStreamsTable.id, input.streamId));
-      if (!stream) {
-        throw new PaymentRequestError("The live stream was not found");
-      }
-    }
-
-    const providerOrder = await this.razorpay.createOrder({
-      amountMinor: input.amountMinor,
-      receipt: this.razorpay.createReceipt(),
-      notes: {
-        payerId: input.payerId,
-        creatorId: input.creatorId,
-        ...(input.streamId ? { streamId: input.streamId } : {}),
-      },
+    if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor<100 || input.amountMinor>1_000_000) throw new PaymentRequestError('Invalid tip amount');
+    const intents = new CheckoutIntentService(this.razorpay), key = input.idempotencyKey ?? randomUUID();
+    const hash = checkoutHash([input.creatorId,input.streamId ?? null,input.amountMinor,input.message?.trim() ?? '']);
+    const reserved = await paymentTransaction(async client => {
+      await lockPaymentParties(client, [input.payerId,input.creatorId]);
+      const existing = await intents.findRepeat(client, 'tip', input.payerId, key, hash);
+      if (existing) return { intent: existing, created: false };
+      if (input.streamId && !(await client.query('SELECT id FROM live_streams WHERE id=$1 AND host_id=$2', [input.streamId,input.creatorId])).rowCount) throw new PaymentRequestError('The stream does not belong to this creator');
+      const id = randomUUID();
+      await client.query(`INSERT INTO payment_orders(id,payer_id,creator_id,stream_id,provider_order_id,amount_minor,status,message)
+        VALUES($1,$2,$3,$4,$5,$6,'provider_pending',$7)`, [id,input.payerId,input.creatorId,input.streamId ?? null,`pending_${id.replaceAll('-','')}`,input.amountMinor,input.message?.trim() ?? '']);
+      return { intent: await intents.reserve(client, { id, product: 'tip', ownerId: input.payerId, key, hash, amountMinor: input.amountMinor }), created: true };
     });
-
-    const [order] = await db.insert(paymentOrdersTable).values({
-      id: randomUUID(),
-      payerId: input.payerId,
-      creatorId: input.creatorId,
-      streamId: input.streamId,
-      provider: "razorpay",
-      providerOrderId: providerOrder.id,
-      amountMinor: input.amountMinor,
-      currency: "INR",
-      status: "created",
-      message: input.message?.trim() || "",
-    }).returning();
-
-    return {
-      orderId: order.providerOrderId,
-      amountMinor: order.amountMinor,
-      currency: order.currency,
-      keyId: env.RAZORPAY_KEY_ID,
-    };
+    const intent = reserved.created ? await intents.createRemote(reserved.intent) : reserved.intent;
+    return { ...await intents.publicState(intent), orderId: intent.provider_order_id };
   }
 
   async verifyTipPayment(input: {
@@ -92,33 +67,11 @@ export class PaymentService {
     if (order.payerId !== input.payerId) {
       throw new PaymentOrderForbiddenError("This payment order belongs to another account");
     }
-    if (order.status === "refunded") throw new PaymentRequestError("This payment has been refunded");
-
-    const referenceId = `razorpay:${order.providerOrderId}`;
-    const [existingLedger] = await db.select({ id: ledgerTransactionsTable.id })
-      .from(ledgerTransactionsTable)
-      .where(eq(ledgerTransactionsTable.referenceId, referenceId));
-    if (existingLedger) {
-      return { transactionId: existingLedger.id, status: "paid" as const };
-    }
-
     if (!this.razorpay.verifySignature(order.providerOrderId, input.paymentId, input.signature)) {
       throw new PaymentRequestError("Payment signature could not be verified");
     }
 
-    const payment = await this.razorpay.getPayment(input.paymentId);
-    if (
-      payment.order_id !== order.providerOrderId ||
-      payment.amount !== order.amountMinor ||
-      payment.currency !== order.currency ||
-      payment.status !== "captured"
-    ) {
-      throw new PaymentRequestError("The payment was not captured for this order");
-    }
-
-    const transactionId = await this.settleCapturedOrder(order.id, input.paymentId, input.signature);
-
-    return { transactionId, status: "paid" as const };
+    return this.reconcileCapturedPayment({ orderId: input.orderId, paymentId: input.paymentId });
   }
 
   async hasProviderOrder(orderId: string): Promise<boolean> {
@@ -137,14 +90,19 @@ export class PaymentService {
     this.razorpay.assertConfigured();
     const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerOrderId, input.orderId));
     if (!order) throw new PaymentOrderNotFoundError("Payment order not found");
+    const intents = new CheckoutIntentService(this.razorpay);
+    await intents.ensureProviderOrder(await intents.get(order.id));
     const payment = await this.razorpay.getPayment(input.paymentId);
     if (payment.order_id !== order.providerOrderId || payment.amount !== order.amountMinor
       || payment.currency !== order.currency || !["captured", "refunded"].includes(payment.status)) {
       throw new PaymentRequestError("The payment was not captured for this order");
     }
-    const transactionId = await this.settleCapturedOrder(order.id, input.paymentId);
-    return { transactionId, status: "paid" as const };
+    return this.settleCapturedOrder(order.id, input.paymentId, payment.status === 'captured');
   }
+
+  async reconcileFailedPayment(input: CapturedPaymentInput) { return new CheckoutIntentService(this.razorpay).failedAttempt('tip', input); }
+
+  async recoverProviderOrder(order: Awaited<ReturnType<RazorpayService['getOrder']>>) { return new CheckoutIntentService(this.razorpay).recoverProviderOrder('tip', order); }
 
   async reconcileRefund(input: ProcessedRefundInput): Promise<boolean> {
     const [order] = await db.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.providerPaymentId, input.paymentId));
@@ -162,17 +120,19 @@ export class PaymentService {
         if (existingRefund.amountMinor !== input.amountMinor) throw new PaymentRequestError("Refund id was already recorded with a different amount");
         return;
       }
-      if (lockedOrder.status !== "paid" && lockedOrder.status !== "refunded") throw new PaymentRequestError("Only a settled payment can be refunded");
+      if (!['paid','refunded','refund_required','disputed'].includes(lockedOrder.status)) throw new PaymentRequestError("Only a settled payment can be refunded");
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
-        .where(like(ledgerTransactionsTable.referenceId, `${prefix}%`));
+        .where(sql`starts_with(${ledgerTransactionsTable.referenceId},${prefix})`);
       const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
       if (nextRefundedTotal > lockedOrder.amountMinor) throw new PaymentRequestError("Refunds exceed the original payment amount");
 
+      const [capturedLedger] = await tx.select({ credited: ledgerTransactionsTable.creditAccountId }).from(ledgerTransactionsTable)
+        .where(or(eq(ledgerTransactionsTable.referenceId, `razorpay:${lockedOrder.providerOrderId}`), eq(ledgerTransactionsTable.referenceId, `razorpay:${lockedOrder.id}`)));
       await tx.insert(ledgerTransactionsTable).values({
         id: randomUUID(),
         creditAccountId: null,
-        debitAccountId: lockedOrder.creatorId,
+        debitAccountId: capturedLedger?.credited ?? null,
         amountMinor: input.amountMinor,
         currency: lockedOrder.currency,
         referenceId,
@@ -180,7 +140,7 @@ export class PaymentService {
       });
       if (nextRefundedTotal === lockedOrder.amountMinor) {
         await tx.update(paymentOrdersTable).set({ status: "refunded" })
-          .where(and(eq(paymentOrdersTable.id, lockedOrder.id), eq(paymentOrdersTable.status, "paid")));
+          .where(eq(paymentOrdersTable.id, lockedOrder.id));
       }
     });
     return true;
@@ -191,40 +151,41 @@ export class PaymentService {
       && input.amountMinor <= amountMinor && (!input.currency || input.currency === currency);
   }
 
-  private async settleCapturedOrder(orderId: string, paymentId: string, signature?: string): Promise<string> {
-    const referenceId = `razorpay:${orderId}`;
+  private async settleCapturedOrder(orderId: string, paymentId: string, captured: boolean) {
     return db.transaction(async (tx) => {
       const [lockedOrder] = await tx.select().from(paymentOrdersTable).where(eq(paymentOrdersTable.id, orderId)).for("update");
       if (!lockedOrder) throw new PaymentRequestError("Payment order no longer exists");
+      const referenceId = `razorpay:${lockedOrder.providerOrderId}`;
       const [existing] = await tx.select({ id: ledgerTransactionsTable.id })
-        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
+        .from(ledgerTransactionsTable).where(or(eq(ledgerTransactionsTable.referenceId, referenceId), eq(ledgerTransactionsTable.referenceId, `razorpay:${orderId}`)));
       if (existing) {
         if (lockedOrder.providerPaymentId && lockedOrder.providerPaymentId !== paymentId) {
           throw new PaymentRequestError("Another payment has already been linked to this order");
         }
-        return existing.id;
+        return { transactionId: existing.id, status: lockedOrder.status };
       }
-      if (lockedOrder.status !== "created") throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      if (!['created','cancelled','expired'].includes(lockedOrder.status)) throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      const status = captured && lockedOrder.status === 'created' && lockedOrder.creatorId && lockedOrder.payerId ? 'paid' : 'refund_required';
 
       const [settledOrder] = await tx.update(paymentOrdersTable).set({
         providerPaymentId: paymentId,
-        providerSignature: signature ?? null,
-        status: "paid",
+        providerSignature: null,
+        status,
         paidAt: new Date().toISOString(),
-      }).where(and(eq(paymentOrdersTable.id, lockedOrder.id), eq(paymentOrdersTable.status, "created")))
+      }).where(eq(paymentOrdersTable.id, lockedOrder.id))
         .returning({ id: paymentOrdersTable.id });
       if (!settledOrder) throw new PaymentRequestError("This payment order has already been settled or cancelled");
 
       const [ledger] = await tx.insert(ledgerTransactionsTable).values({
         id: randomUUID(),
-        creditAccountId: lockedOrder.creatorId,
+        creditAccountId: status === 'paid' ? lockedOrder.creatorId : null,
         debitAccountId: null,
         amountMinor: lockedOrder.amountMinor,
         currency: lockedOrder.currency,
         referenceId,
         status: "completed",
       }).returning({ id: ledgerTransactionsTable.id });
-      return ledger.id;
+      return { transactionId: ledger.id, status };
     });
   }
 }

@@ -61,10 +61,10 @@ test('disabled beta features stay closed through both HTTP API prefixes without 
   const token = jwt.sign({ sub: actorId, deviceId: 'fixture-device' }, env.JWT_SECRET, { expiresIn: '5m' });
   const verification = { orderId: 'existing', paymentId: 'old', signature: 'old' };
   const cases: Array<[string, string, unknown?, number?]> = [
-    ['POST', '/economy/orders', { creatorId: targetId, amountMinor: 100 }],
-    ['POST', '/economy/superchat', { creatorId: targetId, amountMinor: 100 }],
+    ['POST', '/economy/orders', { idempotencyKey: actorId, creatorId: targetId, amountMinor: 100 }],
+    ['POST', '/economy/superchat', { idempotencyKey: actorId, creatorId: targetId, amountMinor: 100 }],
     ['POST', '/economy/orders/existing/verify', verification],
-    ['POST', '/subscriptions/subscribe', { creatorId: targetId, tier: 'chai' }],
+    ['POST', '/subscriptions/subscribe', { idempotencyKey: actorId, creatorId: targetId, tier: 'chai' }],
     ['POST', `/subscriptions/${targetId}/verify`, verification],
     ['POST', '/streams', { title: 'Fixture stream', coverUrl: 'https://example.invalid/cover.png', kind: 'video', startsAt: '2026-09-01T00:00:00Z', category: 'technology', contentRating: 'regular' }],
     ['GET', `/streams/${targetId}/token`],
