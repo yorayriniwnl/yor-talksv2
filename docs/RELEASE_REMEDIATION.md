@@ -79,6 +79,12 @@ before restoring an older application image.
 
 ## Evidence log
 
+- F14 provider deadlines now include response bodies and a 2 MiB response cap.
+  The previous helper aborted a successful fetch before callers read JSON and
+  left its timeout active. Two focused tests pass, including a real local HTTP
+  server with a stalled body, oversized body, completed JSON and caller abort;
+  API TypeScript passes. Provider credentials are not involved in this check.
+
 - Full API checkpoint after `2407974`: 125/125 tests passed against isolated
   PostgreSQL 16 / Redis 7, Node 24.14.0. Updated the disabled-provider fixture to
   mock the strict session read and retained the refund currency in its assertion.
