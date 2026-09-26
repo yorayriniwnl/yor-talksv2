@@ -103,4 +103,12 @@ test("premium profile updates are entitlement-gated while keeping bio text indep
     () => service.updatePremiumProfile(user.id, { messageFontId: "mono" }),
     PremiumProfileFeatureUnavailableError,
   );
+  Object.assign(user, { bioStyleId: 'editorial', messageFontId: 'mono', storyFontId: 'cinematic' });
+  const expired = new UserService(userRepository, undefined, undefined, undefined, undefined,
+    { hasFeature: async () => false } as unknown as FeatureEntitlementService);
+  const restored = await expired.updatePremiumProfile(user.id, { bioStyleId: 'default' });
+  assert.equal(restored?.bioStyleId, 'default');
+  assert.equal(restored?.messageFontId, 'mono');
+  assert.equal(restored?.storyFontId, 'cinematic');
+  assert.equal(restored?.bio, user.bio);
 });

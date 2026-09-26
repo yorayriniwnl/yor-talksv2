@@ -1808,6 +1808,114 @@ export const PostPostsUploadImageResponse = zod.object({
 
 
 /**
+ * @summary Get /premium/catalog
+ */
+export const GetPremiumCatalogResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /premium/me
+ */
+export const GetPremiumMeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /premium/orders
+ */
+export const PostPremiumOrdersBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPremiumOrdersResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /premium/orders/{orderId}
+ */
+export const GetPremiumOrdersByOrderIdParams = zod.object({
+  "orderId": zod.coerce.string()
+})
+
+export const GetPremiumOrdersByOrderIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /premium/orders/{orderId}/cancel
+ */
+export const PostPremiumOrdersByOrderIdCancelParams = zod.object({
+  "orderId": zod.coerce.string()
+})
+
+export const PostPremiumOrdersByOrderIdCancelBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPremiumOrdersByOrderIdCancelResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /premium/orders/{orderId}/recover
+ */
+export const PostPremiumOrdersByOrderIdRecoverParams = zod.object({
+  "orderId": zod.coerce.string()
+})
+
+export const PostPremiumOrdersByOrderIdRecoverBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPremiumOrdersByOrderIdRecoverResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /premium/orders/{orderId}/verify
+ */
+export const PostPremiumOrdersByOrderIdVerifyParams = zod.object({
+  "orderId": zod.coerce.string()
+})
+
+export const PostPremiumOrdersByOrderIdVerifyBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPremiumOrdersByOrderIdVerifyResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /products
  */
 export const GetProductsResponse = zod.object({

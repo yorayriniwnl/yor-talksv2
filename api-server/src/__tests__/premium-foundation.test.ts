@@ -24,9 +24,9 @@ test("the advanced catalog is closed and defaults can be overridden by explicit 
   assert.equal(Object.keys(flags).length, PREMIUM_FEATURES.length);
 });
 
-test("an active user override wins over the rollout default and an expired override does not", async () => {
+test("an active override grants an available perk; expired overrides and availability flags never grant access alone", async () => {
   const overrides = new Map<string, { enabled: boolean; expiresAt: string | null }>([
-    ["user:STORY_PRIORITY", { enabled: true, expiresAt: null }],
+    ["user:STORY_PRIORITY", { enabled: true, expiresAt: new Date(Date.now() + 3600000).toISOString() }],
     ["user:SUPER_HEART", { enabled: true, expiresAt: "2020-01-01T00:00:00.000Z" }],
   ]);
   const repository: FeatureOverrideRepository = {
@@ -37,13 +37,17 @@ test("an active user override wins over the rollout default and an expired overr
   };
   const service = new FeatureEntitlementService(repository, resolveFeatureFlags({
     YOR_ADVANCED_DEFAULT_ENABLED: "false",
-    YOR_FEATURE_STORY_PRIORITY: "false",
+    YOR_FEATURE_STORY_PRIORITY: "true",
     YOR_FEATURE_SUPER_HEART: "false",
   }));
 
   assert.equal(await service.hasFeature("user", "STORY_PRIORITY"), true);
   assert.equal(await service.hasFeature("user", "SUPER_HEART"), false);
   assert.equal(await service.hasFeature("user", "MESSAGE_FONT"), false);
+  const unavailable = new FeatureEntitlementService(repository, { STORY_PRIORITY: false });
+  assert.equal(await unavailable.hasFeature('user', 'STORY_PRIORITY'), false);
+  const free = new FeatureEntitlementService({ findActiveOverride: async () => undefined }, resolveFeatureFlags({ YOR_ADVANCED_DEFAULT_ENABLED: 'true' }));
+  assert.equal(Object.values(await free.getSnapshot('user')).some(Boolean), false);
 });
 
 test("audience policy applies blocks before every inclusion rule", () => {

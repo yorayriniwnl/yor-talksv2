@@ -30,6 +30,7 @@ import { reportRoutes } from "./reports.js";
 import { creatorWorkspaceRoutes } from "./creator-workspace.js";
 import profileInteractionRouter from "./profile-interactions.js";
 import metricsRouter from "./metrics.js";
+import premiumRouter from './premium.js';
 
 const router: IRouter = Router();
 
@@ -40,6 +41,7 @@ router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);
 router.use(userRouter);
+router.use(premiumRouter);
 router.use(profileInteractionRouter);
 router.use(postRouter);
 router.use(messageRouter);

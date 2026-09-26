@@ -130,12 +130,12 @@ export class MessageService {
     // moderation quota on arbitrary conversations.
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
 
-    const textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
+    let textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
     if (!isPremiumMessageStyle(textStyleId)) {
       throw new InvalidMessageStyleError("Message style is not supported");
     }
     if (textStyleId !== "default" && !(await this.entitlementService.hasFeature(senderId, "MESSAGE_FONT"))) {
-      throw new PremiumFeatureUnavailableError("Message fonts are not enabled for this account");
+      textStyleId = 'default';
     }
 
     const replyToId = options?.replyToId ?? null;

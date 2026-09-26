@@ -1,5 +1,6 @@
 import { RazorpayService } from "./razorpay-service.js";
 import type { PaymentWebhookHandler, ProcessedRefundInput } from "./payment-webhook-types.js";
+import { env } from '../config/env.js';
 
 export class PaymentWebhookSignatureError extends Error {}
 export class PaymentWebhookRequestError extends Error {}
@@ -41,12 +42,21 @@ export class PaymentWebhookService {
     if (!rawBody.length || !this.razorpay.verifyWebhookSignature(rawBody, signature)) {
       throw new PaymentWebhookSignatureError("Invalid webhook signature");
     }
+    let verifiedPayload: unknown;
+    try { verifiedPayload = JSON.parse(rawBody.toString('utf8')); }
+    catch { throw new PaymentWebhookRequestError('Invalid payment webhook JSON'); }
+    return this.process(verifiedPayload);
+  }
+
+  /** Only call after signature validation or authenticated durable-inbox decryption. */
+  async process(payload: unknown): Promise<'processed' | 'ignored'> {
     const event = asRecord(payload);
     if (!event || typeof event.event !== "string") {
       throw new PaymentWebhookRequestError("Invalid payment webhook event");
     }
+    if (env.RAZORPAY_ACCOUNT_ID && event.account_id !== env.RAZORPAY_ACCOUNT_ID) throw new PaymentWebhookRequestError('Payment account association mismatch');
 
-    if (event.event === "payment.captured") {
+    if (event.event === "payment.captured" || event.event === 'payment.failed') {
       const entity = asRecord(asRecord(asRecord(event.payload)?.payment)?.entity);
       if (!entity || !providerId(entity.id) || !providerId(entity.order_id)) {
         throw new PaymentWebhookRequestError("Invalid captured payment event");
@@ -55,9 +65,19 @@ export class PaymentWebhookService {
       for (const handler of this.handlers) {
         if (await handler.hasProviderOrder(entity.order_id)) matches.push(handler);
       }
+      if (matches.length === 0) {
+        const recoverable = this.handlers.filter(handler => handler.recoverProviderOrder);
+        if (recoverable.length) {
+          const provider = await this.razorpay.getOrder(entity.order_id);
+          for (const handler of recoverable) if (await handler.recoverProviderOrder!(provider)) matches.push(handler);
+        }
+      }
       if (matches.length === 0) throw new PaymentWebhookNotFoundError("Payment order not found");
       if (matches.length > 1) throw new PaymentWebhookRequestError("Payment order reference is ambiguous");
-      await matches[0]!.reconcileCapturedPayment({ orderId: entity.order_id, paymentId: entity.id });
+      if (event.event === 'payment.failed') {
+        if (!matches[0]!.reconcileFailedPayment) return 'ignored';
+        await matches[0]!.reconcileFailedPayment!({ orderId: entity.order_id, paymentId: entity.id });
+      } else await matches[0]!.reconcileCapturedPayment({ orderId: entity.order_id, paymentId: entity.id });
       return "processed";
     }
 
@@ -74,6 +94,13 @@ export class PaymentWebhookService {
         if (!providerId(payment.order_id)) throw new PaymentWebhookRequestError("Refund payment has no valid provider order id");
         for (const handler of this.handlers) {
           if (await handler.hasProviderOrder(payment.order_id)) matches.push(handler);
+        }
+        if (matches.length === 0) {
+          const recoverable = this.handlers.filter(handler => handler.recoverProviderOrder);
+          if (recoverable.length) {
+            const provider = await this.razorpay.getOrder(payment.order_id);
+            for (const handler of recoverable) if (await handler.recoverProviderOrder!(provider)) matches.push(handler);
+          }
         }
         if (matches.length === 0) throw new PaymentWebhookNotFoundError("Refund payment order was not found");
         if (matches.length > 1) throw new PaymentWebhookRequestError("Refund payment order reference is ambiguous");

@@ -4,7 +4,7 @@ import { BackgroundJobRepository, type BackgroundJob } from '../repositories/bac
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
 
-export type LifecycleHandler = (job: BackgroundJob) => Promise<void>;
+export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
 
 export async function cleanAccountSessions(job: BackgroundJob, redis: RedisRepository): Promise<void> {
   const userId = job.payload.userId;
@@ -39,8 +39,9 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
         .catch(() => { healthy = false; }), 10_000);
       lease.unref();
       try {
-        await handlers[job.kind]!(job);
-        await jobs.finish(job);
+        const result = await handlers[job.kind]!(job);
+        if (result) await jobs.defer(job, result.retryAfterSeconds);
+        else await jobs.finish(job);
       } catch (error) {
         const code = error instanceof Error ? error.name : 'operation_failed';
         await jobs.fail(job, code);

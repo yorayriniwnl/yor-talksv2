@@ -55,8 +55,11 @@ export class UserService {
       storyFontId: updates.storyFontId ?? current.storyFontId,
       appIconId: updates.appIconId ?? current.appIconId,
     });
-    const required = requiredPremiumFeatures(selection);
-    const available = await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
+    // Preserved historical styles must not block changing a different field back
+    // to a free default after expiry. Authorize only the requested selections.
+    const required = requiredPremiumFeatures(updates);
+    const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(userId) : null;
+    const available = snapshot ? required.map(feature => snapshot[feature]) : await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
     if (available.some((enabled) => !enabled)) {
       throw new PremiumProfileFeatureUnavailableError("One or more premium profile styles are not enabled for this account");
     }

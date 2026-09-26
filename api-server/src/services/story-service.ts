@@ -14,7 +14,7 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { QueueService } from "./queue-service.js";
 import { isPremiumStoryStyle } from "../features/premium-profile.js";
-import { isAdvancedStoryTextStyle, normalizeStoryTextStyle, type StoryTextStyle } from "../features/story-text-style.js";
+import { normalizeStoryTextStyle, type StoryTextStyle } from "../features/story-text-style.js";
 
 export class PremiumFeatureUnavailableError extends Error {}
 
@@ -59,18 +59,21 @@ export class StoryService {
   }): Promise<StoryRecord> {
     const audience = (input.audience ?? "followers") as AudienceKind;
     const advancedAudience = ["selected_people", "everyone_except", "custom"].includes(audience);
-    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight, hasStoryFont] = await Promise.all([
+    const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(input.authorId) : null;
+    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight, hasStoryFont] = snapshot
+      ? [snapshot.CUSTOM_STORY_AUDIENCE, snapshot.EXTENDED_STORY, snapshot.STORY_PRIORITY, snapshot.DIRECT_HIGHLIGHT, snapshot.STORY_FONT]
+      : await Promise.all([
       this.entitlementService.hasFeature(input.authorId, "CUSTOM_STORY_AUDIENCE"),
       this.entitlementService.hasFeature(input.authorId, "EXTENDED_STORY"),
       this.entitlementService.hasFeature(input.authorId, "STORY_PRIORITY"),
       this.entitlementService.hasFeature(input.authorId, "DIRECT_HIGHLIGHT"),
       this.entitlementService.hasFeature(input.authorId, "STORY_FONT"),
     ]);
-    const storyFontId = input.storyFontId ?? "default";
-    const storyTextStyle = normalizeStoryTextStyle(input.storyTextStyle);
-    if (!isPremiumStoryStyle(storyFontId)) throw new Error("Story font is not supported");
-    if (storyFontId !== "default" && !hasStoryFont) throw new PremiumFeatureUnavailableError("Story fonts are not enabled for this account");
-    if (isAdvancedStoryTextStyle(storyTextStyle) && !hasStoryFont) throw new PremiumFeatureUnavailableError("Advanced story text styling is not enabled for this account");
+    if (!isPremiumStoryStyle(input.storyFontId ?? 'default')) throw new Error("Story font is not supported");
+    // An expired saved style must not block standard publishing or erase a draft.
+    const storyFontId = hasStoryFont ? input.storyFontId ?? 'default' : 'default';
+    const requestedTextStyle = normalizeStoryTextStyle(input.storyTextStyle);
+    const storyTextStyle = hasStoryFont ? requestedTextStyle : normalizeStoryTextStyle(undefined);
     if (advancedAudience && !hasCustomAudience) throw new PremiumFeatureUnavailableError("Custom story audiences are not enabled for this account");
     if (input.priority && !hasPriority) throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
     const publishMode = input.publishMode ?? "active";

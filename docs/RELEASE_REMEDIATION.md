@@ -52,14 +52,14 @@ production evidence are separate categories.
 | F02 audience/cache | Search still uses author-only filtering; cached records bypass fresh policy | Shared batched post policy; current-record cache reauthorization; SQL-backed audience regression | Pending | Warm-cache and both search paths must pass |
 | F03 media lifecycle | URL-only assets; production containment is not a lifecycle | Owned assets, moderation, protected delivery, cleanup and retries | Pending | Configured provider/moderation acceptance |
 | F04 upload controls | Signed grant metadata cannot enforce type/size | Controlled upload and durable reservations/quotas | Pending | Provider-backed limits and adversarial upload evidence |
-| F05 Premium | Rollout flags still stand in for subscription entitlement | Separate platform plan, billing/entitlements and customer journey | Pending | Final price/policy; provider test lifecycle |
-| F06 payments | Candidate webhook/refund fixes exist but are not a complete durable lifecycle | Integrate/revalidate; durable inbox, settlement/reconciliation, reversals | Pending | Provider test mode and financial fault tests |
+| F05 Premium | Rollout flags granted perks without a purchase; saved paid fonts could block core actions | Durable prepaid platform plans/orders/access; explicit temporary overrides; complete `/premium` journey; expiry preserves content and uses default new typography | 13 real PostgreSQL/Redis Premium tests, 10 strict Chromium cases, full API checkpoint 139/139; TypeScript/config checks and repeat migration pass | Final price/policy; actual provider test lifecycle; shared dispute work under F06 |
+| F06 payments | Candidate webhook/refund fixes existed without durable acceptance | Raw-body/account verified encrypted inbox plus atomic job enqueue; Premium intent before provider call, scheduled receipt recovery, refund/late-capture invariants | Premium concurrency, capture-before-bind, closed tab, timeout recovery, tamper, duplicate/out-of-order refund, transaction-failure tests pass | Remaining creator/marketplace intent recovery and disputes; actual Razorpay test-mode verification |
 | F07 deletion/ledger | Confirmed both ledger parties were erased, orders cascaded away, and operations lacked a transaction | Transactional party-specific anonymization; financial references SET NULL, product snapshot and shipping erasure; durable session cleanup | 5/5 database-backed account/job tests; retained refunds after both deletion orders; transaction rollback and retry fencing | Provider-owned media cleanup is tracked under F03; owner must approve financial retention duration |
 | F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
 | F10 sessions | Same-second JWT repeats; old approved challenges survive revocation; reset read/update/delete races | Random jti + Redis CAS; database auth epoch on HTTP/socket/refresh/challenges; transactional reset redemption; cross-tab Web Lock | 21/21 focused tests with real PostgreSQL/Redis; 44/44 state tests; API/frontend typechecks | Hosted authenticated journeys; cross-tab browser case runs in full suite |
 | F11 export | Export omits supported persisted surfaces | Bounded ownership-bound jobs, matrix, protected expiry/download | Pending | Rich/large/deletion-race acceptance |
-| F12 queries | Per-item author/viewer reads and per-flag overrides | Batch users/relationships/entitlements; measured SQL counts | Pending | Representative query and latency evidence |
+| F12 queries | Per-item author/viewer reads and per-flag overrides | Shared audience batches; entire Premium entitlement snapshot uses one SQL query | 50-candidate audience check uses two queries; all 15 feature decisions use one query | Remaining Story/profile batching and representative latency evidence |
 | F13 budgets | 300/IP/15m conflicts with fallback polling | Separate verified-user/IP budgets, backoff/jitter/visibility | Pending | NAT, tabs and outage regression |
 | F14 reliability | Main checks dependencies; candidate adds heartbeat but schema/lag needed | Bounded providers/cache, readiness, worker supervision, restore/rollback | Fresh Docker engine and isolated services | Failure injection, fresh restore and host monitoring |
 | F15 release | Main now contains Premium/pins; hardening has one unique commit | Intentional integration in isolated worktree | Conflict resolution and typecheck underway | One verified pushed SHA/PR and working CI |
@@ -78,6 +78,23 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F05/F06: `docs/PREMIUM_BILLING.md` defines the free/paid matrix, prepaid billing,
+  expiry/retention, cancellation, refund behavior, migration and external gates.
+  No final price is published; checkout stays off until configured and approved.
+  New models and customer/API flows separate platform Premium from creator money.
+  The full API checkpoint passes 139/139 on Node 24.14.0, PostgreSQL 16 and Redis 7;
+  focused Premium/payment/typography coverage passes 25/25. A final profile-default
+  recovery change passes its 5/5 domain tests. The 10 new strict Chromium Premium
+  cases pass, including mobile states, axe, failure/recovery/cancellation and an
+  invalid billing response followed by retry. These are local provider simulations,
+  not Razorpay merchant/test-mode or hosted staging evidence. Both TypeScript
+  projects and production config checks pass. The release migration was repeated
+  on the populated isolated test database successfully. A UTC override-expiry defect
+  exposed by the real database test was corrected before these passing results.
+
+- F14 timeout fix is committed/pushed as `95dfdb1bd22cd1dd294a2ca5c1c6f6b67a944d3e`;
+  remote SHA matched.
 
 - F14 provider deadlines now include response bodies and a 2 MiB response cap.
   The previous helper aborted a successful fetch before callers read JSON and

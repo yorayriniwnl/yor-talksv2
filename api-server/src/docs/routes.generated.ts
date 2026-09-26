@@ -1097,6 +1097,69 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/premium/catalog",
+    "operationId": "getPremiumCatalog",
+    "tag": "premium",
+    "summary": "Get /premium/catalog",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/me",
+    "operationId": "getPremiumMe",
+    "tag": "premium",
+    "summary": "Get /premium/me",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders",
+    "operationId": "postPremiumOrders",
+    "tag": "premium",
+    "summary": "Post /premium/orders",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/orders/{orderId}",
+    "operationId": "getPremiumOrdersByOrderId",
+    "tag": "premium",
+    "summary": "Get /premium/orders/{orderId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/cancel",
+    "operationId": "postPremiumOrdersByOrderIdCancel",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/recover",
+    "operationId": "postPremiumOrdersByOrderIdRecover",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/recover",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/verify",
+    "operationId": "postPremiumOrdersByOrderIdVerify",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/verify",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/products",
     "operationId": "getProducts",
     "tag": "products",

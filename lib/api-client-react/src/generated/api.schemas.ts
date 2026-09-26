@@ -161,6 +161,14 @@ export type PostPostsByPostIdUnlikeBody = { [key: string]: unknown };
 
 export type PostPostsUploadImageBody = { [key: string]: unknown };
 
+export type PostPremiumOrdersBody = { [key: string]: unknown };
+
+export type PostPremiumOrdersByOrderIdCancelBody = { [key: string]: unknown };
+
+export type PostPremiumOrdersByOrderIdRecoverBody = { [key: string]: unknown };
+
+export type PostPremiumOrdersByOrderIdVerifyBody = { [key: string]: unknown };
+
 export type PostProductsBody = { [key: string]: unknown };
 
 export type PostProductsByIdOrderBody = { [key: string]: unknown };

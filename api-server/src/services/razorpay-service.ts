@@ -31,6 +31,8 @@ interface RazorpayOrder {
   amount: number;
   currency: string;
   status: string;
+  receipt?: string;
+  notes?: Record<string, string>;
 }
 
 interface RazorpayPayment {
@@ -103,7 +105,38 @@ export class RazorpayService {
     const response = await fetchWithTimeout(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}`, {
       headers: { Authorization: authorizationHeader() },
     }, 12_000);
-    return parseProviderResponse<RazorpayPayment>(response);
+    const payment = await parseProviderResponse<RazorpayPayment>(response);
+    if (!payment || payment.id !== paymentId || typeof payment.order_id !== 'string' || !Number.isSafeInteger(payment.amount)
+      || payment.amount < 0 || typeof payment.currency !== 'string' || typeof payment.status !== 'string') {
+      throw new PaymentProviderError('Razorpay returned an invalid payment response');
+    }
+    return payment;
+  }
+
+  async getOrder(orderId: string): Promise<RazorpayOrder> {
+    this.assertConfigured();
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/orders/${encodeURIComponent(orderId)}`, { headers: { Authorization: authorizationHeader() } }, 12_000);
+    const order = await parseProviderResponse<RazorpayOrder>(response);
+    if (!order || order.id !== orderId || !Number.isSafeInteger(order.amount) || typeof order.currency !== 'string') throw new PaymentProviderError('Invalid provider order');
+    return order;
+  }
+
+  async findOrderByReceipt(receipt: string): Promise<RazorpayOrder | undefined> {
+    this.assertConfigured();
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/orders?receipt=${encodeURIComponent(receipt)}&count=100`, { headers: { Authorization: authorizationHeader() } }, 12_000);
+    const result = await parseProviderResponse<{ items: RazorpayOrder[] }>(response);
+    if (!Array.isArray(result?.items)) throw new PaymentProviderError('Invalid provider order list');
+    const matches = result.items.filter(order => order.receipt === receipt);
+    if (matches.length > 1) throw new PaymentProviderError('Ambiguous provider receipt');
+    return matches[0];
+  }
+
+  async getOrderPayments(orderId: string): Promise<RazorpayPayment[]> {
+    this.assertConfigured();
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/orders/${encodeURIComponent(orderId)}/payments`, { headers: { Authorization: authorizationHeader() } }, 12_000);
+    const result = await parseProviderResponse<{ items: RazorpayPayment[] }>(response);
+    if (!Array.isArray(result?.items)) throw new PaymentProviderError('Invalid provider payments list');
+    return result.items.filter(payment => payment.order_id === orderId && ['captured', 'refunded'].includes(payment.status));
   }
 
   verifySignature(orderId: string, paymentId: string, signature: string): boolean {

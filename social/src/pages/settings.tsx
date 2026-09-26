@@ -625,6 +625,7 @@ export default function Settings() {
         <CompanionPetSettings />
 
         <PremiumProfilePanel />
+        <a href="/premium" className="block rounded-2xl border border-primary/25 bg-primary/5 p-4 text-sm font-semibold text-primary">Yor Premium · plans, billing and payment recovery</a>
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">
@@ -701,7 +702,7 @@ export default function Settings() {
           <div className="flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Story viewing privacy</p>
-              <p className="text-xs text-muted-foreground">Choose whether creators see your account in viewer lists. Private mode still contributes to aggregate analytics.</p>
+              <p className="text-xs text-muted-foreground">Private viewing requires an active Premium entitlement and still contributes to aggregate analytics. Without that entitlement, new views are identified even if your saved preference is Private. Earlier private views stay private.</p>
             </div>
             <Select value={storyViewMode} disabled={storyViewModeSaving} onValueChange={(value) => void handleStoryViewModeChange(value as 'identified' | 'private')}>
               <SelectTrigger aria-label="Story viewing privacy" className="w-full shrink-0 rounded-xl font-medium sm:w-44"><SelectValue placeholder="Viewer identity" /></SelectTrigger>

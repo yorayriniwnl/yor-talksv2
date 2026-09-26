@@ -3,10 +3,11 @@ import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { startNotificationWorker, type NotificationWorkerHandle } from "./workers/notification-worker.js";
 import { startLifecycleWorker } from './workers/lifecycle-worker.js';
+import { createPaymentRuntime } from './services/payment-runtime.js';
 
 async function main(): Promise<void> {
   await pool.query("SELECT 1");
-  const lifecycle = await startLifecycleWorker();
+  const lifecycle = await startLifecycleWorker(createPaymentRuntime().handlers);
   let worker: NotificationWorkerHandle | null = await startNotificationWorker();
   if (env.NODE_ENV === "production" && !worker.isHealthy()) {
     await worker.close();

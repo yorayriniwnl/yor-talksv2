@@ -93,6 +93,10 @@ import type {
   PostPostsByPostIdShareBody,
   PostPostsByPostIdUnlikeBody,
   PostPostsUploadImageBody,
+  PostPremiumOrdersBody,
+  PostPremiumOrdersByOrderIdCancelBody,
+  PostPremiumOrdersByOrderIdRecoverBody,
+  PostPremiumOrdersByOrderIdVerifyBody,
   PostProductsBody,
   PostProductsByIdOrderBody,
   PostProductsByIdSaveBody,
@@ -8949,6 +8953,524 @@ export const usePostPostsUploadImage = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPostPostsUploadImageMutationOptions(options));
+    }
+
+export const getGetPremiumCatalogUrl = () => {
+
+
+
+
+  return `/api/premium/catalog`
+}
+
+/**
+ * @summary Get /premium/catalog
+ */
+export const getPremiumCatalog = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPremiumCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPremiumCatalogQueryKey = () => {
+    return [
+    `/api/premium/catalog`
+    ] as const;
+    }
+
+
+export const getGetPremiumCatalogQueryOptions = <TData = Awaited<ReturnType<typeof getPremiumCatalog>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumCatalog>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPremiumCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPremiumCatalog>>> = ({ signal }) => getPremiumCatalog({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPremiumCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPremiumCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof getPremiumCatalog>>>
+export type GetPremiumCatalogQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /premium/catalog
+ */
+
+export function useGetPremiumCatalog<TData = Awaited<ReturnType<typeof getPremiumCatalog>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumCatalog>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPremiumCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPremiumMeUrl = () => {
+
+
+
+
+  return `/api/premium/me`
+}
+
+/**
+ * @summary Get /premium/me
+ */
+export const getPremiumMe = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPremiumMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPremiumMeQueryKey = () => {
+    return [
+    `/api/premium/me`
+    ] as const;
+    }
+
+
+export const getGetPremiumMeQueryOptions = <TData = Awaited<ReturnType<typeof getPremiumMe>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumMe>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPremiumMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPremiumMe>>> = ({ signal }) => getPremiumMe({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPremiumMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPremiumMeQueryResult = NonNullable<Awaited<ReturnType<typeof getPremiumMe>>>
+export type GetPremiumMeQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /premium/me
+ */
+
+export function useGetPremiumMe<TData = Awaited<ReturnType<typeof getPremiumMe>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumMe>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPremiumMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostPremiumOrdersUrl = () => {
+
+
+
+
+  return `/api/premium/orders`
+}
+
+/**
+ * @summary Post /premium/orders
+ */
+export const postPremiumOrders = async (postPremiumOrdersBody?: PostPremiumOrdersBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPremiumOrdersUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPremiumOrdersBody)
+  }
+);}
+
+
+
+
+
+export const getPostPremiumOrdersMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrders>>, TError,{data?: BodyType<PostPremiumOrdersBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrders>>, TError,{data?: BodyType<PostPremiumOrdersBody>}, TContext> => {
+
+const mutationKey = ['postPremiumOrders'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPremiumOrders>>, {data?: BodyType<PostPremiumOrdersBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPremiumOrders(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPremiumOrdersMutationResult = NonNullable<Awaited<ReturnType<typeof postPremiumOrders>>>
+    export type PostPremiumOrdersMutationBody = BodyType<PostPremiumOrdersBody> | undefined
+    export type PostPremiumOrdersMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /premium/orders
+ */
+export const usePostPremiumOrders = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrders>>, TError,{data?: BodyType<PostPremiumOrdersBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPremiumOrders>>,
+        TError,
+        {data?: BodyType<PostPremiumOrdersBody>},
+        TContext
+      > => {
+      return useMutation(getPostPremiumOrdersMutationOptions(options));
+    }
+
+export const getGetPremiumOrdersByOrderIdUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/premium/orders/${orderId}`
+}
+
+/**
+ * @summary Get /premium/orders/{orderId}
+ */
+export const getPremiumOrdersByOrderId = async (orderId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPremiumOrdersByOrderIdUrl(orderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPremiumOrdersByOrderIdQueryKey = (orderId: string,) => {
+    return [
+    `/api/premium/orders/${orderId}`
+    ] as const;
+    }
+
+
+export const getGetPremiumOrdersByOrderIdQueryOptions = <TData = Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>, TError = ErrorType<void>>(orderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPremiumOrdersByOrderIdQueryKey(orderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>> = ({ signal }) => getPremiumOrdersByOrderId(orderId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orderId !== null && orderId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPremiumOrdersByOrderIdQueryResult = NonNullable<Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>>
+export type GetPremiumOrdersByOrderIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /premium/orders/{orderId}
+ */
+
+export function useGetPremiumOrdersByOrderId<TData = Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>, TError = ErrorType<void>>(
+ orderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPremiumOrdersByOrderId>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPremiumOrdersByOrderIdQueryOptions(orderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostPremiumOrdersByOrderIdCancelUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/premium/orders/${orderId}/cancel`
+}
+
+/**
+ * @summary Post /premium/orders/{orderId}/cancel
+ */
+export const postPremiumOrdersByOrderIdCancel = async (orderId: string,
+    postPremiumOrdersByOrderIdCancelBody?: PostPremiumOrdersByOrderIdCancelBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPremiumOrdersByOrderIdCancelUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPremiumOrdersByOrderIdCancelBody)
+  }
+);}
+
+
+
+
+
+export const getPostPremiumOrdersByOrderIdCancelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdCancelBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdCancelBody>}, TContext> => {
+
+const mutationKey = ['postPremiumOrdersByOrderIdCancel'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>, {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdCancelBody>}> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  postPremiumOrdersByOrderIdCancel(orderId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPremiumOrdersByOrderIdCancelMutationResult = NonNullable<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>>
+    export type PostPremiumOrdersByOrderIdCancelMutationBody = BodyType<PostPremiumOrdersByOrderIdCancelBody> | undefined
+    export type PostPremiumOrdersByOrderIdCancelMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /premium/orders/{orderId}/cancel
+ */
+export const usePostPremiumOrdersByOrderIdCancel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdCancelBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPremiumOrdersByOrderIdCancel>>,
+        TError,
+        {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdCancelBody>},
+        TContext
+      > => {
+      return useMutation(getPostPremiumOrdersByOrderIdCancelMutationOptions(options));
+    }
+
+export const getPostPremiumOrdersByOrderIdRecoverUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/premium/orders/${orderId}/recover`
+}
+
+/**
+ * @summary Post /premium/orders/{orderId}/recover
+ */
+export const postPremiumOrdersByOrderIdRecover = async (orderId: string,
+    postPremiumOrdersByOrderIdRecoverBody?: PostPremiumOrdersByOrderIdRecoverBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPremiumOrdersByOrderIdRecoverUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPremiumOrdersByOrderIdRecoverBody)
+  }
+);}
+
+
+
+
+
+export const getPostPremiumOrdersByOrderIdRecoverMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdRecoverBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdRecoverBody>}, TContext> => {
+
+const mutationKey = ['postPremiumOrdersByOrderIdRecover'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>, {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdRecoverBody>}> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  postPremiumOrdersByOrderIdRecover(orderId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPremiumOrdersByOrderIdRecoverMutationResult = NonNullable<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>>
+    export type PostPremiumOrdersByOrderIdRecoverMutationBody = BodyType<PostPremiumOrdersByOrderIdRecoverBody> | undefined
+    export type PostPremiumOrdersByOrderIdRecoverMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /premium/orders/{orderId}/recover
+ */
+export const usePostPremiumOrdersByOrderIdRecover = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdRecoverBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPremiumOrdersByOrderIdRecover>>,
+        TError,
+        {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdRecoverBody>},
+        TContext
+      > => {
+      return useMutation(getPostPremiumOrdersByOrderIdRecoverMutationOptions(options));
+    }
+
+export const getPostPremiumOrdersByOrderIdVerifyUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/premium/orders/${orderId}/verify`
+}
+
+/**
+ * @summary Post /premium/orders/{orderId}/verify
+ */
+export const postPremiumOrdersByOrderIdVerify = async (orderId: string,
+    postPremiumOrdersByOrderIdVerifyBody?: PostPremiumOrdersByOrderIdVerifyBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPremiumOrdersByOrderIdVerifyUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPremiumOrdersByOrderIdVerifyBody)
+  }
+);}
+
+
+
+
+
+export const getPostPremiumOrdersByOrderIdVerifyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdVerifyBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdVerifyBody>}, TContext> => {
+
+const mutationKey = ['postPremiumOrdersByOrderIdVerify'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>, {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdVerifyBody>}> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  postPremiumOrdersByOrderIdVerify(orderId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPremiumOrdersByOrderIdVerifyMutationResult = NonNullable<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>>
+    export type PostPremiumOrdersByOrderIdVerifyMutationBody = BodyType<PostPremiumOrdersByOrderIdVerifyBody> | undefined
+    export type PostPremiumOrdersByOrderIdVerifyMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /premium/orders/{orderId}/verify
+ */
+export const usePostPremiumOrdersByOrderIdVerify = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>, TError,{orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdVerifyBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPremiumOrdersByOrderIdVerify>>,
+        TError,
+        {orderId: string;data?: BodyType<PostPremiumOrdersByOrderIdVerifyBody>},
+        TContext
+      > => {
+      return useMutation(getPostPremiumOrdersByOrderIdVerifyMutationOptions(options));
     }
 
 export const getGetProductsUrl = () => {

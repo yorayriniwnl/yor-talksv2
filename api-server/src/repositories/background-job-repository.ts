@@ -38,6 +38,12 @@ export class BackgroundJobRepository {
       WHERE id=$1 AND lease_token=$2 AND status='running'`, [job.id, job.lease_token]);
   }
 
+  async defer(job: BackgroundJob, delaySeconds: number): Promise<void> {
+    await pool.query(`UPDATE background_jobs SET status='pending',attempts=0,
+      available_at=now()+$3*interval '1 second',lease_token=NULL,lease_until=NULL,last_error=NULL,updated_at=now()
+      WHERE id=$1 AND lease_token=$2 AND status='running'`, [job.id, job.lease_token, Math.max(5, Math.min(3600, delaySeconds))]);
+  }
+
   async fail(job: BackgroundJob, code: string): Promise<void> {
     // Only machine codes belong in durable diagnostics; provider response bodies may contain private data.
     const safeCode = /^[a-z0-9_]{1,80}$/i.test(code) ? code : 'operation_failed';

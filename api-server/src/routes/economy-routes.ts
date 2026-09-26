@@ -15,6 +15,7 @@ import { CreatorAnalyticsService } from "../services/creator-analytics-service.j
 import { MarketplaceOrderNotFoundError, MarketplaceRequestError, MarketplaceService } from "../services/marketplace-service.js";
 import { SubscriptionOrderNotFoundError, SubscriptionRequestError, SubscriptionService } from "../services/subscription-service.js";
 import { PaymentWebhookNotFoundError, PaymentWebhookRequestError, PaymentWebhookService, PaymentWebhookSignatureError } from "../services/payment-webhook-service.js";
+import { createPaymentRuntime } from '../services/payment-runtime.js';
 
 const router = Router();
 const economyService = new EconomyService();
@@ -22,7 +23,7 @@ const razorpayService = new RazorpayService();
 const paymentService = new PaymentService(razorpayService);
 const subscriptionService = new SubscriptionService(razorpayService);
 const marketplaceService = new MarketplaceService(razorpayService);
-const paymentWebhookService = new PaymentWebhookService(razorpayService, [paymentService, subscriptionService, marketplaceService]);
+const paymentInbox = createPaymentRuntime().inbox;
 const creatorAnalyticsService = new CreatorAnalyticsService();
 
 router.get("/wallet", authenticate, async (req, res) => {
@@ -102,8 +103,9 @@ router.post("/webhooks/razorpay", async (req: Request & { rawBody?: Buffer }, re
   const signature = typeof req.headers["x-razorpay-signature"] === "string" ? req.headers["x-razorpay-signature"] : "";
   try {
     if (!req.rawBody) throw new PaymentWebhookSignatureError("Invalid webhook signature");
-    await paymentWebhookService.handle(req.body, req.rawBody, signature);
-    return res.status(200).json({ received: true });
+    const eventId = typeof req.headers['x-razorpay-event-id'] === 'string' ? req.headers['x-razorpay-event-id'] : '';
+    await paymentInbox.accept(req.rawBody, signature, eventId);
+    return res.status(200).json({ accepted: true, processing: 'queued' });
   } catch (error) {
     if (error instanceof PaymentWebhookSignatureError) return res.status(401).json(createResponse("Invalid webhook signature", null, {}, ["invalid_signature"]));
     if (error instanceof PaymentWebhookNotFoundError || error instanceof PaymentOrderNotFoundError

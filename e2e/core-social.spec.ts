@@ -98,6 +98,89 @@ async function installApiBoundary(page: Page, profile = user) {
   });
 }
 
+const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
+  features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
+const premiumOrder = { id: '962a9d20-cbe9-45ef-873b-772eaa991670', providerOrderId: 'order_browserSynthetic', amountMinor: 19900, currency: 'INR',
+  status: 'created', lastPaymentStatus: null as string | null, createdAt: '2026-09-26T00:00:00.000Z', paidAt: null as string | null, plan: premiumPlan, keyId: 'rzp_test_browser' };
+function premiumState(status: string) {
+  const purchased = ['active', 'cancelled', 'expired', 'refunded'].includes(status);
+  return { catalog: { available: true, plan: premiumPlan, operationalFeatures: { MESSAGE_FONT: true, STORY_FONT: true }, automaticRenewal: false,
+    billingModel: 'prepaid_fixed_term', testMode: true, supportEmail: 'support@example.test' },
+    subscription: purchased ? { order_id: premiumOrder.id, starts_at: '2026-09-01T00:00:00.000Z', ends_at: status === 'expired' ? '2026-09-02T00:00:00.000Z' : '2099-10-01T00:00:00.000Z', cancel_at_period_end: status === 'cancelled', status } : null,
+    orders: status === 'free' || status === 'overridden' ? [] : [{ ...premiumOrder, status: purchased ? status === 'refunded' ? 'refunded' : 'paid' : 'created', lastPaymentStatus: status === 'failed' ? 'failed' : purchased ? 'captured' : null, paidAt: purchased ? '2026-09-26T00:00:00.000Z' : null }],
+    enabledFeatures: { MESSAGE_FONT: ['active','cancelled','overridden'].includes(status) } };
+}
+
+for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancelled', 'refunded', 'overridden']) {
+  test(`Premium billing presents ${status} state with free safety controls`, async ({ page }) => {
+    await installApiBoundary(page);
+    if (['expired','cancelled','overridden'].includes(status)) await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/premium/me', route => json(route, premiumState(status)));
+    await page.goto('/premium');
+    await expect(page.getByRole('heading', { name: 'Yor Premium', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your plan', exact: true })).toBeVisible();
+    await expect(page.getByText('Posting, standard Stories and messages, basic privacy, blocking, reporting, export and account deletion are free.')).toBeVisible();
+    if (status === 'overridden') await expect(page.getByText(/authorized feature override/)).toBeVisible();
+    if (status === 'pending') await expect(page.getByRole('button', { name: 'Recover payment', exact: true })).toBeVisible();
+    if (status === 'failed') await expect(page.getByText(/last payment attempt failed/)).toBeVisible();
+    if (status === 'cancelled') await expect(page.getByText(/Cancellation recorded/)).toBeVisible();
+    if (status === 'expired' || status === 'refunded') await expect(page.getByText(`Free account · ${status}`, { exact: true })).toBeVisible();
+    if (status === 'active') await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+    if (status === 'free') {
+      await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();
+      await page.getByRole('checkbox').check();
+      await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeEnabled();
+      const violations = await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze();
+      expect(violations.violations).toEqual([]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
+
+test('Premium checkout accepts configured terms, handles failure, recovers payment and cancels the paid term', async ({ page }) => {
+  await installApiBoundary(page);
+  let state = premiumState('free'), created = 0;
+  await page.route('**/api/premium/**', async route => {
+    const path = new URL(route.request().url()).pathname, method = route.request().method();
+    if (path === '/api/premium/me' && method === 'GET') return json(route, state);
+    if (path === '/api/premium/orders' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      expect(body.acceptedPriceMinor).toBe(19900); expect(body.acceptedTermsVersion).toBe(premiumPlan.termsVersion);
+      expect(body.idempotencyKey).toMatch(/^[a-f0-9-]{36}$/);
+      created++; state = premiumState('pending'); return json(route, premiumOrder);
+    }
+    if (path === `/api/premium/orders/${premiumOrder.id}/recover` && method === 'POST') { state = premiumState('active'); return json(route, state); }
+    if (path === `/api/premium/orders/${premiumOrder.id}/cancel` && method === 'POST') { state = premiumState('cancelled'); return json(route, state); }
+    throw new Error(`Unexpected Premium fixture request: ${method} ${path}`);
+  });
+  await page.addInitScript(() => {
+    (window as any).Razorpay = class {
+      failed?: () => void;
+      on(_event: string, callback: () => void) { this.failed = callback; }
+      open() { this.failed?.(); }
+    };
+  });
+  await page.goto('/premium');
+  await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Upgrade to Yor Premium' }).click();
+  await expect(page.getByRole('alert')).toContainText('Payment did not complete');
+  await page.getByRole('button', { name: 'Recover payment', exact: true }).click();
+  await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+  expect(created).toBe(1);
+  await page.getByRole('button', { name: 'Cancel at end of term' }).click();
+  await expect(page.getByText('Yor Premium · cancelled', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cancellation recorded. Your paid access remains until the date above.')).toBeVisible();
+});
+
+test('Premium billing rejects malformed responses and recovers with a retry', async ({ page }) => {
+  await installApiBoundary(page);
+  let calls = 0;
+  await page.route('**/api/premium/me', route => json(route, ++calls === 1 ? { catalog: [] } : premiumState('free')));
+  await page.goto('/premium');
+  await expect(page.getByRole('alert')).toContainText('Billing details could not be verified');
+  await page.getByRole('button', { name: 'Retry billing' }).click();
+  await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeVisible();
+});
+
 test('two tabs serialize HttpOnly cookie rotation without dropping either restored session', async ({ page, context, baseURL }) => {
   const second = await context.newPage();
   await installApiBoundary(page);

@@ -4,6 +4,7 @@
 // VITE_API_BASE_URL without changing application code.
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
+import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
 
 export interface Tokens {
   accessToken: string;
@@ -13,6 +14,21 @@ export interface Tokens {
 }
 
 export type AuthTokens = Tokens;
+export interface PremiumPlan {
+  key: string; name: string; priceMinor: number; currency: string; durationDays: number;
+  features: string[]; termsVersion: string; refundPolicy: string;
+}
+export interface PremiumOrder {
+  id: string; providerOrderId: string | null; amountMinor: number; currency: string;
+  status: string; lastPaymentStatus: string | null; createdAt: string; paidAt: string | null; plan: PremiumPlan; keyId: string;
+}
+export interface PremiumBillingState {
+  catalog: { available: boolean; plan: PremiumPlan | null; operationalFeatures: Record<string, boolean>;
+    automaticRenewal: false; billingModel: 'prepaid_fixed_term'; testMode: boolean; supportEmail: string };
+  subscription: { order_id: string; starts_at: string; ends_at: string; cancel_at_period_end: boolean; status: string } | null;
+  orders: PremiumOrder[];
+  enabledFeatures: Record<string, boolean>;
+}
 export type FeedMode = 'for_you' | 'following' | 'favorites';
 
 export interface BackendAchievement {
@@ -646,6 +662,13 @@ export const api = {
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  getPremiumBilling: () => request<PremiumBillingState>('/premium/me').then(parsePremiumBilling),
+  createPremiumOrder: (payload: { idempotencyKey: string; acceptedTermsVersion: string; acceptedPriceMinor: number }) =>
+    request<PremiumOrder>('/premium/orders', { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumOrder),
+  verifyPremiumOrder: (id: string, payload: { paymentId: string; signature: string }) =>
+    request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/verify`, { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumBilling),
+  recoverPremiumOrder: (id: string) => request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/recover`, { method: 'POST' }).then(parsePremiumBilling),
+  cancelPremiumOrder: (id: string) => request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }).then(parsePremiumBilling),
   updatePremiumProfile: (payload: Partial<PremiumProfileSelection>) =>
     request<BackendUser>('/users/me/premium-profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: async (file: File) => {
