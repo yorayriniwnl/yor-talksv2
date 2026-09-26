@@ -2,9 +2,11 @@ import { pool } from "@workspace/db";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { startNotificationWorker, type NotificationWorkerHandle } from "./workers/notification-worker.js";
+import { startLifecycleWorker } from './workers/lifecycle-worker.js';
 
 async function main(): Promise<void> {
   await pool.query("SELECT 1");
+  const lifecycle = await startLifecycleWorker();
   let worker: NotificationWorkerHandle | null = await startNotificationWorker();
   if (env.NODE_ENV === "production" && !worker.isHealthy()) {
     await worker.close();
@@ -20,6 +22,7 @@ async function main(): Promise<void> {
     try {
       await worker?.close();
       worker = null;
+      await lifecycle.close();
       await pool.end();
       process.exit(0);
     } catch (error) {

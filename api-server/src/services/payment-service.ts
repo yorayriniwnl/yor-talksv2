@@ -165,7 +165,7 @@ export class PaymentService {
       if (lockedOrder.status !== "paid" && lockedOrder.status !== "refunded") throw new PaymentRequestError("Only a settled payment can be refunded");
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
-        .where(and(eq(ledgerTransactionsTable.debitAccountId, lockedOrder.creatorId), like(ledgerTransactionsTable.referenceId, `${prefix}%`)));
+        .where(like(ledgerTransactionsTable.referenceId, `${prefix}%`));
       const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
       if (nextRefundedTotal > lockedOrder.amountMinor) throw new PaymentRequestError("Refunds exceed the original payment amount");
 

@@ -54,7 +54,7 @@ production evidence are separate categories.
 | F04 upload controls | Signed grant metadata cannot enforce type/size | Controlled upload and durable reservations/quotas | Pending | Provider-backed limits and adversarial upload evidence |
 | F05 Premium | Rollout flags still stand in for subscription entitlement | Separate platform plan, billing/entitlements and customer journey | Pending | Final price/policy; provider test lifecycle |
 | F06 payments | Candidate webhook/refund fixes exist but are not a complete durable lifecycle | Integrate/revalidate; durable inbox, settlement/reconciliation, reversals | Pending | Provider test mode and financial fault tests |
-| F07 deletion/ledger | Historical counterparty attribution defect requires fresh regression | Transactional identity anonymization and retryable cleanup | Pending | Retention policy owner decision |
+| F07 deletion/ledger | Confirmed both ledger parties were erased, orders cascaded away, and operations lacked a transaction | Transactional party-specific anonymization; financial references SET NULL, product snapshot and shipping erasure; durable session cleanup | 5/5 database-backed account/job tests; retained refunds after both deletion orders; transaction rollback and retry fencing | Provider-owned media cleanup is tracked under F03; owner must approve financial retention duration |
 | F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
 | F10 sessions | Same-second JWT repeats; old approved challenges survive revocation; reset read/update/delete races | Random jti + Redis CAS; database auth epoch on HTTP/socket/refresh/challenges; transactional reset redemption; cross-tab Web Lock | 21/21 focused tests with real PostgreSQL/Redis; 44/44 state tests; API/frontend typechecks | Hosted authenticated journeys; cross-tab browser case runs in full suite |
@@ -78,6 +78,17 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F07/F14: `20260926-lifecycle-2` retains payment/membership/marketplace order
+  references independently of deleted identities. Only the deleted ledger party
+  is anonymized; counterparties and ledger event IDs remain intact. Identity,
+  social-content removal, accounting changes and cleanup enqueue commit together.
+  The lifecycle worker leases durable jobs, retries with backoff, fences abandoned
+  leases and records exhausted jobs for operator review. Legacy URL references
+  enter a private ownership-review hold; an arbitrary URL is never treated as
+  authority to delete a provider asset. Tests use synthetic accounts and real local
+  PostgreSQL/Redis. Retention duration requires an owner decision; no legal retention
+  requirement is implied. Provider media cleanup is not yet verified.
 
 - F16: the current mocked Chromium suite passes 32/32, including mobile light/dark,
   keyboard/accessibility, save failure/retry, block failure/retry, messaging,

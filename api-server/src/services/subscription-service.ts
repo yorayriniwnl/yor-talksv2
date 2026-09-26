@@ -220,7 +220,7 @@ export class SubscriptionService {
       if (lockedOrder.status !== "paid" && lockedOrder.status !== "refunded") throw new SubscriptionRequestError("Only a settled membership can be refunded");
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
-        .where(and(eq(ledgerTransactionsTable.debitAccountId, lockedOrder.creatorId), like(ledgerTransactionsTable.referenceId, `${prefix}%`)));
+        .where(like(ledgerTransactionsTable.referenceId, `${prefix}%`));
       const nextRefundedTotal = Number(refundedTotal?.total ?? 0) + input.amountMinor;
       if (nextRefundedTotal > lockedOrder.amountMinor) throw new SubscriptionRequestError("Refunds exceed the original membership amount");
 
@@ -241,7 +241,6 @@ export class SubscriptionService {
           eq(subscriptionsTable.status, "active"),
         ));
         await tx.update(entitlementsTable).set({ status: "revoked" }).where(and(
-          eq(entitlementsTable.userId, lockedOrder.subscriberId),
           eq(entitlementsTable.entityType, "subscription"),
           eq(entitlementsTable.entityId, lockedOrder.subscriptionId),
           eq(entitlementsTable.status, "active"),
@@ -286,8 +285,8 @@ export class SubscriptionService {
 
       await tx.update(subscriptionsTable).set({ status: "active", startedAt: startedAt.toISOString(), expiresAt })
         .where(eq(subscriptionsTable.id, lockedOrder.subscriptionId));
+      if (lockedOrder.subscriberId && lockedOrder.creatorId) {
       const [existingEntitlement] = await tx.select({ id: entitlementsTable.id }).from(entitlementsTable).where(and(
-        eq(entitlementsTable.userId, lockedOrder.subscriberId),
         eq(entitlementsTable.entityType, "subscription"),
         eq(entitlementsTable.entityId, lockedOrder.subscriptionId),
       ));
@@ -304,6 +303,7 @@ export class SubscriptionService {
           grantedAt: startedAt.toISOString(),
           expiresAt,
         });
+      }
       }
       await tx.insert(ledgerTransactionsTable).values({
         id: randomUUID(),

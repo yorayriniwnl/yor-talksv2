@@ -571,9 +571,10 @@ export const liveStreamsTable = pgTable("live_streams", {
 
 export const marketplaceOrdersTable = pgTable("marketplace_orders", {
   id: uuid("id").primaryKey(),
-  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "restrict" }).notNull(),
-  buyerId: uuid("buyer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "set null" }),
+  productSnapshot: jsonb('product_snapshot').notNull().default({}),
+  buyerId: uuid("buyer_id").references(() => usersTable.id, { onDelete: "set null" }),
+  sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
   providerPaymentId: text("provider_payment_id"),
@@ -640,8 +641,8 @@ export const storyPollVotesTable = pgTable("story_poll_votes", {
 
 export const paymentOrdersTable = pgTable("payment_orders", {
   id: uuid("id").primaryKey(),
-  payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "set null" }),
   streamId: uuid("stream_id").references(() => liveStreamsTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
@@ -860,8 +861,8 @@ export const ledgerTransactionsTable = pgTable("ledger_transactions", {
 
 export const subscriptionsTable = pgTable("subscriptions", {
   id: uuid("id").primaryKey(),
-  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: 'set null' }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'set null' }),
   tier: text("tier").notNull().default("basic"),
   status: text("status").notNull().default("active"),
   priceMinor: integer("price_minor").notNull(),
@@ -890,8 +891,8 @@ export const entitlementsTable = pgTable("entitlements", {
 export const subscriptionOrdersTable = pgTable("subscription_orders", {
   id: uuid("id").primaryKey(),
   subscriptionId: uuid("subscription_id").references(() => subscriptionsTable.id, { onDelete: "cascade" }).notNull(),
-  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
   providerPaymentId: text("provider_payment_id"),

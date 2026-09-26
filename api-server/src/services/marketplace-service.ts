@@ -33,7 +33,7 @@ export class MarketplaceService {
         )).returning({ id: marketplaceOrdersTable.id });
         if (cancelled) {
           await tx.update(productsTable).set({ availability: "active" }).where(and(
-            eq(productsTable.id, order.productId),
+            sql`${productsTable.id} = ${order.productId}`,
             eq(productsTable.availability, "reserved"),
           ));
         }
@@ -227,13 +227,13 @@ export class MarketplaceService {
       if (lockedOrder.status === "refund_required" && lockedOrder.providerPaymentId === paymentId) {
         return lockedOrder as MarketplaceOrderRecord;
       }
-      if (lockedOrder.status === "cancelled" || lockedOrder.status === "failed") {
+      if (lockedOrder.status === "cancelled" || lockedOrder.status === "failed" || !lockedOrder.productId || !lockedOrder.sellerId || !lockedOrder.buyerId) {
         const [latePayment] = await tx.update(marketplaceOrdersTable).set({
           providerPaymentId: paymentId,
           providerSignature: signature ?? null,
           status: "refund_required",
           paidAt: new Date().toISOString(),
-        }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), inArray(marketplaceOrdersTable.status, ["cancelled", "failed"])))
+        }).where(and(eq(marketplaceOrdersTable.id, lockedOrder.id), inArray(marketplaceOrdersTable.status, ["created", "cancelled", "failed"])))
           .returning();
         if (!latePayment) throw new MarketplaceRequestError("Late marketplace payment could not be queued for refund");
         return latePayment as MarketplaceOrderRecord;
@@ -298,7 +298,7 @@ export class MarketplaceService {
       eq(marketplaceOrdersTable.status, "created"),
     )).returning();
     if (!order) throw new MarketplaceRequestError("Only an unpaid order can be cancelled");
-    await db.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, order.productId), eq(productsTable.availability, "reserved")));
+    if (order.productId) await db.update(productsTable).set({ availability: "active" }).where(and(eq(productsTable.id, order.productId), eq(productsTable.availability, "reserved")));
     return order as MarketplaceOrderRecord;
   }
 

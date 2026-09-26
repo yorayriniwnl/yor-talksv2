@@ -298,9 +298,10 @@ export interface ProductRecord {
 
 export interface MarketplaceOrderRecord {
   id: string;
-  productId: string;
-  buyerId: string;
-  sellerId: string;
+  productId: string | null;
+  productSnapshot?: { id?: string; title?: string };
+  buyerId: string | null;
+  sellerId: string | null;
   provider: string;
   providerOrderId: string;
   providerPaymentId?: string | null;

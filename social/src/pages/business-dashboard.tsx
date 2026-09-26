@@ -19,7 +19,7 @@ export default function BusinessDashboard() {
   const currentUser = useAppStore((state) => state.currentUser);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [products, setProducts] = useState<Array<{ sellerId: string; availability?: string }>>([]);
-  const [orders, setOrders] = useState<Array<{ sellerId: string; status: string; amountMinor: number; refundedAmountMinor: number }>>([]);
+  const [orders, setOrders] = useState<Array<{ sellerId: string | null; status: string; amountMinor: number; refundedAmountMinor: number }>>([]);
   const [loading, setLoading] = useState(true);
   
   const [isCreating, setIsCreating] = useState(false);

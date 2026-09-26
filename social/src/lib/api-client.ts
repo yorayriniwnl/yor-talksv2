@@ -1108,9 +1108,10 @@ export interface BackendProduct {
 
 export interface BackendMarketplaceOrder {
   id: string;
-  productId: string;
-  buyerId: string;
-  sellerId: string;
+  productId: string | null;
+  productSnapshot?: { id?: string; title?: string };
+  buyerId: string | null;
+  sellerId: string | null;
   providerOrderId: string;
   amountMinor: number;
   refundedAmountMinor?: number;
