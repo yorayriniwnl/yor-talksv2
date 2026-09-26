@@ -21,6 +21,7 @@ export class EconomyService {
         eq(ledgerTransactionsTable.status, "completed"),
         eq(ledgerTransactionsTable.currency, "INR"),
         or(
+          like(ledgerTransactionsTable.referenceId, "dispute:reserve:%"),
           like(ledgerTransactionsTable.referenceId, "razorpay:refund:%"),
           like(ledgerTransactionsTable.referenceId, "subscription:refund:%"),
           like(ledgerTransactionsTable.referenceId, "marketplace:refund:%"),

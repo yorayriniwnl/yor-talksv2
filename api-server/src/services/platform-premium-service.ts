@@ -52,8 +52,8 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
       if (!user.rowCount) throw new PremiumRequestError('Account is unavailable');
       const existing = await client.query<PremiumOrder>('SELECT * FROM premium_orders WHERE user_id=$1 AND idempotency_key=$2', [userId, input.idempotencyKey]);
       if (existing.rows[0]) return { order: existing.rows[0], created: false };
-      const active = await client.query(`SELECT 1 FROM premium_access WHERE user_id=$1 AND status IN ('active','cancelled') AND ends_at>now()`, [userId]);
-      if (active.rowCount) throw new PremiumRequestError('Premium already covers your current period. You can buy another term after expiry.');
+      const active = await client.query(`SELECT 1 FROM premium_access WHERE user_id=$1 AND status IN ('active','cancelled','disputed','chargeback') AND ends_at>now()`, [userId]);
+      if (active.rowCount) throw new PremiumRequestError('An active or disputed Premium term already exists. Review its status before buying another term.');
       const pending = await client.query(`SELECT 1 FROM premium_orders WHERE user_id=$1 AND status IN ('provider_pending','creation_unknown','created')`, [userId]);
       if (pending.rowCount) throw new PremiumRequestError('A checkout is already pending. Recover or cancel it before starting another.');
       await client.query(`INSERT INTO premium_plans(key,name,price_minor,currency,duration_days,features,terms_version,refund_policy,enabled)
@@ -169,7 +169,7 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
       if (order.user_id) await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [order.user_id]);
       const locked = (await client.query<PremiumOrder>('SELECT * FROM premium_orders WHERE id=$1 FOR UPDATE', [order.id])).rows[0]!;
       if (locked.provider_payment_id && locked.provider_payment_id !== input.paymentId) throw new PremiumRequestError('Another payment already settled this order');
-      if (['paid','refunded','disputed','refund_required'].includes(locked.status)) return;
+      if (['paid','refunded','disputed','chargeback','refund_required'].includes(locked.status)) return;
       const grant = Boolean(locked.user_id) && !['cancelled','failed','expired'].includes(locked.status) && payment.status === 'captured';
       await client.query(`UPDATE premium_orders SET provider_payment_id=$2,status=$3,last_payment_status='captured',paid_at=coalesce(paid_at,now()),updated_at=now() WHERE id=$1`, [locked.id, input.paymentId, grant ? 'paid' : 'refund_required']);
       await client.query(`INSERT INTO ledger_transactions(id,amount_minor,currency,reference_id,status) VALUES($1,$2,$3,$4,'completed') ON CONFLICT(reference_id) DO NOTHING`, [randomUUID(), locked.amount_minor, locked.currency, `premium:${locked.id}`]);
@@ -200,6 +200,7 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
       // Any refunded term loses perks; core functionality and existing content remain.
       await client.query(`UPDATE premium_orders SET status='refunded',updated_at=now() WHERE id=$1`, [order.id]);
       await client.query(`UPDATE premium_access SET status='refunded',updated_at=now() WHERE order_id=$1`, [order.id]);
+      await client.query('SELECT yor_sync_dispute_reserve($1,$2)', ['premium',order.id]);
       return true;
     });
   }
@@ -208,9 +209,9 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
     await transaction(async client => {
       const order = (await client.query<PremiumOrder>('SELECT * FROM premium_orders WHERE id=$1 AND user_id=$2 FOR UPDATE', [id,userId])).rows[0];
       if (!order) throw new PremiumRequestError('Premium order not found');
-      if (order.status === 'paid') {
-        await client.query(`UPDATE premium_access SET status='cancelled',cancel_at_period_end=true,updated_at=now()
-          WHERE order_id=$1 AND status='active'`, [id]);
+      if (['paid','disputed','chargeback'].includes(order.status)) {
+        await client.query(`UPDATE premium_access SET status=CASE WHEN status='active' THEN 'cancelled' ELSE status END,cancel_at_period_end=true,updated_at=now()
+          WHERE order_id=$1 AND status IN ('active','disputed','chargeback')`, [id]);
       } else if (['provider_pending','creation_unknown','created'].includes(order.status)) {
         await client.query(`UPDATE premium_orders SET status='cancelled',updated_at=now() WHERE id=$1`, [id]);
       }

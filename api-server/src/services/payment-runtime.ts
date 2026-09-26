@@ -8,13 +8,15 @@ import { PaymentInboxService } from './payment-inbox-service.js';
 import type { LifecycleHandler } from '../workers/lifecycle-worker.js';
 import { CheckoutIntentService } from './checkout-intent-service.js';
 import { pool } from '@workspace/db';
+import { PaymentDisputeService } from './payment-dispute-service.js';
 
 export function createPaymentRuntime() {
   const provider = new RazorpayService();
   const premium = new PlatformPremiumService(provider);
   const products = { tip: new PaymentService(provider), membership: new SubscriptionService(provider), marketplace: new MarketplaceService(provider) };
   const intents = new CheckoutIntentService(provider);
-  const processor = new PaymentWebhookService(provider, [...Object.values(products), premium]);
+  const disputes = new PaymentDisputeService(provider, paymentId=>processor.ensureCaptureByPayment(paymentId));
+  const processor: PaymentWebhookService = new PaymentWebhookService(provider, [...Object.values(products), premium], id=>disputes.reconcile(id));
   const inbox = new PaymentInboxService(provider, processor);
   const handlers: Record<string, LifecycleHandler> = {
     payment_event: async job => {
@@ -29,6 +31,11 @@ export function createPaymentRuntime() {
       if (typeof job.payload.checkoutId !== 'string') throw new Error('invalid_checkout_job');
       const intent = await intents.get(job.payload.checkoutId);
       return { retryAfterSeconds: await intents.reconcile(intent.id, products[intent.product]) };
+    },
+    dispute_scan: async () => ({ retryAfterSeconds: await disputes.scan() }),
+    dispute_reconcile: async job => {
+      if (typeof job.payload.disputeId!=='string') throw new Error('invalid_dispute_job');
+      return {retryAfterSeconds:await disputes.reconcile(job.payload.disputeId)};
     },
   };
   const recover = async (userId: string, id: string) => {
@@ -45,5 +52,5 @@ export function createPaymentRuntime() {
     } else await pool.query(`UPDATE payment_orders SET status='cancelled' WHERE id=$1 AND payer_id=$2 AND status IN ('created','provider_pending')`, [id,userId]);
     return intents.list(userId);
   };
-  return { inbox, premium, handlers, intents, recover, cancel };
+  return { inbox, premium, handlers, intents, recover, cancel, disputes };
 }

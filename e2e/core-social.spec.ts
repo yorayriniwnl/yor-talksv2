@@ -135,18 +135,48 @@ test('Creator billing contains malformed history and retries', async ({ page }) 
   await page.getByRole('button', { name: 'Retry history' }).click();
   await expect(page.getByText('No creator payments yet.')).toBeVisible();
 });
+
+test('Payment operations requires an administrator in the UI', async ({ page }) => {
+  await installApiBoundary(page); await page.goto('/payment-operations');
+  await expect(page.getByText('Administrator access is required.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry failed job' })).toHaveCount(0);
+});
+
+test('Payment operations records a reason before retry and retains failures for review', async ({ page }) => {
+  await installApiBoundary(page, {...user,role:'admin'});
+  await page.setViewportSize({width:390,height:900});
+  const data={jobs:[{id:'c3519578-4b5a-4893-8ef6-0283c291981e',kind:'dispute_reconcile',status:'dead',attempts:8,last_error:'operation_failed'}],
+    disputes:[{id:'disp_testBrowser',product:'premium',status:'open',amount_minor:19900,amount_deducted:0,currency:'INR',respond_by:'2099-10-01T00:00:00.000Z',checked_at:'2026-09-26T12:00:00.000Z'}],
+    checkouts:[],events:[],exposure:[]};
+  let tries=0;
+  await page.route('**/api/operations/payments**',async route=>{
+    if(route.request().method()==='GET')return json(route,data);
+    expect(route.request().postDataJSON().reason).toBe('Provider connection restored');
+    tries++;
+    if(tries===1)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Payment operations are temporarily unavailable'})});
+    data.jobs[0].status='pending';return json(route,data);
+  });
+  await page.goto('/payment-operations');
+  const retry=page.getByRole('button',{name:'Retry failed job'});
+  await expect(retry).toBeDisabled();
+  await page.getByLabel('Reason for reconciliation or retry').fill('Provider connection restored');
+  await retry.click();await expect(page.getByRole('alert').filter({hasText:'temporarily unavailable'})).toBeVisible();
+  await retry.click();await expect(retry).toHaveCount(0);expect(tries).toBe(2);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+});
 const premiumOrder = { id: '962a9d20-cbe9-45ef-873b-772eaa991670', providerOrderId: 'order_browserSynthetic', amountMinor: 19900, currency: 'INR',
   status: 'created', lastPaymentStatus: null as string | null, createdAt: '2026-09-26T00:00:00.000Z', paidAt: null as string | null, plan: premiumPlan, keyId: 'rzp_test_browser' };
 function premiumState(status: string) {
-  const purchased = ['active', 'cancelled', 'expired', 'refunded'].includes(status);
+  const purchased = ['active', 'cancelled', 'expired', 'refunded', 'disputed', 'chargeback'].includes(status);
   return { catalog: { available: true, plan: premiumPlan, operationalFeatures: { MESSAGE_FONT: true, STORY_FONT: true }, automaticRenewal: false,
     billingModel: 'prepaid_fixed_term', testMode: true, supportEmail: 'support@example.test' },
     subscription: purchased ? { order_id: premiumOrder.id, starts_at: '2026-09-01T00:00:00.000Z', ends_at: status === 'expired' ? '2026-09-02T00:00:00.000Z' : '2099-10-01T00:00:00.000Z', cancel_at_period_end: status === 'cancelled', status } : null,
-    orders: status === 'free' || status === 'overridden' ? [] : [{ ...premiumOrder, status: purchased ? status === 'refunded' ? 'refunded' : 'paid' : 'created', lastPaymentStatus: status === 'failed' ? 'failed' : purchased ? 'captured' : null, paidAt: purchased ? '2026-09-26T00:00:00.000Z' : null }],
+    orders: status === 'free' || status === 'overridden' ? [] : [{ ...premiumOrder, status: purchased ? ['refunded','disputed','chargeback'].includes(status) ? status : 'paid' : 'created', lastPaymentStatus: status === 'failed' ? 'failed' : purchased ? 'captured' : null, paidAt: purchased ? '2026-09-26T00:00:00.000Z' : null }],
     enabledFeatures: { MESSAGE_FONT: ['active','cancelled','overridden'].includes(status) } };
 }
 
-for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancelled', 'refunded', 'overridden']) {
+for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancelled', 'refunded', 'disputed', 'chargeback', 'overridden']) {
   test(`Premium billing presents ${status} state with free safety controls`, async ({ page }) => {
     await installApiBoundary(page);
     if (['expired','cancelled','overridden'].includes(status)) await page.setViewportSize({ width: 390, height: 844 });
@@ -160,6 +190,7 @@ for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancell
     if (status === 'failed') await expect(page.getByText(/last payment attempt failed/)).toBeVisible();
     if (status === 'cancelled') await expect(page.getByText(/Cancellation recorded/)).toBeVisible();
     if (status === 'expired' || status === 'refunded') await expect(page.getByText(`Free account · ${status}`, { exact: true })).toBeVisible();
+    if (['disputed','chargeback'].includes(status)) { await expect(page.getByText(/Premium access is paused/)).toBeVisible(); await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toHaveCount(0); }
     if (status === 'active') await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
     if (status === 'free') {
       await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();

@@ -489,13 +489,20 @@ export interface CheckoutState {
   status: string; providerState: string; lastPaymentStatus: string | null; amountMinor: number; currency: string; createdAt: string;
   subscriptionId?: string | null; keyId: string;
 }
+export interface PaymentOperations {
+  jobs: Array<{id:string;kind:string;status:string;attempts:number;last_error:string|null}>;
+  disputes: Array<{id:string;product:string;status:string;amount_minor:number;amount_deducted:number;currency:string;respond_by:string|null;checked_at:string|null}>;
+  checkouts: Array<{id:string;product:string;status:string;amount_minor:number;currency:string}>;
+  events: Array<{event_id:string;event_type:string;status:string;last_error:string|null}>;
+  exposure: Array<{order_id:string;product:string;excess_minor:number|string}>;
+}
 
 export interface BackendSubscription {
   id: string;
   subscriberId: string;
   creatorId: string;
   tier: string;
-  status: 'pending' | 'active' | 'expired' | 'cancelled' | 'refunded' | 'refund_required' | 'disputed';
+  status: 'pending' | 'active' | 'expired' | 'cancelled' | 'refunded' | 'refund_required' | 'disputed' | 'chargeback';
   cancelAtPeriodEnd: boolean;
   priceMinor: number;
   currency: string;
@@ -820,6 +827,9 @@ export const api = {
 
   // ---- Economy ----
   getCheckouts: () => request<CheckoutState[]>('/billing/checkouts').then(parseCheckoutHistory),
+  getPaymentOperations: () => request<PaymentOperations>('/operations/payments'),
+  retryPaymentJob: (id:string,reason:string) => request<PaymentOperations>(`/operations/payments/jobs/${encodeURIComponent(id)}/retry`, {method:'POST',body:JSON.stringify({reason})}),
+  reconcilePaymentDispute: (id:string,reason:string) => request<PaymentOperations>(`/operations/payments/disputes/${encodeURIComponent(id)}/reconcile`, {method:'POST',body:JSON.stringify({reason})}),
   recoverCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/recover`, { method: 'POST' }).then(parseCheckoutHistory),
   cancelCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/cancel`, { method: 'POST' }).then(parseCheckoutHistory),
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),

@@ -1524,6 +1524,54 @@ export const PostOnboardingCompleteResponse = zod.object({
 
 
 /**
+ * @summary Get /operations/payments
+ */
+export const GetOperationsPaymentsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /operations/payments/disputes/{id}/reconcile
+ */
+export const PostOperationsPaymentsDisputesByIdReconcileParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PostOperationsPaymentsDisputesByIdReconcileBody = zod.record(zod.string(), zod.unknown())
+
+export const PostOperationsPaymentsDisputesByIdReconcileResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /operations/payments/jobs/{id}/retry
+ */
+export const PostOperationsPaymentsJobsByIdRetryParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PostOperationsPaymentsJobsByIdRetryBody = zod.record(zod.string(), zod.unknown())
+
+export const PostOperationsPaymentsJobsByIdRetryResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Post /posts
  */
 export const PostPostsBody = zod.record(zod.string(), zod.unknown())

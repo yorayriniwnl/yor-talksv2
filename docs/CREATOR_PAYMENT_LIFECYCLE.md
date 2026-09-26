@@ -39,7 +39,7 @@ per page; a compare-and-set cursor prevents concurrent recovery from skipping
 pages. Paid/old orders repeat daily; pending orders repeat every five minutes,
 with failed jobs retained for retry or operator attention. Refunds missed by a
 webhook are repaired by these reads. Dispute processing and operator controls are
-tracked separately until their acceptance tests pass.
+documented in `PAYMENT_DISPUTES.md`, with separate provider acceptance gates.
 
 Migration: run the production migration runner; `20260926-checkouts-4` follows the
 Premium migration. It adds checkout intents, refund cursors and paid-through

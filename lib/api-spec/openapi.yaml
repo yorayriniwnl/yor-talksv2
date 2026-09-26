@@ -35,6 +35,7 @@ tags:
   - name: notes
   - name: notifications
   - name: onboarding
+  - name: operations
   - name: posts
   - name: premium
   - name: products
@@ -2485,6 +2486,92 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /operations/payments:
+    get:
+      operationId: getOperationsPayments
+      summary: Get /operations/payments
+      tags: [operations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin"
+  /operations/payments/disputes/{id}/reconcile:
+    post:
+      operationId: postOperationsPaymentsDisputesByIdReconcile
+      summary: Post /operations/payments/disputes/{id}/reconcile
+      tags: [operations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin"
+  /operations/payments/jobs/{id}/retry:
+    post:
+      operationId: postOperationsPaymentsJobsByIdRetry
+      summary: Post /operations/payments/jobs/{id}/retry
+      tags: [operations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin"
   /posts:
     post:
       operationId: postPosts

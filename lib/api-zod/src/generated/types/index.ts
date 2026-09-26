@@ -70,6 +70,8 @@ export * from './postNotificationsByNotificationIdReadBody';
 export * from './postNotificationsPushSubscribeBody';
 export * from './postNotificationsReadAllBody';
 export * from './postOnboardingCompleteBody';
+export * from './postOperationsPaymentsDisputesByIdReconcileBody';
+export * from './postOperationsPaymentsJobsByIdRetryBody';
 export * from './postPostsBody';
 export * from './postPostsByPostIdBookmarkBody';
 export * from './postPostsByPostIdCommentsBody';

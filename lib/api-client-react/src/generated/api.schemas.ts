@@ -139,6 +139,10 @@ export type PostNotificationsReadAllBody = { [key: string]: unknown };
 
 export type PostOnboardingCompleteBody = { [key: string]: unknown };
 
+export type PostOperationsPaymentsDisputesByIdReconcileBody = { [key: string]: unknown };
+
+export type PostOperationsPaymentsJobsByIdRetryBody = { [key: string]: unknown };
+
 export type PostPostsBody = { [key: string]: unknown };
 
 export type PutPostsByPostIdBody = { [key: string]: unknown };

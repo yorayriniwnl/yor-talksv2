@@ -83,6 +83,8 @@ import type {
   PostNotificationsPushSubscribeBody,
   PostNotificationsReadAllBody,
   PostOnboardingCompleteBody,
+  PostOperationsPaymentsDisputesByIdReconcileBody,
+  PostOperationsPaymentsJobsByIdRetryBody,
   PostPostsBody,
   PostPostsByPostIdBookmarkBody,
   PostPostsByPostIdCommentsBody,
@@ -7717,6 +7719,227 @@ export const usePostOnboardingComplete = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPostOnboardingCompleteMutationOptions(options));
+    }
+
+export const getGetOperationsPaymentsUrl = () => {
+
+
+
+
+  return `/api/operations/payments`
+}
+
+/**
+ * @summary Get /operations/payments
+ */
+export const getOperationsPayments = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetOperationsPaymentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOperationsPaymentsQueryKey = () => {
+    return [
+    `/api/operations/payments`
+    ] as const;
+    }
+
+
+export const getGetOperationsPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof getOperationsPayments>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOperationsPayments>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOperationsPaymentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperationsPayments>>> = ({ signal }) => getOperationsPayments({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOperationsPayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOperationsPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof getOperationsPayments>>>
+export type GetOperationsPaymentsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /operations/payments
+ */
+
+export function useGetOperationsPayments<TData = Awaited<ReturnType<typeof getOperationsPayments>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOperationsPayments>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOperationsPaymentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostOperationsPaymentsDisputesByIdReconcileUrl = (id: string,) => {
+
+
+
+
+  return `/api/operations/payments/disputes/${id}/reconcile`
+}
+
+/**
+ * @summary Post /operations/payments/disputes/{id}/reconcile
+ */
+export const postOperationsPaymentsDisputesByIdReconcile = async (id: string,
+    postOperationsPaymentsDisputesByIdReconcileBody?: PostOperationsPaymentsDisputesByIdReconcileBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostOperationsPaymentsDisputesByIdReconcileUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postOperationsPaymentsDisputesByIdReconcileBody)
+  }
+);}
+
+
+
+
+
+export const getPostOperationsPaymentsDisputesByIdReconcileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsDisputesByIdReconcileBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsDisputesByIdReconcileBody>}, TContext> => {
+
+const mutationKey = ['postOperationsPaymentsDisputesByIdReconcile'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>, {id: string;data?: BodyType<PostOperationsPaymentsDisputesByIdReconcileBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postOperationsPaymentsDisputesByIdReconcile(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostOperationsPaymentsDisputesByIdReconcileMutationResult = NonNullable<Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>>
+    export type PostOperationsPaymentsDisputesByIdReconcileMutationBody = BodyType<PostOperationsPaymentsDisputesByIdReconcileBody> | undefined
+    export type PostOperationsPaymentsDisputesByIdReconcileMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /operations/payments/disputes/{id}/reconcile
+ */
+export const usePostOperationsPaymentsDisputesByIdReconcile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsDisputesByIdReconcileBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postOperationsPaymentsDisputesByIdReconcile>>,
+        TError,
+        {id: string;data?: BodyType<PostOperationsPaymentsDisputesByIdReconcileBody>},
+        TContext
+      > => {
+      return useMutation(getPostOperationsPaymentsDisputesByIdReconcileMutationOptions(options));
+    }
+
+export const getPostOperationsPaymentsJobsByIdRetryUrl = (id: string,) => {
+
+
+
+
+  return `/api/operations/payments/jobs/${id}/retry`
+}
+
+/**
+ * @summary Post /operations/payments/jobs/{id}/retry
+ */
+export const postOperationsPaymentsJobsByIdRetry = async (id: string,
+    postOperationsPaymentsJobsByIdRetryBody?: PostOperationsPaymentsJobsByIdRetryBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostOperationsPaymentsJobsByIdRetryUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postOperationsPaymentsJobsByIdRetryBody)
+  }
+);}
+
+
+
+
+
+export const getPostOperationsPaymentsJobsByIdRetryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsJobsByIdRetryBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsJobsByIdRetryBody>}, TContext> => {
+
+const mutationKey = ['postOperationsPaymentsJobsByIdRetry'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>, {id: string;data?: BodyType<PostOperationsPaymentsJobsByIdRetryBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postOperationsPaymentsJobsByIdRetry(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostOperationsPaymentsJobsByIdRetryMutationResult = NonNullable<Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>>
+    export type PostOperationsPaymentsJobsByIdRetryMutationBody = BodyType<PostOperationsPaymentsJobsByIdRetryBody> | undefined
+    export type PostOperationsPaymentsJobsByIdRetryMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /operations/payments/jobs/{id}/retry
+ */
+export const usePostOperationsPaymentsJobsByIdRetry = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>, TError,{id: string;data?: BodyType<PostOperationsPaymentsJobsByIdRetryBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postOperationsPaymentsJobsByIdRetry>>,
+        TError,
+        {id: string;data?: BodyType<PostOperationsPaymentsJobsByIdRetryBody>},
+        TContext
+      > => {
+      return useMutation(getPostOperationsPaymentsJobsByIdRetryMutationOptions(options));
     }
 
 export const getPostPostsUrl = () => {

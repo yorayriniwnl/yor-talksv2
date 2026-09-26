@@ -75,6 +75,7 @@ export default function Premium() {
   const plan = state?.catalog.plan;
   const subscription = state?.subscription;
   const covered = subscription && ['active', 'cancelled'].includes(subscription.status) && new Date(subscription.ends_at).getTime() > Date.now();
+  const disputed = subscription && ['disputed','chargeback'].includes(subscription.status);
   const pending = state?.orders.some(order => pendingStates.includes(order.status));
   return <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 pb-28 sm:px-6">
     <section className="rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card to-background p-6 sm:p-9">
@@ -91,7 +92,8 @@ export default function Premium() {
       <section className="rounded-3xl border border-border bg-card p-6" aria-labelledby="current-plan">
         <h2 id="current-plan" className="font-display text-xl font-bold">Your plan</h2>
         <p className="mt-3 font-semibold">{covered ? 'Yor Premium' : 'Free account'}{subscription ? ` · ${subscription.status}` : ''}</p>
-        {subscription && <p className="mt-2 text-sm text-muted-foreground">{covered ? 'Paid through' : 'Term ended'} {date(subscription.ends_at)}. No automatic renewal.</p>}
+        {subscription && <p className="mt-2 text-sm text-muted-foreground">{covered ? 'Paid through' : disputed ? 'Original term ends' : 'Term ended'} {date(subscription.ends_at)}. No automatic renewal.</p>}
+        {disputed && <p className="mt-3 text-sm">Premium access is paused by a payment dispute or chargeback. Your free account remains available. Contact billing support to review the payment; a provider resolution cannot extend the original term.</p>}
         {covered && !subscription.cancel_at_period_end && <Button variant="outline" className="mt-4" disabled={busy} onClick={() => void action(() => api.cancelPremiumOrder(subscription.order_id), 'Cancellation recorded. Premium stays available through the paid end date.')}>Cancel at end of term</Button>}
         {covered && subscription.cancel_at_period_end && <p className="mt-3 text-sm">Cancellation recorded. Your paid access remains until the date above.</p>}
         {!covered && Object.values(state.enabledFeatures).some(Boolean) && <p className="mt-3 text-sm">Your account has an authorized feature override. Its scope and expiry are independent of a paid plan.</p>}
@@ -111,7 +113,7 @@ export default function Premium() {
           <p className="mt-2 text-sm">One prepaid term. No automatic renewal. You can purchase again after expiry.</p>
           <p className="mt-3 whitespace-pre-wrap text-sm">{plan.refundPolicy}</p>
           <p className="mt-2 text-sm text-muted-foreground">Terms version: {plan.termsVersion}. Cancelling a paid term preserves access until it ends and does not initiate a refund. Contact support for a refund request.</p>
-          {!covered && !pending && state.catalog.available && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><Button className="mt-4 min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button></>}
+          {!covered && !disputed && !pending && state.catalog.available && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><Button className="mt-4 min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button></>}
         </> : <p className="mt-3 text-sm">A purchase price has not been configured. Yor Premium checkout is unavailable.</p>}
         {!state.catalog.available && plan && <p className="mt-3 text-sm">New purchases are currently unavailable. You can still check existing orders.</p>}
         {pending && <p className="mt-3 text-sm">You have a pending checkout. Resume, recover or cancel it in billing history.</p>}

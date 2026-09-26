@@ -943,6 +943,39 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/operations/payments",
+    "operationId": "getOperationsPayments",
+    "tag": "operations",
+    "summary": "Get /operations/payments",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/disputes/{id}/reconcile",
+    "operationId": "postOperationsPaymentsDisputesByIdReconcile",
+    "tag": "operations",
+    "summary": "Post /operations/payments/disputes/{id}/reconcile",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/jobs/{id}/retry",
+    "operationId": "postOperationsPaymentsJobsByIdRetry",
+    "tag": "operations",
+    "summary": "Post /operations/payments/jobs/{id}/retry",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
     "method": "post",
     "path": "/posts",
     "operationId": "postPosts",

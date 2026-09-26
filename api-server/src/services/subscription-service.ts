@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   entitlementsTable,
@@ -78,8 +78,8 @@ export class SubscriptionService {
       await lockPaymentParties(client, [input.subscriberId,input.creatorId]);
       const repeated = await intents.findRepeat(client, 'membership', input.subscriberId, key, hash);
       if (repeated) return { intent: repeated, created: false };
-      const active = await client.query(`SELECT 1 FROM subscriptions WHERE subscriber_id=$1 AND creator_id=$2 AND status='active' AND expires_at>timezone('UTC',now())`, [input.subscriberId,input.creatorId]);
-      if (active.rowCount) throw new SubscriptionRequestError('You already have an active membership for this creator');
+      const active = await client.query(`SELECT 1 FROM subscriptions WHERE subscriber_id=$1 AND creator_id=$2 AND status IN ('active','disputed','chargeback') AND expires_at>timezone('UTC',now())`, [input.subscriberId,input.creatorId]);
+      if (active.rowCount) throw new SubscriptionRequestError('You already have an active membership or a disputed term for this creator');
       const pending = (await client.query(`SELECT i.*,s.tier FROM subscriptions s JOIN subscription_orders o ON o.subscription_id=s.id
         JOIN checkout_intents i ON i.id=o.id WHERE s.subscriber_id=$1 AND s.creator_id=$2 AND s.status='pending'
         AND o.status IN ('provider_pending','created') LIMIT 1`, [input.subscriberId,input.creatorId])).rows[0];
@@ -158,7 +158,7 @@ export class SubscriptionService {
         if (existingRefund.amountMinor !== input.amountMinor) throw new SubscriptionRequestError("Refund id was already recorded with a different amount");
         return;
       }
-      if (!['paid','refunded','refund_required','disputed'].includes(lockedOrder.status)) throw new SubscriptionRequestError("Only a settled membership can be refunded");
+      if (!['paid','refunded','refund_required','disputed','chargeback'].includes(lockedOrder.status)) throw new SubscriptionRequestError("Only a settled membership can be refunded");
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
         .where(sql`starts_with(${ledgerTransactionsTable.referenceId},${prefix})`);
@@ -182,9 +182,10 @@ export class SubscriptionService {
         await tx.update(entitlementsTable).set({ status: "revoked" }).where(and(
           eq(entitlementsTable.entityType, "subscription"),
           eq(entitlementsTable.entityId, lockedOrder.subscriptionId),
-          eq(entitlementsTable.status, "active"),
+          inArray(entitlementsTable.status, ['active','disputed']),
         ));
       }
+      await tx.execute(sql`SELECT yor_sync_dispute_reserve('membership', ${lockedOrder.id}::uuid)`);
     });
     return true;
   }
@@ -269,7 +270,7 @@ export class SubscriptionService {
       await client.query('SELECT id FROM subscription_orders WHERE subscription_id=$1 FOR UPDATE', [subscriptionId]);
       const sub = (await client.query('SELECT * FROM subscriptions WHERE id=$1 AND subscriber_id=$2 FOR UPDATE', [subscriptionId,subscriberId])).rows[0];
       if (!sub) throw new SubscriptionRequestError('Membership not found');
-      if (sub.status === 'active') await client.query('UPDATE subscriptions SET cancel_at_period_end=true WHERE id=$1', [subscriptionId]);
+      if (['active','disputed','chargeback'].includes(sub.status)) await client.query('UPDATE subscriptions SET cancel_at_period_end=true WHERE id=$1', [subscriptionId]);
       if (sub.status === 'pending') {
         await client.query(`UPDATE subscriptions SET status='cancelled',cancel_at_period_end=true WHERE id=$1`, [subscriptionId]);
         await client.query(`UPDATE subscription_orders SET status='cancelled' WHERE subscription_id=$1 AND status IN ('provider_pending','created')`, [subscriptionId]);

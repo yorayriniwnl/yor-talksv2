@@ -36,7 +36,20 @@ export class PaymentWebhookService {
   constructor(
     private readonly razorpay: RazorpayService,
     private readonly handlers: PaymentWebhookHandler[],
+    private readonly reconcileDispute?: (id: string) => Promise<unknown>,
   ) {}
+
+  async ensureCaptureByPayment(paymentId: string): Promise<void> {
+    const payment=await this.razorpay.getPayment(paymentId);
+    let matches: PaymentWebhookHandler[]=[];
+    for (const handler of this.handlers) if (await handler.hasProviderOrder(payment.order_id)) matches.push(handler);
+    if (!matches.length) {
+      const order=await this.razorpay.getOrder(payment.order_id);
+      for (const handler of this.handlers) if (await handler.recoverProviderOrder?.(order)) matches.push(handler);
+    }
+    if (matches.length!==1) throw new PaymentWebhookNotFoundError('Disputed payment order is missing or ambiguous');
+    await matches[0]!.reconcileCapturedPayment({orderId:payment.order_id,paymentId});
+  }
 
   async handle(payload: unknown, rawBody: Buffer, signature: string): Promise<"processed" | "ignored"> {
     if (!rawBody.length || !this.razorpay.verifyWebhookSignature(rawBody, signature)) {
@@ -55,6 +68,14 @@ export class PaymentWebhookService {
       throw new PaymentWebhookRequestError("Invalid payment webhook event");
     }
     if (env.RAZORPAY_ACCOUNT_ID && event.account_id !== env.RAZORPAY_ACCOUNT_ID) throw new PaymentWebhookRequestError('Payment account association mismatch');
+
+    if (event.event.startsWith('payment.dispute.')) {
+      const entity=asRecord(asRecord(asRecord(event.payload)?.dispute)?.entity);
+      if (!entity || !providerId(entity.id) || !String(entity.id).startsWith('disp_')) throw new PaymentWebhookRequestError('Invalid dispute event');
+      if (!this.reconcileDispute) throw new PaymentWebhookRequestError('Dispute processing is unavailable');
+      await this.reconcileDispute(entity.id);
+      return 'processed';
+    }
 
     if (event.event === "payment.captured" || event.event === 'payment.failed') {
       const entity = asRecord(asRecord(asRecord(event.payload)?.payment)?.entity);

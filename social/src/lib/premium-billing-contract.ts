@@ -7,7 +7,7 @@ const plan = z.object({
 });
 export const premiumOrderSchema = z.object({
   id: z.string().uuid(), providerOrderId: z.string().nullable(), amountMinor: z.number().int().min(100), currency: z.literal('INR'),
-  status: z.enum(['provider_pending','creation_unknown','created','paid','failed','cancelled','expired','refunded','disputed','refund_required']),
+  status: z.enum(['provider_pending','creation_unknown','created','paid','failed','cancelled','expired','refunded','disputed','chargeback','refund_required']),
   lastPaymentStatus: z.string().nullable(), createdAt: z.string().datetime({ offset: true }), paidAt: z.string().datetime({ offset: true }).nullable(),
   plan, keyId: z.string(),
 });
@@ -15,7 +15,7 @@ export const premiumBillingSchema = z.object({
   catalog: z.object({ available: z.boolean(), plan: plan.nullable(), operationalFeatures: z.record(z.boolean()),
     automaticRenewal: z.literal(false), billingModel: z.literal('prepaid_fixed_term'), testMode: z.boolean(), supportEmail: z.union([z.literal(''), z.string().email()]) }),
   subscription: z.object({ order_id: z.string().uuid(), starts_at: z.string().datetime({ offset: true }), ends_at: z.string().datetime({ offset: true }),
-    cancel_at_period_end: z.boolean(), status: z.enum(['active','cancelled','expired','refunded','disputed','revoked']) }).nullable(),
+    cancel_at_period_end: z.boolean(), status: z.enum(['active','cancelled','expired','refunded','disputed','chargeback','revoked']) }).nullable(),
   orders: z.array(premiumOrderSchema).max(50), enabledFeatures: z.record(z.boolean()),
 });
 export function parsePremiumBilling(value: unknown): PremiumBillingState {

@@ -53,7 +53,7 @@ production evidence are separate categories.
 | F03 media lifecycle | URL-only assets; production containment is not a lifecycle | Owned assets, moderation, protected delivery, cleanup and retries | Pending | Configured provider/moderation acceptance |
 | F04 upload controls | Signed grant metadata cannot enforce type/size | Controlled upload and durable reservations/quotas | Pending | Provider-backed limits and adversarial upload evidence |
 | F05 Premium | Rollout flags granted perks without a purchase; saved paid fonts could block core actions | Durable prepaid platform plans/orders/access; explicit temporary overrides; complete `/premium` journey; expiry preserves content and uses default new typography | 13 real PostgreSQL/Redis Premium tests, 10 strict Chromium cases, full API checkpoint 139/139; TypeScript/config checks and repeat migration pass | Final price/policy; actual provider test lifecycle; shared dispute work under F06 |
-| F06 payments | Checkout creation could lose provider association after timeout; old refund/status paths were unsafe | Durable intents for every checkout; raw-body/account verified encrypted inbox; scheduled receipt/capture/refund recovery; paid-through cancellation; `/billing` history | 11 new PostgreSQL/Redis creator checkout tests; 3 Chromium billing cases; Premium checkpoint `1da444d` | Disputes and operator controls remain in progress; actual Razorpay test-merchant verification required |
+| F06 payments | Checkout creation could lose provider association after timeout; old refund/status paths were unsafe | Durable intents and encrypted inbox; scheduled settlement/refund/dispute recovery; transactional capped reserves and access changes; paid-through cancellation; customer history and audited administrator operations | Creator chapter `38919c2`; 37 focused PostgreSQL/Redis tests, 4 new Chromium dispute cases; full API checkpoint 164/164 | Actual Razorpay test-merchant lifecycle and operator acceptance remain required |
 | F07 deletion/ledger | Confirmed both ledger parties were erased, orders cascaded away, and operations lacked a transaction | Transactional party-specific anonymization; financial references SET NULL, product snapshot and shipping erasure; durable session cleanup | 5/5 database-backed account/job tests; retained refunds after both deletion orders; transaction rollback and retry fencing | Provider-owned media cleanup is tracked under F03; owner must approve financial retention duration |
 | F08 dependencies | Current baseline: production 0; all dependencies 31 advisories (11 critical, 15 high, 4 moderate, 1 low) | Orval 8.22, patched parsers/transitives/esbuild; deterministic regeneration and package exports | Both refreshed audits 0; frozen install, generated-package TypeScript and production build pass; `docs/remediation/2026-09-26/dependencies.json` | Registry snapshot is not a guarantee against unknown vulnerabilities |
 | F09 staff | Status changes alone do not enforce takedown | Authorized auditable actions, appeals/reversal and read/delivery enforcement | Pending | Staff operator acceptance |
@@ -78,6 +78,20 @@ financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.
 
 ## Evidence log
+
+- F06 creator intent/recovery is committed and pushed as
+  `38919c2f0c7f7d74b0b20b3388c1e1e07a37a524`; remote SHA matched.
+  Dispute/chargeback implementation now covers all four payment products with
+  current-provider reads, transactional access/reserve changes, scheduled discovery
+  and an administrator-only operations UI. `docs/PAYMENT_DISPUTES.md` records the
+  policy, source references, schema `20260926-disputes-5`, rollback and provider gates.
+  37/37 focused real PostgreSQL/Redis payment tests and four new strict Chromium
+  cases pass. The SQL integration tests caught and repaired a membership ID type
+  mismatch and refund revocation that omitted previously disputed entitlements.
+  The full API suite passes 164/164 in 152.3 seconds on Node 24.14.0 with isolated
+  PostgreSQL 16 / Redis 7. API/frontend TypeScript and regeneration of 225 API
+  operations pass. The additive dispute migration succeeds on repeat execution.
+  Provider responses remain simulated; no live merchant actions were taken.
 
 - F06 creator checkout chapter: `docs/CREATOR_PAYMENT_LIFECYCLE.md` records the
   intent, recovery, cancellation and migration contracts. The first focused run

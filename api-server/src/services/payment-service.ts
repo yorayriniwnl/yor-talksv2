@@ -120,7 +120,7 @@ export class PaymentService {
         if (existingRefund.amountMinor !== input.amountMinor) throw new PaymentRequestError("Refund id was already recorded with a different amount");
         return;
       }
-      if (!['paid','refunded','refund_required','disputed'].includes(lockedOrder.status)) throw new PaymentRequestError("Only a settled payment can be refunded");
+      if (!['paid','refunded','refund_required','disputed','chargeback'].includes(lockedOrder.status)) throw new PaymentRequestError("Only a settled payment can be refunded");
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
         .from(ledgerTransactionsTable)
         .where(sql`starts_with(${ledgerTransactionsTable.referenceId},${prefix})`);
@@ -142,6 +142,7 @@ export class PaymentService {
         await tx.update(paymentOrdersTable).set({ status: "refunded" })
           .where(eq(paymentOrdersTable.id, lockedOrder.id));
       }
+      await tx.execute(sql`SELECT yor_sync_dispute_reserve('tip', ${lockedOrder.id}::uuid)`);
     });
     return true;
   }

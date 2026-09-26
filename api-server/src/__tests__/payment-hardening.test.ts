@@ -22,6 +22,17 @@ test("marketplace prices cannot exceed the integer minor-unit ledger ceiling", (
   assert.equal(createProductSchema.safeParse({ ...product, price: 21_474_836.48 }).success, false);
 });
 
+test('dispute adapter validates current provider amounts, currency and payment association fields',async t=>{
+  const original={...env};Object.assign(env,{PAYMENTS_ENABLED:true,RAZORPAY_KEY_ID:'rzp_test_synthetic',RAZORPAY_KEY_SECRET:'synthetic-key',RAZORPAY_WEBHOOK_SECRET:'synthetic-hook'});t.after(()=>Object.assign(env,original));
+  const valid={id:'disp_synthetic',payment_id:'pay_synthetic',amount:500,amount_deducted:100,currency:'INR',status:'won'};
+  let current:unknown=valid;
+  t.mock.method(globalThis,'fetch',async()=>new Response(JSON.stringify(current),{status:200}));
+  const provider=new RazorpayService();assert.equal((await provider.getDispute(valid.id)).amount_deducted,100);
+  for(const changed of [{id:'disp_other'},{payment_id:null},{amount:-1},{amount_deducted:501},{currency:'USD'},{status:'unknown'}]){
+    current={...valid,...changed};await assert.rejects(provider.getDispute(valid.id),PaymentProviderError);
+  }
+});
+
 test("marketplace order creation checks the payment gate before touching the database", async (t) => {
   let databaseReads = 0;
   t.mock.method(db, "select", (() => {

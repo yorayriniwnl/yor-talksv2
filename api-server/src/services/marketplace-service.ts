@@ -137,7 +137,7 @@ export class MarketplaceService {
         if (existingRefund.amountMinor !== input.amountMinor) throw new MarketplaceRequestError("Refund id was already recorded with a different amount");
         return;
       }
-      if (!(["paid", "fulfilled", "refund_required", "refunded", "disputed"] as string[]).includes(lockedOrder.status)) {
+      if (!(["paid", "fulfilled", "refund_required", "refunded", "disputed", "chargeback"] as string[]).includes(lockedOrder.status)) {
         throw new MarketplaceRequestError("Only a settled marketplace order can be refunded");
       }
       const [refundedTotal] = await tx.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` })
@@ -159,9 +159,10 @@ export class MarketplaceService {
       if (nextRefundedTotal === lockedOrder.amountMinor) {
         await tx.update(marketplaceOrdersTable).set({ status: "refunded" }).where(and(
           eq(marketplaceOrdersTable.id, lockedOrder.id),
-          inArray(marketplaceOrdersTable.status, ["paid", "fulfilled", "refund_required", "disputed"]),
+          inArray(marketplaceOrdersTable.status, ["paid", "fulfilled", "refund_required", "disputed", "chargeback"]),
         ));
       }
+      await tx.execute(sql`SELECT yor_sync_dispute_reserve('marketplace', ${lockedOrder.id}::uuid)`);
     });
     return true;
   }

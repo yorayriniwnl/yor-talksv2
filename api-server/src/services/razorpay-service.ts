@@ -43,6 +43,18 @@ interface RazorpayPayment {
   status: string;
 }
 
+export interface RazorpayDispute {
+  id: string; payment_id: string; amount: number; currency: string; amount_deducted: number;
+  status: 'open' | 'under_review' | 'won' | 'lost' | 'closed'; respond_by?: number;
+}
+function validDispute(value: RazorpayDispute): boolean {
+  return Boolean(value && /^disp_[A-Za-z0-9]+$/.test(value.id) && /^pay_[A-Za-z0-9]+$/.test(value.payment_id)
+    && Number.isSafeInteger(value.amount) && value.amount>0 && value.amount<=MAX_LEDGER_AMOUNT_MINOR
+    && Number.isSafeInteger(value.amount_deducted) && value.amount_deducted>=0 && value.amount_deducted<=value.amount
+    && value.currency==='INR' && ['open','under_review','won','lost','closed'].includes(value.status)
+    && (value.respond_by===undefined || Number.isSafeInteger(value.respond_by) && value.respond_by>=0));
+}
+
 function isConfigured(): boolean {
   return env.PAYMENTS_ENABLED && Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET && env.RAZORPAY_WEBHOOK_SECRET);
 }
@@ -68,6 +80,22 @@ async function parseProviderResponse<T>(response: Response): Promise<T> {
 }
 
 export class RazorpayService {
+  async getDispute(id: string): Promise<RazorpayDispute> {
+    this.assertConfigured();
+    if (!/^disp_[A-Za-z0-9]+$/.test(id)) throw new PaymentProviderError('Invalid dispute identifier');
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/disputes/${encodeURIComponent(id)}`, { headers: { Authorization: authorizationHeader() } },12_000);
+    const dispute = await parseProviderResponse<RazorpayDispute>(response);
+    if (!validDispute(dispute) || dispute.id!==id) throw new PaymentProviderError('Invalid provider dispute');
+    return dispute;
+  }
+  async listDisputes(skip = 0): Promise<RazorpayDispute[]> {
+    this.assertConfigured();
+    if (!Number.isSafeInteger(skip) || skip<0) throw new PaymentProviderError('Invalid dispute cursor');
+    const response = await fetchWithTimeout(`${RAZORPAY_API}/disputes?count=50&skip=${skip}`, { headers: { Authorization: authorizationHeader() } },12_000);
+    const value = await parseProviderResponse<{ items: RazorpayDispute[] }>(response);
+    if (!Array.isArray(value?.items) || value.items.length>50 || value.items.some(item=>!validDispute(item))) throw new PaymentProviderError('Invalid provider dispute list');
+    return value.items;
+  }
   assertConfigured(): void {
     if (!isConfigured()) {
       throw new PaymentsNotConfiguredError();
