@@ -434,9 +434,7 @@ export class AuthService {
   }
 
   async logoutAllDevices(userId: string): Promise<void> {
-    // We would need a way to list and delete all keys, but for now we can rely on standard del if redis supports pattern matching or we can just leave it as is if redis doesn't.
-    // Wait, with multiple devices we can't just del `session:${userId}`. 
-    // We can fetch all keys `session:${userId}:*` and delete them.
+    await this.invalidateLoginApprovalChallenges(userId);
     const keys = await this.redisRepository.scanStrict(`session:${userId}:*`);
     if (keys.length > 0) {
       await Promise.all(keys.map(key => this.redisRepository.delStrict(key)));
@@ -528,13 +526,12 @@ export class AuthService {
   async confirmPasswordReset(token: string, newPassword: string): Promise<boolean> {
     const hashed = await this.redisRepository.hashToken(token);
     const key = `password-reset:${hashed}`;
-    const userId = await this.redisRepository.getStrict(key);
+    const userId = await this.redisRepository.consumeStrict(key);
     if (!userId) {
       return false;
     }
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.userRepository.update(userId, { passwordHash, passwordResetRequired: false });
-    await this.redisRepository.delStrict(key);
     // A password reset is a meaningful security event — invalidate every existing
     // session (including any an attacker might hold) and require fresh logins.
     await this.logoutAllDevices(userId);
@@ -770,7 +767,7 @@ export class AuthService {
   }
 
   private issueRefreshToken(user: UserRecord, deviceId: string): string {
-    return jwt.sign({ sub: user.id, type: "refresh", deviceId }, env.JWT_REFRESH_SECRET, {
+    return jwt.sign({ sub: user.id, type: "refresh", deviceId, jti: randomUUID() }, env.JWT_REFRESH_SECRET, {
       expiresIn: "7d",
     });
   }

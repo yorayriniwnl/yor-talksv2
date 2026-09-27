@@ -10,14 +10,11 @@ import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from 
 import { db } from "@workspace/db";
 import { commentsTable, postLikesTable, postBookmarksTable, postRepostsTable } from "@workspace/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { Redis } from "ioredis";
-import { env } from "../config/env.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
-import { logger } from "../lib/logger.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
@@ -481,61 +478,22 @@ export class PostService {
     return this.attachInteractions(visible.slice(0, limit), currentUserId);
   }
 
-    private redis = new Redis(env.REDIS_URL);
-
-  async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+  async getTrendingFeed(cursor?: string, limit = 20, currentUserId?: string): Promise<any[]> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
-    const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
-    const pageSize = Math.min(100, Math.max(20, limit * 2));
-    const cacheKey = `feed:trending:${cursor || "first"}:${pageSize}`;
-    
-    // Redis is an optimization, never a requirement for a healthy feed.
-    let cached: string | null = null;
-    try {
-      cached = await this.redis.get(cacheKey);
-    } catch (error) {
-      logger.warn({ err: error }, "Trending feed cache read failed");
-    }
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        cached = JSON.stringify(parsed);
-      } catch (e) {
-        cached = null;
-      }
-    }
-
-    // Cache the unfiltered candidate set. Contact Shield visibility is per
-    // viewer, so storing one user's filtered list would hide those posts from
-    // every other viewer sharing the cache key.
     const visible: PostRecord[] = [];
+    const pageSize = Math.min(100, Math.max(20, limit * 2));
     let nextCursor = cursor;
-    let firstPage = true;
+    // Re-read records: a cached body can survive deletion or an audience edit.
     for (let page = 0; page < 10 && visible.length < limit; page += 1) {
-      let posts: PostRecord[];
-      if (firstPage && cached) {
-        posts = JSON.parse(cached) as PostRecord[];
-      } else {
-        posts = await this.postRepository.listTrending(nextCursor, pageSize);
-        if (firstPage) {
-          try {
-            await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
-          } catch (error) {
-            logger.warn({ err: error }, "Trending feed cache write failed");
-          }
-        }
-      }
-      firstPage = false;
-      if (posts.length === 0) break;
-      const contentVisible = posts.filter((post) =>
-        !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
-      );
-      visible.push(...await this.filterVisiblePosts(contentVisible, currentUserId));
-      if (posts.length < pageSize) break;
-      nextCursor = encodeTrendingCursor(posts[posts.length - 1]);
+      const candidates = await this.postRepository.listTrending(nextCursor, pageSize);
+      if (!candidates.length) break;
+      visible.push(...await this.filterVisiblePosts(candidates.filter((post) => !excludedAuthorIds.includes(post.authorId)), currentUserId));
+      if (candidates.length < pageSize) break;
+      nextCursor = encodeTrendingCursor(candidates[candidates.length - 1]);
     }
     return this.attachInteractions(visible.slice(0, limit), currentUserId);
   }
+
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
@@ -568,43 +526,14 @@ export class PostService {
   }
 
   private async filterVisiblePosts(posts: PostRecord[], viewerId?: string): Promise<PostRecord[]> {
-    if (posts.length === 0) return posts;
-    const visible = await Promise.all(posts.map(async (post) => ({
-      post,
-      allowed: await this.canViewPost(post, viewerId),
-    })));
-    return visible.filter(({ allowed }) => allowed).map(({ post }) => post);
-  }
-
-  private async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
-    if (viewerId && authorId === viewerId) return true;
-    const [author, viewer] = await Promise.all([
-      this.userRepository.findById(authorId),
-      viewerId ? this.userRepository.findById(viewerId) : Promise.resolve(undefined),
-    ]);
-    if (!author) return false;
-    if (viewerId && (
-      author.blockedUsers?.includes(viewerId)
-      || viewer?.blockedUsers?.includes(authorId)
-      || viewer?.mutedUsers?.includes(authorId)
-    )) return false;
-    const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
-    if (visibility === "public") return true;
-    return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
+    return new ContentSafetyService(this.userRepository).filterVisiblePosts(posts, viewerId);
   }
 
   private async canViewPost(post: PostRecord, viewerId?: string): Promise<boolean> {
-    if (!(await this.canViewAuthorContent(post.authorId, viewerId))) return false;
-    if (post.authorId === viewerId || (post.audience ?? "public") === "public") return true;
-    if (!viewerId) return false;
-    if (post.audience === "close_friends") return this.userRepository.isCloseFriend(post.authorId, viewerId);
-    return this.userRepository.isFollowing(viewerId, post.authorId);
+    return (await this.filterVisiblePosts([post], viewerId)).length === 1;
   }
 
-  close(): void {
-    this.redis.disconnect();
-  }
-
+  close(): void {}
 
   private extractMentions(content: string): string[] {
     return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import {
   commentsTable,
   contactShieldsTable,
@@ -58,17 +58,22 @@ export class AccountService {
       throw new InvalidAccountPasswordError("Password confirmation failed");
     }
 
-    // Preserve financial audit rows without retaining a deleted user's
-    // identity, and detach invite references that are intentionally nullable.
-    await db.update(ledgerTransactionsTable)
-      .set({ creditAccountId: null, debitAccountId: null })
-      .where(or(eq(ledgerTransactionsTable.creditAccountId, userId), eq(ledgerTransactionsTable.debitAccountId, userId)));
-    await db.update(invitesTable)
-      .set({ inviteeId: null })
-      .where(eq(invitesTable.inviteeId, userId));
-
-    await this.redisRepository.keys(`session:${userId}:*`).then((keys) => Promise.all(keys.map((key) => this.redisRepository.del(key))));
-    await this.userRepository.deleteById(userId);
+    // Financial attribution belongs to each party independently. Keep the
+    // surviving account's balance and the immutable transaction reference.
+    await db.transaction(async (tx) => {
+      await tx.update(ledgerTransactionsTable)
+        .set({ creditAccountId: null })
+        .where(eq(ledgerTransactionsTable.creditAccountId, userId));
+      await tx.update(ledgerTransactionsTable)
+        .set({ debitAccountId: null })
+        .where(eq(ledgerTransactionsTable.debitAccountId, userId));
+      await tx.update(invitesTable).set({ inviteeId: null }).where(eq(invitesTable.inviteeId, userId));
+      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+    });
+    // Authentication also checks the database: deleted users cannot use a
+    // stale Redis session if cache cleanup is temporarily unavailable.
+    const keys = await this.redisRepository.keys(`session:${userId}:*`);
+    await Promise.all(keys.map((key) => this.redisRepository.del(key)));
     return true;
   }
 }

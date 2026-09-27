@@ -19,7 +19,7 @@ export class SearchService {
       this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(normalized)),
       this.postRepository.search(normalized, 50, shieldedUserIds, contentFilter),
     ]);
-    const posts = await this.contentSafetyService.filterVisibleByAuthor(candidatePosts, viewerId, (post) => post.authorId);
-    return { users, posts };
+    const posts = await this.contentSafetyService.filterVisiblePosts(candidatePosts, viewerId);
+    return { users: users.filter((user) => !user.accountStatus || user.accountStatus === "active"), posts };
   }
 }

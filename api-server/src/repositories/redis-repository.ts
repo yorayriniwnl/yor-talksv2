@@ -117,6 +117,13 @@ export class RedisRepository {
     return this.client.get(key);
   }
 
+  /** Atomic single-use consumption, also supported by Redis 6.0. */
+  async consumeStrict(key: string): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval("local v = redis.call('GET', KEYS[1]); redis.call('DEL', KEYS[1]); return v", 1, key);
+    return typeof result === "string" ? result : null;
+  }
+
   async setStrict(key: string, value: string, ttlSeconds?: number): Promise<void> {
     await this.ensureReady();
     if (ttlSeconds) {

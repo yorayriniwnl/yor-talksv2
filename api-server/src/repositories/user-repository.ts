@@ -1,10 +1,24 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
 
 export class UserRepository {
+
+  async findByIds(ids: string[]): Promise<UserRecord[]> {
+    if (!ids.length) return [];
+    return await db.select().from(usersTable).where(inArray(usersTable.id, ids)) as UserRecord[];
+  }
+
+  async getVisibilityRelationships(viewerId: string, authorIds: string[]) {
+    if (!authorIds.length) return { following: new Set<string>(), closeFriends: new Set<string>() };
+    const [following, closeFriends] = await Promise.all([
+      db.select({ id: userFollowsTable.followingId }).from(userFollowsTable).where(and(eq(userFollowsTable.followerId, viewerId), inArray(userFollowsTable.followingId, authorIds))),
+      db.select({ id: userCloseFriendsTable.ownerId }).from(userCloseFriendsTable).where(and(eq(userCloseFriendsTable.friendId, viewerId), inArray(userCloseFriendsTable.ownerId, authorIds))),
+    ]);
+    return { following: new Set(following.map((row) => row.id)), closeFriends: new Set(closeFriends.map((row) => row.id)) };
+  }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
     const [relationship] = await db.select({ followerId: userFollowsTable.followerId })
