@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   creatorAnalyticsDailyTable,
@@ -63,9 +63,10 @@ export class CreatorAnalyticsService {
         gte(userFollowsTable.createdAt, date),
         lt(userFollowsTable.createdAt, nextDate),
       )),
-      db.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` }).from(ledgerTransactionsTable).where(and(
-        eq(ledgerTransactionsTable.creditAccountId, creatorId),
+      db.select({ total: sql<number>`coalesce(sum(case when ${ledgerTransactionsTable.creditAccountId} = ${creatorId} then ${ledgerTransactionsTable.amountMinor} else -${ledgerTransactionsTable.amountMinor} end), 0)` }).from(ledgerTransactionsTable).where(and(
+        or(eq(ledgerTransactionsTable.creditAccountId, creatorId), eq(ledgerTransactionsTable.debitAccountId, creatorId)),
         eq(ledgerTransactionsTable.status, "completed"),
+        eq(ledgerTransactionsTable.currency, "INR"),
         gte(ledgerTransactionsTable.createdAt, date),
         lt(ledgerTransactionsTable.createdAt, nextDate),
       )),

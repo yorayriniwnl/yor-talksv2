@@ -19,7 +19,7 @@ export default function BusinessDashboard() {
   const currentUser = useAppStore((state) => state.currentUser);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [products, setProducts] = useState<Array<{ sellerId: string; availability?: string }>>([]);
-  const [orders, setOrders] = useState<Array<{ sellerId: string; status: string; amountMinor: number }>>([]);
+  const [orders, setOrders] = useState<Array<{ sellerId: string | null; status: string; amountMinor: number; refundedAmountMinor: number }>>([]);
   const [loading, setLoading] = useState(true);
   
   const [isCreating, setIsCreating] = useState(false);
@@ -39,7 +39,7 @@ export default function BusinessDashboard() {
       ]);
       setBusinesses(businessResponse?.businesses ?? []);
       setProducts(productResponse.map((product) => ({ sellerId: product.sellerId, availability: product.availability })));
-      setOrders(orderResponse.map((order) => ({ sellerId: order.sellerId, status: order.status, amountMinor: order.amountMinor })));
+      setOrders(orderResponse.map((order) => ({ sellerId: order.sellerId, status: order.status, amountMinor: order.amountMinor, refundedAmountMinor: order.refundedAmountMinor ?? 0 })));
     } catch (e) {
       toast.error('Failed to load business workspace');
     } finally {
@@ -124,7 +124,7 @@ export default function BusinessDashboard() {
               {(() => {
                 const ownedProducts = products.filter((product) => product.sellerId === currentUser?.id);
                 const ownedOrders = orders.filter((order) => order.sellerId === currentUser?.id && ['paid', 'fulfilled'].includes(order.status));
-                const revenueMinor = ownedOrders.reduce((total, order) => total + Number(order.amountMinor || 0), 0);
+                const revenueMinor = ownedOrders.reduce((total, order) => total + Math.max(0, Number(order.amountMinor || 0) - Number(order.refundedAmountMinor || 0)), 0);
                 return <div className="mt-8 grid grid-cols-3 gap-4">
                 <div className="bg-background rounded-xl p-3 border border-border/40">
                   <HandCoins className="w-4 h-4 text-emerald-400 mb-2" />

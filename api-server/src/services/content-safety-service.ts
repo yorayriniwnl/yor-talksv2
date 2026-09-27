@@ -1,91 +1,88 @@
 import { UserRepository } from "../repositories/user-repository.js";
-import type { UserRecord } from "../types/index.js";
-import {
-  canViewContent,
-  DEFAULT_CONTENT_RATING,
-  normalizeContentRating,
-} from "../utils/content-safety.js";
+import { canViewContent, DEFAULT_CONTENT_RATING, normalizeContentRating } from "../utils/content-safety.js";
+import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
 
-type RatedContent = { contentRating?: unknown | null; moderationStatus?: string | null };
+type RatedContent = {
+  contentRating?: unknown;
+  audience?: string;
+  distributionMode?: string;
+  deletedAt?: string | null;
+  moderationStatus?: string;
+  selectedMemberIds?: string[];
+  excludedViewerIds?: string[];
+};
+export type VisibilityOptions = { discovery?: boolean };
 
-/** Resolves a viewer's maximum content level and applies it consistently to public content. */
+/** One request-scoped policy for current records. Caches never supply authority. */
 export class ContentSafetyService {
   constructor(private readonly userRepository = new UserRepository()) {}
 
   async getViewerFilter(viewerId?: string) {
     if (!viewerId) return DEFAULT_CONTENT_RATING;
-    const user = await this.userRepository.findById(viewerId);
-    return normalizeContentRating(user?.settings?.contentFilter);
+    return normalizeContentRating((await this.userRepository.findById(viewerId))?.settings?.contentFilter);
+  }
+
+  async prepare(authorIds: string[], viewerId?: string, options: VisibilityOptions = {}) {
+    return (await this.prepareContext(authorIds, viewerId, options)).allows;
+  }
+
+  async prepareContext(authorIds: string[], viewerId?: string, options: VisibilityOptions = {}) {
+    const authors = [...new Set(authorIds)];
+    const ids = [...new Set([...authors, ...(viewerId ? [viewerId] : [])])];
+    // The SQL repository executes one users query and one relationships query.
+    const [users, relationships] = await Promise.all([
+      this.userRepository.findByIds
+        ? this.userRepository.findByIds(ids)
+        : Promise.all(ids.map(id => this.userRepository.findById(id))),
+      !viewerId ? Promise.resolve({ following: new Set<string>(), closeFriends: new Set<string>() })
+        : this.userRepository.audienceRelationships ? this.userRepository.audienceRelationships(viewerId, authors)
+        : Promise.all(authors.map(async id => ({ id, follows: await this.userRepository.isFollowing(viewerId, id),
+          close: this.userRepository.isCloseFriend ? await this.userRepository.isCloseFriend(id, viewerId) : false })))
+          .then(rows => ({ following: new Set(rows.filter(row => row.follows).map(row => row.id)), closeFriends: new Set(rows.filter(row => row.close).map(row => row.id)) })),
+    ]);
+    const byId = new Map(users.filter(user => !!user).map(user => [user!.id, user!]));
+    const viewer = viewerId ? byId.get(viewerId) : undefined;
+    const viewerFilter = normalizeContentRating(viewer?.settings?.contentFilter);
+    const allows = (item: RatedContent, authorId: string): boolean => {
+      const author = byId.get(authorId);
+      if (!author || (viewerId && !viewer)) return false;
+      if (item.deletedAt || ['removed', 'quarantined', 'rejected'].includes(item.moderationStatus ?? '')) return false;
+      if (['suspended', 'deactivated', 'deleted'].includes(author.accountStatus ?? 'active')) return false;
+      if (viewer && ['suspended', 'deactivated', 'deleted'].includes(viewer.accountStatus ?? 'active')) return false;
+      if (!canViewContent(item.contentRating, viewerFilter)) return false;
+      if (options.discovery && item.distributionMode === 'profile_only') return false;
+      if (viewerId && (author.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(authorId))) return false;
+      if (viewerId === authorId) return true;
+      if (options.discovery && viewer?.mutedUsers?.includes(authorId)) return false;
+      const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? 'private' : 'public');
+      if (visibility !== 'public' && !relationships.following.has(authorId)) return false;
+      return evaluateAudience({ ownerId: authorId, viewerId, audience: (item.audience ?? 'public') as AudienceKind,
+        isFollowing: relationships.following.has(authorId), isCloseFriend: relationships.closeFriends.has(authorId),
+        selectedMember: Boolean(viewerId && item.selectedMemberIds?.includes(viewerId)),
+        excluded: Boolean(viewerId && item.excludedViewerIds?.includes(viewerId)), blocked: false }).allowed;
+    };
+    return { allows, relationshipScore: (authorId: string) => !viewerId ? 0 : viewerId === authorId ? 40
+      : relationships.closeFriends.has(authorId) ? 30 : relationships.following.has(authorId) ? 20 : 0 };
   }
 
   async filterVisible<T extends RatedContent>(items: T[], viewerId?: string): Promise<T[]> {
-    const viewerFilter = await this.getViewerFilter(viewerId);
-    return items.filter((item) => canViewContent(item.contentRating, viewerFilter));
+    const filter = await this.getViewerFilter(viewerId);
+    return items.filter(item => canViewContent(item.contentRating, filter));
+  }
+
+  async filterVisibleByAuthor<T extends RatedContent>(items: T[], viewerId: string | undefined, authorId: (item: T) => string, options: VisibilityOptions = {}): Promise<T[]> {
+    if (!items.length) return [];
+    const allows = await this.prepare(items.map(authorId), viewerId, options);
+    return items.filter(item => allows(item, authorId(item)));
   }
 
   async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
-    const [author, viewer] = await Promise.all([
-      this.userRepository.findById(authorId),
-      viewerId ? this.userRepository.findById(viewerId) : Promise.resolve(undefined),
-    ]);
-    if (!this.active(author) || (viewerId && !this.active(viewer))) return false;
-    if (authorId === viewerId) return true;
-    if (viewerId && (
-      author.blockedUsers?.includes(viewerId)
-      || viewer?.blockedUsers?.includes(authorId)
-      || viewer?.mutedUsers?.includes(authorId)
-    )) return false;
-    const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
-    if (visibility === "public") return true;
-    return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
-  }
-
-  async filterVisibleByAuthor<T extends RatedContent>(items: T[], viewerId: string | undefined, getAuthorId: (item: T) => string): Promise<T[]> {
-    return this.filterWithPolicy(items, viewerId, getAuthorId);
-  }
-
-  private active(user: UserRecord | undefined): user is UserRecord {
-    return Boolean(user && (!user.accountStatus || user.accountStatus === "active"));
-  }
-
-  /** All post reads and interactions use this policy, including search. */
-  async filterVisiblePosts<T extends RatedContent & { authorId: string; audience?: string | null }>(items: T[], viewerId?: string): Promise<T[]> {
-    return this.filterWithPolicy(items, viewerId, (item) => item.authorId, (item) => item.audience ?? "public");
-  }
-
-  private async filterWithPolicy<T extends RatedContent>(items: T[], viewerId: string | undefined, authorId: (item: T) => string, audience?: (item: T) => string): Promise<T[]> {
-    if (!items.length) return [];
-    // Request-scoped context: privacy changes take effect on the next read.
-    const ids = [...new Set([...items.map(authorId), ...(viewerId ? [viewerId] : [])])];
-    const users = await this.userRepository.findByIds(ids);
-    const byId = new Map(users.map((user) => [user.id, user]));
-    const viewer = viewerId ? byId.get(viewerId) : undefined;
-    if (viewerId && !this.active(viewer)) return [];
-    const filter = normalizeContentRating(viewer?.settings?.contentFilter);
-    const relationships = viewerId
-      ? await this.userRepository.getVisibilityRelationships(viewerId, ids)
-      : { following: new Set<string>(), closeFriends: new Set<string>() };
-    return items.filter((item) => {
-      if (item.moderationStatus === "removed" || !canViewContent(item.contentRating, filter)) return false;
-      const ownerId = authorId(item);
-      const owner = byId.get(ownerId);
-      if (!this.active(owner)) return false;
-      if (ownerId === viewerId) return true;
-      if (viewerId && (owner.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(ownerId) || viewer?.mutedUsers?.includes(ownerId))) return false;
-      const visibility = owner.privacy?.profileVisibility ?? (owner.settings?.privateAccount ? "private" : "public");
-      if (visibility !== "public" && !relationships.following.has(ownerId)) return false;
-      switch (audience?.(item) ?? "public") {
-        case "public": return true;
-        case "followers": return relationships.following.has(ownerId);
-        case "close_friends": return relationships.closeFriends.has(ownerId);
-        default: return false;
-      }
-    });
+    return (await this.prepare([authorId], viewerId))({}, authorId);
   }
 
   async isVisible(item: RatedContent | undefined, viewerId?: string, authorId?: string): Promise<boolean> {
-    if (!item || item.moderationStatus === "removed") return false;
-    if (!canViewContent(item.contentRating, await this.getViewerFilter(viewerId))) return false;
-    return authorId ? this.canViewAuthorContent(authorId, viewerId) : true;
+    if (!item) return false;
+    if (!authorId) return canViewContent(item.contentRating, await this.getViewerFilter(viewerId));
+    return (await this.prepare([authorId], viewerId))(item, authorId);
   }
 }

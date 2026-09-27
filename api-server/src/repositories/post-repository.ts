@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { discoveryScope } from './discovery-scope.js';
 import { eq, desc, ilike, lt, and, notInArray, inArray, or } from "drizzle-orm";
 import {
   postsTable,
@@ -49,6 +50,12 @@ function decodeTrendingCursor(value: string | undefined): TrendingCursor | undef
 }
 
 export class PostRepository {
+  constructor(private readonly searchMode: 'auto' | 'fallback' = 'auto') {}
+
+  async findByIds(ids: string[]): Promise<PostRecord[]> {
+    if (!ids.length) return [];
+    return await db.select().from(postsTable).where(inArray(postsTable.id, ids)) as PostRecord[];
+  }
 
   async pinPost(postId: string, userId: string, maximum = 6): Promise<PostRecord | undefined> {
     return db.transaction(async (tx) => {
@@ -400,7 +407,11 @@ export class PostRepository {
   }
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
-  async search(query: string, limit: number = 50, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
+  async search(query: string, limit: number = 50, excludedAuthorIds: string[] = [], contentFilter?: ContentRating, viewerId?: string): Promise<PostRecord[]> {
+    const candidateFilters = [discoveryScope(postsTable, viewerId), eq(postsTable.distributionMode, "feed_and_profile")];
+    if (excludedAuthorIds.length > 0) candidateFilters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    if (contentFilter === "child_safe") candidateFilters.push(eq(postsTable.contentRating, "child_safe"));
+    if (contentFilter === "regular") candidateFilters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     const indexState = await pool.query<{ is_ready: boolean }>(`
       SELECT EXISTS (
         SELECT 1
@@ -411,37 +422,28 @@ export class PostRepository {
       ) AS is_ready
     `);
 
-    if (!indexState.rows[0]?.is_ready) {
+    if (this.searchMode === 'fallback' || !indexState.rows[0]?.is_ready) {
       const recentPosts = db
         .select()
         .from(postsTable)
-        .orderBy(desc(postsTable.createdAt))
+        .where(and(...candidateFilters))
+        .orderBy(desc(postsTable.createdAt), desc(postsTable.id))
         .limit(250)
         .as("recent_searchable_posts");
 
-      const recentFilters: any[] = [ilike(recentPosts.content, `%${query}%`)];
-      if (excludedAuthorIds.length > 0) recentFilters.push(notInArray(recentPosts.authorId, excludedAuthorIds));
-      recentFilters.push(eq(recentPosts.distributionMode, "feed_and_profile"));
-      if (contentFilter === "child_safe") recentFilters.push(eq(recentPosts.contentRating, "child_safe"));
-      if (contentFilter === "regular") recentFilters.push(inArray(recentPosts.contentRating, ["child_safe", "regular"]));
       return (await db
         .select()
         .from(recentPosts)
-        .where(and(...recentFilters))
-        .orderBy(desc(recentPosts.createdAt))
+        .where(ilike(recentPosts.content, `%${query}%`))
+        .orderBy(desc(recentPosts.createdAt), desc(recentPosts.id))
         .limit(limit)) as PostRecord[];
     }
 
-    const filters: any[] = [ilike(postsTable.content, `%${query}%`)];
-    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
     return (await db
       .select()
       .from(postsTable)
-      .where(and(...filters))
-      .orderBy(desc(postsTable.createdAt))
+      .where(and(...candidateFilters, ilike(postsTable.content, `%${query}%`)))
+      .orderBy(desc(postsTable.createdAt), desc(postsTable.id))
       .limit(limit)) as PostRecord[];
   }
 

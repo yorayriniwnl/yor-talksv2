@@ -6,7 +6,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import type { HighlightRecord, StoryReaction, StoryRecord, StoryReactionType } from "../types/index.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
-import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
+import { type AudienceKind } from "../utils/audience-policy.js";
 import { calculateStoryScore, resolveStoryDurationHours, selectViewerExposure, type StoryAnalyticsSummary, type StoryViewExposure } from "./story-analytics-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
@@ -14,7 +14,7 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { QueueService } from "./queue-service.js";
 import { isPremiumStoryStyle } from "../features/premium-profile.js";
-import { isAdvancedStoryTextStyle, normalizeStoryTextStyle, type StoryTextStyle } from "../features/story-text-style.js";
+import { normalizeStoryTextStyle, type StoryTextStyle } from "../features/story-text-style.js";
 
 export class PremiumFeatureUnavailableError extends Error {}
 
@@ -59,18 +59,21 @@ export class StoryService {
   }): Promise<StoryRecord> {
     const audience = (input.audience ?? "followers") as AudienceKind;
     const advancedAudience = ["selected_people", "everyone_except", "custom"].includes(audience);
-    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight, hasStoryFont] = await Promise.all([
+    const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(input.authorId) : null;
+    const [hasCustomAudience, hasExtendedStory, hasPriority, hasDirectHighlight, hasStoryFont] = snapshot
+      ? [snapshot.CUSTOM_STORY_AUDIENCE, snapshot.EXTENDED_STORY, snapshot.STORY_PRIORITY, snapshot.DIRECT_HIGHLIGHT, snapshot.STORY_FONT]
+      : await Promise.all([
       this.entitlementService.hasFeature(input.authorId, "CUSTOM_STORY_AUDIENCE"),
       this.entitlementService.hasFeature(input.authorId, "EXTENDED_STORY"),
       this.entitlementService.hasFeature(input.authorId, "STORY_PRIORITY"),
       this.entitlementService.hasFeature(input.authorId, "DIRECT_HIGHLIGHT"),
       this.entitlementService.hasFeature(input.authorId, "STORY_FONT"),
     ]);
-    const storyFontId = input.storyFontId ?? "default";
-    const storyTextStyle = normalizeStoryTextStyle(input.storyTextStyle);
-    if (!isPremiumStoryStyle(storyFontId)) throw new Error("Story font is not supported");
-    if (storyFontId !== "default" && !hasStoryFont) throw new PremiumFeatureUnavailableError("Story fonts are not enabled for this account");
-    if (isAdvancedStoryTextStyle(storyTextStyle) && !hasStoryFont) throw new PremiumFeatureUnavailableError("Advanced story text styling is not enabled for this account");
+    if (!isPremiumStoryStyle(input.storyFontId ?? 'default')) throw new Error("Story font is not supported");
+    // An expired saved style must not block standard publishing or erase a draft.
+    const storyFontId = hasStoryFont ? input.storyFontId ?? 'default' : 'default';
+    const requestedTextStyle = normalizeStoryTextStyle(input.storyTextStyle);
+    const storyTextStyle = hasStoryFont ? requestedTextStyle : normalizeStoryTextStyle(undefined);
     if (advancedAudience && !hasCustomAudience) throw new PremiumFeatureUnavailableError("Custom story audiences are not enabled for this account");
     if (input.priority && !hasPriority) throw new PremiumFeatureUnavailableError("Story priority is not enabled for this account");
     const publishMode = input.publishMode ?? "active";
@@ -87,8 +90,9 @@ export class StoryService {
     const memberIds = [...new Set(input.audienceMemberIds ?? [])];
     const exclusionIds = [...new Set(input.audienceExclusionIds ?? [])];
     if (advancedAudience && [...memberIds, ...exclusionIds].length > 0) {
-      const users = await Promise.all([...memberIds, ...exclusionIds].map((userId) => this.userRepository.findById(userId)));
-      if (users.some((user) => !user)) throw new Error("Story audience contains an unknown account");
+      const audienceIds = [...new Set([...memberIds, ...exclusionIds])];
+      const users = await this.userRepository.findByIds(audienceIds);
+      if (users.length !== audienceIds.length) throw new Error("Story audience contains an unknown account");
     }
 
     await enforceTextContentPolicy([
@@ -149,18 +153,20 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await Promise.all((await this.storyRepository.listActive(viewerId)).map(async (story) => (
-      await this.canViewStory(story, viewerId) ? story : undefined
-    )));
-    const visibleStories = stories.filter((story): story is StoryRecord => Boolean(story));
+    const stories = await this.storyRepository.listActive(viewerId);
+    if (!stories.length) return [];
+    const [context, audience] = await Promise.all([
+      this.contentSafetyService.prepareContext(stories.map(story => story.authorId), viewerId, { discovery: true }),
+      this.storyRepository.audienceForViewer(stories.map(story => story.id), viewerId),
+    ]);
+    const visibleStories = stories.filter(story => context.allows({ ...story,
+      selectedMemberIds: viewerId && audience.selected.has(story.id) ? [viewerId] : [],
+      excludedViewerIds: viewerId && audience.excluded.has(story.id) ? [viewerId] : [],
+    }, story.authorId));
     const polls = await this.storyRepository.getPolls(visibleStories.map((story) => story.id), viewerId);
     const hydrated = visibleStories.map((story) => polls.get(story.id) ? { ...story, poll: polls.get(story.id) } : story);
-    const ranked = await Promise.all(hydrated.map(async (story) => {
-      const relationshipScore = viewerId && story.authorId === viewerId
-        ? 40
-        : viewerId && await this.userRepository.isCloseFriend(story.authorId, viewerId)
-          ? 30
-          : viewerId && await this.userRepository.isFollowing(viewerId, story.authorId) ? 20 : 0;
+    const ranked = hydrated.map((story) => {
+      const relationshipScore = context.relationshipScore(story.authorId);
       const recencyScore = Math.max(0, 30 - ((Date.now() - new Date(story.publishedAt ?? story.createdAt).getTime()) / (60 * 60 * 1000)));
       return {
         story,
@@ -171,7 +177,7 @@ export class StoryService {
           priorityBoost: story.priorityBoost ?? 0,
         }),
       };
-    }));
+    });
     return ranked.sort((left, right) => right.score - left.score).map(({ story }) => story);
   }
 
@@ -263,33 +269,15 @@ export class StoryService {
     return poll ? { ...story, poll } : story;
   }
 
-  private async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
-    if (!story || !(await this.contentSafetyService.isVisible(story, viewerId, story.authorId))) return false;
-    if (!viewerId && story.audience === "public") return true;
-    const author = await this.userRepository.findById(story.authorId);
-    const viewer = viewerId ? await this.userRepository.findById(viewerId) : undefined;
-    if (!author) return false;
-    const blocked = Boolean(viewerId && (
-      author.blockedUsers?.includes(viewerId)
-      || viewer?.blockedUsers?.includes(story.authorId)
-    ));
-    const [isFollowing, isCloseFriend, selectedMember, excluded] = viewerId
-      ? await Promise.all([
-        this.userRepository.isFollowing(viewerId, story.authorId),
-        this.userRepository.isCloseFriend(story.authorId, viewerId),
-        this.storyRepository.isAudienceMember(story.id, viewerId),
-        this.storyRepository.isAudienceExcluded(story.id, viewerId),
-      ])
-      : [false, false, false, false];
-    return evaluateAudience({
-      ownerId: story.authorId,
-      viewerId,
-      audience: (story.audience ?? "followers") as AudienceKind,
-      isFollowing,
-      isCloseFriend,
-      selectedMember,
-      excluded,
-      blocked,
-    }).allowed;
+  public async canViewStory(story: StoryRecord | undefined, viewerId?: string): Promise<boolean> {
+    if (!story) return false;
+    const [selected, excluded] = viewerId ? await Promise.all([
+      this.storyRepository.isAudienceMember(story.id, viewerId),
+      this.storyRepository.isAudienceExcluded(story.id, viewerId),
+    ]) : [false, false];
+    return this.contentSafetyService.isVisible({ ...story,
+      selectedMemberIds: selected && viewerId ? [viewerId] : [],
+      excludedViewerIds: excluded && viewerId ? [viewerId] : [],
+    }, viewerId, story.authorId);
   }
 }

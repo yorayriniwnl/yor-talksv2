@@ -4,6 +4,8 @@
 // VITE_API_BASE_URL without changing application code.
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
+import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
+import { parseCheckoutHistory } from './checkout-contract';
 
 export interface Tokens {
   accessToken: string;
@@ -13,6 +15,21 @@ export interface Tokens {
 }
 
 export type AuthTokens = Tokens;
+export interface PremiumPlan {
+  key: string; name: string; priceMinor: number; currency: string; durationDays: number;
+  features: string[]; termsVersion: string; refundPolicy: string;
+}
+export interface PremiumOrder {
+  id: string; providerOrderId: string | null; amountMinor: number; currency: string;
+  status: string; lastPaymentStatus: string | null; createdAt: string; paidAt: string | null; plan: PremiumPlan; keyId: string;
+}
+export interface PremiumBillingState {
+  catalog: { available: boolean; plan: PremiumPlan | null; operationalFeatures: Record<string, boolean>;
+    automaticRenewal: false; billingModel: 'prepaid_fixed_term'; testMode: boolean; supportEmail: string };
+  subscription: { order_id: string; starts_at: string; ends_at: string; cancel_at_period_end: boolean; status: string } | null;
+  orders: PremiumOrder[];
+  enabledFeatures: Record<string, boolean>;
+}
 export type FeedMode = 'for_you' | 'following' | 'favorites';
 
 export interface BackendAchievement {
@@ -41,11 +58,13 @@ export type TwoFactorChallengeStatus = {
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
+const EXPLICIT_LOGOUT_KEY = 'yortalks-logged-out';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
 export type { ContentCategory } from './content-category';
 import type { ContentCategory } from './content-category';
 import { normalizeApiTimestamps } from './timestamps';
 let memoryAccessToken: string | null = null;
+let explicitLogoutIntent = false;
 let sessionEpoch = 0;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 let tokenChangeListener: ((token: string | null) => void) | null = null;
@@ -68,10 +87,38 @@ export function getStoredTokens(): Tokens | null {
 }
 
 export function setStoredTokens(tokens: Tokens | null): void {
+  if (tokens?.accessToken) clearExplicitLogoutIntent();
   // Login, account changes, and logout invalidate all previous in-flight data.
   // Token rotation within one session deliberately does not advance this epoch.
   sessionEpoch++;
   updateMemoryTokens(tokens);
+}
+
+function markExplicitLogoutIntent(): void {
+  explicitLogoutIntent = true;
+  try {
+    localStorage.setItem(EXPLICIT_LOGOUT_KEY, '1');
+  } catch {
+    // Keep the marker in memory when browser storage is unavailable.
+  }
+}
+
+function clearExplicitLogoutIntent(): void {
+  explicitLogoutIntent = false;
+  try {
+    localStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+  } catch {
+    // A restricted storage context must not prevent a successful login.
+  }
+}
+
+function hasExplicitLogoutIntent(): boolean {
+  if (explicitLogoutIntent) return true;
+  try {
+    return localStorage.getItem(EXPLICIT_LOGOUT_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 function updateMemoryTokens(tokens: Tokens | null): void {
@@ -114,56 +161,125 @@ interface ApiEnvelope<T> {
   meta: Record<string, unknown>;
 }
 
-let refreshInFlight: Promise<Tokens | null> | null = null;
-let refreshEpoch = -1;
+type RefreshOutcome =
+  | { kind: 'refreshed'; tokens: Tokens }
+  | { kind: 'expired' }
+  | { kind: 'unavailable' }
+  | { kind: 'changed' };
 
-async function tryRefresh(): Promise<Tokens | null> {
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+let refreshEpoch = -1;
+const sessionExpiredListeners = new Set<() => void>();
+
+export function onSessionExpired(listener: () => void): () => void {
+  sessionExpiredListeners.add(listener);
+  return () => sessionExpiredListeners.delete(listener);
+}
+
+function notifySessionExpired(): void {
+  for (const listener of sessionExpiredListeners) listener();
+}
+
+async function tryRefresh(): Promise<RefreshOutcome> {
   // Coalesce concurrent refreshes (e.g. several components hitting a 401 at once)
   // into a single request instead of racing multiple refresh calls.
   const epoch = sessionEpoch;
   if (!refreshInFlight || refreshEpoch !== epoch) {
     refreshEpoch = epoch;
-    refreshInFlight = (async () => {
+    const rotate = async (): Promise<RefreshOutcome> => {
       try {
+        if (epoch !== sessionEpoch || hasExplicitLogoutIntent()) return { kind: 'changed' };
         const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           signal: AbortSignal.timeout(20_000),
         });
-        if (!res.ok) return null;
+        if (!res.ok) return res.status === 401 ? { kind: 'expired' } : { kind: 'unavailable' };
         const json = (await res.json()) as ApiEnvelope<Tokens>;
-        return epoch === sessionEpoch && json.success && typeof json.data?.accessToken === 'string' && json.data.accessToken
-          ? json.data : null;
+        if (epoch !== sessionEpoch) return { kind: 'changed' };
+        return json.success && typeof json.data?.accessToken === 'string' && json.data.accessToken
+          ? { kind: 'refreshed', tokens: json.data }
+          : { kind: 'unavailable' };
       } catch {
-        return null;
-      } finally {
-        if (refreshEpoch === epoch) refreshInFlight = null;
+        return { kind: 'unavailable' };
       }
-    })();
+    };
+    // HttpOnly cookies are shared across tabs. Serialize rotation across this
+    // origin so every request uses the cookie installed by its predecessor.
+    refreshInFlight = (typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('yor-session-refresh', { signal: AbortSignal.timeout(25_000) }, rotate)
+      : rotate()).catch((): RefreshOutcome => ({ kind: 'unavailable' })).finally(() => {
+        if (refreshEpoch === epoch) refreshInFlight = null;
+      });
   }
   return refreshInFlight;
 }
 
-async function refreshSession(): Promise<Tokens | null> {
+async function refreshSessionOutcome(): Promise<RefreshOutcome> {
+  if (hasExplicitLogoutIntent()) {
+    if (getStoredTokens()) {
+      setStoredTokens(null);
+      notifySessionExpired();
+    }
+    return { kind: 'expired' };
+  }
   const epoch = sessionEpoch;
-  const refreshed = await tryRefresh();
-  if (epoch !== sessionEpoch) return null;
-  if (refreshed) updateMemoryTokens(refreshed);
-  return refreshed;
+  const outcome = await tryRefresh();
+  if (epoch !== sessionEpoch || outcome.kind === 'changed') return { kind: 'changed' };
+  if (outcome.kind === 'refreshed') {
+    updateMemoryTokens(outcome.tokens);
+    return outcome;
+  }
+  if (outcome.kind === 'expired') {
+    setStoredTokens(null);
+    notifySessionExpired();
+  }
+  return outcome;
 }
 
-async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch): Promise<ApiEnvelope<T>> {
+async function refreshSession(): Promise<Tokens | null> {
+  const outcome = await refreshSessionOutcome();
+  return outcome.kind === 'refreshed' ? outcome.tokens : null;
+}
+
+function isCredentialEstablishment(path: string, method?: string): boolean {
+  const pathname = path.split('?')[0];
+  const verb = (method ?? 'GET').toUpperCase();
+  const publicEndpoints = new Set([
+    'POST /auth/register',
+    'POST /auth/login',
+    'POST /auth/google',
+    'POST /auth/email-otp/send',
+    'POST /auth/email-otp/verify',
+    'POST /auth/otp/send',
+    'POST /auth/otp/verify',
+    'POST /auth/reset-password',
+    'POST /auth/reset-password/confirm',
+    'POST /auth/verify-email/resend-public',
+  ]);
+  return publicEndpoints.has(`${verb} ${pathname}`)
+    || (verb === 'GET' && pathname.startsWith('/auth/verify-email/'))
+    || (verb === 'GET' && /^\/auth\/2fa\/challenges\/[^/]+$/.test(pathname))
+    || (verb === 'POST' && /^\/auth\/2fa\/challenges\/[^/]+\/complete$/.test(pathname));
+}
+
+async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch, includeAuthorization = true): Promise<ApiEnvelope<T>> {
   const assertSession = () => {
     if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
   };
   assertSession();
   const tokens = getStoredTokens();
+  if (tokens && hasExplicitLogoutIntent()) {
+    setStoredTokens(null);
+    notifySessionExpired();
+    throw new ApiError('Your session expired. Please sign in again.', 401);
+  }
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  if (tokens) {
+  if (tokens && includeAuthorization) {
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
@@ -173,14 +289,18 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   assertSession();
 
   // A rejected sign-in must never authenticate through an unrelated cookie.
-  if (res.status === 401 && !isRetry && tokens && !path.startsWith('/auth/')) {
-    const refreshed = await refreshSession();
-    assertSession();
-    if (refreshed) {
-      return requestEnvelope<T>(path, options, true, epoch);
+  if (res.status === 401 && !isRetry && tokens && includeAuthorization && !isCredentialEstablishment(path, options.method)) {
+    const outcome = await refreshSessionOutcome();
+    if (outcome.kind === 'refreshed') {
+      assertSession();
+      return requestEnvelope<T>(path, options, true, epoch, includeAuthorization);
     }
-    setStoredTokens(null);
-    throw new ApiError('Your session expired. Please sign in again.', 401);
+    if (outcome.kind === 'expired') throw new ApiError('Your session expired. Please sign in again.', 401);
+    if (outcome.kind === 'changed') {
+      assertSession();
+      throw new ApiError('Your session changed. Please try again.', 409);
+    }
+    throw new ApiError('Could not verify your session. Check your connection and try again.', 503);
   }
 
   let json: ApiEnvelope<T> | null = null;
@@ -202,8 +322,8 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
   return normalizeApiTimestamps(json);
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  return (await requestEnvelope<T>(path, options)).data;
+async function request<T>(path: string, options: RequestInit = {}, includeAuthorization = true): Promise<T> {
+  return (await requestEnvelope<T>(path, options, false, sessionEpoch, includeAuthorization)).data;
 }
 
 export interface PaginatedResult<T> {
@@ -364,12 +484,26 @@ export interface BackendSubscriptionTier {
   perks: string[];
 }
 
+export interface CheckoutState {
+  checkoutId: string; product: 'tip' | 'membership' | 'marketplace'; providerOrderId: string | null;
+  status: string; providerState: string; lastPaymentStatus: string | null; amountMinor: number; currency: string; createdAt: string;
+  subscriptionId?: string | null; keyId: string;
+}
+export interface PaymentOperations {
+  jobs: Array<{id:string;kind:string;status:string;attempts:number;last_error:string|null}>;
+  disputes: Array<{id:string;product:string;status:string;amount_minor:number;amount_deducted:number;currency:string;respond_by:string|null;checked_at:string|null}>;
+  checkouts: Array<{id:string;product:string;status:string;amount_minor:number;currency:string}>;
+  events: Array<{event_id:string;event_type:string;status:string;last_error:string|null}>;
+  exposure: Array<{order_id:string;product:string;excess_minor:number|string}>;
+}
+
 export interface BackendSubscription {
   id: string;
   subscriberId: string;
   creatorId: string;
   tier: string;
-  status: 'pending' | 'active' | 'expired' | 'cancelled';
+  status: 'pending' | 'active' | 'expired' | 'cancelled' | 'refunded' | 'refund_required' | 'disputed' | 'chargeback';
+  cancelAtPeriodEnd: boolean;
   priceMinor: number;
   currency: string;
   startedAt: string;
@@ -500,7 +634,10 @@ export const api = {
     request<AuthLoginResult>('/auth/email-otp/verify', { method: 'POST', body: JSON.stringify(payload) }),
 
   logout: () => {
-    return request<null>('/auth/logout', { method: 'POST' });
+    markExplicitLogoutIntent();
+    setStoredTokens(null);
+    notifySessionExpired();
+    return request<null>('/auth/logout', { method: 'POST' }, false);
   },
 
   requestPasswordReset: (email: string) =>
@@ -540,6 +677,13 @@ export const api = {
   updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  getPremiumBilling: () => request<PremiumBillingState>('/premium/me').then(parsePremiumBilling),
+  createPremiumOrder: (payload: { idempotencyKey: string; acceptedTermsVersion: string; acceptedPriceMinor: number }) =>
+    request<PremiumOrder>('/premium/orders', { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumOrder),
+  verifyPremiumOrder: (id: string, payload: { paymentId: string; signature: string }) =>
+    request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/verify`, { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumBilling),
+  recoverPremiumOrder: (id: string) => request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/recover`, { method: 'POST' }).then(parsePremiumBilling),
+  cancelPremiumOrder: (id: string) => request<PremiumBillingState>(`/premium/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }).then(parsePremiumBilling),
   updatePremiumProfile: (payload: Partial<PremiumProfileSelection>) =>
     request<BackendUser>('/users/me/premium-profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: async (file: File) => {
@@ -682,30 +826,43 @@ export const api = {
   deleteNote: (id: string) => request<null>(`/notes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // ---- Economy ----
+  getCheckouts: () => request<CheckoutState[]>('/billing/checkouts').then(parseCheckoutHistory),
+  getPaymentOperations: () => request<PaymentOperations>('/operations/payments'),
+  retryPaymentJob: (id:string,reason:string) => request<PaymentOperations>(`/operations/payments/jobs/${encodeURIComponent(id)}/retry`, {method:'POST',body:JSON.stringify({reason})}),
+  reconcilePaymentDispute: (id:string,reason:string) => request<PaymentOperations>(`/operations/payments/disputes/${encodeURIComponent(id)}/reconcile`, {method:'POST',body:JSON.stringify({reason})}),
+  recoverCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/recover`, { method: 'POST' }).then(parseCheckoutHistory),
+  cancelCheckout: (id: string) => request<CheckoutState[]>(`/billing/checkouts/${encodeURIComponent(id)}/cancel`, { method: 'POST' }).then(parseCheckoutHistory),
   getCreatorWallet: () => request<{ balanceMinor: number; currency: string }>('/economy/wallet'),
-  createTipOrder: (payload: { creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
-    request<{ orderId: string; amountMinor: number; currency: string; keyId: string }>('/economy/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  createTipOrder: (payload: { idempotencyKey: string; creatorId: string; streamId?: string; amountMinor: number; message?: string }) =>
+    request<CheckoutState & { orderId: string | null }>('/economy/orders', { method: 'POST', body: JSON.stringify(payload) }),
   verifyTipPayment: (orderId: string, payload: { paymentId: string; signature: string }) =>
-    request<{ transactionId: string; status: 'paid' }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
-  sendSuperchat: (payload: { streamId: string; creatorId: string; amountMinor: number; message: string }) =>
-    request<{ transactionId: string }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
+    request<{ transactionId: string; status: string }>(`/economy/orders/${encodeURIComponent(orderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+  sendSuperchat: (payload: { idempotencyKey: string; streamId: string; creatorId: string; amountMinor: number; message: string }) =>
+    request<CheckoutState & { orderId: string | null }>('/economy/superchat', { method: 'POST', body: JSON.stringify(payload) }),
 
   // ---- Creator memberships ----
   getSubscriptionTiers: (creatorId: string) => request<BackendSubscriptionTier[]>(`/subscriptions/tiers/${encodeURIComponent(creatorId)}`),
-  createSubscriptionOrder: (payload: { creatorId: string; tier: BackendSubscriptionTier['id'] }) =>
-    request<{ subscriptionId: string; orderId: string; amountMinor: number; currency: string; keyId: string; tier: string }>('/subscriptions/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
+  createSubscriptionOrder: (payload: { idempotencyKey: string; creatorId: string; tier: BackendSubscriptionTier['id'] }) =>
+    request<CheckoutState & { subscriptionId: string; orderId: string | null; tier: string }>('/subscriptions/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
   verifySubscriptionPayment: (subscriptionId: string, payload: { orderId: string; paymentId: string; signature: string }) =>
-    request<{ subscriptionId: string; status: 'active'; expiresAt: string }>(`/subscriptions/${encodeURIComponent(subscriptionId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
+    request<{ subscriptionId: string; status: string; expiresAt: string | null }>(`/subscriptions/${encodeURIComponent(subscriptionId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   getMySubscriptions: () => request<BackendSubscription[]>('/subscriptions/my-subscriptions'),
   cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
   // ---- Messages ----
-  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded') => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) }) }),
+  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
   createGroupChat: (payload: { memberIds: string[]; title: string }) => request<BackendConversation>('/conversations/group', { method: 'POST', body: JSON.stringify(payload) }),
   setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
-  getConversationMessages: (conversationId: string) => request<BackendMessage[]>(`/conversations/${conversationId}/messages`),
+  getConversationMessages: (conversationId: string, options: { direction?: 'latest' | 'older' | 'newer'; cursorAt?: string; cursorId?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) query.set(key, String(value));
+    }
+    const suffix = query.size ? `?${query.toString()}` : '';
+    return request<BackendMessage[]>(`/conversations/${encodeURIComponent(conversationId)}/messages${suffix}`);
+  },
   previewMessage: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/preview`, { method: 'POST' }),
   markMessageSeen: (messageId: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}/seen`, { method: 'POST' }),
   editMessage: (messageId: string, content: string) => request<BackendMessage>(`/messages/${encodeURIComponent(messageId)}`, { method: 'PUT', body: JSON.stringify({ content }) }),
@@ -742,8 +899,8 @@ export const api = {
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
   saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
-  createMarketplaceOrder: (productId: string, payload: { shippingName: string; shippingAddress: string; shippingPhone?: string }) =>
-    request<{ orderId: string; providerOrderId: string; amountMinor: number; currency: string; keyId: string }>(`/products/${encodeURIComponent(productId)}/order`, { method: 'POST', body: JSON.stringify(payload) }),
+  createMarketplaceOrder: (productId: string, payload: { idempotencyKey: string; shippingName: string; shippingAddress: string; shippingPhone?: string }) =>
+    request<CheckoutState & { orderId: string }>(`/products/${encodeURIComponent(productId)}/order`, { method: 'POST', body: JSON.stringify(payload) }),
   verifyMarketplacePayment: (providerOrderId: string, payload: { paymentId: string; signature: string }) =>
     request<BackendMarketplaceOrder>(`/products/orders/${encodeURIComponent(providerOrderId)}/verify`, { method: 'POST', body: JSON.stringify(payload) }),
   getMarketplaceOrders: () => request<BackendMarketplaceOrder[]>('/products/orders'),
@@ -995,13 +1152,15 @@ export interface BackendProduct {
 
 export interface BackendMarketplaceOrder {
   id: string;
-  productId: string;
-  buyerId: string;
-  sellerId: string;
+  productId: string | null;
+  productSnapshot?: { id?: string; title?: string };
+  buyerId: string | null;
+  sellerId: string | null;
   providerOrderId: string;
   amountMinor: number;
+  refundedAmountMinor?: number;
   currency: string;
-  status: 'provider_pending' | 'created' | 'paid' | 'fulfilled' | 'cancelled' | 'failed';
+  status: 'provider_pending' | 'created' | 'paid' | 'fulfilled' | 'refund_required' | 'refunded' | 'cancelled' | 'failed';
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

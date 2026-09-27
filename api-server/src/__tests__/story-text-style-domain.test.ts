@@ -7,7 +7,7 @@ import {
 } from "../features/story-text-style.js";
 import type { FeatureEntitlementService } from "../services/feature-entitlement-service.js";
 import type { StoryRepository } from "../repositories/story-repository.js";
-import { PremiumFeatureUnavailableError, StoryService } from "../services/story-service.js";
+import { StoryService } from "../services/story-service.js";
 
 test("story text styles normalize to safe curated defaults and controls", () => {
   assert.deepEqual(normalizeStoryTextStyle(undefined), DEFAULT_STORY_TEXT_STYLE);
@@ -61,7 +61,7 @@ function createStoryStyleService(storyFontEnabled: boolean) {
 test("advanced story text styling is entitlement-gated and persisted after authorization", async () => {
   const style = { ...DEFAULT_STORY_TEXT_STYLE, size: "xl" as const, positionX: 24 };
   const locked = createStoryStyleService(false);
-  await assert.rejects(() => locked.service.createStory({
+  const downgraded = await locked.service.createStory({
     authorId: "11111111-1111-4111-8111-111111111111",
     mediaUrl: "https://example.test/story.jpg",
     type: "text",
@@ -70,7 +70,9 @@ test("advanced story text styling is entitlement-gated and persisted after autho
     contentCategory: "other",
     contentRating: "regular",
     storyTextStyle: style,
-  }), PremiumFeatureUnavailableError);
+  });
+  assert.equal(downgraded.textContent, 'Safe story text');
+  assert.deepEqual(locked.getPersistedStyle(), DEFAULT_STORY_TEXT_STYLE);
 
   const enabled = createStoryStyleService(true);
   await enabled.service.createStory({

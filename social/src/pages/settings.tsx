@@ -1,3 +1,4 @@
+import { isPremiumProfileCatalog } from '@/lib/premium-catalog';
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -264,6 +265,8 @@ function PremiumProfilePanel() {
   const currentUser = useAppStore((state) => state.currentUser);
   const updatePremiumProfile = useAppStore((state) => state.updatePremiumProfile);
   const [catalog, setCatalog] = useState<PremiumProfileOptions | null>(null);
+  const [catalogError, setCatalogError] = useState(false);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [selection, setSelection] = useState<PremiumProfileSelection | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingField, setSavingField] = useState<keyof PremiumProfileSelection | null>(null);
@@ -271,20 +274,23 @@ function PremiumProfilePanel() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setCatalog(null);
+    setCatalogError(false);
     api.getPremiumProfileOptions()
       .then((result) => {
         if (!active) return;
+        if (!isPremiumProfileCatalog(result)) throw new Error('Invalid optional catalog');
         setCatalog(result);
         setSelection(result.selection);
       })
       .catch(() => {
-        if (active) toast.error('Could not load premium profile options');
+        if (active) setCatalogError(true);
       })
       .finally(() => {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, catalogAttempt]);
 
   if (!currentUser) return null;
 
@@ -294,7 +300,7 @@ function PremiumProfilePanel() {
     storyFontId: currentUser.storyFontId ?? 'default',
     appIconId: currentUser.appIconId ?? 'yor-default',
   };
-  const enabled = (feature: string) => catalog?.enabledFeatures[feature] === true;
+  const enabled = (feature: string) => catalog?.enabledFeatures?.[feature] === true;
   const save = async <K extends keyof PremiumProfileSelection>(field: K, value: PremiumProfileSelection[K]) => {
     const previous = currentSelection[field];
     setSelection((current) => ({ ...(current ?? currentSelection), [field]: value }));
@@ -325,6 +331,7 @@ function PremiumProfilePanel() {
         </div>
 
         {loading && <p role="status" className="text-xs text-muted-foreground">Loading your premium identity options…</p>}
+        {catalogError && <p role="status" className="text-sm text-muted-foreground">Premium options are temporarily unavailable. Your privacy settings remain available. <button type="button" className="underline" onClick={() => setCatalogAttempt(value => value + 1)}>Retry Premium options</button></p>}
         {!loading && catalog && (
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Bio style</span><Select value={currentSelection.bioStyleId} disabled={savingField === 'bioStyleId'} onValueChange={(value) => void save('bioStyleId', value)}><SelectTrigger aria-label="Bio style" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.bioStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'CUSTOM_BIO_FONT')}>{option.label}{option.id !== 'default' && !enabled('CUSTOM_BIO_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
@@ -618,6 +625,8 @@ export default function Settings() {
         <CompanionPetSettings />
 
         <PremiumProfilePanel />
+        <a href="/premium" className="block rounded-2xl border border-primary/25 bg-primary/5 p-4 text-sm font-semibold text-primary">Yor Premium · plans, billing and payment recovery</a>
+        <a href="/billing" className="block rounded-2xl border border-border/50 p-4 text-sm font-semibold">Creator payments · history, cancellation and recovery</a>
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">
@@ -694,7 +703,7 @@ export default function Settings() {
           <div className="flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Story viewing privacy</p>
-              <p className="text-xs text-muted-foreground">Choose whether creators see your account in viewer lists. Private mode still contributes to aggregate analytics.</p>
+              <p className="text-xs text-muted-foreground">Private viewing requires an active Premium entitlement and still contributes to aggregate analytics. Without that entitlement, new views are identified even if your saved preference is Private. Earlier private views stay private.</p>
             </div>
             <Select value={storyViewMode} disabled={storyViewModeSaving} onValueChange={(value) => void handleStoryViewModeChange(value as 'identified' | 'private')}>
               <SelectTrigger aria-label="Story viewing privacy" className="w-full shrink-0 rounded-xl font-medium sm:w-44"><SelectValue placeholder="Viewer identity" /></SelectTrigger>

@@ -1,3 +1,6 @@
+import { requireTrustedOrigin } from '../middlewares/trusted-origin.js';
+import { authRateLimiter } from '../middlewares/rate-limit.js';
+import { CheckoutRequestError } from '../services/checkout-intent-service.js';
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
 import { validateBody, validateParams } from "../middlewares/validation.js";
@@ -23,7 +26,7 @@ router.get("/tiers/:creatorId", (_req, res) => {
   return res.status(200).json(createResponse("Membership tiers loaded", subscriptionService.getTiers()));
 });
 
-router.post("/subscribe", authenticate, validateBody(createSubscriptionOrderSchema), async (req, res) => {
+router.post("/subscribe", authenticate, requireTrustedOrigin, authRateLimiter, validateBody(createSubscriptionOrderSchema), async (req, res) => {
   try {
     const order = await subscriptionService.createOrder({ subscriberId: req.user!.id, ...req.body });
     return res.status(201).json(createResponse("Membership payment order created", order));
@@ -34,7 +37,7 @@ router.post("/subscribe", authenticate, validateBody(createSubscriptionOrderSche
     if (error instanceof PaymentProviderError) {
       return res.status(502).json(createResponse("Payment provider rejected the membership order", null, {}, [error.message]));
     }
-    if (error instanceof SubscriptionRequestError) {
+    if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Membership order could not be created", null, {}, [error.message]));
     }
     console.error(error);
@@ -42,7 +45,7 @@ router.post("/subscribe", authenticate, validateBody(createSubscriptionOrderSche
   }
 });
 
-router.post("/:id/verify", authenticate, validateParams(subscriptionIdParamSchema), validateBody(verifySubscriptionPaymentSchema), async (req, res) => {
+router.post("/:id/verify", authenticate, requireTrustedOrigin, authRateLimiter, validateParams(subscriptionIdParamSchema), validateBody(verifySubscriptionPaymentSchema), async (req, res) => {
   try {
     const result = await subscriptionService.verifyPayment({ subscriberId: req.user!.id, subscriptionId: paramId(req.params.id), ...req.body });
     return res.status(200).json(createResponse("Membership payment verified", result));
@@ -59,7 +62,7 @@ router.post("/:id/verify", authenticate, validateParams(subscriptionIdParamSchem
     if (error instanceof SubscriptionOrderForbiddenError) {
       return res.status(403).json(createResponse("Membership payment is not yours", null, {}, [error.message]));
     }
-    if (error instanceof SubscriptionRequestError) {
+    if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Membership payment verification failed", null, {}, [error.message]));
     }
     console.error(error);
@@ -77,12 +80,12 @@ router.get("/my-subscriptions", authenticate, async (req, res) => {
   }
 });
 
-router.delete("/:id", authenticate, validateParams(subscriptionIdParamSchema), async (req, res) => {
+router.delete("/:id", authenticate, requireTrustedOrigin, authRateLimiter, validateParams(subscriptionIdParamSchema), async (req, res) => {
   try {
     const subscription = await subscriptionService.cancel(paramId(req.params.id), req.user!.id);
     return res.status(200).json(createResponse("Membership cancelled", subscription));
   } catch (error) {
-    if (error instanceof SubscriptionRequestError) {
+    if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(404).json(createResponse("Membership could not be cancelled", null, {}, [error.message]));
     }
     console.error(error);

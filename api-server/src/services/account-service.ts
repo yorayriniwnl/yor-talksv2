@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { eq, or, sql } from "drizzle-orm";
+import { randomUUID } from 'node:crypto';
 import {
   commentsTable,
   contactShieldsTable,
@@ -58,22 +59,48 @@ export class AccountService {
       throw new InvalidAccountPasswordError("Password confirmation failed");
     }
 
-    // Financial attribution belongs to each party independently. Keep the
-    // surviving account's balance and the immutable transaction reference.
-    await db.transaction(async (tx) => {
-      await tx.update(ledgerTransactionsTable)
-        .set({ creditAccountId: null })
-        .where(eq(ledgerTransactionsTable.creditAccountId, userId));
-      await tx.update(ledgerTransactionsTable)
-        .set({ debitAccountId: null })
-        .where(eq(ledgerTransactionsTable.debitAccountId, userId));
+    return db.transaction(async tx => {
+      const [locked] = await tx.select().from(usersTable).where(eq(usersTable.id, userId)).for('update');
+      if (!locked) return false;
+      // Reject a password changed between confirmation and acquiring the lock.
+      if (locked.passwordHash !== user.passwordHash) throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
+      await tx.update(ledgerTransactionsTable).set({
+        creditAccountId: sql`CASE WHEN ${ledgerTransactionsTable.creditAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.creditAccountId} END`,
+        debitAccountId: sql`CASE WHEN ${ledgerTransactionsTable.debitAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.debitAccountId} END`,
+      }).where(or(eq(ledgerTransactionsTable.creditAccountId, userId), eq(ledgerTransactionsTable.debitAccountId, userId)));
       await tx.update(invitesTable).set({ inviteeId: null }).where(eq(invitesTable.inviteeId, userId));
+      // Retain provider/event references; erase only this party's personal fields.
+      await tx.execute(sql`UPDATE marketplace_orders SET shipping_name='Deleted account',shipping_address='',shipping_phone=NULL WHERE buyer_id=${userId}`);
+      await tx.execute(sql`UPDATE payment_orders SET message='' WHERE payer_id=${userId}`);
+      await tx.execute(sql`UPDATE marketplace_orders o SET product_snapshot=jsonb_build_object('id',p.id,'title',p.title)
+        FROM products p WHERE p.id=o.product_id AND p.seller_id=${userId}`);
+      await tx.execute(sql`UPDATE entitlements SET status='revoked' WHERE entity_type='subscription'
+        AND entity_id IN (SELECT id::text FROM subscriptions WHERE creator_id=${userId} OR subscriber_id=${userId})`);
+      await tx.execute(sql`UPDATE subscriptions SET status='cancelled' WHERE creator_id=${userId} OR subscriber_id=${userId}`);
+      await tx.execute(sql`UPDATE payment_orders SET status='cancelled' WHERE (payer_id=${userId} OR creator_id=${userId}) AND status IN ('created','provider_pending')`);
+      await tx.execute(sql`UPDATE subscription_orders SET status='cancelled' WHERE (subscriber_id=${userId} OR creator_id=${userId}) AND status IN ('created','provider_pending')`);
+      await tx.execute(sql`UPDATE products SET availability='active' WHERE availability='reserved' AND id IN
+        (SELECT product_id FROM marketplace_orders WHERE (buyer_id=${userId} OR seller_id=${userId}) AND status IN ('created','provider_pending'))`);
+      await tx.execute(sql`UPDATE marketplace_orders SET status='cancelled' WHERE (buyer_id=${userId} OR seller_id=${userId}) AND status IN ('created','provider_pending')`);
+      await tx.execute(sql`UPDATE premium_access SET status='revoked',updated_at=now() WHERE user_id=${userId}`);
+      await tx.execute(sql`UPDATE premium_orders SET status='cancelled',updated_at=now() WHERE user_id=${userId} AND status IN ('provider_pending','creation_unknown','created')`);
+      // Preserve ambiguous legacy media references for ownership review instead
+      // of deleting another person's provider asset based only on a supplied URL.
+      await tx.execute(sql`INSERT INTO media_cleanup_holds(deletion_id,source_type,source_id,references_json)
+        SELECT ${userId}::uuid,'post',id,images FROM posts WHERE author_id=${userId} AND images<>'[]'::jsonb
+        UNION ALL SELECT ${userId}::uuid,'avatar',id,to_jsonb(avatar_url) FROM users WHERE id=${userId} AND avatar_url IS NOT NULL
+        UNION ALL SELECT ${userId}::uuid,'story',id,to_jsonb(media_url) FROM stories WHERE author_id=${userId} AND media_url IS NOT NULL
+        UNION ALL SELECT ${userId}::uuid,'video',id,jsonb_build_array(video_url,thumbnail_url) FROM videos WHERE author_id=${userId}`);
+      await tx.execute(sql`UPDATE users SET follower_count=greatest(0,coalesce(follower_count,0)-1)
+        WHERE id IN (SELECT following_id FROM user_follows WHERE follower_id=${userId})`);
+      await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
+        WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
+      await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
+        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb) ON CONFLICT(dedup_key) DO NOTHING`);
+      // FK SET NULL preserves retained financial records; ordinary owned social
+      // content cascades. Missing user rows invalidate HTTP, refresh and sockets.
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
+      return true;
     });
-    // Authentication also checks the database: deleted users cannot use a
-    // stale Redis session if cache cleanup is temporarily unavailable.
-    const keys = await this.redisRepository.keys(`session:${userId}:*`);
-    await Promise.all(keys.map((key) => this.redisRepository.del(key)));
-    return true;
   }
 }

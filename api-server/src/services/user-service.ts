@@ -55,8 +55,11 @@ export class UserService {
       storyFontId: updates.storyFontId ?? current.storyFontId,
       appIconId: updates.appIconId ?? current.appIconId,
     });
-    const required = requiredPremiumFeatures(selection);
-    const available = await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
+    // Preserved historical styles must not block changing a different field back
+    // to a free default after expiry. Authorize only the requested selections.
+    const required = requiredPremiumFeatures(updates);
+    const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(userId) : null;
+    const available = snapshot ? required.map(feature => snapshot[feature]) : await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
     if (available.some((enabled) => !enabled)) {
       throw new PremiumProfileFeatureUnavailableError("One or more premium profile styles are not enabled for this account");
     }
@@ -241,8 +244,8 @@ export class UserService {
   async listCloseFriends(userId: string): Promise<UserRecord[]> {
     const ids = await this.userRepository.listCloseFriendIds(userId);
     if (ids.length === 0) return [];
-    const users = await Promise.all(ids.map((id) => this.userRepository.findById(id)));
-    return users.filter((user): user is UserRecord => Boolean(user));
+    const users = new Map((await this.userRepository.findByIds(ids)).map(user => [user.id, user]));
+    return ids.flatMap(id => users.has(id) ? [users.get(id)!] : []);
   }
 
   async setCloseFriend(userId: string, friendId: string, enabled: boolean): Promise<{ friendId: string; closeFriend: boolean } | undefined> {

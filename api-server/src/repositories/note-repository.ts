@@ -1,6 +1,7 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { db, userNotesTable } from "@workspace/db";
 import type { NoteRecord } from "../types/index.js";
+import { discoveryScope } from './discovery-scope.js';
 
 export class NoteRepository {
   async replaceForAuthor(note: NoteRecord): Promise<NoteRecord> {
@@ -13,12 +14,12 @@ export class NoteRepository {
     return created as NoteRecord;
   }
 
-  async listActive(): Promise<NoteRecord[]> {
+  async listActive(viewerId?: string): Promise<NoteRecord[]> {
     return (await db
       .select()
       .from(userNotesTable)
-      .where(gt(userNotesTable.expiresAt, new Date().toISOString()))
-      .orderBy(desc(userNotesTable.createdAt))
+      .where(and(gt(userNotesTable.expiresAt, new Date().toISOString()), discoveryScope(userNotesTable, viewerId)))
+      .orderBy(desc(userNotesTable.createdAt), desc(userNotesTable.id))
       .limit(100)) as NoteRecord[];
   }
 

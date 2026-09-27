@@ -8,6 +8,8 @@ import { startNotificationWorker } from "./workers/notification-worker.js";
 import { startFeedWorker } from "./workers/feed-worker.js";
 import { env } from "./config/env.js";
 import { closeRateLimitRedis } from "./middlewares/rate-limit.js";
+import { startLifecycleWorker } from './workers/lifecycle-worker.js';
+import { createPaymentRuntime } from './services/payment-runtime.js';
 
 async function ensureProductionDependencies(): Promise<void> {
   if (env.NODE_ENV !== "production") return;
@@ -33,7 +35,8 @@ async function main() {
   await ensureProductionDependencies();
 
   const httpServer = createServer(app);
-  const io = attachSocketServer(httpServer);
+  const io = await attachSocketServer(httpServer);
+  const lifecycleWorker = await startLifecycleWorker(createPaymentRuntime().handlers);
   const feedWorker = await startFeedWorker().catch((err) => { logger.warn({ err }, "Feed worker failed to start"); return null; });
   const notificationWorker = await startNotificationWorker().catch((err) => {
     logger.warn({ err }, "Notification worker failed to start");
@@ -72,6 +75,7 @@ async function main() {
       });
       await notificationWorker?.close();
       await feedWorker?.close();
+      await lifecycleWorker.close();
       await closeRateLimitRedis();
       await pool.end();
       logger.info("Shutdown complete");
@@ -90,4 +94,3 @@ main().catch((err) => {
   logger.error(err);
   process.exit(1);
 });
-

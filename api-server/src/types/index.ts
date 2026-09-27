@@ -8,6 +8,7 @@ export interface UserRecord {
   email: string;
   googleSubject?: string | null;
   passwordHash: string;
+  authVersion?: number;
   termsVersion?: string | null;
   termsAcceptedAt?: string | null;
   ageConfirmedAt?: string | null;
@@ -157,6 +158,7 @@ export interface NotificationRecord {
   readAt: string | null;
   channel?: "in_app" | "email" | "push";
   metadata?: Record<string, unknown>;
+  pushDeliveredAt?: string | null;
 }
 
 export interface MessageRecord {
@@ -296,16 +298,18 @@ export interface ProductRecord {
 
 export interface MarketplaceOrderRecord {
   id: string;
-  productId: string;
-  buyerId: string;
-  sellerId: string;
+  productId: string | null;
+  productSnapshot?: { id?: string; title?: string };
+  buyerId: string | null;
+  sellerId: string | null;
   provider: string;
   providerOrderId: string;
   providerPaymentId?: string | null;
   providerSignature?: string | null;
   amountMinor: number;
+  refundedAmountMinor?: number;
   currency: string;
-  status: "provider_pending" | "created" | "paid" | "fulfilled" | "cancelled" | "failed";
+  status: "provider_pending" | "created" | "paid" | "fulfilled" | "refund_required" | "refunded" | "cancelled" | "failed";
   shippingName: string;
   shippingAddress: string;
   shippingPhone?: string | null;

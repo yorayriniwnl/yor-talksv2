@@ -214,7 +214,7 @@ export const apiRouteCatalog = [
     "operationId": "postAuthLogout",
     "tag": "auth",
     "summary": "Post /auth/logout",
-    "authenticated": true,
+    "authenticated": false,
     "roles": []
   },
   {
@@ -305,6 +305,33 @@ export const apiRouteCatalog = [
     "tag": "auth",
     "summary": "Post /auth/verify-email/resend-public",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/billing/checkouts",
+    "operationId": "getBillingCheckouts",
+    "tag": "billing",
+    "summary": "Get /billing/checkouts",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/cancel",
+    "operationId": "postBillingCheckoutsByCheckoutIdCancel",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/recover",
+    "operationId": "postBillingCheckoutsByCheckoutIdRecover",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/recover",
+    "authenticated": true,
     "roles": []
   },
   {
@@ -539,7 +566,9 @@ export const apiRouteCatalog = [
     "tag": "diagnostics",
     "summary": "Get /diagnostics",
     "authenticated": true,
-    "roles": []
+    "roles": [
+      "admin"
+    ]
   },
   {
     "method": "get",
@@ -914,6 +943,39 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/operations/payments",
+    "operationId": "getOperationsPayments",
+    "tag": "operations",
+    "summary": "Get /operations/payments",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/disputes/{id}/reconcile",
+    "operationId": "postOperationsPaymentsDisputesByIdReconcile",
+    "tag": "operations",
+    "summary": "Post /operations/payments/disputes/{id}/reconcile",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/jobs/{id}/retry",
+    "operationId": "postOperationsPaymentsJobsByIdRetry",
+    "tag": "operations",
+    "summary": "Post /operations/payments/jobs/{id}/retry",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
     "method": "post",
     "path": "/posts",
     "operationId": "postPosts",
@@ -1090,6 +1152,69 @@ export const apiRouteCatalog = [
     "operationId": "postPostsUploadImage",
     "tag": "posts",
     "summary": "Post /posts/upload-image",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/catalog",
+    "operationId": "getPremiumCatalog",
+    "tag": "premium",
+    "summary": "Get /premium/catalog",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/me",
+    "operationId": "getPremiumMe",
+    "tag": "premium",
+    "summary": "Get /premium/me",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders",
+    "operationId": "postPremiumOrders",
+    "tag": "premium",
+    "summary": "Post /premium/orders",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/orders/{orderId}",
+    "operationId": "getPremiumOrdersByOrderId",
+    "tag": "premium",
+    "summary": "Get /premium/orders/{orderId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/cancel",
+    "operationId": "postPremiumOrdersByOrderIdCancel",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/recover",
+    "operationId": "postPremiumOrdersByOrderIdRecover",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/recover",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/verify",
+    "operationId": "postPremiumOrdersByOrderIdVerify",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/verify",
     "authenticated": true,
     "roles": []
   },

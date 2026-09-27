@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { loadRazorpayCheckout } from '@/lib/razorpay-checkout';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Loader2, PackageCheck, Search, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { Button } from '@/components/ui/button';
@@ -11,31 +12,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
-type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
-
-function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
-  const existing = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-  if (existing) return Promise.resolve(existing);
-  return new Promise((resolve, reject) => {
-    const current = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
-    const finish = () => {
-      const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-      checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
-    };
-    if (current) {
-      current.addEventListener('load', finish, { once: true });
-      current.addEventListener('error', () => reject(new Error('Razorpay Checkout could not load')), { once: true });
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.dataset.razorpayCheckout = 'true';
-    script.onload = finish;
-    script.onerror = () => reject(new Error('Razorpay Checkout could not load'));
-    document.body.appendChild(script);
-  });
-}
 
 function PurchaseDialog({ product, onCompleted }: { product: Product; onCompleted: () => void }) {
   const [open, setOpen] = useState(false);
@@ -44,6 +20,7 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
   const [shippingPhone, setShippingPhone] = useState('');
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
+  const checkoutKey = useRef(crypto.randomUUID());
 
   const startPurchase = async () => {
     if (!publicBetaConfig.paymentsEnabled) {
@@ -54,10 +31,12 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
     setError('');
     try {
       const order = await api.createMarketplaceOrder(product.id, {
+        idempotencyKey: checkoutKey.current,
         shippingName: shippingName.trim(),
         shippingAddress: shippingAddress.trim(),
         ...(shippingPhone.trim() ? { shippingPhone: shippingPhone.trim() } : {}),
       });
+      if (!order.providerOrderId || order.status !== 'created') throw new Error('This checkout is saved. Open payment history to recover or cancel it before starting another payment.');
       const Razorpay = await loadRazorpayCheckout();
       const checkout = new Razorpay({
         key: order.keyId,
@@ -69,10 +48,12 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
         theme: { color: '#8b5cf6' },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
-            await api.verifyMarketplacePayment(response.razorpay_order_id, {
+            const result = await api.verifyMarketplacePayment(response.razorpay_order_id, {
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
+            if (result.status !== 'paid') throw new Error('Payment needs review. See payment history for its current status.');
+            checkoutKey.current = crypto.randomUUID();
             toast.success('Payment verified. Your order is confirmed.');
             setOpen(false);
             onCompleted();
@@ -86,6 +67,7 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
         },
         modal: { ondismiss: () => setPaying(false) },
       });
+      checkout.on?.('payment.failed', () => { setError('Payment attempt failed. You can retry the same checkout or recover it in payment history.'); setPaying(false); });
       checkout.open();
     } catch (purchaseError) {
       const message = purchaseError instanceof Error ? purchaseError.message : 'Purchase could not be started';
@@ -110,6 +92,7 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
           <DialogDescription>Payment is verified on the server before this listing becomes sold. Shipping details are shared with the seller only for fulfillment.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          <a href="/billing" className="text-sm text-primary underline">Payment history and recovery</a>
           <div className="space-y-1.5"><Label htmlFor={`store-shipping-name-${product.id}`}>Recipient name</Label><Input id={`store-shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} maxLength={100} className="rounded-xl" /></div>
           <div className="space-y-1.5"><Label htmlFor={`store-shipping-address-${product.id}`}>Shipping / pickup details</Label><textarea id={`store-shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} maxLength={1000} className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" /></div>
           <div className="space-y-1.5"><Label htmlFor={`store-shipping-phone-${product.id}`}>Phone (optional)</Label><Input id={`store-shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} maxLength={24} className="rounded-xl" /></div>

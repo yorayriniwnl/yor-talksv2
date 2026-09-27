@@ -173,3 +173,37 @@ test('in-flight social snapshots cannot restore a newly blocked creator', async 
   assert.deepEqual(useAppStore.getState().stories, []);
   assert.deepEqual(useAppStore.getState().notes, []);
 });
+
+test('a definitively expired refresh clears private UI state immediately', async (t) => {
+  const { useAppStore, api, setStoredTokens } = await store(t);
+  useAppStore.setState({
+    currentUser: { id: 'fixture-user', notificationsEnabled: true },
+    posts: [{ id: 'private-post' }],
+    conversations: [{ id: 'private-conversation' }],
+    messagesByConversation: { 'private-conversation': [{ id: 'private-message' }] },
+  });
+  setStoredTokens({ accessToken: 'expired-token' });
+  t.mock.method(globalThis, 'fetch', async (url) => url.endsWith('/auth/refresh')
+    ? Response.json({ success: false, message: 'Invalid refresh token' }, { status: 401 })
+    : Response.json({ success: false }, { status: 401 }));
+
+  await assert.rejects(api.request('/private-data'), /Your session expired/);
+  assert.equal(useAppStore.getState().currentUser, null);
+  assert.deepEqual(useAppStore.getState().posts, []);
+  assert.deepEqual(useAppStore.getState().conversations, []);
+  assert.deepEqual(useAppStore.getState().messagesByConversation, {});
+});
+
+test('video loading distinguishes a failed fetch from an empty library and can retry', async (t) => {
+  const { useAppStore, api } = await store(t);
+  t.mock.method(api, 'getVideos', async () => { throw new Error('Videos unavailable'); });
+  await useAppStore.getState().loadVideos();
+  assert.equal(useAppStore.getState().videosLoaded, false);
+  assert.match(useAppStore.getState().videosError, /could not load/i);
+
+  t.mock.method(api, 'getVideos', async () => []);
+  await useAppStore.getState().loadVideos();
+  assert.equal(useAppStore.getState().videosLoaded, true);
+  assert.equal(useAppStore.getState().videosError, null);
+  assert.deepEqual(useAppStore.getState().videos, []);
+});

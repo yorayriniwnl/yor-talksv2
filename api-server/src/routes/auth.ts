@@ -36,7 +36,9 @@ router.post("/auth/google", validateBody(googleLoginSchema), authController.goog
 router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
 router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
 router.post("/auth/refresh", requireTrustedOrigin, authController.refresh);
-router.post("/auth/logout", authenticate, authController.logout);
+// Logout uses the HttpOnly refresh cookie so an expired access token cannot
+// prevent the server from revoking the session and clearing that cookie.
+router.post("/auth/logout", requireTrustedOrigin, authController.logout);
 router.post("/auth/logout-all", authenticate, authController.logoutAllDevices);
 router.post("/auth/reset-password", validateBody(resetPasswordSchema), authController.resetPassword);
 router.post("/auth/reset-password/confirm", validateBody(confirmResetPasswordSchema), authController.confirmResetPassword);

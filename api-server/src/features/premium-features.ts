@@ -23,7 +23,7 @@ function parseBoolean(value: string | undefined): boolean | undefined {
   if (value === undefined || value.trim() === "") return undefined;
   if (value.trim().toLowerCase() === "true") return true;
   if (value.trim().toLowerCase() === "false") return false;
-  return undefined;
+  throw new Error('Premium availability flags must be true or false');
 }
 
 function featureEnvKey(feature: PremiumFeature): string {
@@ -32,8 +32,8 @@ function featureEnvKey(feature: PremiumFeature): string {
 
 /**
  * Resolve rollout configuration without coupling feature code to a billing
- * provider. The beta default is enabled so the product can be exercised
- * locally; deployments can turn the complete suite or individual features off.
+ * provider. Operational availability never grants an entitlement by itself.
+ * Paid access requires a current server-owned subscription or authorized override.
  */
 export function resolveFeatureFlags(source: Record<string, string | undefined> = process.env): FeatureFlags {
   const defaultEnabled = parseBoolean(source.YOR_ADVANCED_DEFAULT_ENABLED) ?? true;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createMarketplaceOrderSchema = z.object({
+  idempotencyKey: z.string().uuid(),
   shippingName: z.string().trim().min(2).max(100),
   shippingAddress: z.string().trim().min(5).max(1000),
   shippingPhone: z.string().trim().min(7).max(24).optional(),

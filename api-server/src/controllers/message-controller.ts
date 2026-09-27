@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
 import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
+import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
@@ -12,7 +13,8 @@ export class MessageController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const replyToId = typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
     const textStyleId = typeof req.body.textStyleId === "string" ? req.body.textStyleId : undefined;
-    const sendOptions = { ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}) };
+    const idempotencyKey = typeof req.body.idempotencyKey === "string" ? req.body.idempotencyKey : undefined;
+    const sendOptions = { ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) };
     
     try {
       let message;
@@ -86,7 +88,13 @@ export class MessageController {
 
   listConversation = async (req: Request, res: Response) => {
     const conversationId = typeof req.params.conversationId === "string" ? req.params.conversationId : "";
-    const messages = await this.messageService.listConversation(conversationId, req.user?.id ?? "");
+    const query = conversationMessagesQuerySchema.parse(req.query);
+    const messages = await this.messageService.listConversationPage(conversationId, req.user?.id ?? "", {
+      direction: query.direction ?? "latest",
+      cursorAt: query.cursorAt,
+      cursorId: query.cursorId,
+      limit: query.limit ?? 200,
+    });
     return res.status(200).json(createResponse("Conversation loaded", messages));
   };
 
