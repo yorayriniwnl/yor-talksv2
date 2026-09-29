@@ -56,7 +56,7 @@ export default function Premium() {
       ),
       modal: { ondismiss: () => { setBusy(false); setAttempt(value => value + 1); setNotice('Checkout closed. Any completed payment can still be recovered below.'); } },
     });
-    checkout.on?.('payment.failed', () => { setBusy(false); setError('Payment did not complete. Check the order below before trying again.'); setAttempt(value => value + 1); });
+    checkout.on?.('payment.failed', () => { setBusy(false); setError('Payment did not complete. Check the order below before trying again.'); });
     checkout.open();
   };
   const purchase = async (existing?: PremiumOrder) => {
