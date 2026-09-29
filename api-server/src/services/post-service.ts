@@ -16,6 +16,9 @@ import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { Redis } from "ioredis";
+import { env } from "../config/env.js";
+import { logger } from "../lib/logger.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
 export { ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
@@ -480,64 +483,104 @@ export class PostService {
     return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
 
-  private redis = new Redis(env.REDIS_URL, {
-    lazyConnect: true, connectTimeout: 1000, commandTimeout: 1000,
-    maxRetriesPerRequest: 1, retryStrategy: () => null,
-  }).on("error", () => { /* cache errors are handled at the command boundary */ });
+  private readonly redis = new Redis(env.REDIS_URL, {
+    lazyConnect: true,
+    connectTimeout: 1000,
+    commandTimeout: 1000,
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null,
+  }).on("error", () => {
+    // Trending cache is an optimization. Database-backed feed delivery remains
+    // authoritative when Redis is unavailable.
+  });
 
   async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<FeedResult> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const pageSize = Math.min(100, Math.max(20, limit * 2));
-    const cacheKey = `feed:trending:v2:${cursor || "first"}:${pageSize}`;
-    
-    // Redis is an optimization, never a requirement for a healthy feed.
-    let cached: string | null = null;
-    try {
-      cached = await this.redis.get(cacheKey);
-    } catch (error) {
-      logger.warn({ err: error }, "Trending feed cache read failed");
-    }
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        cached = JSON.stringify(parsed);
-      } catch (e) {
-        cached = null;
-      }
-    }
+    const cacheKey = `feed:trending:v3:${cursor || "first"}:${pageSize}`;
 
-    // Cache the unfiltered candidate set. Contact Shield visibility is per
-    // viewer, so storing one user's filtered list would hide those posts from
-    // every other viewer sharing the cache key.
-    const visible: PostRecord[] = [];
-    const pageSize = Math.min(100, Math.max(20, limit * 2));
-    let nextCursor = cursor;
-    // Re-read records: a cached body can survive deletion or an audience edit.
-    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
-      let posts: PostRecord[];
-      if (firstPage && cached) {
-        const candidates = JSON.parse(cached) as PostRecord[];
-        const fresh = await this.postRepository.findByIds(candidates.map(post => post.id));
-        const byId = new Map(fresh.map(post => [post.id, post]));
-        // Deletions, rank edits or distribution changes invalidate this page;
-        // re-query to avoid broken pagination. Content always comes from SQL.
-        posts = candidates.every(old => {
-          const current = byId.get(old.id);
-          return current && current.score === old.score && current.distributionMode === 'feed_and_profile';
-        }) ? candidates.map(old => byId.get(old.id)!) : await this.postRepository.listTrending(nextCursor, pageSize);
-      } else {
-        posts = await this.postRepository.listTrending(nextCursor, pageSize);
-        if (firstPage) {
-          try {
-            await this.redis.set(cacheKey, JSON.stringify(posts.map(({ id, score, createdAt }) => ({ id, score, createdAt }))), "EX", 60);
-          } catch (error) {
-            logger.warn({ err: error }, "Trending feed cache write failed");
-          }
+    type CachedTrendingPost = Pick<PostRecord, "id" | "createdAt" | "distributionMode"> & { score: number };
+    let cachedCandidates: CachedTrendingPost[] | null = null;
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          cachedCandidates = parsed.filter((item): item is CachedTrendingPost =>
+            Boolean(item) &&
+            typeof item === "object" &&
+            typeof (item as CachedTrendingPost).id === "string" &&
+            typeof (item as CachedTrendingPost).createdAt === "string" &&
+            typeof (item as CachedTrendingPost).score === "number" &&
+            ((item as CachedTrendingPost).distributionMode === "feed_and_profile" ||
+              (item as CachedTrendingPost).distributionMode === "profile_only"),
+          );
         }
       }
+    } catch (error) {
+      cachedCandidates = null;
+      logger.warn({ err: error }, "Trending feed cache read failed");
+    }
+
+    const visible: PostRecord[] = [];
+    let nextCursor = cursor;
+    let firstPage = true;
+
+    // Cached pages contain only ordering/identity fields. Every cache hit is
+    // re-fetched from SQL before visibility checks so deletions, audience edits,
+    // score changes, and distribution changes cannot be resurrected by Redis.
+    for (let page = 0; page < 10 && visible.length < limit; page += 1) {
+      let posts: PostRecord[];
+      let shouldRefreshCache = false;
+
+      if (firstPage && cachedCandidates?.length) {
+        const fresh = await this.postRepository.findByIds(cachedCandidates.map((post) => post.id));
+        const byId = new Map(fresh.map((post) => [post.id, post]));
+        const cacheStillValid = cachedCandidates.every((old) => {
+          const current = byId.get(old.id);
+          return Boolean(
+            current &&
+            (current.score ?? 0) === old.score &&
+            current.createdAt === old.createdAt &&
+            current.distributionMode === old.distributionMode,
+          );
+        });
+
+        if (cacheStillValid) {
+          posts = cachedCandidates.flatMap((old) => {
+            const current = byId.get(old.id);
+            return current ? [current] : [];
+          });
+        } else {
+          posts = await this.postRepository.listTrending(nextCursor, pageSize);
+          shouldRefreshCache = true;
+        }
+      } else {
+        posts = await this.postRepository.listTrending(nextCursor, pageSize);
+        shouldRefreshCache = firstPage;
+      }
+
+      if (firstPage && shouldRefreshCache) {
+        try {
+          const payload: CachedTrendingPost[] = posts.map((post) => ({
+            id: post.id,
+            score: post.score ?? 0,
+            createdAt: post.createdAt,
+            distributionMode: post.distributionMode,
+          }));
+          await this.redis.set(cacheKey, JSON.stringify(payload), "EX", 60);
+        } catch (error) {
+          logger.warn({ err: error }, "Trending feed cache write failed");
+        }
+      }
+
       firstPage = false;
-      if (posts.length === 0) { nextCursor = undefined; break; }
+      if (posts.length === 0) {
+        nextCursor = undefined;
+        break;
+      }
+
       const contentVisible = posts.filter((post) =>
         !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
       );
@@ -545,8 +588,10 @@ export class PostService {
       nextCursor = posts.length < pageSize ? undefined : encodeTrendingCursor(posts[posts.length - 1]);
       if (posts.length < pageSize) break;
     }
+
     return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
+
   async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<FeedResult> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
@@ -593,8 +638,6 @@ export class PostService {
   close(): void {
     this.redis.disconnect();
   }
-
-  close(): void {}
 
   private extractMentions(content: string): string[] {
     return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);

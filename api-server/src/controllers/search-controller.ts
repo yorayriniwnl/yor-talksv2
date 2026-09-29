@@ -5,6 +5,8 @@ import { createResponse } from "../utils/response.js";
 import type { UserRecord } from "../types/index.js";
 import { toPublicUsers } from "../utils/user-view.js";
 
+const SEARCH_CACHE_TTL_SECONDS = 30;
+
 export class SearchController {
   constructor(
     private readonly searchService: SearchService,
@@ -26,7 +28,7 @@ export class SearchController {
       const query = typeof req.query.q === "string" ? req.query.q : "";
       const viewerId = req.user?.id ?? "anonymous";
       const cacheKey = `search:${viewerId}:${query.toLowerCase()}`;
-      const cached = await this.cacheService.get<Awaited<ReturnType<SearchService["search"]>>>(cacheKey);
+      const cached = await this.cacheService.get<{ postIds: string[] }>(cacheKey);
       // Always re-query current records: a result cache cannot authorize a later request.
       const results = await this.searchService.search(query, req.user?.id);
       const safeResults = this.safeResults(results);
