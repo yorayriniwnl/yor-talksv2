@@ -1,0 +1,33 @@
+name: Post-audit branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/post-audit-branch-cleanup.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Delete merged repair branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/audit/restore-green-ci-20260929"
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/fix/premium-payment-failure-state-20260930"
+      - name: Remove temporary cleanup workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/post-audit-branch-cleanup.yml
+          git commit -m "chore: remove temporary branch cleanup workflow"
+          git push origin HEAD:main
