@@ -127,8 +127,11 @@ export class AccountService {
       // Preserve financial audit rows without retaining a deleted user's
       // identity, and detach invite references that are intentionally nullable.
       await tx.update(ledgerTransactionsTable)
-        .set({ creditAccountId: null, debitAccountId: null })
-        .where(or(eq(ledgerTransactionsTable.creditAccountId, userId), eq(ledgerTransactionsTable.debitAccountId, userId)));
+        .set({ creditAccountId: null })
+        .where(eq(ledgerTransactionsTable.creditAccountId, userId));
+      await tx.update(ledgerTransactionsTable)
+        .set({ debitAccountId: null })
+        .where(eq(ledgerTransactionsTable.debitAccountId, userId));
       await tx.update(invitesTable)
         .set({ inviteeId: null })
         .where(eq(invitesTable.inviteeId, userId));
