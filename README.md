@@ -98,15 +98,15 @@ direct API is available on port 4000. The generated OpenAPI document is exposed
 at `/api/docs`; it is built from the mounted Express routes and checked for
 drift in CI.
 
-The seeded demo accounts use the following credentials:
+The seeded demo accounts use fully synthetic identities:
 
 | Email | Password |
 | --- | --- |
-| `2329001@kiit.ac.in` | `yorayriniwnl` |
-| `2329002@kiit.ac.in` | `password123` |
-| `2329003@kiit.ac.in` | `password123` |
+| `founder@example.test` | `DemoFounder123!` |
+| `creator@example.test` | `DemoUser123!` |
+| `cofounder@example.test` | `DemoUser123!` |
 
-Demo seeds are for isolated local databases only. Do not seed a public deployment.
+These identities are fictional and exist only for isolated local databases. Do not seed a public deployment.
 
 For public traffic, use `.env.production` and `docker-compose.production.yml`
 as described in the production runbook. The development Compose profile is
