@@ -28,6 +28,10 @@ import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
+export async function closeAuthenticationDependencies(): Promise<void> {
+  await redisRepository.disconnect();
+}
+
 function normalizedRequestPath(req: Request): string {
   return req.originalUrl.split("?")[0].replace(/^\/api(?:\/v1)?/, "") || "/";
 }

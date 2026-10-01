@@ -143,6 +143,21 @@ export class RedisRepository {
     return typeof count === "number" && count <= limit;
   }
 
+  async incrementHashStrict(key: string, counts: Record<string, number>, sums: Record<string, number>): Promise<void> {
+    await this.ensureReady();
+    const batch = this.client.multi();
+    for (const [field, amount] of Object.entries(counts)) batch.hincrby(key, field, amount);
+    for (const [field, amount] of Object.entries(sums)) batch.hincrbyfloat(key, field, amount);
+    const results = await batch.exec();
+    const error = results?.find(([commandError]) => commandError)?.[0];
+    if (error) throw error;
+  }
+
+  async getHashStrict(key: string): Promise<Record<string, string>> {
+    await this.ensureReady();
+    return this.client.hgetall(key);
+  }
+
   async addToSetStrict(key: string, value: string): Promise<void> {
     await this.ensureReady();
     await this.client.sadd(key, value);

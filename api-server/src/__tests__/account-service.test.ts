@@ -6,11 +6,16 @@ import { pool } from "@workspace/db";
 import { AccountService, InvalidAccountPasswordError } from "../services/account-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
+import { MessageService } from "../services/message-service.js";
+import { createTestUser } from "./test-helpers.js";
 
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
 after(async () => {
+  await pool.query("DROP TRIGGER IF EXISTS fail_account_delete ON users");
+  await pool.query("DROP FUNCTION IF EXISTS fail_account_delete_fn()");
   await redisRepository.disconnect();
   await pool.end();
 });
@@ -35,14 +40,86 @@ test("account export excludes authentication secrets and deletion removes the ac
   });
 
   const accountService = new AccountService(userRepository, redisRepository);
+  const recipient = await createTestUser(userRepository);
+  const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
+  await messageService.sendMessage(id, recipient.id, "Exported message content");
+  await messageService.sendMessage(recipient.id, id, "Received message content");
+  const providerOrderId = `account-export-${randomUUID()}`;
+  await pool.query(`
+    INSERT INTO payment_orders (id, payer_id, creator_id, provider_order_id, provider_signature, amount_minor, currency, status)
+    VALUES ($1, $2, $3, $4, 'private-provider-signature', 500, 'INR', 'created')
+  `, [randomUUID(), id, recipient.id, providerOrderId]);
+  const storyId = randomUUID();
+  await pool.query("INSERT INTO stories (id, author_id, media_url, type, expires_at) VALUES ($1, $2, 'https://example.test/export.jpg', 'image', $3)", [
+    storyId,
+    id,
+    new Date(Date.now() + 86_400_000).toISOString(),
+  ]);
   const exported = await accountService.exportAccount(id);
   const account = exported?.account as Record<string, unknown>;
+  const content = exported?.content as {
+    stories: Array<{ id: string }>;
+    sentMessages: Array<{ content: string }>;
+    receivedMessages: Array<{ content: string }>;
+  };
+  const paymentOrders = exported?.paymentOrders as Array<{ providerOrderId: string }>;
   assert.equal(account.email, email);
   assert.equal("passwordHash" in account, false);
   assert.equal("totpSecret" in account, false);
   assert.equal("contactIdentityDigest" in account, false);
+  assert.equal(content.stories[0]?.id, storyId);
+  assert.equal(content.sentMessages[0]?.content, "Exported message content");
+  assert.equal(content.receivedMessages[0]?.content, "Received message content");
+  assert.equal(paymentOrders[0]?.providerOrderId, providerOrderId);
+  assert.doesNotMatch(JSON.stringify(exported), /private-provider-signature/);
 
   await assert.rejects(() => accountService.deleteAccount(id, "wrong-password"), InvalidAccountPasswordError);
+  const sessionKey = `session:${id}:account-export-test-device`;
+  await redisRepository.setStrict(sessionKey, "active", 300);
   assert.equal(await accountService.deleteAccount(id, "Supersecret1!"), true);
   assert.equal(await userRepository.findById(id), undefined);
+  assert.equal(await redisRepository.getStrict(sessionKey), null);
+});
+
+test("account deletion rolls back ledger anonymization when user deletion fails", async () => {
+  const owner = await createTestUser(userRepository, { passwordHash: await bcrypt.hash("Supersecret2!", 4) });
+  const counterparty = await createTestUser(userRepository);
+  const ledgerId = randomUUID();
+  const referenceId = `account-delete-rollback:${ledgerId}`;
+  await pool.query(`
+    INSERT INTO ledger_transactions (id, credit_account_id, debit_account_id, amount_minor, currency, reference_id, status)
+    VALUES ($1, $2, $3, 777, 'INR', $4, 'completed')
+  `, [ledgerId, owner.id, counterparty.id, referenceId]);
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION fail_account_delete_fn() RETURNS trigger AS $$
+    BEGIN
+      RAISE EXCEPTION 'forced_delete_failure';
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await pool.query(`CREATE TRIGGER fail_account_delete BEFORE DELETE ON users FOR EACH ROW WHEN (OLD.id = '${owner.id}') EXECUTE FUNCTION fail_account_delete_fn()`);
+
+  const accountService = new AccountService(userRepository, redisRepository);
+  try {
+    await assert.rejects(accountService.deleteAccount(owner.id, "Supersecret2!"), (error: Error & { cause?: unknown }) => {
+      assert.match(String(error.cause), /forced_delete_failure/);
+      return true;
+    });
+    const [ledger] = await pool.query<{ credit_account_id: string | null }>(
+      "SELECT credit_account_id FROM ledger_transactions WHERE id = $1", [ledgerId],
+    ).then((result) => result.rows);
+    assert.equal(ledger.credit_account_id, owner.id);
+    assert.ok(await userRepository.findById(owner.id));
+  } finally {
+    await pool.query("DROP TRIGGER fail_account_delete ON users");
+    await pool.query("DROP FUNCTION fail_account_delete_fn()");
+  }
+
+  assert.equal(await accountService.deleteAccount(owner.id, "Supersecret2!"), true);
+  const [anonymized] = (await pool.query<{ credit_account_id: string | null }>(
+    "SELECT credit_account_id FROM ledger_transactions WHERE id = $1", [ledgerId],
+  )).rows;
+  assert.equal(anonymized.credit_account_id, null);
+  await pool.query("DELETE FROM ledger_transactions WHERE id = $1", [ledgerId]);
+  await pool.query("DELETE FROM users WHERE id = $1", [counterparty.id]);
 });

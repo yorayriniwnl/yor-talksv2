@@ -162,15 +162,31 @@ export class PaymentService {
 
     const referenceId = `razorpay:${order.providerOrderId}`;
     const transactionId = await db.transaction(async (tx) => {
-      const [existing] = await tx.select({ id: ledgerTransactionsTable.id })
-        .from(ledgerTransactionsTable).where(eq(ledgerTransactionsTable.referenceId, referenceId));
-      if (existing) return existing.id;
+      const [existing] = await tx.select({
+        id: ledgerTransactionsTable.id,
+        paymentId: paymentOrdersTable.providerPaymentId,
+      }).from(ledgerTransactionsTable).innerJoin(paymentOrdersTable, eq(paymentOrdersTable.id, order.id))
+        .where(eq(ledgerTransactionsTable.referenceId, referenceId));
+      if (existing) {
+        if (existing.paymentId !== input.paymentId) {
+          throw new PaymentRequestError("This order was already reconciled with a different payment");
+        }
+        return existing.id;
+      }
       const [updated] = await tx.update(paymentOrdersTable).set({
         providerPaymentId: input.paymentId,
         status: "paid",
         paidAt: new Date().toISOString(),
       }).where(and(eq(paymentOrdersTable.id, order.id), eq(paymentOrdersTable.status, "created"))).returning({ id: paymentOrdersTable.id });
-      if (!updated) throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      if (!updated) {
+        const [settled] = await tx.select({
+          id: ledgerTransactionsTable.id,
+          paymentId: paymentOrdersTable.providerPaymentId,
+        }).from(ledgerTransactionsTable).innerJoin(paymentOrdersTable, eq(paymentOrdersTable.id, order.id))
+          .where(eq(ledgerTransactionsTable.referenceId, referenceId));
+        if (settled?.paymentId === input.paymentId) return settled.id;
+        throw new PaymentRequestError("This payment order has already been settled or cancelled");
+      }
       const [ledger] = await tx.insert(ledgerTransactionsTable).values({
         id: randomUUID(), creditAccountId: order.creatorId, debitAccountId: order.payerId,
         amountMinor: order.amountMinor, currency: order.currency, referenceId, status: "completed",

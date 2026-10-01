@@ -65,6 +65,7 @@ export class CreatorAnalyticsService {
       )),
       db.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` }).from(ledgerTransactionsTable).where(and(
         eq(ledgerTransactionsTable.creditAccountId, creatorId),
+        eq(ledgerTransactionsTable.currency, "INR"),
         eq(ledgerTransactionsTable.status, "completed"),
         gte(ledgerTransactionsTable.createdAt, date),
         lt(ledgerTransactionsTable.createdAt, nextDate),

@@ -1413,6 +1413,27 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/telemetry/analytics",
+    "operationId": "getTelemetryAnalytics",
+    "tag": "telemetry",
+    "summary": "Get /telemetry/analytics",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/telemetry/events",
+    "operationId": "postTelemetryEvents",
+    "tag": "telemetry",
+    "summary": "Post /telemetry/events",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/users/{userId}",
     "operationId": "getUsersByUserId",
     "tag": "users",

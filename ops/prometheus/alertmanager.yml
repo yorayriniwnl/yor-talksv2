@@ -1,0 +1,19 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: deployment-webhook
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: deployment-webhook
+    webhook_configs:
+      - url: ${ALERTMANAGER_WEBHOOK_URL}
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: ${ALERTMANAGER_WEBHOOK_USER}
+            password_file: /run/secrets/alertmanager_webhook_password

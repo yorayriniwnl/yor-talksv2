@@ -51,6 +51,21 @@ test("message content length is bounded before transport-specific persistence", 
   await assert.rejects(() => messageService.editMessage("id", "sender", "x".repeat(4001)), InvalidMessageContentError);
 });
 
+test("blocks deny new and existing messages in both blocking directions", async () => {
+  const users = new UserRepository();
+  const blocker = await createTestUser(users);
+  const blocked = await createTestUser(users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+  const conversation = await service.createConversation(blocker.id, blocked.id);
+
+  await users.update(blocker.id, { blockedUsers: [blocked.id] });
+  await assert.rejects(() => service.sendMessage(blocker.id, blocked.id, "Blocked outbound"), MessageBlockedError);
+  await assert.rejects(() => service.sendMessageToConversation(blocked.id, conversation.id, "Blocked inbound"), MessageBlockedError);
+  await users.update(blocker.id, { blockedUsers: [] });
+  await users.update(blocked.id, { blockedUsers: [blocker.id] });
+  await assert.rejects(() => service.sendMessage(blocker.id, blocked.id, "Blocked by recipient"), MessageBlockedError);
+});
+
 test("group read receipts survive reload and stay scoped to each recipient", async () => {
   const users = new UserRepository();
   const sender = await createTestUser(users);

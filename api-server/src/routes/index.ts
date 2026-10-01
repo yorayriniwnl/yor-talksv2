@@ -30,12 +30,14 @@ import { reportRoutes } from "./reports.js";
 import { creatorWorkspaceRoutes } from "./creator-workspace.js";
 import profileInteractionRouter from "./profile-interactions.js";
 import metricsRouter from "./metrics.js";
+import productAnalyticsRouter from "./product-analytics.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(diagnosticsRouter);
 router.use(metricsRouter);
+router.use(productAnalyticsRouter);
 router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);

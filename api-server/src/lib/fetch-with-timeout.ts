@@ -4,11 +4,11 @@ export async function fetchWithTimeout(
   timeoutMs: number,
 ): Promise<Response> {
   const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    const timer = setTimeout(() => {
+    timeout = setTimeout(() => {
       controller.abort();
       reject(new Error(`Request timed out after ${timeoutMs}ms`));
-      clearTimeout(timer);
     }, timeoutMs);
   });
 
@@ -26,6 +26,7 @@ export async function fetchWithTimeout(
     }
     throw error;
   } finally {
+    if (timeout) clearTimeout(timeout);
     controller.abort();
   }
 }

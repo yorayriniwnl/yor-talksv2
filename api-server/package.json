@@ -15,6 +15,7 @@
     "seed-massive": "node --import tsx ./src/scripts/seed-massive.ts",
     "seed-ultra": "node --import tsx ./src/scripts/seed-ultra-massive.ts",
     "verify:infrastructure": "node --import tsx ./src/scripts/verify-infrastructure.ts",
+    "analytics:rollup": "node --import tsx ./src/scripts/rollup-product-analytics.ts",
     "test": "tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {

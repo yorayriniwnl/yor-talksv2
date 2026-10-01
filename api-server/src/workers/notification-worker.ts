@@ -9,6 +9,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import type { NotificationRecord } from "../types/index.js";
 import { isNotificationWorkerHealthy, setNotificationWorkerHealthy } from "../lib/worker-health.js";
+import { operationalMetrics } from "../services/operational-metrics-service.js";
 
 export type NotificationWorkerHandle = {
   close: () => Promise<void>;
@@ -81,6 +82,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
         );
 
         worker.on("failed", (job, err) => {
+          void operationalMetrics.recordWorkerFailure("notifications");
           logger.error({ jobId: job?.id, err }, "Notification delivery job failed");
         });
         worker.on("error", (error) => {

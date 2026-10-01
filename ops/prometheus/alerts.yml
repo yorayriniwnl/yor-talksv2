@@ -1,0 +1,65 @@
+groups:
+  - name: yor-talks-production
+    rules:
+      - alert: YorApiMetricsUnavailable
+        expr: up{job="yor-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Yor Talks API metrics endpoint is unavailable
+          description: Prometheus cannot scrape the API metrics endpoint for two minutes.
+
+      - alert: YorSharedMetricsStoreUnavailable
+        expr: yor_http_metrics_shared_store_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Shared Redis metrics are unavailable
+          description: API replicas are serving only local counters; shared scrape totals are incomplete.
+
+      - alert: YorBackgroundJobsFailing
+        expr: sum by (worker) (increase(yor_worker_failed_jobs_total[10m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Yor Talks background jobs are failing
+          description: A notification or feed worker failure was recorded during the last ten minutes.
+
+      - alert: YorAnalyticsRollupFailed
+        expr: yor_analytics_rollup_last_run_failed == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics rollup failed or has never completed
+          description: Check product_analytics_job_runs and the systemd service journal.
+
+      - alert: YorAnalyticsRollupStale
+        expr: yor_analytics_rollup_last_success_timestamp_seconds == 0 or time() - yor_analytics_rollup_last_success_timestamp_seconds > 93600
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics rollup is more than 26 hours stale
+          description: Check yor-talks-analytics.timer and its latest service result.
+
+      - alert: YorDatabaseBackupStale
+        expr: absent(yor_backup_last_success_timestamp_seconds) or time() - yor_backup_last_success_timestamp_seconds > 90000
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: No successful off-host backup in the last 25 hours
+          description: Check the backup timer, encrypted artifact, rclone remote, and backup service journal.
+
+      - alert: YorDatabaseBackupLastRunFailed
+        expr: yor_backup_last_run_success == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: The latest database backup failed
+          description: Check the backup service journal and preserve the encrypted local artifact if upload failed.

@@ -11,3 +11,6 @@ test-results
 .vercel
 coverage
 *.log
+ops/ci-metrics-bearer-token
+ops/ci-rclone.conf
+ops/ci-alertmanager-password

@@ -51,6 +51,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional().default(process.env.GEMINI_API_KEY || ""),
   CONTACT_SHIELD_SECRET: z.string().default(process.env.CONTACT_SHIELD_SECRET || "contact-shield-development-secret-change-me"),
   TOTP_ENCRYPTION_KEY: z.string().default(process.env.TOTP_ENCRYPTION_KEY || "totp-development-encryption-key-change-me"),
+  METRICS_BEARER_TOKEN_FILE: z.string().default(process.env.METRICS_BEARER_TOKEN_FILE || "/run/secrets/metrics_bearer_token"),
   TERMS_VERSION: z.string().trim().default(process.env.TERMS_VERSION || "development"),
   MINIMUM_AGE: z.coerce.number().int().min(13).default(Number(process.env.MINIMUM_AGE || 18)),
   PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
@@ -79,6 +80,7 @@ if (parsedEnv.NODE_ENV === "production") {
     "replace-with-a-different-random-secret-at-least-32-characters",
     "contact-shield-development-secret-change-me",
     "totp-development-encryption-key-change-me",
+    "metrics-development-token-change-me",
     "",
   ]);
   const invalidSecretFields = ["JWT_SECRET", "JWT_REFRESH_SECRET"].filter((field) => {
@@ -97,6 +99,10 @@ if (parsedEnv.NODE_ENV === "production") {
     throw new Error("[Config Error] Production requires a unique TOTP_ENCRYPTION_KEY of at least 32 characters");
   }
 
+  if (!parsedEnv.METRICS_BEARER_TOKEN_FILE.startsWith("/run/secrets/")) {
+    throw new Error("[Config Error] Production metrics token must be mounted as a Docker secret under /run/secrets");
+  }
+
   const requiredProductionConfig = [
     ["DATABASE_URL", parsedEnv.DATABASE_URL],
     ["REDIS_URL", parsedEnv.REDIS_URL],
@@ -107,6 +113,7 @@ if (parsedEnv.NODE_ENV === "production") {
     ["CLOUDINARY_API_SECRET", parsedEnv.CLOUDINARY_API_SECRET],
     ["RESEND_API_KEY", parsedEnv.RESEND_API_KEY],
     ["EMAIL_FROM", parsedEnv.EMAIL_FROM],
+    ["METRICS_BEARER_TOKEN_FILE", parsedEnv.METRICS_BEARER_TOKEN_FILE],
   ] as const;
   const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example/i;
   const missingProductionConfig = requiredProductionConfig
@@ -121,6 +128,18 @@ if (parsedEnv.NODE_ENV === "production") {
   }
   if (parsedEnv.CORS_ORIGINS.split(",").some((origin) => origin.trim() === "*")) {
     throw new Error("[Config Error] Production CORS_ORIGINS must list explicit browser origins; wildcard is not allowed.");
+  }
+  const productionOrigins = [parsedEnv.CLIENT_ORIGIN, ...parsedEnv.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)];
+  const invalidOrigins = productionOrigins.filter((origin) => {
+    try {
+      const parsed = new URL(origin);
+      return parsed.protocol !== "https:" || parsed.origin !== origin || parsed.username !== "" || parsed.password !== "";
+    } catch {
+      return true;
+    }
+  });
+  if (invalidOrigins.length) {
+    throw new Error("[Config Error] Production CLIENT_ORIGIN and CORS_ORIGINS must be canonical HTTPS origins without paths or credentials");
   }
   if (parsedEnv.AUTH_COOKIE_SAME_SITE === "none" && !parsedEnv.CLIENT_ORIGIN.startsWith("https://")) {
     throw new Error("[Config Error] AUTH_COOKIE_SAME_SITE=none requires an HTTPS CLIENT_ORIGIN");

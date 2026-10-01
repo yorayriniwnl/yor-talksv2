@@ -7,6 +7,9 @@ import { attachSocketServer } from "./socket/index.js";
 import { startNotificationWorker } from "./workers/notification-worker.js";
 import { startFeedWorker } from "./workers/feed-worker.js";
 import { env } from "./config/env.js";
+import { operationalMetrics } from "./services/operational-metrics-service.js";
+import { closeAuthenticationDependencies } from "./middlewares/auth.js";
+import { assertMetricsTokenFile } from "./lib/metrics-auth.js";
 
 async function ensureProductionDependencies(): Promise<void> {
   if (env.NODE_ENV !== "production") return;
@@ -24,6 +27,8 @@ async function ensureProductionDependencies(): Promise<void> {
     logger.error({ redis }, message);
     throw new Error(message);
   }
+
+  await assertMetricsTokenFile(env.METRICS_BEARER_TOKEN_FILE);
 }
 
 async function main() {
@@ -71,6 +76,8 @@ async function main() {
       });
       await notificationWorker?.close();
       await feedWorker?.close();
+      await operationalMetrics.close();
+      await closeAuthenticationDependencies();
       await pool.end();
       logger.info("Shutdown complete");
       process.exit(0);
