@@ -5,17 +5,17 @@ import { randomUUID } from "node:crypto";
 async function createProfiles() {
   const usersToCreate = [
     {
-      username: "yorayriniwnl",
-      email: "2329001@kiit.ac.in",
-      password: "yorayriniwnl",
-      fullName: "Ayush Roy",
+      username: "demo_founder",
+      email: "founder@example.test",
+      password: "demo_founder",
+      fullName: "Demo Founder",
       role: "founder"
     },
     {
-      username: "aditisingh",
-      email: "2329003@kiit.ac.in",
-      password: "aditisingh",
-      fullName: "Aditi Singh",
+      username: "demo_cofounder",
+      email: "cofounder@example.test",
+      password: "demo_cofounder",
+      fullName: "Demo Co-Founder",
       role: "co-founder"
     }
   ];
