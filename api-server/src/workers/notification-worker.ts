@@ -9,9 +9,8 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import type { NotificationRecord } from "../types/index.js";
-import { isNotificationWorkerHealthy, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 import { operationalMetrics } from "../services/operational-metrics-service.js";
-import { isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
+import { closeNotificationWorkerHealthDependencies, isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 
 export type NotificationWorkerHandle = {
   close: () => Promise<void>;
@@ -154,6 +153,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
     }
     this.stopHeartbeat();
     await this.initializing;
+    if (this.recovering) await this.recovering;
     if (this.worker) {
       try {
         await this.worker.close();
@@ -165,6 +165,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
       await this.recoveryQueue.close();
       this.recoveryQueue = null;
     }
+    await closeNotificationWorkerHealthDependencies();
   }
 
   isHealthy(): boolean {
