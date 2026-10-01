@@ -10,14 +10,15 @@ an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
 
-## Public-beta status — 2 September 2026
+## Public-beta status — 1 October 2026
 
 **B. CODE-READY, DEPLOYMENT BLOCKED.** The latest continuation passed 69 API,
 30 unit/integration and 24 browser tests. Fresh production images also completed
 a clean PostgreSQL/Redis migration and healthy API/Nginx runtime rehearsal under
 the non-root API user. This is not a verified public deployment. GitHub Actions
-is billing-locked, and real provider, domain/TLS, monitoring and production
-backup/recovery acceptance checks remain required. See the
+is currently executing successfully on `main`; historical billing-locked runs
+remain documented in the dated readiness reports. Real provider, domain/TLS,
+monitoring and production backup/recovery acceptance checks remain required. See the
 [latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-09-02.md) and
 [production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
 
