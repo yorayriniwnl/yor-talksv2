@@ -466,13 +466,13 @@ test('expired bearer logout revokes refresh session before a reload can restore 
   });
 
   await page.goto('/settings');
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Log out', exact: true }).click();
   await expect(page).toHaveURL(/\/auth/);
   expect(logoutAttempts).toBe(1);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
 });
 
 test('narrow Google sign-in stays within its panel as the viewport changes', async ({ page }) => {
