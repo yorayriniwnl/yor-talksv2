@@ -3,6 +3,7 @@ import RedisStore from "rate-limit-redis";
 import Redis from "ioredis";
 import type { Request, Response, RequestHandler } from "express";
 import { env } from "../config/env.js";
+import { logger } from "../lib/logger.js";
 
 const healthPaths = new Set([
   "/api/livez",
@@ -12,6 +13,61 @@ const healthPaths = new Set([
   "/healthz",
   "/readyz",
 ]);
+
+let rateLimitRedisClient: Redis | null = null;
+let rateLimitRedisConnectPromise: Promise<void> | null = null;
+
+function getRateLimitRedisClient(): Redis {
+  if (rateLimitRedisClient) return rateLimitRedisClient;
+
+  rateLimitRedisClient = new Redis(env.REDIS_URL, {
+    // RedisStore loads its Lua scripts while middleware modules are imported.
+    // Connect explicitly before sending those commands so production startup
+    // cannot race a socket while the offline queue is disabled.
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    enableOfflineQueue: false,
+    connectTimeout: 5_000,
+    commandTimeout: 5_000,
+    retryStrategy(times) {
+      if (times > 3) return null;
+      return Math.min(times * 50, 500);
+    },
+  });
+  rateLimitRedisClient.on("error", (error) => {
+    logger.warn({ error: error?.message || error }, "Rate-limit Redis connection warning");
+  });
+  return rateLimitRedisClient;
+}
+
+async function ensureRateLimitRedisReady(): Promise<Redis> {
+  const client = getRateLimitRedisClient();
+  if (client.status === "ready") return client;
+
+  if (!rateLimitRedisConnectPromise) {
+    if (client.status !== "wait" && client.status !== "end") {
+      throw new Error(`Rate-limit Redis is not ready (${client.status})`);
+    }
+    rateLimitRedisConnectPromise = client.connect().then(() => undefined).finally(() => {
+      rateLimitRedisConnectPromise = null;
+    });
+  }
+  await rateLimitRedisConnectPromise;
+  return client;
+}
+
+async function sendRateLimitRedisCommand(...args: string[]) {
+  const [command, ...parameters] = args;
+  if (!command) throw new Error("Redis command is required");
+  const client = await ensureRateLimitRedisReady();
+  return client.call(command, ...parameters) as any;
+}
+
+export async function closeRateLimitRedis(): Promise<void> {
+  rateLimitRedisClient?.disconnect();
+  rateLimitRedisClient = null;
+  rateLimitRedisConnectPromise = null;
+}
 
 function createLimiter(prefix: string, windowMs: number, max: number) {
   const config = {
@@ -36,15 +92,11 @@ function createLimiter(prefix: string, windowMs: number, max: number) {
   // Redis 7 through the deployed stack for shared limits across instances.
   if (env.NODE_ENV !== "production") return rateLimit(config);
 
-  const redisClient = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 1,
-  });
-
   return rateLimit({
     ...config,
     store: new RedisStore({
       prefix,
-      sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as any,
+      sendCommand: sendRateLimitRedisCommand,
     }),
   });
 }
@@ -65,3 +117,4 @@ export const grievanceStatusRateLimiter = createLimiter("yor:rate:grievance-stat
 export const reportRateLimiter = createLimiter("yor:rate:report:", 15 * 60 * 1000, 20);
 export const mediaRateLimiter = createLimiter("yor:rate:media:", 15 * 60 * 1000, 30);
 export const telemetryRateLimiter = createLimiter("yor:rate:telemetry:", 15 * 60 * 1000, 60);
+export const storyReactionRateLimiter = createLimiter("yor:rate:story-reaction:", 60 * 1000, 60);

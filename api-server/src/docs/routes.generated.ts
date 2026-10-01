@@ -214,7 +214,7 @@ export const apiRouteCatalog = [
     "operationId": "postAuthLogout",
     "tag": "auth",
     "summary": "Post /auth/logout",
-    "authenticated": true,
+    "authenticated": false,
     "roles": []
   },
   {
@@ -305,6 +305,33 @@ export const apiRouteCatalog = [
     "tag": "auth",
     "summary": "Post /auth/verify-email/resend-public",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/billing/checkouts",
+    "operationId": "getBillingCheckouts",
+    "tag": "billing",
+    "summary": "Get /billing/checkouts",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/cancel",
+    "operationId": "postBillingCheckoutsByCheckoutIdCancel",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/billing/checkouts/{checkoutId}/recover",
+    "operationId": "postBillingCheckoutsByCheckoutIdRecover",
+    "tag": "billing",
+    "summary": "Post /billing/checkouts/{checkoutId}/recover",
+    "authenticated": true,
     "roles": []
   },
   {
@@ -539,7 +566,9 @@ export const apiRouteCatalog = [
     "tag": "diagnostics",
     "summary": "Get /diagnostics",
     "authenticated": true,
-    "roles": []
+    "roles": [
+      "admin"
+    ]
   },
   {
     "method": "get",
@@ -677,6 +706,24 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/highlights",
+    "operationId": "getHighlights",
+    "tag": "highlights",
+    "summary": "Get /highlights",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/highlights",
+    "operationId": "postHighlights",
+    "tag": "highlights",
+    "summary": "Post /highlights",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "post",
     "path": "/invites/claim",
     "operationId": "postInvitesClaim",
@@ -763,6 +810,15 @@ export const apiRouteCatalog = [
     "operationId": "postMessagesByMessageIdPin",
     "tag": "messages",
     "summary": "Post /messages/{messageId}/pin",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/messages/{messageId}/preview",
+    "operationId": "postMessagesByMessageIdPreview",
+    "tag": "messages",
+    "summary": "Post /messages/{messageId}/preview",
     "authenticated": true,
     "roles": []
   },
@@ -887,6 +943,39 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/operations/payments",
+    "operationId": "getOperationsPayments",
+    "tag": "operations",
+    "summary": "Get /operations/payments",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/disputes/{id}/reconcile",
+    "operationId": "postOperationsPaymentsDisputesByIdReconcile",
+    "tag": "operations",
+    "summary": "Post /operations/payments/disputes/{id}/reconcile",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/operations/payments/jobs/{id}/retry",
+    "operationId": "postOperationsPaymentsJobsByIdRetry",
+    "tag": "operations",
+    "summary": "Post /operations/payments/jobs/{id}/retry",
+    "authenticated": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
     "method": "post",
     "path": "/posts",
     "operationId": "postPosts",
@@ -978,6 +1067,24 @@ export const apiRouteCatalog = [
   },
   {
     "method": "post",
+    "path": "/posts/{postId}/pin",
+    "operationId": "postPostsByPostIdPin",
+    "tag": "posts",
+    "summary": "Post /posts/{postId}/pin",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/posts/{postId}/pin",
+    "operationId": "deletePostsByPostIdPin",
+    "tag": "posts",
+    "summary": "Delete /posts/{postId}/pin",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
     "path": "/posts/{postId}/poll/vote",
     "operationId": "postPostsByPostIdPollVote",
     "tag": "posts",
@@ -1045,6 +1152,69 @@ export const apiRouteCatalog = [
     "operationId": "postPostsUploadImage",
     "tag": "posts",
     "summary": "Post /posts/upload-image",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/catalog",
+    "operationId": "getPremiumCatalog",
+    "tag": "premium",
+    "summary": "Get /premium/catalog",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/me",
+    "operationId": "getPremiumMe",
+    "tag": "premium",
+    "summary": "Get /premium/me",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders",
+    "operationId": "postPremiumOrders",
+    "tag": "premium",
+    "summary": "Post /premium/orders",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/premium/orders/{orderId}",
+    "operationId": "getPremiumOrdersByOrderId",
+    "tag": "premium",
+    "summary": "Get /premium/orders/{orderId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/cancel",
+    "operationId": "postPremiumOrdersByOrderIdCancel",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/cancel",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/recover",
+    "operationId": "postPremiumOrdersByOrderIdRecover",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/recover",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/premium/orders/{orderId}/verify",
+    "operationId": "postPremiumOrdersByOrderIdVerify",
+    "tag": "premium",
+    "summary": "Post /premium/orders/{orderId}/verify",
     "authenticated": true,
     "roles": []
   },
@@ -1295,11 +1465,29 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/stories/{id}/analytics",
+    "operationId": "getStoriesByIdAnalytics",
+    "tag": "stories",
+    "summary": "Get /stories/{id}/analytics",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "post",
     "path": "/stories/{id}/poll/vote",
     "operationId": "postStoriesByIdPollVote",
     "tag": "stories",
     "summary": "Post /stories/{id}/poll/vote",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "patch",
+    "path": "/stories/{id}/priority",
+    "operationId": "patchStoriesByIdPriority",
+    "tag": "stories",
+    "summary": "Patch /stories/{id}/priority",
     "authenticated": true,
     "roles": []
   },
@@ -1318,6 +1506,15 @@ export const apiRouteCatalog = [
     "operationId": "postStoriesByIdView",
     "tag": "stories",
     "summary": "Post /stories/{id}/view",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/stories/{id}/viewers",
+    "operationId": "getStoriesByIdViewers",
+    "tag": "stories",
+    "summary": "Get /stories/{id}/viewers",
     "authenticated": true,
     "roles": []
   },
@@ -1744,6 +1941,24 @@ export const apiRouteCatalog = [
     "operationId": "postUsersMeFollowRequestsByRequestIdReject",
     "tag": "users",
     "summary": "Post /users/me/follow-requests/{requestId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/users/me/premium-profile",
+    "operationId": "getUsersMePremiumProfile",
+    "tag": "users",
+    "summary": "Get /users/me/premium-profile",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "put",
+    "path": "/users/me/premium-profile",
+    "operationId": "putUsersMePremiumProfile",
+    "tag": "users",
+    "summary": "Put /users/me/premium-profile",
     "authenticated": true,
     "roles": []
   },

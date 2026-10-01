@@ -117,6 +117,108 @@ export class RedisRepository {
     return this.client.get(key);
   }
 
+  async reserveSocketCallStrict(call: {
+    id: string;
+    callerId: string;
+    recipientId: string;
+    createdAt: number;
+    status: "ringing";
+  }, ttlSeconds: number): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        if redis.call('EXISTS', KEYS[2]) == 1 or redis.call('EXISTS', KEYS[3]) == 1 or redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+        redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+        redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[2])
+        redis.call('SET', KEYS[3], ARGV[3], 'EX', ARGV[2])
+        return 1
+      `,
+      3,
+      `{socket}:call:${call.id}`,
+      `{socket}:user-call:${call.callerId}`,
+      `{socket}:user-call:${call.recipientId}`,
+      JSON.stringify(call),
+      ttlSeconds,
+      call.id,
+    );
+    return result === 1;
+  }
+
+  async getSocketCallStrict(callId: string): Promise<string | null> {
+    return this.getStrict(`{socket}:call:${callId}`);
+  }
+
+  async getSocketCallIdForUserStrict(userId: string): Promise<string | null> {
+    return this.getStrict(`{socket}:user-call:${userId}`);
+  }
+
+  async acceptSocketCallStrict(callId: string, recipientId: string, ttlSeconds: number): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return false end
+        local call = cjson.decode(raw)
+        if call.recipientId ~= ARGV[1] or call.status ~= 'ringing' then return false end
+        call.status = 'active'
+        local updated = cjson.encode(call)
+        redis.call('SET', KEYS[1], updated, 'EX', ARGV[2])
+        redis.call('SET', ARGV[3] .. call.callerId, call.id, 'EX', ARGV[2])
+        redis.call('SET', ARGV[3] .. call.recipientId, call.id, 'EX', ARGV[2])
+        return updated
+      `,
+      1,
+      `{socket}:call:${callId}`,
+      recipientId,
+      ttlSeconds,
+      "{socket}:user-call:",
+    );
+    return typeof result === "string" ? result : null;
+  }
+
+  async releaseSocketCallStrict(callId: string): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return false end
+        local call = cjson.decode(raw)
+        redis.call('DEL', KEYS[1])
+        local callerKey = ARGV[1] .. call.callerId
+        local recipientKey = ARGV[1] .. call.recipientId
+        if redis.call('GET', callerKey) == call.id then redis.call('DEL', callerKey) end
+        if redis.call('GET', recipientKey) == call.id then redis.call('DEL', recipientKey) end
+        return raw
+      `,
+      1,
+      `{socket}:call:${callId}`,
+      "{socket}:user-call:",
+    );
+    return typeof result === "string" ? result : null;
+  }
+
+  async expireRingingSocketCallStrict(callId: string): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return false end
+        local call = cjson.decode(raw)
+        if call.status ~= 'ringing' then return false end
+        redis.call('DEL', KEYS[1])
+        local callerKey = ARGV[1] .. call.callerId
+        local recipientKey = ARGV[1] .. call.recipientId
+        if redis.call('GET', callerKey) == call.id then redis.call('DEL', callerKey) end
+        if redis.call('GET', recipientKey) == call.id then redis.call('DEL', recipientKey) end
+        return raw
+      `,
+      1,
+      `{socket}:call:${callId}`,
+      "{socket}:user-call:",
+    );
+    return typeof result === "string" ? result : null;
+  }
+
   async setStrict(key: string, value: string, ttlSeconds?: number): Promise<void> {
     await this.ensureReady();
     if (ttlSeconds) {

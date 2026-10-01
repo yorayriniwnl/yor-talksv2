@@ -9,6 +9,8 @@ interface JwtPayload {
   role: string;
   permissions: string[];
   deviceId: string;
+  authVersion?: number;
+  type?: string;
 }
 
 declare global {
@@ -29,6 +31,7 @@ const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
 export async function closeAuthenticationDependencies(): Promise<void> {
+export async function closeAuthDependencies(): Promise<void> {
   await redisRepository.disconnect();
 }
 
@@ -55,19 +58,22 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   const token = header.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
+    if (typeof decoded.sub !== 'string' || typeof decoded.deviceId !== 'string' || (decoded.type && decoded.type !== 'access')) {
+      return res.status(401).json(createResponse('Invalid session', null));
+    }
     
     // Check if this specific device's session was revoked (e.g. logout / logoutAllDevices).
     // Bug fixed: this used to check `session:${sub}` with no deviceId — a key that
     // auth-service never writes (sessions are stored per-device) — so every request
     // failed here regardless of the token's validity. If we wanted true stateless
     // revocation instead of a session-existence check, we'd use a token blacklist.
-    const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
+    const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
     if (!activeSession) {
       return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
     }
     const user = await userRepository.findById(decoded.sub);
-    if (!user || user.accountStatus === "suspended" || user.accountStatus === "deactivated") {
+    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || ['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
       return res.status(401).json(createResponse("Account is unavailable", null, {}, ["Unauthorized"]));
     }
 
@@ -85,24 +91,27 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       ));
     }
     return next();
-  } catch {
-    return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
+    return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
   }
 };
 
 /** Public content endpoints can personalize results without rejecting anonymous viewers. */
-export const optionalAuthenticate = async (req: Request, _res: Response, next: NextFunction) => {
+export const optionalAuthenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) return next();
 
   try {
-    const decoded = jwt.verify(header.split(" ")[1], env.JWT_SECRET) as JwtPayload;
-    const activeSession = await redisRepository.get(`session:${decoded.sub}:${decoded.deviceId}`);
+    const decoded = jwt.verify(header.split(" ")[1], env.JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
+    if (typeof decoded.sub !== 'string' || typeof decoded.deviceId !== 'string' || (decoded.type && decoded.type !== 'access')) return next();
+    const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
-    if (activeSession && user && user.accountStatus !== "suspended" && user.accountStatus !== "deactivated") {
+    if (activeSession && user && (decoded.authVersion ?? 0) === (user.authVersion ?? 0) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
       req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
     }
-  } catch {
+  } catch (error) {
+    if (!(error instanceof jwt.JsonWebTokenError)) return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
     // An invalid optional credential is treated as anonymous access.
   }
   return next();

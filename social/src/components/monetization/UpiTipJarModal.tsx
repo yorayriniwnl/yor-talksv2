@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { loadRazorpayCheckout } from '@/lib/razorpay-checkout';
+import { useRef, useState, type ReactNode } from 'react';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,35 +23,6 @@ interface UpiTipJarModalProps {
   streamId?: string;
 }
 
-type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
-
-function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
-  const existing = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-  if (existing) return Promise.resolve(existing);
-
-  return new Promise((resolve, reject) => {
-    const current = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
-    if (current) {
-      current.addEventListener('load', () => {
-        const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-        checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
-      }, { once: true });
-      current.addEventListener('error', () => reject(new Error('Razorpay Checkout could not load')), { once: true });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.dataset.razorpayCheckout = 'true';
-    script.onload = () => {
-      const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-      checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
-    };
-    script.onerror = () => reject(new Error('Razorpay Checkout could not load'));
-    document.body.appendChild(script);
-  });
-}
 
 export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamId }: UpiTipJarModalProps) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -61,6 +33,7 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
   const [message, setMessage] = useState('');
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
+  const checkoutKey = useRef(crypto.randomUUID());
 
   const startPayment = async () => {
     if (!publicBetaConfig.paymentsEnabled) {
@@ -70,7 +43,8 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
     setPaying(true);
     setError('');
     try {
-      const order = await api.createTipOrder({ creatorId: creator.id, streamId, amountMinor, message });
+      const order = await api.createTipOrder({ idempotencyKey: checkoutKey.current, creatorId: creator.id, streamId, amountMinor, message });
+      if (!order.providerOrderId || order.status !== 'created') throw new Error('This checkout is saved. Open payment history to recover or cancel it before starting another payment.');
       const Razorpay = await loadRazorpayCheckout();
       const checkout = new Razorpay({
         key: order.keyId,
@@ -82,10 +56,12 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
         theme: { color: '#8b5cf6' },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
-            await api.verifyTipPayment(response.razorpay_order_id, {
+            const result = await api.verifyTipPayment(response.razorpay_order_id, {
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
+            if (result.status !== 'paid') throw new Error('Payment needs review. See payment history for its current status.');
+            checkoutKey.current = crypto.randomUUID();
             toast.success('Tip payment verified');
             setOpen(false);
           } catch (verificationError) {
@@ -100,6 +76,7 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
           ondismiss: () => setPaying(false),
         },
       });
+      checkout.on?.('payment.failed', () => { setError('Payment attempt failed. You can retry the same checkout or recover it in payment history.'); setPaying(false); });
       checkout.open();
     } catch (paymentError) {
       const paymentMessage = paymentError instanceof Error ? paymentError.message : 'Payment could not be started';
@@ -126,6 +103,7 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
         </DialogHeader>
 
         <div className="space-y-4">
+          <a href="/billing" className="text-sm text-primary underline">Payment history and recovery</a>
           {!publicBetaConfig.paymentsEnabled && <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-xs leading-relaxed text-amber-100">Payments are paused for this beta while provider settlement and support operations are completed.</div>}
           <div className="grid grid-cols-3 gap-2">
             {[500, 1000, 2500].map((value) => (

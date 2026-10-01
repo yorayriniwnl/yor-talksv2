@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
   Search, Plus, UsersRound, MoreVertical, SendHorizontal, ArrowLeft, LoaderCircle,
   Reply, X, Video, Phone, Mic, Zap, EyeOff, Image as ImageIcon, Pencil, Trash2, Pin, Smile,
-  ArrowLeftRight, LockKeyhole, Inbox
+  ArrowLeftRight, LockKeyhole, Inbox, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket-client';
@@ -51,13 +51,18 @@ function parseReply(content: string): ParsedReply | null {
 
 type ReplyPreview = Pick<ParsedReply, 'senderName' | 'excerpt'>;
 
-function MessageContent({ content, isMine, reply: structuredReply }: { content: string; isMine: boolean; reply?: ReplyPreview | null }) {
+function MessageContent({ content, isMine, textStyleId = 'default', reply: structuredReply }: { content: string; isMine: boolean; textStyleId?: DirectMessage['textStyleId']; reply?: ReplyPreview | null }) {
   const legacyReply = parseReply(content);
   const reply = structuredReply ?? legacyReply;
   const body = legacyReply?.body ?? content;
   const imageMatch = body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/);
   const imageUrl = imageMatch?.[1];
   const textBody = imageMatch ? body.slice(0, imageMatch.index).trim() : body;
+  const textStyle = textStyleId === 'mono'
+    ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }
+    : textStyleId === 'rounded'
+      ? { fontFamily: 'ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif' }
+      : undefined;
 
   const replyMarkup = reply ? (
     <div className="operator-message-reply" data-mine={isMine || undefined}>
@@ -86,7 +91,7 @@ function MessageContent({ content, isMine, reply: structuredReply }: { content: 
   return (
     <>
       {replyMarkup}
-      {textBody && <span className="operator-message-text">{textBody}</span>}
+      {textBody && <span className="operator-message-text" style={textStyle}>{textBody}</span>}
       {imageUrl && <img className="operator-message-image" src={imageUrl} alt="Shared attachment" loading="lazy" />}
     </>
   );
@@ -121,6 +126,9 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BackendUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [selected, setSelected] = useState<BackendUser | null>(null);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
@@ -128,16 +136,29 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [sendError, setSendError] = useState('');
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults([]);
+      setSearchLoading(false);
+      setSearchError('');
+      return;
+    }
     let active = true;
+    setResults([]);
+    setSearchLoading(true);
+    setSearchError('');
     const handle = setTimeout(async () => {
       try {
-        const users = await api.searchUsers(query.trim());
+        const users = await api.searchUsers(term);
         if (active) setResults(users.filter((u) => u.id !== currentUser?.id));
-      } catch { /* ignore transient search errors */ }
+      } catch {
+        if (active) setSearchError('People could not load. Check your connection and retry.');
+      } finally {
+        if (active) setSearchLoading(false);
+      }
     }, 250);
     return () => { active = false; clearTimeout(handle); };
-  }, [query, currentUser?.id]);
+  }, [query, currentUser?.id, searchAttempt]);
 
   const handleSend = async () => {
     if (!selected || !content.trim() || sendingRef.current) return;
@@ -172,13 +193,20 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
             </div>
             <div className="max-h-64 overflow-y-auto space-y-1 thin-scrollbar">
               {results.map((u) => (
-                <button key={u.id} onClick={() => setSelected(u)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 text-left transition-colors cursor-pointer">
+                <button type="button" key={u.id} onClick={() => setSelected(u)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 text-left transition-colors cursor-pointer">
                   <Avatar className="w-9 h-9"><AvatarImage src={u.avatarUrl ?? undefined} /><AvatarFallback>{(u.fullName || u.username).charAt(0)}</AvatarFallback></Avatar>
                   <div><p className="text-sm font-medium">{u.fullName || u.username}</p><p className="text-xs text-muted-foreground">@{u.username}</p></div>
                 </button>
               ))}
-              {query.length >= 2 && results.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-4">No users found.</p>
+              {searchLoading && <p role="status" className="text-center text-sm text-muted-foreground py-4">Searching people…</p>}
+              {searchError && (
+                <div role="alert" className="text-center text-sm text-muted-foreground py-4">
+                  <p>{searchError}</p>
+                  <button type="button" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>Retry people search</button>
+                </div>
+              )}
+              {query.trim().length >= 2 && !searchLoading && !searchError && results.length === 0 && (
+                <p role="status" className="text-center text-sm text-muted-foreground py-4">No users found.</p>
               )}
             </div>
           </div>
@@ -208,21 +236,37 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   const createGroupChat = useAppStore((s) => s.createGroupChat);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BackendUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [selected, setSelected] = useState<BackendUser[]>([]);
   const [title, setTitle] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults([]);
+      setSearchLoading(false);
+      setSearchError('');
+      return;
+    }
     let active = true;
+    setResults([]);
+    setSearchLoading(true);
+    setSearchError('');
     const handle = setTimeout(async () => {
       try {
-        const users = await api.searchUsers(query.trim());
+        const users = await api.searchUsers(term);
         if (active) setResults(users.filter((user) => user.id !== currentUser?.id));
-      } catch { /* ignore transient search errors */ }
+      } catch {
+        if (active) setSearchError('Group members could not load. Check your connection and retry.');
+      } finally {
+        if (active) setSearchLoading(false);
+      }
     }, 250);
     return () => { active = false; clearTimeout(handle); };
-  }, [query, currentUser?.id]);
+  }, [query, currentUser?.id, searchAttempt]);
 
   const toggleMember = (user: BackendUser) => {
     setSelected((members) => members.some((member) => member.id === user.id)
@@ -255,7 +299,7 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
           <Input value={title} onChange={(event) => setTitle(event.target.value.slice(0, 120))} placeholder="Group name" className="rounded-xl" autoFocus />
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Add people" value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9 surface-1 border-none rounded-xl" />
+            <Input placeholder="Add people" aria-label="Search people to add" value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9 surface-1 border-none rounded-xl" />
           </div>
           {selected.length > 0 && (
             <div className="flex flex-wrap gap-2" aria-label="Selected group members">
@@ -277,10 +321,49 @@ function NewGroupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 </button>
               );
             })}
-            {query.length >= 2 && results.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No people found.</p>}
+            {searchLoading && <p role="status" className="text-center text-sm text-muted-foreground py-4">Searching people…</p>}
+            {searchError && (
+              <div role="alert" className="text-center text-sm text-muted-foreground py-4">
+                <p>{searchError}</p>
+                <button type="button" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>Retry member search</button>
+              </div>
+            )}
+            {query.trim().length >= 2 && !searchLoading && !searchError && results.length === 0 && <p role="status" className="text-center text-sm text-muted-foreground py-4">No people found.</p>}
           </div>
           <Button onClick={() => void handleCreate()} disabled={selected.length === 0 || !title.trim() || creating} className="w-full rounded-xl py-5">{creating ? 'Creating…' : `Create group · ${selected.length + 1} people`}</Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MessagePreviewDialog({
+  message,
+  senderName,
+  open,
+  onOpenChange,
+}: {
+  message: DirectMessage | null;
+  senderName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="operator-message-dialog">
+        <DialogHeader><DialogTitle>Preview from {senderName}</DialogTitle></DialogHeader>
+        {message ? (
+          <div className="space-y-3">
+            <div className="operator-message-preview-card">
+              <MessageContent content={message.content} isMine={false} textStyleId={message.textStyleId} />
+              <time dateTime={message.createdAt}>{format(new Date(message.createdAt), 'MMM d, h:mm a')}</time>
+            </div>
+            <p className="flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
+              <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Preview only — opening this sheet does not send a read receipt.
+            </p>
+          </div>
+        ) : <p role="status" className="text-sm text-muted-foreground">Loading preview…</p>}
       </DialogContent>
     </Dialog>
   );
@@ -291,44 +374,51 @@ function ConversationItem({
   active,
   isTyping,
   onSelect,
+  onPreview,
 }: {
-  entry: { conv: any; user: any; lastMsg?: DirectMessage; unreadCount: number };
+  entry: { conv: any; user: any; lastMsg?: DirectMessage; previewMessage?: DirectMessage; unreadCount: number };
   active: boolean;
   isTyping: boolean;
   onSelect: (id: string) => void;
+  onPreview: (message: DirectMessage) => void;
 }) {
-  const { conv, user, lastMsg, unreadCount } = entry;
+  const { conv, user, lastMsg, previewMessage, unreadCount } = entry;
   const displayName = user.displayName || user.username || 'User';
 
   return (
-    <button
-      onClick={() => onSelect(conv.id)}
+    <div
       className="operator-conversation-item"
       data-active={active || undefined}
       data-unread={unreadCount > 0 || undefined}
-      aria-current={active ? 'page' : undefined}
     >
-      <span className="operator-conversation-item__avatar">
-      <Avatar>
-        <AvatarImage src={user.avatarUrl} />
-        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-      </Avatar>
-      </span>
-      <span className="operator-conversation-item__body">
-        <span className="operator-conversation-item__head">
-          <strong>{displayName}</strong>
-          {lastMsg && (
-            <time dateTime={lastMsg.createdAt}>
-              {formatDistanceToNow(new Date(lastMsg.createdAt))}
-            </time>
-          )}
+      <button type="button" onClick={() => onSelect(conv.id)} className="operator-conversation-item__select" aria-current={active ? 'page' : undefined}>
+        <span className="operator-conversation-item__avatar">
+          <Avatar>
+            <AvatarImage src={user.avatarUrl} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+          </Avatar>
         </span>
-        <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
-          {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+        <span className="operator-conversation-item__body">
+          <span className="operator-conversation-item__head">
+            <strong>{displayName}</strong>
+            {lastMsg && (
+              <time dateTime={lastMsg.createdAt}>
+                {formatDistanceToNow(new Date(lastMsg.createdAt))}
+              </time>
+            )}
+          </span>
+          <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
+            {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+          </span>
         </span>
-      </span>
-      {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-    </button>
+        {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+      </button>
+      {previewMessage && (
+        <button type="button" className="operator-conversation-item__preview-action" onClick={() => onPreview(previewMessage)} aria-label={`Preview unread message from ${displayName}`} title="Preview unread message without marking read">
+          <Eye aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -343,6 +433,9 @@ export default function Messages() {
   const messagesByConversation = useAppStore((s) => s.messagesByConversation);
   const loadConversations = useAppStore((s) => s.loadConversations);
   const loadConversationMessages = useAppStore((s) => s.loadConversationMessages);
+  const previewDirectMessage = useAppStore((s) => s.previewDirectMessage);
+  const loadOlderConversationMessages = useAppStore((s) => s.loadOlderConversationMessages);
+  const syncConversationMessages = useAppStore((s) => s.syncConversationMessages);
   const markDirectMessageSeen = useAppStore((s) => s.markDirectMessageSeen);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
@@ -351,6 +444,7 @@ export default function Messages() {
   const draft = useAppStore((state) => state.messageDrafts[id ?? '']);
   const updateMessageDraft = useAppStore((state) => state.updateMessageDraft);
   const message = draft?.message ?? '';
+  const textStyleId = draft?.textStyleId ?? (currentUser?.messageFontId === 'mono' || currentUser?.messageFontId === 'rounded' ? currentUser.messageFontId : 'default');
   const imageAttachment = draft?.imageAttachment ?? '';
   const replyTarget = draft?.replyTarget ?? null;
   const updateDraft = useCallback((patch: Partial<MessageDraft>) => {
@@ -358,6 +452,7 @@ export default function Messages() {
     updateMessageDraft(id, patch);
   }, [id, currentUser?.id, updateMessageDraft]);
   const setMessage = (value: string) => updateDraft({ message: value });
+  const setTextStyleId = (value: DirectMessage['textStyleId']) => updateDraft({ textStyleId: value ?? 'default' });
   const setImageAttachment = (value: string) => updateDraft({ imageAttachment: value });
   const setReplyTarget = (value: ReplyTarget | null) => updateDraft({ replyTarget: value });
   const [showImageInput, setShowImageInput] = useState(false);
@@ -369,11 +464,17 @@ export default function Messages() {
   const [sendError, setSendError] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageLoadError, setMessageLoadError] = useState('');
+  const [messageFontEnabled, setMessageFontEnabled] = useState(false);
   const [pulseSend, setPulseSend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [realtimeConnected, setRealtimeConnected] = useState(() => Boolean(getSocket()?.connected));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [typingConversationIds, setTypingConversationIds] = useState<Record<string, true>>({});
+  const [previewMessage, setPreviewMessage] = useState<DirectMessage | null>(null);
+  const [previewSenderName, setPreviewSenderName] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState<boolean | null>(null);
   
   // Direct Messaging 2.0 Pro Features
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -389,11 +490,27 @@ export default function Messages() {
   const [editingText, setEditingText] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const threadFlowRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingStopTimeoutRef = useRef<number | null>(null);
   const typingConversationIdRef = useRef<string | null>(null);
+  const remoteTypingTimers = useRef(new Map<string, number>());
   const messageRequestSequence = useRef(0);
   const requestedProfiles = useRef(new Set<string>());
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUser) {
+      setMessageFontEnabled(false);
+      return () => { active = false; };
+    }
+    void api.getPremiumProfileOptions().then((result) => {
+      if (active) setMessageFontEnabled(result.enabledFeatures.MESSAGE_FONT === true);
+    }).catch(() => {
+      if (active) setMessageFontEnabled(false);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
 
   const stopTyping = useCallback(() => {
     if (typingStopTimeoutRef.current !== null) {
@@ -433,7 +550,15 @@ export default function Messages() {
 
   useEffect(() => {
     const socket = getSocket();
-    const update = () => { setRealtimeConnected(Boolean(socket?.connected)); setOnline(navigator.onLine); };
+    const update = () => {
+      setRealtimeConnected(Boolean(socket?.connected));
+      setOnline(navigator.onLine);
+      if (socket?.connected && id) {
+        void syncConversationMessages(id).catch(() => {
+          toast.error('Realtime restored. This conversation could not finish syncing yet.');
+        });
+      }
+    };
     update();
     socket?.on('connect', update);
     socket?.on('disconnect', update);
@@ -447,7 +572,7 @@ export default function Messages() {
       window.removeEventListener('online', update);
       window.removeEventListener('offline', update);
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, id, syncConversationMessages]);
 
   const requestConversationMessages = useCallback(async (conversationId: string) => {
     const sequence = ++messageRequestSequence.current;
@@ -499,7 +624,9 @@ export default function Messages() {
           const msgs = messagesByConversation[conv.id] || [];
           const lastMsg = msgs[msgs.length - 1];
           const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+          const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+            || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+          return { conv, user: groupUser, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
         }
         let otherUser = users[otherId];
         if (!otherUser && otherId) {
@@ -515,7 +642,9 @@ export default function Messages() {
         const msgs = messagesByConversation[conv.id] || [];
         const lastMsg = msgs[msgs.length - 1];
         const unreadCount = Math.max(msgs.filter((message) => isUnreadMessage(message, currentUser?.id)).length, Number(hasUnreadConversation(conv, currentUser?.id)));
-        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, unreadCount };
+        const previewMessage = [...msgs].reverse().find((message) => isUnreadMessage(message, currentUser?.id))
+          || (isUnreadMessage(conv.lastMessage, currentUser?.id) ? conv.lastMessage : undefined);
+        return { conv, user: otherUser || { id: otherId, username: 'User', displayName: 'User', avatarUrl: '' }, lastMsg: lastMsg || conv.lastMessage, previewMessage, unreadCount };
       })
       .sort((a, b) => (b.lastMsg?.createdAt ?? b.conv.updatedAt).localeCompare(a.lastMsg?.createdAt ?? a.conv.updatedAt));
   }, [conversations, users, currentUser?.id, messagesByConversation]);
@@ -551,6 +680,60 @@ export default function Messages() {
 
   const isPeerTyping = Boolean(id && typingConversationIds[id]);
 
+  useEffect(() => {
+    setHasOlderMessages(null);
+    setPeerOnline(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !activeConv) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onTypingStart = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser?.id || payload.conversationId !== id) return;
+      setTypingConversationIds((current) => ({ ...current, [id]: true }));
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.set(id, window.setTimeout(() => {
+        setTypingConversationIds((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        remoteTypingTimers.current.delete(id);
+      }, 5000));
+    };
+    const onTypingEnd = (payload: { userId?: unknown; conversationId?: unknown }) => {
+      if (payload.userId === currentUser?.id || payload.conversationId !== id) return;
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.delete(id);
+      setTypingConversationIds((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    };
+    const onPresence = (payload: { userId?: unknown; online?: unknown }) => {
+      if (typeof payload.userId !== 'string' || payload.userId === currentUser?.id) return;
+      if (!activeConv.conv.participantIds.includes(payload.userId)) return;
+      if (!activeConv.conv.isGroup && payload.userId === activeConv.user.id) setPeerOnline(payload.online === true);
+    };
+    socket.on('typing:start', onTypingStart);
+    socket.on('typing:end', onTypingEnd);
+    socket.on('presence:update', onPresence);
+    socket.emit('conversation:join', { conversationId: id });
+    return () => {
+      socket.off('typing:start', onTypingStart);
+      socket.off('typing:end', onTypingEnd);
+      socket.off('presence:update', onPresence);
+      const existing = remoteTypingTimers.current.get(id);
+      if (existing !== undefined) window.clearTimeout(existing);
+      remoteTypingTimers.current.delete(id);
+    };
+  }, [id, activeConv?.user.id, activeConv?.conv.isGroup, activeConv?.conv.participantIds, currentUser?.id]);
+
   const handleSend = async () => {
     if ((!message.trim() && !imageAttachment.trim()) || !activeConv || sending || sendingRef.current) return;
     
@@ -569,8 +752,8 @@ export default function Messages() {
     sounds.playPop();
 
     try {
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId);
-      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId);
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId);
+      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId);
       setMessage('');
       setImageAttachment('');
       setShowImageInput(false);
@@ -638,6 +821,19 @@ export default function Messages() {
     }
   };
 
+  const handlePreviewMessage = async (message: DirectMessage, senderName: string) => {
+    setPreviewLoading(true);
+    try {
+      const preview = await previewDirectMessage(message.id);
+      setPreviewMessage(preview);
+      setPreviewSenderName(senderName);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not preview this message');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <div className="messages-page operator-messages-page">
       <div className="operator-messages-shell">
@@ -691,6 +887,7 @@ export default function Messages() {
                   active={activeConv?.conv.id === entry.conv.id} 
                   isTyping={Boolean(typingConversationIds[entry.conv.id])} 
                   onSelect={(convId) => setLocation(`/messages/${convId}`)} 
+                  onPreview={(message) => void handlePreviewMessage(message, entry.user.displayName || entry.user.username || 'User')}
                 />
               ))
             )}
@@ -714,7 +911,7 @@ export default function Messages() {
                   <div className="operator-thread__identity-copy">
                     <h2>{activeConv.user.displayName}</h2>
                     <span data-typing={isPeerTyping || undefined}>
-                      {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : `@${activeConv.user.username}`}
+                      {isPeerTyping ? 'Typing…' : activeConv.conv.isGroup ? activeConv.user.username : peerOnline ? `@${activeConv.user.username} · online` : `@${activeConv.user.username}`}
                     </span>
                   </div>
                 </div>
@@ -750,7 +947,7 @@ export default function Messages() {
                 </div>
               </header>
 
-              <div className="operator-thread__flow" data-vanish={vanishMode || undefined}>
+              <div ref={threadFlowRef} className="operator-thread__flow" data-vanish={vanishMode || undefined}>
                 {loadingMessages && activeMessages.length === 0 ? (
                   <div className="operator-thread__loading" role="status" aria-live="polite">
                     <span className="operator-thread__loading-mark"><LoaderCircle aria-hidden="true" /></span>
@@ -786,6 +983,29 @@ export default function Messages() {
                 )}
 
                 <div className="operator-thread__messages">
+                  {(hasOlderMessages === true || (hasOlderMessages === null && activeMessages.length >= 200)) && (
+                    <button
+                      type="button"
+                      className="operator-thread__load-older"
+                      disabled={loadingMessages}
+                      onClick={async () => {
+                        const flow = threadFlowRef.current;
+                        const previousHeight = flow?.scrollHeight ?? 0;
+                        const previousTop = flow?.scrollTop ?? 0;
+                        try {
+                          const count = await loadOlderConversationMessages(activeConv.conv.id);
+                          setHasOlderMessages(count === 100);
+                          requestAnimationFrame(() => {
+                            if (flow) flow.scrollTop = previousTop + (flow.scrollHeight - previousHeight);
+                          });
+                        } catch {
+                          toast.error('Could not load earlier messages. Try again.');
+                        }
+                      }}
+                    >
+                      Load earlier messages
+                    </button>
+                  )}
                   {activeMessages.map((msg, index) => {
                     const isMine = msg.senderId === currentUser?.id;
                     const senderName = isMine ? 'You' : users[msg.senderId]?.displayName || activeConv.user.displayName;
@@ -824,7 +1044,7 @@ export default function Messages() {
                                 <button type="button" onClick={() => void handleEditMessage()}>Save</button>
                               </div>
                             ) : (
-                              <MessageContent content={msg.content} isMine={isMine} reply={replyPreview} />
+                              <MessageContent content={msg.content} isMine={isMine} textStyleId={msg.textStyleId} reply={replyPreview} />
                             )}
                             <time dateTime={msg.createdAt}>{format(new Date(msg.createdAt), 'h:mm a')}{msg.editedAt ? ' · edited' : ''}</time>
                           </div>
@@ -930,6 +1150,12 @@ export default function Messages() {
                         aria-describedby={sendError ? 'operator-composer-error' : undefined}
                       />
 
+                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-[0.65rem] font-semibold text-muted-foreground outline-none focus:border-primary/50">
+                        <option value="default">YOR</option>
+                        <option value="mono" disabled={!messageFontEnabled}>Mono · Advanced</option>
+                        <option value="rounded" disabled={!messageFontEnabled}>Round · Advanced</option>
+                      </select>
+
                       <Button
                         size="icon"
                         disabled={(!message.trim() && !imageAttachment.trim()) || sending}
@@ -995,6 +1221,12 @@ export default function Messages() {
 
         <NewMessageDialog open={newMessageOpen} onOpenChange={setNewMessageOpen} />
         <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} />
+        <MessagePreviewDialog
+          message={previewMessage}
+          senderName={previewSenderName}
+          open={Boolean(previewMessage) || previewLoading}
+          onOpenChange={(open) => { if (!open) setPreviewMessage(null); }}
+        />
       </div>
     </div>
   );

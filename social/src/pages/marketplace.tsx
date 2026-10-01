@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { loadRazorpayCheckout } from '@/lib/razorpay-checkout';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
@@ -118,31 +119,6 @@ function CreateListingDialog() {
   );
 }
 
-type RazorpayCheckout = new (options: Record<string, unknown>) => { open: () => void };
-
-function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
-  const existing = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-  if (existing) return Promise.resolve(existing);
-  return new Promise((resolve, reject) => {
-    const current = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
-    const finish = () => {
-      const checkout = (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
-      checkout ? resolve(checkout) : reject(new Error('Razorpay Checkout did not load'));
-    };
-    if (current) {
-      current.addEventListener('load', finish, { once: true });
-      current.addEventListener('error', () => reject(new Error('Razorpay Checkout could not load')), { once: true });
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.dataset.razorpayCheckout = 'true';
-    script.onload = finish;
-    script.onerror = () => reject(new Error('Razorpay Checkout could not load'));
-    document.body.appendChild(script);
-  });
-}
 
 function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompleted: () => void }) {
   const [open, setOpen] = useState(false);
@@ -151,6 +127,7 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
   const [shippingPhone, setShippingPhone] = useState('');
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
+  const checkoutKey = useRef(crypto.randomUUID());
 
   const startPurchase = async () => {
     if (!publicBetaConfig.paymentsEnabled) {
@@ -160,7 +137,8 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
     setPaying(true);
     setError('');
     try {
-      const order = await api.createMarketplaceOrder(product.id, { shippingName, shippingAddress, ...(shippingPhone.trim() ? { shippingPhone: shippingPhone.trim() } : {}) });
+      const order = await api.createMarketplaceOrder(product.id, { idempotencyKey: checkoutKey.current, shippingName: shippingName.trim(), shippingAddress: shippingAddress.trim(), ...(shippingPhone.trim() ? { shippingPhone: shippingPhone.trim() } : {}) });
+      if (!order.providerOrderId || order.status !== 'created') throw new Error('Checkout is saved. Open payment history to recover or cancel it.');
       const Razorpay = await loadRazorpayCheckout();
       const checkout = new Razorpay({
         key: order.keyId,
@@ -172,7 +150,9 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
         theme: { color: '#8b5cf6' },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
-            await api.verifyMarketplacePayment(response.razorpay_order_id, { paymentId: response.razorpay_payment_id, signature: response.razorpay_signature });
+            const result = await api.verifyMarketplacePayment(response.razorpay_order_id, { paymentId: response.razorpay_payment_id, signature: response.razorpay_signature });
+            if (result.status !== 'paid') throw new Error('Payment needs review. See payment history for its current status.');
+            checkoutKey.current = crypto.randomUUID();
             toast.success('Payment verified. The listing is now marked sold.');
             setOpen(false);
             onCompleted();
@@ -186,6 +166,7 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
         },
         modal: { ondismiss: () => setPaying(false) },
       });
+      checkout.on?.('payment.failed', () => { setError('Payment attempt failed. Retry this checkout or open payment history.'); setPaying(false); });
       checkout.open();
     } catch (purchaseError) {
       const message = purchaseError instanceof Error ? purchaseError.message : 'Purchase could not be started';
@@ -199,7 +180,7 @@ function PurchaseProductDialog({ product, onCompleted }: { product: any; onCompl
     return <span className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[0.68rem] font-bold text-amber-200">Payments paused</span>;
   }
 
-  return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="sm" disabled={product.availability && product.availability !== 'active'} className="rounded-xl font-bold text-xs bg-primary">{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}</Button></DialogTrigger><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Buy {product.title}</DialogTitle></DialogHeader><div className="space-y-4"><p className="text-sm text-muted-foreground">Your payment is verified server-side before the listing is marked sold. Shipping details are shared with the seller for fulfillment.</p><div className="space-y-1.5"><Label htmlFor={`shipping-name-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Recipient name</Label><Input id={`shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} className="rounded-xl" maxLength={100} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-address-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Shipping / pickup details</Label><Textarea id={`shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} className="rounded-xl resize-none" maxLength={1000} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-phone-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Phone (optional)</Label><Input id={`shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} className="rounded-xl" maxLength={24} /></div>{error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}<Button onClick={() => void startPurchase()} disabled={paying || shippingName.trim().length < 2 || shippingAddress.trim().length < 5} className="w-full rounded-2xl font-bold h-11">{paying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : <>Pay ₹{Number(product.price).toLocaleString('en-IN')}</>}</Button></div></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="sm" disabled={product.availability && product.availability !== 'active'} className="rounded-xl font-bold text-xs bg-primary">{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}</Button></DialogTrigger><DialogContent className="rounded-3xl font-sans glass-heavy border border-border/60"><DialogHeader><DialogTitle className="font-display font-bold text-xl">Buy {product.title}</DialogTitle></DialogHeader><div className="space-y-4"><a href="/billing" className="text-primary underline">Payment history and recovery</a><p className="text-sm text-muted-foreground">Your payment is verified server-side before the listing is marked sold. Shipping details are shared with the seller for fulfillment.</p><div className="space-y-1.5"><Label htmlFor={`shipping-name-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Recipient name</Label><Input id={`shipping-name-${product.id}`} value={shippingName} onChange={(event) => setShippingName(event.target.value)} className="rounded-xl" maxLength={100} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-address-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Shipping / pickup details</Label><Textarea id={`shipping-address-${product.id}`} value={shippingAddress} onChange={(event) => setShippingAddress(event.target.value)} className="rounded-xl resize-none" maxLength={1000} /></div><div className="space-y-1.5"><Label htmlFor={`shipping-phone-${product.id}`} className="text-xs font-mono uppercase text-muted-foreground">Phone (optional)</Label><Input id={`shipping-phone-${product.id}`} value={shippingPhone} onChange={(event) => setShippingPhone(event.target.value)} className="rounded-xl" maxLength={24} /></div>{error && <p className="text-xs text-destructive rounded-xl border border-destructive/30 bg-destructive/10 p-3">{error}</p>}<Button onClick={() => void startPurchase()} disabled={paying || shippingName.trim().length < 2 || shippingAddress.trim().length < 5} className="w-full rounded-2xl font-bold h-11">{paying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for payment…</> : <>Pay ₹{Number(product.price).toLocaleString('en-IN')}</>}</Button></div></DialogContent></Dialog>;
 }
 
 function OrderHistoryDialog({ orders, products, open, onOpenChange, currentUserId, onFulfilled }: { orders: any[]; products: any[]; open: boolean; onOpenChange: (open: boolean) => void; currentUserId?: string; onFulfilled: (orderId: string) => Promise<void> }) {

@@ -44,6 +44,13 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().default(process.env.RAZORPAY_KEY_ID || ""),
   RAZORPAY_KEY_SECRET: z.string().default(process.env.RAZORPAY_KEY_SECRET || ""),
   RAZORPAY_WEBHOOK_SECRET: z.string().default(process.env.RAZORPAY_WEBHOOK_SECRET || ""),
+  RAZORPAY_ACCOUNT_ID: z.string().default(''),
+  PAYMENT_EVENT_ENCRYPTION_KEY: z.string().default(''),
+  YOR_PREMIUM_ENABLED: z.preprocess(value => booleanFromEnv(value), z.boolean()),
+  YOR_PREMIUM_PRICE_MINOR: z.coerce.number().int().min(0).max(2147483647).default(0),
+  YOR_PREMIUM_DURATION_DAYS: z.coerce.number().int().min(1).max(366).default(30),
+  YOR_PREMIUM_TERMS_VERSION: z.string().trim().max(100).default(''),
+  YOR_PREMIUM_REFUND_POLICY: z.string().trim().max(4000).default(''),
   LIVEKIT_URL: z.string().default(process.env.LIVEKIT_URL || ""),
   LIVEKIT_API_KEY: z.string().default(process.env.LIVEKIT_API_KEY || ""),
   LIVEKIT_API_SECRET: z.string().default(process.env.LIVEKIT_API_SECRET || ""),
@@ -176,6 +183,15 @@ if (parsedEnv.PUBLIC_BETA) {
 
 if (parsedEnv.PAYMENTS_ENABLED && (!parsedEnv.RAZORPAY_KEY_ID || !parsedEnv.RAZORPAY_KEY_SECRET || !parsedEnv.RAZORPAY_WEBHOOK_SECRET)) {
   throw new Error("[Config Error] PAYMENTS_ENABLED requires Razorpay keys and RAZORPAY_WEBHOOK_SECRET");
+}
+
+if (parsedEnv.PAYMENTS_ENABLED && parsedEnv.NODE_ENV === 'production' &&
+  (!/^acc_[A-Za-z0-9]+$/.test(parsedEnv.RAZORPAY_ACCOUNT_ID) || parsedEnv.PAYMENT_EVENT_ENCRYPTION_KEY.length < 32)) {
+  throw new Error('[Config Error] Payments require the expected RAZORPAY_ACCOUNT_ID and a separate PAYMENT_EVENT_ENCRYPTION_KEY of at least 32 characters');
+}
+if (parsedEnv.YOR_PREMIUM_ENABLED && (!parsedEnv.PAYMENTS_ENABLED || parsedEnv.YOR_PREMIUM_PRICE_MINOR < 100 ||
+  !parsedEnv.YOR_PREMIUM_TERMS_VERSION || !parsedEnv.YOR_PREMIUM_REFUND_POLICY || !z.string().email().safeParse(parsedEnv.SUPPORT_EMAIL).success)) {
+  throw new Error('[Config Error] Yor Premium requires payments, a configured price, terms version, refund policy and support email');
 }
 
 if (parsedEnv.LIVE_ROOMS_ENABLED && (!parsedEnv.LIVEKIT_URL || !parsedEnv.LIVEKIT_API_KEY || !parsedEnv.LIVEKIT_API_SECRET)) {

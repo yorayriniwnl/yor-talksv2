@@ -7,13 +7,17 @@ import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { isPremiumMessageStyle } from "../features/premium-profile.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
 export class InvalidMessageContentError extends Error {}
+export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
+export class PremiumFeatureUnavailableError extends Error {}
 
-type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId">;
+type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string };
 
 const normalizeMessageContent = (content: string): string => {
   if (typeof content !== "string") throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
@@ -30,6 +34,7 @@ export class MessageService {
     private readonly messageRepository: MessageRepository,
     private readonly userRepository?: UserRepository,
     private readonly aiService: AIService = new AIService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
@@ -92,11 +97,26 @@ export class MessageService {
       throw new UnauthorizedError("You are not a member of this conversation");
     }
 
+    let senderProfile: UserRecord | undefined;
+    // A request can time out after the database committed. Reusing the same
+    // client key returns that exact row without invoking moderation or writing
+    // a second message.
+    if (options?.idempotencyKey) {
+      const existing = await this.messageRepository.findById(options.idempotencyKey);
+      if (existing) {
+        if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
+          throw new UnauthorizedError("This message key is already in use");
+        }
+        return existing;
+      }
+    }
+
     if (this.userRepository) {
       const participants = await Promise.all(
         members.filter((memberId) => memberId !== senderId).map((memberId) => this.userRepository!.findById(memberId)),
       );
       const sender = await this.userRepository.findById(senderId);
+      senderProfile = sender;
       if (!sender || participants.some((recipient) => !recipient || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipient.id))) {
         throw new MessageBlockedError("You can't message this user");
       }
@@ -110,6 +130,14 @@ export class MessageService {
     // moderation quota on arbitrary conversations.
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
 
+    let textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
+    if (!isPremiumMessageStyle(textStyleId)) {
+      throw new InvalidMessageStyleError("Message style is not supported");
+    }
+    if (textStyleId !== "default" && !(await this.entitlementService.hasFeature(senderId, "MESSAGE_FONT"))) {
+      textStyleId = 'default';
+    }
+
     const replyToId = options?.replyToId ?? null;
     if (replyToId) {
       const replyTarget = await this.messageRepository.findById(replyToId);
@@ -119,11 +147,12 @@ export class MessageService {
     }
     const createdAt = new Date();
     const message: MessageRecord = {
-      id: randomUUID(),
+      id: options?.idempotencyKey ?? randomUUID(),
       conversationId,
       senderId,
       recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
       content: normalizedContent,
+      textStyleId,
       createdAt: createdAt.toISOString(),
       seenAt: null,
       replyToId,
@@ -134,17 +163,49 @@ export class MessageService {
       expiresAt: conversation.vanishMode ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
       pinned: false,
     };
-    await this.messageRepository.create(message);
-    return message;
+    const persisted = await this.messageRepository.create(message);
+    if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
+      throw new UnauthorizedError("This message key is already in use");
+    }
+    return persisted;
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
+    return this.listConversationPage(conversationId, userId, { direction: "latest", limit: 200 });
+  }
+
+  async listConversationPage(conversationId: string, userId: string, options: {
+    direction?: "latest" | "older" | "newer";
+    cursorAt?: string;
+    cursorId?: string;
+    limit?: number;
+  }): Promise<MessageRecord[]> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) {
       return [];
     }
-    const messages = await this.messageRepository.listConversation(conversationId);
+    const messages = await this.messageRepository.listConversation(conversationId, options);
     return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+  }
+
+  async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
+    const message = await this.messageRepository.findById(messageId);
+    if (!message || message.deletedAt) return undefined;
+    const members = await this.conversationRepository.getMembers(message.conversationId);
+    if (!members.includes(userId)) return undefined;
+    if (message.senderId === userId) return undefined;
+    if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
+      throw new PremiumFeatureUnavailableError("Unread message previews are not enabled for this account");
+    }
+    // Direct messages retain a legacy single-recipient timestamp while group
+    // conversations use the per-user message_reads table. Check both so a
+    // preview can never be used to reopen an already-read message.
+    if ((message.recipientId === userId && message.seenAt !== null) || await this.messageRepository.hasReadReceipt(messageId, userId)) {
+      return undefined;
+    }
+    const previewedAt = new Date().toISOString();
+    const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
+    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {

@@ -31,6 +31,9 @@ import { creatorWorkspaceRoutes } from "./creator-workspace.js";
 import profileInteractionRouter from "./profile-interactions.js";
 import metricsRouter from "./metrics.js";
 import productAnalyticsRouter from "./product-analytics.js";
+import premiumRouter from './premium.js';
+import billingRouter from './billing.js';
+import paymentOperationsRouter from './payment-operations.js';
 
 const router: IRouter = Router();
 
@@ -42,6 +45,9 @@ router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);
 router.use(userRouter);
+router.use(premiumRouter);
+router.use(billingRouter);
+router.use(paymentOperationsRouter);
 router.use(profileInteractionRouter);
 router.use(postRouter);
 router.use(messageRouter);

@@ -254,7 +254,7 @@ async function runMegaScaleSeed() {
 
       chunk.push({
         id,
-        email: `${String(2300001 + i)}@kiit.ac.in`,
+        email: `${String(2300001 + i)}@seed.example.test`,
         username,
         passwordHash,
         fullName: `${fName} ${lName}`,

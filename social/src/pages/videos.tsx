@@ -312,6 +312,9 @@ export default function Videos() {
   const [, videoRouteParams] = useRoute<{ id: string }>('/videos/:id');
   const users = useAppStore((s: any) => s.users);
   const videos = useAppStore((s: any) => s.videos);
+  const videosLoaded = useAppStore((s: any) => s.videosLoaded);
+  const videosLoading = useAppStore((s: any) => s.videosLoading);
+  const videosError = useAppStore((s: any) => s.videosError);
   const loadVideos = useAppStore((s: any) => s.loadVideos);
   const loadUserProfile = useAppStore((s: any) => s.loadUserProfile);
   const [formatTab, setFormatTab] = useState<'All' | 'short' | 'standard'>('All');
@@ -434,10 +437,22 @@ export default function Videos() {
             id="watch-queue-title"
             eyebrow="Curated playback"
             title="Your watch queue"
-            description={filteredVideos.length ? `${filteredVideos.length} videos matched to the active filters.` : 'No videos match this combination yet.'}
+            description={!videosLoaded ? videosError || 'Loading your video queue…' : filteredVideos.length ? `${filteredVideos.length} videos matched to the active filters.` : 'No videos match this combination yet.'}
           />
 
-          {filteredVideos.length === 0 ? (
+          {!videosLoaded ? (
+            <OperatorPanel className="operator-discovery-empty">
+              <VideoIcon aria-hidden="true" />
+              {videosError ? (
+                <div role="alert">
+                  <p>{videosError}</p>
+                  <button type="button" onClick={() => void loadVideos()} disabled={videosLoading}>Retry videos</button>
+                </div>
+              ) : (
+                <p role="status" aria-live="polite">Loading videos…</p>
+              )}
+            </OperatorPanel>
+          ) : filteredVideos.length === 0 ? (
             <OperatorPanel className="operator-discovery-empty">
               <VideoIcon aria-hidden="true" />
               <h3>Your queue is empty</h3>

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
-import { encodePostCursor, encodeTrendingCursor, PostRepository } from "../repositories/post-repository.js";
+import { encodePostCursor, encodeTrendingCursor, PostRepository, ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AIService } from "./ai-service.js";
 import { QueueService } from "./queue-service.js";
@@ -10,18 +10,23 @@ import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from 
 import { db } from "@workspace/db";
 import { commentsTable, postLikesTable, postBookmarksTable, postRepostsTable } from "@workspace/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { Redis } from "ioredis";
-import { env } from "../config/env.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
 import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { Redis } from "ioredis";
+import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
+export { ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
+
+export class PremiumFeatureUnavailableError extends Error {}
 
 export type FeedMode = "for_you" | "following" | "favorites";
+export type FeedResult = any[] & { scanCursor?: string };
 
 export class PostService {
 
@@ -63,7 +68,8 @@ export class PostService {
     private readonly aiService: AIService = new AIService(),
     private readonly securityService: SecurityService = new SecurityService(),
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
-    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(userRepository),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   private async notify(input: NotificationRecord) {
@@ -89,7 +95,11 @@ export class PostService {
     contentRating = DEFAULT_CONTENT_RATING,
     audience: PostRecord["audience"] = "public",
     poll?: { question: string; options: Array<{ text: string }> },
+    distributionMode: PostRecord["distributionMode"] = "feed_and_profile",
   ): Promise<PostRecord> {
+    if (distributionMode === "profile_only" && !(await this.entitlementService.hasFeature(authorId, "PROFILE_ONLY_POST"))) {
+      throw new PremiumFeatureUnavailableError("Profile-only posts are not enabled for this account");
+    }
     const mentions = this.extractMentions(content);
     const tags = this.extractHashtags(content);
     const post: PostRecord = {
@@ -109,6 +119,7 @@ export class PostService {
       mentions,
       score: this.calculateScore({ likes: 0, shares: 0, comments: 0 }),
       audience,
+      distributionMode,
       contentCategory,
       contentRating,
     };
@@ -130,6 +141,28 @@ export class PostService {
     const post = await this.postRepository.findById(postId);
     if (!post || post.authorId !== userId) return false;
     return this.postRepository.delete(postId);
+  }
+
+  async pinPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    if (!(await this.entitlementService.hasFeature(userId, "SIX_PINNED_POSTS"))) {
+      throw new PremiumFeatureUnavailableError("Six pinned posts are not enabled for this account");
+    }
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return undefined;
+    return this.postRepository.pinPost(postId, userId);
+  }
+
+  async unpinPost(postId: string, userId: string): Promise<PostRecord | undefined> {
+    const post = await this.postRepository.findById(postId);
+    if (!post || post.authorId !== userId) return undefined;
+    return this.postRepository.unpinPost(postId, userId);
+  }
+
+  async reorderPinnedPosts(postIds: string[], userId: string): Promise<PostRecord[]> {
+    if (!(await this.entitlementService.hasFeature(userId, "SIX_PINNED_POSTS"))) {
+      throw new PremiumFeatureUnavailableError("Six pinned posts are not enabled for this account");
+    }
+    return this.postRepository.reorderPinnedPosts(postIds, userId);
   }
 
   async editPost(postId: string, userId: string, content: string, contentRating?: PostRecord["contentRating"], contentCategory?: PostRecord["contentCategory"]): Promise<PostRecord | undefined> {
@@ -310,8 +343,9 @@ export class PostService {
       .where(eq(commentsTable.postId, postId))
       .orderBy(asc(commentsTable.createdAt));
     const visibleRows = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
-    return Promise.all(visibleRows.filter((row) => !row.parentId).map(async (row) => {
-      const author = await this.userRepository.findById(row.authorId);
+    const authors = new Map((await this.userRepository.findByIds(visibleRows.filter(row => !row.parentId).map(row => row.authorId))).map(user => [user.id, user]));
+    return visibleRows.filter((row) => !row.parentId).map((row) => {
+      const author = authors.get(row.authorId);
       const likedBy = Array.isArray(row.likedBy) ? row.likedBy.filter((value): value is string => typeof value === "string") : [];
       const replies = visibleRows.filter((reply) => reply.parentId === row.id).map((reply) => ({
         id: reply.id,
@@ -341,7 +375,7 @@ export class PostService {
           avatarUrl: author?.avatarUrl ?? null,
         },
       };
-    }));
+    });
   }
 
   async bookmarkPost(postId: string, userId: string): Promise<PostRecord | undefined> {
@@ -401,7 +435,7 @@ export class PostService {
   }
 
   
-  async getFeed(cursor?: string, limit: number = 20, currentUserId?: string, mode: FeedMode | "recent" = "recent"): Promise<any[]> {
+  async getFeed(cursor?: string, limit: number = 20, currentUserId?: string, mode: FeedMode | "recent" = "recent"): Promise<FeedResult> {
     if (mode === "for_you") {
       return this.getTrendingFeed(cursor, limit, currentUserId);
     }
@@ -425,15 +459,15 @@ export class PostService {
     const pageSize = Math.min(100, Math.max(20, limit * 2));
     for (let page = 0; page < 10 && visible.length < limit; page += 1) {
       const candidates = await this.postRepository.listByAuthors(uniqueAuthorIds, nextCursor, pageSize, excludedAuthorIds, contentFilter);
-      if (candidates.length === 0) break;
-      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length === 0) { nextCursor = undefined; break; }
+      visible.push(...await this.filterVisiblePosts(candidates, currentUserId, true));
+      nextCursor = candidates.length < pageSize ? undefined : encodePostCursor(candidates[candidates.length - 1]);
       if (candidates.length < pageSize) break;
-      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
     }
-    return this.attachInteractions(visible.slice(0, limit), currentUserId);
+    return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
 
-  async getRecentFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+  async getRecentFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<FeedResult> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const visible: PostRecord[] = [];
@@ -441,70 +475,124 @@ export class PostService {
     const pageSize = Math.min(100, Math.max(20, limit * 2));
     for (let page = 0; page < 10 && visible.length < limit; page += 1) {
       const candidates = await this.postRepository.list(nextCursor, pageSize, excludedAuthorIds, contentFilter);
-      if (candidates.length === 0) break;
-      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length === 0) { nextCursor = undefined; break; }
+      visible.push(...await this.filterVisiblePosts(candidates, currentUserId, true));
+      nextCursor = candidates.length < pageSize ? undefined : encodePostCursor(candidates[candidates.length - 1]);
       if (candidates.length < pageSize) break;
-      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
     }
-    return this.attachInteractions(visible.slice(0, limit), currentUserId);
+    return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
 
-    private redis = new Redis(env.REDIS_URL);
+  private readonly redis = new Redis(env.REDIS_URL, {
+    lazyConnect: true,
+    connectTimeout: 1000,
+    commandTimeout: 1000,
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null,
+  }).on("error", () => {
+    // Trending cache is an optimization. Database-backed feed delivery remains
+    // authoritative when Redis is unavailable.
+  });
 
-  async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+  async getTrendingFeed(cursor?: string, limit: number = 20, currentUserId?: string): Promise<FeedResult> {
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
     const pageSize = Math.min(100, Math.max(20, limit * 2));
-    const cacheKey = `feed:trending:${cursor || "first"}:${pageSize}`;
-    
-    // Redis is an optimization, never a requirement for a healthy feed.
-    let cached: string | null = null;
+    const cacheKey = `feed:trending:v3:${cursor || "first"}:${pageSize}`;
+
+    type CachedTrendingPost = Pick<PostRecord, "id" | "createdAt" | "distributionMode"> & { score: number };
+    let cachedCandidates: CachedTrendingPost[] | null = null;
     try {
-      cached = await this.redis.get(cacheKey);
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          cachedCandidates = parsed.filter((item): item is CachedTrendingPost =>
+            Boolean(item) &&
+            typeof item === "object" &&
+            typeof (item as CachedTrendingPost).id === "string" &&
+            typeof (item as CachedTrendingPost).createdAt === "string" &&
+            typeof (item as CachedTrendingPost).score === "number" &&
+            ((item as CachedTrendingPost).distributionMode === "feed_and_profile" ||
+              (item as CachedTrendingPost).distributionMode === "profile_only"),
+          );
+        }
+      }
     } catch (error) {
+      cachedCandidates = null;
       logger.warn({ err: error }, "Trending feed cache read failed");
     }
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        cached = JSON.stringify(parsed);
-      } catch (e) {
-        cached = null;
-      }
-    }
 
-    // Cache the unfiltered candidate set. Contact Shield visibility is per
-    // viewer, so storing one user's filtered list would hide those posts from
-    // every other viewer sharing the cache key.
     const visible: PostRecord[] = [];
     let nextCursor = cursor;
     let firstPage = true;
+
+    // Cached pages contain only ordering/identity fields. Every cache hit is
+    // re-fetched from SQL before visibility checks so deletions, audience edits,
+    // score changes, and distribution changes cannot be resurrected by Redis.
     for (let page = 0; page < 10 && visible.length < limit; page += 1) {
       let posts: PostRecord[];
-      if (firstPage && cached) {
-        posts = JSON.parse(cached) as PostRecord[];
+      let shouldRefreshCache = false;
+
+      if (firstPage && cachedCandidates?.length) {
+        const fresh = await this.postRepository.findByIds(cachedCandidates.map((post) => post.id));
+        const byId = new Map(fresh.map((post) => [post.id, post]));
+        const cacheStillValid = cachedCandidates.every((old) => {
+          const current = byId.get(old.id);
+          return Boolean(
+            current &&
+            (current.score ?? 0) === old.score &&
+            current.createdAt === old.createdAt &&
+            current.distributionMode === old.distributionMode,
+          );
+        });
+
+        if (cacheStillValid) {
+          posts = cachedCandidates.flatMap((old) => {
+            const current = byId.get(old.id);
+            return current ? [current] : [];
+          });
+        } else {
+          posts = await this.postRepository.listTrending(nextCursor, pageSize);
+          shouldRefreshCache = true;
+        }
       } else {
         posts = await this.postRepository.listTrending(nextCursor, pageSize);
-        if (firstPage) {
-          try {
-            await this.redis.set(cacheKey, JSON.stringify(posts), "EX", 60);
-          } catch (error) {
-            logger.warn({ err: error }, "Trending feed cache write failed");
-          }
+        shouldRefreshCache = firstPage;
+      }
+
+      if (firstPage && shouldRefreshCache) {
+        try {
+          const payload: CachedTrendingPost[] = posts.map((post) => ({
+            id: post.id,
+            score: post.score ?? 0,
+            createdAt: post.createdAt,
+            distributionMode: post.distributionMode,
+          }));
+          await this.redis.set(cacheKey, JSON.stringify(payload), "EX", 60);
+        } catch (error) {
+          logger.warn({ err: error }, "Trending feed cache write failed");
         }
       }
+
       firstPage = false;
-      if (posts.length === 0) break;
+      if (posts.length === 0) {
+        nextCursor = undefined;
+        break;
+      }
+
       const contentVisible = posts.filter((post) =>
         !excludedAuthorIds.includes(post.authorId) && canViewContent(post.contentRating, contentFilter),
       );
-      visible.push(...await this.filterVisiblePosts(contentVisible, currentUserId));
+      visible.push(...await this.filterVisiblePosts(contentVisible, currentUserId, true));
+      nextCursor = posts.length < pageSize ? undefined : encodeTrendingCursor(posts[posts.length - 1]);
       if (posts.length < pageSize) break;
-      nextCursor = encodeTrendingCursor(posts[posts.length - 1]);
     }
-    return this.attachInteractions(visible.slice(0, limit), currentUserId);
+
+    return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
-  async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<any[]> {
+
+  async getUserFeed(userId: string, cursor?: string, limit: number = 20, currentUserId?: string): Promise<FeedResult> {
     if (currentUserId && !(await this.contactShieldService.canView(currentUserId, userId))) return [];
     const excludedAuthorIds = currentUserId ? [...await this.contactShieldService.getShieldedUserIds(currentUserId)] : [];
     const contentFilter = await this.contentSafetyService.getViewerFilter(currentUserId);
@@ -513,12 +601,12 @@ export class PostService {
     const pageSize = Math.min(100, Math.max(20, limit * 2));
     for (let page = 0; page < 10 && visible.length < limit; page += 1) {
       const candidates = await this.postRepository.listByUser(userId, nextCursor, pageSize, excludedAuthorIds, contentFilter);
-      if (candidates.length === 0) break;
-      visible.push(...await this.filterVisiblePosts(candidates, currentUserId));
+      if (candidates.length === 0) { nextCursor = undefined; break; }
+      visible.push(...await this.contentSafetyService.filterVisibleByAuthor(candidates, currentUserId, post => post.authorId));
+      nextCursor = candidates.length < pageSize ? undefined : encodePostCursor(candidates[candidates.length - 1]);
       if (candidates.length < pageSize) break;
-      nextCursor = encodePostCursor(candidates[candidates.length - 1]);
     }
-    return this.attachInteractions(visible.slice(0, limit), currentUserId);
+    return Object.assign(await this.attachInteractions(visible.slice(0, limit), currentUserId), { scanCursor: nextCursor });
   }
 
   async getSavedPosts(userId: string, limit = 100): Promise<any[]> {
@@ -535,44 +623,21 @@ export class PostService {
     return this.attachInteractions(await this.filterVisiblePosts(posts, userId), userId);
   }
 
-  private async filterVisiblePosts(posts: PostRecord[], viewerId?: string): Promise<PostRecord[]> {
-    if (posts.length === 0) return posts;
-    const visible = await Promise.all(posts.map(async (post) => ({
-      post,
-      allowed: await this.canViewPost(post, viewerId),
-    })));
-    return visible.filter(({ allowed }) => allowed).map(({ post }) => post);
+  private async filterVisiblePosts(posts: PostRecord[], viewerId?: string, discovery = false): Promise<PostRecord[]> {
+    return this.contentSafetyService.filterVisibleByAuthor(posts, viewerId, post => post.authorId, { discovery });
   }
 
   private async canViewAuthorContent(authorId: string, viewerId?: string): Promise<boolean> {
-    if (viewerId && authorId === viewerId) return true;
-    const [author, viewer] = await Promise.all([
-      this.userRepository.findById(authorId),
-      viewerId ? this.userRepository.findById(viewerId) : Promise.resolve(undefined),
-    ]);
-    if (!author) return false;
-    if (viewerId && (
-      author.blockedUsers?.includes(viewerId)
-      || viewer?.blockedUsers?.includes(authorId)
-      || viewer?.mutedUsers?.includes(authorId)
-    )) return false;
-    const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? "private" : "public");
-    if (visibility === "public") return true;
-    return Boolean(viewerId && await this.userRepository.isFollowing(viewerId, authorId));
+    return this.contentSafetyService.canViewAuthorContent(authorId, viewerId);
   }
 
   private async canViewPost(post: PostRecord, viewerId?: string): Promise<boolean> {
-    if (!(await this.canViewAuthorContent(post.authorId, viewerId))) return false;
-    if (post.authorId === viewerId || (post.audience ?? "public") === "public") return true;
-    if (!viewerId) return false;
-    if (post.audience === "close_friends") return this.userRepository.isCloseFriend(post.authorId, viewerId);
-    return this.userRepository.isFollowing(viewerId, post.authorId);
+    return this.contentSafetyService.isVisible(post, viewerId, post.authorId);
   }
 
   close(): void {
     this.redis.disconnect();
   }
-
 
   private extractMentions(content: string): string[] {
     return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);

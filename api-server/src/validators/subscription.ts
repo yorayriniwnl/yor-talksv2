@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createSubscriptionOrderSchema = z.object({
+  idempotencyKey: z.string().uuid(),
   creatorId: z.string().uuid(),
   tier: z.enum(["chai", "elite", "vip"]),
 });

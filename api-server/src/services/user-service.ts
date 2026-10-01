@@ -6,6 +6,11 @@ import { QueueService } from "./queue-service.js";
 import type { FollowRequestRecord, UserRecord, UserSettings } from "../types/index.js";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { CreatorAnalyticsService } from "./creator-analytics-service.js";
+import { FeatureEntitlementService } from "./feature-entitlement-service.js";
+import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, PREMIUM_MESSAGE_STYLES, PREMIUM_STORY_STYLES, requiredPremiumFeatures, type PremiumProfileSelection } from "../features/premium-profile.js";
+
+export class PremiumProfileFeatureUnavailableError extends Error {}
+export class PremiumStoryViewFeatureUnavailableError extends Error {}
 
 export class UserService {
   constructor(
@@ -14,6 +19,7 @@ export class UserService {
     private readonly queueService?: QueueService,
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
     private readonly creatorAnalyticsService: CreatorAnalyticsService = new CreatorAnalyticsService(),
+    private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
@@ -38,6 +44,50 @@ export class UserService {
 
   async updateProfile(userId: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
     return this.userRepository.update(userId, updates);
+  }
+
+  async updatePremiumProfile(userId: string, updates: Partial<PremiumProfileSelection>): Promise<UserRecord | undefined> {
+    const current = await this.userRepository.findById(userId);
+    if (!current) return undefined;
+    const selection = assertPremiumProfileSelection({
+      bioStyleId: updates.bioStyleId ?? current.bioStyleId,
+      messageFontId: updates.messageFontId ?? current.messageFontId,
+      storyFontId: updates.storyFontId ?? current.storyFontId,
+      appIconId: updates.appIconId ?? current.appIconId,
+    });
+    // Preserved historical styles must not block changing a different field back
+    // to a free default after expiry. Authorize only the requested selections.
+    const required = requiredPremiumFeatures(updates);
+    const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(userId) : null;
+    const available = snapshot ? required.map(feature => snapshot[feature]) : await Promise.all(required.map((feature) => this.entitlementService.hasFeature(userId, feature)));
+    if (available.some((enabled) => !enabled)) {
+      throw new PremiumProfileFeatureUnavailableError("One or more premium profile styles are not enabled for this account");
+    }
+    return this.userRepository.update(userId, selection);
+  }
+
+  async getPremiumProfileOptions(userId: string): Promise<{
+    selection: PremiumProfileSelection;
+    options: {
+      bioStyles: typeof PREMIUM_BIO_STYLES;
+      messageStyles: typeof PREMIUM_MESSAGE_STYLES;
+      storyStyles: typeof PREMIUM_STORY_STYLES;
+      appIcons: typeof PREMIUM_APP_ICONS;
+    };
+    enabledFeatures: Awaited<ReturnType<FeatureEntitlementService["getSnapshot"]>>;
+  } | undefined> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) return undefined;
+    return {
+      selection: assertPremiumProfileSelection(user),
+      options: {
+        bioStyles: PREMIUM_BIO_STYLES,
+        messageStyles: PREMIUM_MESSAGE_STYLES,
+        storyStyles: PREMIUM_STORY_STYLES,
+        appIcons: PREMIUM_APP_ICONS,
+      },
+      enabledFeatures: await this.entitlementService.getSnapshot(userId),
+    };
   }
 
   async uploadAvatar(userId: string, avatarUrl: string): Promise<UserRecord | undefined> {
@@ -194,8 +244,8 @@ export class UserService {
   async listCloseFriends(userId: string): Promise<UserRecord[]> {
     const ids = await this.userRepository.listCloseFriendIds(userId);
     if (ids.length === 0) return [];
-    const users = await Promise.all(ids.map((id) => this.userRepository.findById(id)));
-    return users.filter((user): user is UserRecord => Boolean(user));
+    const users = new Map((await this.userRepository.findByIds(ids)).map(user => [user.id, user]));
+    return ids.flatMap(id => users.has(id) ? [users.get(id)!] : []);
   }
 
   async setCloseFriend(userId: string, friendId: string, enabled: boolean): Promise<{ friendId: string; closeFriend: boolean } | undefined> {
@@ -229,6 +279,9 @@ export class UserService {
   }
 
   async updateSettings(userId: string, settings: Partial<UserSettings>): Promise<UserRecord | undefined> {
+    if (settings.storyViewMode === "private" && !(await this.entitlementService.hasFeature(userId, "STORY_PRIVATE_VIEW"))) {
+      throw new PremiumStoryViewFeatureUnavailableError("Private story viewing is not enabled for this account");
+    }
     return this.userRepository.patchSettings(userId, settings);
   }
 
@@ -236,44 +289,26 @@ export class UserService {
     if (userId === targetId) {
       throw new Error("Cannot block yourself");
     }
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
     const target = await this.userRepository.findById(targetId);
     if (!target) return undefined;
-    const blockedUsers = [...(user.blockedUsers ?? [])];
-    if (!blockedUsers.includes(targetId)) {
-      blockedUsers.push(targetId);
-    }
-    return this.userRepository.update(userId, { blockedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "blockedUsers", true);
   }
 
   async unblockUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    const blockedUsers = (user.blockedUsers ?? []).filter((id) => id !== targetId);
-    return this.userRepository.update(userId, { blockedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "blockedUsers", false);
   }
 
   async muteUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
     if (userId === targetId) {
       throw new Error("Cannot mute yourself");
     }
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
     const target = await this.userRepository.findById(targetId);
     if (!target) return undefined;
-    const mutedUsers = [...(user.mutedUsers ?? [])];
-    if (!mutedUsers.includes(targetId)) {
-      mutedUsers.push(targetId);
-    }
-    return this.userRepository.update(userId, { mutedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "mutedUsers", true);
   }
 
   async unmuteUser(userId: string, targetId: string): Promise<UserRecord | undefined> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return undefined;
-    const mutedUsers = (user.mutedUsers ?? []).filter((id) => id !== targetId);
-    return this.userRepository.update(userId, { mutedUsers });
+    return this.userRepository.setSafetyRelationship(userId, targetId, "mutedUsers", false);
   }
 
   private async canViewProfile(user: UserRecord, viewerId?: string): Promise<boolean> {

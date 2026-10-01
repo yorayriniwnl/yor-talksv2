@@ -68,6 +68,8 @@ export default function Auth() {
   const [readiness, setReadiness] = useState<'checking' | 'operational' | 'unavailable'>('checking');
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleCredentialRef = useRef<string | null>(null);
+  const [googleStatus, setGoogleStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [googleRetry, setGoogleRetry] = useState(0);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
 
@@ -95,64 +97,91 @@ export default function Auth() {
     if (mode !== 'login' || !googleClientId || !googleButtonRef.current) return;
 
     let cancelled = false;
+    let script: HTMLScriptElement | null = null;
+    let lastWidth = 0;
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => renderGoogleButton());
+    setGoogleStatus('loading');
+    const unavailable = () => { if (!cancelled) setGoogleStatus('unavailable'); };
+    const timeout = window.setTimeout(unavailable, 10_000);
     const renderGoogleButton = () => {
-      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) return;
+      if (cancelled || !googleButtonRef.current) return;
+      if (!window.google?.accounts?.id) { unavailable(); return; }
+      const width = Math.min(360, Math.floor(googleButtonRef.current.getBoundingClientRect().width));
+      if (width < 1 || width === lastWidth) return;
       googleButtonRef.current.replaceChildren();
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        ux_mode: 'popup',
-        use_fedcm_for_prompt: true,
-        callback: (response) => {
-          googleCredentialRef.current = response.credential;
-          setErrorMsg('');
-          setFieldErrors({});
-          setLoading(true);
-          void loginWithGoogle(response.credential)
-            .then((challenge) => {
-              if (cancelled) return;
-              if (challenge) {
-                setTwoFactorChallenge(challenge);
-                setTwoFactorFallback(false);
-                setTwoFactorFallbackCode('');
-                setApprovalBusy(false);
-              } else {
-                googleCredentialRef.current = null;
-              }
-            })
-            .catch((error) => {
-              if (!cancelled) setErrorMsg(error instanceof Error ? error.message : 'Google sign-in failed.');
-            })
-            .finally(() => {
-              if (!cancelled) setLoading(false);
-            });
-        },
-      });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        width: 360,
-      });
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          ux_mode: 'popup',
+          use_fedcm_for_prompt: true,
+          callback: (response) => {
+            googleCredentialRef.current = response.credential;
+            setErrorMsg('');
+            setFieldErrors({});
+            setLoading(true);
+            void loginWithGoogle(response.credential)
+              .then((challenge) => {
+                if (cancelled) return;
+                if (challenge) {
+                  setTwoFactorChallenge(challenge);
+                  setTwoFactorFallback(false);
+                  setTwoFactorFallbackCode('');
+                  setApprovalBusy(false);
+                } else {
+                  googleCredentialRef.current = null;
+                }
+              })
+              .catch((error) => {
+                if (!cancelled) setErrorMsg(error instanceof Error ? error.message : 'Google sign-in failed.');
+              })
+              .finally(() => {
+                if (!cancelled) setLoading(false);
+              });
+          },
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width,
+        });
+        window.clearTimeout(timeout);
+        lastWidth = width;
+        setGoogleStatus('ready');
+      } catch {
+        unavailable();
+      }
     };
 
     if (window.google?.accounts?.id) {
       renderGoogleButton();
+      if (googleButtonRef.current) resizeObserver?.observe(googleButtonRef.current);
     } else {
-      const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
-      const script = existingScript ?? document.createElement('script');
+      let existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+      if (googleRetry > 0) {
+        existingScript?.remove();
+        existingScript = null;
+      }
+      script = existingScript ?? document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
       script.addEventListener('load', renderGoogleButton, { once: true });
+      script.addEventListener('error', unavailable, { once: true });
       if (!existingScript) document.head.appendChild(script);
+      if (googleButtonRef.current) resizeObserver?.observe(googleButtonRef.current);
     }
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
+      script?.removeEventListener('load', renderGoogleButton);
+      script?.removeEventListener('error', unavailable);
+      resizeObserver?.disconnect();
       googleButtonRef.current?.replaceChildren();
     };
-  }, [googleClientId, loginWithGoogle, mode]);
+  }, [googleClientId, googleRetry, loginWithGoogle, mode]);
 
   useEffect(() => {
     if (!twoFactorChallenge || twoFactorFallback || approvalBusy) return;
@@ -259,6 +288,18 @@ export default function Auth() {
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      const errorFieldIds: Record<string, string> = {
+        fullName: 'fullName',
+        username: 'username',
+        email: 'accountIdentifier',
+        otpCode: 'otpCode',
+        password: 'password',
+        twoFactorFallbackCode: 'twoFactorFallbackCode',
+        acceptedTerms: 'acceptedTerms',
+        confirmedAge: 'confirmedAge',
+      };
+      const firstInvalidId = Object.keys(errors).map((key) => errorFieldIds[key]).find(Boolean);
+      if (firstInvalidId) window.requestAnimationFrame(() => document.getElementById(firstInvalidId)?.focus());
       return;
     }
 
@@ -409,9 +450,9 @@ export default function Auth() {
             </div>
           </div>
 
-          <div className="operator-access-mode" role="tablist" aria-label="Account access">
-            <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'is-active' : ''} onClick={() => switchMode('login')}>Sign in</button>
-            <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'is-active' : ''} onClick={() => switchMode('register')}>Create account</button>
+          <div className="operator-access-mode" role="group" aria-label="Account access">
+            <button type="button" aria-pressed={mode === 'login'} className={mode === 'login' ? 'is-active' : ''} onClick={() => switchMode('login')}>Sign in</button>
+            <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'is-active' : ''} onClick={() => switchMode('register')}>Create account</button>
           </div>
 
           <header className="operator-access-heading">
@@ -421,8 +462,13 @@ export default function Auth() {
           </header>
 
           {mode === 'login' && googleClientId && (
-            <div className="operator-google-access">
-              <div ref={googleButtonRef} className="operator-google-access__button" aria-label="Sign in with Google" />
+            <div className="operator-google-access" role="group" aria-label="Google sign-in">
+              <div ref={googleButtonRef} className="operator-google-access__button" />
+              {googleStatus === 'loading' && <p role="status" className="text-center text-sm text-muted-foreground">Loading Google sign-in…</p>}
+              {googleStatus === 'unavailable' && <div className="rounded-xl border border-border/50 p-3 text-center">
+                <p role="status" className="text-sm leading-6 text-muted-foreground">Google sign-in couldn’t load. Password and email code are still available.</p>
+                <button type="button" className="mt-2 min-h-11 rounded-lg border border-border px-4 text-sm font-semibold text-foreground" onClick={() => setGoogleRetry((attempt) => attempt + 1)}>Retry Google sign-in</button>
+              </div>}
               <div className="operator-access-divider"><span>or use Yor access</span></div>
             </div>
           )}
@@ -448,13 +494,13 @@ export default function Auth() {
               <div className="operator-access-grid">
                 <div className="operator-field">
                   <Label htmlFor="fullName">Full name</Label>
-                  <div className="operator-field__control"><User /><Input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" autoComplete="name" aria-invalid={Boolean(fieldErrors.fullName)} /></div>
-                  {fieldErrors.fullName && <p className="operator-field__error">{fieldErrors.fullName}</p>}
+                  <div className="operator-field__control"><User /><Input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" autoComplete="name" aria-invalid={Boolean(fieldErrors.fullName)} aria-describedby={fieldErrors.fullName ? 'fullName-error' : undefined} /></div>
+                  {fieldErrors.fullName && <p id="fullName-error" className="operator-field__error">{fieldErrors.fullName}</p>}
                 </div>
                 <div className="operator-field">
                   <Label htmlFor="username">Username</Label>
-                  <div className="operator-field__control"><AtSign /><Input id="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="operator_name" autoComplete="username" aria-invalid={Boolean(fieldErrors.username)} /></div>
-                  {fieldErrors.username && <p className="operator-field__error">{fieldErrors.username}</p>}
+                  <div className="operator-field__control"><AtSign /><Input id="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="operator_name" autoComplete="username" aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? 'username-error' : undefined} /></div>
+                  {fieldErrors.username && <p id="username-error" className="operator-field__error">{fieldErrors.username}</p>}
                 </div>
               </div>
             )}
@@ -471,15 +517,16 @@ export default function Auth() {
                   placeholder={mode === 'login' && loginMethod === 'password' ? 'you@example.com or username' : 'you@example.com'}
                   autoComplete={mode === 'login' && loginMethod === 'password' ? 'username' : 'email'}
                   aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                 />
               </div>
-              {fieldErrors.email && <p className="operator-field__error">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p id="email-error" className="operator-field__error">{fieldErrors.email}</p>}
             </div>
 
             {mode === 'login' && (
-              <div className="operator-method-switch" role="tablist" aria-label="Sign in method">
-                <button type="button" role="tab" aria-selected={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => selectLoginMethod('password')}><KeyRound /> Password</button>
-                <button type="button" role="tab" aria-selected={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => selectLoginMethod('email-code')}><Mail /> Email code</button>
+              <div className="operator-method-switch" role="group" aria-label="Sign in method">
+                <button type="button" aria-pressed={loginMethod === 'password'} className={loginMethod === 'password' ? 'is-active' : ''} onClick={() => selectLoginMethod('password')}><KeyRound /> Password</button>
+                <button type="button" aria-pressed={loginMethod === 'email-code'} className={loginMethod === 'email-code' ? 'is-active' : ''} onClick={() => selectLoginMethod('email-code')}><Mail /> Email code</button>
               </div>
             )}
 
@@ -487,12 +534,12 @@ export default function Auth() {
               <div className="operator-field">
                 <Label htmlFor="otpCode">One-time code</Label>
                 <div className="operator-code-row">
-                  <div className="operator-field__control"><Code2 /><Input id="otpCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" aria-invalid={Boolean(fieldErrors.otpCode)} /></div>
+                  <div className="operator-field__control"><Code2 /><Input id="otpCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" aria-invalid={Boolean(fieldErrors.otpCode)} aria-describedby={fieldErrors.otpCode ? 'otpCode-error' : undefined} /></div>
                   <Button type="button" variant="outline" onClick={requestEmailCode} disabled={requestingOtp || otpCooldown > 0}>
                     {requestingOtp ? <Loader2 className="animate-spin" /> : otpCooldown > 0 ? `Resend ${otpCooldown}s` : otpSent ? 'Resend code' : 'Send code'}
                   </Button>
                 </div>
-                {fieldErrors.otpCode && <p className="operator-field__error">{fieldErrors.otpCode}</p>}
+                {fieldErrors.otpCode && <p id="otpCode-error" className="operator-field__error">{fieldErrors.otpCode}</p>}
                 {otpSent && <p className="operator-field__status"><Check /> Code sent. It expires in 5 minutes and works once.</p>}
               </div>
             )}
@@ -505,10 +552,10 @@ export default function Auth() {
                 </div>
                 <div className="operator-field__control">
                   <Lock />
-                  <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === 'register' ? 'Create a strong password' : 'Your password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} aria-invalid={Boolean(fieldErrors.password)} />
+                  <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === 'register' ? 'Create a strong password' : 'Your password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? 'password-error' : undefined} />
                   <button type="button" className="operator-password-toggle" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? <EyeOff /> : <Eye />}</button>
                 </div>
-                {fieldErrors.password && <p className="operator-field__error">{fieldErrors.password}</p>}
+                {fieldErrors.password && <p id="password-error" className="operator-field__error">{fieldErrors.password}</p>}
                 {mode === 'register' && (
                   <div className="operator-password-rules" aria-label="Password requirements">
                     {passwordRequirements.map((requirement) => <span key={requirement.id} className={requirement.met ? 'is-met' : ''}><i>{requirement.met ? <Check /> : null}</i>{requirement.label}</span>)}
@@ -529,8 +576,8 @@ export default function Auth() {
             {mode === 'login' && twoFactorChallenge && twoFactorFallback && (
               <section className="operator-approval-card">
                 <header><Smartphone /><div><strong>Authenticator fallback</strong><span>Enter the six-digit code from the app enrolled in Settings.</span></div></header>
-                <div className="operator-field__control"><KeyRound /><Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twoFactorFallbackCode} onChange={(event) => setTwoFactorFallbackCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" aria-label="Authenticator code" /></div>
-                {fieldErrors.twoFactorFallbackCode && <p className="operator-field__error">{fieldErrors.twoFactorFallbackCode}</p>}
+                <div className="operator-field__control"><KeyRound /><Input id="twoFactorFallbackCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twoFactorFallbackCode} onChange={(event) => setTwoFactorFallbackCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" aria-label="Authenticator code" aria-invalid={Boolean(fieldErrors.twoFactorFallbackCode)} aria-describedby={fieldErrors.twoFactorFallbackCode ? 'twoFactorFallbackCode-error' : undefined} /></div>
+                {fieldErrors.twoFactorFallbackCode && <p id="twoFactorFallbackCode-error" className="operator-field__error">{fieldErrors.twoFactorFallbackCode}</p>}
                 <button type="button" onClick={() => { setTwoFactorFallback(false); setTwoFactorFallbackCode(''); }}>Return to phone approval</button>
               </section>
             )}
@@ -539,15 +586,15 @@ export default function Auth() {
               <fieldset className="operator-access-consent">
                 <legend>Before you create your account</legend>
                 <label>
-                  <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} aria-invalid={Boolean(fieldErrors.acceptedTerms)} />
+                  <input id="acceptedTerms" type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} aria-invalid={Boolean(fieldErrors.acceptedTerms)} aria-describedby={fieldErrors.acceptedTerms ? 'acceptedTerms-error' : undefined} />
                   <span>I accept the <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Notice</Link>, and <Link href="/community-guidelines">Community Guidelines</Link>.</span>
                 </label>
-                {fieldErrors.acceptedTerms && <p className="operator-field__error">{fieldErrors.acceptedTerms}</p>}
+                {fieldErrors.acceptedTerms && <p id="acceptedTerms-error" className="operator-field__error">{fieldErrors.acceptedTerms}</p>}
                 <label>
-                  <input type="checkbox" checked={confirmedAge} onChange={(event) => setConfirmedAge(event.target.checked)} aria-invalid={Boolean(fieldErrors.confirmedAge)} />
+                  <input id="confirmedAge" type="checkbox" checked={confirmedAge} onChange={(event) => setConfirmedAge(event.target.checked)} aria-invalid={Boolean(fieldErrors.confirmedAge)} aria-describedby={fieldErrors.confirmedAge ? 'confirmedAge-error' : undefined} />
                   <span>I confirm I am at least {publicBetaConfig.minimumAge} years old.</span>
                 </label>
-                {fieldErrors.confirmedAge && <p className="operator-field__error">{fieldErrors.confirmedAge}</p>}
+                {fieldErrors.confirmedAge && <p id="confirmedAge-error" className="operator-field__error">{fieldErrors.confirmedAge}</p>}
               </fieldset>
             )}
 

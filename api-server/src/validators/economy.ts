@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createTipOrderSchema = z.object({
+  idempotencyKey: z.string().uuid(),
   creatorId: z.string().uuid(),
   streamId: z.string().uuid().optional(),
   amountMinor: z.number().int().min(100).max(1_000_000),

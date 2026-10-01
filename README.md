@@ -10,13 +10,16 @@ an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
 
-## Public-beta status — 31 August 2026
+## Public-beta status — 1 October 2026
 
-**B. CODE-READY, DEPLOYMENT BLOCKED.** The audited core beta has passing local
-regression/build checks, but this is not a verified public deployment. GitHub
-Actions is billing-locked, the local Docker engine is unavailable, and live
-provider, TLS, monitoring and restore checks remain required. See the
-[readiness report](docs/PUBLIC_BETA_READINESS_2026-08-31.md) and
+**B. CODE-READY, DEPLOYMENT BLOCKED.** The latest continuation passed 69 API,
+30 unit/integration and 24 browser tests. Fresh production images also completed
+a clean PostgreSQL/Redis migration and healthy API/Nginx runtime rehearsal under
+the non-root API user. This is not a verified public deployment. GitHub Actions
+is currently executing successfully on `main`; historical billing-locked runs
+remain documented in the dated readiness reports. Real provider, domain/TLS,
+monitoring and production backup/recovery acceptance checks remain required. See the
+[latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-09-02.md) and
 [production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
 
 ## Architecture
@@ -95,15 +98,15 @@ direct API is available on port 4000. The generated OpenAPI document is exposed
 at `/api/docs`; it is built from the mounted Express routes and checked for
 drift in CI.
 
-The seeded demo accounts use the following credentials:
+The seeded demo accounts use fully synthetic identities:
 
 | Email | Password |
 | --- | --- |
-| `2329001@kiit.ac.in` | `yorayriniwnl` |
-| `2329002@kiit.ac.in` | `password123` |
-| `2329003@kiit.ac.in` | `password123` |
+| `founder@example.test` | `DemoFounder123!` |
+| `creator@example.test` | `DemoUser123!` |
+| `cofounder@example.test` | `DemoUser123!` |
 
-Demo seeds are for isolated local databases only. Do not seed a public deployment.
+These identities are fictional and exist only for isolated local databases. Do not seed a public deployment.
 
 For public traffic, use `.env.production` and `docker-compose.production.yml`
 as described in the production runbook. The development Compose profile is
@@ -124,8 +127,11 @@ the four optional feature flags disabled until separately approved and tested.
   `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`, and
   test Checkout in an isolated provider test environment.
   The API fetches and verifies the captured payment before crediting the
-  creator wallet. Bank withdrawals/payouts are intentionally not enabled for
-  this deployment because they require a separately verified RazorpayX/KYC
+  creator wallet. Configure the webhook URL for `payment.captured` and
+  `refund.processed`; the handler verifies the raw-body signature, settles
+  tips, memberships, and marketplace orders, and applies processed refunds to
+  the ledger. Bank withdrawals/payouts are intentionally not enabled for this
+  deployment because they require a separately verified RazorpayX/KYC
   settlement setup.
 - LiveKit Cloud: create a project and set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
   `LIVEKIT_API_SECRET`. The server issues short-lived room tokens; the secret
@@ -136,7 +142,13 @@ the four optional feature flags disabled until separately approved and tested.
   production TURN server (STUN alone is not reliable across carrier NATs).
   If the frontend is on Vercel and the API is elsewhere, set `NODE_ENV=production`
   on the API and set `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter
-  must point to a long-lived Socket.IO process.
+  must point to a long-lived Socket.IO process. The Vercel `api/index.ts`
+  function is HTTP-only: it does not start Socket.IO or background workers.
+  If REST requests use that function, deploy a separate persistent notification
+  worker with the same `DATABASE_URL` and `REDIS_URL` using
+  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` checks the
+  worker's Redis heartbeat and stays unhealthy until that process is running.
+  A Vercel function alone is not a supported realtime or push-delivery setup.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
   then set the same client ID in both `GOOGLE_CLIENT_ID` and

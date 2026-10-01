@@ -44,6 +44,10 @@ const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
 const Saved = lazyWithRetry(() => import('@/pages/saved'));
 const BroadcastChannels = lazyWithRetry(() => import('@/pages/broadcast-channels'));
 const Settings = lazyWithRetry(() => import('@/pages/settings'));
+const Advanced = lazyWithRetry(() => import('@/pages/advanced'));
+const Premium = lazyWithRetry(() => import('@/pages/premium'));
+const Billing = lazyWithRetry(() => import('@/pages/billing'));
+const PaymentOperations = lazyWithRetry(() => import('@/pages/payment-operations'));
 
 // Content & Discovery
 const Articles = lazyWithRetry(() => import('@/pages/articles'));
@@ -123,6 +127,10 @@ function ProtectedRoutes() {
                 <Route path="/saved" component={Saved} />
                 <Route path="/channels" component={BroadcastChannels} />
                 <Route path="/settings" component={Settings} />
+                <Route path="/advanced" component={Advanced} />
+                <Route path="/premium" component={Premium} />
+                <Route path="/billing" component={Billing} />
+                <Route path="/payment-operations" component={PaymentOperations} />
 
                 {/* Content & Discovery */}
                 <Route path="/articles/:id?" component={Articles} />

@@ -8,18 +8,18 @@ export class SearchService {
     private readonly userRepository: UserRepository,
     private readonly postRepository: PostRepository,
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
-    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(userRepository),
   ) {}
 
   async search(query: string, viewerId?: string) {
-    const shieldedUserIds = viewerId ? [...await this.contactShieldService.getShieldedUserIds(viewerId)] : [];
+    const shielded = viewerId ? await this.contactShieldService.getShieldedUserIds(viewerId) : new Set<string>();
     const normalized = query.trim().toLowerCase();
     const contentFilter = await this.contentSafetyService.getViewerFilter(viewerId);
     const [users, candidatePosts] = await Promise.all([
-      this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(normalized)),
-      this.postRepository.search(normalized, 50, shieldedUserIds, contentFilter),
+      this.userRepository.list(normalized),
+      this.postRepository.search(normalized, 250, [...shielded], contentFilter, viewerId),
     ]);
-    const posts = await this.contentSafetyService.filterVisibleByAuthor(candidatePosts, viewerId, (post) => post.authorId);
-    return { users, posts };
+    const posts = await this.contentSafetyService.filterVisibleByAuthor(candidatePosts, viewerId, (post) => post.authorId, { discovery: true });
+    return { users: users.filter(user => !shielded.has(user.id) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')), posts: posts.slice(0, 50) };
   }
 }

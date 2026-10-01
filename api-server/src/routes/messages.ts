@@ -2,11 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { MessageController } from "../controllers/message-controller.js";
 import { authenticate } from "../middlewares/auth.js";
-import { validateBody, validateParams } from "../middlewares/validation.js";
+import { validateBody, validateParams, validateQuery } from "../middlewares/validation.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { MessageService } from "../services/message-service.js";
-import { createGroupChatSchema, messageSchema } from "../validators/message.js";
+import { conversationMessagesQuerySchema, createGroupChatSchema, messageSchema } from "../validators/message.js";
 import { conversationIdParamSchema, messageIdParamSchema } from "../validators/params.js";
 
 const router = Router();
@@ -17,7 +17,8 @@ router.post("/messages", authenticate, validateBody(messageSchema), messageContr
 router.post("/conversations/group", authenticate, validateBody(createGroupChatSchema), messageController.createGroupChat);
 router.get("/conversations", authenticate, messageController.listConversations);
 router.put("/conversations/:conversationId/vanish", authenticate, validateParams(conversationIdParamSchema), validateBody(z.object({ enabled: z.boolean() })), messageController.setVanishMode);
-router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), messageController.listConversation);
+router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), validateQuery(conversationMessagesQuerySchema), messageController.listConversation);
+router.post("/messages/:messageId/preview", authenticate, validateParams(messageIdParamSchema), messageController.preview);
 router.post("/messages/:messageId/seen", authenticate, validateParams(messageIdParamSchema), messageController.markSeen);
 router.put("/messages/:messageId", authenticate, validateParams(messageIdParamSchema), validateBody(z.object({ content: z.string().trim().min(1).max(4000) })), messageController.editMessage);
 router.delete("/messages/:messageId", authenticate, validateParams(messageIdParamSchema), messageController.deleteMessage);

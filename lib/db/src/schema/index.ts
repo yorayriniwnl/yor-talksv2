@@ -8,11 +8,16 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   googleSubject: text("google_subject").unique(),
   passwordHash: text("password_hash").notNull(),
+  authVersion: integer("auth_version").notNull().default(0),
   termsVersion: text("terms_version"),
   termsAcceptedAt: timestamp("terms_accepted_at", { mode: "string" }),
   ageConfirmedAt: timestamp("age_confirmed_at", { mode: "string" }),
   fullName: text("full_name").notNull(),
   bio: text("bio").notNull().default(""),
+  bioStyleId: text("bio_style_id").notNull().default("default"),
+  messageFontId: text("message_font_id").notNull().default("default"),
+  storyFontId: text("story_font_id").notNull().default("default"),
+  appIconId: text("app_icon_id").notNull().default("yor-default"),
   avatarUrl: text("avatar_url"),
   role: text("role").notNull().default("user"),
   accountTypes: jsonb("account_types").notNull().default(["user"]), // Phase 9: Multi-role capability (creator, business, advertiser)
@@ -50,6 +55,35 @@ export const usersTable = pgTable("users", {
   lastActiveTimestamp: timestamp("last_active_timestamp", { mode: "string" }),
 });
 
+/** Feature-level access is deliberately separate from subscriptions so rollout,
+ * experiments, promotions, and future plans do not leak into product logic. */
+export const featureEntitlementsTable = pgTable("feature_entitlements", {
+  id: uuid("id").primaryKey(),
+  featureKey: text("feature_key").notNull(),
+  planKey: text("plan_key").notNull().default("default"),
+  enabled: boolean("enabled").notNull().default(true),
+  status: text("status").notNull().default("active"),
+  startsAt: timestamp("starts_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  featurePlanIdx: uniqueIndex("feature_entitlement_feature_plan_idx").on(table.featureKey, table.planKey),
+  activeIdx: index("feature_entitlement_active_idx").on(table.featureKey, table.status, table.expiresAt),
+}));
+
+export const userFeatureOverridesTable = pgTable("user_feature_overrides", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  featureKey: text("feature_key").notNull(),
+  enabled: boolean("enabled").notNull(),
+  status: text("status").notNull().default("active"),
+  grantedAt: timestamp("granted_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.featureKey] }),
+  activeIdx: index("user_feature_override_active_idx").on(table.userId, table.status, table.expiresAt),
+}));
+
 export const postsTable = pgTable("posts", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -73,6 +107,7 @@ export const postsTable = pgTable("posts", {
   contentCategory: text("content_category").notNull().default("other"),
   contentQualityScore: integer("content_quality_score").default(0),
   trendingScore: integer("trending_score").default(0),
+  distributionMode: text("distribution_mode").notNull().default("feed_and_profile"),
   views: integer("views").default(0),
   engagementRate: integer("engagement_rate").default(0),
   contentRating: text("content_rating").notNull().default("regular"),
@@ -130,6 +165,17 @@ export const profileShowcasesTable = pgTable("profile_showcases", {
   userIdx: index("profile_showcases_user_idx").on(t.userId, t.createdAt),
 }));
 
+export const profilePostPinsTable = pgTable("profile_post_pins", {
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  postId: uuid("post_id").references(() => postsTable.id, { onDelete: "cascade" }).notNull(),
+  position: integer("position").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.postId] }),
+  positionIdx: uniqueIndex("profile_post_pin_position_idx").on(table.userId, table.position),
+  postIdx: index("profile_post_pin_post_idx").on(table.postId),
+}));
+
 export const conversationsTable = pgTable("conversations", {
   id: uuid("id").primaryKey(),
   participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -151,6 +197,7 @@ export const messagesTable = pgTable("messages", {
   senderId: uuid("sender_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   content: text("content").notNull(),
+  textStyleId: text("text_style_id").notNull().default("default"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   seenAt: timestamp("seen_at", { mode: "string" }),
   replyToId: uuid("reply_to_id").references((): any => messagesTable.id),
@@ -189,6 +236,7 @@ export const notificationsTable = pgTable("notifications", {
   readAt: timestamp("read_at", { mode: "string" }),
   channel: text("channel").default("in_app"),
   metadata: jsonb("metadata").default({}),
+  pushDeliveredAt: timestamp("push_delivered_at", { mode: "string" }),
 }, (table) => ({
   recipIdx: index("notif_recip_idx").on(table.recipientId)
 }));
@@ -267,6 +315,17 @@ export const broadcastChannelMessagesTable = pgTable("broadcast_channel_messages
   authorIdx: index("broadcast_channel_message_author_idx").on(table.authorId),
 }));
 
+export const highlightsTable = pgTable("highlights", {
+  id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  coverUrl: text("cover_url"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  ownerIdx: index("highlight_owner_idx").on(table.ownerId, table.updatedAt),
+}));
+
 export const storiesTable = pgTable("stories", {
   id: uuid("id").primaryKey(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -274,15 +333,41 @@ export const storiesTable = pgTable("stories", {
   type: text("type").notNull(),
   textContent: text("text_content"),
   backgroundGradient: text("background_gradient"),
+  storyFontId: text("story_font_id").notNull().default("default"),
+  storyTextStyle: jsonb("story_text_style").notNull().default({
+    size: "md",
+    weight: "strong",
+    align: "center",
+    background: "none",
+    backgroundOpacity: 0,
+    positionX: 50,
+    positionY: 50,
+    rotation: 0,
+  }),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
   isHighlight: boolean("is_highlight").notNull().default(false),
   highlightTitle: text("highlight_title"),
+  highlightId: uuid("highlight_id").references(() => highlightsTable.id, { onDelete: "set null" }),
+  publishMode: text("publish_mode").notNull().default("active"),
+  priorityBoost: integer("priority_boost").notNull().default(0),
+  engagementScore: integer("engagement_score").notNull().default(0),
   audience: text("audience").notNull().default("followers"),
   contentCategory: text("content_category").notNull().default("other"),
   contentRating: text("content_rating").notNull().default("regular"),
 }, (table) => ({
   authorIdx: index("story_author_idx").on(table.authorId)
+}));
+
+export const highlightItemsTable = pgTable("highlight_items", {
+  highlightId: uuid("highlight_id").references(() => highlightsTable.id, { onDelete: "cascade" }).notNull(),
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.highlightId, table.storyId] }),
+  positionIdx: uniqueIndex("highlight_item_position_idx").on(table.highlightId, table.position),
 }));
 
 export const storyViewsTable = pgTable("story_views", {
@@ -294,16 +379,48 @@ export const storyViewsTable = pgTable("story_views", {
   userIdx: index("story_view_user_idx").on(table.userId, table.viewedAt),
 }));
 
+export const storyViewEventsTable = pgTable("story_view_events", {
+  id: uuid("id").primaryKey(),
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  viewerId: uuid("viewer_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  exposure: text("exposure").notNull().default("identified"),
+  eventKey: text("event_key").notNull(),
+  viewedAt: timestamp("viewed_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  idempotencyIdx: uniqueIndex("story_view_event_idempotency_idx").on(table.storyId, table.eventKey),
+  storyTimeIdx: index("story_view_event_story_time_idx").on(table.storyId, table.viewedAt),
+  viewerTimeIdx: index("story_view_event_viewer_time_idx").on(table.viewerId, table.viewedAt),
+}));
+
 export const storyReactionsTable = pgTable("story_reactions", {
   storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
   userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   emoji: text("emoji").notNull(),
+  reactionType: text("reaction_type").notNull().default("CUSTOM"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.storyId, table.userId] }),
   userIdx: index("story_reaction_user_idx").on(table.userId, table.updatedAt),
   validEmoji: check("story_reaction_emoji_check", sql`char_length(${table.emoji}) BETWEEN 1 AND 32`),
+}));
+
+export const storyAudienceMembersTable = pgTable("story_audience_members", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_audience_member_user_idx").on(table.userId, table.createdAt),
+}));
+
+export const storyAudienceExclusionsTable = pgTable("story_audience_exclusions", {
+  storyId: uuid("story_id").references(() => storiesTable.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.storyId, table.userId] }),
+  userIdx: index("story_audience_exclusion_user_idx").on(table.userId, table.createdAt),
 }));
 
 /** Short-lived profile statuses shown above the main feed. A note is replaced
@@ -454,9 +571,10 @@ export const liveStreamsTable = pgTable("live_streams", {
 
 export const marketplaceOrdersTable = pgTable("marketplace_orders", {
   id: uuid("id").primaryKey(),
-  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "restrict" }).notNull(),
-  buyerId: uuid("buyer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "set null" }),
+  productSnapshot: jsonb('product_snapshot').notNull().default({}),
+  buyerId: uuid("buyer_id").references(() => usersTable.id, { onDelete: "set null" }),
+  sellerId: uuid("seller_id").references(() => usersTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
   providerPaymentId: text("provider_payment_id"),
@@ -523,8 +641,8 @@ export const storyPollVotesTable = pgTable("story_poll_votes", {
 
 export const paymentOrdersTable = pgTable("payment_orders", {
   id: uuid("id").primaryKey(),
-  payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  payerId: uuid("payer_id").references(() => usersTable.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "set null" }),
   streamId: uuid("stream_id").references(() => liveStreamsTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
@@ -691,6 +809,15 @@ export const messageReadsTable = pgTable("message_reads", {
   pk: primaryKey({ columns: [t.messageId, t.userId] }),
 }));
 
+export const messagePreviewEventsTable = pgTable("message_preview_events", {
+  messageId: uuid("message_id").references(() => messagesTable.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  previewedAt: timestamp("previewed_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.messageId, t.userId] }),
+  userIdx: index("message_preview_user_idx").on(t.userId, t.previewedAt),
+}));
+
 export const creatorAnalyticsDailyTable = pgTable("creator_analytics_daily", {
   id: uuid("id").primaryKey(),
   creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
@@ -770,14 +897,15 @@ export const ledgerTransactionsTable = pgTable("ledger_transactions", {
 
 export const subscriptionsTable = pgTable("subscriptions", {
   id: uuid("id").primaryKey(),
-  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: 'set null' }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: 'set null' }),
   tier: text("tier").notNull().default("basic"),
   status: text("status").notNull().default("active"),
   priceMinor: integer("price_minor").notNull(),
   currency: text("currency").notNull().default("INR"),
   startedAt: timestamp("started_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
 }, (t) => ({
   subCreatorIdx: index("sub_creator_idx").on(t.creatorId),
   subSubscriberIdx: index("sub_subscriber_idx").on(t.subscriberId),
@@ -800,8 +928,8 @@ export const entitlementsTable = pgTable("entitlements", {
 export const subscriptionOrdersTable = pgTable("subscription_orders", {
   id: uuid("id").primaryKey(),
   subscriptionId: uuid("subscription_id").references(() => subscriptionsTable.id, { onDelete: "cascade" }).notNull(),
-  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  subscriberId: uuid("subscriber_id").references(() => usersTable.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => usersTable.id, { onDelete: "set null" }),
   provider: text("provider").notNull().default("razorpay"),
   providerOrderId: text("provider_order_id").notNull().unique(),
   providerPaymentId: text("provider_payment_id"),
@@ -1120,6 +1248,14 @@ export const insertMessageSchema = createInsertSchema(messagesTable);
 export type InsertMessage = typeof messagesTable.$inferInsert;
 export type Message = typeof messagesTable.$inferSelect;
 
+export const insertMessagePreviewEventSchema = createInsertSchema(messagePreviewEventsTable);
+export type InsertMessagePreviewEvent = typeof messagePreviewEventsTable.$inferInsert;
+export type MessagePreviewEvent = typeof messagePreviewEventsTable.$inferSelect;
+
+export const insertProfilePostPinSchema = createInsertSchema(profilePostPinsTable);
+export type InsertProfilePostPin = typeof profilePostPinsTable.$inferInsert;
+export type ProfilePostPin = typeof profilePostPinsTable.$inferSelect;
+
 export const insertNotificationSchema = createInsertSchema(notificationsTable);
 export type InsertNotification = typeof notificationsTable.$inferInsert;
 export type Notification = typeof notificationsTable.$inferSelect;
@@ -1143,6 +1279,18 @@ export type BroadcastChannelMessage = typeof broadcastChannelMessagesTable.$infe
 export const insertStorySchema = createInsertSchema(storiesTable);
 export type InsertStory = typeof storiesTable.$inferInsert;
 export type Story = typeof storiesTable.$inferSelect;
+
+export const insertHighlightSchema = createInsertSchema(highlightsTable);
+export type InsertHighlight = typeof highlightsTable.$inferInsert;
+export type Highlight = typeof highlightsTable.$inferSelect;
+
+export const insertHighlightItemSchema = createInsertSchema(highlightItemsTable);
+export type InsertHighlightItem = typeof highlightItemsTable.$inferInsert;
+export type HighlightItem = typeof highlightItemsTable.$inferSelect;
+
+export const insertStoryViewEventSchema = createInsertSchema(storyViewEventsTable);
+export type InsertStoryViewEvent = typeof storyViewEventsTable.$inferInsert;
+export type StoryViewEvent = typeof storyViewEventsTable.$inferSelect;
 
 export const insertUserNoteSchema = createInsertSchema(userNotesTable);
 export type InsertUserNote = typeof userNotesTable.$inferInsert;
@@ -1207,3 +1355,11 @@ export type Subscription = typeof subscriptionsTable.$inferSelect;
 export const insertEntitlementSchema = createInsertSchema(entitlementsTable);
 export type InsertEntitlement = typeof entitlementsTable.$inferInsert;
 export type Entitlement = typeof entitlementsTable.$inferSelect;
+
+export const insertFeatureEntitlementSchema = createInsertSchema(featureEntitlementsTable);
+export type InsertFeatureEntitlement = typeof featureEntitlementsTable.$inferInsert;
+export type FeatureEntitlement = typeof featureEntitlementsTable.$inferSelect;
+
+export const insertUserFeatureOverrideSchema = createInsertSchema(userFeatureOverridesTable);
+export type InsertUserFeatureOverride = typeof userFeatureOverridesTable.$inferInsert;
+export type UserFeatureOverride = typeof userFeatureOverridesTable.$inferSelect;

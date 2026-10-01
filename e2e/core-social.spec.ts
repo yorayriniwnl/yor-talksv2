@@ -55,6 +55,8 @@ async function json(route: Route, data: unknown, meta: Record<string, unknown> =
 }
 
 async function installApiBoundary(page: Page, profile = user) {
+  const unhandled: string[] = [];
+  page.on('close', () => expect(unhandled, 'Every mocked API route must be explicit').toEqual([]));
   await page.route("**/socket.io/**", (route) => route.abort());
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -65,6 +67,11 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, { accessToken: "browser-smoke-access-token" });
     }
     if (path === "/users/me" && request.method() === "GET") return json(route, profile);
+    if (path === "/users/me/premium-profile" && request.method() === "GET") return json(route, {
+      selection: { bioStyleId: 'default', messageFontId: 'default', storyFontId: 'default', appIconId: 'yor-default' },
+      options: { bioStyles: [{ id: 'default', label: 'Default' }], messageStyles: [{ id: 'default', label: 'Default' }], storyStyles: [{ id: 'default', label: 'Default' }], appIcons: [{ id: 'yor-default', label: 'Yor', platforms: ['web'] }] },
+      enabledFeatures: {},
+    });
     if (path === `/users/${user.id}`) return json(route, profile);
     if (path === "/users/search") return json(route, [user]);
     if (path === "/search") return json(route, { users: [], posts: [] });
@@ -81,9 +88,204 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, post(payload.content, "292d72b6-6bd1-4693-91e8-b4dc32302c7c"));
     }
 
-    return json(route, []);
+    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/communities', '/creator/workspace', '/achievements/me', `/users/${user.id}/following`, `/users/${user.id}/followers`, `/users/${user.id}/feed`, `/users/${user.id}/showcases`, `/users/${user.id}/profile-comments`, `/users/${user.id}/pinned-posts`];
+    if (request.method() === 'GET' && emptyLists.includes(path)) return json(route, []);
+    if (request.method() === 'GET' && ['/posts/liked', '/posts/saved'].includes(path)) return json(route, [], { hasMore: false, nextCursor: null });
+    if (request.method() === 'GET' && path === `/users/${user.id}/posts`) return json(route, [], { hasMore: false, nextCursor: null });
+    unhandled.push(`${request.method()} ${path}`);
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });
+    throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
 }
+
+const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
+  features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
+
+for (const width of [390, 1280]) test(`Creator billing recovery and cancellation at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await installApiBoundary(page);
+  let items = [{ checkoutId: '1eb84e0d-9bdb-4fca-8fe4-12f5ea0d727b', product: 'membership', providerOrderId: null,
+    status: 'provider_pending', providerState: 'creation_unknown', lastPaymentStatus: null, amountMinor: 4900, currency: 'INR',
+    createdAt: '2026-09-26T12:00:00.000Z', subscriptionId: '8a8c7e60-9af3-40e5-ac25-1988b7980da2', keyId: 'rzp_test_browser' }];
+  let cancellations = 0;
+  await page.route('**/api/billing/checkouts**', async route => {
+    const path = new URL(route.request().url()).pathname, method = route.request().method();
+    if (path === '/api/billing/checkouts' && method === 'GET') return json(route, items);
+    if (path.endsWith('/recover') && method === 'POST') { items = items.map(item => ({ ...item, status: 'paid', providerState: 'created' })); return json(route, items); }
+    if (path.endsWith('/cancel') && method === 'POST') { cancellations++; return json(route, items); }
+    throw new Error(`Unexpected checkout fixture request: ${method} ${path}`);
+  });
+  await page.goto('/billing');
+  await expect(page.getByRole('heading', { name: 'Payment history', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue payment' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Recover payment status' }).click();
+  await expect(page.getByText('paid', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'End membership at expiry' }).click();
+  await expect.poll(() => cancellations).toBe(1);
+  await expect(page.getByRole('link', { name: 'Yor Premium plans and billing' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+});
+
+test('Creator billing contains malformed history and retries', async ({ page }) => {
+  await installApiBoundary(page); let calls = 0;
+  await page.route('**/api/billing/checkouts', route => json(route, ++calls === 1 ? [{ product: 'wrong' }] : []));
+  await page.goto('/billing');
+  await expect(page.getByRole('alert').filter({ hasText: 'could not load' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry history' }).click();
+  await expect(page.getByText('No creator payments yet.')).toBeVisible();
+});
+
+test('Payment operations requires an administrator in the UI', async ({ page }) => {
+  await installApiBoundary(page); await page.goto('/payment-operations');
+  await expect(page.getByText('Administrator access is required.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry failed job' })).toHaveCount(0);
+});
+
+test('Payment operations records a reason before retry and retains failures for review', async ({ page }) => {
+  await installApiBoundary(page, {...user,role:'admin'});
+  await page.setViewportSize({width:390,height:900});
+  const data={jobs:[{id:'c3519578-4b5a-4893-8ef6-0283c291981e',kind:'dispute_reconcile',status:'dead',attempts:8,last_error:'operation_failed'}],
+    disputes:[{id:'disp_testBrowser',product:'premium',status:'open',amount_minor:19900,amount_deducted:0,currency:'INR',respond_by:'2099-10-01T00:00:00.000Z',checked_at:'2026-09-26T12:00:00.000Z'}],
+    checkouts:[],events:[],exposure:[]};
+  let tries=0;
+  await page.route('**/api/operations/payments**',async route=>{
+    if(route.request().method()==='GET')return json(route,data);
+    expect(route.request().postDataJSON().reason).toBe('Provider connection restored');
+    tries++;
+    if(tries===1)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Payment operations are temporarily unavailable'})});
+    data.jobs[0].status='pending';return json(route,data);
+  });
+  await page.goto('/payment-operations');
+  const retry=page.getByRole('button',{name:'Retry failed job'});
+  await expect(retry).toBeDisabled();
+  await page.getByLabel('Reason for reconciliation or retry').fill('Provider connection restored');
+  await retry.click();await expect(page.getByRole('alert').filter({hasText:'temporarily unavailable'})).toBeVisible();
+  await retry.click();await expect(retry).toHaveCount(0);expect(tries).toBe(2);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+});
+const premiumOrder = { id: '962a9d20-cbe9-45ef-873b-772eaa991670', providerOrderId: 'order_browserSynthetic', amountMinor: 19900, currency: 'INR',
+  status: 'created', lastPaymentStatus: null as string | null, createdAt: '2026-09-26T00:00:00.000Z', paidAt: null as string | null, plan: premiumPlan, keyId: 'rzp_test_browser' };
+function premiumState(status: string) {
+  const purchased = ['active', 'cancelled', 'expired', 'refunded', 'disputed', 'chargeback'].includes(status);
+  return { catalog: { available: true, plan: premiumPlan, operationalFeatures: { MESSAGE_FONT: true, STORY_FONT: true }, automaticRenewal: false,
+    billingModel: 'prepaid_fixed_term', testMode: true, supportEmail: 'support@example.test' },
+    subscription: purchased ? { order_id: premiumOrder.id, starts_at: '2026-09-01T00:00:00.000Z', ends_at: status === 'expired' ? '2026-09-02T00:00:00.000Z' : '2099-10-01T00:00:00.000Z', cancel_at_period_end: status === 'cancelled', status } : null,
+    orders: status === 'free' || status === 'overridden' ? [] : [{ ...premiumOrder, status: purchased ? ['refunded','disputed','chargeback'].includes(status) ? status : 'paid' : 'created', lastPaymentStatus: status === 'failed' ? 'failed' : purchased ? 'captured' : null, paidAt: purchased ? '2026-09-26T00:00:00.000Z' : null }],
+    enabledFeatures: { MESSAGE_FONT: ['active','cancelled','overridden'].includes(status) } };
+}
+
+for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancelled', 'refunded', 'disputed', 'chargeback', 'overridden']) {
+  test(`Premium billing presents ${status} state with free safety controls`, async ({ page }) => {
+    await installApiBoundary(page);
+    if (['expired','cancelled','overridden'].includes(status)) await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/premium/me', route => json(route, premiumState(status)));
+    await page.goto('/premium');
+    await expect(page.getByRole('heading', { name: 'Yor Premium', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your plan', exact: true })).toBeVisible();
+    await expect(page.getByText('Posting, standard Stories and messages, basic privacy, blocking, reporting, export and account deletion are free.')).toBeVisible();
+    if (status === 'overridden') await expect(page.getByText(/authorized feature override/)).toBeVisible();
+    if (status === 'pending') await expect(page.getByRole('button', { name: 'Recover payment', exact: true })).toBeVisible();
+    if (status === 'failed') await expect(page.getByText(/last payment attempt failed/)).toBeVisible();
+    if (status === 'cancelled') await expect(page.getByText(/Cancellation recorded/)).toBeVisible();
+    if (status === 'expired' || status === 'refunded') await expect(page.getByText(`Free account · ${status}`, { exact: true })).toBeVisible();
+    if (['disputed','chargeback'].includes(status)) { await expect(page.getByText(/Premium access is paused/)).toBeVisible(); await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toHaveCount(0); }
+    if (status === 'active') await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+    if (status === 'free') {
+      await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();
+      await page.getByRole('checkbox').check();
+      await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeEnabled();
+      const violations = await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze();
+      expect(violations.violations).toEqual([]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
+
+test('Premium checkout accepts configured terms, handles failure, recovers payment and cancels the paid term', async ({ page }) => {
+  await installApiBoundary(page);
+  let state = premiumState('free'), created = 0;
+  await page.route('**/api/premium/**', async route => {
+    const path = new URL(route.request().url()).pathname, method = route.request().method();
+    if (path === '/api/premium/me' && method === 'GET') return json(route, state);
+    if (path === '/api/premium/orders' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      expect(body.acceptedPriceMinor).toBe(19900); expect(body.acceptedTermsVersion).toBe(premiumPlan.termsVersion);
+      expect(body.idempotencyKey).toMatch(/^[a-f0-9-]{36}$/);
+      created++; state = premiumState('pending'); return json(route, premiumOrder);
+    }
+    if (path === `/api/premium/orders/${premiumOrder.id}/recover` && method === 'POST') { state = premiumState('active'); return json(route, state); }
+    if (path === `/api/premium/orders/${premiumOrder.id}/cancel` && method === 'POST') { state = premiumState('cancelled'); return json(route, state); }
+    throw new Error(`Unexpected Premium fixture request: ${method} ${path}`);
+  });
+  await page.addInitScript(() => {
+    (window as any).Razorpay = class {
+      failed?: () => void;
+      on(_event: string, callback: () => void) { this.failed = callback; }
+      open() { this.failed?.(); }
+    };
+  });
+  await page.goto('/premium');
+  await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Upgrade to Yor Premium' }).click();
+  await expect(page.getByRole('alert')).toContainText('Payment did not complete');
+  await page.getByRole('button', { name: 'Recover payment', exact: true }).click();
+  await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+  expect(created).toBe(1);
+  await page.getByRole('button', { name: 'Cancel at end of term' }).click();
+  await expect(page.getByText('Yor Premium · cancelled', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cancellation recorded. Your paid access remains until the date above.')).toBeVisible();
+});
+
+test('Premium billing rejects malformed responses and recovers with a retry', async ({ page }) => {
+  await installApiBoundary(page);
+  let calls = 0;
+  await page.route('**/api/premium/me', route => json(route, ++calls === 1 ? { catalog: [] } : premiumState('free')));
+  await page.goto('/premium');
+  await expect(page.getByRole('alert')).toContainText('Billing details could not be verified');
+  await page.getByRole('button', { name: 'Retry billing' }).click();
+  await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeVisible();
+});
+
+test('two tabs serialize HttpOnly cookie rotation without dropping either restored session', async ({ page, context, baseURL }) => {
+  const second = await context.newPage();
+  await installApiBoundary(page);
+  await installApiBoundary(second);
+  await context.addCookies([{ name: 'testRefreshVersion', value: '0', url: baseURL!, httpOnly: true, sameSite: 'Lax' }]);
+  let version = 0, active = 0, maximum = 0, rotations = 0;
+  const rotate = async (route: Route) => {
+    active++; maximum = Math.max(maximum, active);
+    try {
+      expect(route.request().headers().cookie).toContain(`testRefreshVersion=${version}`);
+      // Keep one real browser request pending while the other tab starts.
+      await new Promise(resolve => setTimeout(resolve, 150));
+      rotations++; version++;
+      await route.fulfill({ status: 200, contentType: 'application/json',
+        headers: { 'Set-Cookie': `testRefreshVersion=${version}; HttpOnly; SameSite=Lax; Path=/` },
+        body: JSON.stringify({ success: true, data: { accessToken: `synthetic-access-${version}` } }) });
+    } finally { active--; }
+  };
+  await page.route('**/api/auth/refresh', rotate);
+  await second.route('**/api/auth/refresh', rotate);
+  await Promise.all([page.goto('/'), second.goto('/')]);
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(second.getByRole('heading', { name: 'Home' })).toBeVisible();
+  expect(rotations).toBe(2);
+  expect(maximum).toBe(1);
+  await second.close();
+});
+
+test('malformed optional Premium catalog leaves privacy controls usable and supports retry', async ({ page }) => {
+  await installApiBoundary(page);
+  let malformed = true;
+  await page.route('**/api/users/me/premium-profile', route => malformed ? json(route, []) : route.fallback());
+  await page.goto('/settings');
+  await expect(page.getByText('Your privacy settings remain available.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  malformed = false;
+  await page.getByRole('button', { name: 'Retry Premium options' }).click();
+  await expect(page.getByRole('combobox', { name: 'Bio style' })).toBeVisible();
+});
 
 test("restores the social shell, publishes a post, and navigates discovery", async ({ page }) => {
   await installApiBoundary(page);
@@ -119,6 +321,24 @@ test('feed failures show a retry, never a false empty-success state', async ({ p
   unavailable = false;
   await page.getByRole('button', { name: 'Retry feed' }).click();
   await expect(page.getByRole('article').getByText('The recovered feed is here.')).toBeVisible();
+});
+
+test('feed loading is announced while the first response is pending', async ({ page }) => {
+  await installApiBoundary(page);
+  let releaseFeed!: () => void;
+  const feedPending = new Promise<void>((resolve) => { releaseFeed = resolve; });
+  await page.route('**/api/feed?*', async (route) => {
+    await feedPending;
+    return json(route, [post('The delayed feed arrived.', 'delayed-feed-post')]);
+  });
+
+  await page.goto('/');
+  try {
+    await expect(page.getByRole('status', { name: 'Loading feed' })).toBeVisible();
+  } finally {
+    releaseFeed();
+  }
+  await expect(page.getByRole('article').getByText('The delayed feed arrived.')).toBeVisible();
 });
 
 test('posts survive unavailable author profiles and recover without hook errors', async ({ page }) => {
@@ -173,14 +393,189 @@ test(`mobile home is readable and keyboard-operable in ${colorScheme} mode`, asy
 test('sign-in preserves password and email-code paths with accessible controls', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installApiBoundary(page);
+  // Core auth accessibility must not depend on the live Google CDN completing.
+  await page.route('https://accounts.google.com/gsi/client', (route) => route.abort());
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Password', exact: true })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Email code', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Password', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Email code', exact: true })).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+test('Google script failure has an accessible retry without disabling other sign-in methods', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  let attempts = 0;
+  await page.route('https://accounts.google.com/gsi/client', (route) => {
+    attempts++;
+    if (attempts === 1) return route.abort();
+    // SDK-shaped rendering fixture only; this is not a live OAuth acceptance test.
+    return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
+  });
+  await page.goto('/auth');
+  await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Retry Google sign-in' }).click();
+  await expect(page.getByRole('group', { name: 'Google sign-in', exact: true }).getByRole('button', { name: 'Sign in with Google', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry Google sign-in' })).toHaveCount(0);
+  expect(attempts).toBe(2);
+});
+
+test('sign-in validation focuses and describes the first invalid field', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/auth');
+  await page.locator('#auth-form-panel').getByRole('button', { name: /^Sign in/ }).click();
+  const identifier = page.getByLabel('Username or email');
+  await expect(identifier).toBeFocused();
+  await expect(identifier).toHaveAttribute('aria-invalid', 'true');
+  const describedBy = await identifier.getAttribute('aria-describedby');
+  expect(describedBy).toBeTruthy();
+  await expect(page.locator(`#${describedBy}`)).toContainText('Enter your username or email.');
+  const password = page.getByLabel('Password', { exact: true });
+  await expect(password).toHaveAttribute('aria-describedby', /password-error/);
+});
+
+test('expired bearer logout revokes refresh session before a reload can restore it', async ({ page }) => {
+  let refreshAllowed = true;
+  let logoutAttempts = 0;
+  await page.route('**/socket.io/**', (route) => route.abort());
+  await page.route('**/api/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace(/^\/api/, '');
+    if (path === '/auth/refresh') {
+      return refreshAllowed
+        ? json(route, { accessToken: 'access-before-expiry' })
+        : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Invalid refresh token' }) });
+    }
+    if (path === '/users/me') return json(route, user);
+    if (path === '/auth/logout') {
+      logoutAttempts++;
+      if (request.headers().authorization) {
+        return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired access token' }) });
+      }
+      refreshAllowed = false;
+      return json(route, null);
+    }
+    if (path === '/readyz') return json(route, { status: 'ready' });
+    return json(route, []);
+  });
+
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await expect(page).toHaveURL(/\/auth/);
+  expect(logoutAttempts).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+});
+
+test('narrow Google sign-in stays within its panel as the viewport changes', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await installApiBoundary(page);
+  await page.route('https://accounts.google.com/gsi/client', (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: `window.google={accounts:{id:{initialize(){},renderButton(parent,options){const button=document.createElement('button');button.dataset.renderedWidth=String(options.width);button.style.width=options.width+'px';button.textContent='Sign in with Google';parent.append(button)}}}};`,
+  }));
+  await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/auth');
+  const button = page.locator('.operator-google-access__button button');
+  await expect(button).toBeVisible();
+  const widthAt320 = Number(await button.getAttribute('data-rendered-width'));
+  const panelWidthAt320 = await page.locator('.operator-google-access__button').evaluate((element) => element.clientWidth);
+  expect(widthAt320).toBeLessThanOrEqual(panelWidthAt320);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => Number(await button.getAttribute('data-rendered-width'))).toBeLessThanOrEqual(await page.locator('.operator-google-access__button').evaluate((element) => element.clientWidth));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test('video load failures show a retry instead of a false empty queue', async ({ page }) => {
+  await installApiBoundary(page);
+  let unavailable = true;
+  await page.route('**/api/videos', (route) => unavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+    : json(route, []));
+  await page.goto('/videos');
+  await expect(page.getByRole('alert').filter({ hasText: 'Videos could not load' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your queue is empty' })).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Retry videos' }).click();
+  await expect(page.getByRole('heading', { name: 'Your queue is empty' })).toBeVisible();
+});
+
+test('direct-message and group-member search failures can retry without claiming no matches', async ({ page }) => {
+  await installApiBoundary(page);
+  const candidate = { ...user, id: '10000000-0000-4000-8000-000000000091', username: 'grace', fullName: 'Grace Hopper' };
+  let attempts = 0;
+  await page.route('**/api/users/search*', (route) => {
+    attempts++;
+    return attempts === 1 || attempts === 3
+      ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+      : json(route, [candidate]);
+  });
+  await page.goto('/messages');
+
+  await page.getByRole('button', { name: 'Start a new conversation' }).click();
+  const directDialog = page.getByRole('dialog', { name: 'Start a conversation' });
+  await directDialog.getByRole('textbox', { name: 'Search people to message' }).fill('grace');
+  await expect(directDialog.getByRole('alert').filter({ hasText: 'People could not load' })).toBeVisible();
+  await expect(directDialog.getByText('No users found.')).toHaveCount(0);
+  await directDialog.getByRole('button', { name: 'Retry people search' }).click();
+  await expect(directDialog.getByRole('button', { name: /Grace Hopper/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Create a group chat' }).click();
+  const groupDialog = page.getByRole('dialog', { name: 'Create a group conversation' });
+  await groupDialog.getByRole('textbox', { name: 'Search people to add' }).fill('grace');
+  await expect(groupDialog.getByRole('alert').filter({ hasText: 'Group members could not load' })).toBeVisible();
+  await expect(groupDialog.getByText('No people found.')).toHaveCount(0);
+  await groupDialog.getByRole('button', { name: 'Retry member search' }).click();
+  await expect(groupDialog.getByRole('button', { name: /Grace Hopper/ })).toBeVisible();
+  expect(attempts).toBe(4);
+});
+
+test('reel comments expose a retry and arrow keys in the comment field do not change reels', async ({ page }) => {
+  await installApiBoundary(page);
+  const videos = ['First reel', 'Second reel'].map((title, index) => ({
+    id: `30000000-0000-4000-8000-00000000000${index + 1}`,
+    authorId: user.id,
+    videoUrl: 'https://example.test/reel.mp4',
+    thumbnailUrl: 'https://example.test/reel.jpg',
+    title,
+    views: 0,
+    likes: 0,
+    createdAt: user.createdAt,
+    type: 'short',
+  }));
+  await page.route('**/api/videos', (route) => json(route, videos));
+  let commentsUnavailable = true;
+  await page.route(`**/api/videos/${videos[0].id}/comments`, (route) => commentsUnavailable
+    ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unavailable' }) })
+    : json(route, []));
+  await page.route(`**/api/videos/${videos[1].id}/comments`, (route) => json(route, []));
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch First reel' }).click();
+  await page.getByRole('button', { name: 'Open comments' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Comments could not load' })).toBeVisible();
+  commentsUnavailable = false;
+  await page.getByRole('button', { name: 'Retry comments' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Comments could not load' })).toHaveCount(0);
+
+  const comment = page.getByRole('textbox', { name: 'Write a comment' });
+  await comment.fill('A comment draft');
+  await comment.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  await comment.press('ArrowUp');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Close comments' })).toBeHidden();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
 });
 
 test('discovery loads beyond an empty following feed without changing the selected home feed', async ({ page }) => {
@@ -204,6 +599,9 @@ test("public beta legal pages show configured, dated policy content", async ({ p
   await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
   await expect(page.getByText("test-public-beta-1", { exact: false })).toBeVisible();
   await expect(page.getByText(/draft|not configured/i)).toHaveCount(0);
+  await expect(page.locator('a button, button a')).toHaveCount(0);
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
 });
 
 test("public beta requires consent before opening protected social routes", async ({ page }) => {
@@ -250,6 +648,11 @@ test('profile achievements use earned server progress and never invent mutual fo
   await page.route('**/api/feed?*', (route) => json(route, [{ ...post('A known friend is not automatically a mutual follower.', 'friend-post'), authorId: friend.id }]));
   await page.route(`**/api/users/${friend.id}`, (route) => json(route, friend));
   await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
+  for (const id of [target.id, friend.id]) {
+    for (const surface of ['followers', 'following', 'feed', 'showcases', 'pinned-posts']) {
+      await page.route(`**/api/users/${id}/${surface}*`, route => json(route, []));
+    }
+  }
   await page.route('**/api/users/*/profile-comments', (route) => json(route, [{ id: 'wall-note', targetUserId: target.id, authorId: friend.id, author: friend, content: 'A note from a known friend.', createdAt: user.createdAt }]));
   await page.goto(`/profile/${user.id}`);
   await page.getByRole('button', { name: 'View level 2 achievements' }).click();
@@ -308,6 +711,11 @@ test('pending follows preserve existing relationships and favorites across reloa
   await installApiBoundary(page, profile);
   await page.route(`**/api/users/${target.id}`, (route) => json(route, target));
   await page.route(`**/api/users/${followed.id}`, (route) => json(route, followed));
+  for (const id of [target.id, followed.id]) {
+    for (const surface of ['followers', 'following', 'feed', 'showcases', 'profile-comments', 'pinned-posts']) {
+      await page.route(`**/api/users/${id}/${surface}*`, route => json(route, []));
+    }
+  }
   await page.route('**/api/users/me/favorites/creators', (route) => json(route, [target.id]));
   await page.route(`**/api/users/${user.id}/following`, (route) => json(route, [followed]));
   await page.route(`**/api/users/${target.id}/follow`, (route) => {
@@ -402,7 +810,7 @@ test('settings expose only available notifications with accessible mobile contro
   await installApiBoundary(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/settings');
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(page.getByText('Push notifications are off for this beta', { exact: true })).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Push notifications' })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Profile visibility' })).toBeEnabled();
@@ -511,4 +919,35 @@ test('follow decisions prevent duplicate actions and activity read-all handles f
   await page.getByRole('button', { name: 'Mark all read' }).click();
   await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).not.toHaveAttribute('data-unread', 'true');
   expect(readAttempts).toBe(2);
+});
+
+test('failed blocking never announces success or hides the post, and retry persists', async ({ page }) => {
+  const profile = { ...user, blockedUsers: [] as string[] };
+  await installApiBoundary(page, profile);
+  const creator = { ...user, id: '10000000-0000-4000-8000-000000000090', username: 'block_fixture', fullName: 'Safety Test Creator' };
+  const item = { ...post('Keep this visible until blocking is confirmed.', 'block-post'), authorId: creator.id };
+  await page.route(`**/api/users/${creator.id}`, (route) => json(route, creator));
+  await page.route('**/api/feed?*', (route) => json(route, profile.blockedUsers.length ? [] : [item]));
+  let attempts = 0;
+  await page.route(`**/api/users/${creator.id}/block`, (route) => {
+    attempts++;
+    if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Blocking could not be saved' }) });
+    profile.blockedUsers.push(creator.id);
+    return json(route, { blockedUsers: profile.blockedUsers });
+  });
+  await page.goto('/');
+  const itemCard = page.getByRole('article').filter({ hasText: item.content });
+  await expect(itemCard.getByRole('link', { name: creator.fullName, exact: true })).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(page.getByText('Blocking could not be saved', { exact: true })).toBeVisible();
+  await expect(page.getByText('User blocked', { exact: true })).toHaveCount(0);
+  await expect(itemCard).toBeVisible();
+  await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
+  await expect(itemCard).toHaveCount(0);
+  expect(attempts).toBe(2);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(itemCard).toHaveCount(0);
 });

@@ -1,52 +1,63 @@
 {
-	"private": true,
-	"packageManager": "pnpm@9.15.4",
-	"engines": {
-		"node": ">=24.0.0 <25"
-	},
-	"workspaces": [
-		"api-server",
-		"lib/*",
-		"lib/integrations/*",
-		"scripts",
-		"social"
-	],
-	"dependencies": {
-		"esbuild": "0.28.1"
-	},
-	"devDependencies": {
-		"@axe-core/playwright": "^4.13.0",
-		"@playwright/test": "^1.62.1",
-		"@types/express": "^5.0.6",
-		"@types/node": "^25.3.3",
-		"express": "^5.2.1",
-		"typescript": "5.6.3"
-	},
-	"optionalDependencies": {
-		"@esbuild/linux-x64": "^0.27.3",
-		"@esbuild/win32-x64": "^0.27.3",
-		"@rollup/rollup-linux-x64-gnu": "^4.62.2",
-		"@rollup/rollup-win32-x64-msvc": "^4.62.2",
-		"lightningcss-linux-x64-gnu": "1.32.0",
-		"lightningcss-win32-x64-msvc": "1.32.0"
-	},
-	"pnpm": {
-		"overrides": {
-			"qs": "6.16.0"
-		}
-	},
-	"scripts": {
-		"build": "node ./build.mjs",
-		"build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
-		"contract:generate": "node ./scripts/generate-api-contract.mjs",
-		"contract:check": "node ./scripts/generate-api-contract.mjs --check",
-		"design:check": "node ./scripts/check-design-tokens.mjs",
-		"production-config:check": "node ./scripts/check-production-config.mjs",
-		"test:e2e": "playwright test",
-		"test:unit": "node --test tests/*.test.mjs",
-		"smoke": "node ./ops/smoke-test.mjs",
-		"dev": "node ./dev.mjs",
-		"dev:api": "npm run --prefix api-server dev",
-		"dev:web": "npm run --prefix social dev"
-	}
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "workspaces": [
+    "api-server",
+    "lib/*",
+    "lib/integrations/*",
+    "scripts",
+    "social"
+  ],
+  "dependencies": {
+    "esbuild": "0.28.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "express": "^5.2.1",
+    "typescript": "5.6.3"
+  },
+  "optionalDependencies": {
+    "@esbuild/linux-x64": "^0.28.1",
+    "@esbuild/win32-x64": "^0.28.1",
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
+    "@rollup/rollup-win32-x64-msvc": "^4.62.2",
+    "lightningcss-linux-x64-gnu": "1.32.0",
+    "lightningcss-win32-x64-msvc": "1.32.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "qs": "6.16.0",
+      "esbuild": "0.28.1",
+      "@esbuild-kit/esm-loader": "npm:tsx@4.21.0",
+      "js-yaml": "4.3.2",
+      "fast-uri": "3.1.6",
+      "brace-expansion@^5": "5.0.9",
+      "postcss": "8.5.23",
+      "nanoid@^3": "3.3.18",
+      "browserslist": "4.28.7",
+      "baseline-browser-mapping": "2.11.0",
+      "xcode>uuid": "11.1.1"
+    }
+  },
+  "scripts": {
+    "build": "node ./build.mjs",
+    "build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
+    "contract:generate": "node ./scripts/generate-api-contract.mjs",
+    "contract:check": "node ./scripts/generate-api-contract.mjs --check",
+    "design:check": "node ./scripts/check-design-tokens.mjs",
+    "production-config:check": "node ./scripts/check-production-config.mjs",
+    "test:e2e": "playwright test",
+    "test:unit": "node --test tests/*.test.mjs",
+    "smoke": "node ./ops/smoke-test.mjs",
+    "dev": "node ./dev.mjs",
+    "dev:api": "npm run --prefix api-server dev",
+    "dev:web": "npm run --prefix social dev"
+  }
 }

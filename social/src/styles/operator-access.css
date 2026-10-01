@@ -401,7 +401,7 @@
 }
 
 .operator-google-access { margin-top: 1.45rem; }
-.operator-google-access__button { display: flex; min-height: 2.6rem; justify-content: center; }
+.operator-google-access__button { display: flex; width: 100%; min-width: 0; min-height: 2.6rem; justify-content: center; }
 
 .operator-access-divider {
   display: flex;

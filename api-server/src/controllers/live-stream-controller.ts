@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { LiveStreamService } from "../services/live-stream-service.js";
 import { LiveKitNotConfiguredError } from "../services/livekit-service.js";
-import { LiveStreamNotFoundError, LiveStreamNotLiveError } from "../services/live-stream-service.js";
+import { LiveStreamNotFoundError, LiveStreamNotLiveError, LiveStreamRoomCleanupError } from "../services/live-stream-service.js";
 import { createResponse } from "../utils/response.js";
 
 function paramId(req: Request): string {
@@ -54,6 +54,12 @@ export class LiveStreamController {
     } catch (error) {
       if (error instanceof LiveKitNotConfiguredError) {
         return res.status(503).json(createResponse("Live video is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof LiveStreamNotLiveError) {
+        return res.status(409).json(createResponse(error.message, null, {}, [error.message]));
+      }
+      if (error instanceof LiveStreamRoomCleanupError) {
+        return res.status(502).json(createResponse(error.message, null, {}, [error.message]));
       }
       throw error;
     }

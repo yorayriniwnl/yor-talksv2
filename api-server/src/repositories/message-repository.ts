@@ -1,5 +1,5 @@
-import { eq, or, and, desc, inArray, isNull, gt, sql } from "drizzle-orm";
-import { messagesTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { eq, or, and, asc, desc, inArray, isNull, gt, lt, sql } from "drizzle-orm";
+import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
@@ -7,7 +7,12 @@ import { randomUUID } from "crypto";
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
     return db.transaction(async (tx) => {
-      const [created] = await tx.insert(messagesTable).values(message).returning();
+      const [created] = await tx.insert(messagesTable).values(message).onConflictDoNothing().returning();
+      if (!created) {
+        const [existing] = await tx.select().from(messagesTable).where(eq(messagesTable.id, message.id));
+        if (!existing) throw new Error("Message insert conflicted without an existing message");
+        return existing as MessageRecord;
+      }
       await tx.update(conversationsTable).set({
         updatedAt: sql`greatest(${conversationsTable.updatedAt}, ${message.createdAt}::timestamp)`,
       }).where(eq(conversationsTable.id, message.conversationId));
@@ -15,18 +20,40 @@ export class MessageRepository {
     });
   }
 
-  async listConversation(conversationId: string): Promise<MessageRecord[]> {
+  async listConversation(conversationId: string, options: {
+    direction?: "latest" | "older" | "newer";
+    cursorAt?: string;
+    cursorId?: string;
+    limit?: number;
+  } = {}): Promise<MessageRecord[]> {
+    const direction = options.direction ?? "latest";
+    const conditions = [
+      eq(messagesTable.conversationId, conversationId),
+      isNull(messagesTable.deletedAt),
+      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+    ];
+    if (options.cursorAt && options.cursorId && direction === "older") {
+      conditions.push(or(
+        lt(messagesTable.createdAt, options.cursorAt),
+        and(eq(messagesTable.createdAt, options.cursorAt), lt(messagesTable.id, options.cursorId)),
+      )!);
+    } else if (options.cursorAt && options.cursorId && direction === "newer") {
+      conditions.push(or(
+        gt(messagesTable.createdAt, options.cursorAt),
+        and(eq(messagesTable.createdAt, options.cursorAt), gt(messagesTable.id, options.cursorId)),
+      )!);
+    }
+
     const messages = await db
       .select()
       .from(messagesTable)
-      .where(and(
-        eq(messagesTable.conversationId, conversationId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-      ))
-      .orderBy(desc(messagesTable.createdAt))
-      .limit(200);
-    return messages.reverse() as MessageRecord[];
+      .where(and(...conditions))
+      .orderBy(
+        direction === "newer" ? asc(messagesTable.createdAt) : desc(messagesTable.createdAt),
+        direction === "newer" ? asc(messagesTable.id) : desc(messagesTable.id),
+      )
+      .limit(Math.max(1, Math.min(200, options.limit ?? 200)));
+    return direction === "newer" ? messages as MessageRecord[] : messages.reverse() as MessageRecord[];
   }
 
   async lastMessageForConversation(conversationId: string): Promise<MessageRecord | undefined> {
@@ -46,6 +73,25 @@ export class MessageRepository {
   async findById(messageId: string): Promise<MessageRecord | undefined> {
     const [message] = await db.select().from(messagesTable).where(eq(messagesTable.id, messageId));
     return message as MessageRecord | undefined;
+  }
+
+  async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
+    await db.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+      target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
+      set: { previewedAt },
+    });
+    return this.findById(messageId);
+  }
+
+  async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
+    const [receipt] = await db.select({ messageId: messageReadsTable.messageId })
+      .from(messageReadsTable)
+      .where(and(
+        eq(messageReadsTable.messageId, messageId),
+        eq(messageReadsTable.userId, userId),
+      ))
+      .limit(1);
+    return Boolean(receipt);
   }
   
   async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {

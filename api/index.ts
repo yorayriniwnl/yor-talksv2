@@ -3,6 +3,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // @ts-ignore
 import appModule from "../api-server/dist/app.cjs";
 
+// This handler is intentionally HTTP-only. Vercel invocations do not own the
+// durable Socket.IO listener or notification worker; deploy those as separate
+// long-running processes and share DATABASE_URL/REDIS_URL with this function.
+
 type ExpressHandler = (req: any, res: any, next?: (error?: unknown) => void) => unknown;
 
 /**
@@ -20,7 +24,7 @@ export function resolveExpressHandler(moduleValue: unknown): ExpressHandler {
     }
     break;
   }
-  return ((_req: any, res: any) => res.end()) as ExpressHandler;
+  throw new TypeError("The API bundle does not export an Express handler");
 }
 
 const app = resolveExpressHandler(appModule);
@@ -67,4 +71,3 @@ export default async function handler(req: IncomingMessage | any, res: ServerRes
     }
   }
 }
-

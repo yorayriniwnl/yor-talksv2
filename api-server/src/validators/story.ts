@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { contentCategorySchema } from "../utils/content-category.js";
+import { storyTextStyleSchema } from "../features/story-text-style.js";
 
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
@@ -8,9 +9,17 @@ export const createStorySchema = z.object({
   type: z.enum(["image", "video", "text", "voice"]),
   textContent: z.string().optional(),
   backgroundGradient: z.string().optional(),
+  storyFontId: z.enum(["default", "cinematic", "mono"]).optional(),
+  storyTextStyle: storyTextStyleSchema.optional(),
   isHighlight: z.boolean().default(false),
   highlightTitle: z.string().optional(),
-  audience: z.enum(["followers", "close_friends", "public"]).default("followers"),
+  highlightId: z.string().uuid().optional(),
+  publishMode: z.enum(["active", "highlight_only"]).default("active"),
+  durationHours: z.number().int().min(24).max(72).optional(),
+  priority: z.boolean().default(false),
+  audience: z.enum(["followers", "close_friends", "public", "selected_people", "everyone_except", "custom"]).default("followers"),
+  audienceMemberIds: z.array(z.string().uuid()).max(500).optional().default([]),
+  audienceExclusionIds: z.array(z.string().uuid()).max(500).optional().default([]),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema,
   poll: z.object({
@@ -27,9 +36,25 @@ export const createStorySchema = z.object({
 });
 
 export const reactStorySchema = z.object({
-  emoji: z.string().min(1).max(10), // A simple string for emojis
+  emoji: z.string().min(1).max(32),
+  reactionType: z.enum(["NORMAL_HEART", "SUPER_HEART", "CUSTOM"]).default("CUSTOM"),
+});
+
+export const viewStorySchema = z.object({
+  eventKey: z.string().uuid().optional(),
+});
+
+export const storyViewerQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  cursor: z.string().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export const storyPollVoteSchema = z.object({
   optionId: z.string().uuid("Invalid story poll option ID"),
+});
+
+export const createHighlightSchema = z.object({
+  title: z.string().trim().min(1).max(60),
+  coverUrl: z.string().url().max(2_000).optional(),
 });

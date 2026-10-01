@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   creatorAnalyticsDailyTable,
@@ -67,6 +67,7 @@ export class CreatorAnalyticsService {
         eq(ledgerTransactionsTable.creditAccountId, creatorId),
         eq(ledgerTransactionsTable.currency, "INR"),
         eq(ledgerTransactionsTable.status, "completed"),
+        eq(ledgerTransactionsTable.currency, "INR"),
         gte(ledgerTransactionsTable.createdAt, date),
         lt(ledgerTransactionsTable.createdAt, nextDate),
       )),

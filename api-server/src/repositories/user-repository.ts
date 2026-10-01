@@ -1,10 +1,71 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
 
 export class UserRepository {
+
+  async revokeAllCredentials(userId: string): Promise<void> {
+    await db.update(usersTable).set({ authVersion: sql`${usersTable.authVersion} + 1` })
+      .where(eq(usersTable.id, userId));
+  }
+
+  async recordLogin(user: UserRecord, updates: Partial<Pick<UserRecord, 'emailVerified'>>): Promise<UserRecord | undefined> {
+    const [record] = await db.update(usersTable).set({ ...updates, lastLoginAt: new Date().toISOString() })
+      .where(and(eq(usersTable.id, user.id), eq(usersTable.authVersion, user.authVersion ?? 0),
+        sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`)).returning();
+    return record as UserRecord | undefined;
+  }
+
+  async savePasswordReset(tokenHash: string, user: UserRecord): Promise<void> {
+    await db.execute(sql`INSERT INTO password_reset_tokens(token_hash, user_id, auth_version, expires_at)
+      VALUES (${tokenHash}, ${user.id}, ${user.authVersion ?? 0}, now() + interval '1 hour')`);
+  }
+
+  async cancelPasswordReset(tokenHash: string): Promise<void> {
+    await db.execute(sql`DELETE FROM password_reset_tokens WHERE token_hash = ${tokenHash} AND consumed_at IS NULL`);
+  }
+
+  async redeemPasswordReset(tokenHash: string, passwordHash: string): Promise<string | undefined> {
+    return db.transaction(async tx => {
+      // Lock the user before the token for a consistent lock order across distinct
+      // reset tokens. Updating auth_version also invalidates every other reset.
+      const candidate = await tx.execute(sql`SELECT user_id FROM password_reset_tokens WHERE token_hash = ${tokenHash}`);
+      const userId = candidate.rows[0]?.user_id as string | undefined;
+      if (!userId) return undefined;
+      await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+      const result = await tx.execute(sql`UPDATE password_reset_tokens r SET consumed_at = now()
+        FROM users u WHERE r.token_hash = ${tokenHash} AND r.user_id = u.id
+        AND r.consumed_at IS NULL AND r.expires_at > now() AND r.auth_version = u.auth_version
+        AND coalesce(u.account_status, 'active') NOT IN ('suspended', 'deactivated', 'deleted') RETURNING r.user_id`);
+      if (!result.rowCount) return undefined;
+      await tx.update(usersTable).set({ passwordHash, passwordResetRequired: false,
+        authVersion: sql`${usersTable.authVersion} + 1`, updatedAt: new Date().toISOString() }).where(eq(usersTable.id, userId));
+      return userId;
+    });
+  }
+
+  async findByIds(ids: string[]): Promise<UserRecord[]> {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return [];
+    return await db.select().from(usersTable).where(inArray(usersTable.id, unique)) as UserRecord[];
+  }
+
+  async audienceRelationships(viewerId: string, authorIds: string[]) {
+    if (!authorIds.length) return { following: new Set<string>(), closeFriends: new Set<string>() };
+    const rows = await db.execute(sql`
+      select following_id as author_id, 'following' as kind from user_follows
+      where follower_id = ${viewerId} and following_id in (${sql.join(authorIds.map(id => sql`${id}`), sql`,`)})
+      union all
+      select user_id as author_id, 'close_friend' as kind from user_close_friends
+      where friend_id = ${viewerId} and user_id in (${sql.join(authorIds.map(id => sql`${id}`), sql`,`)})
+    `);
+    return {
+      following: new Set(rows.rows.filter(row => row.kind === 'following').map(row => String(row.author_id))),
+      closeFriends: new Set(rows.rows.filter(row => row.kind === 'close_friend').map(row => String(row.author_id))),
+    };
+  }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
     const [relationship] = await db.select({ followerId: userFollowsTable.followerId })
@@ -145,6 +206,19 @@ export class UserRepository {
           'profileVisibility', CASE WHEN ${usersTable.settings}->>'privateAccount' = 'true' THEN 'private' ELSE 'public' END,
           'messageRequests', true, 'allowDmFromStrangers', true
         ) || coalesce(${usersTable.privacy}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(usersTable.id, id)).returning();
+    return updated as UserRecord | undefined;
+  }
+
+  async setSafetyRelationship(id: string, targetId: string, field: "blockedUsers" | "mutedUsers", enabled: boolean): Promise<UserRecord | undefined> {
+    const column = usersTable[field];
+    const current = sql`coalesce(${column}, '[]'::jsonb)`;
+    const target = JSON.stringify([targetId]);
+    const [updated] = await db.update(usersTable).set({
+      [field]: enabled
+        ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`
+        : sql`${current} - ${targetId}::text`,
       updatedAt: new Date().toISOString(),
     }).where(eq(usersTable.id, id)).returning();
     return updated as UserRecord | undefined;

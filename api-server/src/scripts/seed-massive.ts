@@ -108,7 +108,7 @@ async function seedMassive() {
     try {
       await db.insert(usersTable).values({
         id,
-        email: `${String(2300001 + i)}@kiit.ac.in`,
+        email: `${String(2300001 + i)}@seed.example.test`,
         username: username,
         passwordHash,
         fullName: `${fName} ${lName}`,

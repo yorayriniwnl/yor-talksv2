@@ -5,8 +5,29 @@ export const messageSchema = z.object({
   conversationId: z.string().uuid().optional(),
   content: z.string().trim().min(1).max(4000),
   replyToId: z.string().uuid().optional(),
-}).refine((value) => Boolean(value.recipientId || value.conversationId), {
-  message: "recipientId or conversationId is required",
+  textStyleId: z.enum(["default", "mono", "rounded"]).optional(),
+  idempotencyKey: z.string().uuid().optional(),
+}).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId), {
+  message: "Provide exactly one of recipientId or conversationId",
+});
+
+export const conversationMessagesQuerySchema = z.object({
+  direction: z.enum(["latest", "older", "newer"]).optional(),
+  cursorAt: z.string().datetime().optional(),
+  cursorId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+}).strict().superRefine((value, context) => {
+  const hasCursorAt = Boolean(value.cursorAt);
+  const hasCursorId = Boolean(value.cursorId);
+  if (hasCursorAt !== hasCursorId) {
+    context.addIssue({ code: "custom", message: "cursorAt and cursorId must be provided together" });
+  }
+  if ((value.direction === "older" || value.direction === "newer") && !hasCursorAt) {
+    context.addIssue({ code: "custom", message: "A cursor is required for older and newer pages" });
+  }
+  if (value.direction === "latest" && hasCursorAt) {
+    context.addIssue({ code: "custom", message: "The latest page cannot include a cursor" });
+  }
 });
 
 export const createGroupChatSchema = z.object({

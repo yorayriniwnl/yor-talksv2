@@ -1,0 +1,288 @@
+﻿{
+    "observedAt":  "2026-09-26",
+    "node":  "24.14.0",
+    "pnpm":  "9.15.4",
+    "baseline":  "3b8519ea75c47a039ab2c916e0bfe25a0f6e6d77",
+    "beforeAll":  {
+                      "vulnerabilities":  {
+                                              "info":  0,
+                                              "low":  1,
+                                              "moderate":  4,
+                                              "high":  15,
+                                              "critical":  11
+                                          },
+                      "dependencies":  883,
+                      "devDependencies":  0,
+                      "optionalDependencies":  0,
+                      "totalDependencies":  883
+                  },
+    "beforeProduction":  {
+                             "vulnerabilities":  {
+                                                     "info":  0,
+                                                     "low":  0,
+                                                     "moderate":  0,
+                                                     "high":  0,
+                                                     "critical":  0
+                                                 },
+                             "dependencies":  348,
+                             "devDependencies":  0,
+                             "optionalDependencies":  0,
+                             "totalDependencies":  348
+                         },
+    "afterAll":  {
+                     "vulnerabilities":  {
+                                             "info":  0,
+                                             "low":  0,
+                                             "moderate":  0,
+                                             "high":  0,
+                                             "critical":  0
+                                         },
+                     "dependencies":  803,
+                     "devDependencies":  0,
+                     "optionalDependencies":  0,
+                     "totalDependencies":  803
+                 },
+    "commands":  [
+                     "pnpm audit --prod --json",
+                     "pnpm audit --json",
+                     "pnpm install --frozen-lockfile",
+                     "pnpm --filter @workspace/api-spec codegen",
+                     "pnpm build:pnpm"
+                 ],
+    "remediated":  [
+                       {
+                           "module":  "esbuild",
+                           "severity":  "moderate",
+                           "vulnerable":  "\u003c=0.24.2",
+                           "patched":  "\u003e=0.25.0",
+                           "url":  "https://github.com/advisories/GHSA-67mh-4wv8-2f99"
+                       },
+                       {
+                           "module":  "uuid",
+                           "severity":  "moderate",
+                           "vulnerable":  "\u003c11.1.1",
+                           "patched":  "\u003e=11.1.1",
+                           "url":  "https://github.com/advisories/GHSA-w5hq-g745-h8pq"
+                       },
+                       {
+                           "module":  "esbuild",
+                           "severity":  "low",
+                           "vulnerable":  "\u003e=0.27.3 \u003c0.28.1",
+                           "patched":  "\u003e=0.28.1",
+                           "url":  "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr"
+                       },
+                       {
+                           "module":  "js-yaml",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=4.0.0 \u003c4.3.0",
+                           "patched":  "\u003e=4.3.0",
+                           "url":  "https://github.com/advisories/GHSA-52cp-r559-cp3m"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.0.0 \u003c=3.1.3",
+                           "patched":  "\u003e=3.1.4",
+                           "url":  "https://github.com/advisories/GHSA-v2hh-gcrm-f6hx"
+                       },
+                       {
+                           "module":  "brace-expansion",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=4.0.0 \u003c5.0.8",
+                           "patched":  "\u003e=5.0.8",
+                           "url":  "https://github.com/advisories/GHSA-mh99-v99m-4gvg"
+                       },
+                       {
+                           "module":  "postcss",
+                           "severity":  "moderate",
+                           "vulnerable":  "\u003c=8.5.22",
+                           "patched":  "\u003e=8.5.23",
+                           "url":  "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.0.0 \u003c3.1.5",
+                           "patched":  "\u003e=3.1.5",
+                           "url":  "https://github.com/advisories/GHSA-7p8r-x3mc-p8w7"
+                       },
+                       {
+                           "module":  "brace-expansion",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=4.0.0 \u003c5.0.9",
+                           "patched":  "\u003e=5.0.9",
+                           "url":  "https://github.com/advisories/GHSA-rgw5-rvv9-x895"
+                       },
+                       {
+                           "module":  "js-yaml",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=4.0.0 \u003c4.3.1",
+                           "patched":  "\u003e=4.3.1",
+                           "url":  "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj"
+                       },
+                       {
+                           "module":  "nanoid",
+                           "severity":  "high",
+                           "vulnerable":  "\u003c3.3.18",
+                           "patched":  "\u003e=3.3.18",
+                           "url":  "https://github.com/advisories/GHSA-2v37-7h3g-55p8"
+                       },
+                       {
+                           "module":  "browserslist",
+                           "severity":  "high",
+                           "vulnerable":  "\u003c=4.28.6",
+                           "patched":  "\u003e=4.28.7",
+                           "url":  "https://github.com/advisories/GHSA-c83g-rgw3-j3cx"
+                       },
+                       {
+                           "module":  "browserslist",
+                           "severity":  "high",
+                           "vulnerable":  "\u003c=4.28.6",
+                           "patched":  "\u003e=4.28.7",
+                           "url":  "https://github.com/advisories/GHSA-73wf-gq98-2v4g"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "high",
+                           "vulnerable":  "\u003c8.22.0",
+                           "patched":  "\u003e=8.22.0",
+                           "url":  "https://github.com/advisories/GHSA-cxq5-97v7-87j8"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-p4cg-3328-rvfg"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-6mr6-jvcr-2f25"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.1.3 \u003c3.1.6",
+                           "patched":  "\u003e=3.1.6",
+                           "url":  "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.0.0 \u003c3.1.6",
+                           "patched":  "\u003e=3.1.6",
+                           "url":  "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.1.2 \u003c3.1.6",
+                           "patched":  "\u003e=3.1.6",
+                           "url":  "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+                       },
+                       {
+                           "module":  "fast-uri",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=3.0.0 \u003c3.1.6",
+                           "patched":  "\u003e=3.1.6",
+                           "url":  "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-6437-gxhq-pqv8"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-2w86-xfrc-g85r"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-3575-w9fc-c2j6"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-653q-5476-x79g"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-2h9g-j24r-h63g"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-8j6p-r8jg-mxqh"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-88f2-fpv8-89q2"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-w727-8j6c-2rj4"
+                       },
+                       {
+                           "module":  "orval",
+                           "severity":  "critical",
+                           "vulnerable":  "\u003c8.21.0",
+                           "patched":  "\u003e=8.21.0",
+                           "url":  "https://github.com/advisories/GHSA-fg9p-mrxr-hvq7"
+                       },
+                       {
+                           "module":  "baseline-browser-mapping",
+                           "severity":  "moderate",
+                           "vulnerable":  "\u003e=2.0.0 \u003c2.11.0",
+                           "patched":  "\u003e=2.11.0",
+                           "url":  "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv"
+                       },
+                       {
+                           "module":  "js-yaml",
+                           "severity":  "high",
+                           "vulnerable":  "\u003e=4.0.0 \u003c4.3.2",
+                           "patched":  "\u003e=4.3.2",
+                           "url":  "https://github.com/advisories/GHSA-2883-xcg3-v3hh"
+                       }
+                   ],
+    "limitations":  [
+                        "Registry snapshot; zero advisories does not prove absence of vulnerabilities.",
+                        "Provider and hosted runtime verification are separate."
+                    ],
+    "afterProduction":  {
+                            "vulnerabilities":  {
+                                                    "info":  0,
+                                                    "low":  0,
+                                                    "moderate":  0,
+                                                    "high":  0,
+                                                    "critical":  0
+                                                },
+                            "dependencies":  346,
+                            "devDependencies":  0,
+                            "optionalDependencies":  0,
+                            "totalDependencies":  346
+                        }
+}

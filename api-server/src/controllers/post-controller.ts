@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-repository.js";
-import { ContentPolicyViolationError, PostService } from "../services/post-service.js";
+import { ContentPolicyViolationError, PostService, PremiumFeatureUnavailableError, ProfilePinLimitError } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
 import { StorageService } from "../services/storage-service.js";
 import { MediaModerationUnavailableError } from "../services/storage-service.js";
@@ -53,11 +53,14 @@ export class PostController {
     const content = typeof req.body.content === "string" ? req.body.content : "";
     const images = Array.isArray(req.body.images) ? req.body.images : [];
     try {
-      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll);
+      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll, req.body.distributionMode);
       return res.status(201).json(createResponse("Post created", post));
     } catch (error) {
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
+      }
+      if (error instanceof PremiumFeatureUnavailableError) {
+        return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
       throw error;
     }
@@ -149,6 +152,26 @@ export class PostController {
     return res.status(201).json(createResponse("Reply created", result));
   };
 
+  pin = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    try {
+      const post = await this.postService.pinPost(postId, req.user?.id ?? "");
+      if (!post) return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+      return res.status(200).json(createResponse("Post pinned", post));
+    } catch (error) {
+      if (error instanceof PremiumFeatureUnavailableError) return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
+      if (error instanceof ProfilePinLimitError) return res.status(409).json(createResponse(error.message, null, {}, ["profile_pin_limit"]));
+      throw error;
+    }
+  };
+
+  unpin = async (req: Request, res: Response) => {
+    const postId = typeof req.params.postId === "string" ? req.params.postId : "";
+    const post = await this.postService.unpinPost(postId, req.user?.id ?? "");
+    if (!post) return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
+    return res.status(200).json(createResponse("Post unpinned", post));
+  };
+
   commentLike = async (req: Request, res: Response) => {
     const postId = typeof req.params.postId === "string" ? req.params.postId : "";
     const commentId = typeof req.params.commentId === "string" ? req.params.commentId : "";
@@ -229,9 +252,9 @@ export class PostController {
     const requestedMode = typeof req.query.mode === "string" ? req.query.mode : "recent";
     const mode = requestedMode === "following" || requestedMode === "favorites" || requestedMode === "for_you" ? requestedMode : "recent";
     const items = await this.postService.getFeed(cursor, limit + 1, req.user?.id, mode);
-    const hasMore = items.length > limit;
+    const hasMore = items.length > limit || Boolean(items.scanCursor);
     const visibleItems = items.slice(0, limit);
-    const nextCursor = hasMore && visibleItems.length
+    const nextCursor = items.length <= limit && items.scanCursor ? items.scanCursor : hasMore && visibleItems.length
       ? mode === "for_you"
         ? encodeTrendingCursor(visibleItems[visibleItems.length - 1])
         : encodePostCursor(visibleItems[visibleItems.length - 1])
@@ -243,9 +266,9 @@ export class PostController {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
     const items = await this.postService.getTrendingFeed(cursor, limit + 1, req.user?.id);
-    const hasMore = items.length > limit;
+    const hasMore = items.length > limit || Boolean(items.scanCursor);
     const visibleItems = items.slice(0, limit);
-    const nextCursor = hasMore && visibleItems.length ? encodeTrendingCursor(visibleItems[visibleItems.length - 1]) : null;
+    const nextCursor = items.length <= limit && items.scanCursor ? items.scanCursor : hasMore && visibleItems.length ? encodeTrendingCursor(visibleItems[visibleItems.length - 1]) : null;
     return res.status(200).json(createResponse("Trending feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 
@@ -254,9 +277,9 @@ export class PostController {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const cursor = req.query.cursor as string | undefined;
     const items = await this.postService.getUserFeed(userId, cursor, limit + 1, req.user?.id);
-    const hasMore = items.length > limit;
+    const hasMore = items.length > limit || Boolean(items.scanCursor);
     const visibleItems = items.slice(0, limit);
-    const nextCursor = hasMore && visibleItems.length ? encodePostCursor(visibleItems[visibleItems.length - 1]) : null;
+    const nextCursor = items.length <= limit && items.scanCursor ? items.scanCursor : hasMore && visibleItems.length ? encodePostCursor(visibleItems[visibleItems.length - 1]) : null;
     return res.status(200).json(createResponse("User feed loaded", visibleItems, { nextCursor, hasMore, limit }));
   };
 
