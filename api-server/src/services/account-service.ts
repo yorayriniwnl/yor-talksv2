@@ -160,4 +160,5 @@ export class AccountService {
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
-  }}
+  }
+}
