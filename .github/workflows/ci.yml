@@ -85,7 +85,7 @@ jobs:
           pnpm --filter @workspace/social typecheck
 
       - name: Run API tests serially
-        run: timeout 60 node --import tsx --test src/__tests__/payment-reconciliation.integration.test.ts
+        run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
         working-directory: api-server
         env:
           NODE_ENV: test
