@@ -9,7 +9,6 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import type { NotificationRecord } from "../types/index.js";
-import { isNotificationWorkerHealthy, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 import { operationalMetrics } from "../services/operational-metrics-service.js";
 import { isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 
