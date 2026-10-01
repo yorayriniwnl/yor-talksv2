@@ -15,6 +15,7 @@ after(async () => {
   try {
     if (paymentIds.length) await pool.query("DELETE FROM ledger_transactions WHERE reference_id = ANY($1::text[])", [paymentIds]);
     if (orderIds.length) await pool.query("DELETE FROM payment_orders WHERE id = ANY($1::uuid[])", [orderIds]);
+    if (orderIds.length) await pool.query("DELETE FROM checkout_intents WHERE id = ANY($1::uuid[])", [orderIds]);
     if (userIds.length) await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [userIds]);
   } finally {
     await pool.end();
@@ -36,10 +37,18 @@ test("payment reconciliation survives provider retry and concurrent duplicate we
     INSERT INTO payment_orders (id, payer_id, creator_id, provider, provider_order_id, amount_minor, currency, status)
     VALUES ($1, $2, $3, 'razorpay', $4, 1234, 'INR', 'created')
   `, [id, payer.id, creator.id, providerOrderId]);
+  await pool.query(`
+    INSERT INTO checkout_intents
+      (id, product, owner_id, idempotency_key, input_hash, provider_order_id, amount_minor, currency, legacy, status)
+    VALUES ($1, 'tip', $2, $1, 'legacy-test', $3, 1234, 'INR', true, 'created')
+  `, [id, payer.id, providerOrderId]);
 
   let providerAvailable = false;
   const fakeProvider = {
     assertConfigured() {},
+    async getOrder(orderId: string) {
+      return { id: orderId, amount: 1234, currency: "INR", receipt: null, notes: {} };
+    },
     async getPayment(paymentId: string) {
       if (!providerAvailable) throw new Error("mock provider temporarily unavailable");
       return { id: paymentId, order_id: providerOrderId, amount: 1234, currency: "INR", status: "captured" };
