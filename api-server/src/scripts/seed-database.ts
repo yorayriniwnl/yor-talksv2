@@ -22,36 +22,36 @@ import { randomUUID } from "node:crypto";
 async function seedDatabase() {
   console.log("🌱 Starting full database seed...");
 
-  const defaultPasswordHash = await bcrypt.hash("password123", 10);
-  const adminPasswordHash = await bcrypt.hash("yorayriniwnl", 10);
+  const defaultPasswordHash = await bcrypt.hash("DemoUser123!", 10);
+  const adminPasswordHash = await bcrypt.hash("demo_founder", 10);
 
   const users = [
     {
       id: randomUUID(),
-      username: "yorayriniwnl",
-      email: "2329001@kiit.ac.in",
+      username: "demo_founder",
+      email: "founder@example.test",
       passwordHash: adminPasswordHash,
-      fullName: "Ayush Roy",
+      fullName: "Demo Founder",
       bio: "Founder & Full-Stack Architect @ Yor Talks. Building ambient systems, spatial computing tools, and high-performance product surfaces. 🚀⚡",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop",
       role: "founder"
     },
     {
       id: randomUUID(),
-      username: "anyaa_yaps",
-      email: "2329002@kiit.ac.in",
+      username: "demo_creator",
+      email: "creator@example.test",
       passwordHash: defaultPasswordHash,
-      fullName: "Anya",
+      fullName: "Demo Creator",
       bio: "3D World Builder & Unreal Engine 5.4 Enthusiast 🎮✨ Exploring procedural environments, volumetric lighting & shader graphs.",
       avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop",
       role: "creator"
     },
     {
       id: randomUUID(),
-      username: "aditi_cofounder",
-      email: "2329003@kiit.ac.in",
+      username: "demo_cofounder",
+      email: "cofounder@example.test",
       passwordHash: defaultPasswordHash,
-      fullName: "Aditi Singh",
+      fullName: "Demo Co-Founder",
       bio: "Co-Founder @ Yor Talks & Yor Zenith 🌌 Multimodal AI, community ecosystems & modern aesthetics. Organizing Global Hackathon 2026!",
       avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=400&auto=format&fit=crop",
       role: "co-founder"
@@ -59,7 +59,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "marcus_ai",
-      email: "2329004@kiit.ac.in",
+      email: "researcher@example.test",
       passwordHash: defaultPasswordHash,
       fullName: "Marcus Vance",
       bio: "AI Researcher & Spatial Computing Lead 🤖 Neuromorphic architecture, world models & real-time perception.",
@@ -69,7 +69,7 @@ async function seedDatabase() {
     {
       id: randomUUID(),
       username: "sophia_ui",
-      email: "2329005@kiit.ac.in",
+      email: "designer@example.test",
       passwordHash: defaultPasswordHash,
       fullName: "Sophia Chen",
       bio: "Design Systems Lead @ Multiverse Studio. Minimalist typography, micro-interactions & tactile interfaces. ☕📐",
@@ -110,9 +110,9 @@ async function seedDatabase() {
     }
   }
 
-  const founderId = userMap["yorayriniwnl"] || users[0].id;
-  const anyaId = userMap["anyaa_yaps"] || users[1].id;
-  const aditiId = userMap["aditi_cofounder"] || users[2].id;
+  const founderId = userMap["demo_founder"] || users[0].id;
+  const anyaId = userMap["demo_creator"] || users[1].id;
+  const aditiId = userMap["demo_cofounder"] || users[2].id;
   const marcusId = userMap["marcus_ai"] || users[3].id;
   const sophiaId = userMap["sophia_ui"] || users[4].id;
 
@@ -312,7 +312,7 @@ async function seedDatabase() {
       recipientId: founderId,
       type: "like",
       title: "New Post Reaction",
-      message: "Anya liked your post 'Designing for the Multiverse'.",
+      message: "Demo Creator liked your post 'Designing for the Multiverse'.",
       channel: "in_app",
       createdAt: new Date().toISOString()
     }
