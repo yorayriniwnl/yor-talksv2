@@ -2247,8 +2247,7 @@ paths:
       operationId: getMetrics
       summary: Get /metrics
       tags: [metrics]
-      security:
-        - bearerAuth: []
+      security: []
       responses:
         "200":
           description: Successful response
@@ -2258,10 +2257,6 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
-        "401":
-          description: Authentication required
-        "403":
-          description: "Required role: admin, moderator"
   /notes:
     get:
       operationId: getNotes
