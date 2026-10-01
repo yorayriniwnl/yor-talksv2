@@ -31,9 +31,10 @@ const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
 export async function closeAuthenticationDependencies(): Promise<void> {
-export async function closeAuthDependencies(): Promise<void> {
   await redisRepository.disconnect();
 }
+
+export const closeAuthDependencies = closeAuthenticationDependencies;
 
 function normalizedRequestPath(req: Request): string {
   return req.originalUrl.split("?")[0].replace(/^\/api(?:\/v1)?/, "") || "/";
