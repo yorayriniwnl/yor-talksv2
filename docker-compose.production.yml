@@ -66,6 +66,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.production}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.production}
+      METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_bearer_token
       PUBLIC_BETA: ${PUBLIC_BETA:-true}
       TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.production}
       MINIMUM_AGE: ${MINIMUM_AGE:-18}
@@ -130,9 +131,13 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
     expose:
       - "4000"
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
     networks:
       - edge
       - backend
+    secrets:
+      - metrics_bearer_token
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -144,6 +149,85 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    restart: unless-stopped
+
+  backup:
+    profiles: [ops]
+    build:
+      context: .
+      dockerfile: ops/backup/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?Set BACKUP_AGE_RECIPIENT in .env.production}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:?Set BACKUP_REMOTE in .env.production}
+      BACKUP_DIR: /backups
+      BACKUP_METRICS_FILE: /metrics/yor-talks-backup.prom
+      BACKUP_LOCAL_RETENTION_DAYS: ${BACKUP_LOCAL_RETENTION_DAYS:-14}
+    volumes:
+      - backup_staging:/backups
+      - backup_metrics:/metrics
+    secrets:
+      - source: rclone_config
+        target: /root/.config/rclone/rclone.conf
+    networks:
+      - backend
+      - edge
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backup-metrics-exporter:
+    image: prom/node-exporter:v1.9.1
+    command:
+      - --collector.disable-defaults
+      - --collector.textfile
+      - --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
+    volumes:
+      - backup_metrics:/var/lib/node_exporter/textfile_collector:ro
+    networks:
+      - backend
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=90d
+      - --web.enable-lifecycle
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    secrets:
+      - metrics_bearer_token
+    networks:
+      - backend
+    depends_on:
+      - api
+      - alertmanager
+      - backup-metrics-exporter
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --config.expand-env
+      - --storage.path=/alertmanager
+    environment:
+      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.production}
+      ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.production}
+    volumes:
+      - ./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    secrets:
+      - source: alertmanager_webhook_password
+        target: /run/secrets/alertmanager_webhook_password
+    networks:
+      - edge
+      - backend
     restart: unless-stopped
 
   web:
@@ -170,6 +254,7 @@ services:
         VITE_PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
         VITE_LIVE_ROOMS_ENABLED: ${LIVE_ROOMS_ENABLED:-false}
         VITE_WEB_PUSH_ENABLED: ${WEB_PUSH_ENABLED:-false}
+        VITE_WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
         VITE_RTC_CALLS_ENABLED: ${RTC_CALLS_ENABLED:-false}
     ports:
       - "${WEB_PORT:-8080}:80"
@@ -190,6 +275,18 @@ networks:
   backend:
     internal: true
 
+secrets:
+  metrics_bearer_token:
+    file: ${METRICS_BEARER_TOKEN_FILE:?Set METRICS_BEARER_TOKEN_FILE in .env.production}
+  rclone_config:
+    file: ${RCLONE_CONFIG_FILE:?Set RCLONE_CONFIG_FILE in .env.production}
+  alertmanager_webhook_password:
+    file: ${ALERTMANAGER_WEBHOOK_PASSWORD_FILE:?Set ALERTMANAGER_WEBHOOK_PASSWORD_FILE in .env.production}
+
 volumes:
   postgres_data_production:
   redis_data_production:
+  backup_staging:
+  backup_metrics:
+  prometheus_data:
+  alertmanager_data:

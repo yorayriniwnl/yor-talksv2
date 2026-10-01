@@ -1,4 +1,7 @@
+import { getStoredTokens } from './api-client';
+
 type TelemetryEvent = {
+  eventId?: string;
   type: string;
   timestamp?: string;
   payload?: Record<string, any>;
@@ -12,6 +15,34 @@ const FLUSH_INTERVAL = 1000 * 10; // 10s
 const MAX_ATTEMPTS = 3;
 const DEFAULT_SAMPLING = 1; // 100%
 let queue: TelemetryEvent[] = [];
+
+function telemetryUrl(): string {
+  return (import.meta.env as any).VITE_TELEMETRY_URL || '/api/telemetry/events';
+}
+
+function telemetryHeaders(url: string): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = getStoredTokens()?.accessToken;
+  if (token && new URL(url, window.location.href).origin === window.location.origin) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function serializeEvents(events: TelemetryEvent[]): string {
+  return JSON.stringify({ events: events.map((event) => ({
+    eventId: event.eventId,
+    schemaVersion: 1,
+    eventName: event.type,
+    occurredAt: event.timestamp ?? new Date().toISOString(),
+    properties: event.type === 'react:profiler' ? {
+      id: event.payload?.id,
+      phase: event.payload?.phase,
+      actualDuration: event.payload?.actualDuration,
+      baseDuration: event.payload?.baseDuration,
+    } : {},
+  })) });
+}
 
 export function hasTelemetryConsent(): boolean {
   try {
@@ -40,7 +71,8 @@ function loadQueue(): TelemetryEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as TelemetryEvent[];
+    const stored = JSON.parse(raw) as TelemetryEvent[];
+    return stored.map((event) => ({ ...event, eventId: event.eventId ?? crypto.randomUUID() }));
   } catch (e) {
     return [];
   }
@@ -69,8 +101,8 @@ function getSampling(): number {
 
 async function sendBatch(events: TelemetryEvent[]) {
   if (!hasTelemetryConsent()) return true;
-  const url = (import.meta.env as any).VITE_TELEMETRY_URL;
-  const body = JSON.stringify(events.map((e) => ({ ...e, timestamp: e.timestamp ?? new Date().toISOString() })));
+  const url = telemetryUrl();
+  const body = serializeEvents(events);
 
   if (!url) {
     // no endpoint — drop to console in dev
@@ -80,16 +112,11 @@ async function sendBatch(events: TelemetryEvent[]) {
   }
 
   try {
-    if (navigator && 'sendBeacon' in navigator) {
-      const blob = new Blob([body], { type: 'application/json' });
-      const ok = navigator.sendBeacon(url, blob);
-      return ok;
-    }
-
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: telemetryHeaders(url),
       body,
+      credentials: 'include',
       keepalive: true,
     });
     return res.ok;
@@ -110,7 +137,7 @@ export function enqueueTelemetry(e: TelemetryEvent) {
     return; // sampled out
   }
 
-  const ev: TelemetryEvent = { ...e, timestamp: new Date().toISOString(), _attempts: 0 };
+  const ev: TelemetryEvent = { ...e, eventId: crypto.randomUUID(), timestamp: new Date().toISOString(), _attempts: 0 };
   queue.push(ev);
   saveQueue(queue);
 
@@ -159,14 +186,15 @@ function init() {
   // beforeunload — attempt sendBeacon
   window.addEventListener('beforeunload', () => {
     if (queue.length === 0) return;
-    const url = (import.meta.env as any).VITE_TELEMETRY_URL;
-    if (!url) return;
+    const url = telemetryUrl();
     try {
-      const payload = JSON.stringify(queue.map((e) => ({ ...e, timestamp: e.timestamp ?? new Date().toISOString() })));
-      if (navigator && 'sendBeacon' in navigator) {
-        const blob = new Blob([payload], { type: 'application/json' });
-        navigator.sendBeacon(url, blob);
-      }
+      void fetch(url, {
+        method: 'POST',
+        headers: telemetryHeaders(url),
+        body: serializeEvents(queue),
+        credentials: 'include',
+        keepalive: true,
+      });
     } catch (e) {
       // ignore
     }

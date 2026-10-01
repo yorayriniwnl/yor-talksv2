@@ -30,6 +30,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
 
+export async function closeAuthenticationDependencies(): Promise<void> {
 export async function closeAuthDependencies(): Promise<void> {
   await redisRepository.disconnect();
 }

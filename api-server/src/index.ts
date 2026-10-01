@@ -7,6 +7,9 @@ import { attachSocketServer } from "./socket/index.js";
 import { startNotificationWorker } from "./workers/notification-worker.js";
 import { startFeedWorker } from "./workers/feed-worker.js";
 import { env } from "./config/env.js";
+import { operationalMetrics } from "./services/operational-metrics-service.js";
+import { closeAuthenticationDependencies } from "./middlewares/auth.js";
+import { assertMetricsTokenFile } from "./lib/metrics-auth.js";
 import { closeRateLimitRedis } from "./middlewares/rate-limit.js";
 import { startLifecycleWorker } from './workers/lifecycle-worker.js';
 import { createPaymentRuntime } from './services/payment-runtime.js';
@@ -27,6 +30,8 @@ async function ensureProductionDependencies(): Promise<void> {
     logger.error({ redis }, message);
     throw new Error(message);
   }
+
+  await assertMetricsTokenFile(env.METRICS_BEARER_TOKEN_FILE);
 }
 
 async function main() {
@@ -75,6 +80,8 @@ async function main() {
       });
       await notificationWorker?.close();
       await feedWorker?.close();
+      await operationalMetrics.close();
+      await closeAuthenticationDependencies();
       await lifecycleWorker.close();
       await closeRateLimitRedis();
       await pool.end();

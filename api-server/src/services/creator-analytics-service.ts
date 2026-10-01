@@ -63,8 +63,9 @@ export class CreatorAnalyticsService {
         gte(userFollowsTable.createdAt, date),
         lt(userFollowsTable.createdAt, nextDate),
       )),
-      db.select({ total: sql<number>`coalesce(sum(case when ${ledgerTransactionsTable.creditAccountId} = ${creatorId} then ${ledgerTransactionsTable.amountMinor} else -${ledgerTransactionsTable.amountMinor} end), 0)` }).from(ledgerTransactionsTable).where(and(
-        or(eq(ledgerTransactionsTable.creditAccountId, creatorId), eq(ledgerTransactionsTable.debitAccountId, creatorId)),
+      db.select({ total: sql<number>`coalesce(sum(${ledgerTransactionsTable.amountMinor}), 0)` }).from(ledgerTransactionsTable).where(and(
+        eq(ledgerTransactionsTable.creditAccountId, creatorId),
+        eq(ledgerTransactionsTable.currency, "INR"),
         eq(ledgerTransactionsTable.status, "completed"),
         eq(ledgerTransactionsTable.currency, "INR"),
         gte(ledgerTransactionsTable.createdAt, date),

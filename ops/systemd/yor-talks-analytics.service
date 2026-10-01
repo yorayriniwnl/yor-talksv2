@@ -1,0 +1,12 @@
+[Unit]
+Description=Yor Talks daily analytics rollup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=yor-talks
+Group=docker
+WorkingDirectory=/opt/yor-talks
+TimeoutStartSec=20min
+ExecStart=/usr/bin/docker compose --env-file /etc/yor-talks/.env.production -f /opt/yor-talks/docker-compose.production.yml run --rm --no-deps api pnpm --filter @workspace/api-server analytics:rollup

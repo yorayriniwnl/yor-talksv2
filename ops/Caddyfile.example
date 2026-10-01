@@ -1,0 +1,11 @@
+# Replace both example hostnames with domains whose DNS points at this host.
+# Caddy obtains and renews HTTPS certificates automatically.
+app.yor-talks.example {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+}
+
+api.yor-talks.example {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4000
+}

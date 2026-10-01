@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Yor Talks analytics rollup daily in UTC
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 UTC
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+Unit=yor-talks-analytics.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Yor Talks encrypted database backup daily in UTC
+
+[Timer]
+OnCalendar=*-*-* 01:00:00 UTC
+Persistent=true
+RandomizedDelaySec=10min
+AccuracySec=1min
+Unit=yor-talks-backup.service
+
+[Install]
+WantedBy=timers.target

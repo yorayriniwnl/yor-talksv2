@@ -47,6 +47,7 @@ tags:
   - name: streams
   - name: subscriptions
   - name: system
+  - name: telemetry
   - name: users
   - name: videos
 paths:
@@ -4320,6 +4321,48 @@ paths:
           required: true
           schema:
             type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+  /telemetry/analytics:
+    get:
+      operationId: getTelemetryAnalytics
+      summary: Get /telemetry/analytics
+      tags: [telemetry]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+  /telemetry/events:
+    post:
+      operationId: postTelemetryEvents
+      summary: Post /telemetry/events
+      tags: [telemetry]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
           description: Successful response

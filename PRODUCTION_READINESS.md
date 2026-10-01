@@ -1,14 +1,10 @@
 # Production Readiness Report
 
-Status: backend hardening complete with enhanced deployment verification; production launch remains conditional on external provider and runtime validation.
+Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
 
 ## Executive summary
 
-This repository is now in an enhanced production-hardening state with improved deployment verification, queue diagnostics, database backup/restore procedures, and comprehensive health checking. The remaining risk is not in the code path itself so much as in live-runtime verification outside the repo: real provider acceptance, Docker runtime execution, TLS/domain checks, monitoring, and restore drills remain unverified.
-
-Evidence-backed score: 92/100 (approx. 92% backend deployment readiness under the current bounded scope).
-
-This score is deliberately conservative and based only on repository evidence and verified checks available within the project. It does not claim full public launch approval.
+This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an isolated restore drill remain external launch gates.
 
 ## Scope and boundary
 
@@ -32,7 +28,7 @@ This report does not claim:
 
 ## Verified checks
 
-The following checks were part of the repository’s production readiness evidence and passed before this report was finalized:
+The following checks were reported as passing during an earlier readiness review; they have not been rerun as part of this report update:
 
 ```bash
 pnpm install --frozen-lockfile

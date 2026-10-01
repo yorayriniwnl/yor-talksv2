@@ -1,12 +1,10 @@
 # Production Readiness
 
-## Evidence-based score
+Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
 
-**92/100 for the bounded beta scope.**
+This file and the root [Production Readiness Report](../PRODUCTION_READINESS.md) use the same evidence boundary. Checks below are historical reports, not checks performed by the current implementation session unless its final results say otherwise.
 
-This score reflects verified repository behavior and local container-backed validation. It is not public-launch approval: live providers, TLS, monitoring, restore drills, and sustained production traffic still require external acceptance.
-
-Key improvements in this pass:
+Previously documented repository controls (historical; not re-verified in this session):
 - Enhanced production smoke test with detailed service verification
 - Added `/api/diagnostics` endpoint for queue and worker health
 - Improved `/api/readyz` with environment and version reporting
@@ -15,7 +13,7 @@ Key improvements in this pass:
 
 ## Verification boundary
 
-### Verified locally
+### Previously reported as verified locally (not rerun here)
 
 - Postgres 16 and Redis 7 ran through the project Docker Compose stack.
 - Beta and production migrations completed successfully.
@@ -26,7 +24,7 @@ Key improvements in this pass:
 - API contract and production configuration checks completed.
 - Production smoke test validates web shell, security headers, asset bundle, API routing, and service readiness
 
-### Verified by automated tests
+### Previously reported automated test results (not rerun here)
 
 - Root unit suite: **25 passed, 0 failed**.
 - Full API suite: **68 passed, 0 failed**.
@@ -43,6 +41,8 @@ Key improvements in this pass:
 - Encrypted off-host backups and restore into a separate target.
 - Redis failover, multi-instance behavior, rolling restart, and sustained load.
 - Live backup/restore drills to verify recovery procedures
+
+The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
 
 ### Requires manual acceptance testing
 
@@ -65,13 +65,10 @@ Key improvements in this pass:
 - Health check responses now include detailed service status and environment context
 
 ### Database Backup & Restore
-- Added `lib/db/scripts/backup-database.sh` with:
-  - Automated PostgreSQL backup using `pg_dump` with compression
-  - Backup verification using gzip and SQL content checks
-  - Safe restore procedure with confirmation prompts
-  - Database table count verification after restore
-  - Detailed logging of all operations
 
+Use the current encrypted age/rclone workflow in the [production launch runbook](docs/PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
+
+Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 ### Documentation
 - Updated PRODUCTION_READINESS.md with deployment verification procedures
 - Documented smoke test usage and interpretation
@@ -161,22 +158,24 @@ Expected response:
 
 ### Database Backup & Restore
 
-Create backup:
+Create an encrypted off-host backup (install/configure `age` and `rclone` first):
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost:5432/yor_talks \
+BACKUP_AGE_RECIPIENT="age1..." BACKUP_REMOTE="backups:yor-talks" DATABASE_URL="postgresql://..." \\
   lib/db/scripts/backup-database.sh backup
 ```
 
-Verify backup:
+Verify an encrypted backup:
 ```bash
-lib/db/scripts/backup-database.sh verify .backup/backup_*.sql.gz
+BACKUP_AGE_IDENTITY="/secure/restore-identity" lib/db/scripts/backup-database.sh verify .backup/backup_*.dump.age
 ```
 
-Restore (requires user confirmation):
+Restore to a separate empty database (requires explicit confirmation):
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost:5432/yor_talks \
-  lib/db/scripts/backup-database.sh restore .backup/backup_*.sql.gz
+BACKUP_AGE_IDENTITY="/secure/restore-identity" DATABASE_URL="postgresql://.../restore_db" \\
+  lib/db/scripts/backup-database.sh restore .backup/backup_*.dump.age
 ```
+
+Analytics event taxonomy, formulas, retention, scheduling and current KPI gaps are documented in [Analytics Operations](ANALYTICS_OPERATIONS.md).
 
 ## Exact verification commands
 
@@ -214,6 +213,6 @@ Migration validation completed with `pnpm --filter @workspace/db migrate:beta` a
 
 ## Release judgment
 
-The repository is code-ready for a controlled beta deployment with optional commercial/realtime features disabled, subject to the real-infrastructure and manual acceptance gates above. It should not be described as fully production verified until those gates have evidence.
+Do not treat the repository as launch-approved based on this document. The listed historical checks do not establish current-commit readiness. Complete the current CI gates and all live provider, security, monitoring, and recovery acceptance steps before enabling public traffic.
 
 The new deployment verification tooling (smoke tests, diagnostics endpoint, backup/restore scripts) improves operational confidence and reduces manual deployment validation burden.

@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: yor-api
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+    bearer_token_file: /run/secrets/metrics_bearer_token
+    static_configs:
+      - targets: [api:4000]
+
+  - job_name: yor-backup-textfile
+    scrape_interval: 30s
+    static_configs:
+      - targets: [backup-metrics-exporter:9100]

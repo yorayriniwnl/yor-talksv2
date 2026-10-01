@@ -23,6 +23,43 @@ test("invalid boolean environment values fail closed at API startup", () => {
   assert.match(`${result.stdout}\n${result.stderr}`, /PUBLIC_BETA|boolean/i);
 });
 
+test("production configuration rejects cleartext browser origins", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "--eval", "import './src/config/env.ts'"],
+    {
+      cwd: path.resolve(import.meta.dirname, "../.."),
+      encoding: "utf8",
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        JWT_SECRET: "a".repeat(40),
+        JWT_REFRESH_SECRET: "b".repeat(40),
+        CONTACT_SHIELD_SECRET: "c".repeat(40),
+        TOTP_ENCRYPTION_KEY: "d".repeat(40),
+        DATABASE_URL: "postgresql://app:secret@db.example.com:5432/yor",
+        REDIS_URL: "redis://redis.example.com:6379",
+        CLIENT_ORIGIN: "http://app.example.com",
+        CORS_ORIGINS: "http://app.example.com",
+        CLOUDINARY_CLOUD_NAME: "yor-cloud",
+        CLOUDINARY_API_KEY: "cloud-key",
+        CLOUDINARY_API_SECRET: "cloud-secret",
+        RESEND_API_KEY: "re_live_key",
+        EMAIL_FROM: "hello@example.com",
+        OPENAI_API_KEY: "sk-live-placeholder-value",
+        PUBLIC_BETA: "false",
+        PAYMENTS_ENABLED: "false",
+        LIVE_ROOMS_ENABLED: "false",
+        WEB_PUSH_ENABLED: "false",
+        RTC_CALLS_ENABLED: "false",
+      },
+    },
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /canonical HTTPS origins/);
+});
+
 test("production startup fails closed when required dependencies are unavailable", () => {
   const result = spawnSync(
     process.execPath,
@@ -53,6 +90,7 @@ test("production startup fails closed when required dependencies are unavailable
         CLOUDINARY_API_SECRET: "demo-secret",
         RESEND_API_KEY: "re_demo_key",
         EMAIL_FROM: "hello@example.com",
+        METRICS_BEARER_TOKEN_FILE: "/run/secrets/metrics_bearer_token",
         LEGAL_OPERATOR_NAME: "Example Operator",
         LEGAL_OPERATOR_ADDRESS: "123 Example Road",
         LEGAL_EFFECTIVE_DATE: "2026-01-01",

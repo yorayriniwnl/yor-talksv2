@@ -843,6 +843,42 @@ export const creatorProfileViewEventsTable = pgTable("creator_profile_view_event
   uniqueViewerDay: uniqueIndex("profile_view_creator_viewer_day_idx").on(t.creatorId, t.viewerId, t.viewDate),
 }));
 
+export const productAnalyticsEventsTable = pgTable("product_analytics_events", {
+  id: uuid("id").primaryKey(),
+  schemaVersion: integer("schema_version").notNull(),
+  eventName: text("event_name").notNull(),
+  actorId: uuid("actor_id").references(() => usersTable.id, { onDelete: "set null" }),
+  occurredAt: timestamp("occurred_at", { mode: "string" }).notNull(),
+  properties: jsonb("properties").notNull().default({}),
+  receivedAt: timestamp("received_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  occurredAtIdx: index("product_analytics_occurred_at_idx").on(t.occurredAt),
+  actorOccurredAtIdx: index("product_analytics_actor_occurred_at_idx").on(t.actorId, t.occurredAt),
+}));
+
+export const productAnalyticsDailyTable = pgTable("product_analytics_daily", {
+  date: timestamp("date", { mode: "string" }).notNull(),
+  eventName: text("event_name").notNull(),
+  eventCount: integer("event_count").notNull().default(0),
+  uniqueUsers: integer("unique_users").notNull().default(0),
+  rolledUpAt: timestamp("rolled_up_at", { mode: "string" }).notNull().defaultNow(),
+}, (t) => ({
+  dateEventPk: primaryKey({ columns: [t.date, t.eventName] }),
+}));
+
+export const productAnalyticsJobsTable = pgTable("product_analytics_job_runs", {
+  id: uuid("id").primaryKey(),
+  jobName: text("job_name").notNull(),
+  status: text("status").notNull(),
+  startedAt: timestamp("started_at", { mode: "string" }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { mode: "string" }),
+  processedThrough: timestamp("processed_through", { mode: "string" }),
+  processedEvents: integer("processed_events").notNull().default(0),
+  errorCode: text("error_code"),
+}, (t) => ({
+  startedAtIdx: index("product_analytics_job_started_idx").on(t.startedAt),
+}));
+
 export const ledgerTransactionsTable = pgTable("ledger_transactions", {
   id: uuid("id").primaryKey(),
   creditAccountId: uuid("credit_account_id").references(() => usersTable.id), // Nullable for external/system
