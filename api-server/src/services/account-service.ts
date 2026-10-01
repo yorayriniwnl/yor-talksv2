@@ -123,7 +123,7 @@ export class AccountService {
       throw new InvalidAccountPasswordError("Password confirmation failed");
     }
 
-    return db.transaction(async tx => {
+    const deleted = await db.transaction(async tx => {
       const [locked] = await tx.select().from(usersTable).where(eq(usersTable.id, userId)).for('update');
       if (!locked) return false;
       if (locked.passwordHash !== user.passwordHash) {
@@ -160,5 +160,13 @@ export class AccountService {
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
+    if (!deleted) return false;
+
+    // Invalidate ordinary active sessions immediately after the durable
+    // transaction commits. The queued account_cleanup job remains the retry
+    // path for Redis outages, login approvals, and any sessions missed here.
+    await this.redisRepository.keys(`session:${userId}:*`)
+      .then((keys) => Promise.all(keys.map((key) => this.redisRepository.del(key))));
+    return true;
   }
 }
