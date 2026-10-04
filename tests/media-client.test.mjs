@@ -25,6 +25,24 @@ test('a finalize outage preserves the reservation and uploaded file; retry never
   await assert.rejects(()=>api.uploadMedia(file,'post'),/Moderation unavailable/);
   assert.equal((await api.uploadMedia(file,'post')).mediaId,mediaId);assert.equal(prepares,1);assert.equal(uploads,1);assert.equal(finalizes,2);
 });
+
+test('a lost server upload response retries the same reservation and reaches finalization',async t=>{
+  const api=await client(t),file=new File(['synthetic'],'a.png',{type:'image/png'});let prepares=0,uploadRequests=0,finalizes=0;
+  t.mock.method(globalThis,'fetch',async url=>{
+    if(url.endsWith('/presign')){prepares++;return ok(grant(file));}
+    if(url.endsWith('/upload')){
+      uploadRequests++;
+      if(uploadRequests===1)throw new TypeError('The successful upload response was lost');
+      // The server recovers the same owned byte hash without a provider write.
+      return ok({id:mediaId,mediaId,status:'uploaded'});
+    }
+    finalizes++;return ok(approved(file));
+  });
+  await assert.rejects(()=>api.uploadMedia(file,'post'),/response was lost/);
+  assert.equal(finalizes,0);
+  assert.equal((await api.uploadMedia(file,'post')).mediaId,mediaId);
+  assert.equal(prepares,1);assert.equal(uploadRequests,2);assert.equal(finalizes,1);
+});
 test('direct uploads send every signed field unchanged and discard the provider URL before finalization',async t=>{
   const api=await client(t),file=new File(['synthetic'],'a.png',{type:'image/png'});
   const fields={public_id:'yor-talks/owner/reservation',type:'authenticated',overwrite:'false',upload_preset:'restricted',signature:'signed',api_key:'key',timestamp:'123',allowed_formats:'png'};

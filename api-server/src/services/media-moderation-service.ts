@@ -9,6 +9,20 @@ const decisionSchema = z.object({
   reasons: z.array(z.enum(REASONS)).max(7),
   sexualContent: z.boolean(), graphicViolence: z.boolean(), hate: z.boolean(), harassment: z.boolean(), selfHarm: z.boolean(), illegalActivity: z.boolean(),
 }).strict();
+// Gemini's safety category/probability fields are required whenever a rating is
+// supplied. Optional score/severity fields use Google's documented response
+// extensions; missing ratings remain valid, but uncertain ratings do not.
+const safetyRatingSchema = z.object({
+  category: z.enum(["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    "HARM_CATEGORY_DANGEROUS_CONTENT", "HARM_CATEGORY_CIVIC_INTEGRITY", "HARM_CATEGORY_JAILBREAK"]),
+  probability: z.enum(["HARM_PROBABILITY_UNSPECIFIED", "NEGLIGIBLE", "LOW", "MEDIUM", "HIGH"])
+    .refine(value => value === "NEGLIGIBLE" || value === "LOW"),
+  blocked: z.boolean().optional().refine(value => value !== true),
+  probabilityScore: z.number().finite().min(0).max(1).optional(),
+  severity: z.enum(["HARM_SEVERITY_UNSPECIFIED", "HARM_SEVERITY_NEGLIGIBLE", "HARM_SEVERITY_LOW", "HARM_SEVERITY_MEDIUM", "HARM_SEVERITY_HIGH"])
+    .optional().refine(value => value === undefined || value === "HARM_SEVERITY_NEGLIGIBLE" || value === "HARM_SEVERITY_LOW"),
+  severityScore: z.number().finite().min(0).max(1).optional(),
+});
 export interface MediaModerationDecision { decision: "approve" | "reject" | "uncertain"; reasons: string[]; }
 
 const responseJsonSchema = {
@@ -26,21 +40,26 @@ function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new MediaModerationUnavailableError();
   return value as Record<string, unknown>;
 }
+function assertSafeRatings(value: unknown): void {
+  if (value === undefined) return;
+  const ratings = z.array(safetyRatingSchema).max(6).safeParse(value);
+  if (!ratings.success || new Set(ratings.data.map(rating => rating.category)).size !== ratings.data.length) throw new MediaModerationUnavailableError();
+}
 /** Enforces a complete, explicit response; permissive text moderation parsers must never be used here. */
 export function parseMediaModerationResponse(value: unknown): MediaModerationDecision {
-  const response = object(value), feedback = response.promptFeedback ? object(response.promptFeedback) : undefined;
-  if (feedback?.blockReason && feedback.blockReason !== "BLOCK_REASON_UNSPECIFIED") throw new MediaModerationUnavailableError();
+  const response = object(value), feedback = response.promptFeedback !== undefined ? object(response.promptFeedback) : undefined;
+  if (feedback?.blockReason !== undefined && feedback.blockReason !== "BLOCK_REASON_UNSPECIFIED") throw new MediaModerationUnavailableError();
   if (!Array.isArray(response.candidates) || response.candidates.length !== 1) throw new MediaModerationUnavailableError();
   const candidate = object(response.candidates[0]);
   if (candidate.finishReason !== "STOP" || candidate.content === undefined) throw new MediaModerationUnavailableError();
-  for (const ratings of [candidate.safetyRatings, feedback?.safetyRatings]) {
-    if (ratings !== undefined && (!Array.isArray(ratings) || ratings.some((rating) => {
-      const info = object(rating); return info.blocked === true || ["MEDIUM", "HIGH"].includes(String(info.probability));
-    }))) throw new MediaModerationUnavailableError();
-  }
-  const parts = object(candidate.content).parts;
+  for (const ratings of [candidate.safetyRatings, feedback?.safetyRatings]) assertSafeRatings(ratings);
+  const content = object(candidate.content);
+  if (content.role !== undefined && content.role !== "model") throw new MediaModerationUnavailableError();
+  const parts = content.parts;
   if (!Array.isArray(parts)) throw new MediaModerationUnavailableError();
-  const visibleParts = parts.map(object).filter((part) => part.thought !== true);
+  const parsedParts = parts.map(object);
+  if (parsedParts.some(part => part.thought !== undefined && typeof part.thought !== "boolean")) throw new MediaModerationUnavailableError();
+  const visibleParts = parsedParts.filter((part) => part.thought !== true);
   if (visibleParts.length !== 1 || typeof visibleParts[0].text !== "string" || Object.keys(visibleParts[0]).some((key) => !["text", "thought"].includes(key))) throw new MediaModerationUnavailableError();
   let parsed: z.infer<typeof decisionSchema>;
   try { parsed = decisionSchema.parse(JSON.parse(visibleParts[0].text)); } catch { throw new MediaModerationUnavailableError(); }

@@ -28,11 +28,11 @@ References: [upload signatures](https://cloudinary.com/documentation/upload_imag
 
 ## Implemented behavior and rollout
 
-The lifecycle is `pending -> uploaded -> verifying -> approved/rejected/failed -> deleted`. Failures can retry the same reservation; terminal approval/rejection is idempotent. The database stores immutable provider identity, original byte SHA256, decoded metadata, explicit moderation decision, verification/deletion leases and entity references. It prevents NULL verification metadata from satisfying approval. Content and approved ownership/purpose checks commit in one transaction, including replacements. Historical URL-only content remains unverified and readable; its URLs cannot be reused as new attachments. Historical provider backfill is not implemented by this change.
+The lifecycle is `pending -> uploaded -> verifying -> approved/rejected/failed -> deleted`. Failures can retry the same reservation; terminal approval/rejection is idempotent. A lost server-upload response can retry the same owner/MIME/length/hash and acknowledge the committed upload without another provider write; different bytes cannot replace it. Finalization checks the downloaded hash against the original server buffer where present. The database stores immutable provider identity, original byte SHA256, decoded metadata, explicit moderation decision, verification/deletion leases and entity references. It prevents NULL verification metadata from satisfying approval. Content and approved ownership/purpose checks commit in one transaction, including replacements. Historical URL-only content remains unverified and readable; its URLs cannot be reused as new attachments. Historical provider backfill is not implemented by this change.
 
 `POST /media/presign` requires authenticated ownership plus filename, exact MIME, size and purpose. `POST /media/:id/upload` is the bounded multipart transport. `POST /media/:id/finalize` accepts an empty body and the owned record ID; it returns 202 while another verifier holds the lease. `/media/upload`, `/posts/upload-image` and `/users/me/avatar` use the same verification/moderation path. `DELETE /media/:id` schedules deletion only when the asset is unused. All responses retain the existing API envelope.
 
-Publication uses `mediaIds`, `mediaId`, `avatarMediaId`, `coverMediaId`, `thumbnailMediaId`, `customImageMediaId` or `logoMediaId`, as applicable. Purposes cover avatars, posts, post/video comments, Stories, image/voice messages, videos, products, articles, events, live-stream covers, broadcast-channel covers, highlights, showcases, businesses and communities. A separately allowlisted external-video URL requires an independently approved image poster. Raw uploaded URLs and provider public IDs are rejected.
+Publication uses `mediaIds`, `mediaId`, `avatarMediaId`, `coverMediaId`, `thumbnailMediaId`, `customImageMediaId` or `logoMediaId`, as applicable. Purposes cover avatars, posts, post/video comments, Stories, image/voice messages, videos, products, articles, events, live-stream covers, broadcast-channel covers, highlights, showcases, businesses and communities. Direct/group image-message drafts survive moderation and send failures, including image-only messages. Studio Camera Post mode captures a bounded JPEG frame; Reel/Story modes record video. A separately allowlisted external-video URL requires an independently approved image poster. Raw uploaded URLs and provider public IDs are rejected.
 
 Static JPEG/PNG/WebP images are supported; animated images, GIF, SVG, QuickTime and audio MP4 are excluded. Video MP4/WebM and audio MPEG/WAV/WebM/Ogg are supported only for the applicable purposes. Avatars and image covers/logos have a 2 MiB limit; content images and ordinary voice/comment attachments have a 5 MiB limit; Story audio/video and uploaded video content have a 10 MiB limit. Audio/video lasts at most 120 seconds. Images have a 4096-pixel edge/12-megapixel limit; avatars 2048/4 megapixels; video 1920 long edge, 1080 short edge and 2.1 megapixels. Portrait video is supported.
 
@@ -41,6 +41,8 @@ Actual FFprobe inspection and complete FFmpeg decoding enforce container signatu
 Cloudinary originals/poster URLs remain internal. Expiring HMAC delivery grants point to `GET /media/:id/content`; every request checks approval and deletion state. Provider bytes must match the finalized hash before delivery. Video posters are generated from those same verified original bytes. This closes the replay window where a valid upload signature recreates a deleted provider path while an older delivery URL is cached. Delivery supports bounded single-range audio/video requests, uses `no-store`, and caches at most three verified buffers for 30 seconds; approval is rechecked before cache use. Set `MEDIA_DELIVERY_ORIGIN` to the HTTPS API origin when the frontend and API use different domains.
 
 The lifecycle worker removes expired unused reservations, rejected/orphaned assets, expired non-highlight Stories and deleted/vanished messages. Last-reference/account deletion revokes publication before provider cleanup. Deletion is leased, idempotent and backed off after errors. Tombstones retain the server public ID and reconcile image/video/raw replay namespaces during the upload-signature window. A retry never restores publication.
+
+The candidate query excludes live references before limiting the batch, so older published assets cannot starve later abandoned/rejected assets. The permanent media sweep recovers its completed/dead job state at startup and every minute without stealing a live lease or changing finite account cleanup dead-letter policy. Provider deletion backoff remains durable and independent of the recurring job's lease.
 
 Publication, explicit deletion, worker cleanup and the last-reference trigger acquire an asset lock before a separate reference-existence check. This matters under PostgreSQL READ COMMITTED: a deletion that waited for publication must see the reference committed during that wait. A two-connection regression reaches the actual PostgreSQL lock wait before releasing publication and verifies that the surviving reference keeps the asset approved.
 
@@ -52,13 +54,38 @@ Production media requires working Cloudinary credentials, three signed presets (
 
 ## Validation status
 
-Local validation passed with 235 API tests, 48 unit tests and 51 browser tests, all without skips. Contract/design checks, fresh and repeated production migration, both typechecks/builds, production configuration and Compose parsing also passed. This Windows host has no Docker Engine: actual production container builds and the production readiness smoke are still pending verification in GitHub Actions against this change. Green CI for the starting revision does not validate this change.
+Final local validation passed with 241 API tests, 49 unit tests and 54 browser tests, all without skips. Contract/design checks, fresh and repeated production migration, both typechecks/builds, production configuration and Compose parsing also passed. This Windows host has no Docker Engine: actual production container builds and readiness smoke run in GitHub Actions. The [initial implementation CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37216654689) passed those container gates, including an assertion that the API container's media decoder is ready and the complete `pnpm smoke` script. Final source acceptance uses the [final verification tag](https://github.com/yorayriniwnl/yor-talksv2/tree/media-verification-20261004-final), which reruns every gate against that exact revision; the task handoff supplies its direct CI run URL. Green CI for the starting revision is not used as evidence for this change.
 
 Local API verification uses a fresh synthetic PostgreSQL 16 database configured to UTC and a dedicated Redis test database, matching CI's UTC database. Browser verification explicitly uses `NODE_ENV=production` because the local ignored `.env` selects development. The default local development runtime invokes React effects twice and invalidates existing first-response billing retry fixtures; the production suite passes unchanged. Previously reused synthetic databases retained successful analytics jobs and failed an existing first-run metric assertion; the fresh database passes unchanged.
 
+A clock probe also measured Windows PostgreSQL about 10 ms ahead of Node. One existing engagement fixture inserted a Story view at database `now()` and immediately compared it to Node's exclusive `now()` cutoff. The fixture now assigns its engagement timestamps one minute in the past, within the period it tests, retaining every original KPI assertion. Production analytics code is unchanged.
+
+| Gate | Exact command / execution | Recorded result |
+| --- | --- | --- |
+| Dependencies | `pnpm install --frozen-lockfile` | Passed; lockfile unchanged |
+| API contract | `pnpm contract:generate`; `pnpm contract:check` | Passed; 231 operations / 195 paths |
+| Design | `pnpm design:check` | Passed |
+| Unit tests | `pnpm test:unit` | 49 passed; zero skipped |
+| Database package | `pnpm --filter @workspace/db build` | Passed |
+| Production migration | `pnpm --filter @workspace/db migrate:production` | Passed fresh and repeated, synthetic UTC database |
+| CI migration | `pnpm --filter @workspace/db migrate:beta` | Required by final CI; passed initial CI |
+| API typecheck | `pnpm --filter @workspace/api-server typecheck` | Passed |
+| Frontend typecheck | `pnpm --filter @workspace/social typecheck` | Passed |
+| API tests | From `api-server`: `node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts` | 241 passed; zero skipped; `MEDIA_REQUIRE_DECODER_TESTS=true` and actual binaries |
+| Browser tests | `NODE_ENV=production CI=true pnpm test:e2e` | 54 passed; no retries/skips |
+| API build | `pnpm --filter @workspace/api-server build` | Passed |
+| Frontend build | `NODE_ENV=production pnpm --filter @workspace/social build` | Passed |
+| Production configuration | `pnpm production-config:check` | Passed; 64 environment keys |
+| Production Compose | `docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet` | Passed locally with verified Compose executable and in initial Linux CI; repeated by final CI |
+| Production images | `docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml build migrate api web` | Initial Linux CI passed; required again by final-tag CI |
+| Production stack | `WEB_PORT=127.0.0.1:18080 docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml up -d --no-build` | Synthetic production stack, required by final-tag CI |
+| Readiness smoke | `BASE_URL=http://127.0.0.1:18080 pnpm smoke` | Initial Linux CI passed; final CI additionally requires healthy `/api/readyz`, `details.media.decoder=true`, successful migrator, non-root API user and Redis-backed rate limits |
+
+No CI gate was removed or weakened. CI adds required decoder installation/execution and production smoke checks. Production provider acceptance is separate: synthetic configuration deliberately cannot make `details.media.ready` true without working restricted Cloudinary presets and accessible Gemini moderation.
+
 ## Security test coverage
 
-The new API suites are `media-http.integration.test.ts`, `media-lifecycle.integration.test.ts`, `media-provider-security.test.ts` and `media-publication.integration.test.ts`, with shared synthetic metadata in `media-fixtures.ts`. Integration cases use actual PostgreSQL transactions and HTTP authentication; provider transport/moderation cases inject controlled external responses. Required decoder cases execute actual FFmpeg/FFprobe, including poster extraction, and CI requires these cases rather than skipping missing binaries. Four browser-client unit cases exercise the bundled API client; two browser cases exercise approved image publication and rejected/retryable uploads through the actual composer.
+The new API suites are `media-http.integration.test.ts`, `media-lifecycle.integration.test.ts`, `media-provider-security.test.ts`, `media-publication.integration.test.ts` and `media-cleanup-loop.integration.test.ts`, with shared synthetic metadata in `media-fixtures.ts`. Integration cases use actual PostgreSQL transactions and HTTP authentication; provider transport/moderation cases inject controlled external responses. Required decoder cases execute actual FFmpeg/FFprobe, including poster extraction, and CI requires these cases rather than skipping missing binaries. Five browser-client unit cases exercise the bundled API client, including a lost successful upload response; browser cases exercise approved/rejected/retryable post uploads, direct/group image messages with moderation and send failures, and camera photo publication.
 
 | Threat | Checked boundary |
 | --- | --- |
@@ -74,7 +101,7 @@ The new API suites are `media-http.integration.test.ts`, `media-lifecycle.integr
 | Repeated / concurrent finalize | Durable verification lease, one moderation invocation, terminal idempotence and revoked late approval |
 | Provider replay / tampering | Identity recheck after moderation, original SHA verification on delivery, expiring grant tampering and deletion revocation |
 | Publication versus deletion | Explicit deletion, replacement, account deletion and last-reference trigger lock interleavings |
-| Cleanup failure / concurrency | Retry state, one deletion claim and late direct-upload tombstone reconciliation |
+| Cleanup failure / concurrency / starvation | Retry state, one deletion claim, live references excluded before batch limits, recurring sweep recovery and late direct-upload tombstone reconciliation |
 
 The HTTP suite explicitly sets the process production environment and confirms that configured upload and presign succeed. Separate cases prove that unavailable moderation/storage still return a conditional failure. This is executable evidence that the old unconditional production 503 is gone while failure gates remain.
 
@@ -88,12 +115,14 @@ The HTTP suite explicitly sets the process production environment and confirms t
 - `api-server/src/__tests__/beta-feature-gates.test.ts`
 - `api-server/src/__tests__/disappearing-message.test.ts`
 - `api-server/src/__tests__/event-service.test.ts`
+- `api-server/src/__tests__/media-cleanup-loop.integration.test.ts`
 - `api-server/src/__tests__/media-fixtures.ts`
 - `api-server/src/__tests__/media-http.integration.test.ts`
 - `api-server/src/__tests__/media-lifecycle.integration.test.ts`
 - `api-server/src/__tests__/media-provider-security.test.ts`
 - `api-server/src/__tests__/media-publication.integration.test.ts`
 - `api-server/src/__tests__/payment-hardening.test.ts`
+- `api-server/src/__tests__/product-analytics.integration.test.ts`
 - `api-server/src/__tests__/product-service.test.ts`
 - `api-server/src/__tests__/story-service.test.ts`
 - `api-server/src/__tests__/story-text-style-domain.test.ts`

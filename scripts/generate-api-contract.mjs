@@ -25,6 +25,7 @@ const mediaMimes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video
 const mediaId = { type: "string", format: "uuid", description: "An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose." };
 const reservationId = { type: "string", format: "uuid", description: "Server-generated lifecycle record ID." };
 const mediaIds = { type: "array", maxItems: 10, uniqueItems: true, items: mediaId };
+const rawMediaFields = ["images", "mediaUrl", "videoUrl", "thumbnailUrl", "avatarUrl", "coverUrl", "logoUrl", "customImageUrl"];
 const mediaSchemas = {
   MediaPresignRequest: { type: "object", additionalProperties: false, required: ["filename", "mimeType", "size", "purpose"], properties: {
     filename: { type: "string", minLength: 1, maxLength: 255 }, mimeType: { type: "string", enum: mediaMimes },
@@ -35,12 +36,13 @@ const mediaSchemas = {
     id: reservationId, mediaId: reservationId, status: { const: "pending" }, purpose: { type: "string", enum: mediaPurposes }, mimeType: { type: "string", enum: mediaMimes },
     maxFileSize: { type: "integer" }, mode: { type: "string", enum: ["server", "direct"] }, uploadUrl: { type: "string" },
     fields: { type: "object", additionalProperties: { type: "string" }, description: "Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials." },
-  } },
+  }, allOf: [{ if: { properties: { mode: { const: "direct" } } }, then: { required: ["fields"] }, else: { not: { required: ["fields"] } } }] },
   MediaResult: { type: "object", required: ["id", "mediaId", "status"], properties: {
     id: reservationId, mediaId: reservationId, status: { type: "string", enum: ["pending", "uploaded", "verifying", "approved", "rejected", "failed", "deleted"] },
     purpose: { type: "string", enum: mediaPurposes }, url: { type: "string", description: "Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval." },
     thumbnailUrl: { type: ["string", "null"] }, mimeType: { type: "string", enum: mediaMimes }, size: { type: "integer" }, width: { type: "integer" }, height: { type: "integer" }, duration: { type: "number", description: "Verified seconds." },
-  } },
+  }, allOf: [{ if: { properties: { status: { const: "approved" } } }, then: { required: ["purpose", "url", "mimeType", "size"] },
+    else: { not: { anyOf: [{ required: ["url"] }, { required: ["thumbnailUrl"] }] } } }] },
 };
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
@@ -61,7 +63,8 @@ function mediaRequest(route) {
   } } } };
   const properties = publicationMediaFields[`${route.method} ${route.path}`];
   if (properties) return { required: true, description: "Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.",
-    content: { "application/json": { schema: { type: "object", properties, additionalProperties: true } } } };
+    content: { "application/json": { schema: { type: "object", properties, additionalProperties: true,
+      not: { anyOf: rawMediaFields.map(field => ({ required: [field] })) } } } } };
 }
 
 function findInvocationEnd(source, start) {

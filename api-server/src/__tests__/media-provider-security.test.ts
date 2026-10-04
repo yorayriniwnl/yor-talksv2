@@ -109,6 +109,62 @@ test("multimodal receipt approves only complete explicit clear decisions", () =>
   assert.equal(parseMediaModerationResponse(modelResponse({ ...clear, decision: "uncertain", certainty: "uncertain", reasons: ["cannot_assess"] })).decision, "uncertain");
 });
 
+test("malformed or uncertain Gemini safety metadata never approves an otherwise clear receipt", () => {
+  const valid = { category: "HARM_CATEGORY_HARASSMENT", probability: "NEGLIGIBLE" };
+  const malformedRatings: [string, unknown][] = [
+    ["null ratings", null], ["object ratings", valid], ["null rating", [null]], ["missing fields", [{}]],
+    ["missing category", [{ probability: "LOW" }]], ["unknown category", [{ ...valid, category: "UNKNOWN" }]],
+    ["unspecified category", [{ ...valid, category: "HARM_CATEGORY_UNSPECIFIED" }]], ["nonstring category", [{ ...valid, category: 7 }]],
+    ["missing probability", [{ category: valid.category }]], ["unknown probability", [{ ...valid, probability: "UNKNOWN" }]],
+    ["unspecified probability", [{ ...valid, probability: "HARM_PROBABILITY_UNSPECIFIED" }]],
+    ["nonstring probability", [{ ...valid, probability: 0 }]], ["medium probability", [{ ...valid, probability: "MEDIUM" }]],
+    ["high probability", [{ ...valid, probability: "HIGH" }]], ["blocked", [{ ...valid, blocked: true }]],
+    ["string blocked", [{ ...valid, blocked: "true" }]], ["null blocked", [{ ...valid, blocked: null }]],
+    ["numeric blocked", [{ ...valid, blocked: 0 }]], ["string probability score", [{ ...valid, probabilityScore: "0.1" }]],
+    ["negative probability score", [{ ...valid, probabilityScore: -0.1 }]], ["excess probability score", [{ ...valid, probabilityScore: 1.1 }]],
+    ["nonfinite probability score", [{ ...valid, probabilityScore: Infinity }]], ["NaN probability score", [{ ...valid, probabilityScore: NaN }]],
+    ["null severity", [{ ...valid, severity: null }]], ["unknown severity", [{ ...valid, severity: "UNKNOWN" }]],
+    ["unspecified severity", [{ ...valid, severity: "HARM_SEVERITY_UNSPECIFIED" }]],
+    ["medium severity", [{ ...valid, severity: "HARM_SEVERITY_MEDIUM" }]], ["high severity", [{ ...valid, severity: "HARM_SEVERITY_HIGH" }]],
+    ["string severity score", [{ ...valid, severityScore: "0.1" }]], ["negative severity score", [{ ...valid, severityScore: -0.1 }]],
+    ["excess severity score", [{ ...valid, severityScore: 1.1 }]], ["nonfinite severity score", [{ ...valid, severityScore: Infinity }]],
+    ["duplicate category", [valid, { ...valid, probability: "LOW" }]],
+  ];
+  for (const [name, ratings] of malformedRatings) {
+    const response = modelResponse();
+    assert.throws(() => parseMediaModerationResponse({ ...response, candidates: [{ ...response.candidates[0], safetyRatings: ratings }] }), MediaModerationUnavailableError, `candidate: ${name}`);
+    assert.throws(() => parseMediaModerationResponse({ ...response, promptFeedback: { safetyRatings: ratings } }), MediaModerationUnavailableError, `prompt: ${name}`);
+  }
+  for (const role of [null, false, 1, "", "user", "UNKNOWN"]) {
+    const response = modelResponse();
+    assert.throws(() => parseMediaModerationResponse({ candidates: [{ ...response.candidates[0], content: { ...response.candidates[0].content, role } }] }), MediaModerationUnavailableError);
+  }
+  for (const thought of [null, 0, "false", "true", {}]) {
+    const response = modelResponse();
+    assert.throws(() => parseMediaModerationResponse({ candidates: [{ ...response.candidates[0], content: { parts: [{ text: JSON.stringify(clear), thought }] } }] }), MediaModerationUnavailableError);
+  }
+  for (const promptFeedback of [null, false, 0, "", { blockReason: false }, { blockReason: null }, { blockReason: "UNKNOWN" }]) {
+    assert.throws(() => parseMediaModerationResponse({ ...modelResponse(), promptFeedback }), MediaModerationUnavailableError);
+  }
+});
+
+test("valid optional Gemini metadata and omitted safety ratings preserve explicit clear approval", () => {
+  assert.equal(parseMediaModerationResponse(modelResponse()).decision, "approve");
+  for (const probability of ["NEGLIGIBLE", "LOW"]) {
+    for (const severity of [undefined, "HARM_SEVERITY_NEGLIGIBLE", "HARM_SEVERITY_LOW"]) {
+      const rating = { category: "HARM_CATEGORY_HARASSMENT", probability, blocked: false, probabilityScore: 0.1,
+        ...(severity ? { severity, severityScore: 0.1 } : {}) };
+      const response = modelResponse();
+      assert.equal(parseMediaModerationResponse({ ...response, promptFeedback: { safetyRatings: [rating] }, candidates: [{
+        ...response.candidates[0], safetyRatings: [rating], content: { role: "model", parts: [
+          { thought: true, text: "Inspecting the supplied evidence." }, { thought: false, text: JSON.stringify(clear) },
+        ] },
+      }] }).decision, "approve");
+    }
+  }
+  assert.equal(parseMediaModerationResponse({ ...modelResponse(), promptFeedback: { blockReason: "BLOCK_REASON_UNSPECIFIED", safetyRatings: [] } }).decision, "approve");
+});
+
 test("Gemini moderation sends actual multimodal bytes, uses header credentials and never falls back", async (t) => {
   configured(t); const verified: VerifiedMedia = { ...identity, ...await decoder.verify(Buffer.from("data"), "image/png", "post") };
   let inference = 0;

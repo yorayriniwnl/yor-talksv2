@@ -119,8 +119,11 @@ test("source KPIs calculate activation, cohort retention, engagement, and ledger
     activationUser.id,
     new Date(activationSignupAt.getTime() + 2 * 86_400_000).toISOString(),
   ]);
-  await pool.query("INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)", [postId, dormantUser.id]);
-  await pool.query("INSERT INTO comments (id, post_id, author_id, content) VALUES ($1, $2, $3, 'integration fixture')", [randomUUID(), postId, dormantUser.id]);
+  // Test engagement within the period, independently of subsecond database /
+  // application clock skew at the overview's exclusive upper boundary.
+  const engagementAt = new Date(now.getTime() - 60_000).toISOString();
+  await pool.query("INSERT INTO post_likes (post_id, user_id, created_at) VALUES ($1, $2, $3)", [postId, dormantUser.id, engagementAt]);
+  await pool.query("INSERT INTO comments (id, post_id, author_id, content, created_at) VALUES ($1, $2, $3, 'integration fixture', $4)", [randomUUID(), postId, dormantUser.id, engagementAt]);
 
   const storyId = randomUUID();
   await pool.query("INSERT INTO stories (id, author_id, media_url, type, expires_at) VALUES ($1, $2, 'https://example.test/story.jpg', 'image', $3)", [
@@ -128,12 +131,12 @@ test("source KPIs calculate activation, cohort retention, engagement, and ledger
     activationUser.id,
     new Date(now.getTime() + 86_400_000).toISOString(),
   ]);
-  await pool.query("INSERT INTO story_views (story_id, user_id) VALUES ($1, $2)", [storyId, dormantUser.id]);
-  await pool.query("INSERT INTO story_reactions (story_id, user_id, emoji) VALUES ($1, $2, 'heart')", [storyId, dormantUser.id]);
+  await pool.query("INSERT INTO story_views (story_id, user_id, viewed_at) VALUES ($1, $2, $3)", [storyId, dormantUser.id, engagementAt]);
+  await pool.query("INSERT INTO story_reactions (story_id, user_id, emoji, created_at) VALUES ($1, $2, 'heart', $3)", [storyId, dormantUser.id, engagementAt]);
 
   const communityId = randomUUID();
   await pool.query("INSERT INTO communities (id, name, slug, owner_id) VALUES ($1, 'Analytics fixture', $2, $3)", [communityId, `analytics-${communityId}`, activationUser.id]);
-  await pool.query("INSERT INTO community_members (community_id, user_id) VALUES ($1, $2)", [communityId, dormantUser.id]);
+  await pool.query("INSERT INTO community_members (community_id, user_id, created_at) VALUES ($1, $2, $3)", [communityId, dormantUser.id, engagementAt]);
 
   const cohortDate = new Date(Date.UTC(retentionSignup.getUTCFullYear(), retentionSignup.getUTCMonth(), retentionSignup.getUTCDate()));
   for (const dayOffset of [1, 7, 30]) {

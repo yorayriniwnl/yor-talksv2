@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { pool, runInDatabaseTransaction, type DbTransaction } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { StorageService } from "./storage-service.js";
@@ -88,15 +88,24 @@ export class MediaService {
   }
   async upload(ownerId:string,id:string,file:{buffer:Buffer;mimetype:string}) {
     const row=await this.owned(ownerId,id);
-    if (row.status!=='pending'||Date.parse(row.upload_expires_at)<Date.now()) throw new MediaLifecycleError("Upload is no longer pending",409,"media_upload_closed");
     if (file.mimetype!==row.declared_mime||file.buffer.length!==row.declared_bytes) throw new MediaLifecycleError("Media does not match the reservation",415,"media_metadata_mismatch");
+    const sha256=createHash('sha256').update(file.buffer).digest('hex');
+    if(row.deletion_status!=='none'||(row.status!=='approved'&&Date.parse(row.upload_expires_at)<Date.now())) throw new MediaLifecycleError("Upload is no longer pending",409,"media_upload_closed");
+    // An HTTP response can be lost after the upload commits. A retry may
+    // acknowledge those exact owner-bound bytes, without writing the provider
+    // again or reopening verification, rejection, or deletion state.
+    if(['uploaded','verifying','approved','failed'].includes(row.status)) {
+      if(row.sha256!==sha256)throw new MediaLifecycleError("Media bytes do not match the original upload",415,"media_metadata_mismatch");
+      return mediaResult(row);
+    }
+    if(row.status!=='pending')throw new MediaLifecycleError("Upload is no longer pending",409,"media_upload_closed");
     const token=randomUUID(),claimed=await pool.query(`UPDATE media_assets SET verification_token=$2,verification_until=now()+interval '2 minutes'
       WHERE id=$1 AND status='pending' AND deletion_status='none' AND (verification_until IS NULL OR verification_until<now()) RETURNING *`,[id,token]);
     if (!claimed.rowCount) throw new MediaLifecycleError("Upload is already in progress",409,"media_upload_in_progress");
     try {
       await this.provider.uploadBuffer(mediaIntent(row),file.buffer);
-      const result=await pool.query<MediaAssetRow>(`UPDATE media_assets SET status='uploaded',verification_token=NULL,verification_until=NULL,updated_at=now()
-        WHERE id=$1 AND verification_token=$2 AND status='pending' AND deletion_status='none' RETURNING *`,[id,token]);
+      const result=await pool.query<MediaAssetRow>(`UPDATE media_assets SET status='uploaded',sha256=$3,verification_token=NULL,verification_until=NULL,updated_at=now()
+        WHERE id=$1 AND verification_token=$2 AND status='pending' AND deletion_status='none' RETURNING *`,[id,token,sha256]);
       if (!result.rowCount) throw new MediaLifecycleError("Upload reservation was revoked",409,"media_upload_closed");
       return mediaResult(result.rows[0]!);
     } catch(error) {
@@ -117,6 +126,8 @@ export class MediaService {
     }
     try {
       const verified=await this.provider.verifyUpload(mediaIntent(row),mediaIdentity(row));
+      const verifiedSha=createHash('sha256').update(verified.buffer).digest('hex');
+      if(verified.sha256!==verifiedSha||(row.sha256!==null&&row.sha256!==verifiedSha))throw new MediaVerificationError('Uploaded bytes changed before verification');
       await pool.query(`UPDATE media_assets SET status='uploaded' WHERE id=$1 AND verification_token=$2 AND deletion_status='none'`,[id,token]);
       const active=await pool.query(`UPDATE media_assets SET status='verifying',provider_asset_id=$3,provider_version=$4,provider_format=$5,
         verified_mime=$6,verified_bytes=$7,sha256=$8,width=$9,height=$10,duration_seconds=$11,updated_at=now()
@@ -173,6 +184,7 @@ export class MediaService {
         AND (deletion_status='pending' OR (deletion_status='deleted' AND upload_expires_at+interval '1 hour'>now())
           OR (deletion_status='none' AND status IN ('pending','uploaded','verifying','failed','approved')))
         AND (deletion_until IS NULL OR deletion_until<now()) AND (verification_until IS NULL OR verification_until<now())
+        AND NOT EXISTS(SELECT 1 FROM media_references WHERE media_id=media_assets.id)
         ORDER BY cleanup_at,id FOR UPDATE SKIP LOCKED LIMIT ${bounded}`);
       const rows:Array<MediaAssetRow&{deletion_token:string;deletion_attempts:number}>=[];
       for(const candidate of candidates.rows as unknown as MediaAssetRow[]) {

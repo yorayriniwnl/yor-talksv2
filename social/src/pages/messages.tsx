@@ -752,8 +752,10 @@ export default function Messages() {
     sounds.playPop();
 
     try {
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId);
-      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId);
+      const approved = imageFiles[0] ? await uploadApprovedMedia(imageFiles[0], 'message') : undefined;
+      const attachment = approved ? { mediaId: approved.mediaId } : undefined;
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId, attachment);
+      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId, attachment);
       setMessage('');
       setImageFiles([]);
       setShowImageInput(false);

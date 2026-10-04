@@ -100,6 +100,57 @@ test('uploaded media has no delivery URL; finalize is idempotent after explicit 
   assert.equal(persisted.verification_token, null);
 });
 
+test('upload retries acknowledge committed identical owner bytes without another provider write and preserve them across moderation retries', async () => {
+  const owner = await createTestUser(users), other = await createTestUser(users);
+  let writes = 0, decisions = 0;
+  const service = new MediaService(fixtureProvider({ uploadBuffer: async () => { writes++; } }), {
+    ...approve, moderate: async () => {
+      decisions++;
+      if(decisions===1)throw new MediaModerationUnavailableError();
+      return { decision: 'approve', reasons: [] };
+    },
+  });
+  const media = await reservation(service, owner.id);
+  const file = { buffer: bytes, mimetype: 'image/png' };
+  // Commit the first request but intentionally discard its response, as a
+  // transport failure would. The same grant/File can now resume finalization.
+  await service.upload(owner.id, media.id, file);
+  assert.equal((await row(media.id)).sha256, createHash('sha256').update(bytes).digest('hex'));
+  const retried = await service.upload(owner.id, media.id, file);
+  assert.equal(retried.status, 'uploaded'); assert.equal(retried.url, undefined);
+  assert.equal(writes, 1);
+  const changed = Buffer.from(bytes); changed[0] ^= 1;
+  await assert.rejects(() => service.upload(owner.id, media.id, { ...file, buffer: changed }), code('media_metadata_mismatch'));
+  await assert.rejects(() => service.upload(other.id, media.id, file), code('media_owner_mismatch'));
+  await assert.rejects(() => service.finalizeUpload(owner.id, media.id), code('media_moderation_unavailable'));
+  assert.equal((await row(media.id)).status, 'failed');
+  assert.equal((await service.upload(owner.id, media.id, file)).status, 'failed');
+  assert.equal((await row(media.id)).sha256, createHash('sha256').update(bytes).digest('hex'));
+  assert.equal((await service.finalizeUpload(owner.id, media.id)).status, 'approved');
+  assert.equal((await service.upload(owner.id, media.id, file)).status, 'approved');
+  assert.equal(writes, 1); assert.equal(decisions, 2);
+  await service.deleteUpload(owner.id, media.id);
+  await assert.rejects(() => service.upload(owner.id, media.id, file), code('media_upload_closed'));
+});
+
+test('finalize refuses provider replacement of the exact server-uploaded bytes or a dishonest provider digest', async () => {
+  const owner = await createTestUser(users);
+  for(const dishonestDigest of [false,true]) {
+    let decisions = 0;
+    const changed = Buffer.from(bytes); changed[0] ^= 1;
+    const service = new MediaService(fixtureProvider({ verifyUpload: async intent => ({ ...verified(intent), buffer: changed,
+      sha256: dishonestDigest ? createHash('sha256').update(bytes).digest('hex') : createHash('sha256').update(changed).digest('hex') }) }),
+      { ...approve, moderate: async () => { decisions++; return { decision: 'approve', reasons: [] }; } });
+    const media = await reservation(service, owner.id);
+    await service.upload(owner.id, media.id, { buffer: bytes, mimetype: 'image/png' });
+    await assert.rejects(() => service.finalizeUpload(owner.id, media.id), code('media_verification_failed'));
+    assert.equal(decisions, 0);
+    assert.equal((await row(media.id)).status, 'rejected');
+    assert.equal((await row(media.id)).deletion_status, 'pending');
+    await assert.rejects(() => service.upload(owner.id, media.id, { buffer: bytes, mimetype: 'image/png' }), code('media_upload_closed'));
+  }
+});
+
 test('concurrent finalizers invoke the verifier/moderator once and return no URL to the losing request', async () => {
   const owner = await createTestUser(users), entered = latch(), resume = latch(); let reads = 0, decisions = 0;
   const service = new MediaService(fixtureProvider({ verifyUpload: async intent => { reads++; entered.release(); await resume.promise; return verified(intent); } }),
@@ -161,6 +212,7 @@ test('rejection is idempotent, cannot be published, and deletes only the server 
   assert.deepEqual(await service.finalizeUpload(owner.id, media.id), result);
   await assert.rejects(() => withApprovedMedia(owner.id, [{ mediaIds: [media.id], purpose: 'post', slot: 'images' }],
     { type: 'posts', id: randomUUID() }, async () => true), code('media_not_approved'));
+  await pool.query("UPDATE media_assets SET cleanup_at='1800-01-01T00:00:00Z' WHERE id=$1", [media.id]);
   await service.cleanup(100);
   assert.ok(destroyed.includes(`yor-talks/${owner.id}/${media.id}`));
   assert.equal((await row(media.id)).deletion_status, 'deleted'); assert.equal((await row(media.id)).status, 'rejected');
@@ -170,15 +222,15 @@ test('expired reservations and provider cleanup failures are retried, including 
   const owner = await createTestUser(users); let attempts = 0;
   const service = new MediaService(fixtureProvider({ deletePendingUpload: async () => { attempts++; throw new MediaProviderUnavailableError(); } }), approve);
   const media = await reservation(service, owner.id);
-  await pool.query("UPDATE media_assets SET upload_expires_at=now()-interval '1 minute',cleanup_at=now()-interval '1 minute' WHERE id=$1", [media.id]);
+  await pool.query("UPDATE media_assets SET upload_expires_at=now()-interval '1 minute',cleanup_at='1801-01-01T00:00:00Z' WHERE id=$1", [media.id]);
   await assert.rejects(() => service.finalizeUpload(owner.id, media.id), code('media_upload_expired'));
   await service.cleanup(100);
   assert.ok(attempts > 0); assert.equal((await row(media.id)).deletion_status, 'pending'); assert.equal((await row(media.id)).status, 'deleted');
-  await pool.query('UPDATE media_assets SET cleanup_at=now() WHERE id=$1', [media.id]);
+  await pool.query("UPDATE media_assets SET cleanup_at='1801-01-01T00:00:00Z' WHERE id=$1", [media.id]);
   const retried: string[] = [];
   const reliable = new MediaService(fixtureProvider({ deletePendingUpload: async intent => { retried.push(intent.id); } }), approve);
   await reliable.cleanup(100); assert.ok(retried.includes(media.id)); assert.equal((await row(media.id)).deletion_status, 'deleted');
-  await pool.query('UPDATE media_assets SET cleanup_at=now() WHERE id=$1', [media.id]);
+  await pool.query("UPDATE media_assets SET cleanup_at='1801-01-01T00:00:00Z' WHERE id=$1", [media.id]);
   await reliable.cleanup(100); assert.equal(retried.filter(id => id === media.id).length, 2);
 });
 
@@ -187,9 +239,49 @@ test('concurrent cleanup workers cannot claim the same provider deletion', async
   const provider = fixtureProvider({ deletePendingUpload: async intent => { calls.set(intent.id, (calls.get(intent.id) ?? 0) + 1); if (intent.id === target) { entered.release(); await resume.promise; } } });
   const service = new MediaService(provider, approve), media = await reservation(service, owner.id), target = media.id;
   await service.deleteUpload(owner.id, media.id);
+  await pool.query("UPDATE media_assets SET cleanup_at='1802-01-01T00:00:00Z' WHERE id=$1", [media.id]);
   const first = service.cleanup(100); await entered.promise;
   await service.cleanup(100); resume.release(); await first;
   assert.equal(calls.get(media.id), 1); assert.equal((await row(media.id)).deletion_status, 'deleted');
+});
+
+test('cleanup skips more than one batch of older live assets before limiting expired and rejected candidates', async t => {
+  const owner = await createTestUser(users);
+  t.after(() => users.deleteById(owner.id));
+  const destroyed: string[] = [];
+  const provider = fixtureProvider({ deletePendingUpload: async intent => { destroyed.push(intent.id); } });
+  const service = new MediaService(provider, approve);
+  const active: string[] = [];
+  for (let index = 0; index < 26; index++) {
+    const media = await reservation(service, owner.id);
+    await service.finalizeUpload(owner.id, media.id);
+    const id = randomUUID();
+    await withApprovedMedia(owner.id, [{ mediaIds: [media.id], purpose: 'post', slot: 'images' }], { type: 'posts', id }, async assets => {
+      await db.insert(postsTable).values({ id, authorId: owner.id, content: 'Referenced cleanup regression fixture', images: assets.images.map(asset => asset.url) });
+      return true;
+    });
+    active.push(media.id);
+  }
+  // Fixed synthetic timestamps keep this fixture ahead of unrelated retained
+  // test rows while preserving the real ordering: live uses precede garbage.
+  await pool.query("UPDATE media_assets SET cleanup_at='1900-01-01T00:00:00Z' WHERE id=ANY($1::uuid[])", [active]);
+  const expired = await reservation(service, owner.id);
+  await pool.query("UPDATE media_assets SET cleanup_at='1901-01-01T00:00:00Z',upload_expires_at=now()-interval '2 hours' WHERE id=$1", [expired.id]);
+  const rejecting = new MediaService(provider, { ...approve, moderate: async () => ({ decision: 'reject', reasons: ['synthetic regression'] }) });
+  const rejected = await reservation(rejecting, owner.id);
+  await rejecting.finalizeUpload(owner.id, rejected.id);
+  await pool.query("UPDATE media_assets SET cleanup_at='1901-01-02T00:00:00Z' WHERE id=$1", [rejected.id]);
+
+  await service.cleanup(25);
+  assert.ok(destroyed.includes(expired.id), 'an expired later reservation must not starve behind live referenced media');
+  assert.ok(destroyed.includes(rejected.id), 'a later rejected asset must also be reached in the same sweep');
+  for (const id of active) {
+    assert.equal((await row(id)).status, 'approved');
+    assert.equal((await row(id)).deletion_status, 'none');
+    assert.equal(destroyed.includes(id), false);
+  }
+  assert.equal((await row(expired.id)).deletion_status, 'deleted');
+  assert.equal((await row(rejected.id)).deletion_status, 'deleted');
 });
 
 test('an expired verification lease or explicit deletion revokes a late moderation approval', async () => {
