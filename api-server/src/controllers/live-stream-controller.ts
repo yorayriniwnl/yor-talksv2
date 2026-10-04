@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { LiveStreamService } from "../services/live-stream-service.js";
 import { LiveKitNotConfiguredError } from "../services/livekit-service.js";
@@ -20,6 +21,7 @@ export class LiveStreamController {
       const stream = await this.liveStreamService.createStream({ ...req.body, hostId });
       return res.status(201).json(createResponse("Stream scheduled", stream));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof LiveKitNotConfiguredError) {
         return res.status(503).json(createResponse("Live video is unavailable", null, {}, [error.message]));
       }
@@ -52,6 +54,7 @@ export class LiveStreamController {
       }
       return res.status(200).json(createResponse("Stream status updated", stream));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof LiveKitNotConfiguredError) {
         return res.status(503).json(createResponse("Live video is unavailable", null, {}, [error.message]));
       }
@@ -74,6 +77,7 @@ export class LiveStreamController {
       const token = await this.liveStreamService.getRoomAccessToken(paramId(req), userId);
       return res.status(200).json(createResponse("Live room token created", token));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof LiveKitNotConfiguredError) {
         return res.status(503).json(createResponse("Live video is unavailable", null, {}, [error.message]));
       }

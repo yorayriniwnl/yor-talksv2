@@ -16,6 +16,8 @@ import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { hasTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -351,6 +353,9 @@ export default function Settings() {
   
   const logout = useAppStore((s) => s.logout);
   const currentUser = useAppStore((s) => s.currentUser);
+  const updateProfile = useAppStore((s) => s.updateProfile);
+  const [avatarFiles, setAvatarFiles] = useState<File[]>([]);
+  const [avatarSaving, setAvatarSaving] = useState(false);
   const updateContentFilter = useAppStore((s) => s.updateContentFilter);
   const updateTwoFactorEnabled = useAppStore((s) => s.setTwoFactorEnabled);
   const privacySettings = useAppStore((s) => s.privacy);
@@ -576,6 +581,22 @@ export default function Settings() {
         animate="animate"
         className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-8"
       >
+        {currentUser && <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
+          <h3 className="font-semibold">Profile image</h3>
+          {currentUser.avatarUrl && <img src={currentUser.avatarUrl} alt="Current profile image" className="h-20 w-20 rounded-full object-cover" />}
+          <MediaImageField id="profile-avatar" label="New profile image" files={avatarFiles} onChange={setAvatarFiles} disabled={avatarSaving} />
+          <Button disabled={avatarSaving || avatarFiles.length === 0} onClick={async () => {
+            setAvatarSaving(true);
+            try {
+              const approved = await uploadApprovedMedia(avatarFiles[0], 'avatar');
+              await updateProfile({ avatarMediaId: approved.mediaId });
+              setAvatarFiles([]);
+              toast.success('Profile image updated');
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : 'Could not update your profile image. Your selected file is still here.');
+            } finally { setAvatarSaving(false); }
+          }}>{avatarSaving ? 'Saving profile image…' : 'Save profile image'}</Button>
+        </section>}
         {/* Appearance */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
           <div className="showcase-section-title mb-2">

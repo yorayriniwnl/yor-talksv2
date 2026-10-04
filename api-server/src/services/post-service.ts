@@ -1,3 +1,5 @@
+import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
+import { MediaLifecycleError } from "./media-service.js";
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
@@ -90,7 +92,7 @@ export class PostService {
   async createPost(
     authorId: string,
     content: string,
-    images: string[],
+    mediaIds: string[],
     contentCategory = DEFAULT_CONTENT_CATEGORY,
     contentRating = DEFAULT_CONTENT_RATING,
     audience: PostRecord["audience"] = "public",
@@ -106,7 +108,7 @@ export class PostService {
       id: randomUUID(),
       authorId,
       content,
-      images,
+      images: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       likesCount: 0,
@@ -133,7 +135,7 @@ export class PostService {
       question: poll.question.trim(),
       options: poll.options.map((option, position) => ({ id: randomUUID(), text: option.text.trim(), position })),
     } : undefined;
-    const created = await this.postRepository.create(post, normalizedPoll);
+    const created = await withApprovedMedia(authorId, [{ mediaIds, purpose: "post", slot: "images" }], { type: "posts", id: post.id }, media => this.postRepository.create({ ...post, images: media.images.map(asset => asset.url) }, normalizedPoll));
     return (await this.getPost(created.id, authorId)) ?? created;
   }
 
@@ -196,23 +198,24 @@ export class PostService {
     postId: string,
     authorId: string,
     content: string,
-    attachment?: { mediaUrl?: string; mediaType?: "image" | "gif" | "audio"; mediaDuration?: number },
+    attachment?: { mediaId?: string; mediaType?: "image" | "gif" | "audio"; mediaDuration?: number },
   ): Promise<{ post: PostRecord; comment: CommentRecord } | undefined> {
     const post = await this.getPost(postId, authorId);
     if (!post) {
       return undefined;
     }
     const normalizedContent = content.trim();
+    if (!normalizedContent && attachment?.mediaId === undefined) throw new MediaLifecycleError("Comment text or approved media is required", 400, "invalid_comment");
     await enforceTextContentPolicy(normalizedContent, this.aiService, "comment");
-    const createdComment = await db.transaction(async (tx) => {
+    rejectRawMedia(attachment ?? {}, ["mediaUrl"]);
+    const commentId = randomUUID();
+    const createdComment = await withApprovedMedia(authorId, mediaBinding(attachment?.mediaId, "comment", "mediaUrl"), { type: "comments", id: commentId }, media => db.transaction(async (tx) => {
       const [created] = await tx.insert(commentsTable).values({
-        id: randomUUID(),
+        id: commentId,
         postId,
         authorId,
         content: normalizedContent,
-        mediaUrl: attachment?.mediaUrl,
-        mediaType: attachment?.mediaType,
-        mediaDuration: attachment?.mediaDuration,
+        ...attachmentFields(media.mediaUrl?.[0]),
       }).returning();
       await tx.execute(sql`
         UPDATE posts
@@ -222,7 +225,7 @@ export class PostService {
         WHERE id = ${postId}
       `);
       return created;
-    });
+    }));
     const updatedPost = await this.postRepository.findById(postId);
     const comment: CommentRecord = {
       id: createdComment.id,

@@ -11,6 +11,7 @@ import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 import { apiRateLimiter } from "./middlewares/rate-limit.js";
 import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
+import { mediaResponse } from "./services/media-response.js";
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -41,6 +42,7 @@ app.disable("x-powered-by");
 app.use(requestContext);
 app.use(requestLogger);
 app.use(recordOperationalMetrics);
+app.use(mediaResponse);
 app.use(createHelmetMiddleware());
 app.use(compression());
 app.use(

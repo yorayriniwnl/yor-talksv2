@@ -98,6 +98,46 @@ async function installApiBoundary(page: Page, profile = user) {
   });
 }
 
+for (const outcome of ['retry', 'rejected'] as const) test(`image publishing keeps its draft until media is approved: ${outcome}`, async ({ page }) => {
+  await installApiBoundary(page);
+  const mediaId = 'b66d5b3e-e258-4932-9b99-d15cf3f33615';
+  const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  let prepares = 0, uploads = 0, finalizes = 0, publications = 0;
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      prepares++; expect(route.request().postDataJSON().purpose).toBe('post');
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: 'post', mimeType: 'image/png', maxFileSize: 5 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    if (path.endsWith('/upload')) { uploads++; return json(route, { id: mediaId, mediaId, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      if (outcome === 'rejected') return json(route, { id: mediaId, mediaId, status: 'rejected' });
+      if (finalizes === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media moderation is temporarily unavailable', errors: ['media_moderation_unavailable'] }) });
+      return json(route, { id: mediaId, mediaId, status: 'approved', mimeType: 'image/png', size: image.length, url: `/api/media/${mediaId}/content?token=synthetic.signed` });
+    }
+    return route.fulfill({ status: 200, contentType: 'image/png', body: image });
+  });
+  await page.route('**/api/posts', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    publications++; const payload = route.request().postDataJSON(); expect(payload.mediaIds).toEqual([mediaId]); expect(payload.images).toBeUndefined();
+    return json(route, post(payload.content, '292d72b6-6bd1-4693-91e8-b4dc32302c7c'));
+  });
+  await page.goto('/'); await page.getByRole('button', { name: 'Create a post' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Create post' });
+  await dialog.getByRole('textbox', { name: 'Write a post' }).fill('Keep this media draft until approval.');
+  await dialog.locator('#post-content-category').selectOption('technology');
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: image });
+  await dialog.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Post', exact: true })).toBeEnabled();
+  await expect(dialog.getByRole('textbox', { name: 'Write a post' })).toHaveValue('Keep this media draft until approval.');
+  expect(publications).toBe(0); expect(prepares).toBe(1); expect(uploads).toBe(1);
+  if (outcome === 'retry') {
+    await dialog.getByRole('button', { name: 'Post', exact: true }).click(); await expect(dialog).toBeHidden();
+    expect(publications).toBe(1); expect(prepares).toBe(1); expect(uploads).toBe(1); expect(finalizes).toBe(2);
+  }
+});
+
 const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
   features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
 

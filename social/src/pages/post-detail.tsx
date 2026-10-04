@@ -90,9 +90,9 @@ export default function PostDetail() {
 
   const handleAddComment = async (data: RichCommentData) => {
     if (!post) return;
-    if (!data.text.trim() && !data.imageUrl && !data.gifUrl && !data.voiceNoteUrl) return;
+    if (!data.text.trim() && !data.mediaId) return;
     if (replyingTo) {
-      if (data.imageUrl || data.gifUrl || data.voiceNoteUrl) {
+      if (data.mediaId) {
         throw new Error('Text replies are required for nested replies. Add media as a top-level comment instead.');
       }
       const result = await api.replyToPostComment(post.id, replyingTo.id, data.text.trim());
@@ -104,13 +104,7 @@ export default function PostDetail() {
       return;
     }
 
-    const media = data.voiceNoteUrl
-      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
-      : data.gifUrl
-        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
-        : data.imageUrl
-          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
-          : {};
+    const media = data.mediaId ? { mediaId: data.mediaId, mediaType: data.mediaType, mediaDuration: data.voiceDuration } : {};
     const result = await api.commentOnPost(post.id, { content: data.text.trim(), ...media });
     const newComment: CommentItem = {
       id: result.comment.id,

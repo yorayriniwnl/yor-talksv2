@@ -167,6 +167,11 @@ export interface MessageRecord {
   senderId: string;
   recipientId: string;
   content: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "audio" | null;
+  mediaDuration?: number | null;
+  mediaLegacy?: boolean;
   textStyleId?: string;
   createdAt: string;
   seenAt: string | null;
@@ -249,6 +254,7 @@ export interface CommunityRecord {
   name: string;
   slug: string;
   description: string;
+  coverUrl?: string | null;
   ownerId: string;
   moderators: string[];
   memberIds: string[];

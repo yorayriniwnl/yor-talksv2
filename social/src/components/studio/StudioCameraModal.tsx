@@ -19,6 +19,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -168,7 +169,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     }
 
     try {
-      const recorder = new MediaRecorder(streamRef.current);
+      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(value => MediaRecorder.isTypeSupported(value));
+      if (!mimeType) { toast.error('This browser cannot record a supported MP4 or WebM video.'); return; }
+      const recorder = new MediaRecorder(streamRef.current, { mimeType });
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => {
@@ -225,20 +228,17 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     }
     setPublishing(true);
     sounds.playChime();
-    triggerConfetti();
 
     try {
       if ((mode === 'reel' || mode === 'story') && !recordedFile) {
         throw new Error('Record a clip before publishing this format.');
       }
-      const uploaded = recordedFile ? await api.uploadMedia(recordedFile) : null;
-      const mediaUrl = uploaded?.url;
+      const uploaded = recordedFile ? await uploadApprovedMedia(recordedFile, mode === 'reel' ? 'video' : mode === 'story' ? 'story' : 'post') : null;
 
       if (mode === 'reel') {
         await createVideo({
           title: caption.trim() || 'New Cinematic Reel ✨',
-          videoUrl: mediaUrl!,
-          thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
+          mediaId: uploaded!.mediaId,
           type: 'short',
           contentCategory,
           contentRating,
@@ -247,7 +247,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       } else if (mode === 'story') {
         await addStory({
           type: 'video',
-          mediaUrl: mediaUrl!,
+          mediaId: uploaded!.mediaId,
           textContent: caption.trim() || undefined,
           backgroundGradient: 'from-purple-900 via-indigo-900 to-black',
           contentCategory,
@@ -255,11 +255,12 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         });
         toast.success('✨ Story added to your 24h highlights!');
       } else {
-        await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', mediaUrl ? [mediaUrl] : undefined, undefined, contentRating, contentCategory);
+        await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', uploaded ? [uploaded.mediaId] : undefined, undefined, contentRating, contentCategory);
         toast.success('🚀 Published to the global feed!');
       }
 
       onOpenChange(false);
+      triggerConfetti();
       // Reset
       setRecordedPreviewUrl(null);
       setRecordedFile(null);

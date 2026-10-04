@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { communitiesTable, communityMembersTable } from "@workspace/db/schema";
@@ -14,8 +15,9 @@ export class CommunityService {
     private readonly aiService: AIService = new AIService(),
   ) {}
 
-  async createCommunity(input: { name: string; slug: string; description: string; ownerId: string; contentRating?: CommunityRecord["contentRating"] }): Promise<CommunityRecord> {
+  async createCommunity(input: { name: string; slug: string; description: string; ownerId: string; coverMediaId?: string; contentRating?: CommunityRecord["contentRating"] }): Promise<CommunityRecord> {
     await enforceTextContentPolicy(`${input.name}\n${input.description}`, this.aiService, "community");
+    rejectRawMedia(input, ["coverUrl"]);
     const community: CommunityRecord = {
       id: randomUUID(),
       name: input.name,
@@ -35,12 +37,12 @@ export class CommunityService {
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
     
-    return db.transaction(async (tx) => {
+    return withApprovedMedia(input.ownerId, mediaBinding(input.coverMediaId, "community", "coverUrl", "image"), { type: "communities", id: community.id }, media => db.transaction(async (tx) => {
       const { memberIds: _memberIds, ...persistedCommunity } = community;
-      const [created] = await tx.insert(communitiesTable).values(persistedCommunity).returning();
+      const [created] = await tx.insert(communitiesTable).values({ ...persistedCommunity, coverUrl: media.coverUrl?.[0]?.url }).returning();
       await tx.insert(communityMembersTable).values({ communityId: created.id, userId: input.ownerId, role: "owner" });
       return { ...(created as unknown as CommunityRecord), memberIds: [input.ownerId] };
-    });
+    }));
   }
 
   async listCommunities(viewerId?: string): Promise<CommunityRecord[]> {

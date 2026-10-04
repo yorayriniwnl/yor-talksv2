@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { VideoService } from "../services/video-service.js";
 import { createResponse } from "../utils/response.js";
@@ -81,7 +82,7 @@ export class VideoController {
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     try {
       const result = await this.videoService.commentOnVideo(paramId(req), userId, req.body.content, {
-        mediaUrl: req.body.mediaUrl,
+        mediaId: req.body.mediaId,
         mediaType: req.body.mediaType,
         mediaDuration: req.body.mediaDuration,
       });
@@ -91,6 +92,7 @@ export class VideoController {
         comment: this.commentView(result.comment),
       }));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.moderation).filter(([, value]) => value).map(([key]) => key)));
       }

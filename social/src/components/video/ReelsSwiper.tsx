@@ -222,13 +222,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     const video = videos[playingIndex];
     if (!video) return;
     sounds.playPop();
-    const media = data.voiceNoteUrl
-      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
-      : data.gifUrl
-        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
-        : data.imageUrl
-          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
-          : {};
+    const media = data.mediaId ? { mediaId: data.mediaId, mediaType: data.mediaType, mediaDuration: data.voiceDuration } : {};
     const result = await api.commentOnVideo(video.id, { content: data.text.trim(), ...media });
     setComments((prev) => [mapVideoComment({ ...result.comment, author: {
       id: currentUser?.id || result.comment.authorId,
@@ -569,6 +563,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
 
               <div className="operator-reels-comments__composer">
                 <RichCommentComposer
+                  mediaPurpose="video_comment"
                   postId={videos[playingIndex]?.id || 'reel'}
                   creatorUser={users[videos[playingIndex]?.authorId]}
                   placeholder="Add a comment, photo, GIF or tip..."

@@ -84,10 +84,14 @@ jobs:
           pnpm --filter @workspace/api-server typecheck
           pnpm --filter @workspace/social typecheck
 
+      - name: Install media verification runtime
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
       - name: Run API tests serially
         run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
         working-directory: api-server
         env:
+          MEDIA_REQUIRE_DECODER_TESTS: 'true'
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yor_talks
           REDIS_URL: redis://127.0.0.1:6379
@@ -148,6 +152,9 @@ jobs:
           "${compose[@]}" up -d --no-build
           timeout 120 sh -c 'until curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz >/dev/null; do sleep 2; done'
           curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz > /tmp/yor-talks-ci-readiness.json
+          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.details?.media?.decoder!==true)throw new Error('Production media decoder is unavailable');"
+          BASE_URL=http://127.0.0.1:18080 pnpm smoke
           curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
 
           migration_id=$("${compose[@]}" ps --all --quiet migrate)

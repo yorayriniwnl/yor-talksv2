@@ -3,6 +3,7 @@ import { pool } from '@workspace/db';
 import { BackgroundJobRepository, type BackgroundJob } from '../repositories/background-job-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
+import { MediaService } from '../services/media-service.js';
 
 export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
 
@@ -20,8 +21,14 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
   const jobs = new BackgroundJobRepository();
   const redis = new RedisRepository();
   const workerId = `lifecycle:${randomUUID()}`;
+  const media = new MediaService();
+  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
+    VALUES($1,'media_cleanup','media:cleanup:loop','{}',now())
+    ON CONFLICT(dedup_key) DO UPDATE SET status=CASE WHEN background_jobs.status='complete' THEN 'pending' ELSE background_jobs.status END`,[randomUUID()]);
   const handlers: Record<string, LifecycleHandler> = {
-    account_cleanup: job => cleanAccountSessions(job, redis), ...additionalHandlers,
+    account_cleanup: job => cleanAccountSessions(job, redis),
+    media_cleanup: async () => { await media.cleanup(); return { retryAfterSeconds: 60 }; },
+    ...additionalHandlers,
   };
   await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
   let stopping = false, busy = false, healthy = true;

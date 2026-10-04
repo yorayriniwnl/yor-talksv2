@@ -1,6 +1,7 @@
+import { MediaService, MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { AuthService } from "../services/auth-service.js";
-import { MediaModerationUnavailableError, StorageService } from "../services/storage-service.js";
+import { MediaModerationUnavailableError } from "../services/storage-service.js";
 import { PremiumProfileFeatureUnavailableError, PremiumStoryViewFeatureUnavailableError, UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
@@ -10,7 +11,7 @@ import { env } from "../config/env.js";
 import { assertValidUploadedFile } from "../middlewares/upload.js";
 
 export class UserController {
-  private readonly storageService = new StorageService();
+  private readonly mediaService = new MediaService();
   private readonly contactShieldService = new ContactShieldService();
 
   constructor(
@@ -65,6 +66,7 @@ export class UserController {
       if (!user) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       return res.status(200).json(createResponse("Premium profile updated", toOwnUser(user)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumProfileFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -79,13 +81,15 @@ export class UserController {
     }
     try {
       assertValidUploadedFile(file, "image");
-      const avatarUrl = await this.storageService.uploadAvatar(file.buffer, file.originalname);
-      const user = await this.userService.uploadAvatar(req.user?.id ?? "", avatarUrl);
+      const approved = await this.mediaService.processUpload(req.user?.id ?? "", file, "avatar");
+      if (approved.status !== "approved") throw new MediaLifecycleError("Avatar was not approved", 422, "media_not_approved");
+      const user = await this.userService.uploadAvatar(req.user?.id ?? "", approved.mediaId);
       if (!user) {
         return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       }
       return res.status(200).json(createResponse("Avatar uploaded", toOwnUser(user)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof Error && error.name === "InvalidFileTypeError") {
         return res.status(415).json(createResponse("Invalid avatar file", null, {}, [error.message]));
       }
@@ -150,6 +154,7 @@ export class UserController {
       if (!result) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       return res.status(200).json(createResponse("Close Friend added", result));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Could not add Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -161,6 +166,7 @@ export class UserController {
       if (!result) return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       return res.status(200).json(createResponse("Close Friend removed", result));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -172,6 +178,7 @@ export class UserController {
       if (!result) return res.status(404).json(createResponse("Creator not found", null, {}, ["Creator not found"]));
       return res.status(200).json(createResponse("Creator added to Favorites", result));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -183,6 +190,7 @@ export class UserController {
       if (!result) return res.status(404).json(createResponse("Creator not found", null, {}, ["Creator not found"]));
       return res.status(200).json(createResponse("Creator removed from Favorites", result));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -225,6 +233,7 @@ export class UserController {
       }
       return res.status(200).json(createResponse("Settings updated", user.settings));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumStoryViewFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -249,6 +258,7 @@ export class UserController {
       }
       return res.status(200).json(createResponse("User blocked", { blockedUsers: user.blockedUsers }));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Cannot block user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -271,6 +281,7 @@ export class UserController {
       }
       return res.status(200).json(createResponse("User muted", { mutedUsers: user.mutedUsers }));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Cannot mute user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -302,6 +313,7 @@ export class UserController {
       res.clearCookie("refreshToken", { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: env.AUTH_COOKIE_SAME_SITE, path: "/" });
       return res.status(200).json(createResponse("Account deleted", null));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof InvalidAccountPasswordError) {
         return res.status(401).json(createResponse("Password confirmation failed", null, {}, [error.message]));
       }
@@ -320,6 +332,7 @@ export class UserController {
       const shields = await this.contactShieldService.add(req.user?.id ?? "", contacts);
       return res.status(201).json(createResponse("Contact shields updated", shields));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, [error instanceof Error ? error.message : "Invalid contact list"]));
     }
   };

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { motion } from 'framer-motion';
 import { fadeInUp, staggerContainer, staggerItem, hoverLift, tapScale } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +25,7 @@ function CreateArticleDialog() {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
@@ -38,13 +41,14 @@ function CreateArticleDialog() {
         title: title.trim(),
         excerpt: excerpt.trim(),
         content: content.trim(),
-        coverUrl: `https://picsum.photos/seed/${encodeURIComponent(title)}/800/400`,
+        coverMediaId: coverFiles[0] ? (await uploadApprovedMedia(coverFiles[0], 'article')).mediaId : undefined,
         readTime: Math.max(1, Math.round(wordCount / 200)),
         contentCategory: contentCategory as ContentCategory,
         contentRating,
       });
       setOpen(false);
       setTitle(''); setExcerpt(''); setContent(''); setContentCategory(''); setContentRating(DEFAULT_CONTENT_RATING);
+      setCoverFiles([]);
     } catch (err: any) {
       setError(err.message || 'Failed to publish article');
     }
@@ -66,6 +70,7 @@ function CreateArticleDialog() {
           </div>
           <ContentCategorySelect id="article-content-category" value={contentCategory} onChange={setContentCategory} />
           <ContentRatingSelect id="article-content-rating" value={contentRating} onChange={setContentRating} />
+          <MediaImageField id="article-cover" label="Cover image (optional)" files={coverFiles} onChange={setCoverFiles} disabled={loading} />
           <div className="space-y-1.5">
             <Label htmlFor="article-excerpt" className="text-xs font-mono uppercase text-muted-foreground">Excerpt</Label>
             <Textarea id="article-excerpt" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} required maxLength={500} placeholder="A one or two sentence summary" rows={2} className="rounded-xl resize-none" />
@@ -219,7 +224,7 @@ export default function Articles() {
               whileHover={{ y: -3 }}
               className="relative h-72 sm:h-80 rounded-3xl overflow-hidden cursor-pointer group border border-border/30 shadow-lg"
             >
-              <img src={featuredArticle.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={featuredArticle.title} />
+              {featuredArticle.coverUrl && <img src={featuredArticle.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={featuredArticle.title} />}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8">
                 <ContentCategoryBadge value={featuredArticle.contentCategory} className="mb-3 w-fit border-white/25 bg-white/15 text-white" />
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white mb-3 line-clamp-2 leading-tight">{featuredArticle.title}</h2>
@@ -264,7 +269,7 @@ export default function Articles() {
                     className="surface-1 rounded-2xl overflow-hidden flex flex-col group cursor-pointer border border-border/40 hover:border-accent/40 transition-all duration-300"
                   >
                     <div className="h-44 overflow-hidden relative">
-                      <img src={article.coverUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={article.title} />
+                      {article.coverUrl && <img src={article.coverUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={article.title} />}
                       <ContentCategoryBadge value={article.contentCategory} className="absolute left-3 top-3 border-white/25 bg-black/45 text-white backdrop-blur-md" />
                       <button 
                         onClick={(e) => { e.stopPropagation(); }} 

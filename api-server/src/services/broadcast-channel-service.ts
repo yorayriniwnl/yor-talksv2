@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { BroadcastChannelRepository } from "../repositories/broadcast-channel-repository.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
@@ -28,25 +29,27 @@ export class BroadcastChannelService {
     ownerId: string;
     name: string;
     description?: string;
-    coverUrl?: string;
+    coverMediaId?: string;
     contentCategory?: string;
     contentRating?: BroadcastChannelRecord["contentRating"];
   }): Promise<BroadcastChannelRecord> {
     const name = input.name.trim();
     const description = (input.description ?? "").trim();
     await enforceTextContentPolicy(`${name}\n${description}`, this.aiService, "broadcast channel");
+    rejectRawMedia(input, ["coverUrl"]);
     const now = new Date().toISOString();
-    return this.repository.create({
-      id: randomUUID(),
+    const id = randomUUID();
+    return withApprovedMedia(input.ownerId, mediaBinding(input.coverMediaId, "broadcast_channel", "coverUrl", "image"), { type: "broadcast_channels", id }, media => this.repository.create({
+      id,
       ownerId: input.ownerId,
       name,
       description,
-      coverUrl: input.coverUrl?.trim() || undefined,
+      coverUrl: media.coverUrl?.[0]?.url,
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
       createdAt: now,
       updatedAt: now,
-    });
+    }));
   }
 
   async joinChannel(channelId: string, userId: string): Promise<BroadcastChannelRecord | undefined> {

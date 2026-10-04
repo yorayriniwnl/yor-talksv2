@@ -6,17 +6,21 @@ import { randomUUID } from "crypto";
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
+    return (await this.createWithResult(message)).message;
+  }
+
+  async createWithResult(message: MessageRecord): Promise<{ message: MessageRecord; created: boolean }> {
     return db.transaction(async (tx) => {
       const [created] = await tx.insert(messagesTable).values(message).onConflictDoNothing().returning();
       if (!created) {
         const [existing] = await tx.select().from(messagesTable).where(eq(messagesTable.id, message.id));
         if (!existing) throw new Error("Message insert conflicted without an existing message");
-        return existing as MessageRecord;
+        return { message: existing as MessageRecord, created: false };
       }
       await tx.update(conversationsTable).set({
         updatedAt: sql`greatest(${conversationsTable.updatedAt}, ${message.createdAt}::timestamp)`,
       }).where(eq(conversationsTable.id, message.conversationId));
-      return created as MessageRecord;
+      return { message: created as MessageRecord, created: true };
     });
   }
 

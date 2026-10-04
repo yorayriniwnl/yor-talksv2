@@ -173,13 +173,7 @@ paths:
       tags: [articles]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -909,13 +903,7 @@ paths:
       tags: [broadcast-channels]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -1126,13 +1114,7 @@ paths:
       tags: [business]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"logoMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -1165,13 +1147,7 @@ paths:
       tags: [communities]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -1717,13 +1693,7 @@ paths:
       tags: [events]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -1885,13 +1855,7 @@ paths:
       tags: [highlights]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -1968,6 +1932,95 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /media/{id}:
+    delete:
+      operationId: deleteMediaById
+      summary: Delete /media/{id}
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
+  /media/{id}/content:
+    get:
+      operationId: getMediaByIdContent
+      summary: Get /media/{id}/content
+      tags: [media]
+      security:
+        - mediaGrant: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses: {"200":{"description":"Approved original bytes or a JPEG poster derived from verified original bytes","content":{"image/jpeg":{"schema":{"type":"string","format":"binary"}},"image/png":{"schema":{"type":"string","format":"binary"}},"image/webp":{"schema":{"type":"string","format":"binary"}},"video/mp4":{"schema":{"type":"string","format":"binary"}},"video/webm":{"schema":{"type":"string","format":"binary"}},"audio/mpeg":{"schema":{"type":"string","format":"binary"}},"audio/wav":{"schema":{"type":"string","format":"binary"}},"audio/webm":{"schema":{"type":"string","format":"binary"}},"audio/ogg":{"schema":{"type":"string","format":"binary"}}}},"206":{"description":"Approved original bytes or a JPEG poster derived from verified original bytes","content":{"image/jpeg":{"schema":{"type":"string","format":"binary"}},"image/png":{"schema":{"type":"string","format":"binary"}},"image/webp":{"schema":{"type":"string","format":"binary"}},"video/mp4":{"schema":{"type":"string","format":"binary"}},"video/webm":{"schema":{"type":"string","format":"binary"}},"audio/mpeg":{"schema":{"type":"string","format":"binary"}},"audio/wav":{"schema":{"type":"string","format":"binary"}},"audio/webm":{"schema":{"type":"string","format":"binary"}},"audio/ogg":{"schema":{"type":"string","format":"binary"}}}},"403":{"description":"Invalid or expired delivery grant"},"404":{"description":"Media revoked or unavailable"},"415":{"description":"Provider bytes no longer match the approved hash"},"416":{"description":"Invalid or unsatisfiable single byte range"},"502":{"description":"Provider unavailable"},"503":{"description":"Media delivery busy or unavailable"}}
+  /media/{id}/finalize:
+    post:
+      operationId: postMediaByIdFinalize
+      summary: Post /media/{id}/finalize
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":false,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MediaFinalizeRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "202":
+          description: Verification already in progress; retry the same media ID
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/{id}/hls:
     get:
       operationId: getMediaByIdHls
@@ -1989,6 +2042,43 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /media/{id}/upload:
+    post:
+      operationId: postMediaByIdUpload
+      summary: Post /media/{id}/upload
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["file"],"properties":{"file":{"type":"string","format":"binary"}}}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/presign:
     post:
       operationId: postMediaPresign
@@ -1996,24 +2086,30 @@ paths:
       tags: [media]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MediaPresignRequest"}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaReservation"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/upload:
     post:
       operationId: postMediaUpload
@@ -2021,24 +2117,32 @@ paths:
       tags: [media]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["file","purpose"],"properties":{"file":{"type":"string","format":"binary"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]}}}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "201":
+          description: Media verified and approved
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /messages:
     post:
       operationId: postMessages
@@ -2046,13 +2150,7 @@ paths:
       tags: [messages]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -2575,13 +2673,7 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaIds":{"type":"array","maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -2737,13 +2829,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -3102,13 +3188,7 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["image"],"properties":{"image":{"type":"string","format":"binary"}}}}}}
       responses:
         "200":
           description: Successful response
@@ -3316,13 +3396,7 @@ paths:
       tags: [products]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaIds":{"type":"array","maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -3901,13 +3975,7 @@ paths:
       tags: [stories]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -4112,13 +4180,7 @@ paths:
       tags: [streams]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -4783,13 +4845,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"customImageMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -4971,13 +5027,7 @@ paths:
       tags: [users]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"avatarMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -5013,13 +5063,7 @@ paths:
       tags: [users]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["avatar"],"properties":{"avatar":{"type":"string","format":"binary"}}}}}}
       responses:
         "200":
           description: Successful response
@@ -5387,13 +5431,7 @@ paths:
       tags: [videos]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."},"thumbnailMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."},"externalVideoUrl":{"type":"string","format":"uri","description":"Separate allowlisted external embed; requires an approved video-purpose image thumbnail."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -5516,13 +5554,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true}}}}
       responses:
         "200":
           description: Successful response
@@ -5625,6 +5657,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    mediaGrant:
+      type: apiKey
+      in: query
+      name: token
   schemas:
     ApiEnvelope:
       type: object
@@ -5639,3 +5675,7 @@ components:
         meta:
           type: object
           additionalProperties: true
+    MediaPresignRequest: {"type":"object","additionalProperties":false,"required":["filename","mimeType","size","purpose"],"properties":{"filename":{"type":"string","minLength":1,"maxLength":255},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer","minimum":1,"maximum":10485760,"description":"Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side."},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]}}}
+    MediaFinalizeRequest: {"type":"object","additionalProperties":false}
+    MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}}}
+    MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}}}

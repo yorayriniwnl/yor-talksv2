@@ -5,8 +5,8 @@ const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2).optional(),
   bio: z.string().max(280).optional(),
-  avatarUrl: z.string().url().optional(),
-});
+  avatarMediaId: z.string().uuid().optional(),
+}).strict();
 
 export const searchUsersSchema = z.object({
   q: z.string().optional(),

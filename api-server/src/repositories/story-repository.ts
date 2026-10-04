@@ -68,10 +68,10 @@ export class StoryRepository {
     }));
   }
 
-  async createHighlight(ownerId: string, title: string, coverUrl?: string): Promise<HighlightRecord> {
+  async createHighlight(ownerId: string, title: string, coverUrl?: string, id = randomUUID()): Promise<HighlightRecord> {
     const now = new Date().toISOString();
     const [created] = await db.insert(highlightsTable).values({
-      id: randomUUID(),
+      id,
       ownerId,
       title,
       coverUrl: coverUrl || null,

@@ -9,6 +9,7 @@ import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { isPremiumMessageStyle } from "../features/premium-profile.js";
+import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -17,12 +18,12 @@ export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
 
-type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string };
+type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string; mediaId?: string };
 
-const normalizeMessageContent = (content: string): string => {
+const normalizeMessageContent = (content: string, hasMedia = false): string => {
   if (typeof content !== "string") throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
   const normalized = content.trim();
-  if (!normalized || normalized.length > 4000) {
+  if ((!normalized && !hasMedia) || normalized.length > 4000) {
     throw new InvalidMessageContentError("Message must be between 1 and 4000 characters");
   }
   return normalized;
@@ -73,7 +74,8 @@ export class MessageService {
 
   // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
-    const normalizedContent = normalizeMessageContent(content);
+    rejectRawMedia(options ?? {}, ["mediaUrl"]);
+    const normalizedContent = normalizeMessageContent(content, Boolean(options?.mediaId));
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
       const sender = await this.userRepository.findById(senderId);
@@ -87,7 +89,8 @@ export class MessageService {
   }
 
   async sendMessageToConversation(senderId: string, conversationId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
-    const normalizedContent = normalizeMessageContent(content);
+    rejectRawMedia(options ?? {}, ["mediaUrl"]);
+    const normalizedContent = normalizeMessageContent(content, Boolean(options?.mediaId));
     const conversation = await this.conversationRepository.findById(conversationId);
     if (!conversation) {
       throw new UnauthorizedError("Conversation not found");
@@ -162,8 +165,18 @@ export class MessageService {
       deletedAt: null,
       expiresAt: conversation.vanishMode ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
       pinned: false,
+      mediaLegacy: false,
     };
-    const persisted = await this.messageRepository.create(message);
+    let persisted: MessageRecord | undefined;
+    await withApprovedMedia(senderId, mediaBinding(options?.mediaId, "message", "mediaUrl"), { type: "messages", id: message.id }, async media => {
+      const attachment = media.mediaUrl?.[0];
+      const result = await this.messageRepository.createWithResult({ ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null });
+      persisted = result.message;
+      // Conflict losers return the winning row without creating or replacing
+      // its attachment references, including a text-only winning message.
+      return result.created ? result.message : undefined;
+    });
+    if (!persisted) throw new Error("Message was not persisted");
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
@@ -281,7 +294,9 @@ export class MessageService {
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
     message.content = normalizedContent;
     message.editedAt = new Date().toISOString();
-    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt });
+    // Compatibility rendering is bound to the historical body. An edit is a
+    // new publication and cannot mint an attachment from an arbitrary text URL.
+    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {

@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import type { LiveStreamRecord } from "../types/index.js";
@@ -29,7 +30,7 @@ export class LiveStreamService {
   async createStream(input: {
     hostId: string;
     title: string;
-    coverUrl: string;
+    coverMediaId?: string;
     kind: string;
     startsAt: string;
     category: string;
@@ -39,15 +40,17 @@ export class LiveStreamService {
       throw new LiveKitNotConfiguredError();
     }
     await enforceTextContentPolicy(input.title, this.aiService, "live stream title");
+    rejectRawMedia(input, ["coverUrl"]);
     const stream: LiveStreamRecord = {
       id: randomUUID(),
       ...input,
+      coverUrl: "",
       status: "scheduled",
       viewers: 0,
       guestIds: [],
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.liveStreamRepository.create(stream);
+    return withApprovedMedia(input.hostId, mediaBinding(input.coverMediaId, "live_stream", "coverUrl", "image"), { type: "live_streams", id: stream.id }, media => this.liveStreamRepository.create({ ...stream, coverUrl: media.coverUrl?.[0]?.url ?? "" }));
   }
 
   async listStreams(viewerId?: string): Promise<LiveStreamRecord[]> {

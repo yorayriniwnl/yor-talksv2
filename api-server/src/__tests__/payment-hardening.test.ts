@@ -13,7 +13,7 @@ test("marketplace prices cannot exceed the integer minor-unit ledger ceiling", (
     title: "Desk lamp",
     description: "Working condition",
     price: 21_474_836.47,
-    images: [],
+    mediaIds: [],
     category: "home",
     condition: "used",
     contentRating: "regular",
