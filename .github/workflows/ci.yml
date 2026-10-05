@@ -138,7 +138,7 @@ jobs:
           WEB_PORT: 127.0.0.1:18080
         run: |
           set -euo pipefail
-          compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml)
+          compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml)
 
           cleanup() {
             status=$?
@@ -156,7 +156,7 @@ jobs:
           timeout 120 sh -c 'until curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz >/dev/null; do sleep 2; done'
           curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz > /tmp/yor-talks-ci-readiness.json
-          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.details?.media?.decoder!==true)throw new Error('Production media decoder is unavailable');"
+          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.details?.media?.decoder!==true)throw new Error('Production media decoder is unavailable'); if(report.details?.media?.ready!==false)throw new Error('Synthetic unavailable providers must not enable production media');"
           BASE_URL=http://127.0.0.1:18080 pnpm smoke
           curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
 
@@ -168,6 +168,8 @@ jobs:
           test -n "$redis_id"
           test "$(docker inspect --format '{{.State.ExitCode}}' "$migration_id")" = "0"
           test "$(docker inspect --format '{{.Config.User}}' "$api_id")" = "node"
+          test "$(docker inspect --format '{{json .HostConfig.Dns}}' "$api_id")" = '["127.0.0.1"]'
+          docker exec "$api_id" node -e "require('node:dns').promises.lookup('api.cloudinary.com').then(({address})=>{if(address!=='127.0.0.1')throw new Error('CI provider isolation is unavailable');})"
           docker exec "$redis_id" sh -c 'redis-cli --no-auth-warning -a "$REDIS_PASSWORD" --scan --pattern "yor:rate:api:*" | grep -q "^yor:rate:api:"'
 
           api_logs=$("${compose[@]}" logs --no-color api)

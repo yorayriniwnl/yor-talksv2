@@ -1,0 +1,16 @@
+# Test-only overlay. Production keeps its normal provider connectivity.
+# The unmodified production image must fail closed against unavailable providers
+# without sending even synthetic credentials to external provider endpoints.
+services:
+  api:
+    dns:
+      - 127.0.0.1
+    extra_hosts:
+      - "api.cloudinary.com:127.0.0.1"
+      - "res.cloudinary.com:127.0.0.1"
+      - "generativelanguage.googleapis.com:127.0.0.1"
+      - "api.openai.com:127.0.0.1"
+      - "api.resend.com:127.0.0.1"
+      - "api.razorpay.com:127.0.0.1"
+      - "oauth2.googleapis.com:127.0.0.1"
+      - "www.googleapis.com:127.0.0.1"
