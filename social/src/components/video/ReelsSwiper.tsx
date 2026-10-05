@@ -16,6 +16,7 @@ import { RichCommentComposer, RichCommentData } from '@/components/comments/Rich
 import { RichCommentList, CommentItem } from '@/components/comments/RichCommentList';
 import { toast } from 'sonner';
 import { api, type BackendComment } from '@/lib/api-client';
+import { ReelVideoPlayer } from './ReelVideoPlayer';
 
 interface ReelsSwiperProps {
   videos: Video[];
@@ -176,23 +177,6 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     void loadVideoComments(video.id);
     return () => { commentsRequestSequence.current += 1; };
   }, [playingIndex, videos, loadVideoComments]);
-
-  useEffect(() => {
-    const players = containerRef.current?.querySelectorAll('video');
-    if (!players) return;
-    players.forEach((player, index) => {
-      player.muted = isMuted;
-      player.playbackRate = playbackSpeed;
-      if (index === playingIndex) {
-        void player.play().catch(() => {
-          // Autoplay can be blocked until the viewer interacts with the page.
-        });
-      } else {
-        player.pause();
-        player.currentTime = 0;
-      }
-    });
-  }, [playingIndex, isMuted, playbackSpeed, videos]);
 
   const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
     const now = Date.now();
@@ -362,16 +346,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                 inert={!isPlaying}
               >
                 <div className="operator-reel-slide__media">
-                  <video
-                    src={video.videoUrl}
-                    poster={video.thumbnailUrl}
-                    className="operator-reel-video"
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    preload={isPlaying ? 'auto' : 'metadata'}
-                    aria-label={video.title}
-                  />
+                  <ReelVideoPlayer video={video} active={isPlaying} muted={isMuted} playbackSpeed={playbackSpeed} />
                   <div className="operator-reel-scrim" />
                 </div>
 

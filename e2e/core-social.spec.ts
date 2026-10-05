@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
 
 const user = {
   id: "1cc96a14-2728-46fd-ae3c-cbf15fd9db1a",
@@ -97,6 +98,171 @@ async function installApiBoundary(page: Page, profile = user) {
     throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
 }
+
+async function syntheticPosterImage(page: Page): Promise<Buffer> {
+  const encoded = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2; canvas.height = 2;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#2980b9'; context.fillRect(0, 0, 2, 2);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  return Buffer.from(encoded, 'base64');
+}
+
+test('expired uploaded-video grants renew through the authorized video read and preserve playback', async ({ page }) => {
+  const playable = readFileSync(new URL('./fixtures/delivery.webm', import.meta.url));
+  const poster = await syntheticPosterImage(page);
+  await installApiBoundary(page);
+  const assetIds = ['40000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000152'];
+  const videos = assetIds.map((assetId, index) => ({
+    id: `30000000-0000-4000-8000-00000000015${index + 1}`, authorId: user.id,
+    videoUrl: `/api/media/${assetId}/content?token=original`, thumbnailUrl: `/api/media/${assetId}/content?token=poster`,
+    title: `Delivery reel ${index + 1}`, views: 0, likes: 0, createdAt: user.createdAt, type: 'short',
+  }));
+  let expired = false, authorizedReads = 0;
+  const renewedVideo = { ...videos[1], videoUrl: `/api/media/${assetIds[1]}/content?token=renewed`, thumbnailUrl: `/api/media/${assetIds[1]}/content?token=renewed-poster` };
+  await page.route('**/api/videos', route => json(route, expired && authorizedReads > 0 ? [videos[0], renewedVideo] : videos));
+  await page.route('**/api/videos/*/comments', route => json(route, []));
+  await page.route(`**/api/videos/${videos[1].id}`, route => {
+    authorizedReads++;
+    expect(route.request().headers().authorization).toBe('Bearer browser-smoke-access-token');
+    return json(route, renewedVideo);
+  });
+  await page.route('**/api/media/*/content?*', route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('token')?.includes('poster')) return route.fulfill({ status: 200, contentType: 'image/png', body: poster });
+    if (expired && url.pathname.includes(assetIds[1]) && url.searchParams.get('token') === 'original') {
+      return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media delivery grant is invalid or expired' }) });
+    }
+    const range = route.request().headers().range?.match(/^bytes=(\d+)-(\d*)$/);
+    const start = range ? Number(range[1]) : 0;
+    const end = range?.[2] ? Math.min(Number(range[2]), playable.length - 1) : playable.length - 1;
+    return route.fulfill({
+      status: range ? 206 : 200, contentType: 'video/webm',
+      headers: { 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${playable.length}` } : {}) },
+      body: playable.subarray(start, end + 1),
+    });
+  });
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Delivery reel 2' }).click();
+  await page.getByRole('button', { name: 'Mute video', exact: true }).click();
+  await page.getByRole('button', { name: 'Playback speed 1 times' }).click();
+  const player = page.locator('.operator-reel-video').nth(1);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.35);
+  // Reload the same grant after its fixture expiry, producing a real media403.
+  await player.evaluate(async element => {
+    const video = element as HTMLVideoElement;
+    const paused = new Promise<void>(resolve => video.addEventListener('pause', () => resolve(), { once: true }));
+    video.pause(); await paused;
+    const sought = new Promise<void>(resolve => video.addEventListener('seeked', () => resolve(), { once: true }));
+    video.currentTime = 0.4; await sought;
+  });
+  await expect(player).toHaveJSProperty('currentTime', 0.4);
+  expired = true;
+  const denial = page.waitForResponse(response => response.url().includes(`${assetIds[1]}/content?token=original`) && response.status() === 403);
+  await player.evaluate(video => (video as HTMLVideoElement).load());
+  await denial;
+  await expect(player).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).readyState)).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeCloseTo(0.4, 1);
+  await expect(player).toHaveJSProperty('paused', true);
+  await expect(player).toHaveJSProperty('muted', true);
+  await expect(player).toHaveJSProperty('playbackRate', 1.5);
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
+  expect(authorizedReads).toBe(1);
+  // The renewed URL remains playable without resetting the selected reel.
+  await player.evaluate(video => (video as HTMLVideoElement).play());
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.55);
+  await page.getByRole('button', { name: 'Close video viewer' }).click();
+  await page.getByRole('button', { name: 'Watch Delivery reel 2' }).click();
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  expect(authorizedReads).toBe(1);
+});
+
+test('denied or unchanged delivery renewals stop automatically and allow a bounded explicit retry', async ({ page }) => {
+  const poster = await syntheticPosterImage(page);
+  await installApiBoundary(page);
+  const assetIds = ['40000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000162'];
+  const videos = assetIds.map((assetId, index) => ({
+    id: `30000000-0000-4000-8000-00000000016${index + 1}`, authorId: user.id,
+    videoUrl: `/api/media/${assetId}/content?token=expired`, thumbnailUrl: `/api/media/${assetId}/content?token=poster`,
+    title: `Unavailable reel ${index + 1}`, views: 0, likes: 0, createdAt: user.createdAt, type: 'short',
+  }));
+  const reads = [0, 0];
+  let releaseLateRead!: () => void;
+  const lateRead = new Promise<void>(resolve => { releaseLateRead = resolve; });
+  await page.route('**/api/videos', route => json(route, videos));
+  await page.route('**/api/videos/*/comments', route => json(route, []));
+  for (const [index, video] of videos.entries()) await page.route(`**/api/videos/${video.id}`, async route => {
+    reads[index]++;
+    if (index === 1 && reads[index] === 2) {
+      await lateRead;
+      return json(route, { ...video, videoUrl: `/api/media/${assetIds[1]}/content?token=late-renewed` });
+    }
+    return index === 0
+      ? route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Video is no longer visible' }) })
+      : json(route, video);
+  });
+  await page.route('**/api/media/*/content?*', route => new URL(route.request().url()).searchParams.get('token') === 'poster'
+    ? route.fulfill({ status: 200, contentType: 'image/png', body: poster })
+    : route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired delivery grant' }) }));
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Unavailable reel 1' }).click();
+  const failure = page.getByRole('alert').filter({ hasText: 'Video could not load' });
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([1, 0]);
+  // Repeated actual media failures must not recursively call the read endpoint.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const denial = page.waitForResponse(response => response.url().includes(`${assetIds[0]}/content?token=expired`) && response.status() === 403);
+    await page.locator('.operator-reel-video').nth(0).evaluate(video => (video as HTMLVideoElement).load());
+    await denial;
+  }
+  expect(reads).toEqual([1, 0]);
+  await page.getByRole('button', { name: 'Retry video', exact: true }).click();
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([2, 0]);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([2, 1]);
+  await page.getByRole('button', { name: 'Retry video', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Refreshing video playback' })).toBeVisible();
+  await expect.poll(() => reads).toEqual([2, 2]);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  releaseLateRead();
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=expired`);
+  expect(reads).toEqual([2, 2]);
+});
+
+test('historical message encodings render attachments only with the server legacy flag', async ({ page }) => {
+  await installApiBoundary(page);
+  const peer = { ...user, id: '10000000-0000-4000-8000-000000000171', username: 'legacy_peer', fullName: 'Legacy Peer' };
+  const conversation = { id: '20000000-0000-4000-8000-000000000171', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt };
+  const voice = '[Voice Note] https://legacy.example.test/voice.webm (3s)';
+  const image = 'Historical image caption\n📷 https://legacy.example.test/photo.png';
+  const messages = [voice, image, voice, image].map((content, index) => ({
+    id: `legacy-fixture-${index}`, conversationId: conversation.id, senderId: peer.id, recipientId: user.id,
+    content, mediaLegacy: index < 2, mediaId: null, mediaType: null, mediaUrl: null, seenAt: user.createdAt,
+    createdAt: `2026-08-28T09:0${index}:00.000Z`,
+  }));
+  await page.route('**/api/conversations', route => json(route, [{ conversation }]));
+  await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages', route => json(route, messages));
+  await page.route('https://legacy.example.test/**', route => route.fulfill({ status: 404, body: '' }));
+  await page.goto(`/messages/${conversation.id}`);
+  const rows = page.locator('article.operator-message');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0).locator('audio')).toHaveAttribute('src', 'https://legacy.example.test/voice.webm');
+  await expect(rows.nth(1).getByRole('img', { name: 'Shared attachment' })).toHaveAttribute('src', 'https://legacy.example.test/photo.png');
+  await expect(rows.nth(1).getByText('Historical image caption', { exact: true })).toBeVisible();
+  await expect(rows.nth(2).locator('audio, img.operator-message-image')).toHaveCount(0);
+  await expect(rows.nth(2).getByText(voice, { exact: true })).toBeVisible();
+  await expect(rows.nth(3).locator('audio, img.operator-message-image')).toHaveCount(0);
+  await expect(rows.nth(3).locator('.operator-message-text')).toHaveText(image);
+});
 
 for (const outcome of ['retry', 'rejected'] as const) test(`image publishing keeps its draft until media is approved: ${outcome}`, async ({ page }) => {
   await installApiBoundary(page);

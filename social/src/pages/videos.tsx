@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useIsPresent } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { api } from '@/lib/api-client';
 import { uploadApprovedMedia } from '@/lib/media-upload';
+import { applyFreshVideoDelivery, hasUploadedVideoDelivery, readFreshVideoDelivery } from '@/lib/video-delivery';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { useLocation, useRoute } from 'wouter';
 import { OperatorPanel, SectionHeader, SignalLabel, StatusBadge } from '@/components/system';
@@ -55,8 +56,8 @@ function UploadVideoDialog() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('video/')) {
-      setError('Please select a valid video file (.mp4, .webm, .mov, etc.)');
+    if (!['video/mp4', 'video/webm'].includes(file.type)) {
+      setError('Please select an MP4 or WebM video.');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -212,7 +213,7 @@ function UploadVideoDialog() {
                       <UploadCloud className="w-5 h-5" />
                     </div>
                     <p className="text-sm font-semibold">Click to choose a video file</p>
-                    <p className="text-xs text-muted-foreground">Supports MP4, WebM, MOV up to 4K resolution</p>
+                    <p className="text-xs text-muted-foreground">MP4 or WebM, up to 1080p, 120 seconds and 10 MB</p>
                   </>
                 )}
               </div>
@@ -226,7 +227,7 @@ function UploadVideoDialog() {
 
           <div className="space-y-1.5">
             <Label htmlFor="video-title" className="text-xs font-mono uppercase text-muted-foreground">Title & Caption</Label>
-            <Input id="video-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="e.g. 4K FPV Drone Canyon Chase or AI Shader Timelapse" className="rounded-xl" />
+            <Input id="video-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="e.g. FPV Drone Canyon Chase or AI Shader Timelapse" className="rounded-xl" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -309,6 +310,7 @@ function formatPublishedDate(value?: string): string {
 }
 
 export default function Videos() {
+  const isPresent = useIsPresent();
   const [, setLocation] = useLocation();
   const [, videoRouteParams] = useRoute<{ id: string }>('/videos/:id');
   const users = useAppStore((s: any) => s.users);
@@ -322,6 +324,27 @@ export default function Videos() {
   const [selectedCategory, setSelectedCategory] = useState<ContentCategory | 'all'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
+  const posterRefreshAttempts = useRef(new Set<string>());
+  const mountedRef = useRef(true);
+  const presentRef = useRef(isPresent);
+  presentRef.current = isPresent;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const refreshPoster = async (video: Parameters<typeof hasUploadedVideoDelivery>[0]) => {
+    if (!presentRef.current || !hasUploadedVideoDelivery(video) || posterRefreshAttempts.current.has(video.id)) return;
+    posterRefreshAttempts.current.add(video.id);
+    const sessionUser = useAppStore.getState().currentUser;
+    try {
+      const fresh = await readFreshVideoDelivery(video);
+      if (mountedRef.current && presentRef.current && useAppStore.getState().currentUser === sessionUser) applyFreshVideoDelivery(video, fresh);
+    } catch {
+      // The watch action still opens the viewer's explicit playback retry.
+    }
+  };
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
@@ -356,7 +379,6 @@ export default function Videos() {
   const openVideo = (videoId: string) => {
     const index = activeSwiperList.findIndex((video: any) => video.id === videoId);
     if (index === -1) return;
-    setActiveReelIndex(index);
     setLocation(`/videos/${videoId}`);
   };
 
@@ -476,7 +498,7 @@ export default function Videos() {
                     aria-label={`Watch ${video.title}`}
                   >
                     <span className="operator-video-card__media">
-                      <img src={video.thumbnailUrl} alt="" />
+                      <img src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
                       <span className="operator-video-card__play"><Play aria-hidden="true" /></span>
                       <span className="operator-video-card__format">{video.type === 'short' ? 'Reel' : 'Video'}</span>
                       <ContentCategoryBadge value={video.contentCategory} className="operator-video-card__category" />
@@ -496,7 +518,7 @@ export default function Videos() {
           )}
         </section>
 
-        {activeReelIndex !== null && activeSwiperList.length > 0 && (
+        {isPresent && activeReelIndex !== null && activeSwiperList.length > 0 && (
           <ReelsSwiper videos={activeSwiperList} initialIndex={activeReelIndex} onClose={closeViewer} />
         )}
       </section>
