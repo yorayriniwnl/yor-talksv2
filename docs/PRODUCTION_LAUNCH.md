@@ -2,6 +2,8 @@
 
 This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
+**Current release decision: not ready for the requested global, three-age-group launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) records unresolved sign-in, privacy, shared-history deletion, monitoring and age-policy defects. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate those countries. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
+
 The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
 current media controls, source-specific repository checks and the remaining
 provider/runtime acceptance gates. CI requires `pnpm audit --prod`, actual decoder
@@ -43,7 +45,7 @@ sudo chmod 0640 /etc/yor-talks/alertmanager-webhook-password
 
 The frontend provider switches are build-time `VITE_*` values wired from the corresponding backend flags; `pnpm production-config:check` guards this mapping. Keep payments, live rooms, RTC and Web Push disabled until provider acceptance is complete. Web Push additionally needs VAPID keys and obtains the public key from the authenticated API; the frontend does not embed the private key. RTC calls require an authenticated TURN service and short-lived TURN credentials; do not enable them with only the public STUN example.
 
-Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. The app's production Nginx serves the frontend; it does not terminate public TLS or proxy the API.
+Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. Production Nginx serves the frontend and provides same-origin API/WebSocket proxy routes; public TLS is terminated at the external proxy. The recommended separate API hostname below reaches the API directly through one proxy. The alternative Caddy → Nginx → API route has two hops and currently aggregates client IP limits at the proxy; resolve that topology's trusted-client identity and verify distinct clients before selecting it for public traffic.
 
 ## 2. Configure the external launch dependencies
 

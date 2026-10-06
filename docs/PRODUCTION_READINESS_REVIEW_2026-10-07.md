@@ -4,7 +4,7 @@
 
 **Scope:** EU-based operator; intended global availability; under-13, 13–17 and 18+ experiences. The actual EU member state and legal entity are unknown. This is a source and validation review, not certification of legal compliance or a deployed-service acceptance.
 
-**Committed baseline:** `c1c10e31cbec09cb1fde5ffcd6d9d50672d4cdd0`, branch `codex/media-lifecycle-20261006`. The checkout also contained 233 pre-existing modified frontend entries, including 36 files with content changes after Git normalization. Those changes were neither edited nor included in this review's commit. Local checks exercise the working copy; GitHub checks exercise the committed baseline.
+**Latest verified committed baseline:** `44ca8c44e51c30d36fbc9318c38823b2d275d866`, branch `codex/media-lifecycle-20261006`; product source is unchanged from the initial `c1c10e3` review. The checkout also contained 233 pre-existing modified frontend entries, including 36 files with content changes after Git normalization. Those changes were neither edited nor included in this review's commit. Local checks exercise the working copy; GitHub checks exercise the committed baseline.
 
 ## Verification completed
 
@@ -19,10 +19,11 @@
 | Local database/API/frontend build | Passed | Windows build completed; large frontend chunk warnings remain |
 | Local Chromium browser suite, current working copy | 56 passed, 4 failed | Initial run used development React; camera control regression confirmed |
 | Targeted Chromium rerun with `NODE_ENV=production` | 3 passed, 1 failed | Media renewal and both billing recovery cases passed; missing Studio stop control reproduced |
-| GitHub CI, push run 37518373497 | Completed successfully | 262 API tests and 60 browser tests passed with no skips/failures; migrations, builds and container smoke steps passed on this commit |
-| GitHub CI, pull-request run 37518379067 | Completed successfully | The second run also completed successfully on this commit |
+| Fresh PostgreSQL 16.4 production migration and account-deletion probe | Migration and probe completed; shared-history loss reproduced | Actual current schema and account/conversation services confirm the defect in a separate synthetic cluster |
+| GitHub CI, push run 37522534217 | Completed successfully, attempt 1 | 57 unit, 262 API and 60 browser tests passed with no skips/failures; migrations, builds and container smoke steps passed on this commit |
+| GitHub CI, pull-request run 37522541152 | Completed successfully, attempt 1 | The same test counts and release checks passed on this commit |
 
-Sources: [push CI run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37518373497), [pull-request CI run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37518379067). Job `112457065034` was inspected, including step outcomes and decoded logs. CI provider calls are isolated; its readiness assertion intentionally expects `details.media.ready=false`. It does not prove real media-provider acceptance.
+Sources: [push CI run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37522534217), [pull-request CI run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37522541152). Jobs `112471295987` and `112471317747` were inspected, including step outcomes and decoded logs. CI provider calls are isolated; its readiness assertion intentionally expects `details.media.ready=false`. It does not prove real media-provider acceptance.
 
 Local evidence logs are outside the repository at `C:/Users/yoray/AppData/Local/Temp/yor-production-recheck-20261007/`. The working-copy browser run exited 1 after 5.8 minutes. Retained browser failure evidence is in the ignored `test-results/` directory; the committed CI result must not be substituted for this local failure result.
 
@@ -56,7 +57,11 @@ Required acceptance: submission and tracking responses allowlist `ticketId`, `st
 
 Group creation stores its creator in both legacy participant columns (`api-server/src/repositories/message-repository.ts:140`). Both foreign keys cascade on user deletion (`lib/db/src/schema/index.ts:182`), then conversation deletion cascades to messages. Group messages also use an arbitrary other member as a cascading legacy recipient (`services/message-service.ts:156`, schema `:199`). Account deletion deletes the user row (`services/account-service.ts:160`).
 
-This is source/schema-confirmed; a PostgreSQL deletion scenario was not executed. Required acceptance: create a three-member group, delete its creator and separately delete the legacy recipient, and verify the approved handling of the surviving members' conversation and contributions. Define shared-history retention and anonymisation before changing the schema; preservation is subject to the applicable rights/retention model.
+This is now reproduced against the current production migration in a fresh PostgreSQL 16.4 cluster on `127.0.0.1:55437`, database `yor_global_readiness_20261007`. The probe uses the actual `AccountService`, `UserRepository` and `ConversationRepository`, stubbed Redis, and synthetic raw message fixtures. Deleting the creator left both other users present but removed the conversation and both of their messages. Separately, deleting a noncreator legacy recipient preserved the group but removed its surviving owner's message; another member's contribution remained. Actual foreign-key inspection confirmed all three legacy participant/recipient references use `ON DELETE CASCADE`. The probe exited 0 because it successfully reproduced the defect; no repair is claimed.
+
+The database's address, port, name and empty public schema were checked before the production migration, which exited 0. An initial identity guard compared an `inet` string without normalising its host representation and refused to proceed; the corrected `host(inet_server_addr())` check passed before migration. No application/production database or provider was accessed. The temporary cluster was stopped and its port verified closed after the probe; fixture data and `cascade-probe.mjs`, `cascade-result.json`, `cascade-probe.log` and `cascade-migration.log` are retained under the external evidence directory.
+
+Required acceptance after repair: create a three-member group, delete its creator and separately delete the legacy recipient, and verify the approved handling of surviving members' conversation and contributions. Define shared-history retention and anonymisation before changing the schema; preservation is subject to the applicable rights/retention model.
 
 ### P1 — Monitoring configuration is incompatible with the pinned Alertmanager
 
