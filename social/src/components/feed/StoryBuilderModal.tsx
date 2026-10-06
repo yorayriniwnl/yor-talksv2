@@ -270,6 +270,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         targetHighlightId = createdHighlight.id;
         targetHighlightTitle = createdHighlight.title;
         setHighlights((items) => [createdHighlight, ...items]);
+        // Highlight creation has committed even if the Story write fails.
+        // Keep that acknowledged destination so retry does not create it again.
+        setHighlightId(createdHighlight.id);
+        setHighlightTitle(createdHighlight.title);
+        setHighlightDestination('existing');
       }
       await addStory({
         type: storyType,

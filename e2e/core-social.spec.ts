@@ -485,6 +485,76 @@ for (const outcome of ['retry', 'rejected'] as const) test(`image publishing kee
   }
 });
 
+test('a story retry reuses its created Highlight and approved voice/cover without losing the draft', async ({ page }) => {
+  await installApiBoundary(page);
+  const voice = readFileSync(new URL('./fixtures/delivery.wav', import.meta.url));
+  const cover = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  const voiceId = '40000000-0000-4000-8000-000000000191', coverId = '40000000-0000-4000-8000-000000000192';
+  const highlightId = '50000000-0000-4000-8000-000000000191';
+  let prepares = 0, uploads = 0, finalizes = 0, highlightCreates = 0;
+  const publications: Array<Record<string, unknown>> = [];
+  const highlights: Array<{ id: string; ownerId: string; title: string; coverUrl: string; storyIds: string[]; createdAt: string; updatedAt: string }> = [];
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      prepares++;
+      const payload = route.request().postDataJSON();
+      expect(['story', 'highlight']).toContain(payload.purpose);
+      const id = payload.purpose === 'story' ? voiceId : coverId;
+      expect(payload).toMatchObject({ mimeType: id === voiceId ? 'audio/wav' : 'image/png', size: id === voiceId ? voice.length : cover.length });
+      return json(route, { id, mediaId: id, status: 'pending', purpose: payload.purpose, mimeType: payload.mimeType, maxFileSize: payload.purpose === 'story' ? 10 * 1024 * 1024 : 2 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${id}/upload` });
+    }
+    const id = path.includes(voiceId) ? voiceId : coverId;
+    if (path.endsWith('/upload')) { uploads++; return json(route, { id, mediaId: id, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      return json(route, { id, mediaId: id, status: 'approved', mimeType: id === voiceId ? 'audio/wav' : 'image/png', size: id === voiceId ? voice.length : cover.length, ...(id === voiceId ? { duration: 1 } : {}), url: `/api/media/${id}/content?token=synthetic.signed` });
+    }
+    return fulfillSeekableMedia(route, id === voiceId ? voice : cover, id === voiceId ? 'audio/wav' : 'image/png');
+  });
+  await page.route('**/api/highlights', async route => {
+    if (route.request().method() === 'GET') return json(route, highlights);
+    highlightCreates++;
+    const payload = route.request().postDataJSON();
+    expect(payload).toEqual({ title: 'Field notes', coverMediaId: coverId });
+    const created = { id: highlightCreates === 1 ? highlightId : '50000000-0000-4000-8000-000000000192', ownerId: user.id, title: payload.title, coverUrl: `/api/media/${coverId}/content?token=synthetic.signed`, storyIds: [], createdAt: user.createdAt, updatedAt: user.createdAt };
+    highlights.push(created);
+    return json(route, created);
+  });
+  await page.route('**/api/stories', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const payload = route.request().postDataJSON();
+    publications.push(payload);
+    if (publications.length === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Story publication is temporarily unavailable', errors: ['story_unavailable'] }) });
+    return json(route, { ...payload, id: '60000000-0000-4000-8000-000000000191', authorId: user.id, mediaUrl: `/api/media/${voiceId}/content?token=synthetic.signed`, createdAt: user.createdAt, expiresAt: new Date(Date.now() + 86_400_000).toISOString() });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add a story', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Voice Story', exact: true }).click();
+  await dialog.locator('#story-voice-file').setInputFiles({ name: 'draft-voice.wav', mimeType: 'audio/wav', buffer: voice });
+  await dialog.getByPlaceholder('Add an optional caption…').fill('Keep this voice and caption for retry.');
+  await dialog.locator('#story-content-category').selectOption('technology');
+  await dialog.getByText('Highlight destination', { exact: true }).locator('..').locator('select').selectOption('new');
+  await dialog.getByRole('textbox', { name: 'New Highlight name' }).fill('Field notes');
+  await dialog.locator('#highlight-cover').setInputFiles({ name: 'draft-cover.png', mimeType: 'image/png', buffer: cover });
+  const publish = dialog.getByRole('button', { name: 'Share Story Live', exact: true });
+  await publish.click();
+  await expect(publish).toBeEnabled();
+  await expect(dialog.getByPlaceholder('Add an optional caption…')).toHaveValue('Keep this voice and caption for retry.');
+  await expect(dialog.locator('label[for="story-voice-file"]')).toContainText('draft-voice.wav');
+  expect(highlightCreates).toBe(1);
+  await publish.click();
+  await expect(dialog).toBeHidden();
+  expect(highlightCreates).toBe(1);
+  expect(prepares).toBe(2); expect(uploads).toBe(2); expect(finalizes).toBe(2);
+  expect(publications).toHaveLength(2);
+  for (const payload of publications) {
+    expect(payload).toMatchObject({ mediaId: voiceId, textContent: 'Keep this voice and caption for retry.', highlightId, highlightTitle: 'Field notes' });
+    expect(payload.mediaUrl).toBeUndefined();
+  }
+});
+
 test('Studio Post captures camera pixels as a bounded approved JPEG and rejects video-mode carryover', async ({ page }) => {
   await installApiBoundary(page);
   await page.addInitScript(() => {
