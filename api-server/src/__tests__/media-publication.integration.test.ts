@@ -29,6 +29,7 @@ import { UserService } from "../services/user-service.js";
 import { MessageService } from "../services/message-service.js";
 import { withApprovedMedia } from "../services/media-publication.js";
 import { MediaLifecycleError } from "../services/media-service.js";
+import { hydrateMediaValue } from "../services/media-response.js";
 import { createPostSchema, commentSchema } from "../validators/post.js";
 import { createStorySchema } from "../validators/story.js";
 import { createVideoSchema } from "../validators/video.js";
@@ -182,6 +183,55 @@ test("avatar replacement preserves legacy reads, keeps reused media, and release
   assert.equal((await service.uploadAvatar(owner.id, second.id))?.avatarUrl, marker(second.id));
   assert.deepEqual(await references(owner.id), [{ media_id: second.id, entity_type: "users", slot: "avatarUrl" }]);
   assert.equal((await pool.query("SELECT deletion_status FROM media_assets WHERE id=$1", [first.id])).rows[0].deletion_status, "pending");
+});
+
+test("approved avatars hydrate typed follow, call and story viewer response DTOs", async t => {
+  const owner = await createTestUser(users);
+  const other = await createTestUser(users);
+  t.after(async () => { await users.deleteById(owner.id); await users.deleteById(other.id); });
+  const ownerAvatar = await createTestApprovedMedia(owner.id, "avatar");
+  const otherAvatar = await createTestApprovedMedia(other.id, "avatar");
+  const service = new UserService(users);
+  await service.uploadAvatar(owner.id, ownerAvatar.id);
+  await service.uploadAvatar(other.id, otherAvatar.id);
+  const ownerDto = { id: owner.id, username: owner.username, fullName: owner.fullName, avatarUrl: marker(ownerAvatar.id) };
+  const otherDto = { id: other.id, username: other.username, fullName: other.fullName, avatarUrl: marker(otherAvatar.id) };
+  const cases: Array<{ name: string; value: object; avatars: (value: any) => Array<[string, string]> }> = [
+    { name: "follow response", value: { data: { follower: ownerDto, target: otherDto, status: "accepted" } }, avatars: value => [[value.data.follower.avatarUrl, ownerAvatar.id], [value.data.target.avatarUrl, otherAvatar.id]] },
+    { name: "follow request list", value: { data: [{ id: randomUUID(), requesterId: owner.id, targetId: other.id, status: "pending", requester: ownerDto }] }, avatars: value => [[value.data[0].requester.avatarUrl, ownerAvatar.id]] },
+    { name: "accepted follow request", value: { data: { request: { id: randomUUID(), requesterId: owner.id, targetId: other.id, status: "accepted" }, follower: ownerDto, target: otherDto } }, avatars: value => [[value.data.follower.avatarUrl, ownerAvatar.id], [value.data.target.avatarUrl, otherAvatar.id]] },
+    { name: "call invitation", value: { callId: randomUUID(), callType: "audio", offer: { type: "offer", sdp: "synthetic" }, caller: { id: owner.id, username: owner.username, displayName: owner.fullName, avatarUrl: ownerDto.avatarUrl } }, avatars: value => [[value.caller.avatarUrl, ownerAvatar.id]] },
+    { name: "story viewer list", value: { data: { viewers: [{ viewerId: owner.id, username: owner.username, displayName: owner.fullName, avatarUrl: ownerDto.avatarUrl, viewedAt: new Date().toISOString() }], nextCursor: null } }, avatars: value => [[value.data.viewers[0].avatarUrl, ownerAvatar.id]] },
+  ];
+  for (const fixture of cases) await t.test(fixture.name, async () => {
+    const result = await hydrateMediaValue(fixture.value);
+    for (const [avatar, assetId] of fixture.avatars(result)) {
+      const delivery = new URL(avatar);
+      assert.equal(delivery.pathname, `/api/media/${assetId}/content`);
+      assert.ok(delivery.searchParams.get("token"));
+    }
+  });
+});
+
+test("typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers in arbitrary metadata", async t => {
+  const owner = await createTestUser(users);
+  const other = await createTestUser(users);
+  t.after(async () => { await users.deleteById(owner.id); await users.deleteById(other.id); });
+  const avatar = await createTestApprovedMedia(owner.id, "avatar");
+  const unattached = await createTestApprovedMedia(owner.id, "avatar");
+  await new UserService(users).uploadAvatar(owner.id, avatar.id);
+  for (const container of ["follower", "target", "requester", "caller"]) {
+    const foreign = { data: { [container]: { id: other.id, avatarUrl: marker(avatar.id) } } };
+    const unreferenced = { data: { [container]: { id: owner.id, avatarUrl: marker(unattached.id) } } };
+    assert.equal((await hydrateMediaValue(foreign)).data[container].avatarUrl, null, `${container}: foreign asset`);
+    assert.equal((await hydrateMediaValue(unreferenced)).data[container].avatarUrl, null, `${container}: unreferenced asset`);
+  }
+  const foreignViewer = { data: { viewers: [{ viewerId: other.id, avatarUrl: marker(avatar.id) }] } };
+  const unattachedViewer = { data: { viewers: [{ viewerId: owner.id, avatarUrl: marker(unattached.id) }] } };
+  assert.equal((await hydrateMediaValue(foreignViewer)).data.viewers[0].avatarUrl, null);
+  assert.equal((await hydrateMediaValue(unattachedViewer)).data.viewers[0].avatarUrl, null);
+  const arbitrary = { data: { content: marker(avatar.id), metadata: { caller: { id: owner.id, avatarUrl: marker(avatar.id) }, viewers: [{ viewerId: owner.id, avatarUrl: marker(avatar.id) }] } } };
+  assert.deepEqual(await hydrateMediaValue(arbitrary), arbitrary);
 });
 
 test("concurrent message retries attach exactly the winning image/audio asset; soft deletion and replay never restore references", async () => {

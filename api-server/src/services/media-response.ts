@@ -7,7 +7,7 @@ import { mediaDeliveryUrl } from './media-delivery.js';
 
 const fields=new Set(['url','avatarUrl','mediaUrl','videoUrl','coverUrl','thumbnailUrl','customImageUrl','logoUrl','images']);
 const untrusted=new Set(['content','metadata','payload','privacy','settings','premiumStyle','storyTextStyle','stickers','productSnapshot','socialLinks','links','customText','textContent','description','body','reactions','preferences','dataJson']);
-const containers=new Set(['data','items','results','rows','entries','posts','post','comments','comment','replies','stories','story','videos','video','messages','message','users','user','author','sender','recipient','owner','host','seller','products','product','articles','article','events','event','streams','stream','channels','channel','highlights','highlight','showcases','showcase','communities','community','businesses','business','members','participants','conversations','conversation','profile','feed','notifications','notification','notes','note','threads','thread']);
+const containers=new Set(['data','items','results','rows','entries','posts','post','comments','comment','replies','stories','story','videos','video','messages','message','users','user','author','sender','recipient','owner','host','seller','follower','target','requester','caller','viewers','products','product','articles','article','events','event','streams','stream','channels','channel','highlights','highlight','showcases','showcase','communities','community','businesses','business','members','participants','conversations','conversation','profile','feed','notifications','notification','notes','note','threads','thread']);
 const trusted=(key:string)=>!untrusted.has(key)&&(fields.has(key)||containers.has(key));
 const marker=/^(media|media-poster):([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 type Context={entityId?:string;previewId?:string;avatarOwner?:string};
@@ -15,9 +15,9 @@ type Context={entityId?:string;previewId?:string;avatarOwner?:string};
  * may mint URLs. A marker in free text/arbitrary JSON is never sufficient. */
 export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,'signedDeliveryUrl'|'signedPosterUrl'>,viewerId?:string):Promise<T> {
   const wanted=new Set<string>(),entities=new Set<string>();
-  function context(item:Record<string,unknown>,parent:Context):Context {
+  function context(item:Record<string,unknown>,parent:Context,key:string):Context {
     const id=typeof item.id==='string'?item.id:parent.entityId;
-    const avatarOwner=typeof item.authorId==='string'?item.authorId:typeof item.senderId==='string'?item.senderId:id;
+    const avatarOwner=key==='viewers'&&typeof item.viewerId==='string'?item.viewerId:typeof item.authorId==='string'?item.authorId:typeof item.senderId==='string'?item.senderId:id;
     return {entityId:id,avatarOwner,previewId:item.status==='approved'&&item.mediaId===item.id&&typeof item.mediaId==='string'?item.mediaId:undefined};
   }
   function discover(item:unknown,key='',scope:Context={}):void {
@@ -25,7 +25,7 @@ export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,
       const match=item.match(marker);if(match){wanted.add(match[2]!);if(scope.entityId)entities.add(scope.entityId);if(key==='avatarUrl'&&scope.avatarOwner)entities.add(scope.avatarOwner);}
     }else if(Array.isArray(item))item.forEach(child=>discover(child,key,scope));
     else if(item&&typeof item==='object') {
-      const scopeNext=context(item as Record<string,unknown>,scope);
+      const scopeNext=context(item as Record<string,unknown>,scope,key);
       for(const [childKey,child]of Object.entries(item))if(trusted(childKey))discover(child,childKey,scopeNext);
     }
   }
@@ -49,7 +49,7 @@ export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,
     }
     if(Array.isArray(item))return item.map(child=>transform(child,key,scope));
     if(item&&typeof item==='object'){
-      const scopeNext=context(item as Record<string,unknown>,scope);
+      const scopeNext=context(item as Record<string,unknown>,scope,key);
       return Object.fromEntries(Object.entries(item).map(([childKey,child])=>[childKey,trusted(childKey)?transform(child,childKey,scopeNext):child]));
     }
     return item;
