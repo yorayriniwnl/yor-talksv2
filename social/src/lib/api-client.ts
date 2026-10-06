@@ -148,7 +148,7 @@ export interface PaginatedResponse<T> {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public code?: string) {
     super(message);
   }
 }
@@ -317,7 +317,7 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
     const retryAfter = Number(res.headers.get('Retry-After'));
     throw new ApiError(res.status === 429 && retryAfter > 0
       ? `Too many requests. Please try again in ${Math.ceil(retryAfter / 60)} minute${retryAfter > 60 ? 's' : ''}.`
-      : message || `Request failed (${res.status})`, res.status);
+      : message || `Request failed (${res.status})`, res.status, detail && /^[a-z][a-z0-9_]+$/.test(detail) ? detail : undefined);
   }
   return normalizeApiTimestamps(json);
 }
@@ -366,7 +366,7 @@ interface MediaUploadGrant {
   mimeType: string;
 }
 type MediaCompletion = Omit<UploadedMedia, 'status' | 'url'> & { status: string; url?: string };
-type UploadAttempt = { epoch: number; grant?: MediaUploadGrant; uploaded: boolean; approved?: UploadedMedia; approvedAt?: number; inFlight?: Promise<UploadedMedia>; rejected?: ApiError };
+type UploadAttempt = { epoch: number; grant?: MediaUploadGrant; uploaded: boolean; directUploadAttempted?: boolean; approved?: UploadedMedia; approvedAt?: number; inFlight?: Promise<UploadedMedia>; rejected?: ApiError };
 const uploadAttempts = new WeakMap<File, Map<MediaPurpose, UploadAttempt>>();
 const imageMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const videoMimeTypes = ['video/mp4', 'video/webm'];
@@ -414,6 +414,50 @@ async function uploadMediaFile(file: File, purpose: MediaPurpose, onPhase?: (pha
       current.grant = grant;
     }
     const grant = current.grant;
+    const finalize = async (): Promise<UploadedMedia> => {
+      onPhase?.('checking');
+      for (let check = 0; check < 3; check++) {
+        assertSession();
+        const result = await request<MediaCompletion>(`/media/${encodeURIComponent(grant.id)}/finalize`, { method: 'POST', body: '{}', signal: AbortSignal.timeout(90_000) });
+        assertSession();
+        if (result?.status === 'approved') {
+          const resolveDelivery = (value: string | undefined): string | undefined => {
+            if (!value) return undefined;
+            const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+            const url = new URL(value, apiOrigin);
+            if (![apiOrigin, window.location.origin].includes(url.origin) || url.pathname !== `/api/media/${grant.id}/content` || !url.searchParams.get('token') || url.username || url.password || url.hash) return undefined;
+            return url.href;
+          };
+          const deliveryUrl = resolveDelivery(result.url), posterUrl = resolveDelivery(result.thumbnailUrl);
+          if (result.id !== grant.id || result.mediaId !== grant.id || !deliveryUrl
+            || result.mimeType !== mimeType || !Number.isSafeInteger(result.size) || result.size !== file.size
+            || (result.mimeType?.startsWith('video/') && (!posterUrl || posterUrl === deliveryUrl))) {
+            throw new ApiError('Approved media delivery could not be verified. Please retry.', 502);
+          }
+          current.uploaded = true;
+          current.approved = { ...result, url: deliveryUrl, thumbnailUrl: posterUrl } as UploadedMedia;
+          current.approvedAt = Date.now();
+          return current.approved;
+        }
+        if (result?.status === 'rejected') {
+          current.rejected = new ApiError('This media could not be approved. Choose another file.', 422);
+          throw current.rejected;
+        }
+        if (!['pending', 'uploaded', 'verifying'].includes(result?.status)) throw new ApiError('Media checks could not finish. Your file is still selected. Please retry.', 503);
+        if (check < 2) await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      throw new ApiError('Your media is still being checked. Your file is still selected. Please retry.', 503);
+    };
+    if (!current.uploaded && grant.mode === 'direct' && current.directUploadAttempted) {
+      // The provider may have stored the exact object before its response was
+      // lost. Recheck ownership, bytes and moderation before repeating a write
+      // to the overwrite=false reservation. Only a confirmed missing provider
+      // object permits another write with the same file and reserved identity.
+      try { return await finalize(); }
+      catch (error) {
+        if (!(error instanceof ApiError) || error.code !== 'media_upload_not_found') throw error;
+      }
+    }
     if (!current.uploaded) {
       assertSession();
       onPhase?.('uploading');
@@ -429,6 +473,7 @@ async function uploadMediaFile(file: File, purpose: MediaPurpose, onPhase?: (pha
           if (name === 'file' || typeof value !== 'string') throw new ApiError('The upload provider settings are invalid.', 502);
           form.append(name, value);
         }
+        current.directUploadAttempted = true;
         const response = await fetch(grant.uploadUrl, { method: 'POST', body: form, signal: AbortSignal.timeout(90_000) });
         assertSession();
         // Provider URLs and metadata are untrusted. Only server completion can
@@ -445,37 +490,7 @@ async function uploadMediaFile(file: File, purpose: MediaPurpose, onPhase?: (pha
       assertSession();
       current.uploaded = true;
     }
-    onPhase?.('checking');
-    for (let check = 0; check < 3; check++) {
-      assertSession();
-      const result = await request<MediaCompletion>(`/media/${encodeURIComponent(grant.id)}/finalize`, { method: 'POST', body: '{}', signal: AbortSignal.timeout(90_000) });
-      assertSession();
-      if (result?.status === 'approved') {
-        const resolveDelivery = (value: string | undefined): string | undefined => {
-          if (!value) return undefined;
-          const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
-          const url = new URL(value, apiOrigin);
-          if (![apiOrigin, window.location.origin].includes(url.origin) || url.pathname !== `/api/media/${grant.id}/content` || !url.searchParams.get('token') || url.username || url.password || url.hash) return undefined;
-          return url.href;
-        };
-        const deliveryUrl = resolveDelivery(result.url), posterUrl = resolveDelivery(result.thumbnailUrl);
-        if (result.id !== grant.id || result.mediaId !== grant.id || !deliveryUrl
-          || result.mimeType !== mimeType || !Number.isSafeInteger(result.size) || result.size !== file.size
-          || (result.mimeType?.startsWith('video/') && (!posterUrl || posterUrl === deliveryUrl))) {
-          throw new ApiError('Approved media delivery could not be verified. Please retry.', 502);
-        }
-        current.approved = { ...result, url: deliveryUrl, thumbnailUrl: posterUrl } as UploadedMedia;
-        current.approvedAt = Date.now();
-        return current.approved;
-      }
-      if (result?.status === 'rejected') {
-        current.rejected = new ApiError('This media could not be approved. Choose another file.', 422);
-        throw current.rejected;
-      }
-      if (!['pending', 'uploaded', 'verifying'].includes(result?.status)) throw new ApiError('Media checks could not finish. Your file is still selected. Please retry.', 503);
-      if (check < 2) await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    throw new ApiError('Your media is still being checked. Your file is still selected. Please retry.', 503);
+    return finalize();
   })().finally(() => { current.inFlight = undefined; });
   return current.inFlight;
 }

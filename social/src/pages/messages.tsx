@@ -28,6 +28,7 @@ import '@/styles/operator-communications.css';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { MessageAttachment } from '@/components/messages/MessageAttachment';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -75,6 +76,14 @@ function MessageContent({ content, isMine, textStyleId = 'default', reply: struc
       </div>
     </div>
   ) : null;
+
+  if (attachment?.mediaId && attachment.mediaLegacy !== true && (attachment.mediaType === 'audio' || attachment.mediaType === 'image')) {
+    return <>
+      {replyMarkup}
+      {textBody && <span className="operator-message-text" style={textStyle}>{textBody}</span>}
+      <MessageAttachment message={attachment} />
+    </>;
+  }
 
   if (attachment?.mediaType === 'audio' || (attachment?.mediaLegacy && body.startsWith('[Voice Note]'))) {
     const audioUrlMatch = body.match(/\[Voice Note\]\s*(https?:\/\/[^\s]+|\S+)/);

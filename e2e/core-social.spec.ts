@@ -110,6 +110,187 @@ async function syntheticPosterImage(page: Page): Promise<Buffer> {
   return Buffer.from(encoded, 'base64');
 }
 
+async function fulfillSeekableMedia(route: Route, bytes: Buffer, mime: string) {
+  const range = route.request().headers().range?.match(/^bytes=(\d*)-(\d*)$/);
+  const start = range ? (range[1] ? Number(range[1]) : Math.max(0, bytes.length - Number(range[2]))) : 0;
+  const end = range?.[1] && range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1;
+  return route.fulfill({
+    status: range ? 206 : 200, contentType: mime,
+    headers: { 'Cache-Control': 'private, no-store', 'Accept-Ranges': 'bytes', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${bytes.length}` } : {}) },
+    body: bytes.subarray(start, end + 1),
+  });
+}
+
+test('older structured message image and audio grants renew without replacing history or drafts', async ({ page }) => {
+  const poster = await syntheticPosterImage(page);
+  const audioBytes = readFileSync(new URL('./fixtures/delivery.wav', import.meta.url));
+  await installApiBoundary(page);
+  const peer = { ...user, id: '10000000-0000-4000-8000-000000000181', username: 'expiry_peer', fullName: 'Expiry Peer' };
+  const conversation = { id: '20000000-0000-4000-8000-000000000181', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt };
+  const imageId = '40000000-0000-4000-8000-000000000181', audioId = '40000000-0000-4000-8000-000000000182';
+  const attachments = [
+    { id: '30000000-0000-4000-8000-000000000000', content: 'Earlier image caption', mediaType: 'image', mediaId: imageId, createdAt: '2026-08-28T08:00:00.123456Z' },
+    { id: '30000000-0000-4000-8000-000000000181', content: 'Earlier voice caption', mediaType: 'audio', mediaId: audioId, createdAt: '2026-08-28T08:01:00.654321Z' },
+  ].map(message => ({ ...message, conversationId: conversation.id, senderId: peer.id, recipientId: user.id, mediaLegacy: false,
+    mediaUrl: `/api/media/${message.mediaId}/content?token=original`, deletedAt: null, expiresAt: null, seenAt: user.createdAt }));
+  const recent = Array.from({ length: 200 }, (_, index) => ({
+    id: `50000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`, conversationId: conversation.id,
+    senderId: user.id, recipientId: peer.id, content: `Recent history row ${index}`, createdAt: user.createdAt, seenAt: user.createdAt,
+  }));
+  let snapshotReads = 0, olderReads = 0, audioExpired = false;
+  const attachmentReads = [0, 0];
+  await page.route('**/api/conversations', route => json(route, [{ conversation }]));
+  await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    if (!query.size) { snapshotReads++; return json(route, recent); }
+    if (query.get('limit') === '100') { olderReads++; return json(route, attachments); }
+    expect(query.get('limit')).toBe('1');
+    const index = query.get('cursorAt') === attachments[0].createdAt ? 0 : 1;
+    expect(query.get('cursorAt')).toBe(attachments[index].createdAt);
+    expect(query.get('direction')).toBe(index === 0 ? 'older' : 'newer');
+    expect(query.get('cursorId')).toBe(index === 0 ? '30000000-0000-4000-8000-000000000001' : '30000000-0000-4000-8000-000000000180');
+    expect(route.request().headers().authorization).toBe('Bearer browser-smoke-access-token');
+    attachmentReads[index]++;
+    return json(route, [{ ...attachments[index], mediaUrl: `/api/media/${attachments[index].mediaId}/content?token=renewed` }]);
+  });
+  await page.route('**/api/media/*/content?*', route => {
+    const url = new URL(route.request().url());
+    const original = url.searchParams.get('token') === 'original';
+    if (original && (url.pathname.includes(imageId) || audioExpired)) {
+      return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media delivery grant is invalid or expired' }) });
+    }
+    return url.pathname.includes(imageId) ? fulfillSeekableMedia(route, poster, 'image/png') : fulfillSeekableMedia(route, audioBytes, 'audio/wav');
+  });
+  await page.goto(`/messages/${conversation.id}`);
+  await expect(page.locator('article.operator-message')).toHaveCount(200);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('This composer draft must survive media expiry.');
+  const threadGeometry = await page.locator('.operator-thread__flow').evaluate(async element => {
+    element.scroll({ top: 0, behavior: 'instant' });
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const messages = element.querySelector('.operator-thread__messages')!;
+    const earlier = Array.from(element.querySelectorAll('button')).find(button => button.textContent?.includes('Load earlier messages'))!;
+    return { scrollTop: element.scrollTop, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+      flow: element.getBoundingClientRect().toJSON(), messages: messages.getBoundingClientRect().toJSON(),
+      messagesScrollHeight: messages.scrollHeight, messagesFlexShrink: getComputedStyle(messages).flexShrink,
+      earlier: earlier.getBoundingClientRect().toJSON() };
+  });
+  expect(threadGeometry.earlier.top).toBeGreaterThanOrEqual(threadGeometry.flow.top);
+  await page.getByRole('button', { name: 'Load earlier messages' }).click();
+  await expect(page.locator('article.operator-message')).toHaveCount(202);
+  const imageRow = page.locator('article.operator-message').filter({ hasText: 'Earlier image caption' });
+  await imageRow.scrollIntoViewIfNeeded();
+  const image = imageRow.getByRole('img', { name: 'Shared attachment' });
+  await expect(image).toHaveAttribute('src', new URL(`/api/media/${imageId}/content?token=renewed`, page.url()).href);
+  await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(2);
+  const audioRow = page.locator('article.operator-message').filter({ hasText: 'Earlier voice caption' });
+  const audio = audioRow.locator('audio');
+  await audioRow.scrollIntoViewIfNeeded();
+  await audio.evaluate(element => (element as HTMLAudioElement).play());
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(0.3);
+  await audio.evaluate(async element => {
+    const player = element as HTMLAudioElement;
+    const paused = new Promise<void>(resolve => player.addEventListener('pause', () => resolve(), { once: true }));
+    player.pause(); await paused;
+    const sought = new Promise<void>(resolve => player.addEventListener('seeked', () => resolve(), { once: true }));
+    player.currentTime = 0.4; await sought;
+    player.muted = true;
+    const changed = new Promise<void>(resolve => player.addEventListener('ratechange', () => resolve(), { once: true }));
+    player.playbackRate = 1.5; await changed;
+  });
+  await expect(audio).toHaveJSProperty('currentTime', 0.4);
+  audioExpired = true;
+  const expired = page.waitForResponse(response => response.url().includes(`${audioId}/content?token=original`) && response.status() === 403);
+  await audio.evaluate(element => (element as HTMLAudioElement).load());
+  await expired;
+  await expect(audio).toHaveAttribute('src', new URL(`/api/media/${audioId}/content?token=renewed`, page.url()).href);
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeCloseTo(0.4, 1);
+  await expect(audio).toHaveJSProperty('paused', true);
+  await expect(audio).toHaveJSProperty('muted', true);
+  await expect(audio).toHaveJSProperty('playbackRate', 1.5);
+  await audio.evaluate(element => (element as HTMLAudioElement).play());
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(0.55);
+  await expect(imageRow.getByText('Earlier image caption', { exact: true })).toBeVisible();
+  await expect(audioRow.getByText('Earlier voice caption', { exact: true })).toBeVisible();
+  await expect(page.locator('article.operator-message')).toHaveCount(202);
+  await expect(page.locator('article.operator-message').getByText('Recent history row 199', { exact: true })).toHaveCount(1);
+  await expect(composer).toHaveValue('This composer draft must survive media expiry.');
+  expect([snapshotReads, olderReads, ...attachmentReads]).toEqual([1, 1, 1, 1]);
+});
+
+test('message attachment renewal denies mismatches, bounds errors, and ignores a late conversation response', async ({ page }) => {
+  await installApiBoundary(page);
+  const peers = ['Attachment Alpha', 'Attachment Beta'].map((fullName, index) => ({ ...user, id: `10000000-0000-4000-8000-00000000019${index + 1}`, username: `attachment_${index}`, fullName }));
+  const conversations = peers.map((peer, index) => ({ id: `20000000-0000-4000-8000-00000000019${index + 1}`, participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt }));
+  const attachments = ['image', 'audio'].map((mediaType, index) => ({
+    id: `30000000-0000-4000-8000-00000000019${index + 1}`, conversationId: conversations[0].id, senderId: peers[0].id,
+    recipientId: user.id, content: `Alpha ${mediaType} caption`, mediaId: `40000000-0000-4000-8000-00000000019${index + 1}`,
+    mediaType, mediaLegacy: false, mediaUrl: `/api/media/40000000-0000-4000-8000-00000000019${index + 1}/content?token=expired`,
+    createdAt: `2026-08-28T08:0${index}:00.123456Z`, seenAt: user.createdAt, deletedAt: null, expiresAt: null,
+  }));
+  const reads = [0, 0], providerRequests: string[] = [];
+  let releaseLate!: () => void;
+  const held = new Promise<void>(resolve => { releaseLate = resolve; });
+  page.on('request', request => { if (new URL(request.url()).hostname === 'untrusted.invalid') providerRequests.push(request.url()); });
+  await page.route('**/api/conversations', route => json(route, conversations.map(conversation => ({ conversation }))));
+  for (const peer of peers) await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages*', async route => {
+    const url = new URL(route.request().url()), query = url.searchParams;
+    if (url.pathname.includes(conversations[1].id)) return json(route, [{ id: 'beta-text', conversationId: conversations[1].id, senderId: peers[1].id, recipientId: user.id, content: 'Beta conversation only.', createdAt: user.createdAt, seenAt: user.createdAt }]);
+    if (!query.size) return json(route, attachments);
+    expect(query.get('limit')).toBe('1');
+    const index = query.get('cursorAt') === attachments[0].createdAt ? 0 : 1;
+    reads[index]++;
+    if (index === 0 && reads[index] === 1) return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Conversation access denied' }) });
+    if (index === 0) {
+      await held;
+      return json(route, [{ ...attachments[0], mediaUrl: `/api/media/${attachments[0].mediaId}/content?token=late-renewed` }]);
+    }
+    if (reads[1] === 1) return json(route, [attachments[1]]); // Unchanged grant.
+    if (reads[1] === 2) return json(route, [{ ...attachments[1], mediaId: attachments[0].mediaId, mediaUrl: `/api/media/${attachments[0].mediaId}/content?token=forged` }]);
+    return json(route, [{ ...attachments[1], mediaUrl: 'https://untrusted.invalid/audio.wav' }]);
+  });
+  await page.route('**/api/media/*/content?*', route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired delivery grant' }) }));
+  await page.goto(`/messages/${conversations[0].id}`);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('Alpha draft stays private.');
+  const rows = page.locator('article.operator-message');
+  const imageRow = rows.filter({ hasText: 'Alpha image caption' }), audioRow = rows.filter({ hasText: 'Alpha audio caption' });
+  await imageRow.scrollIntoViewIfNeeded();
+  await expect(imageRow.getByRole('alert')).toBeVisible();
+  await expect(audioRow.getByRole('alert')).toBeVisible();
+  expect(reads).toEqual([1, 1]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const denied = page.waitForResponse(response => response.url().includes(`${attachments[1].mediaId}/content?token=expired`) && response.status() === 403);
+    await audioRow.locator('audio').evaluate(element => (element as HTMLAudioElement).load());
+    await denied;
+  }
+  expect(reads).toEqual([1, 1]);
+  for (const count of [2, 3]) {
+    await audioRow.getByRole('button', { name: 'Retry attachment' }).click();
+    await expect(audioRow.getByRole('alert')).toBeVisible();
+    expect(reads).toEqual([1, count]);
+    await expect(audioRow.locator('audio')).toHaveAttribute('src', new URL(attachments[1].mediaUrl, page.url()).href);
+  }
+  await expect(composer).toHaveValue('Alpha draft stays private.');
+  await expect(rows).toHaveCount(2);
+  await imageRow.getByRole('button', { name: 'Retry attachment' }).click();
+  await expect(imageRow.getByRole('status')).toHaveText('Refreshing attachment…');
+  await page.getByRole('button', { name: /Attachment Beta.*No messages yet/ }).click();
+  await expect(rows.getByText('Beta conversation only.', { exact: true })).toBeVisible();
+  await expect(composer).toHaveValue('');
+  await composer.fill('Beta draft stays with Beta.');
+  const lateResponse = page.waitForResponse(response => response.url().includes(`${conversations[0].id}/messages?`) && response.status() === 200);
+  releaseLate(); await lateResponse;
+  await expect(composer).toHaveValue('Beta draft stays with Beta.');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.getByText('Beta conversation only.', { exact: true })).toBeVisible();
+  await expect(rows.locator('audio, img.operator-message-image')).toHaveCount(0);
+  expect(reads).toEqual([2, 3]);
+  expect(providerRequests).toEqual([]);
+});
+
 test('expired uploaded-video grants renew through the authorized video read and preserve playback', async ({ page }) => {
   const playable = readFileSync(new URL('./fixtures/delivery.webm', import.meta.url));
   const poster = await syntheticPosterImage(page);
