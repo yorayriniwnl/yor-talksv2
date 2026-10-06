@@ -27,7 +27,7 @@
     "bcryptjs": "^2.4.0",
     "bullmq": "^5.8.2",
     "cloudinary": "^2.0.0",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "^0.45.2",
