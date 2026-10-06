@@ -36,11 +36,13 @@ Keep existing content ratings and audience controls, but apply them within the e
 
 ## Workstream 1 design
 
-### 1. Repair the two existing privacy disclosures first
+### 1. Repair the existing privacy disclosures first
 
 Public grievance submission and tracking return an explicit projection: `ticketId`, `status`, `createdAt`, and the current operational deadline where present. Never return reporter identity, the reported URL, description, internal officer notes or the database row identifier. Preserve complete records behind authenticated moderator access. Remove the public interface's dependence on internal notes. Do not describe an India-specific deadline as an EU statutory deadline; the later notice-and-action workstream will replace that lifecycle.
 
 Account export excludes messages marked deleted and messages whose expiry has been reached. Use the same current visibility semantics as ordinary message reads, including read-triggered expiry. Do not export another person's deleted or expired message text, attachments or access grants. This repair does not claim that the current export is a complete GDPR access or portability response; export coverage and lawful retention exceptions belong to workstream 2.
+
+Unread-message preview applies the same deletion and expiry boundary. Premium entitlement cannot reopen expired content. Recheck visibility when recording and returning a preview so a concurrent deletion or expiry cannot expose the retained row through a direct message ID.
 
 ### 2. Separate proof, consent and experience
 
