@@ -5,6 +5,7 @@ export const mediaAssetsTable = pgTable("media_assets", {
   id: uuid("id").primaryKey(),
   ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: "set null" }),
   purpose: text("purpose").notNull(),
+  provider: text("provider").notNull().default("cloudinary"),
   status: text("status").notNull().default("pending"),
   publicId: text("public_id").notNull().unique(),
   resourceType: text("resource_type").notNull(),
@@ -31,6 +32,7 @@ export const mediaAssetsTable = pgTable("media_assets", {
   lastError: text("last_error"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  finalizedAt: timestamp("finalized_at", { withTimezone: true, mode: "string" }),
 }, table => ({ cleanupIdx: index("media_assets_cleanup_idx").on(table.deletionStatus, table.cleanupAt), ownerIdx: index("media_assets_owner_idx").on(table.ownerId, table.status) }));
 
 export const mediaReferencesTable = pgTable("media_references", {

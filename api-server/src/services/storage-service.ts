@@ -3,7 +3,7 @@ import { env } from "../config/env.js";
 import { FFmpegMediaDecoder, type MediaDecoder } from "./media-byte-verification.js";
 import { type DirectUploadGrant, type MediaProvider, type MediaUploadIntent, type ProviderIdentity, type ProviderReadiness, type VerifiedMedia,
   MEDIA_MIME_FORMATS, mediaMimeAllowed, purposeLimits, MediaProviderNotConfiguredError, MediaProviderUnavailableError,
-  MediaVerificationError, MediaModerationUnavailableError, MediaTooLargeError } from "./media-provider.js";
+  MediaVerificationError, MediaModerationUnavailableError, MediaTooLargeError, MediaUploadNotFoundError } from "./media-provider.js";
 export { MediaProviderNotConfiguredError, MediaModerationUnavailableError, MediaProviderUnavailableError, MediaVerificationError, MediaTooLargeError } from "./media-provider.js";
 
 export interface CloudinaryMediaClient {
@@ -131,7 +131,8 @@ export class StorageService implements MediaProvider {
   async verifyUpload(intent: MediaUploadIntent, expectedIdentity?: ProviderIdentity): Promise<VerifiedMedia> {
     this.assertConfigured(); this.assertIntent(intent);
     let metadata: Record<string, unknown>;
-    try { metadata = record(await this.providerRead(this.client.resource(intent.publicId, intent.resourceType))); } catch { throw new MediaProviderUnavailableError(); }
+    try { metadata = record(await this.providerRead(this.client.resource(intent.publicId, intent.resourceType))); }
+    catch (error) { if (!expectedIdentity && isNotFound(error)) throw new MediaUploadNotFoundError(); throw new MediaProviderUnavailableError(); }
     const identity = identityOf(metadata), limits = purposeLimits(intent.purpose, intent.declaredMimeType);
     if (identity.publicId !== intent.publicId || identity.resourceType !== intent.resourceType || identity.format !== MEDIA_MIME_FORMATS[intent.declaredMimeType]
       || (expectedIdentity && !sameIdentity(identity, expectedIdentity))) throw new MediaVerificationError("Provider asset does not match its reservation");

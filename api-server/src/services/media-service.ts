@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { StorageService } from "./storage-service.js";
 import { MediaModerationService } from "./media-moderation-service.js";
 import { MEDIA_PURPOSES, mediaMimeAllowed, purposeLimits, MediaVerificationError, MediaTooLargeError,
-  MediaModerationUnavailableError, MediaProviderNotConfiguredError, MediaProviderUnavailableError,
+  MediaModerationUnavailableError, MediaProviderNotConfiguredError, MediaProviderUnavailableError, MediaUploadNotFoundError,
   type MediaPurpose, type MediaProvider, type MediaUploadIntent, type ProviderIdentity, type VerifiedMedia } from "./media-provider.js";
 
 export class MediaLifecycleError extends Error {
@@ -20,19 +20,19 @@ export interface MediaModerator {
   moderate(media: VerifiedMedia, purpose: MediaPurpose): Promise<{ decision: "approve" | "reject" | "uncertain"; reasons: string[] }>;
 }
 export interface MediaAssetRow {
-  id: string; owner_id: string | null; purpose: MediaPurpose; status: string;
+  id: string; owner_id: string | null; purpose: MediaPurpose; provider: string; status: string;
   public_id: string; resource_type: "image" | "video"; declared_mime: string; declared_bytes: number;
   provider_asset_id: string | null; provider_version: number | null; provider_format: string | null;
   verified_mime: string | null; verified_bytes: number | null; sha256: string | null;
   width: number | null; height: number | null; duration_seconds: number | null;
   moderation_json: unknown; verification_token: string | null; verification_until: string | null;
-  deletion_status: string; upload_expires_at: string;
+  deletion_status: string; upload_expires_at: string; finalized_at: string | null;
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const mediaIntent = (row: MediaAssetRow): MediaUploadIntent => ({ id:row.id,ownerId:row.owner_id??"",purpose:row.purpose,
   publicId:row.public_id,resourceType:row.resource_type,declaredMimeType:row.declared_mime,declaredBytes:row.declared_bytes });
 export function mediaIdentity(row: MediaAssetRow): ProviderIdentity | undefined {
-  if (!row.provider_asset_id || !row.provider_version || !row.provider_format) return undefined;
+  if (row.provider !== "cloudinary" || !row.provider_asset_id || !row.provider_version || !row.provider_format) return undefined;
   return {assetId:row.provider_asset_id,version:row.provider_version,format:row.provider_format,publicId:row.public_id,resourceType:row.resource_type,deliveryType:"authenticated"};
 }
 export function mediaResult(row: MediaAssetRow): MediaUploadResult {
@@ -47,6 +47,7 @@ export function mediaError(error: unknown): MediaLifecycleError {
   if (error instanceof MediaVerificationError) return new MediaLifecycleError("Media verification failed",415,"media_verification_failed");
   if (error instanceof MediaModerationUnavailableError) return new MediaLifecycleError("Media moderation is unavailable",503,"media_moderation_unavailable");
   if (error instanceof MediaProviderNotConfiguredError) return new MediaLifecycleError("Media storage is not configured",503,"media_provider_not_configured");
+  if (error instanceof MediaUploadNotFoundError) return new MediaLifecycleError("The reserved media upload was not found",502,"media_upload_not_found");
   if (error instanceof MediaProviderUnavailableError) return new MediaLifecycleError("Media storage is temporarily unavailable",502,"media_provider_unavailable");
   return new MediaLifecycleError("Media processing is temporarily unavailable",503,"media_processing_unavailable");
 }
@@ -136,12 +137,13 @@ export class MediaService {
       if (!active.rowCount) throw new MediaLifecycleError("Media reservation was revoked",409,"media_upload_closed");
       const decision=await this.moderator.moderate(verified,row.purpose);
       if (!decision||!['approve','reject','uncertain'].includes(decision.decision)||!Array.isArray(decision.reasons)||decision.reasons.some(reason=>typeof reason!=='string')) throw new MediaModerationUnavailableError();
+      if (decision.decision==='approve'&&decision.reasons.length) throw new MediaModerationUnavailableError();
       if (decision.decision==='uncertain') throw new MediaModerationUnavailableError();
       await this.provider.verifyIdentity(verified);
       const rejected=decision.decision==='reject';
       const final=await pool.query<MediaAssetRow>(`UPDATE media_assets SET status=$3,moderation_json=$4,deletion_status=$5,
         cleanup_at=CASE WHEN $5='pending' THEN now() ELSE now()+interval '24 hours' END,
-        verification_token=NULL,verification_until=NULL,last_error=NULL,updated_at=now()
+        verification_token=NULL,verification_until=NULL,last_error=NULL,updated_at=now(),finalized_at=COALESCE(finalized_at,now())
         WHERE id=$1 AND verification_token=$2 AND verification_until>now() AND deletion_status='none' RETURNING *`,
         [id,token,rejected?'rejected':'approved',decision,rejected?'pending':'none']);
       if (!final.rowCount) throw new MediaLifecycleError("Verification lease expired or media was revoked",409,"media_verification_superseded");
@@ -149,7 +151,9 @@ export class MediaService {
     } catch(error) {
       const mapped=mediaError(error),permanent=error instanceof MediaVerificationError||error instanceof MediaTooLargeError;
       await pool.query(`UPDATE media_assets SET status=$3,deletion_status=$4,cleanup_at=CASE WHEN $4='pending' THEN now() ELSE upload_expires_at END,
-        verification_token=NULL,verification_until=NULL,last_error=$5,updated_at=now() WHERE id=$1 AND verification_token=$2 AND deletion_status='none'`,
+        verification_token=NULL,verification_until=NULL,last_error=$5,updated_at=now(),
+        finalized_at=CASE WHEN $3='rejected' THEN COALESCE(finalized_at,now()) ELSE finalized_at END
+        WHERE id=$1 AND verification_token=$2 AND deletion_status='none'`,
         [id,token,permanent?'rejected':'failed',permanent?'pending':'none',mapped.code]);
       throw mapped;
     }

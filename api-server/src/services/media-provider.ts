@@ -111,6 +111,11 @@ export class MediaModerationUnavailableError extends Error {
 export class MediaProviderUnavailableError extends Error {
   constructor() { super("Media storage is temporarily unavailable"); this.name = "MediaProviderUnavailableError"; }
 }
+/** Only an initial reservation lookup without prior identity may report upload absence.
+ * Identity rechecks after verification must remain ordinary provider failures. */
+export class MediaUploadNotFoundError extends MediaProviderUnavailableError {
+  constructor() { super(); this.name = "MediaUploadNotFoundError"; }
+}
 export class MediaVerificationError extends Error {
   constructor(message = "Media could not be verified") { super(message); this.name = "MediaVerificationError"; }
 }

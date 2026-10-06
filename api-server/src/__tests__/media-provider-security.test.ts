@@ -9,7 +9,8 @@ import { StorageService, type CloudinaryMediaClient } from "../services/storage-
 import { FFmpegMediaDecoder, runMediaProcess, type MediaDecoder } from "../services/media-byte-verification.js";
 import { MediaModerationService, parseMediaModerationResponse } from "../services/media-moderation-service.js";
 import { createVerifiedVideoPoster } from "../services/media-delivery.js";
-import { type MediaUploadIntent, type ProviderIdentity, type VerifiedMedia, MediaProviderUnavailableError, MediaProviderNotConfiguredError, MediaVerificationError, MediaTooLargeError, MediaModerationUnavailableError, purposeLimits } from "../services/media-provider.js";
+import { mediaError } from "../services/media-service.js";
+import { type MediaUploadIntent, type ProviderIdentity, type VerifiedMedia, MediaProviderUnavailableError, MediaProviderNotConfiguredError, MediaVerificationError, MediaTooLargeError, MediaModerationUnavailableError, MediaUploadNotFoundError, purposeLimits } from "../services/media-provider.js";
 
 const intent: MediaUploadIntent = { id: "reservation", ownerId: "owner", purpose: "post", publicId: "yor-media/owner/reservation", resourceType: "image", declaredMimeType: "image/png", declaredBytes: 4 };
 const identity: ProviderIdentity = { assetId: "a".repeat(32), publicId: intent.publicId, resourceType: "image", deliveryType: "authenticated", version: 1, format: "png" };
@@ -91,6 +92,44 @@ test('provider metadata cannot forge the public ID, resource type, delivery type
       error => error instanceof MediaVerificationError || error instanceof MediaTooLargeError);
   }
   await assert.rejects(() => new StorageService(client({ resource: async () => { throw { http_code: 404 }; } }), decoder, fixtureFetch).verifyUpload(intent), MediaProviderUnavailableError);
+});
+
+test("only an initial reservation lookup 404 confirms that a direct upload may be retried", async t => {
+  configured(t);
+  let downloads = 0;
+  const fetcher = (async (...args) => { downloads++; return fixtureFetch(...args); }) as typeof fetch;
+  for (const failure of [{ http_code: 404 }, { error: { http_code: 404 } }, { http_code: 503 }, new Error("provider outage")]) {
+    const missing = (failure as { http_code?: number; error?: { http_code?: number } }).http_code === 404
+      || (failure as { error?: { http_code?: number } }).error?.http_code === 404;
+    await assert.rejects(() => new StorageService(client({ resource: async () => { throw failure; } }), decoder, fetcher).verifyUpload(intent), error => {
+      assert.equal(error instanceof MediaUploadNotFoundError, missing);
+      assert.equal(mediaError(error).code, missing ? "media_upload_not_found" : "media_provider_unavailable");
+      assert.equal(mediaError(error).status, 502);
+      return true;
+    });
+  }
+  assert.equal(downloads, 0, "lookup failures cannot download or decode an absent object");
+  await assert.rejects(() => new StorageService(client({ resource: async () => { throw { http_code: 404 }; } }), decoder, fetcher).verifyUpload(intent, identity), error => {
+    assert.ok(error instanceof MediaProviderUnavailableError);
+    assert.equal(error instanceof MediaUploadNotFoundError, false);
+    assert.equal(mediaError(error).code, "media_provider_unavailable");
+    return true;
+  });
+  assert.equal(downloads, 0, "a vanished previously verified identity cannot authorize another upload");
+  for (const phase of ["asset-id", "public-id"] as const) {
+    let lookups = 0;
+    const storage = new StorageService(client({
+      resource: async () => { lookups++; if (phase === "public-id" && lookups > 1) throw { http_code: 404 }; return metadata(); },
+      resourceByAssetId: async () => { if (phase === "asset-id") throw { http_code: 404 }; return metadata(); },
+    }), decoder, fetcher);
+    await assert.rejects(() => storage.verifyUpload(intent), error => {
+      assert.ok(error instanceof MediaProviderUnavailableError);
+      assert.equal(error instanceof MediaUploadNotFoundError, false);
+      assert.equal(mediaError(error).code, "media_provider_unavailable");
+      return true;
+    });
+  }
+  assert.equal(downloads, 2, "identity failures occur after the exact initial object was downloaded");
 });
 
 test("deletion uses immutable asset IDs and reconciles all authenticated replay namespaces", async (t) => {

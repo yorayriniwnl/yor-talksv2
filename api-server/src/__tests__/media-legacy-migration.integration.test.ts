@@ -6,8 +6,8 @@ import type { Client } from 'pg';
 
 const { Client: PostgresClient } = createRequire(import.meta.resolve('@workspace/db'))('pg') as typeof import('pg');
 const migrationUrl = new URL('../../../lib/db/scripts/migrate-media.mjs', import.meta.url).href;
-const { migrateMedia, MEDIA_SCHEMA_VERSION, MEDIA_LEGACY_REPAIR_VERSION } = await import(migrationUrl) as {
-  migrateMedia(client: Client): Promise<void>; MEDIA_SCHEMA_VERSION: string; MEDIA_LEGACY_REPAIR_VERSION: string;
+const { migrateMedia, MEDIA_SCHEMA_VERSION, MEDIA_LEGACY_REPAIR_VERSION, MEDIA_METADATA_SCHEMA_VERSION } = await import(migrationUrl) as {
+  migrateMedia(client: Client): Promise<void>; MEDIA_SCHEMA_VERSION: string; MEDIA_LEGACY_REPAIR_VERSION: string; MEDIA_METADATA_SCHEMA_VERSION: string;
 };
 const historical = [
   '[Voice Note] https://fixture.invalid/voice.mp3 (3s)',
@@ -67,7 +67,7 @@ test('fresh media migration preserves actual historical voice/image bodies once 
   assert.ok((await rows(client, ordinary)).every(row => row.mediaLegacy === false));
   assert.equal((await client.query('SELECT count(*)::int AS count FROM media_assets')).rows[0].count, 0, 'Legacy URLs never become approved assets');
   const versions = await client.query('SELECT version FROM release_schema_versions ORDER BY version');
-  assert.deepEqual(versions.rows.map(row => row.version), [MEDIA_SCHEMA_VERSION, MEDIA_LEGACY_REPAIR_VERSION]);
+  assert.deepEqual(versions.rows.map(row => row.version), [MEDIA_SCHEMA_VERSION, MEDIA_LEGACY_REPAIR_VERSION, MEDIA_METADATA_SCHEMA_VERSION]);
   // Even a deliberately backdated new fixture cannot become a legacy attachment
   // on a repeat migration after the repair marker has committed.
   const forged = await insertMessages(client, historical, '1800-01-01T00:00:00Z');
@@ -75,6 +75,33 @@ test('fresh media migration preserves actual historical voice/image bodies once 
   await migrate(client);
   assert.deepEqual(await rows(client, [...old, ...ordinary, ...forged]), before);
   assert.ok((await rows(client, forged)).every(row => row.mediaLegacy === false));
+});
+
+test('metadata migration adds the known provider without inventing historical finalization or changing legacy URLs', async t => {
+  const client = await fixture(t);
+  const legacy = await insertMessages(client, historical, '2026-10-04T00:00:00Z');
+  await migrate(client);
+  const owner = randomUUID(), id = randomUUID();
+  await client.query('INSERT INTO users(id) VALUES($1)', [owner]);
+  await client.query(`INSERT INTO media_assets(id,owner_id,purpose,status,public_id,resource_type,declared_mime,declared_bytes,
+    provider_asset_id,provider_version,provider_format,verified_mime,verified_bytes,sha256,moderation_json,upload_expires_at)
+    VALUES($1,$2,'post','approved',$3,'image','image/png',1,$4,1,'png','image/png',1,$5,'{"decision":"approve"}',now()+interval '1 hour')`,
+    [id, owner, `fixture/${id}`, 'd'.repeat(32), '0'.repeat(64)]);
+  // Recreate the pre-metadata table shape using this private schema only.
+  await client.query('ALTER TABLE media_assets DROP COLUMN provider, DROP COLUMN finalized_at');
+  await client.query('DELETE FROM release_schema_versions WHERE version=$1', [MEDIA_METADATA_SCHEMA_VERSION]);
+  const before = (await client.query('SELECT * FROM media_assets WHERE id=$1', [id])).rows[0];
+  const messagesBefore = (await client.query('SELECT id,content,media_legacy FROM messages WHERE id=ANY($1::uuid[]) ORDER BY id', [legacy])).rows;
+  await migrate(client);
+  const migrated = (await client.query('SELECT * FROM media_assets WHERE id=$1', [id])).rows[0];
+  assert.deepEqual(migrated, { ...before, provider: 'cloudinary', finalized_at: null });
+  assert.deepEqual((await client.query('SELECT id,content,media_legacy FROM messages WHERE id=ANY($1::uuid[]) ORDER BY id', [legacy])).rows, messagesBefore);
+  await assert.rejects(() => client.query("UPDATE media_assets SET provider='untrusted' WHERE id=$1", [id]), error => (error as { code?: string }).code === '23514');
+  await client.query("UPDATE media_assets SET finalized_at='2026-10-06T00:00:00Z' WHERE id=$1", [id]);
+  const finalized = (await client.query('SELECT * FROM media_assets WHERE id=$1', [id])).rows[0];
+  await migrate(client);
+  assert.deepEqual((await client.query('SELECT * FROM media_assets WHERE id=$1', [id])).rows[0], finalized);
+  assert.equal((await client.query('SELECT count(*)::int AS count FROM release_schema_versions WHERE version=$1', [MEDIA_METADATA_SCHEMA_VERSION])).rows[0].count, 1);
 });
 
 test('v1 follow-up repairs only pre-deployment UTC message timestamps and remains idempotent in a non-UTC database session', async t => {
