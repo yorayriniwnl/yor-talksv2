@@ -10,17 +10,16 @@ an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
 
-## Public-beta status — 1 October 2026
+## Public-beta status — 6 October 2026
 
-**B. CODE-READY, DEPLOYMENT BLOCKED.** The latest continuation passed 69 API,
-30 unit/integration and 24 browser tests. Fresh production images also completed
-a clean PostgreSQL/Redis migration and healthy API/Nginx runtime rehearsal under
-the non-root API user. This is not a verified public deployment. GitHub Actions
-is currently executing successfully on `main`; historical billing-locked runs
-remain documented in the dated readiness reports. Real provider, domain/TLS,
-monitoring and production backup/recovery acceptance checks remain required. See the
-[latest readiness report](docs/PUBLIC_BETA_CONTINUATION_2026-09-02.md) and
-[production runbook](docs/PRODUCTION_LAUNCH.md) for evidence and release gates.
+**Verified-media lifecycle implemented; public deployment acceptance remains open.** Uploaded media uses server-owned IDs,
+actual byte verification, explicit Gemini approval, transactional publication
+and durable cleanup. The [media implementation report](docs/MEDIA_LIFECYCLE_IMPLEMENTATION.md)
+records source-specific local and CI evidence, including the isolated production
+container rehearsal. These checks do not establish a verified public deployment.
+Apply the additive migration before deploying the decoder-equipped API and
+complete real provider, domain/TLS, monitoring and backup/recovery acceptance.
+See the [production runbook](docs/PRODUCTION_LAUNCH.md) for release gates.
 
 ## Architecture
 
@@ -203,7 +202,9 @@ API on port 4000.
 ## Verification
 
 ```bash
+pnpm install --frozen-lockfile
 pnpm contract:check
+pnpm design:check
 pnpm production-config:check
 pnpm test:unit
 pnpm --filter @workspace/api-server typecheck
@@ -214,21 +215,21 @@ pnpm test:e2e
 ```
 
 Playwright builds and serves production chunks with deterministic API fixtures
-and no automatic retries. It covers core flows, failure recovery, consent,
+and no automatic retries. External DNS is blocked in Chromium; provider responses
+must come from test fixtures. It covers core flows, failure recovery, consent,
 mobile keyboard navigation and targeted accessibility checks. It does not
 replace real API/provider/browser acceptance tests. The API test suite uses
 the configured isolated Postgres and Redis instances:
 
 ```bash
-pnpm --filter @workspace/api-server test
+pnpm --filter @workspace/api-server exec node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
 ```
 
-The last bounded beta re-audit recorded 61/61 API tests, 17/17 root checks,
-17/17 Chromium E2E checks with zero retries, both workspace typechecks, the
-production build, 200 contract operations and a passing production Compose
-configuration check. Docker image execution, GitHub Actions execution, live
-provider delivery, TLS, monitoring and backup restore remain unverified or
-blocked; these boundaries are launch gates, not implied by a green local build.
+The current media evidence and exact command results are in the
+[implementation report](docs/MEDIA_LIFECYCLE_IMPLEMENTATION.md). CI requires the
+production dependency audit, actual FFmpeg/FFprobe tests, production image builds
+and a complete container smoke test. Live provider delivery, public TLS,
+monitoring and backup restore remain separate launch gates.
 
 ## Visual system
 

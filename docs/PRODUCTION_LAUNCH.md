@@ -2,9 +2,18 @@
 
 This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
-The [latest 31 August readiness report](PUBLIC_BETA_CONTINUATION_2026-08-31.md) records
-passing local checks and the unresolved infrastructure/live-verification gates.
-Do not interpret a pushed commit or a liveness response as release approval.
+The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
+current media controls, source-specific repository checks and the remaining
+provider/runtime acceptance gates. CI requires `pnpm audit --prod`, actual decoder
+tests, production image builds and the complete container smoke test. Do not
+interpret synthetic provider fixtures, a pushed commit or liveness as live release approval.
+
+The [6 October verification report](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md)
+lists all changed files, commands and limitations. Production image builds and
+container startup/smoke have passed in CI for the recorded revisions; this
+Windows host has no Docker Engine. Require a passing run for the revision being
+deployed. Legacy URL-only objects are not automatically approved or deleted:
+their retained account-deletion holds require provider ownership review.
 
 ## 1. Prepare the host and secrets
 
