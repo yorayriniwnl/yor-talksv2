@@ -115,9 +115,9 @@ export class MediaService {
     }
   }
   async finalizeUpload(ownerId:string,id:string):Promise<MediaUploadResult> {
-    const row=await this.owned(ownerId,id);
-    if (['approved','rejected','deleted'].includes(row.status)) return mediaResult(row);
-    const token=randomUUID(),claim=await pool.query(`UPDATE media_assets SET verification_token=$2,verification_until=now()+interval '2 minutes',updated_at=now()
+    const initial=await this.owned(ownerId,id);
+    if (['approved','rejected','deleted'].includes(initial.status)) return mediaResult(initial);
+    const token=randomUUID(),claim=await pool.query<MediaAssetRow>(`UPDATE media_assets SET verification_token=$2,verification_until=now()+interval '2 minutes',updated_at=now()
       WHERE id=$1 AND status IN ('pending','uploaded','verifying','failed') AND deletion_status='none' AND upload_expires_at>now()
       AND (verification_until IS NULL OR verification_until<now()) RETURNING *`,[id,token]);
     if (!claim.rowCount) {
@@ -125,6 +125,9 @@ export class MediaService {
       if (Date.parse(current.upload_expires_at)<Date.now()) throw new MediaLifecycleError("Upload expired",410,"media_upload_expired");
       return mediaResult(current);
     }
+    // Upload/verification may have committed identity evidence since owned().
+    // The claimed row is the reservation this lease is authorized to verify.
+    const row=claim.rows[0]!;
     try {
       const verified=await this.provider.verifyUpload(mediaIntent(row),mediaIdentity(row));
       const verifiedSha=createHash('sha256').update(verified.buffer).digest('hex');
@@ -204,17 +207,23 @@ export class MediaService {
     });
     let deleted=0,failed=0;
     for(const row of claimed) {
+      // Earlier provider requests can outlast later rows' batch leases. Renew
+      // just before deletion, and skip reservations reclaimed by another worker.
+      const lease=await pool.query(`UPDATE media_assets SET deletion_until=now()+interval '2 minutes'
+        WHERE id=$1 AND deletion_token=$2 AND deletion_status='pending'
+        AND NOT EXISTS(SELECT 1 FROM media_references WHERE media_id=$1) RETURNING id`,[row.id,row.deletion_token]);
+      if(!lease.rowCount)continue;
       try {
         await this.provider.deletePendingUpload(mediaIntent(row));
-        await pool.query(`UPDATE media_assets SET status=CASE WHEN status='rejected' THEN status ELSE 'deleted' END,
+        const result=await pool.query(`UPDATE media_assets SET status=CASE WHEN status='rejected' THEN status ELSE 'deleted' END,
           deletion_status='deleted',deletion_token=NULL,deletion_until=NULL,last_error=NULL,cleanup_at=now()+interval '5 minutes',updated_at=now()
           WHERE id=$1 AND deletion_token=$2`,[row.id,row.deletion_token]);
-        deleted++;
+        if(result.rowCount)deleted++;
       }catch {
-        await pool.query(`UPDATE media_assets SET deletion_token=NULL,deletion_until=NULL,last_error='media_delete_failed',
+        const result=await pool.query(`UPDATE media_assets SET deletion_token=NULL,deletion_until=NULL,last_error='media_delete_failed',
           cleanup_at=now()+$3*interval '1 second',updated_at=now() WHERE id=$1 AND deletion_token=$2`,
           [row.id,row.deletion_token,Math.min(3600,2**Math.min(row.deletion_attempts,9)*5)]);
-        failed++;
+        if(result.rowCount)failed++;
       }
     }
     return {deleted,failed};

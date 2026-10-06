@@ -151,6 +151,34 @@ test('finalize refuses provider replacement of the exact server-uploaded bytes o
   }
 });
 
+test('finalize binds bytes committed between its initial read and verification claim', async t => {
+  const owner = await createTestUser(users), read = latch(), resume = latch();
+  const changed = Buffer.from(bytes); changed[0] ^= 1;
+  let decisions = 0, held = false;
+  const service = new MediaService(fixtureProvider({ verifyUpload: async intent => ({ ...verified(intent), buffer: changed,
+    sha256: createHash('sha256').update(changed).digest('hex') }) }),
+    { ...approve, moderate: async () => { decisions++; return { decision: 'approve', reasons: [] }; } });
+  const media = await reservation(service, owner.id);
+  const query = pool.query.bind(pool);
+  t.mock.method(pool, 'query', (async (...args: any[]) => {
+    const result = await (query as any)(...args);
+    if (!held && args[0] === 'SELECT * FROM media_assets WHERE id=$1' && args[1]?.[0] === media.id) {
+      held = true; read.release(); await resume.promise;
+    }
+    return result;
+  }) as any);
+  t.after(() => resume.release());
+  const finalizing = service.finalizeUpload(owner.id, media.id);
+  await read.promise;
+  await service.upload(owner.id, media.id, { buffer: bytes, mimetype: 'image/png' });
+  assert.equal((await row(media.id)).sha256, createHash('sha256').update(bytes).digest('hex'));
+  resume.release();
+  await assert.rejects(() => finalizing, code('media_verification_failed'));
+  assert.equal(decisions, 0, 'replacement bytes must never reach moderation');
+  assert.equal((await row(media.id)).status, 'rejected');
+  assert.equal((await row(media.id)).deletion_status, 'pending');
+});
+
 test('concurrent finalizers invoke the verifier/moderator once and return no URL to the losing request', async () => {
   const owner = await createTestUser(users), entered = latch(), resume = latch(); let reads = 0, decisions = 0;
   const service = new MediaService(fixtureProvider({ verifyUpload: async intent => { reads++; entered.release(); await resume.promise; return verified(intent); } }),
@@ -243,6 +271,60 @@ test('concurrent cleanup workers cannot claim the same provider deletion', async
   const first = service.cleanup(100); await entered.promise;
   await service.cleanup(100); resume.release(); await first;
   assert.equal(calls.get(media.id), 1); assert.equal((await row(media.id)).deletion_status, 'deleted');
+});
+
+test('cleanup renews a later batch row lease immediately before provider deletion', async t => {
+  const owner = await createTestUser(users), ids: string[] = [];
+  let renewed = false;
+  const service = new MediaService(fixtureProvider({ deletePendingUpload: async intent => {
+    if (intent.id === ids[0]) await pool.query("UPDATE media_assets SET deletion_until=now()-interval '1 second' WHERE id=$1", [ids[1]]);
+    if (intent.id === ids[1]) renewed = Date.parse((await row(intent.id)).deletion_until) > Date.now();
+  } }), approve);
+  for (const cleanupAt of ['1600-01-01T00:00:00Z', '1600-01-02T00:00:00Z']) {
+    const media = await reservation(service, owner.id); ids.push(media.id);
+    await service.deleteUpload(owner.id, media.id);
+    await pool.query('UPDATE media_assets SET cleanup_at=$2 WHERE id=$1', [media.id, cleanupAt]);
+  }
+  t.after(async () => { await users.deleteById(owner.id); await pool.query('DELETE FROM media_assets WHERE id=ANY($1::uuid[])', [ids]); });
+  assert.deepEqual(await service.cleanup(2), { deleted: 2, failed: 0 });
+  assert.equal(renewed, true, 'a delayed batch row needs a fresh lease at provider request time');
+});
+
+test('cleanup skips a later batch row whose deletion lease another worker acquired', async t => {
+  const owner = await createTestUser(users), ids: string[] = [], destroyed: string[] = [], otherToken = randomUUID();
+  const service = new MediaService(fixtureProvider({ deletePendingUpload: async intent => {
+    destroyed.push(intent.id);
+    if (intent.id === ids[0]) await pool.query("UPDATE media_assets SET deletion_token=$2,deletion_until=now()+interval '2 minutes' WHERE id=$1", [ids[1], otherToken]);
+  } }), approve);
+  for (const cleanupAt of ['1600-01-01T00:00:00Z', '1600-01-02T00:00:00Z']) {
+    const media = await reservation(service, owner.id); ids.push(media.id);
+    await service.deleteUpload(owner.id, media.id);
+    await pool.query('UPDATE media_assets SET cleanup_at=$2 WHERE id=$1', [media.id, cleanupAt]);
+  }
+  t.after(async () => { await users.deleteById(owner.id); await pool.query('DELETE FROM media_assets WHERE id=ANY($1::uuid[])', [ids]); });
+  assert.deepEqual(await service.cleanup(2), { deleted: 1, failed: 0 });
+  assert.deepEqual(destroyed, [ids[0]]);
+  const retained = await row(ids[1]);
+  assert.equal(retained.deletion_status, 'pending'); assert.equal(retained.deletion_token, otherToken);
+});
+
+test('cleanup does not count provider completion after losing its deletion token', async t => {
+  const owner = await createTestUser(users), ids: string[] = [];
+  t.after(async () => { await users.deleteById(owner.id); await pool.query('DELETE FROM media_assets WHERE id=ANY($1::uuid[])', [ids]); });
+  for (const fail of [false, true]) {
+    const otherToken = randomUUID();
+    const service = new MediaService(fixtureProvider({ deletePendingUpload: async intent => {
+      await pool.query("UPDATE media_assets SET deletion_token=$2,deletion_until=now()+interval '2 minutes' WHERE id=$1", [intent.id, otherToken]);
+      if (fail) throw new MediaProviderUnavailableError();
+    } }), approve);
+    const media = await reservation(service, owner.id); ids.push(media.id);
+    await service.deleteUpload(owner.id, media.id);
+    await pool.query("UPDATE media_assets SET cleanup_at='1600-01-01T00:00:00Z' WHERE id=$1", [media.id]);
+    assert.deepEqual(await service.cleanup(1), { deleted: 0, failed: 0 });
+    const retained = await row(media.id);
+    assert.equal(retained.deletion_status, 'pending'); assert.equal(retained.deletion_token, otherToken);
+    assert.equal(retained.last_error, null);
+  }
 });
 
 test('cleanup skips more than one batch of older live assets before limiting expired and rejected candidates', async t => {

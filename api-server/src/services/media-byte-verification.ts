@@ -21,18 +21,19 @@ export interface MediaDecoder {
 export async function runMediaProcess(binary: string, args: string[], timeoutMs: number, cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { shell: false, windowsHide: true, cwd, stdio: ["ignore", "pipe", "pipe"] });
-    let output = "", outputBytes = 0, errorBytes = 0, failed = false;
-    const abort = () => { failed = true; child.kill("SIGKILL"); };
-    const timer = setTimeout(abort, timeoutMs);
+    let output = "", outputBytes = 0, errorBytes = 0, failure: "timeout" | "invalid" | undefined;
+    const abort = (reason: "timeout" | "invalid") => { failure ??= reason; child.kill("SIGKILL"); };
+    const timer = setTimeout(() => abort("timeout"), timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => {
       outputBytes += chunk.length;
-      if (outputBytes > 256 * 1024) abort(); else output += chunk.toString("utf8");
+      if (outputBytes > 256 * 1024) abort("invalid"); else output += chunk.toString("utf8");
     });
-    child.stderr.on("data", (chunk: Buffer) => { errorBytes += chunk.length; if (errorBytes > 64 * 1024) abort(); });
+    child.stderr.on("data", (chunk: Buffer) => { errorBytes += chunk.length; if (errorBytes > 64 * 1024) abort("invalid"); });
     child.on("error", () => { clearTimeout(timer); reject(new MediaProviderUnavailableError()); });
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (failed || code !== 0 || errorBytes !== 0) reject(new MediaVerificationError("Media could not be completely decoded"));
+      if (failure === "timeout") reject(new MediaProviderUnavailableError());
+      else if (failure || code !== 0 || errorBytes !== 0) reject(new MediaVerificationError("Media could not be completely decoded"));
       else resolve(output);
     });
   });

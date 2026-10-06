@@ -243,6 +243,18 @@ test("provider and Gemini hung requests time out and leave media unapproved", as
   assert.equal(aborted, true);
 });
 
+test('decoder wall-clock timeout stays retryable while malformed and excessive output remain permanent', async () => {
+  await assert.rejects(() => runMediaProcess(process.execPath, ['-e', 'setTimeout(() => {}, 5000)'], 20), error => {
+    assert.ok(error instanceof MediaProviderUnavailableError);
+    assert.equal(mediaError(error).code, 'media_provider_unavailable');
+    assert.equal(mediaError(error).status, 502);
+    return true;
+  });
+  for (const script of ['process.exit(1)', 'process.stderr.write("invalid media")', 'process.stdout.write("x".repeat(256 * 1024 + 1))']) {
+    await assert.rejects(() => runMediaProcess(process.execPath, ['-e', script], 5000), MediaVerificationError);
+  }
+});
+
 test("actual decoder handles allowed synthetic formats, rejects disguised tracks, corruption and animation", async (t) => {
   const actual = new FFmpegMediaDecoder();
   if (!(await actual.inspectReadiness())) {
