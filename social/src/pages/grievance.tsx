@@ -14,6 +14,12 @@ import { publicBetaConfig } from '@/lib/public-beta-config';
 
 type GrievanceField = 'reporterName' | 'reporterEmail' | 'reportedUrl' | 'description';
 type GrievanceErrors = Partial<Record<GrievanceField, string>>;
+type PublicGrievanceTicket = {
+  ticketId: string;
+  status: 'received' | 'under_review' | 'resolved' | 'dismissed';
+  createdAt: string;
+  reviewTargetAt: string;
+};
 
 export default function GrievancePortal() {
   const [activeTab, setActiveTab] = useState<'file' | 'track'>('file');
@@ -25,7 +31,7 @@ export default function GrievancePortal() {
   const [reporterEmail, setReporterEmail] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submittedTicket, setSubmittedTicket] = useState<any>(null);
+  const [submittedTicket, setSubmittedTicket] = useState<PublicGrievanceTicket | null>(null);
   const [formErrors, setFormErrors] = useState<GrievanceErrors>({});
   const [formError, setFormError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
@@ -33,7 +39,7 @@ export default function GrievancePortal() {
   // Track State
   const [trackTicketId, setTrackTicketId] = useState('');
   const [trackingLoading, setTrackingLoading] = useState(false);
-  const [trackedTicket, setTrackedTicket] = useState<any>(null);
+  const [trackedTicket, setTrackedTicket] = useState<PublicGrievanceTicket | null>(null);
   const [trackError, setTrackError] = useState('');
 
   const clearFieldError = (field: GrievanceField) => {
@@ -70,7 +76,7 @@ export default function GrievancePortal() {
     sounds.playPop();
 
     try {
-      const res = await api.request<any>('/reports/grievance', {
+      const res = await api.request<PublicGrievanceTicket>('/reports/grievance', {
         method: 'POST',
         body: JSON.stringify({ category, reportedUrl, reporterName, reporterEmail, description }),
       });
@@ -103,7 +109,7 @@ export default function GrievancePortal() {
     sounds.playPop();
 
     try {
-      const ticket = await api.request<any>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
+      const ticket = await api.request<PublicGrievanceTicket>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
       setTrackedTicket(ticket);
     } catch (error) {
       setTrackError('We could not find that ticket right now. Check the ID or try again in a moment.');
@@ -121,7 +127,7 @@ export default function GrievancePortal() {
           <Scale className="w-3.5 h-3.5" /> Trust, safety & grievance intake
         </div>
         <h1 className="font-display font-black text-3xl lg:text-4xl text-foreground tracking-tight">
-          <span id="grievance-title">Grievance Redressal & Trust Portal 🇮🇳</span>
+          <span id="grievance-title">Grievance & Trust Portal</span>
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
           Submit a report to the Yor Talks trust queue. You will receive a ticket ID, status updates, and a human-review path.
@@ -174,8 +180,8 @@ export default function GrievancePortal() {
                 <span className="font-bold text-emerald-400 uppercase">{submittedTicket.status}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Statutory SLA Deadline:</span>
-                <span className="text-foreground">{new Date(submittedTicket.slaDeadline).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">Review target:</span>
+                <span className="text-foreground">{new Date(submittedTicket.reviewTargetAt).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -331,20 +337,20 @@ export default function GrievancePortal() {
                   {trackedTicket.status.replace('_', ' ')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{trackedTicket.officerNote || 'A reviewer has not added a note yet. Your ticket remains in the trust queue.'}</p>
+              <p className="text-xs text-muted-foreground">This page shows your ticket's current status. Contact support with the ticket ID for assistance.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
-                <span>Resolution SLA: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>
+                <span>Review target: {new Date(trackedTicket.reviewTargetAt).toLocaleDateString()}</span>
               </div>
             </motion.div>
           )}
         </div>
       )}
 
-      {/* Statutory Disclosures */}
+      {/* Operator contacts */}
       <div className="mt-12 p-6 rounded-3xl surface-1 border border-border/30 text-xs text-muted-foreground space-y-2">
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
-          <Building className="w-4 h-4 text-primary" /> Statutory Grievance Redressal Officer
+          <Building className="w-4 h-4 text-primary" /> Grievance contact
         </h4>
         <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
         <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>

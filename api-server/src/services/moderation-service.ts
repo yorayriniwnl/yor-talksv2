@@ -90,7 +90,7 @@ export class ModerationService {
   }): Promise<GrievanceTicket> {
     const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
-    // 24 hours acknowledgment, 15 days redressal as mandated by Indian IT Rules 2021
+    // Internal review target. Applicable statutory duties need separate market review.
     const slaDeadline = new Date(now.getTime() + 15 * 86400 * 1000).toISOString();
 
     const [ticket] = await db.insert(grievanceTicketsTable).values({
