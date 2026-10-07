@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import type { ChallengeConsumption, EligibilityAssessment, EligibilityFacts, EligibilitySubject, GuardianAuthorization, PrivateAssuranceChallenge } from '../eligibility/types.js';
 
 type PrivateRow = Record<string, unknown>;
+export class EligibilitySubjectUnavailableError extends Error { constructor() { super('Eligibility subject unavailable'); } }
 const subjectFields = (row: PrivateRow): EligibilitySubject => row.user_id
   ? { userId: String(row.user_id) } : { enrollmentId: String(row.enrollment_id) };
 const timestamp = (value: unknown): string | null => value == null ? null : new Date(String(value)).toISOString();
@@ -47,7 +48,7 @@ export class EligibilityRepository {
     const result = subject.userId
       ? await tx.execute(sql`SELECT id FROM users WHERE id=${subject.userId} FOR UPDATE`)
       : await tx.execute(sql`SELECT id FROM eligibility_enrollments WHERE id=${subject.enrollmentId} FOR UPDATE`);
-    if (!result.rowCount) throw new Error('Eligibility subject unavailable');
+    if (!result.rowCount) throw new EligibilitySubjectUnavailableError();
   }
 
   async advanceRevision(userId: string, tx: DbTransaction): Promise<string> {
@@ -60,7 +61,7 @@ export class EligibilityRepository {
   async advanceSubjectRevision(subject: EligibilitySubject, tx: DbTransaction): Promise<string> {
     if (subject.userId) return this.advanceRevision(subject.userId, tx);
     const result = await tx.execute(sql`UPDATE eligibility_enrollments SET revision=revision+1 WHERE id=${subject.enrollmentId} RETURNING revision::text`);
-    if (!result.rowCount) throw new Error('Eligibility subject unavailable');
+    if (!result.rowCount) throw new EligibilitySubjectUnavailableError();
     return String(result.rows[0].revision);
   }
 
@@ -77,10 +78,38 @@ export class EligibilityRepository {
   async createChallenge(value: PrivateAssuranceChallenge, tx: DbTransaction): Promise<void> {
     await this.lockSubject(value, tx);
     await tx.execute(sql`INSERT INTO eligibility_challenges(id,user_id,enrollment_id,issuer,audience,purpose,nonce_hash,subject_revision,
-      policy_versions,notice_versions,requested_purposes,expires_at)
+      policy_versions,notice_versions,requested_purposes,expires_at,territory,policy_fingerprint)
       VALUES(${value.id},${value.userId ?? null},${value.enrollmentId ?? null},${value.issuer},${value.audience},${value.purpose},${value.nonceHash},
       ${value.subjectRevision}::bigint,${JSON.stringify(value.policyVersions)}::jsonb,${JSON.stringify(value.noticeVersions)}::jsonb,
-      ${JSON.stringify(value.requestedPurposes)}::jsonb,${value.expiresAt})`);
+      ${JSON.stringify(value.requestedPurposes)}::jsonb,${value.expiresAt},${value.territory ?? null},${value.policyFingerprint ?? null})`);
+  }
+
+  async readChallenge(id: string, tx?: DbTransaction) {
+    const result = await (tx ?? db).execute(sql`SELECT * FROM eligibility_challenges WHERE id=${id}`);
+    const row = result.rows[0];
+    return row ? { ...subjectFields(row),id: String(row.id),issuer: String(row.issuer),audience: String(row.audience),
+      purpose: row.purpose as PrivateAssuranceChallenge['purpose'],nonceHash: String(row.nonce_hash),subjectRevision: String(row.subject_revision),
+      policyVersions: row.policy_versions as Record<string,string>,noticeVersions: row.notice_versions as Record<string,string>,
+      requestedPurposes: row.requested_purposes as PrivateAssuranceChallenge['requestedPurposes'],expiresAt: timestamp(row.expires_at)!,
+      territory: row.territory == null ? null : String(row.territory),policyFingerprint: row.policy_fingerprint == null ? null : String(row.policy_fingerprint),
+      status: String(row.status),createdAt: timestamp(row.created_at)! } : undefined;
+  }
+  async pendingChallenges(subject: EligibilitySubject,tx: DbTransaction): Promise<number> {
+    const result = await tx.execute(sql`SELECT count(*)::int AS n FROM eligibility_challenges WHERE
+      user_id IS NOT DISTINCT FROM ${subject.userId ?? null}::uuid AND enrollment_id IS NOT DISTINCT FROM ${subject.enrollmentId ?? null}::uuid
+      AND status='pending' AND expires_at>clock_timestamp()`);
+    return Number(result.rows[0].n);
+  }
+  async revokeChallenge(id: string): Promise<void> {
+    await db.execute(sql`UPDATE eligibility_challenges SET status='revoked' WHERE id=${id} AND status='pending'`);
+  }
+  async databaseTime(tx: DbTransaction): Promise<Date> {
+    const result = await tx.execute(sql`SELECT clock_timestamp() AS now`); return new Date(result.rows[0].now as Date);
+  }
+  async subjectRevision(subject: EligibilitySubject,tx: DbTransaction): Promise<string> {
+    const result = subject.userId ? await tx.execute(sql`SELECT coalesce((SELECT revision FROM eligibility_revisions WHERE user_id=${subject.userId}),0)::text AS revision`)
+      : await tx.execute(sql`SELECT revision::text FROM eligibility_enrollments WHERE id=${subject.enrollmentId} AND status IN ('pending','authorized') AND expires_at>clock_timestamp()`);
+    if (!result.rows[0]) throw new EligibilitySubjectUnavailableError(); return String(result.rows[0].revision);
   }
 
   async consumeChallenge(value: ChallengeConsumption, tx: DbTransaction): Promise<boolean> {

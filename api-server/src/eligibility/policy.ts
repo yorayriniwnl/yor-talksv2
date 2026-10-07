@@ -21,6 +21,8 @@ function revisionFor(facts: EligibilityFacts | undefined, policies: ApprovedTerr
     guardians: facts?.guardianAuthorizations.map(value => ({ revision: value.subjectRevision, status: value.status,
       purposes: value.purposes, expiresAt: value.expiresAt, withdrawnAt: value.withdrawnAt, notices: value.noticeVersions, policies: value.policyVersions })) }))).digest('hex');
 }
+export const policyFingerprint = (policies: ApprovedTerritoryPolicy[],operatorPolicyIds: string[] = []) =>
+  createHash('sha256').update(JSON.stringify([revisionFor(undefined,policies),[...operatorPolicyIds].sort()])).digest('hex');
 const versionsMatch = (versions: PolicyVersions, policies: ApprovedTerritoryPolicy[]) => policies.every(policy => versions[policy.id] === policy.version);
 
 export function applicablePolicies(context: TerritoryContext | undefined, policies: ApprovedTerritoryPolicy[], now: Date): ApprovedTerritoryPolicy[] | undefined {
@@ -49,6 +51,7 @@ function thresholdFacts(experience: Experience, assertions: ThresholdAssertion[]
   for (const [age,answer] of result) for (const [other,otherAnswer] of result) if (age < other && !answer && otherAnswer) return undefined;
   return result;
 }
+export const consistentThresholdAssertions = (experience: Experience, assertions: ThresholdAssertion[]) => Boolean(thresholdFacts(experience,assertions));
 function atLeast(assertions: Map<Threshold, boolean>, threshold: Threshold): boolean | undefined {
   if (assertions.has(threshold)) return assertions.get(threshold);
   for (const [age,answer] of assertions) if (answer && age >= threshold) return true;

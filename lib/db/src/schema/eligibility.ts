@@ -40,6 +40,7 @@ export const eligibilityChallengesTable = pgTable('eligibility_challenges', {
   nonceHash: text('nonce_hash').notNull().unique(), subjectRevision: bigint('subject_revision', { mode: 'bigint' }).notNull(),
   policyVersions: jsonb('policy_versions').notNull().default({}), noticeVersions: jsonb('notice_versions').notNull().default({}),
   requestedPurposes: jsonb('requested_purposes').notNull().default([]), status: text('status').notNull().default('pending'),
+  territory: text('territory'), policyFingerprint: text('policy_fingerprint'),
   consumedEventId: text('consumed_event_id'), consumedAt: instant('consumed_at'), expiresAt: instant('expires_at').notNull(),
   createdAt: instant('created_at').notNull().defaultNow(),
 }, table => [uniqueIndex('eligibility_challenges_event_idx').on(table.issuer, table.consumedEventId),

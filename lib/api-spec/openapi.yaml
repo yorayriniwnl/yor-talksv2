@@ -5184,6 +5184,91 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/eligibility:
+    get:
+      operationId: getUsersMeEligibility
+      summary: Get /users/me/eligibility
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/EligibilityDecision"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/eligibility/challenges:
+    post:
+      operationId: postUsersMeEligibilityChallenges
+      summary: Post /users/me/eligibility/challenges
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssuranceChallengeRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/eligibility/challenges/{challengeId}:
+    get:
+      operationId: getUsersMeEligibilityChallengesByChallengeId
+      summary: Get /users/me/eligibility/challenges/{challengeId}
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeStatus"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /users/me/export:
     get:
       operationId: getUsersMeExport
@@ -5300,6 +5385,97 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/guardian-authorizations:
+    get:
+      operationId: getUsersMeGuardianAuthorizations
+      summary: Get /users/me/guardian-authorizations
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/GuardianAuthorizationList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+    post:
+      operationId: postUsersMeGuardianAuthorizations
+      summary: Post /users/me/guardian-authorizations
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GuardianJourneyRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/guardian-authorizations/{authorizationId}/withdraw:
+    post:
+      operationId: postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw
+      summary: Post /users/me/guardian-authorizations/{authorizationId}/withdraw
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authorizationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/GuardianWithdrawalReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /users/me/premium-profile:
     get:
       operationId: getUsersMePremiumProfile
@@ -5680,3 +5856,11 @@ components:
     MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}
     MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}},"allOf":[{"if":{"properties":{"status":{"const":"approved"}}},"then":{"required":["purpose","url","mimeType","size"]},"else":{"not":{"anyOf":[{"required":["url"]},{"required":["thumbnailUrl"]}]}}}]}
     PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"},"slaDeadline":{"type":"string","format":"date-time","description":"Operational review target, not a universal statutory deadline."}}}
+    AssuranceChallengeRequest: {"oneOf":[{"type":"object","additionalProperties":false,"required":["purpose","territory"],"properties":{"purpose":{"const":"age_assessment"},"territory":{"type":"string","pattern":"^[A-Z]{2}$"}}},{"type":"object","additionalProperties":false,"required":["purpose","territory","purposes"],"properties":{"purpose":{"const":"guardian_authorization"},"territory":{"type":"string","pattern":"^[A-Z]{2}$"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}}}}]}
+    GuardianJourneyRequest: {"type":"object","additionalProperties":false,"required":["territory","purposes"],"properties":{"territory":{"type":"string","pattern":"^[A-Z]{2}$"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}}}}
+    AssuranceChallengeReceipt: {"type":"object","additionalProperties":false,"required":["challengeId","nextStep","redirectUrl","expiresAt"],"properties":{"challengeId":{"type":"string","format":"uuid"},"nextStep":{"const":"verification_required"},"redirectUrl":{"type":"string","format":"uri"},"expiresAt":{"type":"string","format":"date-time"}}}
+    AssuranceChallengeStatus: {"type":"object","additionalProperties":false,"required":["challengeId","purpose","status","expiresAt"],"properties":{"challengeId":{"type":"string","format":"uuid"},"purpose":{"type":"string","enum":["age_assessment","guardian_authorization"]},"status":{"type":"string","enum":["pending","consumed","revoked","expired"]},"expiresAt":{"type":"string","format":"date-time"}}}
+    GuardianAuthorizationReceipt: {"type":"object","additionalProperties":false,"required":["id","purposes","status","expiresAt"],"properties":{"id":{"type":"string","format":"uuid"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}},"status":{"type":"string","enum":["granted","withdrawn","revoked"]},"expiresAt":{"type":"string","format":"date-time"}}}
+    GuardianAuthorizationList: {"type":"array","maxItems":100,"items":{"$ref":"#/components/schemas/GuardianAuthorizationReceipt"}}
+    GuardianWithdrawalReceipt: {"type":"boolean","const":true}
+    EligibilityDecision: {"type":"object","additionalProperties":false,"required":["experience","activated","capabilities","maximumContentRating","policyVersions","revision","reason","publicBrowsingAllowed"],"properties":{"experience":{"type":"string","enum":["unknown","under_13","teen_13_17","adult_18_plus"]},"activated":{"type":"boolean"},"capabilities":{"type":"object","additionalProperties":false,"required":["social","publish","messaging","payments","seller","memberships","live","rtc","ai","analytics","profiling"],"properties":{"social":{"type":"boolean"},"publish":{"type":"boolean"},"messaging":{"type":"boolean"},"payments":{"type":"boolean"},"seller":{"type":"boolean"},"memberships":{"type":"boolean"},"live":{"type":"boolean"},"rtc":{"type":"boolean"},"ai":{"type":"boolean"},"analytics":{"type":"boolean"},"profiling":{"type":"boolean"}}},"maximumContentRating":{"type":"string","enum":["child_safe","regular","mature"]},"policyVersions":{"type":"array","items":{"type":"string"}},"revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},"reason":{"type":["string","null"],"enum":[null,"verification_required","territory_unavailable","guardian_required","reassessment_required","account_restricted"]},"publicBrowsingAllowed":{"type":"boolean"}}}

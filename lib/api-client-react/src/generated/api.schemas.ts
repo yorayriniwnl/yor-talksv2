@@ -222,6 +222,168 @@ export interface PublicGrievanceReceipt {
   slaDeadline?: string;
 }
 
+export type AssuranceChallengeRequest = {
+  purpose: 'age_assessment';
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+} | {
+  purpose: 'guardian_authorization';
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: ('account_collection' | 'account_activation' | 'social_contact')[];
+};
+
+export type GuardianJourneyRequestPurposesItem = typeof GuardianJourneyRequestPurposesItem[keyof typeof GuardianJourneyRequestPurposesItem];
+
+
+export const GuardianJourneyRequestPurposesItem = {
+  account_collection: 'account_collection',
+  account_activation: 'account_activation',
+  social_contact: 'social_contact',
+} as const;
+
+export interface GuardianJourneyRequest {
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: GuardianJourneyRequestPurposesItem[];
+}
+
+export interface AssuranceChallengeReceipt {
+  challengeId: string;
+  nextStep: 'verification_required';
+  redirectUrl: string;
+  expiresAt: string;
+}
+
+export type AssuranceChallengeStatusPurpose = typeof AssuranceChallengeStatusPurpose[keyof typeof AssuranceChallengeStatusPurpose];
+
+
+export const AssuranceChallengeStatusPurpose = {
+  age_assessment: 'age_assessment',
+  guardian_authorization: 'guardian_authorization',
+} as const;
+
+export type AssuranceChallengeStatusStatus = typeof AssuranceChallengeStatusStatus[keyof typeof AssuranceChallengeStatusStatus];
+
+
+export const AssuranceChallengeStatusStatus = {
+  pending: 'pending',
+  consumed: 'consumed',
+  revoked: 'revoked',
+  expired: 'expired',
+} as const;
+
+export interface AssuranceChallengeStatus {
+  challengeId: string;
+  purpose: AssuranceChallengeStatusPurpose;
+  status: AssuranceChallengeStatusStatus;
+  expiresAt: string;
+}
+
+export type GuardianAuthorizationReceiptPurposesItem = typeof GuardianAuthorizationReceiptPurposesItem[keyof typeof GuardianAuthorizationReceiptPurposesItem];
+
+
+export const GuardianAuthorizationReceiptPurposesItem = {
+  account_collection: 'account_collection',
+  account_activation: 'account_activation',
+  social_contact: 'social_contact',
+} as const;
+
+export type GuardianAuthorizationReceiptStatus = typeof GuardianAuthorizationReceiptStatus[keyof typeof GuardianAuthorizationReceiptStatus];
+
+
+export const GuardianAuthorizationReceiptStatus = {
+  granted: 'granted',
+  withdrawn: 'withdrawn',
+  revoked: 'revoked',
+} as const;
+
+export interface GuardianAuthorizationReceipt {
+  id: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: GuardianAuthorizationReceiptPurposesItem[];
+  status: GuardianAuthorizationReceiptStatus;
+  expiresAt: string;
+}
+
+/**
+ * @maxItems 100
+ */
+export type GuardianAuthorizationList = GuardianAuthorizationReceipt[];
+
+export type GuardianWithdrawalReceipt = true;
+
+export type EligibilityDecisionExperience = typeof EligibilityDecisionExperience[keyof typeof EligibilityDecisionExperience];
+
+
+export const EligibilityDecisionExperience = {
+  unknown: 'unknown',
+  under_13: 'under_13',
+  teen_13_17: 'teen_13_17',
+  adult_18_plus: 'adult_18_plus',
+} as const;
+
+export type EligibilityDecisionCapabilities = {
+  social: boolean;
+  publish: boolean;
+  messaging: boolean;
+  payments: boolean;
+  seller: boolean;
+  memberships: boolean;
+  live: boolean;
+  rtc: boolean;
+  ai: boolean;
+  analytics: boolean;
+  profiling: boolean;
+};
+
+export type EligibilityDecisionMaximumContentRating = typeof EligibilityDecisionMaximumContentRating[keyof typeof EligibilityDecisionMaximumContentRating];
+
+
+export const EligibilityDecisionMaximumContentRating = {
+  child_safe: 'child_safe',
+  regular: 'regular',
+  mature: 'mature',
+} as const;
+
+/**
+ * @nullable
+ */
+export type EligibilityDecisionReason = typeof EligibilityDecisionReason[keyof typeof EligibilityDecisionReason] | null;
+
+
+export const EligibilityDecisionReason = {
+  verification_required: 'verification_required',
+  territory_unavailable: 'territory_unavailable',
+  guardian_required: 'guardian_required',
+  reassessment_required: 'reassessment_required',
+  account_restricted: 'account_restricted',
+} as const;
+
+export interface EligibilityDecision {
+  experience: EligibilityDecisionExperience;
+  activated: boolean;
+  capabilities: EligibilityDecisionCapabilities;
+  maximumContentRating: EligibilityDecisionMaximumContentRating;
+  policyVersions: string[];
+  /** @pattern ^[a-f0-9]{64}$ */
+  revision: string;
+  /** @nullable */
+  reason: EligibilityDecisionReason;
+  publicBrowsingAllowed: boolean;
+}
+
 export type PostAiChatBody = { [key: string]: unknown };
 
 export type PostAiModerateBody = { [key: string]: unknown };
@@ -569,9 +731,35 @@ export type PostUsersMeConsentBody = { [key: string]: unknown };
 
 export type PostUsersMeContactShieldsBody = { [key: string]: unknown };
 
+export type GetUsersMeEligibility200 = ApiEnvelope & {
+  data?: EligibilityDecision;
+};
+
+export type PostUsersMeEligibilityChallenges201 = ApiEnvelope & {
+  data?: AssuranceChallengeReceipt;
+};
+
+export type GetUsersMeEligibilityChallengesByChallengeId200 = ApiEnvelope & {
+  data?: AssuranceChallengeStatus;
+};
+
 export type PostUsersMeFollowRequestsByRequestIdAcceptBody = { [key: string]: unknown };
 
 export type PostUsersMeFollowRequestsByRequestIdRejectBody = { [key: string]: unknown };
+
+export type GetUsersMeGuardianAuthorizations200 = ApiEnvelope & {
+  data?: GuardianAuthorizationList;
+};
+
+export type PostUsersMeGuardianAuthorizations201 = ApiEnvelope & {
+  data?: AssuranceChallengeReceipt;
+};
+
+export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody = { [key: string]: unknown };
+
+export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200 = ApiEnvelope & {
+  data?: GuardianWithdrawalReceipt;
+};
 
 export type PutUsersMePremiumProfileBody = { [key: string]: unknown };
 

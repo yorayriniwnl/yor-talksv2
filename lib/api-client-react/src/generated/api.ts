@@ -21,7 +21,12 @@ import type {
 
 import type {
   ApiEnvelope,
+  AssuranceChallengeRequest,
   GetReportsGrievanceByTicketId200,
+  GetUsersMeEligibility200,
+  GetUsersMeEligibilityChallengesByChallengeId200,
+  GetUsersMeGuardianAuthorizations200,
+  GuardianJourneyRequest,
   MediaFinalizeRequest,
   MediaPresignRequest,
   PatchBroadcastChannelsByIdNotificationsBody,
@@ -141,8 +146,12 @@ import type {
   PostUsersMeAvatarBody,
   PostUsersMeConsentBody,
   PostUsersMeContactShieldsBody,
+  PostUsersMeEligibilityChallenges201,
   PostUsersMeFollowRequestsByRequestIdAcceptBody,
   PostUsersMeFollowRequestsByRequestIdRejectBody,
+  PostUsersMeGuardianAuthorizations201,
+  PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200,
+  PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody,
   PostVideosBody,
   PostVideosByIdBookmarkBody,
   PostVideosByIdCommentsBody,
@@ -15686,6 +15695,231 @@ export const useDeleteUsersMeContactShieldsByShieldId = <TError = ErrorType<void
       return useMutation(getDeleteUsersMeContactShieldsByShieldIdMutationOptions(options));
     }
 
+export const getGetUsersMeEligibilityUrl = () => {
+
+
+
+
+  return `/api/users/me/eligibility`
+}
+
+/**
+ * @summary Get /users/me/eligibility
+ */
+export const getUsersMeEligibility = async ( options?: RequestInit): Promise<GetUsersMeEligibility200> => {
+
+  return customFetch<GetUsersMeEligibility200>(getGetUsersMeEligibilityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsersMeEligibilityQueryKey = () => {
+    return [
+    `/api/users/me/eligibility`
+    ] as const;
+    }
+
+
+export const getGetUsersMeEligibilityQueryOptions = <TData = Awaited<ReturnType<typeof getUsersMeEligibility>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibility>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersMeEligibilityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersMeEligibility>>> = ({ signal }) => getUsersMeEligibility({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibility>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUsersMeEligibilityQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersMeEligibility>>>
+export type GetUsersMeEligibilityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /users/me/eligibility
+ */
+
+export function useGetUsersMeEligibility<TData = Awaited<ReturnType<typeof getUsersMeEligibility>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibility>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUsersMeEligibilityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostUsersMeEligibilityChallengesUrl = () => {
+
+
+
+
+  return `/api/users/me/eligibility/challenges`
+}
+
+/**
+ * @summary Post /users/me/eligibility/challenges
+ */
+export const postUsersMeEligibilityChallenges = async (assuranceChallengeRequest: AssuranceChallengeRequest, options?: RequestInit): Promise<PostUsersMeEligibilityChallenges201> => {
+
+  return customFetch<PostUsersMeEligibilityChallenges201>(getPostUsersMeEligibilityChallengesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(assuranceChallengeRequest)
+  }
+);}
+
+
+
+
+
+export const getPostUsersMeEligibilityChallengesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>, TError,{data: BodyType<AssuranceChallengeRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>, TError,{data: BodyType<AssuranceChallengeRequest>}, TContext> => {
+
+const mutationKey = ['postUsersMeEligibilityChallenges'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>, {data: BodyType<AssuranceChallengeRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postUsersMeEligibilityChallenges(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersMeEligibilityChallengesMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>>
+    export type PostUsersMeEligibilityChallengesMutationBody = BodyType<AssuranceChallengeRequest>
+    export type PostUsersMeEligibilityChallengesMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /users/me/eligibility/challenges
+ */
+export const usePostUsersMeEligibilityChallenges = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>, TError,{data: BodyType<AssuranceChallengeRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersMeEligibilityChallenges>>,
+        TError,
+        {data: BodyType<AssuranceChallengeRequest>},
+        TContext
+      > => {
+      return useMutation(getPostUsersMeEligibilityChallengesMutationOptions(options));
+    }
+
+export const getGetUsersMeEligibilityChallengesByChallengeIdUrl = (challengeId: string,) => {
+
+
+
+
+  return `/api/users/me/eligibility/challenges/${challengeId}`
+}
+
+/**
+ * @summary Get /users/me/eligibility/challenges/{challengeId}
+ */
+export const getUsersMeEligibilityChallengesByChallengeId = async (challengeId: string, options?: RequestInit): Promise<GetUsersMeEligibilityChallengesByChallengeId200> => {
+
+  return customFetch<GetUsersMeEligibilityChallengesByChallengeId200>(getGetUsersMeEligibilityChallengesByChallengeIdUrl(challengeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsersMeEligibilityChallengesByChallengeIdQueryKey = (challengeId: string,) => {
+    return [
+    `/api/users/me/eligibility/challenges/${challengeId}`
+    ] as const;
+    }
+
+
+export const getGetUsersMeEligibilityChallengesByChallengeIdQueryOptions = <TData = Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>, TError = ErrorType<void>>(challengeId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersMeEligibilityChallengesByChallengeIdQueryKey(challengeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>> = ({ signal }) => getUsersMeEligibilityChallengesByChallengeId(challengeId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: challengeId !== null && challengeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUsersMeEligibilityChallengesByChallengeIdQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>>
+export type GetUsersMeEligibilityChallengesByChallengeIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /users/me/eligibility/challenges/{challengeId}
+ */
+
+export function useGetUsersMeEligibilityChallengesByChallengeId<TData = Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>, TError = ErrorType<void>>(
+ challengeId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeEligibilityChallengesByChallengeId>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUsersMeEligibilityChallengesByChallengeIdQueryOptions(challengeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetUsersMeExportUrl = () => {
 
 
@@ -16059,6 +16293,226 @@ export const usePostUsersMeFollowRequestsByRequestIdReject = <TError = ErrorType
         TContext
       > => {
       return useMutation(getPostUsersMeFollowRequestsByRequestIdRejectMutationOptions(options));
+    }
+
+export const getGetUsersMeGuardianAuthorizationsUrl = () => {
+
+
+
+
+  return `/api/users/me/guardian-authorizations`
+}
+
+/**
+ * @summary Get /users/me/guardian-authorizations
+ */
+export const getUsersMeGuardianAuthorizations = async ( options?: RequestInit): Promise<GetUsersMeGuardianAuthorizations200> => {
+
+  return customFetch<GetUsersMeGuardianAuthorizations200>(getGetUsersMeGuardianAuthorizationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsersMeGuardianAuthorizationsQueryKey = () => {
+    return [
+    `/api/users/me/guardian-authorizations`
+    ] as const;
+    }
+
+
+export const getGetUsersMeGuardianAuthorizationsQueryOptions = <TData = Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersMeGuardianAuthorizationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>> = ({ signal }) => getUsersMeGuardianAuthorizations({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUsersMeGuardianAuthorizationsQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>>
+export type GetUsersMeGuardianAuthorizationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /users/me/guardian-authorizations
+ */
+
+export function useGetUsersMeGuardianAuthorizations<TData = Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsersMeGuardianAuthorizations>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUsersMeGuardianAuthorizationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostUsersMeGuardianAuthorizationsUrl = () => {
+
+
+
+
+  return `/api/users/me/guardian-authorizations`
+}
+
+/**
+ * @summary Post /users/me/guardian-authorizations
+ */
+export const postUsersMeGuardianAuthorizations = async (guardianJourneyRequest: GuardianJourneyRequest, options?: RequestInit): Promise<PostUsersMeGuardianAuthorizations201> => {
+
+  return customFetch<PostUsersMeGuardianAuthorizations201>(getPostUsersMeGuardianAuthorizationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(guardianJourneyRequest)
+  }
+);}
+
+
+
+
+
+export const getPostUsersMeGuardianAuthorizationsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>, TError,{data: BodyType<GuardianJourneyRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>, TError,{data: BodyType<GuardianJourneyRequest>}, TContext> => {
+
+const mutationKey = ['postUsersMeGuardianAuthorizations'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>, {data: BodyType<GuardianJourneyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postUsersMeGuardianAuthorizations(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersMeGuardianAuthorizationsMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>>
+    export type PostUsersMeGuardianAuthorizationsMutationBody = BodyType<GuardianJourneyRequest>
+    export type PostUsersMeGuardianAuthorizationsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /users/me/guardian-authorizations
+ */
+export const usePostUsersMeGuardianAuthorizations = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>, TError,{data: BodyType<GuardianJourneyRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersMeGuardianAuthorizations>>,
+        TError,
+        {data: BodyType<GuardianJourneyRequest>},
+        TContext
+      > => {
+      return useMutation(getPostUsersMeGuardianAuthorizationsMutationOptions(options));
+    }
+
+export const getPostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawUrl = (authorizationId: string,) => {
+
+
+
+
+  return `/api/users/me/guardian-authorizations/${authorizationId}/withdraw`
+}
+
+/**
+ * @summary Post /users/me/guardian-authorizations/{authorizationId}/withdraw
+ */
+export const postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw = async (authorizationId: string,
+    postUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody?: PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody, options?: RequestInit): Promise<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200> => {
+
+  return customFetch<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200>(getPostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawUrl(authorizationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody)
+  }
+);}
+
+
+
+
+
+export const getPostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>, TError,{authorizationId: string;data?: BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>, TError,{authorizationId: string;data?: BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody>}, TContext> => {
+
+const mutationKey = ['postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>, {authorizationId: string;data?: BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody>}> = (props) => {
+          const {authorizationId,data} = props ?? {};
+
+          return  postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw(authorizationId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>>
+    export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawMutationBody = BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody> | undefined
+    export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /users/me/guardian-authorizations/{authorizationId}/withdraw
+ */
+export const usePostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>, TError,{authorizationId: string;data?: BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw>>,
+        TError,
+        {authorizationId: string;data?: BodyType<PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody>},
+        TContext
+      > => {
+      return useMutation(getPostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawMutationOptions(options));
     }
 
 export const getGetUsersMePremiumProfileUrl = () => {

@@ -26,6 +26,7 @@ export type PrivateAssuranceChallenge = EligibilitySubject & {
   id: string; issuer: string; audience: string; purpose: AssurancePurpose; nonceHash: string;
   subjectRevision: string; policyVersions: PolicyVersions; noticeVersions: Record<string, string>;
   requestedPurposes: AuthorizationPurpose[]; expiresAt: string;
+  territory?: string | null; policyFingerprint?: string | null;
 };
 export type ChallengeConsumption = EligibilitySubject & {
   challengeId: string; issuer: string; audience: string; purpose: AssurancePurpose;

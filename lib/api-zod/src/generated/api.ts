@@ -3348,6 +3348,101 @@ export const DeleteUsersMeContactShieldsByShieldIdResponse = zod.object({
 
 
 /**
+ * @summary Get /users/me/eligibility
+ */
+export const getUsersMeEligibilityResponseTwoDataRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const GetUsersMeEligibilityResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "experience": zod.enum(['unknown', 'under_13', 'teen_13_17', 'adult_18_plus']),
+  "activated": zod.boolean(),
+  "capabilities": zod.object({
+  "social": zod.boolean(),
+  "publish": zod.boolean(),
+  "messaging": zod.boolean(),
+  "payments": zod.boolean(),
+  "seller": zod.boolean(),
+  "memberships": zod.boolean(),
+  "live": zod.boolean(),
+  "rtc": zod.boolean(),
+  "ai": zod.boolean(),
+  "analytics": zod.boolean(),
+  "profiling": zod.boolean()
+}),
+  "maximumContentRating": zod.enum(['child_safe', 'regular', 'mature']),
+  "policyVersions": zod.array(zod.string()),
+  "revision": zod.string().regex(getUsersMeEligibilityResponseTwoDataRevisionRegExp),
+  "reason": zod.union([zod.literal(null),zod.literal('verification_required'),zod.literal('territory_unavailable'),zod.literal('guardian_required'),zod.literal('reassessment_required'),zod.literal('account_restricted')]).nullable(),
+  "publicBrowsingAllowed": zod.boolean()
+})
+}))
+
+
+/**
+ * @summary Post /users/me/eligibility/challenges
+ */
+export const postUsersMeEligibilityChallengesBodyOneTerritoryRegExp = new RegExp('^[A-Z]{2}$');
+export const postUsersMeEligibilityChallengesBodyTwoTerritoryRegExp = new RegExp('^[A-Z]{2}$');
+export const postUsersMeEligibilityChallengesBodyTwoPurposesMax = 3;
+
+
+
+export const PostUsersMeEligibilityChallengesBody = zod.union([zod.object({
+  "purpose": zod.unknown(),
+  "territory": zod.string().regex(postUsersMeEligibilityChallengesBodyOneTerritoryRegExp)
+}),zod.object({
+  "purpose": zod.unknown(),
+  "territory": zod.string().regex(postUsersMeEligibilityChallengesBodyTwoTerritoryRegExp),
+  "purposes": zod.array(zod.enum(['account_collection', 'account_activation', 'social_contact'])).min(1).max(postUsersMeEligibilityChallengesBodyTwoPurposesMax)
+})])
+
+export const PostUsersMeEligibilityChallengesResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "challengeId": zod.string().uuid(),
+  "nextStep": zod.unknown(),
+  "redirectUrl": zod.string().url(),
+  "expiresAt": zod.coerce.date()
+})
+}))
+
+
+/**
+ * @summary Get /users/me/eligibility/challenges/{challengeId}
+ */
+export const GetUsersMeEligibilityChallengesByChallengeIdParams = zod.object({
+  "challengeId": zod.coerce.string()
+})
+
+export const GetUsersMeEligibilityChallengesByChallengeIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "challengeId": zod.string().uuid(),
+  "purpose": zod.enum(['age_assessment', 'guardian_authorization']),
+  "status": zod.enum(['pending', 'consumed', 'revoked', 'expired']),
+  "expiresAt": zod.coerce.date()
+})
+}))
+
+
+/**
  * @summary Get /users/me/export
  */
 export const GetUsersMeExportResponse = zod.object({
@@ -3417,6 +3512,80 @@ export const PostUsersMeFollowRequestsByRequestIdRejectResponse = zod.object({
   "errors": zod.array(zod.string()),
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Get /users/me/guardian-authorizations
+ */
+export const getUsersMeGuardianAuthorizationsResponseTwoDataItemPurposesMax = 3;
+
+export const getUsersMeGuardianAuthorizationsResponseTwoDataMax = 100;
+
+
+
+export const GetUsersMeGuardianAuthorizationsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "purposes": zod.array(zod.enum(['account_collection', 'account_activation', 'social_contact'])).min(1).max(getUsersMeGuardianAuthorizationsResponseTwoDataItemPurposesMax),
+  "status": zod.enum(['granted', 'withdrawn', 'revoked']),
+  "expiresAt": zod.coerce.date()
+})).max(getUsersMeGuardianAuthorizationsResponseTwoDataMax)
+}))
+
+
+/**
+ * @summary Post /users/me/guardian-authorizations
+ */
+export const postUsersMeGuardianAuthorizationsBodyTerritoryRegExp = new RegExp('^[A-Z]{2}$');
+export const postUsersMeGuardianAuthorizationsBodyPurposesMax = 3;
+
+
+
+export const PostUsersMeGuardianAuthorizationsBody = zod.object({
+  "territory": zod.string().regex(postUsersMeGuardianAuthorizationsBodyTerritoryRegExp),
+  "purposes": zod.array(zod.enum(['account_collection', 'account_activation', 'social_contact'])).min(1).max(postUsersMeGuardianAuthorizationsBodyPurposesMax)
+})
+
+export const PostUsersMeGuardianAuthorizationsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "challengeId": zod.string().uuid(),
+  "nextStep": zod.unknown(),
+  "redirectUrl": zod.string().url(),
+  "expiresAt": zod.coerce.date()
+})
+}))
+
+
+/**
+ * @summary Post /users/me/guardian-authorizations/{authorizationId}/withdraw
+ */
+export const PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawParams = zod.object({
+  "authorizationId": zod.coerce.string()
+})
+
+export const PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody = zod.record(zod.string(), zod.unknown())
+
+export const PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.boolean()
+}))
 
 
 /**

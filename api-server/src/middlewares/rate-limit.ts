@@ -4,6 +4,7 @@ import Redis from "ioredis";
 import type { Request, Response, RequestHandler } from "express";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { createHash } from 'node:crypto';
 
 const healthPaths = new Set([
   "/api/livez",
@@ -69,13 +70,13 @@ export async function closeRateLimitRedis(): Promise<void> {
   rateLimitRedisConnectPromise = null;
 }
 
-function createLimiter(prefix: string, windowMs: number, max: number) {
+function createLimiter(prefix: string, windowMs: number, max: number, keyGenerator = (req: Request) => ipKeyGenerator(req.ip || 'unknown')) {
   const config = {
     windowMs,
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: Request) => ipKeyGenerator(req.ip || "unknown"),
+    keyGenerator,
     skip: (req: Request) => healthPaths.has(req.path),
     handler: (_req: Request, res: Response) => {
       res.status(429).json({
@@ -118,3 +119,9 @@ export const reportRateLimiter = createLimiter("yor:rate:report:", 15 * 60 * 100
 export const mediaRateLimiter = createLimiter("yor:rate:media:", 15 * 60 * 1000, 30);
 export const telemetryRateLimiter = createLimiter("yor:rate:telemetry:", 15 * 60 * 1000, 60);
 export const storyReactionRateLimiter = createLimiter("yor:rate:story-reaction:", 60 * 1000, 60);
+const eligibilitySubjectKey = (req: Request) => req.user?.id
+  ? createHash('sha256').update(req.user.id).digest('hex') : ipKeyGenerator(req.ip || 'unknown');
+export const assuranceStartIpLimiter = createLimiter('yor:rate:assurance-start-ip:',60*60*1000,20);
+export const assuranceStartSubjectLimiter = createLimiter('yor:rate:assurance-start-subject:',60*60*1000,6,eligibilitySubjectKey);
+export const assurancePollLimiter = createLimiter('yor:rate:assurance-poll:',15*60*1000,120,eligibilitySubjectKey);
+export const assuranceCallbackLimiter = createLimiter('yor:rate:assurance-callback:',60*1000,300);

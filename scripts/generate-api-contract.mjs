@@ -53,6 +53,47 @@ const publicGrievanceSchema = {
     slaDeadline: { type: "string", format: "date-time", description: "Operational review target, not a universal statutory deadline." },
   },
 };
+const authorizationPurposes = ['account_collection','account_activation','social_contact'];
+const assurancePurposesSchema = { type: 'array',minItems: 1,maxItems: 3,uniqueItems: true,items: { type: 'string',enum: authorizationPurposes } };
+const territorySchema = { type: 'string',pattern: '^[A-Z]{2}$' };
+const eligibilitySchemas = {
+  AssuranceChallengeRequest: { oneOf: [
+    { type: 'object',additionalProperties: false,required: ['purpose','territory'],properties: { purpose: { const: 'age_assessment' },territory: territorySchema } },
+    { type: 'object',additionalProperties: false,required: ['purpose','territory','purposes'],properties: { purpose: { const: 'guardian_authorization' },territory: territorySchema,purposes: assurancePurposesSchema } },
+  ] },
+  GuardianJourneyRequest: { type: 'object',additionalProperties: false,required: ['territory','purposes'],properties: { territory: territorySchema,purposes: assurancePurposesSchema } },
+  AssuranceChallengeReceipt: { type: 'object',additionalProperties: false,required: ['challengeId','nextStep','redirectUrl','expiresAt'],properties: {
+    challengeId: { type: 'string',format: 'uuid' },nextStep: { const: 'verification_required' },redirectUrl: { type: 'string',format: 'uri' },expiresAt: { type: 'string',format: 'date-time' },
+  } },
+  AssuranceChallengeStatus: { type: 'object',additionalProperties: false,required: ['challengeId','purpose','status','expiresAt'],properties: {
+    challengeId: { type: 'string',format: 'uuid' },purpose: { type: 'string',enum: ['age_assessment','guardian_authorization'] },
+    status: { type: 'string',enum: ['pending','consumed','revoked','expired'] },expiresAt: { type: 'string',format: 'date-time' },
+  } },
+  GuardianAuthorizationReceipt: { type: 'object',additionalProperties: false,required: ['id','purposes','status','expiresAt'],properties: {
+    id: { type: 'string',format: 'uuid' },purposes: assurancePurposesSchema,status: { type: 'string',enum: ['granted','withdrawn','revoked'] },expiresAt: { type: 'string',format: 'date-time' },
+  } },
+  GuardianAuthorizationList: { type: 'array',maxItems: 100,items: { $ref: '#/components/schemas/GuardianAuthorizationReceipt' } },
+  GuardianWithdrawalReceipt: { type: 'boolean',const: true },
+  EligibilityDecision: { type: 'object',additionalProperties: false,required: ['experience','activated','capabilities','maximumContentRating','policyVersions','revision','reason','publicBrowsingAllowed'],properties: {
+    experience: { type: 'string',enum: ['unknown','under_13','teen_13_17','adult_18_plus'] },activated: { type: 'boolean' },
+    capabilities: { type: 'object',additionalProperties: false,required: ['social','publish','messaging','payments','seller','memberships','live','rtc','ai','analytics','profiling'],
+      properties: Object.fromEntries(['social','publish','messaging','payments','seller','memberships','live','rtc','ai','analytics','profiling'].map(key => [key,{ type: 'boolean' }])) },
+    maximumContentRating: { type: 'string',enum: ['child_safe','regular','mature'] },policyVersions: { type: 'array',items: { type: 'string' } },
+    revision: { type: 'string',pattern: '^[a-f0-9]{64}$' },reason: { type: ['string','null'],enum: [null,'verification_required','territory_unavailable','guardian_required','reassessment_required','account_restricted'] },publicBrowsingAllowed: { type: 'boolean' },
+  } },
+};
+function eligibilityContract(route) {
+  const key = `${route.method} ${route.path}`;
+  const definitions = {
+    'get /users/me/eligibility': { result: 'EligibilityDecision' },
+    'post /users/me/eligibility/challenges': { request: 'AssuranceChallengeRequest',result: 'AssuranceChallengeReceipt',created: true },
+    'get /users/me/eligibility/challenges/{challengeId}': { result: 'AssuranceChallengeStatus' },
+    'get /users/me/guardian-authorizations': { result: 'GuardianAuthorizationList' },
+    'post /users/me/guardian-authorizations': { request: 'GuardianJourneyRequest',result: 'AssuranceChallengeReceipt',created: true },
+    'post /users/me/guardian-authorizations/{authorizationId}/withdraw': { result: 'GuardianWithdrawalReceipt' },
+  };
+  return definitions[key];
+}
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
   "post /posts/{postId}/comments": { mediaId }, "post /videos/{id}/comments": { mediaId },
@@ -143,6 +184,9 @@ function discoverRoutes() {
     for (const match of source.matchAll(routePattern)) {
       const invocation = source.slice(match.index, findInvocationEnd(source, match.index));
       const route = joinRoute(mountPrefixes[file], match[2]);
+      // This callback is unmounted in production and has no approved provider
+      // protocol. Explicit fixture injection does not create a public API.
+      if (file === 'eligibility.ts' && route === '/eligibility/provider/callback') continue;
       const firstSegment = route.split("/").filter(Boolean)[0] ?? "system";
       routes.push({
         method: match[1],
@@ -245,7 +289,8 @@ function renderYaml(routes) {
       }
 
       if (["post", "put", "patch"].includes(route.method)) {
-        const request = mediaRequest(route);
+        const eligibility = eligibilityContract(route);
+        const request = eligibility?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${eligibility.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
           "requestBody:",
@@ -260,14 +305,15 @@ function renderYaml(routes) {
 
       const publicGrievance = (route.path === "/reports/grievance" && route.method === "post") ||
         (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
-      const resultSchema = publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
+      const eligibility = eligibilityContract(route);
+      const resultSchema = eligibility?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
         const binary = { description: 'Approved original bytes or a JPEG poster derived from verified original bytes', content: Object.fromEntries(mediaMimes.map(mime => [mime, { schema: { type: 'string', format: 'binary' } }])) };
         lines.push(`      responses: ${JSON.stringify({ '200': binary, '206': binary, '403': { description: 'Invalid or expired delivery grant' }, '404': { description: 'Media revoked or unavailable' }, '415': { description: 'Provider bytes no longer match the approved hash' }, '416': { description: 'Invalid or unsatisfiable single byte range' }, '502': { description: 'Provider unavailable' }, '503': { description: 'Media delivery busy or unavailable' } })}`);
       } else lines.push(...indent([
         "responses:",
-        publicGrievance && route.method === "post" ? '  "201":' : '  "200":',
+        eligibility?.created || publicGrievance && route.method === "post" ? '  "201":' : '  "200":',
         "    description: Successful response",
         "    content:",
         "      application/json:",
@@ -278,6 +324,7 @@ function renderYaml(routes) {
         ...(route.authenticated ? ['  "401":', "    description: Authentication required"] : []),
         ...(route.roles.length > 0 ? ['  "403":', `    description: "Required role: ${route.roles.join(", ")}"`] : []),
       ], 6));
+      if (eligibility) lines.push(...indent(['  "403":','    description: Current account or territory does not permit verification','  "404":','    description: Owner-bound record unavailable','  "429":','    description: Verification rate or outstanding challenge limit exceeded','  "503":','    description: Verification provider unavailable; no authority granted'],6));
       if (route.path.startsWith("/media/") && route.method !== "get") {
         if (route.path === "/media/{id}/finalize") lines.push('        "202":', '          description: Verification already in progress; retry the same media ID');
         if (route.path === "/media/upload") lines.push('        "201":', '          description: Media verified and approved');
@@ -316,6 +363,7 @@ function renderYaml(routes) {
   );
   for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   lines.push(`    PublicGrievanceReceipt: ${JSON.stringify(publicGrievanceSchema)}`);
+  for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }
 
