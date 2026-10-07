@@ -5,9 +5,5 @@
  * Source-synchronized HTTP contract for the Yor Talks platform.
  * OpenAPI spec version: 1.0.0
  */
-import type { PostMediaUploadBodyPurpose } from './postMediaUploadBodyPurpose';
 
-export type PostMediaUploadBody = {
-  file: Blob;
-  purpose: PostMediaUploadBodyPurpose;
-};
+export type PostTelemetryEventsBody = { [key: string]: unknown };

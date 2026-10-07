@@ -10,7 +10,7 @@
 
 **Spec:** [Global age, consent and privacy design](../specs/2026-10-07-global-age-consent-design.md).
 
-**Status:** Ready for user review; implementation has not started. The user's subsequent “Continue” permits preparing this plan from the saved design. Execution review remains pending.
+**Status:** User-approved on 7 October 2026; inline implementation is in progress. The user approved the saved work and delegated the execution choice. Verified completion is recorded per task in the execution ledger and scoped commits; approval does not supply operator, provider or country-release evidence.
 
 **Source checked:** `34a8852beb54432b711a12e579edc99fc87cc956`, 7 October 2026. Preserve the 233 pre-existing frontend changes. Current CI passing does not prove the behaviours proposed below already exist.
 

@@ -121,6 +121,29 @@ async function fulfillSeekableMedia(route: Route, bytes: Buffer, mime: string) {
   });
 }
 
+test('grievance submission and tracking work with private public receipts', async ({ page }) => {
+  await installApiBoundary(page);
+  const receipt = { ticketId: 'YT-GRV-849201ABCD', status: 'received', createdAt: '2026-10-07T08:00:00.000Z', slaDeadline: '2026-10-22T08:00:00.000Z' };
+  await page.route('**/api/reports/grievance', route => json(route, receipt));
+  await page.route(`**/api/reports/grievance/${receipt.ticketId}`, route => json(route, { ...receipt, status: 'under_review' }));
+  await page.goto('/grievance');
+  await page.locator('#reporterName').fill('Private Reporter');
+  await page.locator('#reporterEmail').fill('private@example.test');
+  await page.locator('#reportedUrl').fill('https://example.test/reported-post');
+  await page.locator('#description').fill('A private complaint with enough detail for a reviewer to investigate.');
+  await page.getByRole('button', { name: /Submit Grievance to/ }).click();
+  await expect(page.getByText(receipt.ticketId, { exact: true })).toBeVisible();
+  await expect(page.getByText('Operational review target:', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Statutory SLA|acknowledgement email/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Track Existing Ticket' }).click();
+  await page.locator('#trackTicketId').fill(receipt.ticketId);
+  await page.getByRole('button', { name: 'Track ticket', exact: true }).click();
+  await expect(page.getByText('under review', { exact: true })).toBeVisible();
+  await expect(page.getByText(/A reviewer has not added a note/)).toHaveCount(0);
+  await expect(page.getByText(/Operational review target:/)).toBeVisible();
+  await expect(page.getByText(/Statutory Grievance Redressal Officer/)).toHaveCount(0);
+});
+
 test('older structured message image and audio grants renew without replacing history or drafts', async ({ page }) => {
   const poster = await syntheticPosterImage(page);
   const audioBytes = readFileSync(new URL('./fixtures/delivery.wav', import.meta.url));

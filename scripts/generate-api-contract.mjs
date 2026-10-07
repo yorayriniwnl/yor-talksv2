@@ -44,6 +44,15 @@ const mediaSchemas = {
   }, allOf: [{ if: { properties: { status: { const: "approved" } } }, then: { required: ["purpose", "url", "mimeType", "size"] },
     else: { not: { anyOf: [{ required: ["url"] }, { required: ["thumbnailUrl"] }] } } }] },
 };
+const publicGrievanceSchema = {
+  type: "object", additionalProperties: false, required: ["ticketId", "status", "createdAt"],
+  properties: {
+    ticketId: { type: "string" },
+    status: { type: "string", enum: ["received", "under_review", "resolved", "dismissed"] },
+    createdAt: { type: "string", format: "date-time" },
+    slaDeadline: { type: "string", format: "date-time", description: "Operational review target, not a universal statutory deadline." },
+  },
+};
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
   "post /posts/{postId}/comments": { mediaId }, "post /videos/{id}/comments": { mediaId },
@@ -249,14 +258,16 @@ function renderYaml(routes) {
         ], 6));
       }
 
-      const resultSchema = route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
+      const publicGrievance = (route.path === "/reports/grievance" && route.method === "post") ||
+        (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
+      const resultSchema = publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
         const binary = { description: 'Approved original bytes or a JPEG poster derived from verified original bytes', content: Object.fromEntries(mediaMimes.map(mime => [mime, { schema: { type: 'string', format: 'binary' } }])) };
         lines.push(`      responses: ${JSON.stringify({ '200': binary, '206': binary, '403': { description: 'Invalid or expired delivery grant' }, '404': { description: 'Media revoked or unavailable' }, '415': { description: 'Provider bytes no longer match the approved hash' }, '416': { description: 'Invalid or unsatisfiable single byte range' }, '502': { description: 'Provider unavailable' }, '503': { description: 'Media delivery busy or unavailable' } })}`);
       } else lines.push(...indent([
         "responses:",
-        '  "200":',
+        publicGrievance && route.method === "post" ? '  "201":' : '  "200":',
         "    description: Successful response",
         "    content:",
         "      application/json:",
@@ -304,6 +315,7 @@ function renderYaml(routes) {
     "          additionalProperties: true",
   );
   for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  lines.push(`    PublicGrievanceReceipt: ${JSON.stringify(publicGrievanceSchema)}`);
   return `${lines.join("\n")}\n`;
 }
 

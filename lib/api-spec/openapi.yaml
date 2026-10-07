@@ -3834,12 +3834,12 @@ paths:
               type: object
               additionalProperties: true
       responses:
-        "200":
+        "201":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceReceipt"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}:
@@ -3860,7 +3860,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceReceipt"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}/status:
@@ -5679,3 +5679,4 @@ components:
     MediaFinalizeRequest: {"type":"object","additionalProperties":false}
     MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}
     MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}},"allOf":[{"if":{"properties":{"status":{"const":"approved"}}},"then":{"required":["purpose","url","mimeType","size"]},"else":{"not":{"anyOf":[{"required":["url"]},{"required":["thumbnailUrl"]}]}}}]}
+    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"},"slaDeadline":{"type":"string","format":"date-time","description":"Operational review target, not a universal statutory deadline."}}}
