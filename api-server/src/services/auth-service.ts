@@ -32,6 +32,16 @@ type StoredLoginApprovalChallenge = LoginApprovalChallenge & {
   createdAt: string;
   approvedAt?: string;
   emailOtpKey?: string;
+  emailOtpId?: string;
+};
+
+type StoredEmailOtp = {
+  id: string;
+  userId: string;
+  authVersion: number;
+  codeHash: string;
+  attempts: number;
+  expiresAt: number;
 };
 
 export type LoginApprovalChallengeStatus = {
@@ -268,23 +278,23 @@ export class AuthService {
 
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
-    const existing = await this.redisRepository.getStrict(key);
-    if (existing) {
-      throw new TooManyAttemptsError("A sign-in code was already sent. Please wait a minute before requesting another.");
-    }
-
     const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
     const expiresAt = Date.now() + 5 * 60 * 1000;
-    await this.redisRepository.setStrict(key, JSON.stringify({
+    const raw = JSON.stringify({
+      id: randomUUID(),
       userId: user.id,
+      authVersion: user.authVersion ?? 0,
       codeHash: await this.redisRepository.hashToken(code),
       attempts: 0,
       expiresAt,
-    }), 5 * 60);
+    } satisfies StoredEmailOtp);
+    if (!(await this.redisRepository.setIfAbsentStrict(key, raw, 5 * 60))) {
+      throw new TooManyAttemptsError("A sign-in code was already sent. Please wait before requesting another.");
+    }
     try {
       await this.emailService.sendEmailLoginCode(user.email, code);
     } catch (error) {
-      await this.redisRepository.delStrict(key);
+      await this.redisRepository.consumeValueStrict(key, raw);
       throw error;
     }
     logger.info({ userId: user.id }, "Email login code dispatched");
@@ -295,34 +305,17 @@ export class AuthService {
     const normalizedEmail = input.email.trim().toLowerCase();
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
-    const raw = await this.redisRepository.getStrict(key);
-    if (!raw) {
-      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
-    }
-
-    let state: { userId: string; codeHash: string; attempts: number; expiresAt: number };
-    try {
-      state = JSON.parse(raw) as typeof state;
-    } catch {
-      await this.redisRepository.delStrict(key);
-      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
-    }
-    if (state.expiresAt <= Date.now() || state.attempts >= 5) {
-      await this.redisRepository.delStrict(key);
-      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
-    }
+    const state = this.parseEmailOtp(await this.redisRepository.getStrict(key));
+    if (!state) throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
 
     const suppliedHash = await this.redisRepository.hashToken(input.code);
     if (suppliedHash !== state.codeHash) {
-      const attempts = state.attempts + 1;
-      const remainingTtl = Math.max(1, Math.ceil((state.expiresAt - Date.now()) / 1000));
-      await this.redisRepository.setStrict(key, JSON.stringify({ ...state, attempts }), remainingTtl);
+      await this.changeEmailOtp(key, state, 'failure');
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
 
     const user = await this.userRepository.findById(state.userId);
-    if (!user || user.email !== normalizedEmail || !isAllowedEmail(user.email)) {
-      await this.redisRepository.delStrict(key);
+    if (!user || user.email !== normalizedEmail || !isAllowedEmail(user.email) || (user.authVersion ?? 0) !== state.authVersion) {
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
     this.assertAccountActive(user);
@@ -331,17 +324,51 @@ export class AuthService {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(user, key),
+          await this.createLoginApprovalChallenge(user, key, state.id),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
+        await this.changeEmailOtp(key, state, 'failure');
         throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
-    await this.redisRepository.delStrict(key);
+    if (!(await this.changeEmailOtp(key, state, 'consume'))) {
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+    // recordLogin conditionally matches this same authVersion, closing a
+    // logout-all/password-reset race after proof consumption and before login.
     return this.createSession(user, { emailVerified: true });
+  }
+
+  private parseEmailOtp(raw: string | null): StoredEmailOtp | undefined {
+    if (!raw) return undefined;
+    try {
+      const state = JSON.parse(raw) as StoredEmailOtp;
+      if (!state || typeof state.id !== 'string' || !state.id || typeof state.userId !== 'string' || !state.userId
+        || !Number.isSafeInteger(state.authVersion) || state.authVersion < 0
+        || typeof state.codeHash !== 'string' || !/^[a-f0-9]{64}$/.test(state.codeHash)
+        || !Number.isSafeInteger(state.attempts) || state.attempts < 0 || state.attempts >= 5
+        || !Number.isSafeInteger(state.expiresAt) || state.expiresAt <= Date.now()) return undefined;
+      return state;
+    } catch { return undefined; }
+  }
+
+  /** A code has at most five state-changing failures. Retry CAS conflicts on
+   * those increments; a consumed/reissued code can never match the old ID. */
+  private async changeEmailOtp(key: string, expected: Pick<StoredEmailOtp, 'id' | 'userId' | 'authVersion'>, action: 'failure' | 'consume'): Promise<boolean> {
+    for (let attempt = 0; attempt <= 5; attempt++) {
+      const raw = await this.redisRepository.getStrict(key), current = this.parseEmailOtp(raw);
+      if (!raw || !current || current.id !== expected.id || current.userId !== expected.userId || current.authVersion !== expected.authVersion) return false;
+      if (action === 'consume') {
+        if (await this.redisRepository.consumeValueStrict(key, raw, current.expiresAt)) return true;
+      } else {
+        const ttl = Math.max(1, Math.ceil((current.expiresAt - Date.now()) / 1000));
+        if (await this.redisRepository.rotateValueStrict(key, raw, JSON.stringify({ ...current, attempts: current.attempts + 1 }), ttl)) return true;
+      }
+    }
+    return false;
   }
 
   async listPendingTwoFactorChallenges(userId: string): Promise<LoginApprovalChallenge[]> {
@@ -427,10 +454,11 @@ export class AuthService {
       return undefined;
     }
     await this.redisRepository.removeFromSetStrict(this.loginApprovalIndexKey(challenge.userId), challengeId);
-    if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
-
     const user = await this.userRepository.findById(challenge.userId);
     if (!user || !this.isAccountActive(user) || (user.authVersion ?? 0) !== (challenge.authVersion ?? 0) || !(await this.readTotpSecret(user))) return undefined;
+    if (challenge.emailOtpKey && (!challenge.emailOtpId || !(await this.changeEmailOtp(challenge.emailOtpKey, {
+      id: challenge.emailOtpId, userId: challenge.userId, authVersion: challenge.authVersion,
+    }, 'consume')))) return undefined;
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -671,7 +699,7 @@ export class AuthService {
     return decrypted.secret;
   }
 
-  private async createLoginApprovalChallenge(user: UserRecord, emailOtpKey?: string): Promise<LoginApprovalChallenge> {
+  private async createLoginApprovalChallenge(user: UserRecord, emailOtpKey?: string, emailOtpId?: string): Promise<LoginApprovalChallenge> {
     const userId = user.id;
     const challengeId = randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -684,7 +712,7 @@ export class AuthService {
       status: "pending",
       attempts: 0,
       createdAt: new Date().toISOString(),
-      ...(emailOtpKey ? { emailOtpKey } : {}),
+      ...(emailOtpKey ? { emailOtpKey, emailOtpId } : {}),
     };
     await this.redisRepository.setStrict(this.loginApprovalKey(challengeId), JSON.stringify(challenge), 5 * 60);
     await this.redisRepository.addToSetStrict(this.loginApprovalIndexKey(userId), challengeId);

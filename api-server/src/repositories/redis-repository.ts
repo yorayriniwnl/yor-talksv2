@@ -228,6 +228,28 @@ export class RedisRepository {
     }
   }
 
+  /** Reserve one expiring token without overwriting another concurrent issuer. */
+  async setIfAbsentStrict(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    await this.ensureReady();
+    return await this.client.set(key, value, "EX", ttlSeconds, "NX") === "OK";
+  }
+
+  /** One caller can consume the exact value; stale readers cannot delete a replacement. */
+  async consumeValueStrict(key: string, expected: string, expiresAt?: number): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+       if ARGV[2] ~= '' then
+         local clock = redis.call('TIME')
+         if tonumber(clock[1]) * 1000 + tonumber(clock[2]) / 1000 >= tonumber(ARGV[2]) then return 0 end
+       end
+       redis.call('DEL', KEYS[1])
+       return 1`,
+      1, key, expected, expiresAt ?? '',
+    );
+    return result === 1;
+  }
+
   async delStrict(key: string): Promise<void> {
     await this.ensureReady();
     await this.client.del(key);

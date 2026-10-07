@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { pool } from '@workspace/db';
-import { AuthService, TwoFactorRequiredError } from '../services/auth-service.js';
+import { AuthService, EmailOtpInvalidError, TwoFactorRequiredError } from '../services/auth-service.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { EmailService } from '../services/email-service.js';
@@ -15,7 +15,11 @@ import { authenticate, closeAuthDependencies } from '../middlewares/auth.js';
 const users = new UserRepository();
 const redis = new RedisRepository();
 const ids: string[] = [];
-const email = { sendPasswordResetEmail: async () => undefined } as unknown as EmailService;
+const emailCodes = new Map<string, string>();
+const email = {
+  sendPasswordResetEmail: async () => undefined,
+  sendEmailLoginCode: async (address: string, code: string) => { emailCodes.set(address, code); },
+} as unknown as EmailService;
 const auth = new AuthService(users, redis, undefined, email);
 
 async function fixture(twoFactor = false) {
@@ -100,6 +104,42 @@ test('password reset is single-use, transactionally revokes all sessions, and pr
   assert.equal((await pool.query('SELECT consumed_at FROM password_reset_tokens WHERE token_hash=$1', [nextHash])).rows[0].consumed_at, null);
   assert.equal(await users.redeemPasswordReset(nextHash, await bcrypt.hash('after-rollback', 10)), f.id);
   assert.equal((await users.findById(f.id))!.authVersion, 2);
+});
+
+test('email OTP issued before database credential revocation remains invalid when Redis cleanup fails', async t => {
+  for (const action of ['logout-all', 'password-reset']) await t.test(action, async () => {
+    const f = await fixture();
+    await auth.requestEmailOtp(f.identifier);
+    const code = emailCodes.get(f.identifier)!;
+    const key = `email-login-otp:${await redis.hashToken(f.identifier)}`;
+    t.after(() => redis.delStrict(key));
+    const failingRedis = Object.create(redis) as RedisRepository;
+    failingRedis.scanStrict = async () => { throw new Error('injected OTP Redis cleanup outage'); };
+    const revoking = new AuthService(users, failingRedis, undefined, email);
+    if (action === 'logout-all') await revoking.logoutAllDevices(f.id);
+    else {
+      const token = (await auth.requestPasswordReset(f.identifier))!;
+      assert.equal(await revoking.confirmPasswordReset(token, 'otp-reset-password'), true);
+    }
+    assert.equal((await users.findById(f.id))!.authVersion, 1);
+    assert.ok(await redis.getStrict(key));
+    await assert.rejects(auth.loginWithEmailOtp({ email: f.identifier, code }), EmailOtpInvalidError);
+    assert.equal((await redis.scanStrict(`session:${f.id}:*`)).length, 0);
+  });
+});
+
+test('database credential revocation after atomic OTP consumption wins conditional session creation', async t => {
+  const f = await fixture();
+  await auth.requestEmailOtp(f.identifier);
+  const code = emailCodes.get(f.identifier)!;
+  const recordLogin = users.recordLogin.bind(users);
+  t.mock.method(users, 'recordLogin', async (...args: Parameters<UserRepository['recordLogin']>) => {
+    await users.revokeAllCredentials(f.id);
+    return recordLogin(...args);
+  });
+  await assert.rejects(auth.loginWithEmailOtp({ email: f.identifier, code }), /Credentials changed/);
+  assert.equal((await users.findById(f.id))!.authVersion, 1);
+  assert.equal((await redis.scanStrict(`session:${f.id}:*`)).length, 0);
 });
 
 test('expired reset credentials never change a password', async () => {
