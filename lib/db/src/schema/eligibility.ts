@@ -52,6 +52,7 @@ export const guardianAuthorizationsTable = pgTable('guardian_authorizations', {
   guardianUserId: uuid('guardian_user_id').references(() => usersTable.id, { onDelete: 'cascade' }),
   guardianReference: text('guardian_reference').notNull(), issuer: text('issuer').notNull(), responsibilityReference: text('responsibility_reference').notNull(),
   status: text('status').notNull().default('granted'), purposes: jsonb('purposes').notNull(),
+  subjectRevision: bigint('subject_revision', { mode: 'bigint' }).notNull().default(sql`0`),
   noticeVersions: jsonb('notice_versions').notNull(), policyVersions: jsonb('policy_versions').notNull(),
   verifiedAt: instant('verified_at').notNull(), grantedAt: instant('granted_at').notNull(), expiresAt: instant('expires_at').notNull(),
   withdrawnAt: instant('withdrawn_at'), createdAt: instant('created_at').notNull().defaultNow(),

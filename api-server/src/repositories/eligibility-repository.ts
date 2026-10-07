@@ -16,7 +16,7 @@ function assessmentFromRow(row: PrivateRow): EligibilityAssessment {
 function authorizationFromRow(row: PrivateRow): GuardianAuthorization {
   return { ...subjectFields(row), id: String(row.id), guardianUserId: row.guardian_user_id == null ? null : String(row.guardian_user_id),
     guardianReference: String(row.guardian_reference), issuer: String(row.issuer), responsibilityReference: String(row.responsibility_reference),
-    status: row.status as GuardianAuthorization['status'], purposes: row.purposes as GuardianAuthorization['purposes'],
+    status: row.status as GuardianAuthorization['status'], subjectRevision: String(row.subject_revision), purposes: row.purposes as GuardianAuthorization['purposes'],
     noticeVersions: row.notice_versions as GuardianAuthorization['noticeVersions'], policyVersions: row.policy_versions as GuardianAuthorization['policyVersions'],
     verifiedAt: timestamp(row.verified_at)!, grantedAt: timestamp(row.granted_at)!, expiresAt: timestamp(row.expires_at)!, withdrawnAt: timestamp(row.withdrawn_at) };
 }
@@ -98,12 +98,12 @@ export class EligibilityRepository {
 
   async storeGuardianAuthorization(value: GuardianAuthorization, tx: DbTransaction): Promise<void> {
     await this.lockSubject(value, tx);
+    const revision = await this.advanceSubjectRevision(value, tx);
     await tx.execute(sql`INSERT INTO guardian_authorizations(id,user_id,enrollment_id,guardian_user_id,guardian_reference,issuer,
-      responsibility_reference,status,purposes,notice_versions,policy_versions,verified_at,granted_at,expires_at,withdrawn_at)
+      responsibility_reference,status,subject_revision,purposes,notice_versions,policy_versions,verified_at,granted_at,expires_at,withdrawn_at)
       VALUES(${value.id},${value.userId ?? null},${value.enrollmentId ?? null},${value.guardianUserId},${value.guardianReference},${value.issuer},
-      ${value.responsibilityReference},${value.status},${JSON.stringify(value.purposes)}::jsonb,${JSON.stringify(value.noticeVersions)}::jsonb,
+      ${value.responsibilityReference},${value.status},${revision}::bigint,${JSON.stringify(value.purposes)}::jsonb,${JSON.stringify(value.noticeVersions)}::jsonb,
       ${JSON.stringify(value.policyVersions)}::jsonb,${value.verifiedAt},${value.grantedAt},${value.expiresAt},${value.withdrawnAt})`);
-    await this.advanceSubjectRevision(value, tx);
   }
 
   async withdrawGuardianAuthorization(authorizationId: string, actorId: string, tx: DbTransaction): Promise<boolean> {
@@ -115,7 +115,8 @@ export class EligibilityRepository {
     const result = await tx.execute(sql`UPDATE guardian_authorizations SET status='withdrawn',withdrawn_at=clock_timestamp()
       WHERE id=${authorizationId} AND status='granted' AND (user_id=${actorId} OR guardian_user_id=${actorId}) RETURNING id`);
     if (!result.rowCount) return false;
-    await this.advanceSubjectRevision(subject, tx);
+    const revision = await this.advanceSubjectRevision(subject, tx);
+    await tx.execute(sql`UPDATE guardian_authorizations SET subject_revision=${revision}::bigint WHERE id=${authorizationId}`);
     return true;
   }
 }

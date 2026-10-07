@@ -7,6 +7,7 @@ import { UserRepository } from '../repositories/user-repository.js';
 import { createTestUser } from './test-helpers.js';
 import { toOwnUser, toPublicUser } from '../utils/user-view.js';
 import { AccountService } from '../services/account-service.js';
+import type { ApprovedTerritoryPolicy, GuardianAuthorization } from '../eligibility/types.js';
 
 const fixtureUsers: string[] = [];
 const schemas: string[] = [];
@@ -212,4 +213,38 @@ test('guardian permissions are purpose-specific, owner-bound and withdrawn with 
   assert.ok(BigInt(facts.revision) > BigInt(revision));
   assert.equal(await db.transaction(tx => repo.withdrawGuardianAuthorization(authorization.id, guardian.id, tx)), false);
   await assert.rejects(db.transaction(tx => repo.storeGuardianAuthorization({ ...authorization, id: randomUUID(), purposes: [] }, tx)));
+});
+
+test('current eligibility service observes real proof, newer guardian withdrawal and registry withdrawal', async () => {
+  const child = await newUser(); const parent = await newUser(); const repo = await repository();
+  const { createEligibilityFixture } = await import('./eligibility-fixtures.js');
+  const { EligibilityService } = await import('../services/eligibility-service.js');
+  const now = new Date(); const before = new Date(now.getTime()-60_000).toISOString(); const after = new Date(now.getTime()+86_400_000).toISOString();
+  const registry: ApprovedTerritoryPolicy[] = (['recipient','operator'] as const).map(scope => ({
+    id: `fixture-${scope}`, scope, territory: scope === 'recipient' ? 'ZZ' : 'EE', version: 'fixture-1', approved: true,
+    synthetic: true, approvalReference: 'isolated-approval', effectiveFrom: before, reviewExpiresAt: after,
+    sources: ['https://legal.example/fixture'], allowedExperiences: ['under_13','teen_13_17','adult_18_plus'], minimumAccessThreshold: null,
+    independentConsentThreshold: 13, guardianRequiredBelow: null, requiredGuardianPurposes: ['account_activation'],
+    guardianNoticeVersions: { account_activation: 'notice-1' }, currentTermsVersion: 'terms-1', guardianContactsRequired: true,
+    publicBrowsingAllowed: true, maximumContentRating: 'mature', capabilities: { social: true,publish: true,messaging: true,payments: false,seller: false,memberships: false,live: false,rtc: false,ai: false,analytics: false,profiling: false },
+  }));
+  await createEligibilityFixture(child.id, { account: { id: child.id,status: 'active',termsVersion: 'terms-1',termsAcceptedAt: before,contentPreference: 'mature' } });
+  const adult = (await repo.readFacts(child.id))!.assessment!;
+  await db.transaction(tx => repo.storeAssessment({ ...adult,id: randomUUID(),experience: 'under_13',thresholds: [{age:13,atLeast:false},{age:18,atLeast:false}] },tx));
+  const service = new EligibilityService(repo,{ policies: () => registry,operatorPolicyIds: ['fixture-operator'],currentTermsVersion: 'terms-1' });
+  assert.equal((await service.decisionFor(child.id)).reason,'guardian_required');
+  const grant: GuardianAuthorization = { id: randomUUID(),userId: child.id,guardianUserId: parent.id,guardianReference: 'private-parent-reference',issuer: 'isolated-fixture',
+    responsibilityReference: 'private-responsibility-reference',status: 'granted',purposes: ['account_activation'],noticeVersions: {account_activation:'notice-1'},
+    policyVersions: {'fixture-recipient':'fixture-1','fixture-operator':'fixture-1'},verifiedAt: before,grantedAt: before,expiresAt: after,withdrawnAt: null };
+  await db.transaction(tx => repo.storeGuardianAuthorization(grant,tx));
+  const newer = {...grant,id:randomUUID()}; await db.transaction(tx => repo.storeGuardianAuthorization(newer,tx));
+  const allowed = await service.decisionFor(child.id); assert.equal(allowed.activated,true); assert.equal(allowed.maximumContentRating,'child_safe');
+  assert.doesNotMatch(JSON.stringify(allowed), /private-parent|private-responsibility|opaque-fixture-reference/);
+  await db.transaction(tx => repo.withdrawGuardianAuthorization(newer.id,parent.id,tx));
+  const withdrawn = await service.decisionFor(child.id); assert.equal(withdrawn.activated,false); assert.notEqual(withdrawn.revision,allowed.revision);
+  assert.equal((await repo.readFacts(child.id))!.guardianAuthorizations.find(value => value.id===grant.id)?.status,'granted');
+  await db.transaction(tx => repo.storeGuardianAuthorization({...grant,id:randomUUID()},tx));
+  const reapproved = await service.decisionFor(child.id); assert.equal(reapproved.activated,true);
+  registry[0].approved=false;
+  const policyWithdrawn = await service.decisionFor(child.id); assert.equal(policyWithdrawn.activated,false); assert.notEqual(policyWithdrawn.revision,reapproved.revision);
 });
