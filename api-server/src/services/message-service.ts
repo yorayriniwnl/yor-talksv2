@@ -10,6 +10,7 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { isPremiumMessageStyle } from "../features/premium-profile.js";
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
+import { isMessageVisible, toMessageTombstone } from "../utils/message-visibility.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -110,7 +111,7 @@ export class MessageService {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
-        return existing;
+        return isMessageVisible(existing, new Date()) ? existing : toMessageTombstone(existing);
       }
     }
 
@@ -180,7 +181,7 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
-    return persisted;
+    return isMessageVisible(persisted, new Date()) ? persisted : toMessageTombstone(persisted);
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
@@ -198,12 +199,12 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+    return this.withReadReceipts(messages.filter((message: MessageRecord) => isMessageVisible(message, new Date())), userId);
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
+    if (!message || !isMessageVisible(message, new Date())) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
     if (message.senderId === userId) return undefined;
@@ -216,9 +217,11 @@ export class MessageService {
     if ((message.recipientId === userId && message.seenAt !== null) || await this.messageRepository.hasReadReceipt(messageId, userId)) {
       return undefined;
     }
-    const previewedAt = new Date().toISOString();
-    const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
-    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
+    const boundary = new Date();
+    const previewed = await this.messageRepository.recordVisiblePreview(messageId, userId, boundary);
+    return previewed && isMessageVisible(previewed, new Date())
+      ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt: previewed.previewedAt ?? boundary.toISOString() }
+      : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
@@ -250,45 +253,21 @@ export class MessageService {
         or(eq(messageReadsTable.userId, userId), eq(messagesTable.senderId, userId)),
       )).groupBy(messageReadsTable.messageId);
     const byId = new Map(receipts.map((receipt) => [receipt.messageId, receipt.readAt]));
-    return messages.map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
+    const boundary = new Date();
+    return messages.filter(message => isMessageVisible(message, boundary))
+      .map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
-    
-    const members = await this.conversationRepository.getMembers(message.conversationId);
-    if (!members.includes(userId)) return undefined;
-    // A sender opening their own message is not a recipient read receipt.
-    if (message.senderId === userId) return message;
-
-    // Track read receipt
-    const readAt = new Date().toISOString();
-    await db.insert(messageReadsTable).values({
-      messageId,
-      userId,
-      readAt,
-    }).onConflictDoUpdate({
-      target: [messageReadsTable.messageId, messageReadsTable.userId],
-      set: { readAt },
-    });
-
-    const conversation = await this.conversationRepository.findById(message.conversationId);
-    if (conversation?.vanishMode) {
-      return this.messageRepository.update(messageId, { seenAt: readAt, deletedAt: readAt });
-    }
-    // `seen_at` is a legacy single-recipient field. In a group it would tell
-    // every member that everyone has read the message, so keep group read
-    // receipts in message_reads and only update the legacy field for DMs.
-    if (conversation?.isGroup) return { ...message, seenAt: readAt };
-    message.seenAt = readAt;
-    return this.messageRepository.update(messageId, { seenAt: readAt });
+    const message = await this.messageRepository.recordVisibleRead(messageId, userId);
+    if (!message || message.deletedAt) return message;
+    return isMessageVisible(message, new Date()) ? message : undefined;
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const normalizedContent = normalizeMessageContent(content);
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt || message.senderId !== userId) {
+    if (!message || !isMessageVisible(message, new Date()) || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
@@ -296,7 +275,7 @@ export class MessageService {
     message.editedAt = new Date().toISOString();
     // Compatibility rendering is bound to the historical body. An edit is a
     // new publication and cannot mint an attachment from an arbitrary text URL.
-    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
+    return this.messageRepository.updateVisible(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -305,12 +284,13 @@ export class MessageService {
       return undefined; // Only sender can delete for now
     }
     message.deletedAt = new Date().toISOString();
-    return this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
+    const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
+    return deleted ? toMessageTombstone(deleted) : undefined;
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) {
+    if (!message || !isMessageVisible(message, new Date())) {
       throw new Error("Message not found");
     }
     const members = await this.conversationRepository.getMembers(message.conversationId);
@@ -329,11 +309,11 @@ export class MessageService {
       reactions[reaction] = current;
       message.reactions = reactions;
     }
-    return this.messageRepository.update(messageId, { reactions: message.reactions });
+    return this.messageRepository.updateVisible(messageId, { reactions: message.reactions });
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     await this.assertParticipant(messageId, userId);
-    return this.messageRepository.update(messageId, { pinned: true });
+    return this.messageRepository.updateVisible(messageId, { pinned: true });
   }
 }
