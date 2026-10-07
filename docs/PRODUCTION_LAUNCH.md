@@ -10,7 +10,7 @@ provider/runtime acceptance gates. CI requires `pnpm audit --prod`, actual decod
 tests, production image builds and the complete container smoke test. Do not
 interpret synthetic provider fixtures, a pushed commit or liveness as live release approval.
 
-The [6 October verification report](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md)
+The [media verification report, reconciled on 7 October](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md)
 lists all changed files, commands and limitations. Production image builds and
 container startup/smoke have passed in CI for the recorded revisions; this
 Windows host has no Docker Engine. Require a passing run for the revision being

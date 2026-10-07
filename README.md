@@ -10,7 +10,7 @@ an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
 
-## Public-beta status — 6 October 2026
+## Public-beta status — 7 October 2026
 
 **Verified-media lifecycle implemented; public deployment acceptance remains open.** Uploaded media uses server-owned IDs,
 actual byte verification, explicit Gemini approval, transactional publication

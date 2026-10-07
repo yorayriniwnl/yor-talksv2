@@ -1,5 +1,7 @@
 # Production media lifecycle implementation
 
+The [final continuation report](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md) records the 7 October reconciliation, full changed-file manifest, exact validation commands/counts and external limitations. It preserves earlier source-specific results below as historical evidence. The final candidate also synchronizes native Capacitor references with the already-patched 8.5.2 package lock.
+
 Work is based on GitHub `main` revision `608746f2594b09bc2508fc1bfaefeb11954935a8`. Earlier `v3` audit work was preserved in the named stash `Preserve v3 audit remediation before main media lifecycle 2026-10-04`; it is not part of this change.
 
 ## Gaps established before implementation

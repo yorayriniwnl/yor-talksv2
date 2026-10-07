@@ -1,13 +1,24 @@
-# Verified media lifecycle continuation — 6 October 2026
+# Verified media lifecycle continuation — final reconciliation on 7 October 2026
 
 ## Source and delivery
 
 - Audited remote baseline: `608746f2594b09bc2508fc1bfaefeb11954935a8`.
-- Earlier continuation starting SHA: `d98871fea275143d7c9140074bc7a9d86806b6e3`. This resumed request started at `f3ca64d2afb0a895a46437a8a24b0697e4d40a45`.
-- All ten newer local implementation/security commits, the unfinished documentation, and the existing TOTP regression change were retained and critically audited. The earlier named `v3` stash remains intact.
+- Overall continuation starting SHA: `d98871fea275143d7c9140074bc7a9d86806b6e3`. An earlier resumed request started at `f3ca64d2afb0a895a46437a8a24b0697e4d40a45`; the final 7 October resume started at `34a8852beb54432b711a12e579edc99fc87cc956`.
+- All newer implementation/security/release commits were retained and critically audited. The earlier named `v3` stash remains intact. Separate uncommitted UI work in the original checkout was left untouched and is excluded from this verified candidate; final work uses `C:/Users/yoray/Projects/yor-talks-media-final-20261007`.
 - Earlier scoped source commits: `4376d81` (production dependency patches), `d5c5656` (durable metadata and missing-upload classification), `f3ca64d` (browser upload and message delivery recovery). Resumed fixes are `bb17c01` (deterministic real TOTP test epoch), `763d020` (typed approved-avatar delivery), `3524a2e` (current finalize reservation, decoder timeout and deletion lease ownership), and `e6d210b` (acknowledged Highlight reuse after failed Story publication).
 - Final SHA and direct CI run URL are recorded in the task handoff. A document cannot embed its own final commit hash without changing that hash.
-- Delivery uses the isolated `codex/media-lifecycle-20261006` verification branch. Remote `main` remains at the audited baseline; no merge or public deployment is part of this verification.
+- The final scoped source commit is `c2f7aa3`: native Android/iOS references now match the patched 8.5.2 packages already resolved in the frozen lockfile. Core/CLI 8.5.0 references remain valid. This adds no schema, route or browser behavior changes.
+- Delivery uses the isolated `codex/media-final-20261007` verification branch. Remote `main` remains at the audited baseline; no merge or public deployment is part of this verification.
+
+## Final 7 October reconciliation
+
+The preceding `34a8852` candidate passed all repository CI gates, including 57 unit tests, 262 API test results (257 top-level cases), 60 Chromium tests, frozen installation/audit, contracts/design, database migration, typechecks/builds, production Compose, images and container smoke. Its [PR CI evidence](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37524162317) uses merge commit `e800effa` against ancestor baseline `608746f`; final acceptance requires the exact final branch push revision reported in the handoff.
+
+The final code audit rechecked requirements A–I and found no concrete remaining media safety, publication or cleanup defect. Two native generated references still selected vulnerable 8.5.0 binaries despite the patched package lock: Android's package path and Swift's exact package version. They now select 8.5.2. The Android path exists in the fresh frozen installation. Full native builds are unavailable on this Windows host: Java/Android and Swift/Xcode toolchains are absent; native distribution acceptance remains separate.
+
+Local 7 October validation repeats the frozen installation and non-database repository gates in the isolated checkout; records are in `C:/Users/yoray/AppData/Local/Temp/yor-media-final-20261007-static`. The install exits successfully, with an optional `better-sqlite3` build warning because Windows C++ build tools are absent. No dependency, assertion or security gate was changed to suppress that warning. Final complete API/browser/migration/container validation runs through the unchanged GitHub CI workflow on the exact pushed commit. Local Docker remains unavailable, and its required gates are covered there.
+
+The complete manifest below now includes the three inherited release/compliance documents and the two native reference fixes omitted by the old 134-file manifest. Inherited global-release findings are preserved; closing media repository checks does not resolve those independent public-launch blockers or establish live-provider acceptance.
 
 ## Changes and schema
 
@@ -88,7 +99,7 @@ Focused commands also passed: `pnpm --filter @workspace/api-server exec tsx --te
 
 ## Container gates and final CI acceptance
 
-This Windows host has no Docker Engine/named pipe. The local production image build was attempted with the standalone Compose executable and failed with `open //./pipe/docker_engine: The system cannot find the file specified`. Local container startup and smoke are unavailable for that exact reason; Compose parsing and native builds passed. These container gates must execute in GitHub Actions against the final branch revision, not be waived.
+This Windows host has no Docker Engine/named pipe. The local production image build was attempted with the standalone Compose executable and failed with `open //./pipe/docker_engine: The system cannot find the file specified`. Local container startup and smoke are unavailable for that exact reason; Compose parsing and API/frontend builds passed. These container gates must execute in GitHub Actions against the final branch revision, not be waived.
 
 | CI gate | Exact command / check |
 | --- | --- |
@@ -98,7 +109,7 @@ This Windows host has no Docker Engine/named pipe. The local production image bu
 | Readiness / smoke | `BASE_URL=http://127.0.0.1:18080 pnpm smoke`, healthy `/api/healthz` and `/api/readyz`, `details.media.decoder=true`, synthetic unavailable `details.media.ready=false` |
 | Runtime assertions | Migrator exit 0; API user `node`; external provider DNS blocked; Cloudinary resolves to loopback; Redis rate-limit keys exist; no rate-limit initialization errors |
 
-The production smoke uses unchanged production images with a test-only provider DNS isolation overlay. It tests startup/migrations/readiness/non-root execution/Redis limits without real Cloudinary, Gemini, OpenAI, payment or email requests. All repository-controlled gates, including the full audit, remain required. The historical successful [4 October CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37219328605) built and booted the production containers at `735c8b8`. The resumed [backend verification CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37447618522) passed every gate, including images and full container smoke, at `3524a2ec2a8e96078c67f66b1f8e27cdf409bca9`. Neither run certifies a later source change. The final handoff records the ending SHA, direct final run URL and checked conclusion; require its source-matching result and the [verification branch CI](https://github.com/yorayriniwnl/yor-talksv2/actions/workflows/ci.yml?query=branch%3Acodex%2Fmedia-lifecycle-20261006) for final acceptance.
+The production smoke uses unchanged production images with a test-only provider DNS isolation overlay. It tests startup/migrations/readiness/non-root execution/Redis limits without real Cloudinary, Gemini, OpenAI, payment or email requests. All repository-controlled gates, including the full audit, remain required. The historical successful [4 October CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37219328605) built and booted the production containers at `735c8b8`. The resumed [backend verification CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37447618522) passed every gate, including images and full container smoke, at `3524a2ec2a8e96078c67f66b1f8e27cdf409bca9`. Neither run certifies a later source change. The final handoff records the ending SHA, direct final run URL and checked conclusion; require its source-matching result and the [verification branch CI](https://github.com/yorayriniwnl/yor-talksv2/actions/workflows/ci.yml?query=branch%3Acodex%2Fmedia-final-20261007) for final acceptance.
 
 ## Remaining external release gates
 
@@ -114,9 +125,9 @@ No secrets or production credentials were introduced; examples and tests use syn
 
 ## Complete changed-file manifest
 
-Every file changed from audited baseline 608746f through this candidate is listed below, including the ten preserved implementation commits.
+Every file changed from audited baseline 608746f through the final candidate is listed below. Inherited release/compliance work is included; separate uncommitted UI drafts are excluded.
 
-134 files:
+139 files:
 
 - `.env.example`
 - `.github/workflows/ci.yml`
@@ -200,10 +211,13 @@ Every file changed from audited baseline 608746f through this candidate is liste
 - `api-server/src/validators/video.ts`
 - `api-server/src/workers/lifecycle-worker.ts`
 - `docker-compose.production.yml`
+- `docs/GLOBAL_REGULATORY_INTAKE_2026-10-07.md`
 - `docs/MEDIA_LIFECYCLE_IMPLEMENTATION.md`
 - `docs/MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md`
 - `docs/PRODUCTION_LAUNCH.md`
 - `docs/PRODUCTION_READINESS.md`
+- `docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md`
+- `docs/superpowers/specs/2026-10-07-global-age-consent-design.md`
 - `e2e/core-social.spec.ts`
 - `e2e/fixtures/delivery.wav`
 - `e2e/fixtures/delivery.webm`
@@ -221,6 +235,8 @@ Every file changed from audited baseline 608746f through this candidate is liste
 - `pnpm-lock.yaml`
 - `README.md`
 - `scripts/generate-api-contract.mjs`
+- `social/android/capacitor.settings.gradle`
+- `social/ios/App/CapApp-SPM/Package.swift`
 - `social/package.json`
 - `social/src/components/comments/RichCommentComposer.tsx`
 - `social/src/components/feed/Post.tsx`
@@ -252,19 +268,3 @@ Every file changed from audited baseline 608746f through this candidate is liste
 - `social/src/pages/worlds.tsx`
 - `social/src/styles/operator-communications.css`
 - `tests/media-client.test.mjs`
-
-Files changed during this resumed request from f3ca64d:
-
-- `api-server/src/__tests__/auth-lifecycle.test.ts`
-- `api-server/src/__tests__/media-lifecycle.integration.test.ts`
-- `api-server/src/__tests__/media-provider-security.test.ts`
-- `api-server/src/__tests__/media-publication.integration.test.ts`
-- `api-server/src/services/media-byte-verification.ts`
-- `api-server/src/services/media-response.ts`
-- `api-server/src/services/media-service.ts`
-- `docs/MEDIA_LIFECYCLE_IMPLEMENTATION.md`
-- `docs/MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md`
-- `docs/PRODUCTION_LAUNCH.md`
-- `e2e/core-social.spec.ts`
-- `README.md`
-- `social/src/components/feed/StoryBuilderModal.tsx`
