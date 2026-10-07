@@ -11,6 +11,7 @@ export interface UserRecord {
   authVersion?: number;
   termsVersion?: string | null;
   termsAcceptedAt?: string | null;
+  /** Historical self-attestation only. Private eligibility authority lives separately. */
   ageConfirmedAt?: string | null;
   fullName: string;
   bio: string;
