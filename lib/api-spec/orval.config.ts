@@ -56,6 +56,9 @@ export default defineConfig({
       prettier: true,
       override: {
         zod: {
+          // The target package uses Zod 3; workspace auto-detection can select
+          // Zod 4 from another dependency and emit unsupported zod.uuid().
+          version: 3,
           coerce: {
             query: ['boolean', 'number', 'string'],
             param: ['boolean', 'number', 'string'],

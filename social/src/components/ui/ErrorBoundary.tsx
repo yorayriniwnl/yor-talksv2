@@ -31,8 +31,9 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   handleResetStorage() {
     if (!window.confirm('Reset local Yor Talks preferences and reload? Your saved account data and sign-in session will be kept.')) return;
     try {
+      // Only clear cached UI/preferences state. Auth tokens ('yortalks-tokens')
+      // are intentionally preserved so the confirmation copy above stays true.
       localStorage.removeItem('yortalks-storage');
-      localStorage.removeItem('yortalks-tokens');
     } catch {
       // Ignore
     }

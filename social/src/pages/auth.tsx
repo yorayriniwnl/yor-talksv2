@@ -576,6 +576,7 @@ export default function Auth() {
             {mode === 'login' && twoFactorChallenge && twoFactorFallback && (
               <section className="operator-approval-card">
                 <header><Smartphone /><div><strong>Authenticator fallback</strong><span>Enter the six-digit code from the app enrolled in Settings.</span></div></header>
+                <label htmlFor="twoFactorFallbackCode" className="text-xs font-semibold text-foreground mb-1.5 block">Six-digit authenticator code</label>
                 <div className="operator-field__control"><KeyRound /><Input id="twoFactorFallbackCode" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twoFactorFallbackCode} onChange={(event) => setTwoFactorFallbackCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" aria-label="Authenticator code" aria-invalid={Boolean(fieldErrors.twoFactorFallbackCode)} aria-describedby={fieldErrors.twoFactorFallbackCode ? 'twoFactorFallbackCode-error' : undefined} /></div>
                 {fieldErrors.twoFactorFallbackCode && <p id="twoFactorFallbackCode-error" className="operator-field__error">{fieldErrors.twoFactorFallbackCode}</p>}
                 <button type="button" onClick={() => { setTwoFactorFallback(false); setTwoFactorFallbackCode(''); }}>Return to phone approval</button>

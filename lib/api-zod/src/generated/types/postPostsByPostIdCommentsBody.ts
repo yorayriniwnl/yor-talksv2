@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostPostsByPostIdCommentsBody = { [key: string]: unknown };
+export type PostPostsByPostIdCommentsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };

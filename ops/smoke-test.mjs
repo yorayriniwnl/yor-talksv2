@@ -1,4 +1,10 @@
+import { assertReadiness } from './check-readiness.mjs';
+
 const baseUrl = (process.env.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+const syntheticProviders = process.env.SMOKE_SYNTHETIC_PROVIDERS === 'true';
+if (syntheticProviders && (process.env.CI !== 'true' || !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(baseUrl).hostname))) {
+  throw new Error('Synthetic provider smoke is restricted to isolated loopback CI');
+}
 
 async function check(path, init, expectedStatus) {
   const response = await fetch(`${baseUrl}${path}`, init);
@@ -14,7 +20,7 @@ async function log(category, message) {
 }
 
 try {
-  await log("SMOKE", "Starting production readiness verification...");
+  await log("SMOKE", syntheticProviders ? 'Starting isolated synthetic container smoke...' : 'Starting deployment smoke with required core media readiness...');
 
   // Web shell checks
   await log("WEB", "Checking web shell...");
@@ -57,6 +63,7 @@ try {
   await log("API-HEALTH", "Checking API readiness endpoint...");
   const readiness = await check("/api/readyz", undefined, 200);
   const readinessBody = await readiness.json();
+  assertReadiness(readinessBody, { syntheticProviders });
   
   if (readinessBody.status !== "healthy") {
     throw new Error(`API readiness status is not 'healthy': ${readinessBody.status}`);
@@ -95,7 +102,7 @@ try {
   const uptimeMatch = readinessBody.uptime ? `${Math.round(readinessBody.uptime)}s` : "unknown";
   await log("UPTIME", `API has been running for ${uptimeMatch}`);
 
-  await log("SMOKE", `✅ All production readiness checks passed for ${baseUrl}`);
+  await log("SMOKE", `Deployment smoke passed for ${baseUrl}; provider journeys and operational acceptance remain separate`);
   process.exit(0);
 } catch (error) {
   await log("ERROR", `❌ Production readiness check failed: ${error.message}`);

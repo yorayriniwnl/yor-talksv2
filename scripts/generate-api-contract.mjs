@@ -27,6 +27,10 @@ const reservationId = { type: "string", format: "uuid", description: "Server-gen
 const mediaIds = { type: "array", maxItems: 10, uniqueItems: true, items: mediaId };
 const rawMediaFields = ["images", "mediaUrl", "videoUrl", "thumbnailUrl", "avatarUrl", "coverUrl", "logoUrl", "customImageUrl"];
 const mediaSchemas = {
+  PublicGrievanceTicket: { type: "object", additionalProperties: false, required: ["ticketId", "status", "createdAt"], properties: {
+    ticketId: { type: "string", pattern: "^YT-GRV-[A-Z0-9]{10}$" }, status: { type: "string", enum: ["received", "under_review", "resolved", "dismissed"] },
+    createdAt: { type: "string", format: "date-time" },
+  } },
   MediaPresignRequest: { type: "object", additionalProperties: false, required: ["filename", "mimeType", "size", "purpose"], properties: {
     filename: { type: "string", minLength: 1, maxLength: 255 }, mimeType: { type: "string", enum: mediaMimes },
     size: { type: "integer", minimum: 1, maximum: 10485760, description: "Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side." }, purpose: { type: "string", enum: mediaPurposes },
@@ -249,14 +253,15 @@ function renderYaml(routes) {
         ], 6));
       }
 
-      const resultSchema = route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
+      const publicGrievance = (route.method === "post" && route.path === "/reports/grievance") || (route.method === "get" && route.path === "/reports/grievance/{ticketId}");
+      const resultSchema = publicGrievance ? "PublicGrievanceTicket" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
         const binary = { description: 'Approved original bytes or a JPEG poster derived from verified original bytes', content: Object.fromEntries(mediaMimes.map(mime => [mime, { schema: { type: 'string', format: 'binary' } }])) };
         lines.push(`      responses: ${JSON.stringify({ '200': binary, '206': binary, '403': { description: 'Invalid or expired delivery grant' }, '404': { description: 'Media revoked or unavailable' }, '415': { description: 'Provider bytes no longer match the approved hash' }, '416': { description: 'Invalid or unsatisfiable single byte range' }, '502': { description: 'Provider unavailable' }, '503': { description: 'Media delivery busy or unavailable' } })}`);
       } else lines.push(...indent([
         "responses:",
-        '  "200":',
+        `  "${publicGrievance && route.method === "post" ? "201" : "200"}":`,
         "    description: Successful response",
         "    content:",
         "      application/json:",

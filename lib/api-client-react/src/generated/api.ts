@@ -21,6 +21,9 @@ import type {
 
 import type {
   ApiEnvelope,
+  GetReportsGrievanceByTicketId200,
+  MediaFinalizeRequest,
+  MediaPresignRequest,
   PatchBroadcastChannelsByIdNotificationsBody,
   PatchReportsByReportIdStatusBody,
   PatchReportsGrievanceByTicketIdStatusBody,
@@ -71,7 +74,11 @@ import type {
   PostHighlightsBody,
   PostInvitesClaimBody,
   PostInvitesGenerateBody,
-  PostMediaPresignBody,
+  PostMediaByIdFinalize200,
+  PostMediaByIdUpload200,
+  PostMediaByIdUploadBody,
+  PostMediaPresign200,
+  PostMediaUpload200,
   PostMediaUploadBody,
   PostMessagesBody,
   PostMessagesByMessageIdPinBody,
@@ -111,6 +118,7 @@ import type {
   PostProjectsByProjectIdCollaboratorsBody,
   PostProjectsByProjectIdCollaboratorsRespondBody,
   PostReportsBody,
+  PostReportsGrievance201,
   PostReportsGrievanceBody,
   PostStoriesBody,
   PostStoriesByIdPollVoteBody,
@@ -119,6 +127,7 @@ import type {
   PostStreamsBody,
   PostSubscriptionsByIdVerifyBody,
   PostSubscriptionsSubscribeBody,
+  PostTelemetryEventsBody,
   PostUsersByUserIdBlockBody,
   PostUsersByUserIdCloseFriendBody,
   PostUsersByUserIdFavoriteBody,
@@ -636,7 +645,7 @@ export const getPostArticlesUrl = () => {
 /**
  * @summary Post /articles
  */
-export const postArticles = async (postArticlesBody?: PostArticlesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postArticles = async (postArticlesBody: PostArticlesBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostArticlesUrl(),
   {
@@ -652,8 +661,8 @@ export const postArticles = async (postArticlesBody?: PostArticlesBody, options?
 
 
 export const getPostArticlesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data?: BodyType<PostArticlesBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data?: BodyType<PostArticlesBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data: BodyType<PostArticlesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data: BodyType<PostArticlesBody>}, TContext> => {
 
 const mutationKey = ['postArticles'];
 const {mutation: mutationOptions} = options ?
@@ -665,7 +674,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postArticles>>, {data?: BodyType<PostArticlesBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postArticles>>, {data: BodyType<PostArticlesBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postArticles(data,)
@@ -679,18 +688,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof postArticles>>>
-    export type PostArticlesMutationBody = BodyType<PostArticlesBody> | undefined
+    export type PostArticlesMutationBody = BodyType<PostArticlesBody>
     export type PostArticlesMutationError = ErrorType<void>
 
     /**
  * @summary Post /articles
  */
 export const usePostArticles = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data?: BodyType<PostArticlesBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postArticles>>, TError,{data: BodyType<PostArticlesBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postArticles>>,
         TError,
-        {data?: BodyType<PostArticlesBody>},
+        {data: BodyType<PostArticlesBody>},
         TContext
       > => {
       return useMutation(getPostArticlesMutationOptions(options));
@@ -2879,7 +2888,7 @@ export const getPostBroadcastChannelsUrl = () => {
 /**
  * @summary Post /broadcast-channels
  */
-export const postBroadcastChannels = async (postBroadcastChannelsBody?: PostBroadcastChannelsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postBroadcastChannels = async (postBroadcastChannelsBody: PostBroadcastChannelsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostBroadcastChannelsUrl(),
   {
@@ -2895,8 +2904,8 @@ export const postBroadcastChannels = async (postBroadcastChannelsBody?: PostBroa
 
 
 export const getPostBroadcastChannelsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data?: BodyType<PostBroadcastChannelsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data?: BodyType<PostBroadcastChannelsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data: BodyType<PostBroadcastChannelsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data: BodyType<PostBroadcastChannelsBody>}, TContext> => {
 
 const mutationKey = ['postBroadcastChannels'];
 const {mutation: mutationOptions} = options ?
@@ -2908,7 +2917,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBroadcastChannels>>, {data?: BodyType<PostBroadcastChannelsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBroadcastChannels>>, {data: BodyType<PostBroadcastChannelsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postBroadcastChannels(data,)
@@ -2922,18 +2931,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostBroadcastChannelsMutationResult = NonNullable<Awaited<ReturnType<typeof postBroadcastChannels>>>
-    export type PostBroadcastChannelsMutationBody = BodyType<PostBroadcastChannelsBody> | undefined
+    export type PostBroadcastChannelsMutationBody = BodyType<PostBroadcastChannelsBody>
     export type PostBroadcastChannelsMutationError = ErrorType<void>
 
     /**
  * @summary Post /broadcast-channels
  */
 export const usePostBroadcastChannels = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data?: BodyType<PostBroadcastChannelsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBroadcastChannels>>, TError,{data: BodyType<PostBroadcastChannelsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postBroadcastChannels>>,
         TError,
-        {data?: BodyType<PostBroadcastChannelsBody>},
+        {data: BodyType<PostBroadcastChannelsBody>},
         TContext
       > => {
       return useMutation(getPostBroadcastChannelsMutationOptions(options));
@@ -3465,7 +3474,7 @@ export const getPostBusinessUrl = () => {
 /**
  * @summary Post /business
  */
-export const postBusiness = async (postBusinessBody?: PostBusinessBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postBusiness = async (postBusinessBody: PostBusinessBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostBusinessUrl(),
   {
@@ -3481,8 +3490,8 @@ export const postBusiness = async (postBusinessBody?: PostBusinessBody, options?
 
 
 export const getPostBusinessMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data?: BodyType<PostBusinessBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data?: BodyType<PostBusinessBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data: BodyType<PostBusinessBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data: BodyType<PostBusinessBody>}, TContext> => {
 
 const mutationKey = ['postBusiness'];
 const {mutation: mutationOptions} = options ?
@@ -3494,7 +3503,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBusiness>>, {data?: BodyType<PostBusinessBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBusiness>>, {data: BodyType<PostBusinessBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postBusiness(data,)
@@ -3508,18 +3517,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostBusinessMutationResult = NonNullable<Awaited<ReturnType<typeof postBusiness>>>
-    export type PostBusinessMutationBody = BodyType<PostBusinessBody> | undefined
+    export type PostBusinessMutationBody = BodyType<PostBusinessBody>
     export type PostBusinessMutationError = ErrorType<void>
 
     /**
  * @summary Post /business
  */
 export const usePostBusiness = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data?: BodyType<PostBusinessBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBusiness>>, TError,{data: BodyType<PostBusinessBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postBusiness>>,
         TError,
-        {data?: BodyType<PostBusinessBody>},
+        {data: BodyType<PostBusinessBody>},
         TContext
       > => {
       return useMutation(getPostBusinessMutationOptions(options));
@@ -3613,7 +3622,7 @@ export const getPostCommunitiesUrl = () => {
 /**
  * @summary Post /communities
  */
-export const postCommunities = async (postCommunitiesBody?: PostCommunitiesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postCommunities = async (postCommunitiesBody: PostCommunitiesBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostCommunitiesUrl(),
   {
@@ -3629,8 +3638,8 @@ export const postCommunities = async (postCommunitiesBody?: PostCommunitiesBody,
 
 
 export const getPostCommunitiesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data?: BodyType<PostCommunitiesBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data?: BodyType<PostCommunitiesBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data: BodyType<PostCommunitiesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data: BodyType<PostCommunitiesBody>}, TContext> => {
 
 const mutationKey = ['postCommunities'];
 const {mutation: mutationOptions} = options ?
@@ -3642,7 +3651,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postCommunities>>, {data?: BodyType<PostCommunitiesBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postCommunities>>, {data: BodyType<PostCommunitiesBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postCommunities(data,)
@@ -3656,18 +3665,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostCommunitiesMutationResult = NonNullable<Awaited<ReturnType<typeof postCommunities>>>
-    export type PostCommunitiesMutationBody = BodyType<PostCommunitiesBody> | undefined
+    export type PostCommunitiesMutationBody = BodyType<PostCommunitiesBody>
     export type PostCommunitiesMutationError = ErrorType<void>
 
     /**
  * @summary Post /communities
  */
 export const usePostCommunities = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data?: BodyType<PostCommunitiesBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postCommunities>>, TError,{data: BodyType<PostCommunitiesBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postCommunities>>,
         TError,
-        {data?: BodyType<PostCommunitiesBody>},
+        {data: BodyType<PostCommunitiesBody>},
         TContext
       > => {
       return useMutation(getPostCommunitiesMutationOptions(options));
@@ -5316,7 +5325,7 @@ export const getPostEventsUrl = () => {
 /**
  * @summary Post /events
  */
-export const postEvents = async (postEventsBody?: PostEventsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postEvents = async (postEventsBody: PostEventsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostEventsUrl(),
   {
@@ -5332,8 +5341,8 @@ export const postEvents = async (postEventsBody?: PostEventsBody, options?: Requ
 
 
 export const getPostEventsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data?: BodyType<PostEventsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data?: BodyType<PostEventsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data: BodyType<PostEventsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data: BodyType<PostEventsBody>}, TContext> => {
 
 const mutationKey = ['postEvents'];
 const {mutation: mutationOptions} = options ?
@@ -5345,7 +5354,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postEvents>>, {data?: BodyType<PostEventsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postEvents>>, {data: BodyType<PostEventsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postEvents(data,)
@@ -5359,18 +5368,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostEventsMutationResult = NonNullable<Awaited<ReturnType<typeof postEvents>>>
-    export type PostEventsMutationBody = BodyType<PostEventsBody> | undefined
+    export type PostEventsMutationBody = BodyType<PostEventsBody>
     export type PostEventsMutationError = ErrorType<void>
 
     /**
  * @summary Post /events
  */
 export const usePostEvents = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data?: BodyType<PostEventsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEvents>>, TError,{data: BodyType<PostEventsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postEvents>>,
         TError,
-        {data?: BodyType<PostEventsBody>},
+        {data: BodyType<PostEventsBody>},
         TContext
       > => {
       return useMutation(getPostEventsMutationOptions(options));
@@ -5915,7 +5924,7 @@ export const getPostHighlightsUrl = () => {
 /**
  * @summary Post /highlights
  */
-export const postHighlights = async (postHighlightsBody?: PostHighlightsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postHighlights = async (postHighlightsBody: PostHighlightsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostHighlightsUrl(),
   {
@@ -5931,8 +5940,8 @@ export const postHighlights = async (postHighlightsBody?: PostHighlightsBody, op
 
 
 export const getPostHighlightsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data?: BodyType<PostHighlightsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data?: BodyType<PostHighlightsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data: BodyType<PostHighlightsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data: BodyType<PostHighlightsBody>}, TContext> => {
 
 const mutationKey = ['postHighlights'];
 const {mutation: mutationOptions} = options ?
@@ -5944,7 +5953,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postHighlights>>, {data?: BodyType<PostHighlightsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postHighlights>>, {data: BodyType<PostHighlightsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postHighlights(data,)
@@ -5958,18 +5967,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostHighlightsMutationResult = NonNullable<Awaited<ReturnType<typeof postHighlights>>>
-    export type PostHighlightsMutationBody = BodyType<PostHighlightsBody> | undefined
+    export type PostHighlightsMutationBody = BodyType<PostHighlightsBody>
     export type PostHighlightsMutationError = ErrorType<void>
 
     /**
  * @summary Post /highlights
  */
 export const usePostHighlights = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data?: BodyType<PostHighlightsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postHighlights>>, TError,{data: BodyType<PostHighlightsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postHighlights>>,
         TError,
-        {data?: BodyType<PostHighlightsBody>},
+        {data: BodyType<PostHighlightsBody>},
         TContext
       > => {
       return useMutation(getPostHighlightsMutationOptions(options));
@@ -6194,6 +6203,226 @@ export function useGetLivez<TData = Awaited<ReturnType<typeof getLivez>>, TError
 
 
 
+export const getDeleteMediaByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/media/${id}`
+}
+
+/**
+ * @summary Delete /media/{id}
+ */
+export const deleteMediaById = async (id: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getDeleteMediaByIdUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMediaByIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMediaById>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMediaById>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteMediaById'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMediaById>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMediaById(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMediaByIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMediaById>>>
+
+    export type DeleteMediaByIdMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete /media/{id}
+ */
+export const useDeleteMediaById = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMediaById>>, TError,{id: string}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMediaById>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteMediaByIdMutationOptions(options));
+    }
+
+export const getGetMediaByIdContentUrl = (id: string,) => {
+
+
+
+
+  return `/api/media/${id}/content`
+}
+
+/**
+ * @summary Get /media/{id}/content
+ */
+export const getMediaByIdContent = async (id: string, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetMediaByIdContentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMediaByIdContentQueryKey = (id: string,) => {
+    return [
+    `/api/media/${id}/content`
+    ] as const;
+    }
+
+
+export const getGetMediaByIdContentQueryOptions = <TData = Awaited<ReturnType<typeof getMediaByIdContent>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMediaByIdContent>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMediaByIdContentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMediaByIdContent>>> = ({ signal }) => getMediaByIdContent(id, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMediaByIdContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMediaByIdContentQueryResult = NonNullable<Awaited<ReturnType<typeof getMediaByIdContent>>>
+export type GetMediaByIdContentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /media/{id}/content
+ */
+
+export function useGetMediaByIdContent<TData = Awaited<ReturnType<typeof getMediaByIdContent>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMediaByIdContent>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMediaByIdContentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostMediaByIdFinalizeUrl = (id: string,) => {
+
+
+
+
+  return `/api/media/${id}/finalize`
+}
+
+/**
+ * @summary Post /media/{id}/finalize
+ */
+export const postMediaByIdFinalize = async (id: string,
+    mediaFinalizeRequest?: MediaFinalizeRequest, options?: RequestInit): Promise<PostMediaByIdFinalize200 | void> => {
+
+  return customFetch<PostMediaByIdFinalize200 | void>(getPostMediaByIdFinalizeUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mediaFinalizeRequest)
+  }
+);}
+
+
+
+
+
+export const getPostMediaByIdFinalizeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdFinalize>>, TError,{id: string;data?: BodyType<MediaFinalizeRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdFinalize>>, TError,{id: string;data?: BodyType<MediaFinalizeRequest>}, TContext> => {
+
+const mutationKey = ['postMediaByIdFinalize'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaByIdFinalize>>, {id: string;data?: BodyType<MediaFinalizeRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postMediaByIdFinalize(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostMediaByIdFinalizeMutationResult = NonNullable<Awaited<ReturnType<typeof postMediaByIdFinalize>>>
+    export type PostMediaByIdFinalizeMutationBody = BodyType<MediaFinalizeRequest> | undefined
+    export type PostMediaByIdFinalizeMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /media/{id}/finalize
+ */
+export const usePostMediaByIdFinalize = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdFinalize>>, TError,{id: string;data?: BodyType<MediaFinalizeRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postMediaByIdFinalize>>,
+        TError,
+        {id: string;data?: BodyType<MediaFinalizeRequest>},
+        TContext
+      > => {
+      return useMutation(getPostMediaByIdFinalizeMutationOptions(options));
+    }
+
 export const getGetMediaByIdHlsUrl = (id: string,) => {
 
 
@@ -6271,6 +6500,80 @@ export function useGetMediaByIdHls<TData = Awaited<ReturnType<typeof getMediaByI
 
 
 
+export const getPostMediaByIdUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/media/${id}/upload`
+}
+
+/**
+ * @summary Post /media/{id}/upload
+ */
+export const postMediaByIdUpload = async (id: string,
+    postMediaByIdUploadBody: PostMediaByIdUploadBody, options?: RequestInit): Promise<PostMediaByIdUpload200> => {
+    const formData = new FormData();
+formData.append(`file`, postMediaByIdUploadBody.file);
+
+  return customFetch<PostMediaByIdUpload200>(getPostMediaByIdUploadUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getPostMediaByIdUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdUpload>>, TError,{id: string;data: BodyType<PostMediaByIdUploadBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdUpload>>, TError,{id: string;data: BodyType<PostMediaByIdUploadBody>}, TContext> => {
+
+const mutationKey = ['postMediaByIdUpload'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaByIdUpload>>, {id: string;data: BodyType<PostMediaByIdUploadBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  postMediaByIdUpload(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostMediaByIdUploadMutationResult = NonNullable<Awaited<ReturnType<typeof postMediaByIdUpload>>>
+    export type PostMediaByIdUploadMutationBody = BodyType<PostMediaByIdUploadBody>
+    export type PostMediaByIdUploadMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /media/{id}/upload
+ */
+export const usePostMediaByIdUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaByIdUpload>>, TError,{id: string;data: BodyType<PostMediaByIdUploadBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postMediaByIdUpload>>,
+        TError,
+        {id: string;data: BodyType<PostMediaByIdUploadBody>},
+        TContext
+      > => {
+      return useMutation(getPostMediaByIdUploadMutationOptions(options));
+    }
+
 export const getPostMediaPresignUrl = () => {
 
 
@@ -6282,14 +6585,14 @@ export const getPostMediaPresignUrl = () => {
 /**
  * @summary Post /media/presign
  */
-export const postMediaPresign = async (postMediaPresignBody?: PostMediaPresignBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postMediaPresign = async (mediaPresignRequest: MediaPresignRequest, options?: RequestInit): Promise<PostMediaPresign200> => {
 
-  return customFetch<ApiEnvelope>(getPostMediaPresignUrl(),
+  return customFetch<PostMediaPresign200>(getPostMediaPresignUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(postMediaPresignBody)
+    body: JSON.stringify(mediaPresignRequest)
   }
 );}
 
@@ -6298,8 +6601,8 @@ export const postMediaPresign = async (postMediaPresignBody?: PostMediaPresignBo
 
 
 export const getPostMediaPresignMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data?: BodyType<PostMediaPresignBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data?: BodyType<PostMediaPresignBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data: BodyType<MediaPresignRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data: BodyType<MediaPresignRequest>}, TContext> => {
 
 const mutationKey = ['postMediaPresign'];
 const {mutation: mutationOptions} = options ?
@@ -6311,7 +6614,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaPresign>>, {data?: BodyType<PostMediaPresignBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaPresign>>, {data: BodyType<MediaPresignRequest>}> = (props) => {
           const {data} = props ?? {};
 
           return  postMediaPresign(data,)
@@ -6325,18 +6628,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostMediaPresignMutationResult = NonNullable<Awaited<ReturnType<typeof postMediaPresign>>>
-    export type PostMediaPresignMutationBody = BodyType<PostMediaPresignBody> | undefined
+    export type PostMediaPresignMutationBody = BodyType<MediaPresignRequest>
     export type PostMediaPresignMutationError = ErrorType<void>
 
     /**
  * @summary Post /media/presign
  */
 export const usePostMediaPresign = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data?: BodyType<PostMediaPresignBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaPresign>>, TError,{data: BodyType<MediaPresignRequest>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postMediaPresign>>,
         TError,
-        {data?: BodyType<PostMediaPresignBody>},
+        {data: BodyType<MediaPresignRequest>},
         TContext
       > => {
       return useMutation(getPostMediaPresignMutationOptions(options));
@@ -6353,14 +6656,17 @@ export const getPostMediaUploadUrl = () => {
 /**
  * @summary Post /media/upload
  */
-export const postMediaUpload = async (postMediaUploadBody?: PostMediaUploadBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postMediaUpload = async (postMediaUploadBody: PostMediaUploadBody, options?: RequestInit): Promise<PostMediaUpload200 | void> => {
+    const formData = new FormData();
+formData.append(`file`, postMediaUploadBody.file);
+formData.append(`purpose`, postMediaUploadBody.purpose);
 
-  return customFetch<ApiEnvelope>(getPostMediaUploadUrl(),
+  return customFetch<PostMediaUpload200 | void>(getPostMediaUploadUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(postMediaUploadBody)
+    method: 'POST'
+    ,
+    body: formData
   }
 );}
 
@@ -6369,8 +6675,8 @@ export const postMediaUpload = async (postMediaUploadBody?: PostMediaUploadBody,
 
 
 export const getPostMediaUploadMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data?: BodyType<PostMediaUploadBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data?: BodyType<PostMediaUploadBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data: BodyType<PostMediaUploadBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data: BodyType<PostMediaUploadBody>}, TContext> => {
 
 const mutationKey = ['postMediaUpload'];
 const {mutation: mutationOptions} = options ?
@@ -6382,7 +6688,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaUpload>>, {data?: BodyType<PostMediaUploadBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMediaUpload>>, {data: BodyType<PostMediaUploadBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postMediaUpload(data,)
@@ -6396,18 +6702,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostMediaUploadMutationResult = NonNullable<Awaited<ReturnType<typeof postMediaUpload>>>
-    export type PostMediaUploadMutationBody = BodyType<PostMediaUploadBody> | undefined
+    export type PostMediaUploadMutationBody = BodyType<PostMediaUploadBody>
     export type PostMediaUploadMutationError = ErrorType<void>
 
     /**
  * @summary Post /media/upload
  */
 export const usePostMediaUpload = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data?: BodyType<PostMediaUploadBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMediaUpload>>, TError,{data: BodyType<PostMediaUploadBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postMediaUpload>>,
         TError,
-        {data?: BodyType<PostMediaUploadBody>},
+        {data: BodyType<PostMediaUploadBody>},
         TContext
       > => {
       return useMutation(getPostMediaUploadMutationOptions(options));
@@ -6424,7 +6730,7 @@ export const getPostMessagesUrl = () => {
 /**
  * @summary Post /messages
  */
-export const postMessages = async (postMessagesBody?: PostMessagesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postMessages = async (postMessagesBody: PostMessagesBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostMessagesUrl(),
   {
@@ -6440,8 +6746,8 @@ export const postMessages = async (postMessagesBody?: PostMessagesBody, options?
 
 
 export const getPostMessagesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data?: BodyType<PostMessagesBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data?: BodyType<PostMessagesBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data: BodyType<PostMessagesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data: BodyType<PostMessagesBody>}, TContext> => {
 
 const mutationKey = ['postMessages'];
 const {mutation: mutationOptions} = options ?
@@ -6453,7 +6759,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMessages>>, {data?: BodyType<PostMessagesBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postMessages>>, {data: BodyType<PostMessagesBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postMessages(data,)
@@ -6467,18 +6773,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof postMessages>>>
-    export type PostMessagesMutationBody = BodyType<PostMessagesBody> | undefined
+    export type PostMessagesMutationBody = BodyType<PostMessagesBody>
     export type PostMessagesMutationError = ErrorType<void>
 
     /**
  * @summary Post /messages
  */
 export const usePostMessages = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data?: BodyType<PostMessagesBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMessages>>, TError,{data: BodyType<PostMessagesBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postMessages>>,
         TError,
-        {data?: BodyType<PostMessagesBody>},
+        {data: BodyType<PostMessagesBody>},
         TContext
       > => {
       return useMutation(getPostMessagesMutationOptions(options));
@@ -7953,7 +8259,7 @@ export const getPostPostsUrl = () => {
 /**
  * @summary Post /posts
  */
-export const postPosts = async (postPostsBody?: PostPostsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postPosts = async (postPostsBody: PostPostsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostPostsUrl(),
   {
@@ -7969,8 +8275,8 @@ export const postPosts = async (postPostsBody?: PostPostsBody, options?: Request
 
 
 export const getPostPostsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data?: BodyType<PostPostsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data?: BodyType<PostPostsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data: BodyType<PostPostsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data: BodyType<PostPostsBody>}, TContext> => {
 
 const mutationKey = ['postPosts'];
 const {mutation: mutationOptions} = options ?
@@ -7982,7 +8288,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPosts>>, {data?: BodyType<PostPostsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPosts>>, {data: BodyType<PostPostsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postPosts(data,)
@@ -7996,18 +8302,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostPostsMutationResult = NonNullable<Awaited<ReturnType<typeof postPosts>>>
-    export type PostPostsMutationBody = BodyType<PostPostsBody> | undefined
+    export type PostPostsMutationBody = BodyType<PostPostsBody>
     export type PostPostsMutationError = ErrorType<void>
 
     /**
  * @summary Post /posts
  */
 export const usePostPosts = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data?: BodyType<PostPostsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPosts>>, TError,{data: BodyType<PostPostsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postPosts>>,
         TError,
-        {data?: BodyType<PostPostsBody>},
+        {data: BodyType<PostPostsBody>},
         TContext
       > => {
       return useMutation(getPostPostsMutationOptions(options));
@@ -8394,7 +8700,7 @@ export const getPostPostsByPostIdCommentsUrl = (postId: string,) => {
  * @summary Post /posts/{postId}/comments
  */
 export const postPostsByPostIdComments = async (postId: string,
-    postPostsByPostIdCommentsBody?: PostPostsByPostIdCommentsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    postPostsByPostIdCommentsBody: PostPostsByPostIdCommentsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostPostsByPostIdCommentsUrl(postId),
   {
@@ -8410,8 +8716,8 @@ export const postPostsByPostIdComments = async (postId: string,
 
 
 export const getPostPostsByPostIdCommentsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data?: BodyType<PostPostsByPostIdCommentsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data?: BodyType<PostPostsByPostIdCommentsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data: BodyType<PostPostsByPostIdCommentsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data: BodyType<PostPostsByPostIdCommentsBody>}, TContext> => {
 
 const mutationKey = ['postPostsByPostIdComments'];
 const {mutation: mutationOptions} = options ?
@@ -8423,7 +8729,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPostsByPostIdComments>>, {postId: string;data?: BodyType<PostPostsByPostIdCommentsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPostsByPostIdComments>>, {postId: string;data: BodyType<PostPostsByPostIdCommentsBody>}> = (props) => {
           const {postId,data} = props ?? {};
 
           return  postPostsByPostIdComments(postId,data,)
@@ -8437,18 +8743,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostPostsByPostIdCommentsMutationResult = NonNullable<Awaited<ReturnType<typeof postPostsByPostIdComments>>>
-    export type PostPostsByPostIdCommentsMutationBody = BodyType<PostPostsByPostIdCommentsBody> | undefined
+    export type PostPostsByPostIdCommentsMutationBody = BodyType<PostPostsByPostIdCommentsBody>
     export type PostPostsByPostIdCommentsMutationError = ErrorType<void>
 
     /**
  * @summary Post /posts/{postId}/comments
  */
 export const usePostPostsByPostIdComments = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data?: BodyType<PostPostsByPostIdCommentsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsByPostIdComments>>, TError,{postId: string;data: BodyType<PostPostsByPostIdCommentsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postPostsByPostIdComments>>,
         TError,
-        {postId: string;data?: BodyType<PostPostsByPostIdCommentsBody>},
+        {postId: string;data: BodyType<PostPostsByPostIdCommentsBody>},
         TContext
       > => {
       return useMutation(getPostPostsByPostIdCommentsMutationOptions(options));
@@ -9341,14 +9647,16 @@ export const getPostPostsUploadImageUrl = () => {
 /**
  * @summary Post /posts/upload-image
  */
-export const postPostsUploadImage = async (postPostsUploadImageBody?: PostPostsUploadImageBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postPostsUploadImage = async (postPostsUploadImageBody: PostPostsUploadImageBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    const formData = new FormData();
+formData.append(`image`, postPostsUploadImageBody.image);
 
   return customFetch<ApiEnvelope>(getPostPostsUploadImageUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(postPostsUploadImageBody)
+    method: 'POST'
+    ,
+    body: formData
   }
 );}
 
@@ -9357,8 +9665,8 @@ export const postPostsUploadImage = async (postPostsUploadImageBody?: PostPostsU
 
 
 export const getPostPostsUploadImageMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data?: BodyType<PostPostsUploadImageBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data?: BodyType<PostPostsUploadImageBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data: BodyType<PostPostsUploadImageBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data: BodyType<PostPostsUploadImageBody>}, TContext> => {
 
 const mutationKey = ['postPostsUploadImage'];
 const {mutation: mutationOptions} = options ?
@@ -9370,7 +9678,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPostsUploadImage>>, {data?: BodyType<PostPostsUploadImageBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPostsUploadImage>>, {data: BodyType<PostPostsUploadImageBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postPostsUploadImage(data,)
@@ -9384,18 +9692,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostPostsUploadImageMutationResult = NonNullable<Awaited<ReturnType<typeof postPostsUploadImage>>>
-    export type PostPostsUploadImageMutationBody = BodyType<PostPostsUploadImageBody> | undefined
+    export type PostPostsUploadImageMutationBody = BodyType<PostPostsUploadImageBody>
     export type PostPostsUploadImageMutationError = ErrorType<void>
 
     /**
  * @summary Post /posts/upload-image
  */
 export const usePostPostsUploadImage = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data?: BodyType<PostPostsUploadImageBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPostsUploadImage>>, TError,{data: BodyType<PostPostsUploadImageBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postPostsUploadImage>>,
         TError,
-        {data?: BodyType<PostPostsUploadImageBody>},
+        {data: BodyType<PostPostsUploadImageBody>},
         TContext
       > => {
       return useMutation(getPostPostsUploadImageMutationOptions(options));
@@ -10007,7 +10315,7 @@ export const getPostProductsUrl = () => {
 /**
  * @summary Post /products
  */
-export const postProducts = async (postProductsBody?: PostProductsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postProducts = async (postProductsBody: PostProductsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostProductsUrl(),
   {
@@ -10023,8 +10331,8 @@ export const postProducts = async (postProductsBody?: PostProductsBody, options?
 
 
 export const getPostProductsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data?: BodyType<PostProductsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data?: BodyType<PostProductsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data: BodyType<PostProductsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data: BodyType<PostProductsBody>}, TContext> => {
 
 const mutationKey = ['postProducts'];
 const {mutation: mutationOptions} = options ?
@@ -10036,7 +10344,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postProducts>>, {data?: BodyType<PostProductsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postProducts>>, {data: BodyType<PostProductsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postProducts(data,)
@@ -10050,18 +10358,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostProductsMutationResult = NonNullable<Awaited<ReturnType<typeof postProducts>>>
-    export type PostProductsMutationBody = BodyType<PostProductsBody> | undefined
+    export type PostProductsMutationBody = BodyType<PostProductsBody>
     export type PostProductsMutationError = ErrorType<void>
 
     /**
  * @summary Post /products
  */
 export const usePostProducts = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data?: BodyType<PostProductsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postProducts>>, TError,{data: BodyType<PostProductsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postProducts>>,
         TError,
-        {data?: BodyType<PostProductsBody>},
+        {data: BodyType<PostProductsBody>},
         TContext
       > => {
       return useMutation(getPostProductsMutationOptions(options));
@@ -11252,9 +11560,9 @@ export const getPostReportsGrievanceUrl = () => {
 /**
  * @summary Post /reports/grievance
  */
-export const postReportsGrievance = async (postReportsGrievanceBody?: PostReportsGrievanceBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postReportsGrievance = async (postReportsGrievanceBody?: PostReportsGrievanceBody, options?: RequestInit): Promise<PostReportsGrievance201> => {
 
-  return customFetch<ApiEnvelope>(getPostReportsGrievanceUrl(),
+  return customFetch<PostReportsGrievance201>(getPostReportsGrievanceUrl(),
   {
     ...options,
     method: 'POST',
@@ -11323,9 +11631,9 @@ export const getGetReportsGrievanceByTicketIdUrl = (ticketId: string,) => {
 /**
  * @summary Get /reports/grievance/{ticketId}
  */
-export const getReportsGrievanceByTicketId = async (ticketId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+export const getReportsGrievanceByTicketId = async (ticketId: string, options?: RequestInit): Promise<GetReportsGrievanceByTicketId200> => {
 
-  return customFetch<ApiEnvelope>(getGetReportsGrievanceByTicketIdUrl(ticketId),
+  return customFetch<GetReportsGrievanceByTicketId200>(getGetReportsGrievanceByTicketIdUrl(ticketId),
   {
     ...options,
     method: 'GET'
@@ -11780,7 +12088,7 @@ export const getPostStoriesUrl = () => {
 /**
  * @summary Post /stories
  */
-export const postStories = async (postStoriesBody?: PostStoriesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postStories = async (postStoriesBody: PostStoriesBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostStoriesUrl(),
   {
@@ -11796,8 +12104,8 @@ export const postStories = async (postStoriesBody?: PostStoriesBody, options?: R
 
 
 export const getPostStoriesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data?: BodyType<PostStoriesBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data?: BodyType<PostStoriesBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data: BodyType<PostStoriesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data: BodyType<PostStoriesBody>}, TContext> => {
 
 const mutationKey = ['postStories'];
 const {mutation: mutationOptions} = options ?
@@ -11809,7 +12117,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postStories>>, {data?: BodyType<PostStoriesBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postStories>>, {data: BodyType<PostStoriesBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postStories(data,)
@@ -11823,18 +12131,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostStoriesMutationResult = NonNullable<Awaited<ReturnType<typeof postStories>>>
-    export type PostStoriesMutationBody = BodyType<PostStoriesBody> | undefined
+    export type PostStoriesMutationBody = BodyType<PostStoriesBody>
     export type PostStoriesMutationError = ErrorType<void>
 
     /**
  * @summary Post /stories
  */
 export const usePostStories = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data?: BodyType<PostStoriesBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStories>>, TError,{data: BodyType<PostStoriesBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postStories>>,
         TError,
-        {data?: BodyType<PostStoriesBody>},
+        {data: BodyType<PostStoriesBody>},
         TContext
       > => {
       return useMutation(getPostStoriesMutationOptions(options));
@@ -12370,7 +12678,7 @@ export const getPostStreamsUrl = () => {
 /**
  * @summary Post /streams
  */
-export const postStreams = async (postStreamsBody?: PostStreamsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postStreams = async (postStreamsBody: PostStreamsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostStreamsUrl(),
   {
@@ -12386,8 +12694,8 @@ export const postStreams = async (postStreamsBody?: PostStreamsBody, options?: R
 
 
 export const getPostStreamsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data?: BodyType<PostStreamsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data?: BodyType<PostStreamsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data: BodyType<PostStreamsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data: BodyType<PostStreamsBody>}, TContext> => {
 
 const mutationKey = ['postStreams'];
 const {mutation: mutationOptions} = options ?
@@ -12399,7 +12707,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postStreams>>, {data?: BodyType<PostStreamsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postStreams>>, {data: BodyType<PostStreamsBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postStreams(data,)
@@ -12413,18 +12721,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostStreamsMutationResult = NonNullable<Awaited<ReturnType<typeof postStreams>>>
-    export type PostStreamsMutationBody = BodyType<PostStreamsBody> | undefined
+    export type PostStreamsMutationBody = BodyType<PostStreamsBody>
     export type PostStreamsMutationError = ErrorType<void>
 
     /**
  * @summary Post /streams
  */
 export const usePostStreams = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data?: BodyType<PostStreamsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postStreams>>, TError,{data: BodyType<PostStreamsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postStreams>>,
         TError,
-        {data?: BodyType<PostStreamsBody>},
+        {data: BodyType<PostStreamsBody>},
         TContext
       > => {
       return useMutation(getPostStreamsMutationOptions(options));
@@ -13023,6 +13331,154 @@ export function useGetSubscriptionsTiersByCreatorId<TData = Awaited<ReturnType<t
 
 
 
+
+export const getGetTelemetryAnalyticsUrl = () => {
+
+
+
+
+  return `/api/telemetry/analytics`
+}
+
+/**
+ * @summary Get /telemetry/analytics
+ */
+export const getTelemetryAnalytics = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetTelemetryAnalyticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTelemetryAnalyticsQueryKey = () => {
+    return [
+    `/api/telemetry/analytics`
+    ] as const;
+    }
+
+
+export const getGetTelemetryAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getTelemetryAnalytics>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTelemetryAnalytics>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTelemetryAnalyticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTelemetryAnalytics>>> = ({ signal }) => getTelemetryAnalytics({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTelemetryAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTelemetryAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getTelemetryAnalytics>>>
+export type GetTelemetryAnalyticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /telemetry/analytics
+ */
+
+export function useGetTelemetryAnalytics<TData = Awaited<ReturnType<typeof getTelemetryAnalytics>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTelemetryAnalytics>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTelemetryAnalyticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostTelemetryEventsUrl = () => {
+
+
+
+
+  return `/api/telemetry/events`
+}
+
+/**
+ * @summary Post /telemetry/events
+ */
+export const postTelemetryEvents = async (postTelemetryEventsBody?: PostTelemetryEventsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostTelemetryEventsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postTelemetryEventsBody)
+  }
+);}
+
+
+
+
+
+export const getPostTelemetryEventsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTelemetryEvents>>, TError,{data?: BodyType<PostTelemetryEventsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postTelemetryEvents>>, TError,{data?: BodyType<PostTelemetryEventsBody>}, TContext> => {
+
+const mutationKey = ['postTelemetryEvents'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postTelemetryEvents>>, {data?: BodyType<PostTelemetryEventsBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postTelemetryEvents(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostTelemetryEventsMutationResult = NonNullable<Awaited<ReturnType<typeof postTelemetryEvents>>>
+    export type PostTelemetryEventsMutationBody = BodyType<PostTelemetryEventsBody> | undefined
+    export type PostTelemetryEventsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /telemetry/events
+ */
+export const usePostTelemetryEvents = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTelemetryEvents>>, TError,{data?: BodyType<PostTelemetryEventsBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postTelemetryEvents>>,
+        TError,
+        {data?: BodyType<PostTelemetryEventsBody>},
+        TContext
+      > => {
+      return useMutation(getPostTelemetryEventsMutationOptions(options));
+    }
 
 export const getGetUsersByUserIdUrl = (userId: string,) => {
 
@@ -14145,7 +14601,7 @@ export const getPostUsersByUserIdShowcasesUrl = (userId: string,) => {
  * @summary Post /users/{userId}/showcases
  */
 export const postUsersByUserIdShowcases = async (userId: string,
-    postUsersByUserIdShowcasesBody?: PostUsersByUserIdShowcasesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    postUsersByUserIdShowcasesBody: PostUsersByUserIdShowcasesBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostUsersByUserIdShowcasesUrl(userId),
   {
@@ -14161,8 +14617,8 @@ export const postUsersByUserIdShowcases = async (userId: string,
 
 
 export const getPostUsersByUserIdShowcasesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data?: BodyType<PostUsersByUserIdShowcasesBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data?: BodyType<PostUsersByUserIdShowcasesBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data: BodyType<PostUsersByUserIdShowcasesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data: BodyType<PostUsersByUserIdShowcasesBody>}, TContext> => {
 
 const mutationKey = ['postUsersByUserIdShowcases'];
 const {mutation: mutationOptions} = options ?
@@ -14174,7 +14630,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, {userId: string;data?: BodyType<PostUsersByUserIdShowcasesBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, {userId: string;data: BodyType<PostUsersByUserIdShowcasesBody>}> = (props) => {
           const {userId,data} = props ?? {};
 
           return  postUsersByUserIdShowcases(userId,data,)
@@ -14188,18 +14644,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostUsersByUserIdShowcasesMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>>
-    export type PostUsersByUserIdShowcasesMutationBody = BodyType<PostUsersByUserIdShowcasesBody> | undefined
+    export type PostUsersByUserIdShowcasesMutationBody = BodyType<PostUsersByUserIdShowcasesBody>
     export type PostUsersByUserIdShowcasesMutationError = ErrorType<void>
 
     /**
  * @summary Post /users/{userId}/showcases
  */
 export const usePostUsersByUserIdShowcases = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data?: BodyType<PostUsersByUserIdShowcasesBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersByUserIdShowcases>>, TError,{userId: string;data: BodyType<PostUsersByUserIdShowcasesBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postUsersByUserIdShowcases>>,
         TError,
-        {userId: string;data?: BodyType<PostUsersByUserIdShowcasesBody>},
+        {userId: string;data: BodyType<PostUsersByUserIdShowcasesBody>},
         TContext
       > => {
       return useMutation(getPostUsersByUserIdShowcasesMutationOptions(options));
@@ -14659,7 +15115,7 @@ export const getPutUsersMeUrl = () => {
 /**
  * @summary Put /users/me
  */
-export const putUsersMe = async (putUsersMeBody?: PutUsersMeBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const putUsersMe = async (putUsersMeBody: PutUsersMeBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPutUsersMeUrl(),
   {
@@ -14675,8 +15131,8 @@ export const putUsersMe = async (putUsersMeBody?: PutUsersMeBody, options?: Requ
 
 
 export const getPutUsersMeMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data?: BodyType<PutUsersMeBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data?: BodyType<PutUsersMeBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data: BodyType<PutUsersMeBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data: BodyType<PutUsersMeBody>}, TContext> => {
 
 const mutationKey = ['putUsersMe'];
 const {mutation: mutationOptions} = options ?
@@ -14688,7 +15144,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putUsersMe>>, {data?: BodyType<PutUsersMeBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putUsersMe>>, {data: BodyType<PutUsersMeBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  putUsersMe(data,)
@@ -14702,18 +15158,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PutUsersMeMutationResult = NonNullable<Awaited<ReturnType<typeof putUsersMe>>>
-    export type PutUsersMeMutationBody = BodyType<PutUsersMeBody> | undefined
+    export type PutUsersMeMutationBody = BodyType<PutUsersMeBody>
     export type PutUsersMeMutationError = ErrorType<void>
 
     /**
  * @summary Put /users/me
  */
 export const usePutUsersMe = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data?: BodyType<PutUsersMeBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersMe>>, TError,{data: BodyType<PutUsersMeBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof putUsersMe>>,
         TError,
-        {data?: BodyType<PutUsersMeBody>},
+        {data: BodyType<PutUsersMeBody>},
         TContext
       > => {
       return useMutation(getPutUsersMeMutationOptions(options));
@@ -14801,14 +15257,16 @@ export const getPostUsersMeAvatarUrl = () => {
 /**
  * @summary Post /users/me/avatar
  */
-export const postUsersMeAvatar = async (postUsersMeAvatarBody?: PostUsersMeAvatarBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postUsersMeAvatar = async (postUsersMeAvatarBody: PostUsersMeAvatarBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    const formData = new FormData();
+formData.append(`avatar`, postUsersMeAvatarBody.avatar);
 
   return customFetch<ApiEnvelope>(getPostUsersMeAvatarUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(postUsersMeAvatarBody)
+    method: 'POST'
+    ,
+    body: formData
   }
 );}
 
@@ -14817,8 +15275,8 @@ export const postUsersMeAvatar = async (postUsersMeAvatarBody?: PostUsersMeAvata
 
 
 export const getPostUsersMeAvatarMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data?: BodyType<PostUsersMeAvatarBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data?: BodyType<PostUsersMeAvatarBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data: BodyType<PostUsersMeAvatarBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data: BodyType<PostUsersMeAvatarBody>}, TContext> => {
 
 const mutationKey = ['postUsersMeAvatar'];
 const {mutation: mutationOptions} = options ?
@@ -14830,7 +15288,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeAvatar>>, {data?: BodyType<PostUsersMeAvatarBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeAvatar>>, {data: BodyType<PostUsersMeAvatarBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postUsersMeAvatar(data,)
@@ -14844,18 +15302,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostUsersMeAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeAvatar>>>
-    export type PostUsersMeAvatarMutationBody = BodyType<PostUsersMeAvatarBody> | undefined
+    export type PostUsersMeAvatarMutationBody = BodyType<PostUsersMeAvatarBody>
     export type PostUsersMeAvatarMutationError = ErrorType<void>
 
     /**
  * @summary Post /users/me/avatar
  */
 export const usePostUsersMeAvatar = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data?: BodyType<PostUsersMeAvatarBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeAvatar>>, TError,{data: BodyType<PostUsersMeAvatarBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postUsersMeAvatar>>,
         TError,
-        {data?: BodyType<PostUsersMeAvatarBody>},
+        {data: BodyType<PostUsersMeAvatarBody>},
         TContext
       > => {
       return useMutation(getPostUsersMeAvatarMutationOptions(options));
@@ -16058,7 +16516,7 @@ export const getPostVideosUrl = () => {
 /**
  * @summary Post /videos
  */
-export const postVideos = async (postVideosBody?: PostVideosBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postVideos = async (postVideosBody: PostVideosBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostVideosUrl(),
   {
@@ -16074,8 +16532,8 @@ export const postVideos = async (postVideosBody?: PostVideosBody, options?: Requ
 
 
 export const getPostVideosMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data?: BodyType<PostVideosBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data?: BodyType<PostVideosBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data: BodyType<PostVideosBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data: BodyType<PostVideosBody>}, TContext> => {
 
 const mutationKey = ['postVideos'];
 const {mutation: mutationOptions} = options ?
@@ -16087,7 +16545,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVideos>>, {data?: BodyType<PostVideosBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVideos>>, {data: BodyType<PostVideosBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  postVideos(data,)
@@ -16101,18 +16559,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostVideosMutationResult = NonNullable<Awaited<ReturnType<typeof postVideos>>>
-    export type PostVideosMutationBody = BodyType<PostVideosBody> | undefined
+    export type PostVideosMutationBody = BodyType<PostVideosBody>
     export type PostVideosMutationError = ErrorType<void>
 
     /**
  * @summary Post /videos
  */
 export const usePostVideos = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data?: BodyType<PostVideosBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideos>>, TError,{data: BodyType<PostVideosBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postVideos>>,
         TError,
-        {data?: BodyType<PostVideosBody>},
+        {data: BodyType<PostVideosBody>},
         TContext
       > => {
       return useMutation(getPostVideosMutationOptions(options));
@@ -16427,7 +16885,7 @@ export const getPostVideosByIdCommentsUrl = (id: string,) => {
  * @summary Post /videos/{id}/comments
  */
 export const postVideosByIdComments = async (id: string,
-    postVideosByIdCommentsBody?: PostVideosByIdCommentsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    postVideosByIdCommentsBody: PostVideosByIdCommentsBody, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostVideosByIdCommentsUrl(id),
   {
@@ -16443,8 +16901,8 @@ export const postVideosByIdComments = async (id: string,
 
 
 export const getPostVideosByIdCommentsMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data?: BodyType<PostVideosByIdCommentsBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data?: BodyType<PostVideosByIdCommentsBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data: BodyType<PostVideosByIdCommentsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data: BodyType<PostVideosByIdCommentsBody>}, TContext> => {
 
 const mutationKey = ['postVideosByIdComments'];
 const {mutation: mutationOptions} = options ?
@@ -16456,7 +16914,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVideosByIdComments>>, {id: string;data?: BodyType<PostVideosByIdCommentsBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVideosByIdComments>>, {id: string;data: BodyType<PostVideosByIdCommentsBody>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  postVideosByIdComments(id,data,)
@@ -16470,18 +16928,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostVideosByIdCommentsMutationResult = NonNullable<Awaited<ReturnType<typeof postVideosByIdComments>>>
-    export type PostVideosByIdCommentsMutationBody = BodyType<PostVideosByIdCommentsBody> | undefined
+    export type PostVideosByIdCommentsMutationBody = BodyType<PostVideosByIdCommentsBody>
     export type PostVideosByIdCommentsMutationError = ErrorType<void>
 
     /**
  * @summary Post /videos/{id}/comments
  */
 export const usePostVideosByIdComments = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data?: BodyType<PostVideosByIdCommentsBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVideosByIdComments>>, TError,{id: string;data: BodyType<PostVideosByIdCommentsBody>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postVideosByIdComments>>,
         TError,
-        {id: string;data?: BodyType<PostVideosByIdCommentsBody>},
+        {id: string;data: BodyType<PostVideosByIdCommentsBody>},
         TContext
       > => {
       return useMutation(getPostVideosByIdCommentsMutationOptions(options));

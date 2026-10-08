@@ -2,12 +2,21 @@ import { MediaLifecycleError } from "../services/media-service.js";
 import { hydrateMediaValue } from "../services/media-response.js";
 import { type Request, type Response } from "express";
 import { getIo } from "../lib/realtime.js";
-import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageUnavailableError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
 
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
+
+  private async publish(conversationId:string,userId:string,event:string,message:unknown):Promise<void> {
+    const io=getIo();if(!io)return;
+    const members=await this.messageService.getConversationMemberIds(conversationId,userId);
+    for(const memberId of members){
+      const current=await hydrateMediaValue(message,undefined,memberId);
+      if(current)io.to(memberId).emit(event,current);
+    }
+  }
 
   sendMessage = async (req: Request, res: Response) => {
     const recipientId = typeof req.body.recipientId === "string" ? req.body.recipientId : undefined;
@@ -33,16 +42,12 @@ export class MessageController {
       }
 
       // Multicast to group room via Socket.io
-      const io = getIo();
-      if (io) {
-        const room = `conversation:${actualConversationId}`;
-        const memberIds = await this.messageService.getConversationMemberIds(actualConversationId, message.senderId);
-        for (const memberId of memberIds) io.in(memberId).socketsJoin(room);
-        io.to(room).emit("message:receive", await hydrateMediaValue(message));
-      }
+      if (this.messageService.consumeNewPublication(message))
+        await this.publish(actualConversationId,req.user?.id??'',"message:receive",message);
       
       return res.status(201).json(createResponse("Message sent", message));
     } catch (error) {
+      if (error instanceof MessageUnavailableError) return res.status(410).json(createResponse(error.message,null,{},['message_unavailable']));
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof MessageBlockedError || error instanceof UnauthorizedError) {
         return res.status(403).json(createResponse("Action forbidden", null, {}, [error.message]));
@@ -144,7 +149,7 @@ export class MessageController {
     const io = getIo();
     if (io) {
       if (message.deletedAt) {
-        io.to(`conversation:${message.conversationId}`).emit("message:update", await hydrateMediaValue(message));
+        await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
       } else {
         io.to(`conversation:${message.conversationId}`).emit("message:seen:update", {
           messageId,
@@ -163,7 +168,7 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
-    getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", await hydrateMediaValue(message));
+    await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
     return res.status(200).json(createResponse("Message edited", message));
   };
 
@@ -173,7 +178,7 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
-    getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", await hydrateMediaValue(message));
+    await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
     return res.status(200).json(createResponse("Message deleted", message));
   };
 
@@ -181,7 +186,7 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.addReaction(messageId, req.user?.id ?? "", req.body.reaction);
-      if (message) getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", await hydrateMediaValue(message));
+      if (message) await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
       return res.status(200).json(createResponse("Reaction added", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot react to this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
@@ -192,7 +197,7 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.pinMessage(messageId, req.user?.id ?? "");
-      if (message) getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", await hydrateMediaValue(message));
+      if (message) await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
       return res.status(200).json(createResponse("Message pinned", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot pin this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));

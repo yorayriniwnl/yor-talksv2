@@ -10,6 +10,8 @@ import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { isPremiumMessageStyle } from "../features/premium-profile.js";
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
+import type { MessageTombstone } from './message-view.js';
+import { currentMessageResponse } from './media-response.js';
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -17,6 +19,7 @@ export class InvalidMessageContentError extends Error {}
 export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
+export class MessageUnavailableError extends Error {}
 
 type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string; mediaId?: string };
 
@@ -30,6 +33,14 @@ const normalizeMessageContent = (content: string, hasMedia = false): string => {
 };
 
 export class MessageService {
+  private readonly newPublications = new WeakSet<MessageRecord>();
+
+  /** Only the winner of an idempotent insert may publish a receive event. */
+  consumeNewPublication(message: MessageRecord): boolean {
+    const created = this.newPublications.has(message);
+    this.newPublications.delete(message);
+    return created;
+  }
   constructor(
     private readonly conversationRepository: ConversationRepository,
     private readonly messageRepository: MessageRepository,
@@ -105,12 +116,14 @@ export class MessageService {
     // client key returns that exact row without invoking moderation or writing
     // a second message.
     if (options?.idempotencyKey) {
-      const existing = await this.messageRepository.findById(options.idempotencyKey);
+      const existing = await this.messageRepository.findRetainedById(options.idempotencyKey);
       if (existing) {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
-        return existing;
+        const current = await this.messageRepository.findCurrentForUser(existing.id, senderId);
+        if (!current) throw new MessageUnavailableError('This message is no longer available');
+        return current;
       }
     }
 
@@ -153,7 +166,7 @@ export class MessageService {
       id: options?.idempotencyKey ?? randomUUID(),
       conversationId,
       senderId,
-      recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
+      recipientId: conversation.isGroup ? null : members.find((memberId) => memberId !== senderId) ?? senderId,
       content: normalizedContent,
       textStyleId,
       createdAt: createdAt.toISOString(),
@@ -172,6 +185,7 @@ export class MessageService {
       const attachment = media.mediaUrl?.[0];
       const result = await this.messageRepository.createWithResult({ ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null });
       persisted = result.message;
+      if (result.created) this.newPublications.add(result.message);
       // Conflict losers return the winning row without creating or replacing
       // its attachment references, including a text-only winning message.
       return result.created ? result.message : undefined;
@@ -179,6 +193,13 @@ export class MessageService {
     if (!persisted) throw new Error("Message was not persisted");
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
+    }
+    // Insert conflict losers can race deletion/expiry. Re-read the visible row;
+    // retained data is never the response to a retry.
+    if (!this.newPublications.has(persisted)) {
+      const current = await this.messageRepository.findCurrentForUser(persisted.id, senderId);
+      if (!current) throw new MessageUnavailableError('This message is no longer available');
+      return current;
     }
     return persisted;
   }
@@ -198,7 +219,7 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+    return currentMessageResponse(await this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId),userId);
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -237,7 +258,7 @@ export class MessageService {
     );
     const lastMessages = results.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
+    return currentMessageResponse(results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined })),userId);
   }
 
   private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
@@ -253,36 +274,8 @@ export class MessageService {
     return messages.map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
   }
 
-  async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
-    
-    const members = await this.conversationRepository.getMembers(message.conversationId);
-    if (!members.includes(userId)) return undefined;
-    // A sender opening their own message is not a recipient read receipt.
-    if (message.senderId === userId) return message;
-
-    // Track read receipt
-    const readAt = new Date().toISOString();
-    await db.insert(messageReadsTable).values({
-      messageId,
-      userId,
-      readAt,
-    }).onConflictDoUpdate({
-      target: [messageReadsTable.messageId, messageReadsTable.userId],
-      set: { readAt },
-    });
-
-    const conversation = await this.conversationRepository.findById(message.conversationId);
-    if (conversation?.vanishMode) {
-      return this.messageRepository.update(messageId, { seenAt: readAt, deletedAt: readAt });
-    }
-    // `seen_at` is a legacy single-recipient field. In a group it would tell
-    // every member that everyone has read the message, so keep group read
-    // receipts in message_reads and only update the legacy field for DMs.
-    if (conversation?.isGroup) return { ...message, seenAt: readAt };
-    message.seenAt = readAt;
-    return this.messageRepository.update(messageId, { seenAt: readAt });
+  async markSeen(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
+    return this.messageRepository.markSeenForUser(messageId, userId);
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
@@ -296,16 +289,11 @@ export class MessageService {
     message.editedAt = new Date().toISOString();
     // Compatibility rendering is bound to the historical body. An edit is a
     // new publication and cannot mint an attachment from an arbitrary text URL.
-    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
+    return this.messageRepository.updateForUser(messageId, userId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false }, true);
   }
 
-  async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || message.senderId !== userId) {
-      return undefined; // Only sender can delete for now
-    }
-    message.deletedAt = new Date().toISOString();
-    return this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
+  async deleteMessage(messageId: string, userId: string): Promise<MessageTombstone | undefined> {
+    return this.messageRepository.deleteForUser(messageId, userId);
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
@@ -321,19 +309,12 @@ export class MessageService {
   }
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
-    const message = await this.assertParticipant(messageId, userId);
-    const reactions = message.reactions ?? {};
-    const current = reactions[reaction] ?? [];
-    if (!current.includes(userId)) {
-      current.push(userId);
-      reactions[reaction] = current;
-      message.reactions = reactions;
-    }
-    return this.messageRepository.update(messageId, { reactions: message.reactions });
+    await this.assertParticipant(messageId, userId);
+    return this.messageRepository.addReactionForUser(messageId, userId, reaction);
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     await this.assertParticipant(messageId, userId);
-    return this.messageRepository.update(messageId, { pinned: true });
+    return this.messageRepository.updateForUser(messageId, userId, { pinned: true });
   }
 }

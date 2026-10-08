@@ -40,7 +40,7 @@ function createPreviewService(enabled: boolean, alreadyRead = false) {
 test("message preview records a preview lifecycle without creating a read receipt", async () => {
   const { service, getRecordedPreview } = createPreviewService(true);
 
-  const preview = await service.previewMessage(message.id, message.recipientId);
+  const preview = await service.previewMessage(message.id, message.recipientId!);
 
   assert.equal(preview?.messageState, "MESSAGE_PREVIEWED");
   assert.equal(preview?.seenAt, null);
@@ -52,7 +52,7 @@ test("message preview is entitlement-gated before any preview event is recorded"
   const { service, getRecordedPreview } = createPreviewService(false);
 
   await assert.rejects(
-    () => service.previewMessage(message.id, message.recipientId),
+    () => service.previewMessage(message.id, message.recipientId!),
     PremiumFeatureUnavailableError,
   );
   assert.equal(getRecordedPreview(), undefined);
@@ -61,7 +61,7 @@ test("message preview is entitlement-gated before any preview event is recorded"
 test("message preview does not reopen a message that already has a recipient read receipt", async () => {
   const { service, getRecordedPreview } = createPreviewService(true, true);
 
-  const preview = await service.previewMessage(message.id, message.recipientId);
+  const preview = await service.previewMessage(message.id, message.recipientId!);
 
   assert.equal(preview, undefined);
   assert.equal(getRecordedPreview(), undefined);

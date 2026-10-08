@@ -116,8 +116,23 @@ export function CinematicMediaLightbox({
                   className="flex flex-col items-center gap-3 text-center text-white/60"
                 >
                   <ImageOff className="h-9 w-9" />
-                  <p className="text-sm">This image could not be loaded.</p>
+                  <p className="text-sm">This media could not be loaded.</p>
                 </motion.div>
+              ) : /\.(?:mp4|webm|mov|ogg)(?:[?#]|$)/i.test(currentMedia) ? (
+                <motion.video
+                  key={currentMedia}
+                  src={currentMedia}
+                  controls
+                  autoPlay
+                  playsInline
+                  aria-label={`${authorName}'s post, video ${currentIndex + 1} of ${media.length}`}
+                  initial={reduceMotion ? false : { opacity: 0, x: direction * 18, scale: 0.985 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, x: direction * -12, scale: 1.01 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full w-full select-none object-contain px-3 py-12 sm:px-14 sm:py-16"
+                  onError={() => setFailedImages((images) => new Set(images).add(currentIndex))}
+                />
               ) : (
                 <motion.img
                   key={currentMedia}
@@ -140,9 +155,9 @@ export function CinematicMediaLightbox({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute left-3 hidden h-11 w-11 rounded-full border border-white/10 bg-black/35 text-white hover:bg-white/15 hover:text-white sm:flex"
+                  className="absolute left-2 sm:left-3 flex h-10 w-10 sm:h-11 sm:w-11 rounded-full border border-white/10 bg-black/45 text-white hover:bg-white/15 hover:text-white"
                   onClick={() => moveTo(currentIndex - 1)}
-                  aria-label="Previous image"
+                  aria-label="Previous media"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -150,9 +165,9 @@ export function CinematicMediaLightbox({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-3 hidden h-11 w-11 rounded-full border border-white/10 bg-black/35 text-white hover:bg-white/15 hover:text-white sm:flex"
+                  className="absolute right-2 sm:right-3 flex h-10 w-10 sm:h-11 sm:w-11 rounded-full border border-white/10 bg-black/45 text-white hover:bg-white/15 hover:text-white"
                   onClick={() => moveTo(currentIndex + 1)}
-                  aria-label="Next image"
+                  aria-label="Next media"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>

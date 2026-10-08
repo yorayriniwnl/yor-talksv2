@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PutUsersMeBody = { [key: string]: unknown };
+export type PutUsersMeBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  avatarMediaId?: string;
+  [key: string]: unknown;
+ };

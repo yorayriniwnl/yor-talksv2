@@ -3834,12 +3834,12 @@ paths:
               type: object
               additionalProperties: true
       responses:
-        "200":
+        "201":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceTicket"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}:
@@ -3860,7 +3860,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceTicket"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}/status:
@@ -5675,6 +5675,7 @@ components:
         meta:
           type: object
           additionalProperties: true
+    PublicGrievanceTicket: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string","pattern":"^YT-GRV-[A-Z0-9]{10}$"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"}}}
     MediaPresignRequest: {"type":"object","additionalProperties":false,"required":["filename","mimeType","size","purpose"],"properties":{"filename":{"type":"string","minLength":1,"maxLength":255},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer","minimum":1,"maximum":10485760,"description":"Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side."},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]}}}
     MediaFinalizeRequest: {"type":"object","additionalProperties":false}
     MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}

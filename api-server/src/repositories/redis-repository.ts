@@ -2,14 +2,15 @@ import { createHash } from "node:crypto";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { authChallengeLua, approveLoginChallengeLua, consumeLoginApprovalLua, redeemEmailOtpLua } from './auth-challenge-scripts.js';
 
 export class RedisRepository {
   private readonly client: Redis;
   private connectPromise: Promise<void> | null = null;
   private disconnected = false;
 
-  constructor() {
-    this.client = new Redis(env.REDIS_URL, {
+  constructor(redisUrl = env.REDIS_URL) {
+    this.client = new Redis(redisUrl, {
       // Commands are issued only after ensureReady() below. This keeps
       // construction side-effect free for tests and avoids a startup race
       // when Redis is still accepting connections.
@@ -233,6 +234,47 @@ export class RedisRepository {
     await this.client.del(key);
   }
 
+  /** Reservation and expiration are one operation, including concurrent requests. */
+  async reserveExpiringValueStrict(key: string, value: string, expiresAtMs: number): Promise<boolean> {
+    await this.ensureReady();
+    return await this.client.set(key, value, 'PXAT', expiresAtMs, 'NX') === 'OK';
+  }
+
+  /** A late delivery failure cannot delete a different request's replacement. */
+  async deleteChallengeStrict(key: string, challengeId: string): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(`${authChallengeLua}
+      local state = decode(redis.call('GET', KEYS[1]))
+      if not state or state.challengeId ~= ARGV[1] then return 0 end
+      return redis.call('DEL', KEYS[1])`, 1, key, challengeId);
+    return result === 1;
+  }
+
+  async redeemEmailOtpStrict(input: {
+    key: string; challengeId: string; userId: string; email: string; authVersion: number;
+    codeHash: string; action: 'attempt' | 'consume' | 'approval'; approval?: { challengeId: string; value: string };
+  }): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(redeemEmailOtpLua, 3,
+      input.key, `login-approval:${input.approval?.challengeId ?? input.challengeId}`,
+      `login-approvals:user:${input.userId}`, input.challengeId, input.userId, input.email,
+      input.authVersion, input.codeHash, input.action, input.approval?.value ?? '', 'login-approval:');
+    return typeof result === 'string' ? result : null;
+  }
+
+  async approveLoginChallengeStrict(challengeId: string, userId: string, authVersion: number, matchingNumber: number): Promise<boolean> {
+    await this.ensureReady();
+    return await this.client.eval(approveLoginChallengeLua, 1, `login-approval:${challengeId}`,
+      challengeId, userId, authVersion, matchingNumber, new Date().toISOString()) === 1;
+  }
+
+  async consumeLoginApprovalStrict(challengeId: string, userId: string, emailOtpKey?: string): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(consumeLoginApprovalLua, 3, `login-approval:${challengeId}`,
+      `login-approvals:user:${userId}`, emailOtpKey ?? `login-approval:${challengeId}`, challengeId, userId);
+    return typeof result === 'string' ? result : null;
+  }
+
   /** Account-scoped socket budgets survive reconnects and work across API replicas. */
   async consumeBudgetStrict(key: string, limit: number, windowSeconds: number): Promise<boolean> {
     await this.ensureReady();
@@ -326,26 +368,4 @@ export class RedisRepository {
     return result === 1;
   }
 
-  /** Atomically consumes a challenge only when its JSON state is approved. */
-  async consumeApprovedStrict(key: string, nowIso: string): Promise<string | null> {
-    await this.ensureReady();
-    const result = await this.client.eval(
-      `
-        local raw = redis.call('GET', KEYS[1])
-        if not raw then return false end
-        local state = cjson.decode(raw)
-        if state.status ~= 'approved' then return false end
-        if state.expiresAt <= ARGV[1] then
-          redis.call('DEL', KEYS[1])
-          return false
-        end
-        redis.call('DEL', KEYS[1])
-        return raw
-      `,
-      1,
-      key,
-      nowIso,
-    );
-    return typeof result === "string" ? result : null;
-  }
 }
