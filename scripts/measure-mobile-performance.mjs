@@ -10,6 +10,7 @@ import { chromium } from '@playwright/test';
 const directory = path.resolve(process.argv[2] || 'social/dist/e2e');
 const output = path.resolve(process.argv[3] || 'docs/hardening/mobile-performance.json');
 const compressedDelivery = process.argv.includes('--gzip');
+const profiling = process.argv.includes('--profile');
 const server = createServer((req, res) => {
   let file = path.resolve(directory, `.${new URL(req.url, 'http://localhost').pathname}`);
   if (!file.startsWith(`${directory}${path.sep}`)) file = path.join(directory, 'index.html');
@@ -41,27 +42,65 @@ try {
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, message: 'Synthetic measurement', data, errors: [], meta: { hasMore: false, nextCursor: null } }) });
   });
   await page.route('**/socket.io/**', route => route.abort());
-  await page.addInitScript(() => {
-    window.__mobileMetrics = { lcpMs: 0, longTaskMs: 0 };
+  await page.addInitScript(({ profiling }) => {
+    window.__mobileMetrics = { lcpMs: 0, longTaskMs: 0, longTasks: [] };
     new PerformanceObserver(list => { for (const entry of list.getEntries()) window.__mobileMetrics.lcpMs = entry.startTime; }).observe({ type: 'largest-contentful-paint', buffered: true });
-    new PerformanceObserver(list => { for (const entry of list.getEntries()) window.__mobileMetrics.longTaskMs += Math.max(0, entry.duration - 50); }).observe({ type: 'longtask', buffered: true });
-  });
+    new PerformanceObserver(list => { for (const entry of list.getEntries()) {
+      window.__mobileMetrics.longTaskMs += Math.max(0, entry.duration - 50);
+      if (profiling) window.__mobileMetrics.longTasks.push({ startTime: entry.startTime, duration: entry.duration });
+    } }).observe({ type: 'longtask', buffered: true });
+  }, { profiling });
   const cdp = await context.newCDPSession(page);
   await cdp.send('Network.enable'); await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
   await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 200_000, uploadThroughput: 100_000, connectionType: 'cellular4g' });
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  if (profiling) {
+    await cdp.send('Performance.enable');
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.start');
+    await cdp.send('Tracing.start', { categories: 'devtools.timeline,disabled-by-default-devtools.timeline,blink.user_timing,loading', transferMode: 'ReturnAsStream' });
+  }
   const started = performance.now();
   await page.goto(base, { waitUntil: 'networkidle', timeout: 60_000 });
   await page.getByText('Mobile performance fixture content.', { exact: true }).first().waitFor();
-  const metrics = await page.evaluate(() => ({ ...window.__mobileMetrics, fcpMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null, resources: performance.getEntriesByType('resource').filter(entry => /\.(js|css)(\?|$)/.test(entry.name)).map(entry => ({ url: entry.name, encodedBytes: entry.encodedBodySize, transferredBytes: entry.transferSize })) }));
+  const metrics = await page.evaluate(() => ({ ...window.__mobileMetrics, fcpMs: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null, resources: performance.getEntriesByType('resource').filter(entry => /\.(js|css)(\?|$)/.test(entry.name)).map(entry => ({ url: entry.name, encodedBytes: entry.encodedBodySize, transferredBytes: entry.transferSize, startTime: entry.startTime, responseStart: entry.responseStart, responseEnd: entry.responseEnd, duration: entry.duration })) }));
+  const fixtureReadyMs = Math.round(performance.now() - started);
   if (unexpected.length) throw new Error(`Unexpected measurement APIs: ${unexpected.join(', ')}`);
   const assets = metrics.resources.map(resource => { const assetPath = new URL(resource.url).pathname; const original = readFileSync(path.join(directory, assetPath)); return { path: assetPath, bytes: original.length, deliveredBytes: resource.encodedBytes, gzipBytes: gzipSync(original, { level: 5 }).length }; });
   const sum = (extension, key) => assets.filter(asset => asset.path.endsWith(extension)).reduce((total, asset) => total + asset[key], 0);
-  const measured = { javascriptBytes: sum('.js', 'bytes'), stylesheetBytes: sum('.css', 'bytes'), javascriptDeliveredBytes: sum('.js', 'deliveredBytes'), stylesheetDeliveredBytes: sum('.css', 'deliveredBytes'), javascriptGzipBytes: sum('.js', 'gzipBytes'), stylesheetGzipBytes: sum('.css', 'gzipBytes'), fcpMs: metrics.fcpMs, lcpMs: metrics.lcpMs, longTaskBlockingMs: metrics.longTaskMs, fixtureReadyMs: Math.round(performance.now() - started) };
+  const measured = { javascriptBytes: sum('.js', 'bytes'), stylesheetBytes: sum('.css', 'bytes'), javascriptDeliveredBytes: sum('.js', 'deliveredBytes'), stylesheetDeliveredBytes: sum('.css', 'deliveredBytes'), javascriptGzipBytes: sum('.js', 'gzipBytes'), stylesheetGzipBytes: sum('.css', 'gzipBytes'), fcpMs: metrics.fcpMs, lcpMs: metrics.lcpMs, longTaskBlockingMs: metrics.longTaskMs, fixtureReadyMs };
   const budgets = { javascriptGzipBytes: 350 * 1024, stylesheetGzipBytes: 100 * 1024, fcpMs: 2500, lcpMs: 4000, longTaskBlockingMs: 300 };
   const acceptance = Object.fromEntries(Object.entries(budgets).map(([name, max]) => [name, { maximum: max, observed: measured[name], passed: measured[name] !== null && measured[name] <= max }]));
   const report = { generatedAt: new Date().toISOString(), scope: `Cold synthetic authenticated feed; local production assets; 390x844; 150ms latency; 1.6Mbps down; 4x CPU; ${compressedDelivery ? 'gzip level5 test-server delivery, not Nginx runtime acceptance' : 'no gzip delivery'}; no provider timing. Budgets are proposed repository gates, pending owner agreement. One observation is not field percentile data.`, directory, measured, budgets: acceptance, assets };
-  mkdirSync(path.dirname(output), { recursive: true }); writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
+  mkdirSync(path.dirname(output), { recursive: true });
+  if (profiling) {
+    const { metrics: browserMetrics } = await cdp.send('Performance.getMetrics');
+    const { profile } = await cdp.send('Profiler.stop');
+    const traceComplete = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
+    await cdp.send('Tracing.end');
+    const { stream } = await traceComplete;
+    let trace = '';
+    for (;;) {
+      const chunk = await cdp.send('IO.read', { handle: stream });
+      trace += chunk.base64Encoded ? Buffer.from(chunk.data, 'base64').toString('utf8') : chunk.data;
+      if (chunk.eof) break;
+    }
+    await cdp.send('IO.close', { handle: stream });
+    const prefix = output.replace(/\.json$/, '');
+    writeFileSync(`${prefix}.cpuprofile`, JSON.stringify(profile));
+    writeFileSync(`${prefix}.trace.json`, trace);
+    await page.screenshot({ path: `${prefix}.png` });
+    report.diagnostics = {
+      profilingOverhead: true,
+      longTasks: metrics.longTasks,
+      resources: metrics.resources,
+      browserMetrics: Object.fromEntries(browserMetrics.filter(item => /^(TaskDuration|ScriptDuration|LayoutDuration|RecalcStyleDuration|Nodes|LayoutCount|RecalcStyleCount)$/.test(item.name)).map(item => [item.name, item.value])),
+      cpuProfile: `${prefix}.cpuprofile`,
+      trace: `${prefix}.trace.json`,
+      screenshot: `${prefix}.png`,
+    };
+  }
+  writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify({ measured, budgets: acceptance, output }, null, 2));
   if (Object.values(acceptance).some(item => !item.passed)) process.exitCode = 1;
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
