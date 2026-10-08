@@ -12,12 +12,48 @@ import { createTestUser } from "./test-helpers.js";
 
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
+const fixtureUsers: string[] = [];
 
 after(async () => {
   await pool.query("DROP TRIGGER IF EXISTS fail_account_delete ON users");
   await pool.query("DROP FUNCTION IF EXISTS fail_account_delete_fn()");
+  await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [fixtureUsers]);
   await redisRepository.disconnect();
   await pool.end();
+});
+
+test("both account export directions exclude entire deleted and expired text or attachment rows", async () => {
+  const sender = await createTestUser(userRepository);
+  const recipient = await createTestUser(userRepository);
+  fixtureUsers.push(sender.id, recipient.id);
+  const conversations = new ConversationRepository();
+  const messages = new MessageRepository();
+  const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
+  const now = new Date();
+  const visibleIds: string[] = [];
+  const hiddenIds: string[] = [];
+  for (const [index, visibility] of [
+    {},
+    { expiresAt: new Date(now.getTime() + 86_400_000).toISOString() },
+    { expiresAt: now.toISOString() },
+    { expiresAt: new Date(now.getTime() - 1).toISOString() },
+    { deletedAt: now.toISOString() },
+  ].entries()) {
+    const id = randomUUID();
+    await messages.create({ id, conversationId: conversation.id, senderId: sender.id, recipientId: recipient.id,
+      content: index < 2 ? 'Retained visible message' : `Private vanished body ${id}`,
+      mediaUrl: index < 2 ? null : `https://example.test/private-${id}.jpg`,
+      createdAt: now.toISOString(), seenAt: null, ...visibility });
+    (index < 2 ? visibleIds : hiddenIds).push(id);
+  }
+  const accounts = new AccountService(userRepository, redisRepository);
+  for (const [userId, direction] of [[sender.id, 'sentMessages'], [recipient.id, 'receivedMessages']] as const) {
+    const exported = await accounts.exportAccount(userId);
+    const rows = (exported?.content as Record<string, Array<{ id: string }>>)[direction];
+    assert.deepEqual(rows.map(row => row.id).sort(), visibleIds.sort());
+    for (const id of hiddenIds) assert.doesNotMatch(JSON.stringify(exported), new RegExp(id));
+    assert.doesNotMatch(JSON.stringify(exported), /Private vanished body|private-.*\.jpg/);
+  }
 });
 
 test("account export excludes authentication secrets and deletion removes the account", async () => {

@@ -25,8 +25,10 @@ const deviceId = randomUUID();
 const token = jwt.sign({ sub: user.id, role: "user", permissions: [], deviceId }, env.JWT_SECRET, { expiresIn: "5m" });
 const sessionKey = `session:${user.id}:${deviceId}`;
 await redis.setStrict(sessionKey, "active", 300);
+const grievanceTicketIds: string[] = [];
 
 after(async () => {
+  await pool.query("DELETE FROM grievance_tickets WHERE ticket_id = ANY($1::text[])", [grievanceTicketIds]);
   await pool.query("DELETE FROM reports WHERE reporter_id = $1", [user.id]);
   await pool.query("DELETE FROM users WHERE id = $1", [user.id]);
   await redis.del(sessionKey);
@@ -34,6 +36,61 @@ after(async () => {
   await closeAuthenticationDependencies();
   await pool.end();
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+});
+
+async function submitPrivateGrievance(): Promise<Record<string, unknown>> {
+  const response = await fetch(`${baseUrl}/reports/grievance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      category: "privacy_violation",
+      reportedUrl: "https://example.test/private-reported-content",
+      reporterName: "Private Reporter Identity",
+      reporterEmail: "private-reporter@example.test",
+      description: "Private complaint details that must remain inside the moderation queue.",
+    }),
+  });
+  assert.equal(response.status, 201);
+  const envelope = await response.json() as { data: Record<string, unknown> };
+  assert.equal(typeof envelope.data.ticketId, "string");
+  grievanceTicketIds.push(envelope.data.ticketId as string);
+  return envelope.data;
+}
+
+test("public grievance submission returns only the safe receipt fields", async () => {
+  const receipt = await submitPrivateGrievance();
+  assert.deepEqual(Object.keys(receipt).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.doesNotMatch(JSON.stringify(receipt), /Private Reporter|private-reporter|private-reported-content|Private complaint/);
+});
+
+test("public grievance tracking hides identity and officer notes while moderator access retains them", async () => {
+  const receipt = await submitPrivateGrievance();
+  const ticketId = receipt.ticketId as string;
+  const queueUrl = `${baseUrl}/reports/grievances`;
+  assert.equal((await fetch(queueUrl)).status, 401);
+  assert.equal((await fetch(queueUrl, { headers: { Authorization: `Bearer ${token}` } })).status, 403);
+
+  await pool.query("UPDATE users SET role = 'moderator' WHERE id = $1", [user.id]);
+  const update = await fetch(`${baseUrl}/reports/grievance/${ticketId}/status`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "under_review", officerNote: "Internal officer investigation note" }),
+  });
+  assert.equal(update.status, 200);
+  const moderatorQueue = await fetch(queueUrl, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(moderatorQueue.status, 200);
+  const moderatorPayload = await moderatorQueue.json() as { data: Array<Record<string, unknown>> };
+  await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [user.id]);
+  const fullTicket = moderatorPayload.data.find(ticket => ticket.ticketId === ticketId);
+  assert.equal(fullTicket?.reporterName, "Private Reporter Identity");
+  assert.equal(fullTicket?.officerNote, "Internal officer investigation note");
+
+  const tracked = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
+  assert.equal(tracked.status, 200);
+  const trackedPayload = await tracked.json() as { data: Record<string, unknown> };
+  assert.deepEqual(Object.keys(trackedPayload.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.equal(trackedPayload.data.status, "under_review");
+  assert.doesNotMatch(JSON.stringify(trackedPayload.data), /Private Reporter|private-reporter|private-reported-content|Private complaint|Internal officer/);
 });
 
 test("report routes reject anonymous access and keep moderation queue role-restricted", async () => {

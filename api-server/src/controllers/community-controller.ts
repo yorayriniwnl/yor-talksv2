@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { UserRepository } from "../repositories/user-repository.js";
 import { CommunityService } from "../services/community-service.js";
@@ -44,6 +45,7 @@ export class CommunityController {
       const community = await this.communityService.createCommunity({ ...req.body, ownerId });
       return res.status(201).json(createResponse("Community created", this.view(community, ownerId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
       }
@@ -108,6 +110,7 @@ export class CommunityController {
       }
       return res.status(200).json(createResponse("Left community", this.view(community, userId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof Error && error.message === "The owner can't leave their own community") {
         return res.status(403).json(createResponse(error.message, null, {}, ["Owner cannot leave community"]));
       }
@@ -137,6 +140,7 @@ export class CommunityController {
       if (!discussion) return res.status(404).json(createResponse("Community not found", null, {}, ["Not found"]));
       return res.status(201).json(createResponse("Discussion published", await this.discussionView(discussion, userId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
       }
@@ -160,6 +164,7 @@ export class CommunityController {
       if (!discussion) return res.status(404).json(createResponse("Discussion not found", null, {}, ["Not found"]));
       return res.status(200).json(createResponse("Discussion liked", await this.discussionView(discussion, userId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof Error && error.message.startsWith("Join this community")) {
         return res.status(403).json(createResponse("Join the community first", null, {}, [error.message]));
       }

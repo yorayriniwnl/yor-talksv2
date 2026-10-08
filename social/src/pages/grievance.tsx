@@ -92,7 +92,7 @@ export default function GrievancePortal() {
   const handleTrackTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trackTicketId.trim()) {
-      setTrackError('Enter the ticket ID from your acknowledgement email.');
+      setTrackError('Enter the ticket ID from your submission receipt.');
       toast.error('Add a ticket ID to begin tracking.');
       return;
     }
@@ -121,7 +121,7 @@ export default function GrievancePortal() {
           <Scale className="w-3.5 h-3.5" /> Trust, safety & grievance intake
         </div>
         <h1 className="font-display font-black text-3xl lg:text-4xl text-foreground tracking-tight">
-          <span id="grievance-title">Grievance Redressal & Trust Portal 🇮🇳</span>
+          <span id="grievance-title">Trust & Safety Report Portal</span>
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
           Submit a report to the Yor Talks trust queue. You will receive a ticket ID, status updates, and a human-review path.
@@ -173,10 +173,10 @@ export default function GrievancePortal() {
                 <span className="text-muted-foreground">Status:</span>
                 <span className="font-bold text-emerald-400 uppercase">{submittedTicket.status}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Statutory SLA Deadline:</span>
+              {submittedTicket.slaDeadline && <div className="flex justify-between">
+                <span className="text-muted-foreground">Operational review target:</span>
                 <span className="text-foreground">{new Date(submittedTicket.slaDeadline).toLocaleDateString()}</span>
-              </div>
+              </div>}
             </div>
 
             <Button
@@ -304,7 +304,7 @@ export default function GrievancePortal() {
                 aria-invalid={Boolean(trackError)}
                 aria-describedby={trackError ? 'trackTicketId-error' : undefined}
                 autoComplete="off"
-                placeholder="e.g. YT-GRV-849201"
+                placeholder="e.g. YT-GRV-849201ABCD"
                 className="min-w-0 flex-1 rounded-2xl surface-2 border-border/50 text-xs h-11"
               />
               <Button
@@ -331,25 +331,25 @@ export default function GrievancePortal() {
                   {trackedTicket.status.replace('_', ' ')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{trackedTicket.officerNote || 'A reviewer has not added a note yet. Your ticket remains in the trust queue.'}</p>
+              <p className="text-xs text-muted-foreground">Use this receipt to follow your ticket status. Case evidence and reviewer notes remain private.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
-                <span>Resolution SLA: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>
+                {trackedTicket.slaDeadline && <span>Operational review target: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>}
               </div>
             </motion.div>
           )}
         </div>
       )}
 
-      {/* Statutory Disclosures */}
+      {/* Operator contacts */}
       <div className="mt-12 p-6 rounded-3xl surface-1 border border-border/30 text-xs text-muted-foreground space-y-2">
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
-          <Building className="w-4 h-4 text-primary" /> Statutory Grievance Redressal Officer
+          <Building className="w-4 h-4 text-primary" /> Trust & Safety Contact
         </h4>
         <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
         <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>
         <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured in this development build.'}</p>
-        <p><strong>Handling:</strong> Tickets are persisted, assigned for review, and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
+        <p><strong>Handling:</strong> Tickets are stored for review and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
       </div>
     </div>
   );

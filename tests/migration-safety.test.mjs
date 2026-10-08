@@ -34,3 +34,12 @@ test('premium story migration runs after the base story interaction tables exist
   assert.ok(premiumStory >= 0);
   assert.ok(baseStoryInteraction < premiumStory);
 });
+
+test('private eligibility migration shares the release transaction and cannot backfill legacy adults', async () => {
+  const release = await readFile(new URL('../lib/db/scripts/migrate-release.mjs', import.meta.url), 'utf8');
+  assert.ok(release.includes('await migrateEligibility(client)'));
+  assert.ok(release.indexOf('await migrateEligibility(client)') < release.indexOf("INSERT INTO release_schema_versions"));
+  const eligibility = await readFile(new URL('../lib/db/scripts/migrate-eligibility.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(eligibility, /new\s+(?:pg\.)?(?:Client|Pool)|query\(['"](?:BEGIN|COMMIT)/);
+  assert.doesNotMatch(eligibility, /INSERT\s+INTO\s+eligibility_assessments[^;]*SELECT[^;]*age_confirmed_at/i);
+});

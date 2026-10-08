@@ -3,8 +3,19 @@ import { pool } from '@workspace/db';
 import { BackgroundJobRepository, type BackgroundJob } from '../repositories/background-job-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
+import { MediaService } from '../services/media-service.js';
 
 export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
+
+/** Unlike a finite account cleanup request, this job represents a permanent
+ * sweep. Recover its terminal state without disturbing a live worker lease. */
+export async function ensureMediaCleanupLoop(): Promise<void> {
+  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
+    VALUES($1,'media_cleanup','media:cleanup:loop','{}',now())
+    ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
+      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
+    WHERE background_jobs.kind='media_cleanup' AND background_jobs.status IN ('complete','dead')`, [randomUUID()]);
+}
 
 export async function cleanAccountSessions(job: BackgroundJob, redis: RedisRepository): Promise<void> {
   const userId = job.payload.userId;
@@ -20,8 +31,13 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
   const jobs = new BackgroundJobRepository();
   const redis = new RedisRepository();
   const workerId = `lifecycle:${randomUUID()}`;
+  const media = new MediaService();
+  await ensureMediaCleanupLoop();
+  let nextMediaSweepCheck = Date.now() + 60_000;
   const handlers: Record<string, LifecycleHandler> = {
-    account_cleanup: job => cleanAccountSessions(job, redis), ...additionalHandlers,
+    account_cleanup: job => cleanAccountSessions(job, redis),
+    media_cleanup: async () => { await media.cleanup(); return { retryAfterSeconds: 60 }; },
+    ...additionalHandlers,
   };
   await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
   let stopping = false, busy = false, healthy = true;
@@ -31,6 +47,10 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
     if (stopping || busy) return;
     busy = true;
     try {
+      if (Date.now() >= nextMediaSweepCheck) {
+        await ensureMediaCleanupLoop();
+        nextMediaSweepCheck = Date.now() + 60_000;
+      }
       await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
       const job = await jobs.claim(Object.keys(handlers));
       healthy = true;

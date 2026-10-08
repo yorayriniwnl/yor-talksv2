@@ -3,13 +3,14 @@ import { z } from "zod";
 export const messageSchema = z.object({
   recipientId: z.string().uuid().optional(),
   conversationId: z.string().uuid().optional(),
-  content: z.string().trim().min(1).max(4000),
+  content: z.string().trim().max(4000).default(""),
+  mediaId: z.string().uuid().optional(),
   replyToId: z.string().uuid().optional(),
   textStyleId: z.enum(["default", "mono", "rounded"]).optional(),
   idempotencyKey: z.string().uuid().optional(),
 }).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId), {
   message: "Provide exactly one of recipientId or conversationId",
-});
+}).refine(value => Boolean(value.content || value.mediaId), { message: "Text or approved media is required" });
 
 export const conversationMessagesQuerySchema = z.object({
   direction: z.enum(["latest", "older", "newer"]).optional(),

@@ -2,9 +2,20 @@
 
 This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
-The [latest 31 August readiness report](PUBLIC_BETA_CONTINUATION_2026-08-31.md) records
-passing local checks and the unresolved infrastructure/live-verification gates.
-Do not interpret a pushed commit or a liveness response as release approval.
+**Current release decision: not ready for the requested global, three-age-group launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) records unresolved sign-in, privacy, shared-history deletion, monitoring and age-policy defects. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate those countries. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
+
+The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
+current media controls, source-specific repository checks and the remaining
+provider/runtime acceptance gates. CI requires `pnpm audit --prod`, actual decoder
+tests, production image builds and the complete container smoke test. Do not
+interpret synthetic provider fixtures, a pushed commit or liveness as live release approval.
+
+The [6 October verification report](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md)
+lists all changed files, commands and limitations. Production image builds and
+container startup/smoke have passed in CI for the recorded revisions; this
+Windows host has no Docker Engine. Require a passing run for the revision being
+deployed. Legacy URL-only objects are not automatically approved or deleted:
+their retained account-deletion holds require provider ownership review.
 
 ## 1. Prepare the host and secrets
 
@@ -34,9 +45,11 @@ sudo chmod 0640 /etc/yor-talks/alertmanager-webhook-password
 
 The frontend provider switches are build-time `VITE_*` values wired from the corresponding backend flags; `pnpm production-config:check` guards this mapping. Keep payments, live rooms, RTC and Web Push disabled until provider acceptance is complete. Web Push additionally needs VAPID keys and obtains the public key from the authenticated API; the frontend does not embed the private key. RTC calls require an authenticated TURN service and short-lived TURN credentials; do not enable them with only the public STUN example.
 
-Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. The app's production Nginx serves the frontend; it does not terminate public TLS or proxy the API.
+Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. Production Nginx serves the frontend and provides same-origin API/WebSocket proxy routes; public TLS is terminated at the external proxy. The recommended separate API hostname below reaches the API directly through one proxy. The alternative Caddy → Nginx → API route has two hops and currently aggregates client IP limits at the proxy; resolve that topology's trusted-client identity and verify distinct clients before selecting it for public traffic.
 
 ## 2. Configure the external launch dependencies
+
+New uploaded media uses the implemented [server-owned lifecycle](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Before enabling this core launch path, apply its additive migration, configure three signed/authenticated Cloudinary presets and Gemini media moderation, and verify FFmpeg/FFprobe in the API container. Presign uses a bounded server upload unless authenticated provider account ceilings prove direct-upload limits for every resource endpoint. Playback and posters use expiring API delivery grants with approval/hash checks; set `MEDIA_DELIVERY_ORIGIN=https://<api-host>` for the separate API domain. An OpenAI-only text provider and green core `/readyz` are insufficient: check `details.media.ready` and complete real-provider acceptance. No production upload or provider configuration was performed by the implementation session. Keep the optional payment/live/push/RTC flags disabled.
 
 - Point frontend and API DNS names at a host Caddy/reverse proxy. Start with [ops/Caddyfile.example](../ops/Caddyfile.example): frontend hostname to `127.0.0.1:${WEB_PORT:-8080}`, API hostname to `127.0.0.1:${API_HOST_PORT:-4000}`. Caddy manages HTTPS and forwards WebSocket upgrades automatically. Set `CLIENT_ORIGIN`/`CORS_ORIGINS` to the exact frontend `https://` origin, `VITE_API_BASE_URL=https://<api-host>/api`, and `VITE_REALTIME_URL=https://<api-host>`; allow inbound 80/443 only at the proxy and do not expose API/Postgres/Redis host ports.
 - Verify the Resend sender domain and set `EMAIL_FROM`. Registration is fail-closed when production email delivery is unavailable.
@@ -45,7 +58,7 @@ Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (includ
 - Generate separate Web Push VAPID keys only when launching push: `pnpm --filter @workspace/api-server exec web-push generate-vapid-keys`. Set the public/private values and valid `mailto:` subject; never place the private key in a `VITE_*` variable.
 - Configure LiveKit with a `wss://` endpoint, scoped API credentials, firewall reachability and TURN where required. Keep live rooms/calls disabled until reconnect, safety and capacity acceptance is complete.
 - In Razorpay, register `https://<api-host>/api/economy/webhooks/razorpay` and set a unique webhook secret separate from the API key secret. Keep payments off until signed success/failure, duplicate/retried webhook delivery and provider-to-ledger settlement are verified.
-- Production upload and presign remain disabled because there is no configured server-side media moderation/review path; Cloudinary credentials alone do not enable them. Production HLS returns `501` because no transcoder/packager is configured. To enable either feature, integrate and acceptance-test server-side moderation, signed upload completion/ownership checks, deletion propagation, and a managed HLS transcoder/CDN before changing the feature gate. Do not accept unmoderated client-direct uploads.
+- Production upload and presign use the server-owned lifecycle and fail closed when storage, decoder, signed presets or Gemini media moderation are unavailable. Configure and acceptance-test the implemented path; Cloudinary credentials alone do not enable media. HLS remains 501 until a transcoder/packager is implemented.
 - Keep payments, live rooms, web push and RTC calls disabled in both API and frontend flags for this beta. Enable them only in a separately reviewed rollout after provider, safety and operational acceptance tests; credentials alone do not enable a feature.
 - Decide whether this deployment is open globally or a closed beta. For a closed beta, set `ALLOWED_EMAIL_DOMAINS` and document the approved domains.
 - Publish reviewed Privacy, Terms, Community Guidelines, copyright/takedown process, retention schedule, support address and the appointed grievance officer’s name/contact. The in-app pages intentionally identify the legal fields that are still unconfigured.

@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeModal';
 import { sounds } from '@/lib/sound';
 import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { toast } from 'sonner';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
@@ -42,6 +44,7 @@ function CreateListingDialog() {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
   const [condition, setCondition] = useState<typeof PRODUCT_CONDITIONS[number]>('used');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,13 +60,14 @@ function CreateListingDialog() {
         // Keep the client and API contract in sync with the two-decimal
         // currency column used by the marketplace.
         price: Math.round(Number(price) * 100) / 100,
-        images: [`https://picsum.photos/seed/${encodeURIComponent(title)}/500/500`],
+        mediaIds: (await Promise.all(imageFiles.map(file => uploadApprovedMedia(file, 'product')))).map(media => media.mediaId),
         category,
         condition,
         contentRating,
       });
       setOpen(false);
       setTitle(''); setDescription(''); setPrice(''); setContentRating(DEFAULT_CONTENT_RATING);
+      setImageFiles([]);
     } catch (err: any) {
       setError(err.message || 'Failed to create listing');
     }
@@ -108,8 +112,9 @@ function CreateListingDialog() {
             </select>
           </div>
           <ContentRatingSelect id="product-content-rating" value={contentRating} onChange={setContentRating} />
+          <MediaImageField id="product-images" label="Product photos" files={imageFiles} onChange={setImageFiles} multiple disabled={loading} />
           <DialogFooter>
-            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price} className="rounded-xl font-bold text-xs px-6 bg-primary">
+            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price || !imageFiles.length} className="rounded-xl font-bold text-xs px-6 bg-primary">
               {loading ? 'Listing…' : 'Post Listing'}
             </Button>
           </DialogFooter>

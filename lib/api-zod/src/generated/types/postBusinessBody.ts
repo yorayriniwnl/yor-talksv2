@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostBusinessBody = { [key: string]: unknown };
+export type PostBusinessBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  logoMediaId?: string;
+  [key: string]: unknown;
+ };

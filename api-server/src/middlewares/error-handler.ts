@@ -6,10 +6,14 @@ import { env } from "../config/env.js";
 import { InvalidFileTypeError } from "./upload.js";
 import { ContentPolicyViolationError } from "../services/content-policy-service.js";
 import { ModerationUnavailableError } from "../services/ai-service.js";
+import { MediaLifecycleError } from "../services/media-service.js";
 
 export const errorHandler = (err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (res.headersSent) {
     return next(err);
+  }
+  if (err instanceof MediaLifecycleError) {
+    return res.status(err.status).json(createResponse(err.message, null, {}, [err.code]));
   }
   if (err instanceof multer.MulterError || err instanceof InvalidFileTypeError) {
     return res.status(400).json(createResponse("Invalid file upload", null, {}, [err.message]));

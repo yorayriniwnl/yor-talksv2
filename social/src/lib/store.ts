@@ -175,6 +175,11 @@ export type Message = {
   conversationId: string;
   senderId: string;
   content: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'audio' | null;
+  mediaDuration?: number | null;
+  mediaLegacy?: boolean;
   textStyleId?: 'default' | 'mono' | 'rounded';
   createdAt: string;
   read: boolean;
@@ -508,7 +513,7 @@ function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
     id: c.id,
     name: c.name || 'Community',
     description: c.description || '',
-    coverUrl: `https://picsum.photos/seed/${c.id}/600/300`,
+    coverUrl: c.coverUrl || '',
     members: c.memberCount ?? memberIds.length,
     isMember: c.isMember ?? Boolean(currentUserId && memberIds.includes(currentUserId)),
     visibility: c.visibility ?? 'public',
@@ -523,6 +528,11 @@ function mapMessage(m: BackendMessage): Message {
     conversationId: m.conversationId,
     senderId: m.senderId,
     content: m.content || '',
+    mediaId: m.mediaId ?? null,
+    mediaUrl: m.mediaUrl ?? null,
+    mediaType: m.mediaType ?? null,
+    mediaDuration: m.mediaDuration ?? null,
+    mediaLegacy: m.mediaLegacy === true,
     textStyleId: m.textStyleId ?? 'default',
     createdAt: m.createdAt ? utcTimestamp(m.createdAt) : new Date().toISOString(),
     read: Boolean(m.seenAt !== null && m.seenAt !== undefined),
@@ -574,7 +584,7 @@ function mapArticle(a: BackendArticle): Article {
     title: a.title || 'Untitled Article',
     excerpt: a.excerpt || '',
     content: a.content || '',
-    coverUrl: a.coverUrl || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
+    coverUrl: a.coverUrl || '',
     readTime: readTimeNum,
     claps: a.claps ?? 0,
     createdAt: a.createdAt || new Date().toISOString(),
@@ -692,6 +702,7 @@ function mapShowcase(showcase: BackendShowcase): Showcase {
 export type MessageDraft = {
   message: string;
   imageAttachment: string;
+  imageFiles?: File[];
   textStyleId?: 'default' | 'mono' | 'rounded';
   replyTarget: { messageId: string; senderName: string; excerpt: string } | null;
   sending?: boolean;
@@ -775,7 +786,7 @@ interface AppState {
   syncPostFromBackend: (post: BackendPost) => void;
   likePost: (postId: string) => Promise<void>;
   addPost: (content: string, media?: string[], poll?: Post['poll'], contentRating?: ContentRating, contentCategory?: ContentCategory, audience?: Post['audience'], distributionMode?: Post['distributionMode']) => Promise<void>;
-  updateProfile?: (updates: { displayName?: string; bio?: string; avatarUrl?: string }) => void;
+  updateProfile: (updates: { displayName?: string; bio?: string; avatarMediaId?: string }) => Promise<void>;
   updatePremiumProfile: (updates: Partial<PremiumProfileSelection>) => Promise<void>;
   pinPost: (postId: string) => Promise<void>;
   unpinPost: (postId: string) => Promise<void>;
@@ -784,7 +795,7 @@ interface AppState {
   toggleRepost: (postId: string) => Promise<void>;
 
   loadCommunities: () => Promise<void>;
-  createCommunity: (name: string, slug: string, description: string, contentRating: ContentRating) => Promise<void>;
+  createCommunity: (name: string, slug: string, description: string, contentRating: ContentRating, coverMediaId?: string) => Promise<void>;
   toggleCommunityMembership: (communityId: string) => Promise<void>;
 
   loadNotifications: () => Promise<void>;
@@ -796,7 +807,7 @@ interface AppState {
 
   addProfileComment: (targetUserId: string, content: string) => Promise<void>;
   deleteProfileComment: (commentId: string, targetUserId: string) => Promise<void>;
-  addShowcase: (showcase: Omit<Showcase, 'id'>) => Promise<void>;
+  addShowcase: (showcase: Omit<Showcase, 'id' | 'customImageUrl'> & { customImageMediaId?: string }) => Promise<void>;
   removeShowcase: (showcaseId: string, userId: string) => Promise<void>;
   loadProfileInteractions: (userId: string) => Promise<void>;
 
@@ -806,8 +817,8 @@ interface AppState {
   loadOlderConversationMessages: (conversationId: string) => Promise<number>;
   syncConversationMessages: (conversationId: string) => Promise<void>;
   markDirectMessageSeen: (messageId: string) => Promise<void>;
-  sendDirectMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId']) => Promise<void>;
+  sendDirectMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId'], attachment?: { mediaId: string }) => Promise<void>;
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: Message['textStyleId'], attachment?: { mediaId: string }) => Promise<void>;
   createGroupChat: (memberIds: string[], title: string) => Promise<string>;
   setConversationVanishMode: (conversationId: string, enabled: boolean) => Promise<void>;
   editDirectMessage: (messageId: string, content: string) => Promise<void>;
@@ -824,28 +835,28 @@ interface AppState {
 
   votePoll: (postId: string, optionId: string) => Promise<void>;
   loadEvents: () => Promise<void>;
-  createEvent: (input: { title: string; description: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline: boolean; contentRating: ContentRating }) => Promise<void>;
+  createEvent: (input: Parameters<typeof api.createEvent>[0]) => Promise<void>;
   toggleEventRsvp: (eventId: string, status: 'going' | 'interested') => Promise<void>;
 
   loadProducts: () => Promise<void>;
-  createProduct: (input: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used'; contentRating: ContentRating }) => Promise<void>;
+  createProduct: (input: Parameters<typeof api.createProduct>[0]) => Promise<void>;
 
   loadArticles: () => Promise<void>;
-  createArticle: (input: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  createArticle: (input: Parameters<typeof api.createArticle>[0]) => Promise<void>;
   clapArticle: (articleId: string) => Promise<void>;
 
   loadVideos: () => Promise<void>;
-  createVideo: (input: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  createVideo: (input: Parameters<typeof api.createVideo>[0]) => Promise<void>;
   likeVideo: (videoId: string) => Promise<boolean>;
   toggleVideoBookmark: (videoId: string) => Promise<boolean>;
 
-  addStory: (story: Pick<Story, 'type' | 'mediaUrl' | 'textContent' | 'backgroundGradient'> & { storyFontId?: Story['storyFontId']; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: Story['publishMode']; durationHours?: number; priority?: boolean; audience?: Story['audience']; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; poll?: StoryPollInput; contentCategory: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  addStory: (story: Parameters<typeof api.createStory>[0]) => Promise<void>;
   viewStory: (storyId: string) => Promise<void>;
   reactToStory: (storyId: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => Promise<void>;
   voteStoryPoll: (storyId: string, optionId: string) => Promise<void>;
 
   loadStreams: () => Promise<void>;
-  createStream: (input: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) => Promise<void>;
+  createStream: (input: Parameters<typeof api.createStream>[0]) => Promise<void>;
   setStreamStatus: (streamId: string, status: 'scheduled' | 'live' | 'ended') => Promise<void>;
   updateContentFilter: (contentFilter: ContentRating) => Promise<void>;
   updateStoryViewMode: (storyViewMode: 'identified' | 'private') => Promise<void>;
@@ -967,8 +978,8 @@ function shouldShowStoryReactionToast(key: string): boolean {
 }
 const pendingMessageIdempotencyKeys = new Map<string, string>();
 
-function getPendingMessageKey(userId: string, destination: string, content: string, replyToId?: string): { fingerprint: string; key: string } {
-  const fingerprint = JSON.stringify([userId, destination, content, replyToId ?? null]);
+function getPendingMessageKey(userId: string, destination: string, content: string, replyToId?: string, mediaId?: string): { fingerprint: string; key: string } {
+  const fingerprint = JSON.stringify([userId, destination, content, replyToId ?? null, mediaId ?? null]);
   let key = pendingMessageIdempotencyKeys.get(fingerprint);
   if (!key) {
     if (pendingMessageIdempotencyKeys.size >= 100) {
@@ -1553,7 +1564,7 @@ export const useAppStore = create<AppState>()(
         const updated = await api.updateProfile({
           ...(updates.displayName !== undefined ? { fullName: updates.displayName } : {}),
           ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
-          ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+          ...(updates.avatarMediaId !== undefined ? { avatarMediaId: updates.avatarMediaId } : {}),
         });
         const mapped = mapOwnProfile(updated, get().currentUser);
         set((state) => ({
@@ -1577,7 +1588,7 @@ export const useAppStore = create<AppState>()(
           return;
         }
         try {
-          const created = await api.createPost({ content, images: media, audience, distributionMode, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
+          const created = await api.createPost({ content, mediaIds: media, audience, distributionMode, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts], feedPostIds: [created.id, ...state.feedPostIds] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
@@ -1647,11 +1658,11 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      createCommunity: async (name, slug, description, contentRating) => {
+      createCommunity: async (name, slug, description, contentRating, coverMediaId) => {
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) return;
         try {
-          const created = await api.createCommunity({ name, slug, description, contentRating });
+          const created = await api.createCommunity({ name, slug, description, contentRating, coverMediaId });
           set((state) => ({ communities: [mapCommunity(created, currentUserId), ...state.communities] }));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : 'Could not create the community');
@@ -1817,12 +1828,12 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendDirectMessage: async (recipientId, content, replyToId, textStyleId) => {
+      sendDirectMessage: async (recipientId, content, replyToId, textStyleId, attachment) => {
         const userId = get().currentUser?.id ?? '';
-        const pending = getPendingMessageKey(userId, `user:${recipientId}`, content, replyToId);
+        const pending = getPendingMessageKey(userId, `user:${recipientId}`, content, replyToId, attachment?.mediaId);
         try {
           const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
-          const created = await api.sendMessage(recipientId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key);
+          const created = await api.sendMessage(recipientId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key, attachment);
           pendingMessageIdempotencyKeys.delete(pending.fingerprint);
           const newMsg = mapMessage(created);
           set((state) => {
@@ -1838,12 +1849,12 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      sendMessageToConversation: async (conversationId, content, replyToId, textStyleId) => {
+      sendMessageToConversation: async (conversationId, content, replyToId, textStyleId, attachment) => {
         const userId = get().currentUser?.id ?? '';
-        const pending = getPendingMessageKey(userId, `conversation:${conversationId}`, content, replyToId);
+        const pending = getPendingMessageKey(userId, `conversation:${conversationId}`, content, replyToId, attachment?.mediaId);
         try {
           const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
-          const created = await api.sendMessageToConversation(conversationId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key);
+          const created = await api.sendMessageToConversation(conversationId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key, attachment);
           pendingMessageIdempotencyKeys.delete(pending.fingerprint);
           const newMsg = mapMessage(created);
           set((state) => {
@@ -2223,44 +2234,15 @@ export const useAppStore = create<AppState>()(
 
       addStory: async (story) => {
         const uid = get().currentUser?.id;
-        if (!uid) return;
-        const optimisticId = `story-${Date.now()}`;
-        const newStory: Story = {
-          id: optimisticId,
-          authorId: uid,
-          mediaUrl: story.mediaUrl,
-          type: story.type,
-          textContent: story.textContent,
-          backgroundGradient: story.backgroundGradient,
-          storyFontId: story.storyFontId ?? 'default',
-          storyTextStyle: story.storyTextStyle ?? DEFAULT_STORY_TEXT_STYLE,
-          viewed: false,
-          createdAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 86400000).toISOString(),
-          viewerIds: [],
-          reactions: [],
-          isHighlight: Boolean(story.isHighlight),
-          highlightTitle: story.highlightTitle,
-          highlightId: story.highlightId,
-          publishMode: story.publishMode,
-          audience: story.audience ?? 'followers',
-          poll: story.poll ? {
-            question: story.poll.question,
-            options: story.poll.options.map((option, index) => ({ id: `optimistic-story-poll-${index}`, ...option, votes: 0 })),
-            totalVotes: 0,
-          } : undefined,
-          contentCategory: story.contentCategory,
-          contentRating: story.contentRating ?? DEFAULT_CONTENT_RATING,
-        };
-        set((state) => ({ stories: [newStory, ...state.stories] }));
+        if (!uid) throw new Error('Sign in before publishing a Story.');
         try {
           const created = await api.createStory({
             ...story,
             ...(story.poll ? { poll: { question: story.poll.question, options: story.poll.options.map(({ text }) => ({ text })) } } : {}),
           });
-          set((state) => ({ stories: state.stories.map((item) => item.id === optimisticId ? mapStory(created, uid) : item) }));
+          if (get().currentUser?.id !== uid) return;
+          set((state) => ({ stories: [mapStory(created, uid), ...state.stories] }));
         } catch (error) {
-          set((state) => ({ stories: state.stories.filter((item) => item.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not publish the story');
           throw error;
         }
@@ -2351,25 +2333,12 @@ export const useAppStore = create<AppState>()(
 
       createArticle: async (input) => {
         const uid = get().currentUser?.id;
-        if (!uid) return;
-        const optimisticId = `art-${Date.now()}`;
-        const newArticle: Article = {
-          ...input,
-          id: optimisticId,
-          authorId: uid,
-          readTime: input.readTime || 5,
-          claps: 0,
-          createdAt: new Date().toISOString(),
-          savedByMe: false,
-          contentCategory: input.contentCategory,
-          contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
-        };
-        set((state) => ({ articles: [newArticle, ...state.articles] }));
+        if (!uid) throw new Error('Sign in before publishing an article.');
         try {
           const created = await api.createArticle(input);
-          set((state) => ({ articles: state.articles.map((article) => article.id === optimisticId ? mapArticle(created) : article) }));
+          if (get().currentUser?.id !== uid) return;
+          set((state) => ({ articles: [mapArticle(created), ...state.articles] }));
         } catch (error) {
-          set((state) => ({ articles: state.articles.filter((article) => article.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not publish the article');
           throw error;
         }
@@ -2407,24 +2376,12 @@ export const useAppStore = create<AppState>()(
 
       createVideo: async (input) => {
         const uid = get().currentUser?.id;
-        if (!uid) return;
-        const optimisticId = `vid-${Date.now()}`;
-        const newVideo: Video = {
-          ...input,
-          id: optimisticId,
-          authorId: uid,
-          views: 0,
-          likes: 0,
-          createdAt: new Date().toISOString(),
-          contentCategory: input.contentCategory,
-          contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
-        };
-        set((state) => ({ videos: [newVideo, ...state.videos], videosLoaded: true, videosError: null }));
+        if (!uid) throw new Error('Sign in before publishing a video.');
         try {
           const created = await api.createVideo(input);
-          set((state) => ({ videos: state.videos.map((video) => video.id === optimisticId ? mapVideo(created) : video) }));
+          if (get().currentUser?.id !== uid) return;
+          set((state) => ({ videos: [mapVideo(created), ...state.videos], videosLoaded: true, videosError: null }));
         } catch (error) {
-          set((state) => ({ videos: state.videos.filter((video) => video.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not publish the video');
           throw error;
         }
@@ -2470,23 +2427,12 @@ export const useAppStore = create<AppState>()(
 
       createStream: async (input) => {
         const uid = get().currentUser?.id;
-        if (!uid) return;
-        const optimisticId = `stream-${Date.now()}`;
-        const newStream: LiveStream = {
-          ...input,
-          id: optimisticId,
-          hostId: uid,
-          status: 'scheduled',
-          viewers: 0,
-          guestIds: [],
-          contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
-        };
-        set((state) => ({ liveStreams: [newStream, ...state.liveStreams] }));
+        if (!uid) throw new Error('Sign in before scheduling a live room.');
         try {
           const created = await api.createStream(input);
-          set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === optimisticId ? mapLiveStream(created) : stream) }));
+          if (get().currentUser?.id !== uid) return;
+          set((state) => ({ liveStreams: [mapLiveStream(created), ...state.liveStreams] }));
         } catch (error) {
-          set((state) => ({ liveStreams: state.liveStreams.filter((stream) => stream.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not schedule the live room');
           throw error;
         }

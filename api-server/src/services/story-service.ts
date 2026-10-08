@@ -1,3 +1,5 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
+import { MediaLifecycleError } from "./media-service.js";
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
@@ -38,7 +40,7 @@ export class StoryService {
 
   async createStory(input: {
     authorId: string;
-    mediaUrl: string;
+    mediaId?: string;
     type: string;
     textContent?: string;
     backgroundGradient?: string;
@@ -57,6 +59,8 @@ export class StoryService {
     contentRating?: StoryRecord["contentRating"];
     poll?: { question: string; options: Array<{ text: string }> };
   }): Promise<StoryRecord> {
+    rejectRawMedia(input, ["mediaUrl"]);
+    if (!["image", "video", "text", "voice"].includes(input.type) || (input.type !== "text" && !input.mediaId) || (input.type === "text" && (input.mediaId || !input.textContent?.trim()))) throw new MediaLifecycleError("Story media does not match its type", 400, "invalid_story_media");
     const audience = (input.audience ?? "followers") as AudienceKind;
     const advancedAudience = ["selected_people", "everyone_except", "custom"].includes(audience);
     const snapshot = typeof this.entitlementService.getSnapshot === 'function' ? await this.entitlementService.getSnapshot(input.authorId) : null;
@@ -108,7 +112,7 @@ export class StoryService {
     const story: StoryRecord = {
       id: randomUUID(),
       authorId: input.authorId,
-      mediaUrl: input.mediaUrl,
+      mediaUrl: "",
       type: input.type,
       textContent: input.textContent || null,
       backgroundGradient: input.backgroundGradient || null,
@@ -134,11 +138,12 @@ export class StoryService {
       question: input.poll.question.trim(),
       options: input.poll.options.map((option, position) => ({ id: randomUUID(), text: option.text.trim(), position })),
     } : undefined;
-    const created = await this.storyRepository.create(story, normalizedPoll, {
+    const kind = input.type === "voice" ? "audio" : input.type === "video" ? "video" : "image";
+    const created = await withApprovedMedia(input.authorId, mediaBinding(input.mediaId, "story", "mediaUrl", kind), { type: "stories", id: story.id }, media => this.storyRepository.create({ ...story, mediaUrl: media.mediaUrl?.[0]?.url ?? "" }, normalizedPoll, {
       memberIds,
       exclusionIds,
       highlightId: input.highlightId,
-    });
+    }));
     return this.hydrateStory(created, input.authorId);
   }
 
@@ -146,10 +151,11 @@ export class StoryService {
     return this.storyRepository.listHighlights(ownerId);
   }
 
-  async createHighlight(ownerId: string, title: string, coverUrl?: string): Promise<HighlightRecord> {
+  async createHighlight(ownerId: string, title: string, coverMediaId?: string): Promise<HighlightRecord> {
     const normalizedTitle = title.trim();
     if (!normalizedTitle) throw new Error("Highlight title is required");
-    return this.storyRepository.createHighlight(ownerId, normalizedTitle, coverUrl?.trim() || undefined);
+    const id = randomUUID();
+    return withApprovedMedia(ownerId, mediaBinding(coverMediaId, "highlight", "coverUrl", "image"), { type: "highlights", id }, media => this.storyRepository.createHighlight(ownerId, normalizedTitle, media.coverUrl?.[0]?.url, id));
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {

@@ -15,11 +15,384 @@ export interface ApiEnvelope {
   meta?: ApiEnvelopeMeta;
 }
 
+export type MediaPresignRequestMimeType = typeof MediaPresignRequestMimeType[keyof typeof MediaPresignRequestMimeType];
+
+
+export const MediaPresignRequestMimeType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'video/mp4': 'video/mp4',
+  'video/webm': 'video/webm',
+  'audio/mpeg': 'audio/mpeg',
+  'audio/wav': 'audio/wav',
+  'audio/webm': 'audio/webm',
+  'audio/ogg': 'audio/ogg',
+} as const;
+
+export type MediaPresignRequestPurpose = typeof MediaPresignRequestPurpose[keyof typeof MediaPresignRequestPurpose];
+
+
+export const MediaPresignRequestPurpose = {
+  avatar: 'avatar',
+  post: 'post',
+  comment: 'comment',
+  video_comment: 'video_comment',
+  message: 'message',
+  story: 'story',
+  video: 'video',
+  product: 'product',
+  article: 'article',
+  event: 'event',
+  live_stream: 'live_stream',
+  broadcast_channel: 'broadcast_channel',
+  highlight: 'highlight',
+  showcase: 'showcase',
+  business: 'business',
+  community: 'community',
+} as const;
+
+export interface MediaPresignRequest {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  filename: string;
+  mimeType: MediaPresignRequestMimeType;
+  /**
+     * Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side.
+     * @minimum 1
+     * @maximum 10485760
+     */
+  size: number;
+  purpose: MediaPresignRequestPurpose;
+}
+
+export interface MediaFinalizeRequest { [key: string]: unknown }
+
+export type MediaReservationPurpose = typeof MediaReservationPurpose[keyof typeof MediaReservationPurpose];
+
+
+export const MediaReservationPurpose = {
+  avatar: 'avatar',
+  post: 'post',
+  comment: 'comment',
+  video_comment: 'video_comment',
+  message: 'message',
+  story: 'story',
+  video: 'video',
+  product: 'product',
+  article: 'article',
+  event: 'event',
+  live_stream: 'live_stream',
+  broadcast_channel: 'broadcast_channel',
+  highlight: 'highlight',
+  showcase: 'showcase',
+  business: 'business',
+  community: 'community',
+} as const;
+
+export type MediaReservationMimeType = typeof MediaReservationMimeType[keyof typeof MediaReservationMimeType];
+
+
+export const MediaReservationMimeType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'video/mp4': 'video/mp4',
+  'video/webm': 'video/webm',
+  'audio/mpeg': 'audio/mpeg',
+  'audio/wav': 'audio/wav',
+  'audio/webm': 'audio/webm',
+  'audio/ogg': 'audio/ogg',
+} as const;
+
+export type MediaReservationMode = typeof MediaReservationMode[keyof typeof MediaReservationMode];
+
+
+export const MediaReservationMode = {
+  server: 'server',
+  direct: 'direct',
+} as const;
+
+/**
+ * Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials.
+ */
+export type MediaReservationFields = {[key: string]: string};
+
+export type MediaReservation = unknown & {
+  /** Server-generated lifecycle record ID. */
+  id: string;
+  /** Server-generated lifecycle record ID. */
+  mediaId: string;
+  status: 'pending';
+  purpose: MediaReservationPurpose;
+  mimeType: MediaReservationMimeType;
+  maxFileSize: number;
+  mode: MediaReservationMode;
+  uploadUrl: string;
+  /** Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials. */
+  fields?: MediaReservationFields;
+};
+
+export type MediaResultStatus = typeof MediaResultStatus[keyof typeof MediaResultStatus];
+
+
+export const MediaResultStatus = {
+  pending: 'pending',
+  uploaded: 'uploaded',
+  verifying: 'verifying',
+  approved: 'approved',
+  rejected: 'rejected',
+  failed: 'failed',
+  deleted: 'deleted',
+} as const;
+
+export type MediaResultPurpose = typeof MediaResultPurpose[keyof typeof MediaResultPurpose];
+
+
+export const MediaResultPurpose = {
+  avatar: 'avatar',
+  post: 'post',
+  comment: 'comment',
+  video_comment: 'video_comment',
+  message: 'message',
+  story: 'story',
+  video: 'video',
+  product: 'product',
+  article: 'article',
+  event: 'event',
+  live_stream: 'live_stream',
+  broadcast_channel: 'broadcast_channel',
+  highlight: 'highlight',
+  showcase: 'showcase',
+  business: 'business',
+  community: 'community',
+} as const;
+
+export type MediaResultMimeType = typeof MediaResultMimeType[keyof typeof MediaResultMimeType];
+
+
+export const MediaResultMimeType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'video/mp4': 'video/mp4',
+  'video/webm': 'video/webm',
+  'audio/mpeg': 'audio/mpeg',
+  'audio/wav': 'audio/wav',
+  'audio/webm': 'audio/webm',
+  'audio/ogg': 'audio/ogg',
+} as const;
+
+export type MediaResult = unknown & ({
+  /** Server-generated lifecycle record ID. */
+  id: string;
+  /** Server-generated lifecycle record ID. */
+  mediaId: string;
+  status: MediaResultStatus;
+  purpose?: MediaResultPurpose;
+  /** Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval. */
+  url?: string;
+  /** @nullable */
+  thumbnailUrl?: string | null;
+  mimeType?: MediaResultMimeType;
+  size?: number;
+  width?: number;
+  height?: number;
+  /** Verified seconds. */
+  duration?: number;
+});
+
+export type PublicGrievanceReceiptStatus = typeof PublicGrievanceReceiptStatus[keyof typeof PublicGrievanceReceiptStatus];
+
+
+export const PublicGrievanceReceiptStatus = {
+  received: 'received',
+  under_review: 'under_review',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
+
+export interface PublicGrievanceReceipt {
+  ticketId: string;
+  status: PublicGrievanceReceiptStatus;
+  createdAt: string;
+  /** Operational review target, not a universal statutory deadline. */
+  slaDeadline?: string;
+}
+
+export type AssuranceChallengeRequest = {
+  purpose: 'age_assessment';
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+} | {
+  purpose: 'guardian_authorization';
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: ('account_collection' | 'account_activation' | 'social_contact')[];
+};
+
+export type GuardianJourneyRequestPurposesItem = typeof GuardianJourneyRequestPurposesItem[keyof typeof GuardianJourneyRequestPurposesItem];
+
+
+export const GuardianJourneyRequestPurposesItem = {
+  account_collection: 'account_collection',
+  account_activation: 'account_activation',
+  social_contact: 'social_contact',
+} as const;
+
+export interface GuardianJourneyRequest {
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: GuardianJourneyRequestPurposesItem[];
+}
+
+export interface AssuranceChallengeReceipt {
+  challengeId: string;
+  nextStep: 'verification_required';
+  redirectUrl: string;
+  expiresAt: string;
+}
+
+export type AssuranceChallengeStatusPurpose = typeof AssuranceChallengeStatusPurpose[keyof typeof AssuranceChallengeStatusPurpose];
+
+
+export const AssuranceChallengeStatusPurpose = {
+  age_assessment: 'age_assessment',
+  guardian_authorization: 'guardian_authorization',
+} as const;
+
+export type AssuranceChallengeStatusStatus = typeof AssuranceChallengeStatusStatus[keyof typeof AssuranceChallengeStatusStatus];
+
+
+export const AssuranceChallengeStatusStatus = {
+  pending: 'pending',
+  consumed: 'consumed',
+  revoked: 'revoked',
+  expired: 'expired',
+} as const;
+
+export interface AssuranceChallengeStatus {
+  challengeId: string;
+  purpose: AssuranceChallengeStatusPurpose;
+  status: AssuranceChallengeStatusStatus;
+  expiresAt: string;
+}
+
+export type GuardianAuthorizationReceiptPurposesItem = typeof GuardianAuthorizationReceiptPurposesItem[keyof typeof GuardianAuthorizationReceiptPurposesItem];
+
+
+export const GuardianAuthorizationReceiptPurposesItem = {
+  account_collection: 'account_collection',
+  account_activation: 'account_activation',
+  social_contact: 'social_contact',
+} as const;
+
+export type GuardianAuthorizationReceiptStatus = typeof GuardianAuthorizationReceiptStatus[keyof typeof GuardianAuthorizationReceiptStatus];
+
+
+export const GuardianAuthorizationReceiptStatus = {
+  granted: 'granted',
+  withdrawn: 'withdrawn',
+  revoked: 'revoked',
+} as const;
+
+export interface GuardianAuthorizationReceipt {
+  id: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  purposes: GuardianAuthorizationReceiptPurposesItem[];
+  status: GuardianAuthorizationReceiptStatus;
+  expiresAt: string;
+}
+
+/**
+ * @maxItems 100
+ */
+export type GuardianAuthorizationList = GuardianAuthorizationReceipt[];
+
+export type GuardianWithdrawalReceipt = true;
+
+export type EligibilityDecisionExperience = typeof EligibilityDecisionExperience[keyof typeof EligibilityDecisionExperience];
+
+
+export const EligibilityDecisionExperience = {
+  unknown: 'unknown',
+  under_13: 'under_13',
+  teen_13_17: 'teen_13_17',
+  adult_18_plus: 'adult_18_plus',
+} as const;
+
+export type EligibilityDecisionCapabilities = {
+  social: boolean;
+  publish: boolean;
+  messaging: boolean;
+  payments: boolean;
+  seller: boolean;
+  memberships: boolean;
+  live: boolean;
+  rtc: boolean;
+  ai: boolean;
+  analytics: boolean;
+  profiling: boolean;
+};
+
+export type EligibilityDecisionMaximumContentRating = typeof EligibilityDecisionMaximumContentRating[keyof typeof EligibilityDecisionMaximumContentRating];
+
+
+export const EligibilityDecisionMaximumContentRating = {
+  child_safe: 'child_safe',
+  regular: 'regular',
+  mature: 'mature',
+} as const;
+
+/**
+ * @nullable
+ */
+export type EligibilityDecisionReason = typeof EligibilityDecisionReason[keyof typeof EligibilityDecisionReason] | null;
+
+
+export const EligibilityDecisionReason = {
+  verification_required: 'verification_required',
+  territory_unavailable: 'territory_unavailable',
+  guardian_required: 'guardian_required',
+  reassessment_required: 'reassessment_required',
+  account_restricted: 'account_restricted',
+} as const;
+
+export interface EligibilityDecision {
+  experience: EligibilityDecisionExperience;
+  activated: boolean;
+  capabilities: EligibilityDecisionCapabilities;
+  maximumContentRating: EligibilityDecisionMaximumContentRating;
+  policyVersions: string[];
+  /** @pattern ^[a-f0-9]{64}$ */
+  revision: string;
+  /** @nullable */
+  reason: EligibilityDecisionReason;
+  publicBrowsingAllowed: boolean;
+}
+
 export type PostAiChatBody = { [key: string]: unknown };
 
 export type PostAiModerateBody = { [key: string]: unknown };
 
-export type PostArticlesBody = { [key: string]: unknown };
+export type PostArticlesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostArticlesByIdClapBody = { [key: string]: unknown };
 
@@ -67,7 +440,11 @@ export type PostBillingCheckoutsByCheckoutIdCancelBody = { [key: string]: unknow
 
 export type PostBillingCheckoutsByCheckoutIdRecoverBody = { [key: string]: unknown };
 
-export type PostBroadcastChannelsBody = { [key: string]: unknown };
+export type PostBroadcastChannelsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostBroadcastChannelsByIdJoinBody = { [key: string]: unknown };
 
@@ -77,9 +454,17 @@ export type PostBroadcastChannelsByIdMessagesByMessageIdReactBody = { [key: stri
 
 export type PatchBroadcastChannelsByIdNotificationsBody = { [key: string]: unknown };
 
-export type PostBusinessBody = { [key: string]: unknown };
+export type PostBusinessBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  logoMediaId?: string;
+  [key: string]: unknown;
+ };
 
-export type PostCommunitiesBody = { [key: string]: unknown };
+export type PostCommunitiesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostCommunitiesByIdDiscussionsBody = { [key: string]: unknown };
 
@@ -103,21 +488,76 @@ export type PostEconomySuperchatBody = { [key: string]: unknown };
 
 export type PostEconomyWebhooksRazorpayBody = { [key: string]: unknown };
 
-export type PostEventsBody = { [key: string]: unknown };
+export type PostEventsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostEventsByIdRsvpBody = { [key: string]: unknown };
 
-export type PostHighlightsBody = { [key: string]: unknown };
+export type PostHighlightsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostInvitesClaimBody = { [key: string]: unknown };
 
 export type PostInvitesGenerateBody = { [key: string]: unknown };
 
-export type PostMediaPresignBody = { [key: string]: unknown };
+export type PostMediaByIdFinalize200 = ApiEnvelope & {
+  data?: MediaResult;
+};
 
-export type PostMediaUploadBody = { [key: string]: unknown };
+export type PostMediaByIdUploadBody = {
+  file: Blob;
+};
 
-export type PostMessagesBody = { [key: string]: unknown };
+export type PostMediaByIdUpload200 = ApiEnvelope & {
+  data?: MediaResult;
+};
+
+export type PostMediaPresign200 = ApiEnvelope & {
+  data?: MediaReservation;
+};
+
+export type PostMediaUploadBodyPurpose = typeof PostMediaUploadBodyPurpose[keyof typeof PostMediaUploadBodyPurpose];
+
+
+export const PostMediaUploadBodyPurpose = {
+  avatar: 'avatar',
+  post: 'post',
+  comment: 'comment',
+  video_comment: 'video_comment',
+  message: 'message',
+  story: 'story',
+  video: 'video',
+  product: 'product',
+  article: 'article',
+  event: 'event',
+  live_stream: 'live_stream',
+  broadcast_channel: 'broadcast_channel',
+  highlight: 'highlight',
+  showcase: 'showcase',
+  business: 'business',
+  community: 'community',
+} as const;
+
+export type PostMediaUploadBody = {
+  file: Blob;
+  purpose: PostMediaUploadBodyPurpose;
+};
+
+export type PostMediaUpload200 = ApiEnvelope & {
+  data?: MediaResult;
+};
+
+export type PostMessagesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PutMessagesByMessageIdBody = { [key: string]: unknown };
 
@@ -143,13 +583,21 @@ export type PostOperationsPaymentsDisputesByIdReconcileBody = { [key: string]: u
 
 export type PostOperationsPaymentsJobsByIdRetryBody = { [key: string]: unknown };
 
-export type PostPostsBody = { [key: string]: unknown };
+export type PostPostsBody = {
+  /** @maxItems 10 */
+  mediaIds?: string[];
+  [key: string]: unknown;
+ };
 
 export type PutPostsByPostIdBody = { [key: string]: unknown };
 
 export type PostPostsByPostIdBookmarkBody = { [key: string]: unknown };
 
-export type PostPostsByPostIdCommentsBody = { [key: string]: unknown };
+export type PostPostsByPostIdCommentsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostPostsByPostIdCommentsByCommentIdLikeBody = { [key: string]: unknown };
 
@@ -167,7 +615,9 @@ export type PostPostsByPostIdShareBody = { [key: string]: unknown };
 
 export type PostPostsByPostIdUnlikeBody = { [key: string]: unknown };
 
-export type PostPostsUploadImageBody = { [key: string]: unknown };
+export type PostPostsUploadImageBody = {
+  image: Blob;
+};
 
 export type PostPremiumOrdersBody = { [key: string]: unknown };
 
@@ -177,7 +627,11 @@ export type PostPremiumOrdersByOrderIdRecoverBody = { [key: string]: unknown };
 
 export type PostPremiumOrdersByOrderIdVerifyBody = { [key: string]: unknown };
 
-export type PostProductsBody = { [key: string]: unknown };
+export type PostProductsBody = {
+  /** @maxItems 10 */
+  mediaIds?: string[];
+  [key: string]: unknown;
+ };
 
 export type PostProductsByIdOrderBody = { [key: string]: unknown };
 
@@ -201,9 +655,21 @@ export type PatchReportsByReportIdStatusBody = { [key: string]: unknown };
 
 export type PostReportsGrievanceBody = { [key: string]: unknown };
 
+export type PostReportsGrievance201 = ApiEnvelope & {
+  data?: PublicGrievanceReceipt;
+};
+
+export type GetReportsGrievanceByTicketId200 = ApiEnvelope & {
+  data?: PublicGrievanceReceipt;
+};
+
 export type PatchReportsGrievanceByTicketIdStatusBody = { [key: string]: unknown };
 
-export type PostStoriesBody = { [key: string]: unknown };
+export type PostStoriesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostStoriesByIdPollVoteBody = { [key: string]: unknown };
 
@@ -213,13 +679,19 @@ export type PostStoriesByIdReactBody = { [key: string]: unknown };
 
 export type PostStoriesByIdViewBody = { [key: string]: unknown };
 
-export type PostStreamsBody = { [key: string]: unknown };
+export type PostStreamsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PutStreamsByIdStatusBody = { [key: string]: unknown };
 
 export type PostSubscriptionsByIdVerifyBody = { [key: string]: unknown };
 
 export type PostSubscriptionsSubscribeBody = { [key: string]: unknown };
+
+export type PostTelemetryEventsBody = { [key: string]: unknown };
 
 export type PostUsersByUserIdBlockBody = { [key: string]: unknown };
 
@@ -233,7 +705,11 @@ export type PostUsersByUserIdMuteBody = { [key: string]: unknown };
 
 export type PostUsersByUserIdProfileCommentsBody = { [key: string]: unknown };
 
-export type PostUsersByUserIdShowcasesBody = { [key: string]: unknown };
+export type PostUsersByUserIdShowcasesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  customImageMediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostUsersByUserIdUnblockBody = { [key: string]: unknown };
 
@@ -241,17 +717,49 @@ export type PostUsersByUserIdUnfollowBody = { [key: string]: unknown };
 
 export type PostUsersByUserIdUnmuteBody = { [key: string]: unknown };
 
-export type PutUsersMeBody = { [key: string]: unknown };
+export type PutUsersMeBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  avatarMediaId?: string;
+  [key: string]: unknown;
+ };
 
-export type PostUsersMeAvatarBody = { [key: string]: unknown };
+export type PostUsersMeAvatarBody = {
+  avatar: Blob;
+};
 
 export type PostUsersMeConsentBody = { [key: string]: unknown };
 
 export type PostUsersMeContactShieldsBody = { [key: string]: unknown };
 
+export type GetUsersMeEligibility200 = ApiEnvelope & {
+  data?: EligibilityDecision;
+};
+
+export type PostUsersMeEligibilityChallenges201 = ApiEnvelope & {
+  data?: AssuranceChallengeReceipt;
+};
+
+export type GetUsersMeEligibilityChallengesByChallengeId200 = ApiEnvelope & {
+  data?: AssuranceChallengeStatus;
+};
+
 export type PostUsersMeFollowRequestsByRequestIdAcceptBody = { [key: string]: unknown };
 
 export type PostUsersMeFollowRequestsByRequestIdRejectBody = { [key: string]: unknown };
+
+export type GetUsersMeGuardianAuthorizations200 = ApiEnvelope & {
+  data?: GuardianAuthorizationList;
+};
+
+export type PostUsersMeGuardianAuthorizations201 = ApiEnvelope & {
+  data?: AssuranceChallengeReceipt;
+};
+
+export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody = { [key: string]: unknown };
+
+export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200 = ApiEnvelope & {
+  data?: GuardianWithdrawalReceipt;
+};
 
 export type PutUsersMePremiumProfileBody = { [key: string]: unknown };
 
@@ -259,11 +767,23 @@ export type PutUsersMePrivacyBody = { [key: string]: unknown };
 
 export type PutUsersMeSettingsBody = { [key: string]: unknown };
 
-export type PostVideosBody = { [key: string]: unknown };
+export type PostVideosBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  thumbnailMediaId?: string;
+  /** Separate allowlisted external embed; requires an approved video-purpose image thumbnail. */
+  externalVideoUrl?: string;
+  [key: string]: unknown;
+ };
 
 export type PostVideosByIdBookmarkBody = { [key: string]: unknown };
 
-export type PostVideosByIdCommentsBody = { [key: string]: unknown };
+export type PostVideosByIdCommentsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };
 
 export type PostVideosByIdCommentsByCommentIdLikeBody = { [key: string]: unknown };
 

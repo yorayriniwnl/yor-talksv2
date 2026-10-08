@@ -66,7 +66,7 @@ test('disabled beta features stay closed through both HTTP API prefixes without 
     ['POST', '/economy/orders/existing/verify', verification],
     ['POST', '/subscriptions/subscribe', { idempotencyKey: actorId, creatorId: targetId, tier: 'chai' }],
     ['POST', `/subscriptions/${targetId}/verify`, verification],
-    ['POST', '/streams', { title: 'Fixture stream', coverUrl: 'https://example.invalid/cover.png', kind: 'video', startsAt: '2026-09-01T00:00:00Z', category: 'technology', contentRating: 'regular' }],
+    ['POST', '/streams', { title: 'Fixture stream', kind: 'video', startsAt: '2026-09-01T00:00:00Z', category: 'technology', contentRating: 'regular' }],
     ['GET', `/streams/${targetId}/token`],
     ['PUT', `/streams/${targetId}/status`, { status: 'live' }],
     ['GET', '/notifications/push/public-key'],

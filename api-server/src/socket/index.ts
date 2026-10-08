@@ -1,3 +1,5 @@
+import { hydrateMediaValue } from "../services/media-response.js";
+import { MediaLifecycleError } from "../services/media-service.js";
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "node:http";
 import { createAdapter } from "@socket.io/redis-adapter";
@@ -204,9 +206,9 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
     });
 
     // Modified to support group chats via conversationId
-    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; textStyleId?: unknown; idempotencyKey?: unknown } = {}) => {
-      const { recipientId, conversationId, content, textStyleId, idempotencyKey } = payload;
-      if (typeof content !== "string" || !content.trim()) {
+    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; mediaId?: unknown; textStyleId?: unknown; idempotencyKey?: unknown } = {}) => {
+      const { recipientId, conversationId, content = "", mediaId, textStyleId, idempotencyKey } = payload;
+      if (typeof content !== "string" || (!content.trim() && typeof mediaId !== "string")) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
       }
@@ -215,9 +217,9 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         let actualConversationId = conversationId;
 
         if (typeof conversationId === "string" && conversationId) {
-          message = await messageService.sendMessageToConversation(userId, conversationId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
+          message = await messageService.sendMessageToConversation(userId, conversationId, content, { ...(typeof mediaId === "string" ? { mediaId } : {}), ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
         } else if (typeof recipientId === "string" && recipientId) {
-          message = await messageService.sendMessage(userId, recipientId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
+          message = await messageService.sendMessage(userId, recipientId, content, { ...(typeof mediaId === "string" ? { mediaId } : {}), ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
           actualConversationId = message.conversationId;
           
           // Join every connected device of both members before the first emit.
@@ -232,10 +234,13 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         // messages: a Redis adapter's remote room join may arrive after this emit.
         const deliveryRooms = [`conversation:${actualConversationId}`];
         if (typeof recipientId === 'string') deliveryRooms.push(userId, recipientId);
-        io.to(deliveryRooms).emit("message:receive", message);
-        socket.emit("message:sent", message); // Confirm to sender's current device
+        const delivered = await hydrateMediaValue(message);
+        io.to(deliveryRooms).emit("message:receive", delivered);
+        socket.emit("message:sent", delivered); // Confirm to sender's current device
       } catch (err) {
-        if (err instanceof MessageBlockedError) {
+        if (err instanceof MediaLifecycleError) {
+          socket.emit("message:error", { error: err.message, code: err.code });
+        } else if (err instanceof MessageBlockedError) {
           socket.emit("message:error", { error: err.message });
         } else if (err instanceof InvalidMessageContentError || err instanceof InvalidMessageStyleError || err instanceof PremiumFeatureUnavailableError) {
           socket.emit("message:error", { error: err.message });
@@ -255,7 +260,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           // Vanish-mode reads remove the message for every connected device;
           // regular reads only update the receipt.
           if (updated.deletedAt) {
-            socket.to(`conversation:${updated.conversationId}`).emit("message:update", updated);
+            socket.to(`conversation:${updated.conversationId}`).emit("message:update", await hydrateMediaValue(updated));
           } else {
             socket.to(`conversation:${updated.conversationId}`).emit("message:seen:update", { messageId, userId, seenAt: updated.seenAt });
           }
@@ -397,7 +402,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         emitCallError("That account is already on another call or this call identifier is in use");
         return;
       }
-      io.to(targetUserId).emit("call:invite", {
+      io.to(targetUserId).emit("call:invite", await hydrateMediaValue({
         callId,
         callType,
         offer,
@@ -407,7 +412,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           username: caller.username,
           avatarUrl: caller.avatarUrl,
         },
-      });
+      }));
       const timeout = setTimeout(() => {
         callTimeouts.delete(callId);
         void redisRepository.expireRingingSocketCallStrict(callId).then((expired) => {

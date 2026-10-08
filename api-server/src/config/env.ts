@@ -23,6 +23,18 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().default(process.env.CLOUDINARY_CLOUD_NAME || ""),
   CLOUDINARY_API_KEY: z.string().default(process.env.CLOUDINARY_API_KEY || ""),
   CLOUDINARY_API_SECRET: z.string().default(process.env.CLOUDINARY_API_SECRET || ""),
+  CLOUDINARY_MEDIA_IMAGE_PRESET: z.string().trim().regex(/^[A-Za-z0-9_-]*$/).default(""),
+  CLOUDINARY_MEDIA_VIDEO_PRESET: z.string().trim().regex(/^[A-Za-z0-9_-]*$/).default(""),
+  CLOUDINARY_MEDIA_AUDIO_PRESET: z.string().trim().regex(/^[A-Za-z0-9_-]*$/).default(""),
+  MEDIA_FFPROBE_PATH: z.string().min(1).default("ffprobe"),
+  MEDIA_FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
+  MEDIA_DECODE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(30000),
+  MEDIA_DECODE_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(2),
+  MEDIA_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(15000),
+  MEDIA_MODERATION_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
+  MEDIA_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
+  MEDIA_DELIVERY_ORIGIN: z.string().url().or(z.literal('')).default(''),
+  MEDIA_GEMINI_MODEL: z.enum(["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash", "gemini-3.8-flash"]).default("gemini-2.5-flash"),
   REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6379"),
   DATABASE_URL: z.string().default(process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/yor_talks"),
   // Comma-separated list of allowed browser origins for CORS. Defaults to the
@@ -63,6 +75,11 @@ const envSchema = z.object({
   MINIMUM_AGE: z.coerce.number().int().min(13).default(Number(process.env.MINIMUM_AGE || 18)),
   PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   PAYMENTS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  SELLER_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  MEMBERSHIPS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  AI_COMPANION_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
+  ELIGIBILITY_ASSURANCE_ADAPTER: z.enum(['unavailable']).default('unavailable'),
+  ELIGIBILITY_POLICY_SOURCE: z.enum(['approved_registry']).default('approved_registry'),
   LIVE_ROOMS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   WEB_PUSH_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   RTC_CALLS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
@@ -147,6 +164,12 @@ if (parsedEnv.NODE_ENV === "production") {
   });
   if (invalidOrigins.length) {
     throw new Error("[Config Error] Production CLIENT_ORIGIN and CORS_ORIGINS must be canonical HTTPS origins without paths or credentials");
+  }
+  if (parsedEnv.MEDIA_DELIVERY_ORIGIN) {
+    const mediaOrigin = new URL(parsedEnv.MEDIA_DELIVERY_ORIGIN);
+    if (mediaOrigin.protocol !== 'https:' || mediaOrigin.origin !== parsedEnv.MEDIA_DELIVERY_ORIGIN) {
+      throw new Error('[Config Error] Production MEDIA_DELIVERY_ORIGIN must be a canonical HTTPS origin');
+    }
   }
   if (parsedEnv.AUTH_COOKIE_SAME_SITE === "none" && !parsedEnv.CLIENT_ORIGIN.startsWith("https://")) {
     throw new Error("[Config Error] AUTH_COOKIE_SAME_SITE=none requires an HTTPS CLIENT_ORIGIN");

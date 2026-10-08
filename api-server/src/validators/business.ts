@@ -5,4 +5,5 @@ export const createBusinessSchema = z.object({
   industry: z.string().trim().min(2).max(80).default("General"),
   website: z.string().url().max(500).optional(),
   contactEmail: z.string().email().max(320).optional(),
-});
+  logoMediaId: z.string().uuid().optional(),
+}).strict();

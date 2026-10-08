@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useIsPresent } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,9 @@ import { ContentCategorySelect } from '@/components/content/ContentCategorySelec
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { applyFreshVideoDelivery, hasUploadedVideoDelivery, readFreshVideoDelivery } from '@/lib/video-delivery';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { useLocation, useRoute } from 'wouter';
 import { OperatorPanel, SectionHeader, SignalLabel, StatusBadge } from '@/components/system';
 import '@/styles/operator-discovery.css';
@@ -29,7 +32,7 @@ function UploadVideoDialog() {
   const [mode, setMode] = useState<'file' | 'url'>('file');
   const [title, setTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([]);
   const [type, setType] = useState<'short' | 'standard'>('short');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
@@ -53,8 +56,8 @@ function UploadVideoDialog() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('video/')) {
-      setError('Please select a valid video file (.mp4, .webm, .mov, etc.)');
+    if (!['video/mp4', 'video/webm'].includes(file.type)) {
+      setError('Please select an MP4 or WebM video.');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -71,24 +74,6 @@ function UploadVideoDialog() {
     setFileName(file.name);
     setError('');
 
-    // Try auto-capturing a thumbnail frame
-    try {
-      const vid = document.createElement('video');
-      vid.src = objectUrl;
-      vid.currentTime = 1;
-      vid.onloadeddata = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = vid.videoWidth || 640;
-        canvas.height = vid.videoHeight || 360;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-          setThumbnailUrl(canvas.toDataURL('image/jpeg', 0.8));
-        }
-      };
-    } catch {
-      setThumbnailUrl('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800&auto=format&fit=crop');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +81,6 @@ function UploadVideoDialog() {
     setError('');
 
     const finalVideoUrl = videoUrl.trim();
-    const finalThumb = thumbnailUrl.trim() || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800&auto=format&fit=crop';
 
     if (!finalVideoUrl) {
       setError('Please select a video file or provide a valid video URL.');
@@ -110,14 +94,32 @@ function UploadVideoDialog() {
       setError('Add a title with at least 2 characters.');
       return;
     }
+    if (mode === 'file' && !selectedFile) {
+      setError('Choose a video file before publishing.');
+      return;
+    }
+    if (mode === 'url') {
+      try {
+        const external = new URL(finalVideoUrl);
+        if (external.protocol !== 'https:' || external.username || external.password) throw new Error();
+      } catch {
+        setError('Use a valid HTTPS video URL from a supported host.');
+        return;
+      }
+      if (!thumbnailFiles[0]) {
+        setError('Choose a cover image for the external video.');
+        return;
+      }
+    }
 
     setLoading(true);
     try {
-      const uploaded = mode === 'file' && selectedFile ? await api.uploadMedia(selectedFile) : null;
+      const uploaded = mode === 'file' && selectedFile ? await uploadApprovedMedia(selectedFile, 'video') : null;
+      const thumbnail = thumbnailFiles[0] ? await uploadApprovedMedia(thumbnailFiles[0], 'video') : null;
       await createVideo({ 
         title: title.trim(), 
-        videoUrl: uploaded?.url || finalVideoUrl,
-        thumbnailUrl: uploaded?.thumbnailUrl?.startsWith('data:image/') ? uploaded.thumbnailUrl : finalThumb,
+        ...(uploaded ? { mediaId: uploaded.mediaId } : { externalVideoUrl: finalVideoUrl }),
+        ...(thumbnail ? { thumbnailMediaId: thumbnail.mediaId } : {}),
         type,
         contentCategory,
         contentRating,
@@ -127,7 +129,7 @@ function UploadVideoDialog() {
       setOpen(false);
       setTitle(''); 
       setVideoUrl(''); 
-      setThumbnailUrl(''); 
+      setThumbnailFiles([]);
       setFileName('');
       setPreviewUrl('');
       setSelectedFile(null);
@@ -187,7 +189,7 @@ function UploadVideoDialog() {
               <input 
                 ref={fileInputRef}
                 type="file" 
-                accept="video/mp4,video/webm,video/ogg,video/quicktime" 
+                accept="video/mp4,video/webm"
                 className="hidden" 
                 onChange={handleFileChange}
               />
@@ -211,7 +213,7 @@ function UploadVideoDialog() {
                       <UploadCloud className="w-5 h-5" />
                     </div>
                     <p className="text-sm font-semibold">Click to choose a video file</p>
-                    <p className="text-xs text-muted-foreground">Supports MP4, WebM, MOV up to 4K resolution</p>
+                    <p className="text-xs text-muted-foreground">MP4 or WebM, up to 1080p, 120 seconds and 10 MB</p>
                   </>
                 )}
               </div>
@@ -225,7 +227,7 @@ function UploadVideoDialog() {
 
           <div className="space-y-1.5">
             <Label htmlFor="video-title" className="text-xs font-mono uppercase text-muted-foreground">Title & Caption</Label>
-            <Input id="video-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="e.g. 4K FPV Drone Canyon Chase or AI Shader Timelapse" className="rounded-xl" />
+            <Input id="video-title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} placeholder="e.g. FPV Drone Canyon Chase or AI Shader Timelapse" className="rounded-xl" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -238,8 +240,8 @@ function UploadVideoDialog() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="video-thumb" className="text-xs font-mono uppercase text-muted-foreground">Custom Cover (Optional)</Label>
-              <Input id="video-thumb" type="url" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} placeholder="Auto-captured or Image URL" className="rounded-xl h-10 text-xs" />
+              <MediaImageField maxBytes={5 * 1024 * 1024} id="video-thumb" label={mode === 'url' ? 'Cover image (required)' : 'Custom cover (optional)'} files={thumbnailFiles} onChange={setThumbnailFiles} disabled={loading} />
+              {mode === 'file' && <p className="text-xs text-muted-foreground">A poster frame is generated from the approved video when no custom cover is selected.</p>}
             </div>
           </div>
 
@@ -308,6 +310,7 @@ function formatPublishedDate(value?: string): string {
 }
 
 export default function Videos() {
+  const isPresent = useIsPresent();
   const [, setLocation] = useLocation();
   const [, videoRouteParams] = useRoute<{ id: string }>('/videos/:id');
   const users = useAppStore((s: any) => s.users);
@@ -321,6 +324,27 @@ export default function Videos() {
   const [selectedCategory, setSelectedCategory] = useState<ContentCategory | 'all'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
+  const posterRefreshAttempts = useRef(new Set<string>());
+  const mountedRef = useRef(true);
+  const presentRef = useRef(isPresent);
+  presentRef.current = isPresent;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const refreshPoster = async (video: Parameters<typeof hasUploadedVideoDelivery>[0]) => {
+    if (!presentRef.current || !hasUploadedVideoDelivery(video) || posterRefreshAttempts.current.has(video.id)) return;
+    posterRefreshAttempts.current.add(video.id);
+    const sessionUser = useAppStore.getState().currentUser;
+    try {
+      const fresh = await readFreshVideoDelivery(video);
+      if (mountedRef.current && presentRef.current && useAppStore.getState().currentUser === sessionUser) applyFreshVideoDelivery(video, fresh);
+    } catch {
+      // The watch action still opens the viewer's explicit playback retry.
+    }
+  };
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
@@ -355,7 +379,6 @@ export default function Videos() {
   const openVideo = (videoId: string) => {
     const index = activeSwiperList.findIndex((video: any) => video.id === videoId);
     if (index === -1) return;
-    setActiveReelIndex(index);
     setLocation(`/videos/${videoId}`);
   };
 
@@ -475,7 +498,7 @@ export default function Videos() {
                     aria-label={`Watch ${video.title}`}
                   >
                     <span className="operator-video-card__media">
-                      <img src={video.thumbnailUrl} alt="" />
+                      <img src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
                       <span className="operator-video-card__play"><Play aria-hidden="true" /></span>
                       <span className="operator-video-card__format">{video.type === 'short' ? 'Reel' : 'Video'}</span>
                       <ContentCategoryBadge value={video.contentCategory} className="operator-video-card__category" />
@@ -495,7 +518,7 @@ export default function Videos() {
           )}
         </section>
 
-        {activeReelIndex !== null && activeSwiperList.length > 0 && (
+        {isPresent && activeReelIndex !== null && activeSwiperList.length > 0 && (
           <ReelsSwiper videos={activeSwiperList} initialIndex={activeReelIndex} onClose={closeViewer} />
         )}
       </section>

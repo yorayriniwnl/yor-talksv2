@@ -1,6 +1,9 @@
 import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index, primaryKey, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
+export { mediaAssetsTable, mediaReferencesTable } from "./media";
+export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnrollmentsTable,
+  guardianAuthorizationsTable, eligibilityRevisionsTable } from './eligibility';
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -197,6 +200,11 @@ export const messagesTable = pgTable("messages", {
   senderId: uuid("sender_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   content: text("content").notNull(),
+  mediaId: uuid("media_id"),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
+  mediaDuration: integer("media_duration"),
+  mediaLegacy: boolean("media_legacy").notNull().default(false),
   textStyleId: text("text_style_id").notNull().default("default"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   seenAt: timestamp("seen_at", { mode: "string" }),
@@ -246,6 +254,7 @@ export const communitiesTable = pgTable("communities", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description").notNull().default(""),
+  coverUrl: text("cover_url"),
   ownerId: uuid("owner_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   moderators: jsonb("moderators").notNull().default([]),
   pendingRequests: jsonb("pending_requests").notNull().default([]),

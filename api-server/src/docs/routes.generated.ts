@@ -751,12 +751,48 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "delete",
+    "path": "/media/{id}",
+    "operationId": "deleteMediaById",
+    "tag": "media",
+    "summary": "Delete /media/{id}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/media/{id}/content",
+    "operationId": "getMediaByIdContent",
+    "tag": "media",
+    "summary": "Get /media/{id}/content",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/finalize",
+    "operationId": "postMediaByIdFinalize",
+    "tag": "media",
+    "summary": "Post /media/{id}/finalize",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/media/{id}/hls",
     "operationId": "getMediaByIdHls",
     "tag": "media",
     "summary": "Get /media/{id}/hls",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/upload",
+    "operationId": "postMediaByIdUpload",
+    "tag": "media",
+    "summary": "Post /media/{id}/upload",
+    "authenticated": true,
     "roles": []
   },
   {
@@ -1898,6 +1934,33 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/users/me/eligibility",
+    "operationId": "getUsersMeEligibility",
+    "tag": "users",
+    "summary": "Get /users/me/eligibility",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/eligibility/challenges",
+    "operationId": "postUsersMeEligibilityChallenges",
+    "tag": "users",
+    "summary": "Post /users/me/eligibility/challenges",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/users/me/eligibility/challenges/{challengeId}",
+    "operationId": "getUsersMeEligibilityChallengesByChallengeId",
+    "tag": "users",
+    "summary": "Get /users/me/eligibility/challenges/{challengeId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/users/me/export",
     "operationId": "getUsersMeExport",
     "tag": "users",
@@ -1938,6 +2001,33 @@ export const apiRouteCatalog = [
     "operationId": "postUsersMeFollowRequestsByRequestIdReject",
     "tag": "users",
     "summary": "Post /users/me/follow-requests/{requestId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/users/me/guardian-authorizations",
+    "operationId": "getUsersMeGuardianAuthorizations",
+    "tag": "users",
+    "summary": "Get /users/me/guardian-authorizations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/guardian-authorizations",
+    "operationId": "postUsersMeGuardianAuthorizations",
+    "tag": "users",
+    "summary": "Post /users/me/guardian-authorizations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/guardian-authorizations/{authorizationId}/withdraw",
+    "operationId": "postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw",
+    "tag": "users",
+    "summary": "Post /users/me/guardian-authorizations/{authorizationId}/withdraw",
     "authenticated": true,
     "roles": []
   },

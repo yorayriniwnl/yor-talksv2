@@ -1,102 +1,68 @@
-import { Router, Request, Response } from "express";
-import { MediaService } from "../services/media-service.js";
-import { MediaProviderNotConfiguredError, StorageService } from "../services/storage-service.js";
-import { assertValidUploadedFile, upload } from "../middlewares/upload.js";
-import { authenticate } from "../middlewares/auth.js";
-import { createResponse } from "../utils/response.js";
-import { mediaRateLimiter } from "../middlewares/rate-limit.js";
+import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
+import { MediaService, mediaError, MediaLifecycleError } from '../services/media-service.js';
+import { upload } from '../middlewares/upload.js';
+import { authenticate } from '../middlewares/auth.js';
+import { createResponse } from '../utils/response.js';
+import { mediaRateLimiter } from '../middlewares/rate-limit.js';
+import { MediaDeliveryService } from '../services/media-delivery.js';
 
-const router = Router();
-const mediaService = new MediaService();
-const storageService = new StorageService();
-
-// Direct multipart upload endpoint
-router.post(
-  "/media/upload",
-  authenticate,
-  mediaRateLimiter,
-  upload.single("file"),
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.file) {
-        res.status(400).json(createResponse("No file provided", null, {}, ["file_required"]));
-        return;
+const prepare=z.object({filename:z.string().trim().min(1).max(255),mimeType:z.string().min(1).max(80),size:z.number(),purpose:z.string().min(1).max(50)}).strict();
+const empty=z.object({}).strict();
+const fail=(res:Response,error:unknown)=>{const value=mediaError(error);res.status(value.status).json(createResponse(value.message,null,{},[value.code]));};
+export function createMediaRouter(service=new MediaService(),delivery=new MediaDeliveryService()):Router {
+  const router=Router();
+  router.get('/media/:id/content',async(req:Request,res:Response)=>{
+    try{
+      if(typeof req.query.token!=='string')throw new MediaLifecycleError('Media delivery grant is required',403,'media_delivery_denied');
+      const content=await delivery.read(req.params.id as string,req.query.token);
+      res.setHeader('Content-Type',content.mime);res.setHeader('X-Content-Type-Options','nosniff');
+      res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Disposition','inline');
+      res.setHeader('Accept-Ranges','bytes');
+      // Browser audio/video seeking stays bounded to the already verified buffer.
+      const range=req.headers.range;
+      if(range){const match=/^bytes=(\d*)-(\d*)$/.exec(range);
+        let start=0,end=content.buffer.length-1;
+        if(!match||(!match[1]&&!match[2])){res.status(416).end();return;}
+        if(!match[1])start=Math.max(0,content.buffer.length-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}
+        if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||start>end||start>=content.buffer.length){res.status(416).end();return;}
+        res.status(206).setHeader('Content-Range',`bytes ${start}-${end}/${content.buffer.length}`);res.send(content.buffer.subarray(start,end+1));return;
       }
-
-      if (process.env.NODE_ENV === "production") {
-        res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
-        return;
-      }
-
-      assertValidUploadedFile(req.file);
-
-      const result = await mediaService.processUpload(
-        req.file.buffer,
-        req.file.originalname,
-        req.file.mimetype
-      );
-
-      res.status(201).json(createResponse("Media uploaded successfully", result));
-    } catch (err: any) {
-      const status = err?.name === "MediaProviderNotConfiguredError" ? 503 : 500;
-      res.status(status).json(createResponse(status === 503 ? "Media uploads are temporarily unavailable" : "Media processing failed", null, {}, [status === 503 ? "media_provider_not_configured" : "media_processing_error"]));
-    }
-  }
-);
-
-// Signed Cloudinary upload parameters keep large media off serverless request bodies.
-router.post(
-  "/media/presign",
-  authenticate,
-  mediaRateLimiter,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const filename = typeof req.body?.filename === "string" ? req.body.filename.trim() : "";
-      const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType.toLowerCase() : "";
-      if (!filename || filename.length > 255 || !mimeType) {
-        res.status(400).json(createResponse("Filename and mimeType required", null, {}, ["invalid_input"]));
-        return;
-      }
-
-      const purpose = req.body?.purpose === "avatar" || req.body?.purpose === "post" || req.body?.purpose === "media"
-        ? req.body.purpose
-        : "media";
-      const isImage = mimeType.startsWith("image/");
-      const isVideo = mimeType.startsWith("video/");
-      const isAudio = mimeType.startsWith("audio/");
-      if (!isImage && !isVideo && !isAudio) {
-        res.status(415).json(createResponse("Unsupported media type", null, {}, ["unsupported_media_type"]));
-        return;
-      }
-      if (purpose === "avatar" && !isImage) {
-        res.status(415).json(createResponse("Avatars must be image files", null, {}, ["avatar_image_required"]));
-        return;
-      }
-
-      if (process.env.NODE_ENV === "production") {
-        res.status(503).json(createResponse("Media moderation is not configured", null, {}, ["media_moderation_unavailable"]));
-        return;
-      }
-
-      const signature = storageService.createDirectUploadSignature(
-        isImage ? "image" : "video",
-        purpose === "avatar" ? "avatars" : isAudio ? "audio" : "posts",
-        req.user!.id,
-      );
-      res.status(200).json(createResponse("Direct upload prepared", signature));
-    } catch (err: any) {
-      if (err instanceof MediaProviderNotConfiguredError) {
-        res.status(503).json(createResponse("Media uploads are temporarily unavailable", null, {}, ["media_provider_not_configured"]));
-        return;
-      }
-      res.status(500).json(createResponse("Could not prepare media upload", null, {}, ["media_upload_error"]));
-    }
-  }
-);
-
-// Get HLS streaming manifest
-router.get("/media/:id/hls", (req: Request, res: Response): void => {
-  res.status(501).json(createResponse("Adaptive HLS streaming is not enabled in this deployment", null, {}, ["hls_not_configured"]));
-});
-
-export default router;
+      res.status(200).send(content.buffer);
+    }catch(error){fail(res,error);}
+  });
+  router.post('/media/presign',authenticate,mediaRateLimiter,async(req:Request,res:Response)=>{
+    const input=prepare.safeParse(req.body);
+    if(!input.success){res.status(400).json(createResponse('Filename, MIME type, size and purpose are required',null,{},['invalid_input']));return;}
+    try{res.status(200).json(createResponse('Media upload requested',await service.prepareUpload(req.user!.id,input.data)));}catch(error){fail(res,error);}
+  });
+  router.post('/media/:id/upload',authenticate,mediaRateLimiter,upload.single('file'),async(req:Request,res:Response)=>{
+    try{
+      if(!req.file)throw new MediaLifecycleError('No file provided',400,'file_required');
+      if(Object.keys(req.body??{}).length)throw new MediaLifecycleError('Provider identity is server-owned',400,'invalid_input');
+      res.status(200).json(createResponse('Media uploaded; verification is required',await service.upload(req.user!.id,req.params.id as string,req.file)));
+    }catch(error){fail(res,error);}
+  });
+  router.post('/media/:id/finalize',authenticate,mediaRateLimiter,async(req:Request,res:Response)=>{
+    if(!empty.safeParse(req.body??{}).success){res.status(400).json(createResponse('Finalize accepts only the media ID',null,{},['invalid_input']));return;}
+    try{
+      const result=await service.finalizeUpload(req.user!.id,req.params.id as string);
+      const busy=['pending','uploaded','verifying'].includes(result.status);
+      res.status(busy?202:200).json(createResponse(busy?'Media verification is in progress':'Media verification completed',result));
+    }catch(error){fail(res,error);}
+  });
+  router.delete('/media/:id',authenticate,mediaRateLimiter,async(req:Request,res:Response)=>{
+    try{await service.deleteUpload(req.user!.id,req.params.id as string);res.status(200).json(createResponse('Media deletion scheduled',null));}catch(error){fail(res,error);}
+  });
+  router.post('/media/upload',authenticate,mediaRateLimiter,upload.single('file'),async(req:Request,res:Response)=>{
+    try{
+      if(!req.file)throw new MediaLifecycleError('No file provided',400,'file_required');
+      if(typeof req.body?.purpose!=='string'||Object.keys(req.body).some(key=>key!=='purpose'))throw new MediaLifecycleError('An explicit media purpose is required',400,'invalid_media_purpose');
+      const result=await service.processUpload(req.user!.id,req.file,req.body.purpose);
+      res.status(result.status==='approved'?201:200).json(createResponse('Media verification completed',result));
+    }catch(error){fail(res,error);}
+  });
+  router.get('/media/:id/hls',(_req:Request,res:Response)=>{res.status(501).json(createResponse('Adaptive HLS streaming is not enabled in this deployment',null,{},['hls_not_configured']));});
+  return router;
+}
+export default createMediaRouter();

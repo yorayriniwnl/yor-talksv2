@@ -1,8 +1,8 @@
+import { MediaService, MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-repository.js";
 import { ContentPolicyViolationError, PostService, PremiumFeatureUnavailableError, ProfilePinLimitError } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
-import { StorageService } from "../services/storage-service.js";
 import { MediaModerationUnavailableError } from "../services/storage-service.js";
 import { assertValidUploadedFile } from "../middlewares/upload.js";
 import { createResponse } from "../utils/response.js";
@@ -15,7 +15,7 @@ function parsePagination(req: Request): { page: number; pageSize: number } {
 
 export class PostController {
   private readonly paginationService = new PaginationService();
-  private readonly storageService = new StorageService();
+  private readonly mediaService = new MediaService();
 
   constructor(private readonly postService: PostService) {}
 
@@ -35,9 +35,11 @@ export class PostController {
     }
     try {
       assertValidUploadedFile(file, "image");
-      const url = await this.storageService.uploadImage(file.buffer, file.originalname);
-      return res.status(201).json(createResponse("Image uploaded", { url }));
+      const approved = await this.mediaService.processUpload(req.user?.id ?? "", file, "post");
+      if (approved.status !== "approved") throw new MediaLifecycleError("Image was not approved", 422, "media_not_approved");
+      return res.status(201).json(createResponse("Image processed", approved));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof Error && error.name === "InvalidFileTypeError") {
         return res.status(415).json(createResponse("Invalid image file", null, {}, [error.message]));
       }
@@ -51,11 +53,12 @@ export class PostController {
   createPost = async (req: Request, res: Response) => {
     
     const content = typeof req.body.content === "string" ? req.body.content : "";
-    const images = Array.isArray(req.body.images) ? req.body.images : [];
+    const mediaIds = Array.isArray(req.body.mediaIds) ? req.body.mediaIds : [];
     try {
-      const post = await this.postService.createPost(req.user?.id ?? "", content, images, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll, req.body.distributionMode);
+      const post = await this.postService.createPost(req.user?.id ?? "", content, mediaIds, req.body.contentCategory, req.body.contentRating, req.body.audience, req.body.poll, req.body.distributionMode);
       return res.status(201).json(createResponse("Post created", post));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }
@@ -82,6 +85,7 @@ export class PostController {
     try {
       post = await this.postService.editPost(postId, req.user?.id ?? "", content, req.body.contentRating, req.body.contentCategory);
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }
@@ -117,11 +121,12 @@ export class PostController {
     let result;
     try {
       result = await this.postService.commentOnPost(postId, req.user?.id ?? "", content, {
-        mediaUrl: req.body.mediaUrl,
+        mediaId: req.body.mediaId,
         mediaType: req.body.mediaType,
         mediaDuration: req.body.mediaDuration,
       });
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }
@@ -141,6 +146,7 @@ export class PostController {
     try {
       result = await this.postService.replyToComment(postId, commentId, req.user?.id ?? "", content);
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }
@@ -159,6 +165,7 @@ export class PostController {
       if (!post) return res.status(404).json(createResponse("Post not found", null, {}, ["Post not found"]));
       return res.status(200).json(createResponse("Post pinned", post));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       if (error instanceof ProfilePinLimitError) return res.status(409).json(createResponse(error.message, null, {}, ["profile_pin_limit"]));
       throw error;

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -71,6 +73,7 @@ function CreateEventDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [category, setCategory] = useState(EVENT_CATEGORIES[0]);
   const [startsAt, setStartsAt] = useState('');
   const [location, setLocationField] = useState('');
@@ -87,7 +90,7 @@ function CreateEventDialog() {
       await createEvent({
         title: title.trim(),
         description: description.trim(),
-        coverUrl: `https://picsum.photos/seed/${encodeURIComponent(title)}/600/300`,
+        coverMediaId: coverFiles[0] ? (await uploadApprovedMedia(coverFiles[0], 'event')).mediaId : undefined,
         category,
         startsAt: new Date(startsAt).toISOString(),
         location: location.trim(),
@@ -96,6 +99,7 @@ function CreateEventDialog() {
       });
       setOpen(false);
       setTitle(''); setDescription(''); setStartsAt(''); setLocationField(''); setIsOnline(false); setContentRating(DEFAULT_CONTENT_RATING);
+      setCoverFiles([]);
     } catch (err: any) {
       setError(err.message || 'Failed to create event');
     }
@@ -140,6 +144,7 @@ function CreateEventDialog() {
             <Input id="event-location" value={location} onChange={(e) => setLocationField(e.target.value)} required placeholder={isOnline ? 'zoom.us/...' : '123 Main St'} className="rounded-xl" />
           </div>
           <ContentRatingSelect id="event-content-rating" value={contentRating} onChange={setContentRating} />
+          <MediaImageField id="event-cover" label="Event cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={loading} />
           <DialogFooter>
             <Button type="submit" disabled={loading || title.trim().length < 2 || !startsAt || !location.trim()} className="rounded-xl font-bold text-xs px-6">
               {loading ? 'Creating…' : 'Publish Event'}
@@ -241,7 +246,7 @@ export default function EventsPage() {
                 className="surface-1 rounded-2xl overflow-hidden flex flex-col group border border-border/40 hover:border-primary/40 transition-all duration-300"
               >
                 <div className="h-44 relative bg-muted overflow-hidden">
-                  <img src={event.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
+                  {event.coverUrl && <img src={event.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   
                   {event.isOnline && (

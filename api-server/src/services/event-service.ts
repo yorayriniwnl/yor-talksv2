@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { EventRepository } from "../repositories/event-repository.js";
 import type { EventRecord } from "../types/index.js";
@@ -17,7 +18,7 @@ export class EventService {
     hostId: string;
     title: string;
     description: string;
-    coverUrl: string;
+    coverMediaId?: string;
     category: string;
     startsAt: string;
     location: string;
@@ -25,12 +26,13 @@ export class EventService {
     contentRating?: EventRecord["contentRating"];
   }): Promise<EventRecord> {
     await enforceTextContentPolicy(`${input.title}\n${input.description}`, this.aiService, "event");
+    rejectRawMedia(input, ["coverUrl"]);
     const event: EventRecord = {
       id: randomUUID(),
       hostId: input.hostId,
       title: input.title,
       description: input.description,
-      coverUrl: input.coverUrl,
+      coverUrl: "",
       category: input.category,
       startsAt: input.startsAt,
       location: input.location,
@@ -39,7 +41,7 @@ export class EventService {
       interestedIds: [],
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.eventRepository.create(event);
+    return withApprovedMedia(input.hostId, mediaBinding(input.coverMediaId, "event", "coverUrl", "image"), { type: "events", id: event.id }, media => this.eventRepository.create({ ...event, coverUrl: media.coverUrl?.[0]?.url ?? "" }));
   }
 
   async listEvents(viewerId?: string): Promise<EventRecord[]> {

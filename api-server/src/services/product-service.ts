@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { ProductRepository } from "../repositories/product-repository.js";
 import type { ProductRecord } from "../types/index.js";
@@ -18,21 +19,23 @@ export class ProductService {
     title: string;
     description: string;
     price: number;
-    images: string[];
+    mediaIds?: string[];
     category: string;
     condition: string;
     contentRating?: ProductRecord["contentRating"];
   }): Promise<ProductRecord> {
     await enforceTextContentPolicy(`${input.title}\n${input.description}`, this.aiService, "marketplace listing");
+    rejectRawMedia(input, ["images"]);
     const product: ProductRecord = {
       id: randomUUID(),
       ...input,
+      images: [],
       savedBy: [],
       availability: "active",
       createdAt: new Date().toISOString(),
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.productRepository.create(product);
+    return withApprovedMedia(input.sellerId, [{ mediaIds: input.mediaIds ?? [], purpose: "product", slot: "images", kind: "image" }], { type: "products", id: product.id }, media => this.productRepository.create({ ...product, images: media.images.map(asset => asset.url) }));
   }
 
   async toggleSave(productId: string, userId: string): Promise<ProductRecord | undefined> {
