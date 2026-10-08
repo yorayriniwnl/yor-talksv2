@@ -148,7 +148,7 @@ export interface PaginatedResponse<T> {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public code?: string) {
     super(message);
   }
 }
@@ -317,7 +317,7 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
     const retryAfter = Number(res.headers.get('Retry-After'));
     throw new ApiError(res.status === 429 && retryAfter > 0
       ? `Too many requests. Please try again in ${Math.ceil(retryAfter / 60)} minute${retryAfter > 60 ? 's' : ''}.`
-      : message || `Request failed (${res.status})`, res.status);
+      : message || `Request failed (${res.status})`, res.status, detail && /^[a-z][a-z0-9_]+$/.test(detail) ? detail : undefined);
   }
   return normalizeApiTimestamps(json);
 }
@@ -342,89 +342,157 @@ async function requestPaginated<T>(path: string, options: RequestInit = {}): Pro
   return { data, nextCursor, hasMore };
 }
 
-interface DirectUploadSignature {
-  cloudName: string;
-  apiKey: string;
-  timestamp: number;
-  folder: 'posts' | 'audio' | 'avatars';
-  signature: string;
-  resourceType: 'image' | 'video';
-  maxFileSize: number;
-}
-
-interface UploadedMedia {
+export type MediaPurpose = 'avatar' | 'post' | 'comment' | 'video_comment' | 'story' | 'message' | 'video' | 'product' | 'article' | 'event' | 'live_stream' | 'broadcast_channel' | 'highlight' | 'showcase' | 'business' | 'community';
+export type MediaUploadPhase = 'preparing' | 'uploading' | 'checking';
+export interface UploadedMedia {
   id: string;
+  mediaId: string;
+  status: 'approved';
   url: string;
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
   mimeType: string;
   size: number;
+  duration?: number;
 }
-
-type DirectUploadPurpose = 'post' | 'media' | 'avatar';
-
-async function uploadDirectToCloudinary(file: File, purpose: DirectUploadPurpose): Promise<UploadedMedia | null> {
-  const signature = await request<DirectUploadSignature>('/media/presign', {
-    method: 'POST',
-    body: JSON.stringify({ filename: file.name, mimeType: file.type, purpose }),
-  }).catch((error: unknown) => {
-    // Local development intentionally falls back to the existing multipart path
-    // when Cloudinary is not configured. Production must fail closed instead of
-    // sending a large body through a serverless function.
-    if (error instanceof ApiError && error.status === 503 && !import.meta.env.PROD) return null;
-    throw error;
-  });
-
-  if (!signature) return null;
-  if (file.size > signature.maxFileSize) {
-    throw new ApiError(`File is larger than the ${Math.floor(signature.maxFileSize / (1024 * 1024))} MB limit`, 413);
-  }
-
-  const form = new FormData();
-  form.append('file', file);
-  form.append('api_key', signature.apiKey);
-  form.append('timestamp', String(signature.timestamp));
-  form.append('folder', signature.folder);
-  form.append('signature', signature.signature);
-
-  const cloudinaryResponse = await fetch(
-    `https://api.cloudinary.com/v1_1/${encodeURIComponent(signature.cloudName)}/${signature.resourceType}/upload`,
-    { method: 'POST', body: form },
-  );
-  let payload: { asset_id?: string; public_id?: string; secure_url?: string; bytes?: number; error?: { message?: string } } | null = null;
-  try {
-    payload = await cloudinaryResponse.json();
-  } catch {
-    // Keep the provider failure below actionable even when it returns no JSON.
-  }
-  if (!cloudinaryResponse.ok || !payload?.secure_url) {
-    throw new ApiError(payload?.error?.message || 'Media provider rejected the upload', cloudinaryResponse.status || 502);
-  }
-
-  return {
-    id: payload.asset_id || payload.public_id || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    url: payload.secure_url,
-    thumbnailUrl: payload.secure_url,
-    mimeType: file.type,
-    size: payload.bytes || file.size,
-  };
+interface MediaUploadGrant {
+  id: string;
+  mediaId: string;
+  status: 'pending';
+  mode: 'direct' | 'server';
+  uploadUrl: string;
+  fields?: Record<string, string>;
+  maxFileSize: number;
+  purpose: MediaPurpose;
+  mimeType: string;
 }
-
-async function uploadMediaFile(file: File, purpose: DirectUploadPurpose = 'media'): Promise<UploadedMedia> {
-  const directUpload = await uploadDirectToCloudinary(file, purpose);
-  if (directUpload) return directUpload;
-
-  const form = new FormData();
-  form.append('file', file);
-  return request<UploadedMedia>('/media/upload', { method: 'POST', body: form });
+type MediaCompletion = Omit<UploadedMedia, 'status' | 'url'> & { status: string; url?: string };
+type UploadAttempt = { epoch: number; grant?: MediaUploadGrant; uploaded: boolean; directUploadAttempted?: boolean; approved?: UploadedMedia; approvedAt?: number; inFlight?: Promise<UploadedMedia>; rejected?: ApiError };
+const uploadAttempts = new WeakMap<File, Map<MediaPurpose, UploadAttempt>>();
+const imageMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const videoMimeTypes = ['video/mp4', 'video/webm'];
+const audioMimeTypes = ['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/wav'];
+export function mediaMaxBytes(purpose: MediaPurpose, mimeType: string): number {
+  if (purpose === 'avatar') return 2 * 1024 * 1024;
+  if (mimeType.startsWith('image/')) return (['post', 'comment', 'video_comment', 'message', 'story', 'video'].includes(purpose) ? 5 : 2) * 1024 * 1024;
+  return (mimeType.startsWith('audio/') && purpose !== 'story' ? 5 : 10) * 1024 * 1024;
 }
-
-async function uploadPostImageFile(file: File): Promise<{ url: string }> {
-  const directUpload = await uploadDirectToCloudinary(file, 'post');
-  if (directUpload) return { url: directUpload.url };
-
-  const form = new FormData();
-  form.append('image', file);
-  return request<{ url: string }>('/posts/upload-image', { method: 'POST', body: form });
+function canonicalMediaMime(file: File): string {
+  const mime = file.type.split(';')[0].trim().toLowerCase();
+  return mime === 'audio/x-wav' ? 'audio/wav' : mime === 'audio/mp3' ? 'audio/mpeg' : mime;
+}
+function mediaMimeAllowed(mime: string, purpose: MediaPurpose): boolean {
+  const allowed = purpose === 'video' ? [...imageMimeTypes, ...videoMimeTypes]
+    : purpose === 'story' ? [...imageMimeTypes, ...videoMimeTypes, ...audioMimeTypes]
+    : purpose === 'comment' || purpose === 'video_comment' || purpose === 'message' ? [...imageMimeTypes, ...audioMimeTypes]
+    : imageMimeTypes;
+  return allowed.includes(mime);
+}
+async function uploadMediaFile(file: File, purpose: MediaPurpose, onPhase?: (phase: MediaUploadPhase) => void): Promise<UploadedMedia> {
+  const mimeType = canonicalMediaMime(file);
+  if (!mediaMimeAllowed(mimeType, purpose)) throw new ApiError('This file type is not supported for this attachment.', 415);
+  const limit = mediaMaxBytes(purpose, mimeType);
+  if (file.size > limit) throw new ApiError(`This media must be ${limit / 1024 / 1024} MB or smaller.`, 413);
+  if (file.size === 0) throw new ApiError('Choose a file containing media before uploading.', 400);
+  const epoch = sessionEpoch;
+  const assertSession = () => { if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409); };
+  let attempts = uploadAttempts.get(file);
+  if (!attempts) { attempts = new Map(); uploadAttempts.set(file, attempts); }
+  let attempt = attempts.get(purpose);
+  if (!attempt || attempt.epoch !== epoch) { attempt = { epoch, uploaded: false }; attempts.set(purpose, attempt); }
+  const current = attempt;
+  if (current.rejected) throw current.rejected;
+  if (current.approved && Date.now() - (current.approvedAt ?? 0) < 15_000) return current.approved;
+  if (current.inFlight) return current.inFlight;
+  current.inFlight = (async () => {
+    if (!current.grant) {
+      onPhase?.('preparing');
+      const grant = await request<MediaUploadGrant>('/media/presign', { method: 'POST', body: JSON.stringify({ filename: file.name, mimeType, size: file.size, purpose }) });
+      assertSession();
+      if (!grant || !grant.id || grant.mediaId !== grant.id || grant.status !== 'pending' || grant.purpose !== purpose || grant.mimeType !== mimeType || !Number.isSafeInteger(grant.maxFileSize) || grant.maxFileSize <= 0 || grant.maxFileSize > limit || file.size > grant.maxFileSize) {
+        throw new ApiError('The upload could not be prepared safely. Please try again.', 502);
+      }
+      current.grant = grant;
+    }
+    const grant = current.grant;
+    const finalize = async (): Promise<UploadedMedia> => {
+      onPhase?.('checking');
+      for (let check = 0; check < 3; check++) {
+        assertSession();
+        const result = await request<MediaCompletion>(`/media/${encodeURIComponent(grant.id)}/finalize`, { method: 'POST', body: '{}', signal: AbortSignal.timeout(90_000) });
+        assertSession();
+        if (result?.status === 'approved') {
+          const resolveDelivery = (value: string | undefined): string | undefined => {
+            if (!value) return undefined;
+            const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+            const url = new URL(value, apiOrigin);
+            if (![apiOrigin, window.location.origin].includes(url.origin) || url.pathname !== `/api/media/${grant.id}/content` || !url.searchParams.get('token') || url.username || url.password || url.hash) return undefined;
+            return url.href;
+          };
+          const deliveryUrl = resolveDelivery(result.url), posterUrl = resolveDelivery(result.thumbnailUrl);
+          if (result.id !== grant.id || result.mediaId !== grant.id || !deliveryUrl
+            || result.mimeType !== mimeType || !Number.isSafeInteger(result.size) || result.size !== file.size
+            || (result.mimeType?.startsWith('video/') && (!posterUrl || posterUrl === deliveryUrl))) {
+            throw new ApiError('Approved media delivery could not be verified. Please retry.', 502);
+          }
+          current.uploaded = true;
+          current.approved = { ...result, url: deliveryUrl, thumbnailUrl: posterUrl } as UploadedMedia;
+          current.approvedAt = Date.now();
+          return current.approved;
+        }
+        if (result?.status === 'rejected') {
+          current.rejected = new ApiError('This media could not be approved. Choose another file.', 422);
+          throw current.rejected;
+        }
+        if (!['pending', 'uploaded', 'verifying'].includes(result?.status)) throw new ApiError('Media checks could not finish. Your file is still selected. Please retry.', 503);
+        if (check < 2) await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      throw new ApiError('Your media is still being checked. Your file is still selected. Please retry.', 503);
+    };
+    if (!current.uploaded && grant.mode === 'direct' && current.directUploadAttempted) {
+      // The provider may have stored the exact object before its response was
+      // lost. Recheck ownership, bytes and moderation before repeating a write
+      // to the overwrite=false reservation. Only a confirmed missing provider
+      // object permits another write with the same file and reserved identity.
+      try { return await finalize(); }
+      catch (error) {
+        if (!(error instanceof ApiError) || error.code !== 'media_upload_not_found') throw error;
+      }
+    }
+    if (!current.uploaded) {
+      assertSession();
+      onPhase?.('uploading');
+      const form = new FormData();
+      form.append('file', file.type === mimeType ? file : new File([file], file.name, { type: mimeType, lastModified: file.lastModified }));
+      if (grant.mode === 'direct') {
+        const url = new URL(grant.uploadUrl);
+        if (url.protocol !== 'https:' || url.hostname !== 'api.cloudinary.com' || url.port || url.username || url.password || !/^\/v1_1\/[^/]+\/(?:image|video)\/upload$/.test(url.pathname) || url.search || url.hash
+          || !grant.fields || grant.fields.type !== 'authenticated' || grant.fields.overwrite !== 'false' || !grant.fields.public_id || !grant.fields.upload_preset || !grant.fields.signature || !grant.fields.api_key || !grant.fields.timestamp) {
+          throw new ApiError('The upload provider settings are unavailable. Your file is still selected.', 503);
+        }
+        for (const [name, value] of Object.entries(grant.fields)) {
+          if (name === 'file' || typeof value !== 'string') throw new ApiError('The upload provider settings are invalid.', 502);
+          form.append(name, value);
+        }
+        current.directUploadAttempted = true;
+        const response = await fetch(grant.uploadUrl, { method: 'POST', body: form, signal: AbortSignal.timeout(90_000) });
+        assertSession();
+        // Provider URLs and metadata are untrusted. Only server completion can
+        // establish ownership, actual bytes, moderation and delivery identity.
+        await response.body?.cancel();
+        if (!response.ok) throw new ApiError('The media provider could not accept the upload. Your file is still selected. Please retry.', response.status === 413 ? 413 : 502);
+      } else if (grant.mode === 'server') {
+        const uploadPath = `/media/${encodeURIComponent(grant.id)}/upload`;
+        if (grant.uploadUrl !== uploadPath && grant.uploadUrl !== `/api${uploadPath}` && grant.uploadUrl !== `${API_BASE_URL}${uploadPath}`) throw new ApiError('The upload route is invalid.', 502);
+        await request<unknown>(uploadPath, { method: 'POST', body: form, signal: AbortSignal.timeout(90_000) });
+      } else {
+        throw new ApiError('Media uploads are unavailable. Your file is still selected.', 503);
+      }
+      assertSession();
+      current.uploaded = true;
+    }
+    return finalize();
+  })().finally(() => { current.inFlight = undefined; });
+  return current.inFlight;
 }
 
 // ---- Auth ----
@@ -674,7 +742,7 @@ export const api = {
   deleteAccount: (password: string) => request<null>('/users/me', { method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE', password }) }),
   getProfile: (userId: string) => request<BackendUser>(`/users/${userId}`),
   getProfileByUsername: (username: string) => request<BackendUser>(`/users/by-username/${encodeURIComponent(username)}`),
-  updateProfile: (payload: { fullName?: string; bio?: string; avatarUrl?: string }) =>
+  updateProfile: (payload: { fullName?: string; bio?: string; avatarMediaId?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
   getPremiumBilling: () => request<PremiumBillingState>('/premium/me').then(parsePremiumBilling),
@@ -687,17 +755,8 @@ export const api = {
   updatePremiumProfile: (payload: Partial<PremiumProfileSelection>) =>
     request<BackendUser>('/users/me/premium-profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadAvatar: async (file: File) => {
-    const directUpload = await uploadDirectToCloudinary(file, 'avatar');
-    if (directUpload) {
-      return request<BackendUser>('/users/me', {
-        method: 'PUT',
-        body: JSON.stringify({ avatarUrl: directUpload.url }),
-      });
-    }
-
-    const form = new FormData();
-    form.append('avatar', file);
-    return request<BackendUser>('/users/me/avatar', { method: 'POST', body: form });
+    const approved = await uploadMediaFile(file, 'avatar');
+    return request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify({ avatarMediaId: approved.mediaId }) });
   },
   searchUsers: (q: string) => request<BackendUser[]>(`/users/search?q=${encodeURIComponent(q)}`),
   followUser: (userId: string) => request<{ follower: BackendUser; target: BackendUser; status: 'accepted' | 'pending' }>(`/users/${userId}/follow`, { method: 'POST' }),
@@ -718,7 +777,7 @@ export const api = {
   createProfileComment: (userId: string, content: string) => request<BackendProfileComment>(`/users/${encodeURIComponent(userId)}/profile-comments`, { method: 'POST', body: JSON.stringify({ content }) }),
   deleteProfileComment: (userId: string, commentId: string) => request<null>(`/users/${encodeURIComponent(userId)}/profile-comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' }),
   getProfileShowcases: (userId: string) => request<BackendShowcase[]>(`/users/${encodeURIComponent(userId)}/showcases`),
-  createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageUrl?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
+  createProfileShowcase: (userId: string, payload: { type: 'achievement' | 'post' | 'custom'; title: string; contentId?: string; customText?: string; customImageMediaId?: string }) => request<BackendShowcase>(`/users/${encodeURIComponent(userId)}/showcases`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteProfileShowcase: (userId: string, showcaseId: string) => request<null>(`/users/${encodeURIComponent(userId)}/showcases/${encodeURIComponent(showcaseId)}`, { method: 'DELETE' }),
   updateSettings: (payload: { theme?: 'light' | 'dark'; notificationsEnabled?: boolean; privateAccount?: boolean; contentFilter?: ContentRating; storyViewMode?: 'identified' | 'private' }) =>
     request<NonNullable<BackendUser['settings']>>('/users/me/settings', { method: 'PUT', body: JSON.stringify(payload) }),
@@ -754,7 +813,7 @@ export const api = {
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
-  createPost: (payload: { content: string; images?: string[]; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
+  createPost: (payload: { content: string; mediaIds?: string[]; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only'; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) => request<BackendPost>('/posts', { method: 'POST', body: JSON.stringify(payload) }),
   getPost: (postId: string) => request<BackendPost>(`/posts/${postId}`),
   editPost: (postId: string, content: string, contentCategory?: ContentCategory, contentRating?: ContentRating) => request<BackendPost>(`/posts/${postId}`, { method: 'PUT', body: JSON.stringify({ content, ...(contentCategory ? { contentCategory } : {}), ...(contentRating ? { contentRating } : {}) }) }),
   deletePost: (postId: string) => request<null>(`/posts/${postId}`, { method: 'DELETE' }),
@@ -767,17 +826,17 @@ export const api = {
   repostPost: (postId: string, note?: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) }),
   unrepostPost: (postId: string) => request<BackendPost>(`/posts/${postId}/repost`, { method: 'DELETE' }),
   votePostPoll: (postId: string, optionId: string) => request<BackendPost>(`/posts/${postId}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionId }) }),
-  commentOnPost: (postId: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) => request<{ post: BackendPost; comment: BackendComment }>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
+  commentOnPost: (postId: string, payload: { content?: string; mediaId?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) => request<{ post: BackendPost; comment: BackendComment }>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
   getPostComments: (postId: string) => request<BackendComment[]>(`/posts/${postId}/comments`),
   likePostComment: (postId: string, commentId: string) => request<BackendComment>(`/posts/${postId}/comments/${commentId}/like`, { method: 'POST' }),
   replyToPostComment: (postId: string, commentId: string, content: string) => request<{ post: BackendPost; reply: BackendComment }>(`/posts/${postId}/comments/${commentId}/replies`, { method: 'POST', body: JSON.stringify({ content }) }),
-  uploadPostImage: (file: File) => uploadPostImageFile(file),
-  uploadMedia: (file: File) => uploadMediaFile(file),
+  uploadPostImage: (file: File, onPhase?: (phase: MediaUploadPhase) => void) => uploadMediaFile(file, 'post', onPhase),
+  uploadMedia: (file: File, purpose: MediaPurpose, onPhase?: (phase: MediaUploadPhase) => void) => uploadMediaFile(file, purpose, onPhase),
 
   // ---- Communities ----
   getCommunities: () => request<BackendCommunity[]>('/communities'),
   getCommunity: (idOrSlug: string) => request<BackendCommunity>(`/communities/${idOrSlug}`),
-  createCommunity: (payload: { name: string; slug: string; description?: string; contentRating: ContentRating }) =>
+  createCommunity: (payload: { name: string; slug: string; description?: string; contentRating: ContentRating; coverMediaId?: string }) =>
     request<BackendCommunity>('/communities', { method: 'POST', body: JSON.stringify(payload) }),
   joinCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/join`, { method: 'POST' }),
   leaveCommunity: (id: string) => request<BackendCommunity>(`/communities/${id}/leave`, { method: 'POST' }),
@@ -796,9 +855,9 @@ export const api = {
 
   // ---- Stories ----
   getHighlights: () => request<BackendHighlight[]>('/highlights'),
-  createHighlight: (payload: { title: string; coverUrl?: string }) => request<BackendHighlight>('/highlights', { method: 'POST', body: JSON.stringify(payload) }),
+  createHighlight: (payload: { title: string; coverMediaId?: string }) => request<BackendHighlight>('/highlights', { method: 'POST', body: JSON.stringify(payload) }),
   getStories: () => request<BackendStory[]>('/stories'),
-  createStory: (payload: { mediaUrl: string; type: string; textContent?: string; backgroundGradient?: string; storyFontId?: 'default' | 'cinematic' | 'mono'; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
+  createStory: (payload: { mediaId?: string; type: string; textContent?: string; backgroundGradient?: string; storyFontId?: 'default' | 'cinematic' | 'mono'; storyTextStyle?: StoryTextStyle; isHighlight?: boolean; highlightTitle?: string; highlightId?: string; publishMode?: 'active' | 'highlight_only'; durationHours?: number; priority?: boolean; audience?: 'followers' | 'close_friends' | 'public' | 'selected_people' | 'everyone_except' | 'custom'; audienceMemberIds?: string[]; audienceExclusionIds?: string[]; contentCategory: ContentCategory; contentRating?: ContentRating; poll?: { question: string; options: Array<{ text: string }> } }) =>
     request<BackendStory>('/stories', { method: 'POST', body: JSON.stringify(payload) }),
   viewStory: (id: string) => request<BackendStory>(`/stories/${id}/view`, { method: 'POST' }),
   reactToStory: (id: string, emoji: string, reactionType?: 'NORMAL_HEART' | 'SUPER_HEART' | 'CUSTOM') => request<BackendStory>(`/stories/${id}/react`, { method: 'POST', body: JSON.stringify({ emoji, ...(reactionType ? { reactionType } : {}) }) }),
@@ -808,7 +867,7 @@ export const api = {
 
   // ---- Broadcast channels ----
   getBroadcastChannels: () => request<BackendBroadcastChannel[]>('/broadcast-channels'),
-  createBroadcastChannel: (payload: { name: string; description?: string; coverUrl?: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
+  createBroadcastChannel: (payload: { name: string; description?: string; coverMediaId?: string; contentCategory?: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendBroadcastChannel>('/broadcast-channels', { method: 'POST', body: JSON.stringify(payload) }),
   joinBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'POST' }),
   leaveBroadcastChannel: (id: string) => request<BackendBroadcastChannel>(`/broadcast-channels/${encodeURIComponent(id)}/join`, { method: 'DELETE' }),
@@ -850,8 +909,8 @@ export const api = {
   cancelSubscription: (subscriptionId: string) => request<BackendSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' }),
 
   // ---- Messages ----
-  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
-  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }) }),
+  sendMessage: (recipientId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string, attachment?: { mediaId: string }) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ recipientId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}), ...(attachment ? { mediaId: attachment.mediaId } : {}) }) }),
+  sendMessageToConversation: (conversationId: string, content: string, replyToId?: string, textStyleId?: 'default' | 'mono' | 'rounded', idempotencyKey?: string, attachment?: { mediaId: string }) => request<BackendMessage>('/messages', { method: 'POST', body: JSON.stringify({ conversationId, content, ...(replyToId ? { replyToId } : {}), ...(textStyleId ? { textStyleId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}), ...(attachment ? { mediaId: attachment.mediaId } : {}) }) }),
   createGroupChat: (payload: { memberIds: string[]; title: string }) => request<BackendConversation>('/conversations/group', { method: 'POST', body: JSON.stringify(payload) }),
   setConversationVanishMode: (conversationId: string, enabled: boolean) => request<BackendConversation>(`/conversations/${encodeURIComponent(conversationId)}/vanish`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
   getConversations: () => request<{ conversation: BackendConversation; lastMessage: BackendMessage | null }[]>('/conversations'),
@@ -886,7 +945,7 @@ export const api = {
   // ---- Events ----
   getEvents: () => request<BackendEvent[]>('/events'),
   getEvent: (id: string) => request<BackendEvent>(`/events/${id}`),
-  createEvent: (payload: { title: string; description?: string; coverUrl: string; category: string; startsAt: string; location: string; isOnline?: boolean; contentRating: ContentRating }) =>
+  createEvent: (payload: { title: string; description?: string; coverMediaId?: string; category: string; startsAt: string; location: string; isOnline?: boolean; contentRating: ContentRating }) =>
     request<BackendEvent>('/events', { method: 'POST', body: JSON.stringify(payload) }),
   rsvpEvent: (id: string, status: 'going' | 'interested' | null) =>
     request<BackendEvent>(`/events/${id}/rsvp`, { method: 'POST', body: JSON.stringify({ status }) }),
@@ -895,7 +954,7 @@ export const api = {
   // ---- Products ----
   getProducts: () => request<BackendProduct[]>('/products'),
   getProduct: (id: string) => request<BackendProduct>(`/products/${id}`),
-  createProduct: (payload: { title: string; description: string; price: number; images: string[]; category: string; condition: 'new' | 'like-new' | 'used'; contentRating: ContentRating }) =>
+  createProduct: (payload: { title: string; description: string; price: number; mediaIds: string[]; category: string; condition: 'new' | 'like-new' | 'used'; contentRating: ContentRating }) =>
     request<BackendProduct>('/products', { method: 'POST', body: JSON.stringify(payload) }),
   saveProduct: (id: string) => request<BackendProduct>(`/products/${id}/save`, { method: 'POST' }),
   deleteProduct: (id: string) => request<null>(`/products/${id}`, { method: 'DELETE' }),
@@ -910,7 +969,7 @@ export const api = {
   // ---- Articles ----
   getArticles: () => request<BackendArticle[]>('/articles'),
   getArticle: (id: string) => request<BackendArticle>(`/articles/${id}`),
-  createArticle: (payload: { title: string; excerpt: string; content: string; coverUrl: string; readTime?: number; collection?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
+  createArticle: (payload: { title: string; excerpt: string; content: string; coverMediaId?: string; readTime?: number; collection?: string; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendArticle>('/articles', { method: 'POST', body: JSON.stringify(payload) }),
   clapArticle: (id: string, count = 1) => request<BackendArticle>(`/articles/${id}/clap`, { method: 'POST', body: JSON.stringify({ count }) }),
 
@@ -918,12 +977,12 @@ export const api = {
   getVideos: () => request<BackendVideo[]>('/videos'),
   getSavedVideos: () => request<BackendVideo[]>('/videos/saved'),
   getVideo: (id: string) => request<BackendVideo>(`/videos/${id}`),
-  createVideo: (payload: { title: string; videoUrl: string; thumbnailUrl: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
+  createVideo: (payload: { title: string; mediaId?: string; externalVideoUrl?: string; thumbnailMediaId?: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),
   likeVideo: (id: string) => request<BackendVideo>(`/videos/${id}/like`, { method: 'POST' }),
   bookmarkVideo: (id: string) => request<BackendVideo>(`/videos/${id}/bookmark`, { method: 'POST' }),
   getVideoComments: (id: string) => request<BackendComment[]>(`/videos/${id}/comments`),
-  commentOnVideo: (id: string, payload: { content?: string; mediaUrl?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) =>
+  commentOnVideo: (id: string, payload: { content?: string; mediaId?: string; mediaType?: 'image' | 'gif' | 'audio'; mediaDuration?: number }) =>
     request<{ video: BackendVideo; comment: BackendComment }>(`/videos/${id}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
   likeVideoComment: (videoId: string, commentId: string) => request<BackendComment>(`/videos/${videoId}/comments/${commentId}/like`, { method: 'POST' }),
 
@@ -931,7 +990,7 @@ export const api = {
   getStreams: () => request<BackendLiveStream[]>('/streams'),
   getStream: (id: string) => request<BackendLiveStream>(`/streams/${id}`),
   getStreamToken: (id: string) => request<{ token: string; wsUrl: string; roomName: string }>(`/streams/${id}/token`),
-  createStream: (payload: { title: string; coverUrl: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) =>
+  createStream: (payload: { title: string; coverMediaId?: string; kind: 'video' | 'audio'; startsAt: string; category: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendLiveStream>('/streams', { method: 'POST', body: JSON.stringify(payload) }),
   setStreamStatus: (id: string, status: 'scheduled' | 'live' | 'ended') =>
     request<BackendLiveStream>(`/streams/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
@@ -1090,6 +1149,7 @@ export interface BackendComment {
 }
 
 export interface BackendCommunity {
+  coverUrl?: string | null;
   id: string;
   name: string;
   slug: string;
@@ -1232,6 +1292,11 @@ export interface BackendMessage {
   senderId: string;
   recipientId: string;
   content: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'audio' | null;
+  mediaDuration?: number | null;
+  mediaLegacy?: boolean;
   textStyleId?: 'default' | 'mono' | 'rounded';
   createdAt: string;
   seenAt: string | null;

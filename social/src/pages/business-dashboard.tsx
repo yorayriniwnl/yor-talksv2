@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { PageTransition } from '@/components/ui/PageTransition';
 
 interface Business {
@@ -13,6 +15,7 @@ interface Business {
   industry: string;
   role: string;
   isVerified: boolean;
+  logoUrl?: string;
 }
 
 export default function BusinessDashboard() {
@@ -25,6 +28,8 @@ export default function BusinessDashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
   const [industry, setIndustry] = useState('');
+  const [logoFiles, setLogoFiles] = useState<File[]>([]);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     void fetchDashboard();
@@ -48,19 +53,23 @@ export default function BusinessDashboard() {
   };
 
   const handleCreate = async () => {
+    if (creating) return;
+    setCreating(true);
     try {
+      const logo = logoFiles[0] ? await uploadApprovedMedia(logoFiles[0], 'business') : undefined;
       await api.request('/business', {
         method: 'POST',
-        body: JSON.stringify({ name, industry })
+        body: JSON.stringify({ name, industry, logoMediaId: logo?.mediaId })
       });
       toast.success('Business Profile Created!');
       setIsCreating(false);
       setName('');
       setIndustry('');
+      setLogoFiles([]);
       void fetchDashboard();
-    } catch (e) {
-      toast.error('Failed to create business profile');
-    }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create business profile. Your draft is still here.');
+    } finally { setCreating(false); }
   };
 
   if (loading) return null;
@@ -96,9 +105,10 @@ export default function BusinessDashboard() {
                 <Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="e.g. Retail, Agency, Tech" className="h-12 rounded-xl bg-background" />
               </div>
             </div>
+            <MediaImageField id="business-logo" label="Business logo (optional)" files={logoFiles} onChange={setLogoFiles} disabled={creating} />
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="ghost" onClick={() => setIsCreating(false)}>Cancel</Button>
-              <Button onClick={handleCreate} className="bg-primary text-black font-bold">Launch Profile</Button>
+              <Button disabled={creating || !name.trim()} onClick={handleCreate} className="bg-primary text-black font-bold">Launch Profile</Button>
             </div>
           </div>
         )}
@@ -109,7 +119,7 @@ export default function BusinessDashboard() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/30">
-                    <Building2 className="w-8 h-8 text-primary" />
+                    {biz.logoUrl ? <img src={biz.logoUrl} alt={`${biz.name} logo`} className="h-full w-full object-cover rounded-2xl" /> : <Building2 className="w-8 h-8 text-primary" />}
                   </div>
                   <div>
                     <h3 className="font-bold text-xl font-display tracking-tight flex items-center gap-2">

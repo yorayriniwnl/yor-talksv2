@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
 
 const user = {
   id: "1cc96a14-2728-46fd-ae3c-cbf15fd9db1a",
@@ -97,6 +98,743 @@ async function installApiBoundary(page: Page, profile = user) {
     throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
 }
+
+async function syntheticPosterImage(page: Page): Promise<Buffer> {
+  const encoded = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2; canvas.height = 2;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#2980b9'; context.fillRect(0, 0, 2, 2);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  return Buffer.from(encoded, 'base64');
+}
+
+async function fulfillSeekableMedia(route: Route, bytes: Buffer, mime: string) {
+  const range = route.request().headers().range?.match(/^bytes=(\d*)-(\d*)$/);
+  const start = range ? (range[1] ? Number(range[1]) : Math.max(0, bytes.length - Number(range[2]))) : 0;
+  const end = range?.[1] && range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1;
+  return route.fulfill({
+    status: range ? 206 : 200, contentType: mime,
+    headers: { 'Cache-Control': 'private, no-store', 'Accept-Ranges': 'bytes', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${bytes.length}` } : {}) },
+    body: bytes.subarray(start, end + 1),
+  });
+}
+
+test('older structured message image and audio grants renew without replacing history or drafts', async ({ page }) => {
+  const poster = await syntheticPosterImage(page);
+  const audioBytes = readFileSync(new URL('./fixtures/delivery.wav', import.meta.url));
+  await installApiBoundary(page);
+  const peer = { ...user, id: '10000000-0000-4000-8000-000000000181', username: 'expiry_peer', fullName: 'Expiry Peer' };
+  const conversation = { id: '20000000-0000-4000-8000-000000000181', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt };
+  const imageId = '40000000-0000-4000-8000-000000000181', audioId = '40000000-0000-4000-8000-000000000182';
+  const attachments = [
+    { id: '30000000-0000-4000-8000-000000000000', content: 'Earlier image caption', mediaType: 'image', mediaId: imageId, createdAt: '2026-08-28T08:00:00.123456Z' },
+    { id: '30000000-0000-4000-8000-000000000181', content: 'Earlier voice caption', mediaType: 'audio', mediaId: audioId, createdAt: '2026-08-28T08:01:00.654321Z' },
+  ].map(message => ({ ...message, conversationId: conversation.id, senderId: peer.id, recipientId: user.id, mediaLegacy: false,
+    mediaUrl: `/api/media/${message.mediaId}/content?token=original`, deletedAt: null, expiresAt: null, seenAt: user.createdAt }));
+  const recent = Array.from({ length: 200 }, (_, index) => ({
+    id: `50000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`, conversationId: conversation.id,
+    senderId: user.id, recipientId: peer.id, content: `Recent history row ${index}`, createdAt: user.createdAt, seenAt: user.createdAt,
+  }));
+  let snapshotReads = 0, olderReads = 0, audioExpired = false;
+  const attachmentReads = [0, 0];
+  await page.route('**/api/conversations', route => json(route, [{ conversation }]));
+  await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    if (!query.size) { snapshotReads++; return json(route, recent); }
+    if (query.get('limit') === '100') { olderReads++; return json(route, attachments); }
+    expect(query.get('limit')).toBe('1');
+    const index = query.get('cursorAt') === attachments[0].createdAt ? 0 : 1;
+    expect(query.get('cursorAt')).toBe(attachments[index].createdAt);
+    expect(query.get('direction')).toBe(index === 0 ? 'older' : 'newer');
+    expect(query.get('cursorId')).toBe(index === 0 ? '30000000-0000-4000-8000-000000000001' : '30000000-0000-4000-8000-000000000180');
+    expect(route.request().headers().authorization).toBe('Bearer browser-smoke-access-token');
+    attachmentReads[index]++;
+    return json(route, [{ ...attachments[index], mediaUrl: `/api/media/${attachments[index].mediaId}/content?token=renewed` }]);
+  });
+  await page.route('**/api/media/*/content?*', route => {
+    const url = new URL(route.request().url());
+    const original = url.searchParams.get('token') === 'original';
+    if (original && (url.pathname.includes(imageId) || audioExpired)) {
+      return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media delivery grant is invalid or expired' }) });
+    }
+    return url.pathname.includes(imageId) ? fulfillSeekableMedia(route, poster, 'image/png') : fulfillSeekableMedia(route, audioBytes, 'audio/wav');
+  });
+  await page.goto(`/messages/${conversation.id}`);
+  await expect(page.locator('article.operator-message')).toHaveCount(200);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('This composer draft must survive media expiry.');
+  const threadGeometry = await page.locator('.operator-thread__flow').evaluate(async element => {
+    element.scroll({ top: 0, behavior: 'instant' });
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const messages = element.querySelector('.operator-thread__messages')!;
+    const earlier = Array.from(element.querySelectorAll('button')).find(button => button.textContent?.includes('Load earlier messages'))!;
+    return { scrollTop: element.scrollTop, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+      flow: element.getBoundingClientRect().toJSON(), messages: messages.getBoundingClientRect().toJSON(),
+      messagesScrollHeight: messages.scrollHeight, messagesFlexShrink: getComputedStyle(messages).flexShrink,
+      earlier: earlier.getBoundingClientRect().toJSON() };
+  });
+  expect(threadGeometry.earlier.top).toBeGreaterThanOrEqual(threadGeometry.flow.top);
+  await page.getByRole('button', { name: 'Load earlier messages' }).click();
+  await expect(page.locator('article.operator-message')).toHaveCount(202);
+  const imageRow = page.locator('article.operator-message').filter({ hasText: 'Earlier image caption' });
+  await imageRow.scrollIntoViewIfNeeded();
+  const image = imageRow.getByRole('img', { name: 'Shared attachment' });
+  await expect(image).toHaveAttribute('src', new URL(`/api/media/${imageId}/content?token=renewed`, page.url()).href);
+  await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(2);
+  const audioRow = page.locator('article.operator-message').filter({ hasText: 'Earlier voice caption' });
+  const audio = audioRow.locator('audio');
+  await audioRow.scrollIntoViewIfNeeded();
+  await audio.evaluate(element => (element as HTMLAudioElement).play());
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(0.3);
+  await audio.evaluate(async element => {
+    const player = element as HTMLAudioElement;
+    const paused = new Promise<void>(resolve => player.addEventListener('pause', () => resolve(), { once: true }));
+    player.pause(); await paused;
+    const sought = new Promise<void>(resolve => player.addEventListener('seeked', () => resolve(), { once: true }));
+    player.currentTime = 0.4; await sought;
+    player.muted = true;
+    const changed = new Promise<void>(resolve => player.addEventListener('ratechange', () => resolve(), { once: true }));
+    player.playbackRate = 1.5; await changed;
+  });
+  await expect(audio).toHaveJSProperty('currentTime', 0.4);
+  audioExpired = true;
+  const expired = page.waitForResponse(response => response.url().includes(`${audioId}/content?token=original`) && response.status() === 403);
+  await audio.evaluate(element => (element as HTMLAudioElement).load());
+  await expired;
+  await expect(audio).toHaveAttribute('src', new URL(`/api/media/${audioId}/content?token=renewed`, page.url()).href);
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeCloseTo(0.4, 1);
+  await expect(audio).toHaveJSProperty('paused', true);
+  await expect(audio).toHaveJSProperty('muted', true);
+  await expect(audio).toHaveJSProperty('playbackRate', 1.5);
+  await audio.evaluate(element => (element as HTMLAudioElement).play());
+  await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(0.55);
+  await expect(imageRow.getByText('Earlier image caption', { exact: true })).toBeVisible();
+  await expect(audioRow.getByText('Earlier voice caption', { exact: true })).toBeVisible();
+  await expect(page.locator('article.operator-message')).toHaveCount(202);
+  await expect(page.locator('article.operator-message').getByText('Recent history row 199', { exact: true })).toHaveCount(1);
+  await expect(composer).toHaveValue('This composer draft must survive media expiry.');
+  expect([snapshotReads, olderReads, ...attachmentReads]).toEqual([1, 1, 1, 1]);
+});
+
+test('message attachment renewal denies mismatches, bounds errors, and ignores a late conversation response', async ({ page }) => {
+  await installApiBoundary(page);
+  const peers = ['Attachment Alpha', 'Attachment Beta'].map((fullName, index) => ({ ...user, id: `10000000-0000-4000-8000-00000000019${index + 1}`, username: `attachment_${index}`, fullName }));
+  const conversations = peers.map((peer, index) => ({ id: `20000000-0000-4000-8000-00000000019${index + 1}`, participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt }));
+  const attachments = ['image', 'audio'].map((mediaType, index) => ({
+    id: `30000000-0000-4000-8000-00000000019${index + 1}`, conversationId: conversations[0].id, senderId: peers[0].id,
+    recipientId: user.id, content: `Alpha ${mediaType} caption`, mediaId: `40000000-0000-4000-8000-00000000019${index + 1}`,
+    mediaType, mediaLegacy: false, mediaUrl: `/api/media/40000000-0000-4000-8000-00000000019${index + 1}/content?token=expired`,
+    createdAt: `2026-08-28T08:0${index}:00.123456Z`, seenAt: user.createdAt, deletedAt: null, expiresAt: null,
+  }));
+  const reads = [0, 0], providerRequests: string[] = [];
+  let releaseLate!: () => void;
+  const held = new Promise<void>(resolve => { releaseLate = resolve; });
+  page.on('request', request => { if (new URL(request.url()).hostname === 'untrusted.invalid') providerRequests.push(request.url()); });
+  await page.route('**/api/conversations', route => json(route, conversations.map(conversation => ({ conversation }))));
+  for (const peer of peers) await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages*', async route => {
+    const url = new URL(route.request().url()), query = url.searchParams;
+    if (url.pathname.includes(conversations[1].id)) return json(route, [{ id: 'beta-text', conversationId: conversations[1].id, senderId: peers[1].id, recipientId: user.id, content: 'Beta conversation only.', createdAt: user.createdAt, seenAt: user.createdAt }]);
+    if (!query.size) return json(route, attachments);
+    expect(query.get('limit')).toBe('1');
+    const index = query.get('cursorAt') === attachments[0].createdAt ? 0 : 1;
+    reads[index]++;
+    if (index === 0 && reads[index] === 1) return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Conversation access denied' }) });
+    if (index === 0) {
+      await held;
+      return json(route, [{ ...attachments[0], mediaUrl: `/api/media/${attachments[0].mediaId}/content?token=late-renewed` }]);
+    }
+    if (reads[1] === 1) return json(route, [attachments[1]]); // Unchanged grant.
+    if (reads[1] === 2) return json(route, [{ ...attachments[1], mediaId: attachments[0].mediaId, mediaUrl: `/api/media/${attachments[0].mediaId}/content?token=forged` }]);
+    return json(route, [{ ...attachments[1], mediaUrl: 'https://untrusted.invalid/audio.wav' }]);
+  });
+  await page.route('**/api/media/*/content?*', route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired delivery grant' }) }));
+  await page.goto(`/messages/${conversations[0].id}`);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('Alpha draft stays private.');
+  const rows = page.locator('article.operator-message');
+  const imageRow = rows.filter({ hasText: 'Alpha image caption' }), audioRow = rows.filter({ hasText: 'Alpha audio caption' });
+  await imageRow.scrollIntoViewIfNeeded();
+  await expect(imageRow.getByRole('alert')).toBeVisible();
+  await expect(audioRow.getByRole('alert')).toBeVisible();
+  expect(reads).toEqual([1, 1]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const denied = page.waitForResponse(response => response.url().includes(`${attachments[1].mediaId}/content?token=expired`) && response.status() === 403);
+    await audioRow.locator('audio').evaluate(element => (element as HTMLAudioElement).load());
+    await denied;
+  }
+  expect(reads).toEqual([1, 1]);
+  for (const count of [2, 3]) {
+    await audioRow.getByRole('button', { name: 'Retry attachment' }).click();
+    await expect(audioRow.getByRole('alert')).toBeVisible();
+    expect(reads).toEqual([1, count]);
+    await expect(audioRow.locator('audio')).toHaveAttribute('src', new URL(attachments[1].mediaUrl, page.url()).href);
+  }
+  await expect(composer).toHaveValue('Alpha draft stays private.');
+  await expect(rows).toHaveCount(2);
+  await imageRow.getByRole('button', { name: 'Retry attachment' }).click();
+  await expect(imageRow.getByRole('status')).toHaveText('Refreshing attachment…');
+  await page.getByRole('button', { name: /Attachment Beta.*No messages yet/ }).click();
+  await expect(rows.getByText('Beta conversation only.', { exact: true })).toBeVisible();
+  await expect(composer).toHaveValue('');
+  await composer.fill('Beta draft stays with Beta.');
+  const lateResponse = page.waitForResponse(response => response.url().includes(`${conversations[0].id}/messages?`) && response.status() === 200);
+  releaseLate(); await lateResponse;
+  await expect(composer).toHaveValue('Beta draft stays with Beta.');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.getByText('Beta conversation only.', { exact: true })).toBeVisible();
+  await expect(rows.locator('audio, img.operator-message-image')).toHaveCount(0);
+  expect(reads).toEqual([2, 3]);
+  expect(providerRequests).toEqual([]);
+});
+
+test('expired uploaded-video grants renew through the authorized video read and preserve playback', async ({ page }) => {
+  const playable = readFileSync(new URL('./fixtures/delivery.webm', import.meta.url));
+  const poster = await syntheticPosterImage(page);
+  await installApiBoundary(page);
+  const assetIds = ['40000000-0000-4000-8000-000000000151', '40000000-0000-4000-8000-000000000152'];
+  const videos = assetIds.map((assetId, index) => ({
+    id: `30000000-0000-4000-8000-00000000015${index + 1}`, authorId: user.id,
+    videoUrl: `/api/media/${assetId}/content?token=original`, thumbnailUrl: `/api/media/${assetId}/content?token=poster`,
+    title: `Delivery reel ${index + 1}`, views: 0, likes: 0, createdAt: user.createdAt, type: 'short',
+  }));
+  let expired = false, authorizedReads = 0;
+  const renewedVideo = { ...videos[1], videoUrl: `/api/media/${assetIds[1]}/content?token=renewed`, thumbnailUrl: `/api/media/${assetIds[1]}/content?token=renewed-poster` };
+  await page.route('**/api/videos', route => json(route, expired && authorizedReads > 0 ? [videos[0], renewedVideo] : videos));
+  await page.route('**/api/videos/*/comments', route => json(route, []));
+  await page.route(`**/api/videos/${videos[1].id}`, route => {
+    authorizedReads++;
+    expect(route.request().headers().authorization).toBe('Bearer browser-smoke-access-token');
+    return json(route, renewedVideo);
+  });
+  await page.route('**/api/media/*/content?*', route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('token')?.includes('poster')) return route.fulfill({ status: 200, contentType: 'image/png', body: poster });
+    if (expired && url.pathname.includes(assetIds[1]) && url.searchParams.get('token') === 'original') {
+      return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media delivery grant is invalid or expired' }) });
+    }
+    const range = route.request().headers().range?.match(/^bytes=(\d+)-(\d*)$/);
+    const start = range ? Number(range[1]) : 0;
+    const end = range?.[2] ? Math.min(Number(range[2]), playable.length - 1) : playable.length - 1;
+    return route.fulfill({
+      status: range ? 206 : 200, contentType: 'video/webm',
+      headers: { 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes', ...(range ? { 'Content-Range': `bytes ${start}-${end}/${playable.length}` } : {}) },
+      body: playable.subarray(start, end + 1),
+    });
+  });
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Delivery reel 2' }).click();
+  await page.getByRole('button', { name: 'Mute video', exact: true }).click();
+  await page.getByRole('button', { name: 'Playback speed 1 times' }).click();
+  const player = page.locator('.operator-reel-video').nth(1);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.35);
+  // Reload the same grant after its fixture expiry, producing a real media403.
+  await player.evaluate(async element => {
+    const video = element as HTMLVideoElement;
+    const paused = new Promise<void>(resolve => video.addEventListener('pause', () => resolve(), { once: true }));
+    video.pause(); await paused;
+    const sought = new Promise<void>(resolve => video.addEventListener('seeked', () => resolve(), { once: true }));
+    video.currentTime = 0.4; await sought;
+  });
+  await expect(player).toHaveJSProperty('currentTime', 0.4);
+  expired = true;
+  const denial = page.waitForResponse(response => response.url().includes(`${assetIds[1]}/content?token=original`) && response.status() === 403);
+  await player.evaluate(video => (video as HTMLVideoElement).load());
+  await denial;
+  await expect(player).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).readyState)).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeCloseTo(0.4, 1);
+  await expect(player).toHaveJSProperty('paused', true);
+  await expect(player).toHaveJSProperty('muted', true);
+  await expect(player).toHaveJSProperty('playbackRate', 1.5);
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
+  expect(authorizedReads).toBe(1);
+  // The renewed URL remains playable without resetting the selected reel.
+  await player.evaluate(video => (video as HTMLVideoElement).play());
+  await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.55);
+  await page.getByRole('button', { name: 'Close video viewer' }).click();
+  await page.getByRole('button', { name: 'Watch Delivery reel 2' }).click();
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  expect(authorizedReads).toBe(1);
+});
+
+test('denied or unchanged delivery renewals stop automatically and allow a bounded explicit retry', async ({ page }) => {
+  const poster = await syntheticPosterImage(page);
+  await installApiBoundary(page);
+  const assetIds = ['40000000-0000-4000-8000-000000000161', '40000000-0000-4000-8000-000000000162'];
+  const videos = assetIds.map((assetId, index) => ({
+    id: `30000000-0000-4000-8000-00000000016${index + 1}`, authorId: user.id,
+    videoUrl: `/api/media/${assetId}/content?token=expired`, thumbnailUrl: `/api/media/${assetId}/content?token=poster`,
+    title: `Unavailable reel ${index + 1}`, views: 0, likes: 0, createdAt: user.createdAt, type: 'short',
+  }));
+  const reads = [0, 0];
+  let releaseLateRead!: () => void;
+  const lateRead = new Promise<void>(resolve => { releaseLateRead = resolve; });
+  await page.route('**/api/videos', route => json(route, videos));
+  await page.route('**/api/videos/*/comments', route => json(route, []));
+  for (const [index, video] of videos.entries()) await page.route(`**/api/videos/${video.id}`, async route => {
+    reads[index]++;
+    if (index === 1 && reads[index] === 2) {
+      await lateRead;
+      return json(route, { ...video, videoUrl: `/api/media/${assetIds[1]}/content?token=late-renewed` });
+    }
+    return index === 0
+      ? route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Video is no longer visible' }) })
+      : json(route, video);
+  });
+  await page.route('**/api/media/*/content?*', route => new URL(route.request().url()).searchParams.get('token') === 'poster'
+    ? route.fulfill({ status: 200, contentType: 'image/png', body: poster })
+    : route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Expired delivery grant' }) }));
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Unavailable reel 1' }).click();
+  const failure = page.getByRole('alert').filter({ hasText: 'Video could not load' });
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([1, 0]);
+  // Repeated actual media failures must not recursively call the read endpoint.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const denial = page.waitForResponse(response => response.url().includes(`${assetIds[0]}/content?token=expired`) && response.status() === 403);
+    await page.locator('.operator-reel-video').nth(0).evaluate(video => (video as HTMLVideoElement).load());
+    await denial;
+  }
+  expect(reads).toEqual([1, 0]);
+  await page.getByRole('button', { name: 'Retry video', exact: true }).click();
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([2, 0]);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('02');
+  await expect(failure).toBeVisible();
+  expect(reads).toEqual([2, 1]);
+  await page.getByRole('button', { name: 'Retry video', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Refreshing video playback' })).toBeVisible();
+  await expect.poll(() => reads).toEqual([2, 2]);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
+  releaseLateRead();
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=expired`);
+  expect(reads).toEqual([2, 2]);
+});
+
+test('historical message encodings render attachments only with the server legacy flag', async ({ page }) => {
+  await installApiBoundary(page);
+  const peer = { ...user, id: '10000000-0000-4000-8000-000000000171', username: 'legacy_peer', fullName: 'Legacy Peer' };
+  const conversation = { id: '20000000-0000-4000-8000-000000000171', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt };
+  const voice = '[Voice Note] https://legacy.example.test/voice.webm (3s)';
+  const image = 'Historical image caption\n📷 https://legacy.example.test/photo.png';
+  const messages = [voice, image, voice, image].map((content, index) => ({
+    id: `legacy-fixture-${index}`, conversationId: conversation.id, senderId: peer.id, recipientId: user.id,
+    content, mediaLegacy: index < 2, mediaId: null, mediaType: null, mediaUrl: null, seenAt: user.createdAt,
+    createdAt: `2026-08-28T09:0${index}:00.000Z`,
+  }));
+  await page.route('**/api/conversations', route => json(route, [{ conversation }]));
+  await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/conversations/*/messages', route => json(route, messages));
+  await page.route('https://legacy.example.test/**', route => route.fulfill({ status: 404, body: '' }));
+  await page.goto(`/messages/${conversation.id}`);
+  const rows = page.locator('article.operator-message');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0).locator('audio')).toHaveAttribute('src', 'https://legacy.example.test/voice.webm');
+  await expect(rows.nth(1).getByRole('img', { name: 'Shared attachment' })).toHaveAttribute('src', 'https://legacy.example.test/photo.png');
+  await expect(rows.nth(1).getByText('Historical image caption', { exact: true })).toBeVisible();
+  await expect(rows.nth(2).locator('audio, img.operator-message-image')).toHaveCount(0);
+  await expect(rows.nth(2).getByText(voice, { exact: true })).toBeVisible();
+  await expect(rows.nth(3).locator('audio, img.operator-message-image')).toHaveCount(0);
+  await expect(rows.nth(3).locator('.operator-message-text')).toHaveText(image);
+});
+
+for (const outcome of ['retry', 'rejected'] as const) test(`image publishing keeps its draft until media is approved: ${outcome}`, async ({ page }) => {
+  await installApiBoundary(page);
+  const mediaId = 'b66d5b3e-e258-4932-9b99-d15cf3f33615';
+  const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  let prepares = 0, uploads = 0, finalizes = 0, publications = 0;
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      prepares++; expect(route.request().postDataJSON().purpose).toBe('post');
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: 'post', mimeType: 'image/png', maxFileSize: 5 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    if (path.endsWith('/upload')) { uploads++; return json(route, { id: mediaId, mediaId, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      if (outcome === 'rejected') return json(route, { id: mediaId, mediaId, status: 'rejected' });
+      if (finalizes === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media moderation is temporarily unavailable', errors: ['media_moderation_unavailable'] }) });
+      return json(route, { id: mediaId, mediaId, status: 'approved', mimeType: 'image/png', size: image.length, url: `/api/media/${mediaId}/content?token=synthetic.signed` });
+    }
+    return route.fulfill({ status: 200, contentType: 'image/png', body: image });
+  });
+  await page.route('**/api/posts', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    publications++; const payload = route.request().postDataJSON(); expect(payload.mediaIds).toEqual([mediaId]); expect(payload.images).toBeUndefined();
+    return json(route, post(payload.content, '292d72b6-6bd1-4693-91e8-b4dc32302c7c'));
+  });
+  await page.goto('/'); await page.getByRole('button', { name: 'Create a post' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Create post' });
+  await dialog.getByRole('textbox', { name: 'Write a post' }).fill('Keep this media draft until approval.');
+  await dialog.locator('#post-content-category').selectOption('technology');
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: image });
+  await dialog.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Post', exact: true })).toBeEnabled();
+  await expect(dialog.getByRole('textbox', { name: 'Write a post' })).toHaveValue('Keep this media draft until approval.');
+  expect(publications).toBe(0); expect(prepares).toBe(1); expect(uploads).toBe(1);
+  if (outcome === 'retry') {
+    await dialog.getByRole('button', { name: 'Post', exact: true }).click(); await expect(dialog).toBeHidden();
+    expect(publications).toBe(1); expect(prepares).toBe(1); expect(uploads).toBe(1); expect(finalizes).toBe(2);
+  }
+});
+
+test('a story retry reuses its created Highlight and approved voice/cover without losing the draft', async ({ page }) => {
+  await installApiBoundary(page);
+  const voice = readFileSync(new URL('./fixtures/delivery.wav', import.meta.url));
+  const cover = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
+  const voiceId = '40000000-0000-4000-8000-000000000191', coverId = '40000000-0000-4000-8000-000000000192';
+  const highlightId = '50000000-0000-4000-8000-000000000191';
+  let prepares = 0, uploads = 0, finalizes = 0, highlightCreates = 0;
+  const publications: Array<Record<string, unknown>> = [];
+  const highlights: Array<{ id: string; ownerId: string; title: string; coverUrl: string; storyIds: string[]; createdAt: string; updatedAt: string }> = [];
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      prepares++;
+      const payload = route.request().postDataJSON();
+      expect(['story', 'highlight']).toContain(payload.purpose);
+      const id = payload.purpose === 'story' ? voiceId : coverId;
+      expect(payload).toMatchObject({ mimeType: id === voiceId ? 'audio/wav' : 'image/png', size: id === voiceId ? voice.length : cover.length });
+      return json(route, { id, mediaId: id, status: 'pending', purpose: payload.purpose, mimeType: payload.mimeType, maxFileSize: payload.purpose === 'story' ? 10 * 1024 * 1024 : 2 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${id}/upload` });
+    }
+    const id = path.includes(voiceId) ? voiceId : coverId;
+    if (path.endsWith('/upload')) { uploads++; return json(route, { id, mediaId: id, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      return json(route, { id, mediaId: id, status: 'approved', mimeType: id === voiceId ? 'audio/wav' : 'image/png', size: id === voiceId ? voice.length : cover.length, ...(id === voiceId ? { duration: 1 } : {}), url: `/api/media/${id}/content?token=synthetic.signed` });
+    }
+    return fulfillSeekableMedia(route, id === voiceId ? voice : cover, id === voiceId ? 'audio/wav' : 'image/png');
+  });
+  await page.route('**/api/highlights', async route => {
+    if (route.request().method() === 'GET') return json(route, highlights);
+    highlightCreates++;
+    const payload = route.request().postDataJSON();
+    expect(payload).toEqual({ title: 'Field notes', coverMediaId: coverId });
+    const created = { id: highlightCreates === 1 ? highlightId : '50000000-0000-4000-8000-000000000192', ownerId: user.id, title: payload.title, coverUrl: `/api/media/${coverId}/content?token=synthetic.signed`, storyIds: [], createdAt: user.createdAt, updatedAt: user.createdAt };
+    highlights.push(created);
+    return json(route, created);
+  });
+  await page.route('**/api/stories', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const payload = route.request().postDataJSON();
+    publications.push(payload);
+    if (publications.length === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Story publication is temporarily unavailable', errors: ['story_unavailable'] }) });
+    return json(route, { ...payload, id: '60000000-0000-4000-8000-000000000191', authorId: user.id, mediaUrl: `/api/media/${voiceId}/content?token=synthetic.signed`, createdAt: user.createdAt, expiresAt: new Date(Date.now() + 86_400_000).toISOString() });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add a story', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Voice Story', exact: true }).click();
+  await dialog.locator('#story-voice-file').setInputFiles({ name: 'draft-voice.wav', mimeType: 'audio/wav', buffer: voice });
+  await dialog.getByPlaceholder('Add an optional caption…').fill('Keep this voice and caption for retry.');
+  await dialog.locator('#story-content-category').selectOption('technology');
+  await dialog.getByText('Highlight destination', { exact: true }).locator('..').locator('select').selectOption('new');
+  await dialog.getByRole('textbox', { name: 'New Highlight name' }).fill('Field notes');
+  await dialog.locator('#highlight-cover').setInputFiles({ name: 'draft-cover.png', mimeType: 'image/png', buffer: cover });
+  const publish = dialog.getByRole('button', { name: 'Share Story Live', exact: true });
+  await publish.click();
+  await expect(publish).toBeEnabled();
+  await expect(dialog.getByPlaceholder('Add an optional caption…')).toHaveValue('Keep this voice and caption for retry.');
+  await expect(dialog.locator('label[for="story-voice-file"]')).toContainText('draft-voice.wav');
+  expect(highlightCreates).toBe(1);
+  await publish.click();
+  await expect(dialog).toBeHidden();
+  expect(highlightCreates).toBe(1);
+  expect(prepares).toBe(2); expect(uploads).toBe(2); expect(finalizes).toBe(2);
+  expect(publications).toHaveLength(2);
+  for (const payload of publications) {
+    expect(payload).toMatchObject({ mediaId: voiceId, textContent: 'Keep this voice and caption for retry.', highlightId, highlightTitle: 'Field notes' });
+    expect(payload.mediaUrl).toBeUndefined();
+  }
+});
+
+test('Studio Post captures camera pixels as a bounded approved JPEG and rejects video-mode carryover', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => {
+      const camera = document.createElement('canvas');
+      camera.width = 640; camera.height = 480;
+      const context = camera.getContext('2d')!;
+      const paint = () => { context.fillStyle = 'rgb(25,163,74)'; context.fillRect(0, 0, camera.width, camera.height); };
+      paint();
+      const timer = setInterval(paint, 100);
+      const stream = camera.captureStream(10);
+      for (const track of stream.getTracks()) {
+        const stop = track.stop.bind(track);
+        track.stop = () => { clearInterval(timer); stop(); };
+      }
+      return stream;
+    } });
+  });
+  const reel = { id: '30000000-0000-4000-8000-000000000141', authorId: user.id, title: 'Synthetic camera entry', videoUrl: 'https://example.test/reel.mp4', thumbnailUrl: 'https://example.test/reel.jpg', type: 'short', views: 0, likes: 0, createdAt: user.createdAt };
+  await page.route('**/api/videos', route => json(route, [reel]));
+  await page.route(`**/api/videos/${reel.id}/comments`, route => json(route, []));
+  const mediaId = '40000000-0000-4000-8000-000000000141';
+  let prepares = 0, finalizes = 0, publications = 0, declaredSize = 0;
+  let uploadedJpeg: Buffer | undefined;
+  let release!: () => void;
+  const moderation = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      prepares++;
+      const payload = route.request().postDataJSON();
+      expect(payload.purpose).toBe('post'); expect(payload.mimeType).toBe('image/jpeg'); expect(payload.filename).toMatch(/\.jpg$/);
+      declaredSize = payload.size;
+      expect(declaredSize).toBeGreaterThan(0); expect(declaredSize).toBeLessThanOrEqual(5 * 1024 * 1024);
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: 'post', mimeType: 'image/jpeg', maxFileSize: 5 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    if (path.endsWith('/upload')) {
+      const multipart = route.request().postDataBuffer()!;
+      const start = multipart.indexOf(Buffer.from([255, 216, 255]));
+      const end = multipart.lastIndexOf(Buffer.from([255, 217])) + 2;
+      expect(start).toBeGreaterThanOrEqual(0); expect(end).toBeGreaterThan(start);
+      uploadedJpeg = multipart.subarray(start, end);
+      expect(uploadedJpeg.length).toBe(declaredSize);
+      return json(route, { id: mediaId, mediaId, status: 'uploaded' });
+    }
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      await moderation;
+      return json(route, { id: mediaId, mediaId, status: 'approved', mimeType: 'image/jpeg', size: declaredSize, url: `/api/media/${mediaId}/content?token=synthetic.signed` });
+    }
+    if (path.endsWith('/content')) return route.fulfill({ contentType: 'image/jpeg', body: uploadedJpeg! });
+    throw new Error(`Unexpected Studio media request: ${path}`);
+  });
+  await page.route('**/api/posts', route => {
+    const payload = route.request().postDataJSON();
+    expect(payload.mediaIds).toEqual([mediaId]); expect(payload.images).toBeUndefined();
+    publications++;
+    return json(route, { ...post(payload.content, '50000000-0000-4000-8000-000000000141'), images: [`/api/media/${mediaId}/content?token=synthetic.signed`] });
+  });
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Synthetic camera entry', exact: true }).click();
+  await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
+  const studio = page.getByRole('dialog').filter({ hasText: 'Ultra Studio Camera' });
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByRole('button', { name: 'Photo Post mode', exact: true })).toBeDisabled();
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeDisabled();
+  await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
+  await studio.getByRole('button', { name: 'Stop recording', exact: true }).click();
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeEnabled();
+  await studio.getByRole('button', { name: 'Photo Post mode', exact: true }).click();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeDisabled();
+  await studio.getByRole('button', { name: 'Capture photo', exact: true }).click();
+  await expect(studio.getByRole('img', { name: 'Captured Post photo', exact: true })).toBeVisible();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeEnabled();
+  await studio.getByRole('button', { name: /Publish POST/ }).click();
+  await expect.poll(() => finalizes).toBe(1);
+  expect(publications).toBe(0); expect(prepares).toBe(1);
+  await expect(studio.getByRole('button', { name: 'Photo Post mode', exact: true })).toBeDisabled();
+  await expect(studio.getByRole('button', { name: 'Capture photo', exact: true })).toBeDisabled();
+  const actualFrame = await page.evaluate(async encoded => {
+    const bytes = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
+    const image = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    const pixel = Array.from(context.getImageData(50, 50, 1, 1).data);
+    image.close();
+    return { width: canvas.width, height: canvas.height, pixel };
+  }, uploadedJpeg!.toString('base64'));
+  expect([actualFrame.width, actualFrame.height]).toEqual([640, 480]);
+  expect(actualFrame.width * actualFrame.height).toBeLessThanOrEqual(12_000_000);
+  expect(Math.max(actualFrame.width, actualFrame.height)).toBeLessThanOrEqual(4096);
+  for (const [index, value] of [25, 163, 74].entries()) expect(Math.abs(actualFrame.pixel[index] - value)).toBeLessThan(5);
+  release();
+  await expect(studio).toBeHidden();
+  expect(publications).toBe(1);
+});
+
+async function openCancellationStudio(page: Page) {
+  const reel = { id: '30000000-0000-4000-8000-000000000142', authorId: user.id, title: 'Camera lifecycle entry', videoUrl: 'https://example.test/lifecycle.mp4', thumbnailUrl: 'https://example.test/lifecycle.jpg', type: 'short', views: 0, likes: 0, createdAt: user.createdAt };
+  await page.route('**/api/videos', route => json(route, [reel]));
+  await page.route(`**/api/videos/${reel.id}/comments`, route => json(route, []));
+  if (!page.url().endsWith('/videos')) await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Camera lifecycle entry', exact: true }).click();
+  await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
+  return page.getByRole('dialog').filter({ hasText: 'Ultra Studio Camera' });
+}
+
+test('Studio cancels permission results after close, camera flip and route unmount', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    const harness = { pending: [] as Array<(stream: MediaStream) => void>, streams: [] as MediaStream[] };
+    (window as any).__cameraHarness = harness;
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: () => new Promise<MediaStream>(resolve => { harness.pending.push(resolve); }) });
+    (window as any).__resolveCamera = (index: number) => {
+      const canvas = document.createElement('canvas'); canvas.width = 40; canvas.height = 40;
+      canvas.getContext('2d')!.fillRect(0, 0, 40, 40);
+      const stream = canvas.captureStream(10);
+      harness.streams[index] = stream;
+      harness.pending[index](stream);
+    };
+  });
+  const studio = await openCancellationStudio(page);
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(1);
+  await studio.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await page.evaluate(() => (window as any).__resolveCamera(0));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[0].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(2);
+  await studio.getByRole('button', { name: 'Flip Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(3);
+  await page.evaluate(() => (window as any).__resolveCamera(1));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[1].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.evaluate(() => (window as any).__resolveCamera(2));
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
+  await studio.getByRole('button', { name: 'Flip Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(4);
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[2].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.evaluate(() => { window.history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  await expect(studio).toBeHidden();
+  await page.evaluate(() => (window as any).__resolveCamera(3));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[3].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+});
+
+test('Studio timer stop, recording close and obsolete preview cleanup preserve capture boundaries', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    const streams: MediaStream[] = [];
+    (window as any).__cameraStreams = streams;
+    (window as any).__studioUrls = { created: [] as string[], revoked: [] as string[] };
+    const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = blob => { const url = create(blob); (window as any).__studioUrls.created.push(url); return url; };
+    URL.revokeObjectURL = url => { (window as any).__studioUrls.revoked.push(url); revoke(url); };
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => {
+      const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
+      const paint = () => { const context = canvas.getContext('2d')!; context.fillStyle = 'green'; context.fillRect(0, 0, 320, 240); };
+      paint(); const timer = setInterval(paint, 100);
+      const stream = canvas.captureStream(10); streams.push(stream);
+      for (const track of stream.getTracks()) { const stop = track.stop.bind(track); track.stop = () => { clearInterval(timer); stop(); }; }
+      return stream;
+    } });
+  });
+  const studio = await openCancellationStudio(page);
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
+  await page.clock.install();
+  await page.clock.fastForward(30_000);
+  await expect(studio.getByRole('button', { name: 'Stop recording', exact: true })).toHaveCount(0);
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeEnabled();
+  const videoUrl = await page.evaluate(() => (window as any).__studioUrls.created.at(-1));
+  await studio.getByRole('button', { name: 'Photo Post mode', exact: true }).click();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeDisabled();
+  await expect.poll(() => page.evaluate(url => (window as any).__studioUrls.revoked.includes(url), videoUrl)).toBe(true);
+  await studio.getByRole('button', { name: 'Capture photo', exact: true }).click();
+  await expect(studio.getByRole('img', { name: 'Captured Post photo', exact: true })).toBeVisible();
+  const photoUrl = await page.evaluate(() => (window as any).__studioUrls.created.at(-1));
+  await studio.getByRole('button', { name: 'Video Reel mode', exact: true }).click();
+  await expect.poll(() => page.evaluate(url => (window as any).__studioUrls.revoked.includes(url), photoUrl)).toBe(true);
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByRole('button', { name: 'Stop recording', exact: true })).toBeVisible();
+  await studio.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await expect(studio).toBeHidden();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraStreams.every((stream: MediaStream) => stream.getTracks().every(track => track.readyState === 'ended')))).toBe(true);
+});
+
+test('Studio permission denial keeps recording and publication unavailable', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => { throw new DOMException('Permission denied', 'NotAllowedError'); } }));
+  const studio = await openCancellationStudio(page);
+  await expect(studio.getByRole('heading', { name: 'Camera unavailable', exact: true })).toBeVisible();
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeDisabled();
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
+  await studio.getByRole('button', { name: 'Photo Post mode', exact: true }).click();
+  await expect(studio.getByRole('button', { name: 'Capture photo', exact: true })).toBeDisabled();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeDisabled();
+});
+
+for (const mode of ['reel', 'story'] as const) test(`Studio ${mode} publishes only its approved camera video`, async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => {
+    const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
+    const paint = () => { canvas.getContext('2d')!.fillRect(0, 0, 320, 240); };
+    paint(); const timer = setInterval(paint, 100); const stream = canvas.captureStream(10);
+    for (const track of stream.getTracks()) { const stop = track.stop.bind(track); track.stop = () => { clearInterval(timer); stop(); }; }
+    return stream;
+  } }));
+  const mediaId = '40000000-0000-4000-8000-000000000143';
+  let finalizes = 0, declaredSize = 0, publications = 0;
+  let mimeType = '';
+  let release!: () => void;
+  const moderation = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      const payload = route.request().postDataJSON(); declaredSize = payload.size; mimeType = payload.mimeType;
+      expect(payload.purpose).toBe(mode === 'reel' ? 'video' : 'story');
+      expect(['video/webm', 'video/mp4']).toContain(payload.mimeType);
+      expect(payload.filename).toMatch(/\.(webm|mp4)$/); expect(declaredSize).toBeGreaterThan(0);
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: payload.purpose, mimeType, maxFileSize: 10 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    if (path.endsWith('/upload')) { expect(route.request().postDataBuffer()!.length).toBeGreaterThan(declaredSize); return json(route, { id: mediaId, mediaId, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) { finalizes++; await moderation; return json(route, { id: mediaId, mediaId, status: 'approved', mimeType, size: declaredSize, url: `/api/media/${mediaId}/content?token=synthetic.signed`, thumbnailUrl: `/api/media/${mediaId}/content?token=synthetic.poster&variant=poster` }); }
+    if (path.endsWith('/content')) return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII=', 'base64') });
+    throw new Error(`Unexpected Studio video media request: ${path}`);
+  });
+  const studio = await openCancellationStudio(page);
+  if (mode === 'story') await studio.getByRole('button', { name: 'Video Story mode', exact: true }).click();
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await page.route('**/api/videos/50000000-0000-4000-8000-000000000143/comments', route => json(route, []));
+  await page.route(`**/api/${mode === 'reel' ? 'videos' : 'stories'}`, route => {
+    expect(route.request().method()).toBe('POST'); const payload = route.request().postDataJSON();
+    expect(payload.mediaId).toBe(mediaId); expect(payload.mediaUrl).toBeUndefined(); expect(payload.videoUrl).toBeUndefined();
+    expect(payload.contentCategory).toBe('technology'); expect(payload.type).toBe(mode === 'reel' ? 'short' : 'video'); publications++;
+    return json(route, { id: '50000000-0000-4000-8000-000000000143', authorId: user.id, ...payload, mediaUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, videoUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, createdAt: user.createdAt, expiresAt: '2026-08-29T09:00:00.000Z', views: [], likes: 0 });
+  });
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
+  const stop = studio.getByRole('button', { name: 'Stop recording', exact: true });
+  await stop.focus(); await stop.press('Enter');
+  const publish = studio.getByRole('button', { name: new RegExp(`Publish ${mode.toUpperCase()}`) });
+  await expect(publish).toBeEnabled(); await publish.click();
+  await expect.poll(() => finalizes).toBe(1); expect(publications).toBe(0);
+  await expect(studio.getByRole('button', { name: 'Photo Post mode', exact: true })).toBeDisabled();
+  release(); await expect(studio).toBeHidden(); expect(publications).toBe(1);
+});
+
+for (const width of [390, 1280]) test(`grievance receipts and keyboard tracking expose public status only at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 850 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await installApiBoundary(page);
+  const receipt = { ticketId: 'YT-GRV-ABCDEF1234', status: 'received', createdAt: user.createdAt };
+  await page.route('**/api/reports/grievance', route => json(route, receipt));
+  await page.route(`**/api/reports/grievance/${receipt.ticketId}`, route => json(route, { ...receipt, status: 'under_review' }));
+  await page.goto('/grievance');
+  await page.getByRole('button', { name: 'Submit Grievance to Redressal Officer' }).click();
+  await expect(page.getByLabel('Your Full Name *', { exact: true })).toBeFocused();
+  await expect(page.getByRole('alert').filter({ hasText: 'A few details need attention.' })).toBeVisible();
+  await page.getByLabel('Your Full Name *', { exact: true }).fill('Private Reporter');
+  await page.getByLabel('Email Address *', { exact: true }).fill('private@example.test');
+  await page.getByLabel('Reported Post / Reel / Profile URL *', { exact: true }).fill('@private-test');
+  await page.getByLabel('Detailed Description & Evidence *', { exact: true }).fill('Private report explanation for the staff review queue.');
+  const submit = page.getByRole('button', { name: 'Submit Grievance to Redressal Officer' });
+  await submit.focus(); await submit.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Grievance Ticket Acknowledged', exact: true })).toBeVisible();
+  await expect(page.getByText(receipt.ticketId, { exact: true })).toBeVisible();
+  await expect(page.getByText(/Statutory SLA|Resolution SLA/)).toHaveCount(0);
+  const trackTab = page.getByRole('button', { name: 'Track Existing Ticket', exact: true });
+  await trackTab.focus(); await trackTab.press('Enter');
+  await page.getByLabel('Ticket ID', { exact: true }).fill(receipt.ticketId);
+  await page.getByLabel('Ticket ID', { exact: true }).press('Enter');
+  await expect(page.getByText('under review', { exact: true })).toBeVisible();
+  await expect(page.getByText('This page shows your ticket status. Reporter details and internal review notes remain private.', { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const accessibility = await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
 
 const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
   features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
@@ -759,6 +1497,95 @@ test('inbox failures offer a retry without claiming an empty or live-connected i
   await expect(page.getByRole('heading', { name: 'Your inbox is clear' })).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(accessibility.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+});
+
+for (const width of [390, 1280]) for (const isGroup of [false, true]) test(`message image approval and send retries preserve the draft: ${isGroup ? 'group' : 'direct'} at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 850 });
+  await installApiBoundary(page);
+  const peer = { ...user, id: '10000000-0000-4000-8000-000000000131', username: 'media_peer', fullName: 'Media Peer' };
+  const conversation = { id: '20000000-0000-4000-8000-000000000131', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt, isGroup, title: isGroup ? 'Media group' : null };
+  const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII=', 'base64');
+  const mediaIds = ['30000000-0000-4000-8000-000000000131', '30000000-0000-4000-8000-000000000132'];
+  let prepares = 0, uploads = 0, finalizes = 0, approvals = 0;
+  const publications: Array<Record<string, any>> = [];
+  await page.route('**/api/conversations', route => json(route, [{ conversation }]));
+  await page.route('**/api/conversations/*/messages', route => json(route, []));
+  await page.route(`**/api/users/${peer.id}`, route => json(route, peer));
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      const payload = route.request().postDataJSON();
+      expect(payload).toMatchObject({ purpose: 'message', mimeType: 'image/png', size: image.length });
+      const mediaId = mediaIds[prepares++];
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: 'message', mimeType: 'image/png', maxFileSize: 5 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    const mediaId = path.split('/')[3];
+    if (path.endsWith('/upload')) { uploads++; return json(route, { id: mediaId, mediaId, status: 'uploaded' }); }
+    if (path.endsWith('/content')) return route.fulfill({ contentType: 'image/png', body: image });
+    if (path.endsWith('/finalize')) {
+      finalizes++;
+      if (finalizes === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Media moderation is temporarily unavailable', errors: ['media_moderation_unavailable'] }) });
+      approvals++;
+      return json(route, { id: mediaId, mediaId, status: 'approved', mimeType: 'image/png', size: image.length, url: `/api/media/${mediaId}/content?token=synthetic.signed` });
+    }
+    throw new Error(`Unexpected media fixture request: ${path}`);
+  });
+  await page.route('**/api/messages', async route => {
+    expect(approvals, 'Messages may only publish after media approval').toBeGreaterThan(0);
+    const payload = route.request().postDataJSON();
+    expect(payload.mediaId).toBe(mediaIds[publications.length < 3 ? 0 : 1]);
+    expect(payload.mediaUrl).toBeUndefined();
+    expect(payload.content).not.toContain('📷');
+    if (isGroup) { expect(payload.conversationId).toBe(conversation.id); expect(payload.recipientId).toBeUndefined(); }
+    else { expect(payload.recipientId).toBe(peer.id); expect(payload.conversationId).toBeUndefined(); }
+    publications.push(payload);
+    if (publications.length <= 2) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Message publication is temporarily unavailable' }) });
+    return json(route, { id: `sent-media-${publications.length}`, conversationId: conversation.id, senderId: user.id, recipientId: peer.id, content: payload.content, mediaId: payload.mediaId, mediaUrl: `/api/media/${payload.mediaId}/content?token=synthetic.signed`, mediaType: 'image', mediaLegacy: false, createdAt: user.createdAt, seenAt: null });
+  });
+  await page.goto(`/messages/${conversation.id}`);
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('Keep this caption and image until publication succeeds.');
+  await page.getByRole('button', { name: 'Add image attachment', exact: true }).click();
+  const fileInput = page.getByLabel('Message image', { exact: true });
+  await fileInput.setInputFiles({ name: 'retained-message.png', mimeType: 'image/png', buffer: image });
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  const failure = page.getByRole('alert').filter({ hasText: 'Could not send this message.' });
+  await expect(failure).toBeVisible();
+  await expect(page.getByText('Message not sent. Your draft is still here.', { exact: true })).toHaveCount(0);
+  await expect(composer).toHaveValue('Keep this caption and image until publication succeeds.');
+  await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
+  expect(publications).toHaveLength(0);
+  expect([prepares, uploads, finalizes]).toEqual([1, 1, 1]);
+  await failure.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect.poll(() => publications.length).toBe(1);
+  await expect(failure).toBeVisible();
+  await expect(composer).toHaveValue('Keep this caption and image until publication succeeds.');
+  await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
+  expect([prepares, uploads, finalizes]).toEqual([1, 1, 2]);
+  await failure.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect.poll(() => publications.length).toBe(2);
+  await expect(failure).toBeVisible();
+  await expect(composer).toHaveValue('Keep this caption and image until publication succeeds.');
+  await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
+  await expect(failure).toHaveCount(1);
+  const retry = failure.getByRole('button', { name: 'Retry', exact: true });
+  await retry.focus();
+  await retry.press('Enter');
+  await expect(composer).toHaveValue('');
+  expect(publications).toHaveLength(3);
+  expect(publications[0]).toEqual(publications[1]);
+  expect(publications[1]).toEqual(publications[2]);
+  expect([prepares, uploads, finalizes]).toEqual([1, 1, 2]);
+  await expect(page.getByRole('img', { name: 'Shared attachment', exact: true })).toHaveCount(1);
+  await expect(page.getByText('retained-message.png', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add image attachment', exact: true }).click();
+  await fileInput.setInputFiles({ name: 'image-only.png', mimeType: 'image/png', buffer: image });
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => publications.length).toBe(4);
+  expect(publications[3].content).toBe('');
+  expect(publications[3].mediaId).toBe(mediaIds[1]);
+  await expect(page.getByRole('img', { name: 'Shared attachment', exact: true })).toHaveCount(2);
+  expect([prepares, uploads, finalizes]).toEqual([2, 2, 3]);
 });
 
 test('message drafts stay with their conversation and survive failed duplicate sends', async ({ page }) => {

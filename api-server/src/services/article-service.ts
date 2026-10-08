@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { ArticleRepository } from "../repositories/article-repository.js";
 import type { ArticleRecord } from "../types/index.js";
@@ -24,22 +25,24 @@ export class ArticleService {
     title: string;
     excerpt: string;
     content: string;
-    coverUrl: string;
+    coverMediaId?: string;
     readTime: number;
     collection?: string;
     contentCategory?: ArticleRecord["contentCategory"];
     contentRating?: ArticleRecord["contentRating"];
   }): Promise<ArticleRecord> {
     await enforceTextContentPolicy(`${input.title}\n${input.excerpt}\n${input.content}`, this.aiService, "article");
+    rejectRawMedia(input, ["coverUrl"]);
     const article: ArticleRecord = {
       id: randomUUID(),
       ...input,
+      coverUrl: "",
       claps: 0,
       createdAt: new Date().toISOString(),
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.articleRepository.create(article);
+    return withApprovedMedia(input.authorId, mediaBinding(input.coverMediaId, "article", "coverUrl", "image"), { type: "articles", id: article.id }, media => this.articleRepository.create({ ...article, coverUrl: media.coverUrl?.[0]?.url ?? "" }));
   }
 
   async listArticles(viewerId?: string): Promise<ArticleRecord[]> {

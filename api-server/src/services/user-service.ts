@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { emitToUser } from "../lib/realtime.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
@@ -42,8 +43,13 @@ export class UserService {
     return user;
   }
 
-  async updateProfile(userId: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
-    return this.userRepository.update(userId, updates);
+  async updateProfile(userId: string, updates: Pick<Partial<UserRecord>, "fullName" | "bio"> & { avatarMediaId?: string }): Promise<UserRecord | undefined> {
+    rejectRawMedia(updates, ["avatarUrl"]);
+    return withApprovedMedia(userId, mediaBinding(updates.avatarMediaId, "avatar", "avatarUrl", "image"), { type: "users", id: userId }, media => this.userRepository.update(userId, {
+      ...(updates.fullName !== undefined ? { fullName: updates.fullName } : {}),
+      ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
+      ...(updates.avatarMediaId !== undefined ? { avatarUrl: media.avatarUrl[0].url } : {}),
+    }));
   }
 
   async updatePremiumProfile(userId: string, updates: Partial<PremiumProfileSelection>): Promise<UserRecord | undefined> {
@@ -90,8 +96,8 @@ export class UserService {
     };
   }
 
-  async uploadAvatar(userId: string, avatarUrl: string): Promise<UserRecord | undefined> {
-    return this.userRepository.update(userId, { avatarUrl });
+  async uploadAvatar(userId: string, avatarMediaId: string): Promise<UserRecord | undefined> {
+    return this.updateProfile(userId, { avatarMediaId });
   }
 
   async searchUsers(search: string, viewerId?: string): Promise<UserRecord[]> {

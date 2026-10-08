@@ -165,8 +165,13 @@ export interface MessageRecord {
   id: string;
   conversationId: string;
   senderId: string;
-  recipientId: string;
+  recipientId: string | null;
   content: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "audio" | null;
+  mediaDuration?: number | null;
+  mediaLegacy?: boolean;
   textStyleId?: string;
   createdAt: string;
   seenAt: string | null;
@@ -185,8 +190,8 @@ export type MessageLifecycleState = "MESSAGE_DELIVERED" | "MESSAGE_PREVIEWED" | 
 
 export interface ConversationRecord {
   id: string;
-  participantA: string;
-  participantB: string;
+  participantA: string | null;
+  participantB: string | null;
   updatedAt: string;
   participantIds?: string[];
   isGroup?: boolean;
@@ -249,6 +254,7 @@ export interface CommunityRecord {
   name: string;
   slug: string;
   description: string;
+  coverUrl?: string | null;
   ownerId: string;
   moderators: string[];
   memberIds: string[];

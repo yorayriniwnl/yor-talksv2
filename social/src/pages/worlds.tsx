@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { WorldSelector } from '@/components/worlds/WorldSelector';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 
 const WORLD_FILTERS = ['All worlds', 'Joined', 'Technology', 'Creative', 'Gaming', 'Culture'] as const;
@@ -57,6 +59,7 @@ export default function Worlds() {
   const [description, setDescription] = useState('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [creating, setCreating] = useState(false);
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
 
   const visibleWorlds = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -78,12 +81,16 @@ export default function Worlds() {
     }
     setCreating(true);
     try {
-      await createCommunity(trimmedName, slugify(trimmedName), description.trim(), contentRating);
+      const cover = coverFiles[0] ? await uploadApprovedMedia(coverFiles[0], 'community') : undefined;
+      await createCommunity(trimmedName, slugify(trimmedName), description.trim(), contentRating, cover?.mediaId);
+      setCoverFiles([]);
       setName('');
       setDescription('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setShowCreate(false);
       toast.success('Your world is live.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create this world. Your draft is still here.');
     } finally {
       setCreating(false);
     }
@@ -203,20 +210,22 @@ export default function Worlds() {
             <DialogTitle className="text-2xl font-display">Create the place you wish existed.</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-3">
-            <label className="yor-field">
-              <span>Name</span>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Midnight filmmakers" maxLength={80} />
-            </label>
-            <label className="yor-field">
-              <span>What pulls people here?</span>
+            <div className="yor-field space-y-1.5">
+              <label htmlFor="world-name-input" className="text-xs font-semibold text-foreground block">Name</label>
+              <Input id="world-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Midnight filmmakers" maxLength={80} />
+            </div>
+            <div className="yor-field space-y-1.5">
+              <label htmlFor="world-description-input" className="text-xs font-semibold text-foreground block">What pulls people here?</label>
               <Textarea
+                id="world-description-input"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="A place for people who want to make strange, beautiful short films after class..."
                 rows={4}
                 maxLength={500}
               />
-            </label>
+            </div>
+            <MediaImageField id="world-cover" label="World cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={creating} />
             <ContentRatingSelect id="world-content-rating" value={contentRating} onChange={setContentRating} />
             <div className="yor-dialog-note">
               <Sparkles className="h-4 w-4" />

@@ -751,12 +751,48 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "delete",
+    "path": "/media/{id}",
+    "operationId": "deleteMediaById",
+    "tag": "media",
+    "summary": "Delete /media/{id}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/media/{id}/content",
+    "operationId": "getMediaByIdContent",
+    "tag": "media",
+    "summary": "Get /media/{id}/content",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/finalize",
+    "operationId": "postMediaByIdFinalize",
+    "tag": "media",
+    "summary": "Post /media/{id}/finalize",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/media/{id}/hls",
     "operationId": "getMediaByIdHls",
     "tag": "media",
     "summary": "Get /media/{id}/hls",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/upload",
+    "operationId": "postMediaByIdUpload",
+    "tag": "media",
+    "summary": "Post /media/{id}/upload",
+    "authenticated": true,
     "roles": []
   },
   {

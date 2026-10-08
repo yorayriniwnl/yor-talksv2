@@ -18,7 +18,7 @@ test("marketplace saves are private, viewer-scoped, and toggleable", async () =>
     title: "Handmade control surface",
     description: "A durable control surface for live creators.",
     price: 2499,
-    images: ["https://example.test/product.jpg"],
+    mediaIds: [],
     category: "hardware",
     condition: "new",
   });

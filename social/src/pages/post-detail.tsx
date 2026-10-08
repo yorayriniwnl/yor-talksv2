@@ -90,9 +90,9 @@ export default function PostDetail() {
 
   const handleAddComment = async (data: RichCommentData) => {
     if (!post) return;
-    if (!data.text.trim() && !data.imageUrl && !data.gifUrl && !data.voiceNoteUrl) return;
+    if (!data.text.trim() && !data.mediaId) return;
     if (replyingTo) {
-      if (data.imageUrl || data.gifUrl || data.voiceNoteUrl) {
+      if (data.mediaId) {
         throw new Error('Text replies are required for nested replies. Add media as a top-level comment instead.');
       }
       const result = await api.replyToPostComment(post.id, replyingTo.id, data.text.trim());
@@ -104,13 +104,7 @@ export default function PostDetail() {
       return;
     }
 
-    const media = data.voiceNoteUrl
-      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
-      : data.gifUrl
-        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
-        : data.imageUrl
-          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
-          : {};
+    const media = data.mediaId ? { mediaId: data.mediaId, mediaType: data.mediaType, mediaDuration: data.voiceDuration } : {};
     const result = await api.commentOnPost(post.id, { content: data.text.trim(), ...media });
     const newComment: CommentItem = {
       id: result.comment.id,
@@ -148,7 +142,7 @@ export default function PostDetail() {
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h2>
+          <h1 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h1>
           <p className="text-xs text-muted-foreground">A thought worth talking about.</p>
         </div>
       </div>
@@ -167,9 +161,9 @@ export default function PostDetail() {
         <div className="mb-10 space-y-4">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            <h3 className="font-display font-extrabold text-sm text-foreground">
+            <h2 className="font-display font-extrabold text-sm text-foreground">
               Replies{!commentsLoading && !commentsError ? ` (${commentList.length})` : ''}
-            </h3>
+            </h2>
           </div>
           
           {/* Rich Composer */}

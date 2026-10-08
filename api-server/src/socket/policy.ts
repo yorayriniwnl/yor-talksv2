@@ -22,10 +22,11 @@ const schemas: Record<string, z.ZodTypeAny> = {
   "typing:end": conversation,
   "message:send": z.object({
     recipientId: id.optional(), conversationId: id.optional(),
-    content: z.string().trim().min(1).max(4000),
+    content: z.string().trim().max(4000).default(""),
+    mediaId: id.optional(),
     textStyleId: z.enum(['default', 'mono', 'rounded']).optional(),
     idempotencyKey: id.optional(),
-  }).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId)),
+  }).strict().refine((value) => Boolean(value.recipientId) !== Boolean(value.conversationId)).refine(value => Boolean(value.content || value.mediaId)),
   "message:seen": z.object({ messageId: id }).strict(),
   "stream:join": stream,
   "stream:leave": stream,

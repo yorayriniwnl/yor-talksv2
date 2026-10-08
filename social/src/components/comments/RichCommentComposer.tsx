@@ -1,28 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  SendHorizontal, Image as ImageIcon, Film, Smile, 
+  SendHorizontal, Image as ImageIcon, Smile, 
   Mic, Zap, X, Trash2, Sparkles, Loader2 
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
-import { GifPickerModal, GifItem } from './GifPickerModal';
 import { VoiceNoteRecorder } from '@/components/messages/VoiceNoteRecorder';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const QUICK_EMOJIS = ['🔥', '❤️', '😂', '🚀', '💎', '👏', '🙏', '✨'];
 
 export interface RichCommentData {
   text: string;
-  imageUrl?: string;
-  gifUrl?: string;
-  voiceNoteUrl?: string;
+  mediaId?: string;
+  mediaType?: 'image' | 'audio';
   voiceDuration?: number;
 }
 
@@ -31,21 +29,21 @@ export function RichCommentComposer({
   placeholder = "Write a rich comment...",
   onCommentSubmit,
   creatorUser,
+  mediaPurpose = 'comment',
 }: {
   postId: string;
   placeholder?: string;
   onCommentSubmit: (data: RichCommentData) => void | Promise<void>;
   creatorUser?: { id: string; displayName: string; username: string; avatarUrl?: string };
+  mediaPurpose?: 'comment' | 'video_comment';
 }) {
   const currentUser = useAppStore((state) => state.currentUser);
   
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [selectedGif, setSelectedGif] = useState<GifItem | null>(null);
-  const [gifModalOpen, setGifModalOpen] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
-  const [voiceNote, setVoiceNote] = useState<{ url: string; duration: number } | null>(null);
+  const [voiceNote, setVoiceNote] = useState<{ mediaId: string; url: string; duration: number } | null>(null);
   const [tipModalOpen, setTipModalOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -64,8 +62,8 @@ export function RichCommentComposer({
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error('Image must be smaller than 8MB');
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be 5 MB or smaller');
         return;
       }
       releaseSelectedImage();
@@ -73,33 +71,32 @@ export function RichCommentComposer({
       selectedImageRef.current = url;
       setSelectedImage(url);
       setSelectedImageFile(file);
-      setSelectedGif(null);
       sounds.playPop();
     }
   };
 
   const handleSend = async () => {
-    if (sendingRef.current || (!text.trim() && !selectedImage && !selectedGif && !voiceNote)) return;
+    if (sendingRef.current || (!text.trim() && !selectedImage && !voiceNote)) return;
     sendingRef.current = true;
     setSending(true);
     try {
-      let imageUrl = selectedImage || undefined;
+      let mediaId = voiceNote?.mediaId;
+      let mediaType: RichCommentData['mediaType'] = voiceNote ? 'audio' : undefined;
       if (selectedImageFile) {
-        imageUrl = (await api.uploadMedia(selectedImageFile)).url;
+        mediaId = (await uploadApprovedMedia(selectedImageFile, mediaPurpose)).mediaId;
+        mediaType = 'image';
       }
       await onCommentSubmit({
         text: text.trim(),
-        imageUrl,
-        gifUrl: selectedGif?.url || undefined,
-        voiceNoteUrl: voiceNote?.url || undefined,
-        voiceDuration: voiceNote?.duration || undefined,
+        mediaId,
+        mediaType,
+        voiceDuration: mediaType === 'audio' ? voiceNote?.duration : undefined,
       });
       sounds.playPop();
       setText('');
       releaseSelectedImage();
       setSelectedImage(null);
       setSelectedImageFile(null);
-      setSelectedGif(null);
       setVoiceNote(null);
       toast.success('Comment posted!');
     } catch (error) {
@@ -116,8 +113,12 @@ export function RichCommentComposer({
       {showVoiceRecorder ? (
         <div className="py-1">
           <VoiceNoteRecorder
-            onSendVoiceNote={(url, duration) => {
-              setVoiceNote({ url, duration });
+            purpose={mediaPurpose}
+            onSendVoiceNote={(media, duration) => {
+              releaseSelectedImage();
+              setSelectedImage(null);
+              setSelectedImageFile(null);
+              setVoiceNote({ mediaId: media.mediaId, url: media.url, duration });
               setShowVoiceRecorder(false);
               toast.success('Voice memo attached to comment! 🎙️');
             }}
@@ -143,8 +144,11 @@ export function RichCommentComposer({
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    void handleSend();
+                    const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+                    if (!isTouch) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
                   }
                 }}
                 placeholder={placeholder}
@@ -167,32 +171,9 @@ export function RichCommentComposer({
                       aria-label="Remove image attachment"
                       disabled={sending}
                       onClick={() => { releaseSelectedImage(); setSelectedImage(null); setSelectedImageFile(null); }}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
+                      className="absolute top-1 right-1 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full bg-black/75 text-white hover:bg-rose-600 transition-colors shadow-md"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                )}
-
-                {selectedGif && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative w-40 h-28 rounded-xl overflow-hidden border border-amber-400/40 mt-2 group"
-                  >
-                    <img src={selectedGif.url} alt={selectedGif.title} className="w-full h-full object-cover" />
-                    <div className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-black/70 text-[0.6rem] font-bold font-mono text-amber-400">
-                      GIF
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Remove GIF attachment"
-                      disabled={sending}
-                      onClick={() => setSelectedGif(null)}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </motion.div>
                 )}
@@ -246,7 +227,7 @@ export function RichCommentComposer({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={handleImageFile}
               />
@@ -257,16 +238,6 @@ export function RichCommentComposer({
                 title="Attach Photo"
               >
                 <ImageIcon className="w-4 h-4" />
-              </button>
-
-              {/* GIF Search */}
-              <button
-                type="button"
-                onClick={() => setGifModalOpen(true)}
-                className="p-1.5 rounded-xl hover:bg-amber-500/10 text-muted-foreground hover:text-amber-400 transition-colors cursor-pointer"
-                title="Add GIF"
-              >
-                <Film className="w-4 h-4" />
               </button>
 
               {/* Voice Memo */}
@@ -302,10 +273,10 @@ export function RichCommentComposer({
                 aria-label={sending ? 'Posting comment' : 'Post comment'}
                 size="sm"
                 onClick={() => void handleSend()}
-                disabled={sending || (!text.trim() && !selectedImage && !selectedGif && !voiceNote)}
+                disabled={sending || (!text.trim() && !selectedImage && !voiceNote)}
                 className={cn(
                   "rounded-xl h-8 px-3 text-xs font-bold ml-1 transition-all cursor-pointer",
-                  text.trim() || selectedImage || selectedGif || voiceNote
+                  text.trim() || selectedImage || voiceNote
                     ? "bg-primary text-primary-foreground glow-neon-primary"
                     : "bg-muted text-muted-foreground"
                 )}
@@ -317,17 +288,6 @@ export function RichCommentComposer({
         </>
       )}
 
-      {/* GIF Picker Modal */}
-      <GifPickerModal
-        isOpen={gifModalOpen}
-        onOpenChange={setGifModalOpen}
-        onSelectGif={(gif) => {
-          releaseSelectedImage();
-          setSelectedGif(gif);
-          setSelectedImage(null);
-          setSelectedImageFile(null);
-        }}
-      />
       {creatorUser && publicBetaConfig.paymentsEnabled && (
         <UpiTipJarModal
           creator={creatorUser}

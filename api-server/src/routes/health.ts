@@ -4,6 +4,8 @@ import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { inspectMediaReadiness } from '../services/media-readiness.js';
+import { inspectLifecycleHealth } from '../services/lifecycle-health.js';
 
 const router = Router();
 
@@ -18,6 +20,7 @@ const readinessHandler = async (_req: Request, res: Response) => {
     redis: "down",
     api: "up",
     worker: "down",
+    lifecycle: "down",
   };
 
   const details: Record<string, unknown> = {
@@ -26,6 +29,7 @@ const readinessHandler = async (_req: Request, res: Response) => {
   };
 
   try {
+    details.media = await inspectMediaReadiness();
     await db.execute(sql`SELECT 1`);
     services.database = "up";
 
@@ -42,6 +46,11 @@ const readinessHandler = async (_req: Request, res: Response) => {
       throw new Error("Required notification worker is not ready");
     }
     services.worker = "up";
+
+    const lifecycle = await inspectLifecycleHealth();
+    details.lifecycle = lifecycle;
+    if (!lifecycle.ready) throw new Error('Required lifecycle worker is stopped, unavailable, or stalled');
+    services.lifecycle = 'up';
 
     res.status(200).json({
       status: "healthy",

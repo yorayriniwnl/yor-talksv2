@@ -26,6 +26,8 @@ import { staggerItem, springGentle } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api, type BackendUser } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 import { toast } from 'sonner';
 import { computeLevel } from '@/lib/achievement-progress';
@@ -82,7 +84,7 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
   const [type, setType] = useState<'achievement' | 'custom'>('custom');
   const [title, setTitle] = useState('');
   const [customText, setCustomText] = useState('');
-  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,8 +92,9 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
     if (!title.trim() || saving) return;
     setSaving(true);
     try {
-      await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageUrl: customImageUrl.trim() || undefined });
-      setOpen(false); setTitle(''); setCustomText(''); setCustomImageUrl('');
+      const customImageMediaId = type === 'custom' && imageFiles[0] ? (await uploadApprovedMedia(imageFiles[0], 'showcase')).mediaId : undefined;
+      await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageMediaId });
+      setOpen(false); setTitle(''); setCustomText(''); setImageFiles([]);
     } catch {
       // The store reports the error; leave all fields intact for a retry.
     } finally { setSaving(false); }
@@ -134,8 +137,7 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
                 <Textarea id="sc-desc" value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Tell people about this..." className="rounded-xl resize-none min-h-[90px]" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sc-img" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Image URL</Label>
-                <Input id="sc-img" type="url" value={customImageUrl} onChange={e => setCustomImageUrl(e.target.value)} placeholder="https://..." className="rounded-xl h-11" />
+                <MediaImageField id="sc-img" label="Showcase image (optional)" files={imageFiles} onChange={setImageFiles} disabled={saving} />
               </div>
             </>
           )}
@@ -779,10 +781,19 @@ export default function Profile() {
                       <motion.div
                         key={video.id}
                         variants={staggerItem}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Watch reel: ${video.title}`}
                         onClick={() => {
                           setActiveReelIndex(idx);
                         }}
-                        className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setActiveReelIndex(idx);
+                          }
+                        }}
+                        className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none focus-visible:ring-2 focus-visible:ring-primary outline-none"
                       >
                         <img
                           src={video.thumbnailUrl}

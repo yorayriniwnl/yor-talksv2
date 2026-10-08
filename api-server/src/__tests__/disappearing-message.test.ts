@@ -19,7 +19,7 @@ test("vanish-mode messages receive a bounded expiry", async () => {
       setVanishMode: async (_id: string, enabled: boolean) => ({ ...conversation, vanishMode: enabled }),
     } as never,
     {
-      create: async (message: any) => { persisted = message; return message; },
+      createWithResult: async (message: any) => { persisted = message; return { message, created: true }; },
       findById: async () => undefined,
       update: async (_id: string, updates: Record<string, unknown>) => ({ ...persisted, ...updates }),
     } as never,

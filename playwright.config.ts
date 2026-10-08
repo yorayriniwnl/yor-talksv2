@@ -27,12 +27,14 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: `pnpm --filter @workspace/social exec vite build --outDir dist/e2e && pnpm --filter @workspace/social exec vite preview --outDir dist/e2e --host 127.0.0.1 --port ${previewPort}`,
+    command: `corepack pnpm --filter @workspace/social exec vite build --outDir dist/e2e && corepack pnpm --filter @workspace/social exec vite preview --outDir dist/e2e --host 127.0.0.1 --port ${previewPort}`,
     url: previewUrl,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
       ...process.env,
+      // Vite inherits the ignored developer .env; explicitly select release React.
+      NODE_ENV: "production",
       VITE_REALTIME_ENABLED: "false",
       VITE_PUBLIC_BETA: "true",
       VITE_TERMS_VERSION: "test-public-beta-1",
@@ -51,7 +53,14 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // API/provider fixtures are fulfilled by routes. Prevent an omitted
+        // external fixture from reaching Google, storage, or stock-image hosts.
+        launchOptions: {
+          args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+        },
+      },
     },
   ],
 });

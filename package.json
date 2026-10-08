@@ -34,6 +34,9 @@
   "pnpm": {
     "overrides": {
       "qs": "6.16.0",
+      "engine.io": "6.6.10",
+      "ip-address": "10.7.1",
+      "proxy-addr": "2.0.8",
       "esbuild": "0.28.1",
       "@esbuild-kit/esm-loader": "npm:tsx@4.21.0",
       "js-yaml": "4.3.2",
@@ -48,7 +51,7 @@
   },
   "scripts": {
     "build": "node ./build.mjs",
-    "build:pnpm": "pnpm --filter @workspace/db build && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
+    "build:pnpm": "pnpm --filter @workspace/db build && pnpm exec tsc -b lib/api-zod && pnpm --filter @workspace/api-server build && pnpm --filter @workspace/social build",
     "contract:generate": "node ./scripts/generate-api-contract.mjs",
     "contract:check": "node ./scripts/generate-api-contract.mjs --check",
     "design:check": "node ./scripts/check-design-tokens.mjs",

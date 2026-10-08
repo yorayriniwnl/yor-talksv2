@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAppStore, type Message as DirectMessage, type MessageDraft } from '@/lib/store';
-import { api, type BackendUser } from '@/lib/api-client';
+import { api, type BackendUser, type UploadedMedia } from '@/lib/api-client';
 import { useParams, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,10 @@ import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
 import { SignalLabel, StatusBadge } from '@/components/system';
 import '@/styles/operator-communications.css';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import { MessageAttachment } from '@/components/messages/MessageAttachment';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -51,12 +54,12 @@ function parseReply(content: string): ParsedReply | null {
 
 type ReplyPreview = Pick<ParsedReply, 'senderName' | 'excerpt'>;
 
-function MessageContent({ content, isMine, textStyleId = 'default', reply: structuredReply }: { content: string; isMine: boolean; textStyleId?: DirectMessage['textStyleId']; reply?: ReplyPreview | null }) {
+function MessageContent({ content, isMine, textStyleId = 'default', reply: structuredReply, attachment }: { content: string; isMine: boolean; textStyleId?: DirectMessage['textStyleId']; reply?: ReplyPreview | null; attachment?: DirectMessage }) {
   const legacyReply = parseReply(content);
   const reply = structuredReply ?? legacyReply;
   const body = legacyReply?.body ?? content;
-  const imageMatch = body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/);
-  const imageUrl = imageMatch?.[1];
+  const imageMatch = attachment?.mediaLegacy ? body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/) : null;
+  const imageUrl = attachment?.mediaType === 'image' ? attachment.mediaUrl : imageMatch?.[1];
   const textBody = imageMatch ? body.slice(0, imageMatch.index).trim() : body;
   const textStyle = textStyleId === 'mono'
     ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }
@@ -74,9 +77,17 @@ function MessageContent({ content, isMine, textStyleId = 'default', reply: struc
     </div>
   ) : null;
 
-  if (body.startsWith('[Voice Note]')) {
+  if (attachment?.mediaId && attachment.mediaLegacy !== true && (attachment.mediaType === 'audio' || attachment.mediaType === 'image')) {
+    return <>
+      {replyMarkup}
+      {textBody && <span className="operator-message-text" style={textStyle}>{textBody}</span>}
+      <MessageAttachment message={attachment} />
+    </>;
+  }
+
+  if (attachment?.mediaType === 'audio' || (attachment?.mediaLegacy && body.startsWith('[Voice Note]'))) {
     const audioUrlMatch = body.match(/\[Voice Note\]\s*(https?:\/\/[^\s]+|\S+)/);
-    const audioUrl = audioUrlMatch ? audioUrlMatch[1] : '';
+    const audioUrl = attachment?.mediaType === 'audio' ? attachment.mediaUrl : audioUrlMatch?.[1];
     return (
       <>
         {replyMarkup}
@@ -175,7 +186,6 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       if (conv) setLocation(`/messages/${conv.id}`);
     } catch (err) {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     }
     sendingRef.current = false;
     setSending(false);
@@ -355,7 +365,7 @@ function MessagePreviewDialog({
         {message ? (
           <div className="space-y-3">
             <div className="operator-message-preview-card">
-              <MessageContent content={message.content} isMine={false} textStyleId={message.textStyleId} />
+              <MessageContent attachment={message} content={message.content} isMine={false} textStyleId={message.textStyleId} />
               <time dateTime={message.createdAt}>{format(new Date(message.createdAt), 'MMM d, h:mm a')}</time>
             </div>
             <p className="flex items-center gap-2 text-xs leading-relaxed text-muted-foreground">
@@ -408,7 +418,7 @@ function ConversationItem({
             )}
           </span>
           <span className="operator-conversation-item__preview" data-typing={isTyping || undefined}>
-            {isTyping ? "Typing…" : lastMsg?.content || "No messages yet"}
+            {isTyping ? "Typing…" : lastMsg?.content || (lastMsg?.mediaType === 'audio' ? 'Voice note' : lastMsg?.mediaType === 'image' ? 'Image' : 'No messages yet')}
           </span>
         </span>
         {unreadCount > 0 && <span className="operator-conversation-item__unread" aria-label={`${unreadCount} unread messages`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
@@ -445,7 +455,7 @@ export default function Messages() {
   const updateMessageDraft = useAppStore((state) => state.updateMessageDraft);
   const message = draft?.message ?? '';
   const textStyleId = draft?.textStyleId ?? (currentUser?.messageFontId === 'mono' || currentUser?.messageFontId === 'rounded' ? currentUser.messageFontId : 'default');
-  const imageAttachment = draft?.imageAttachment ?? '';
+  const imageFiles = draft?.imageFiles ?? [];
   const replyTarget = draft?.replyTarget ?? null;
   const updateDraft = useCallback((patch: Partial<MessageDraft>) => {
     if (!id || !currentUser || useAppStore.getState().currentUser?.id !== currentUser.id) return;
@@ -453,7 +463,7 @@ export default function Messages() {
   }, [id, currentUser?.id, updateMessageDraft]);
   const setMessage = (value: string) => updateDraft({ message: value });
   const setTextStyleId = (value: DirectMessage['textStyleId']) => updateDraft({ textStyleId: value ?? 'default' });
-  const setImageAttachment = (value: string) => updateDraft({ imageAttachment: value });
+  const setImageFiles = (files: File[]) => updateDraft({ imageFiles: files, imageAttachment: '' });
   const setReplyTarget = (value: ReplyTarget | null) => updateDraft({ replyTarget: value });
   const [showImageInput, setShowImageInput] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
@@ -735,14 +745,12 @@ export default function Messages() {
   }, [id, activeConv?.user.id, activeConv?.conv.isGroup, activeConv?.conv.participantIds, currentUser?.id]);
 
   const handleSend = async () => {
-    if ((!message.trim() && !imageAttachment.trim()) || !activeConv || sending || sendingRef.current) return;
+    if ((!message.trim() && imageFiles.length === 0) || !activeConv || sending || sendingRef.current) return;
     
-    const baseMessage = imageAttachment.trim() 
-      ? `${message.trim()}\n📷 ${imageAttachment.trim()}`
-      : message.trim();
+    const baseMessage = message.trim();
 
     if (baseMessage.length > MAX_MESSAGE_LENGTH) {
-      setSendError('The message and attachment URL together must be 4,000 characters or fewer.');
+      setSendError('The message must be 4,000 characters or fewer.');
       return;
     }
     sendingRef.current = true;
@@ -752,17 +760,18 @@ export default function Messages() {
     sounds.playPop();
 
     try {
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId);
-      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId);
+      const approved = imageFiles[0] ? await uploadApprovedMedia(imageFiles[0], 'message') : undefined;
+      const attachment = approved ? { mediaId: approved.mediaId } : undefined;
+      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, baseMessage, replyTarget?.messageId, textStyleId, attachment);
+      else await sendDirectMessage(activeConv.user.id, baseMessage, replyTarget?.messageId, textStyleId, attachment);
       setMessage('');
-      setImageAttachment('');
+      setImageFiles([]);
       setShowImageInput(false);
       setReplyTarget(null);
       stopTyping();
       if (inputRef.current) inputRef.current.style.height = 'auto';
     } catch {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -770,17 +779,12 @@ export default function Messages() {
     }
   };
 
-  const handleSendVoiceNote = async (audioUrl: string, durationSeconds: number) => {
-    if (!activeConv) return;
-    try {
-      const content = `[Voice Note] ${audioUrl} (${durationSeconds}s)`;
-      if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, content);
-      else await sendDirectMessage(activeConv.user.id, content);
-      setShowVoiceRecorder(false);
-      toast.success('Voice note sent! 🎙️');
-    } catch {
-      toast.error('Failed to send voice note');
-    }
+  const handleSendVoiceNote = async (media: UploadedMedia, _durationSeconds: number) => {
+    if (!activeConv) throw new Error('Open a conversation to send this voice note.');
+    if (activeConv.conv.isGroup) await sendMessageToConversation(activeConv.conv.id, '', undefined, textStyleId, { mediaId: media.mediaId });
+    else await sendDirectMessage(activeConv.user.id, '', undefined, textStyleId, { mediaId: media.mediaId });
+    setShowVoiceRecorder(false);
+    toast.success('Voice note sent!');
   };
 
   const handleEditMessage = async () => {
@@ -1044,7 +1048,7 @@ export default function Messages() {
                                 <button type="button" onClick={() => void handleEditMessage()}>Save</button>
                               </div>
                             ) : (
-                              <MessageContent content={msg.content} isMine={isMine} textStyleId={msg.textStyleId} reply={replyPreview} />
+                              <MessageContent attachment={msg} content={msg.content} isMine={isMine} textStyleId={msg.textStyleId} reply={replyPreview} />
                             )}
                             <time dateTime={msg.createdAt}>{format(new Date(msg.createdAt), 'h:mm a')}{msg.editedAt ? ' · edited' : ''}</time>
                           </div>
@@ -1075,29 +1079,8 @@ export default function Messages() {
                     )}
                     {showImageInput && (
                       <div className="operator-composer-attachment">
-                        <div>
-                          <Input
-                            value={imageAttachment}
-                            disabled={sending}
-                            onChange={(e) => { setImageAttachment(e.target.value); setSendError(''); }}
-                            placeholder="Paste a direct image URL"
-                            aria-label="Image URL"
-                          />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => { setShowImageInput(false); setImageAttachment(''); }}
-                            aria-label="Close image attachment"
-                            disabled={sending}
-                          >
-                            <X aria-hidden="true" />
-                          </Button>
-                        </div>
-                        {imageAttachment.trim() && (
-                          <div className="operator-composer-attachment__preview">
-                            <img src={imageAttachment} alt="Attachment preview" />
-                          </div>
-                        )}
+                        <MediaImageField id="message-image" maxBytes={5 * 1024 * 1024} label="Message image" files={imageFiles} onChange={files => { setImageFiles(files); setSendError(''); }} disabled={sending} />
+                        <Button size="sm" variant="ghost" onClick={() => { setShowImageInput(false); setImageFiles([]); }} aria-label="Close image attachment" disabled={sending}><X aria-hidden="true" /></Button>
                       </div>
                     )}
                     <div className="operator-composer__controls">
@@ -1150,7 +1133,7 @@ export default function Messages() {
                         aria-describedby={sendError ? 'operator-composer-error' : undefined}
                       />
 
-                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-[0.65rem] font-semibold text-muted-foreground outline-none focus:border-primary/50">
+                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-base sm:text-xs font-semibold text-muted-foreground outline-none focus:border-primary/50">
                         <option value="default">YOR</option>
                         <option value="mono" disabled={!messageFontEnabled}>Mono · Advanced</option>
                         <option value="rounded" disabled={!messageFontEnabled}>Round · Advanced</option>
@@ -1158,7 +1141,7 @@ export default function Messages() {
 
                       <Button
                         size="icon"
-                        disabled={(!message.trim() && !imageAttachment.trim()) || sending}
+                        disabled={(!message.trim() && imageFiles.length === 0) || sending}
                         aria-busy={sending}
                         onClick={handleSend}
                         className="operator-composer__send"

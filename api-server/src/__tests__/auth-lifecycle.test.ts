@@ -52,7 +52,13 @@ test('same-second rotation has unique jti and concurrent replay has exactly one 
   assert.notEqual(next.refreshToken, winner.refreshToken);
 });
 
-test('logout-all rejects old refresh and approved challenges even when Redis cleanup fails', async () => {
+test('logout-all rejects old refresh and approved challenges even when Redis cleanup fails', async t => {
+  // Exercise real token generation/checking at one deterministic TOTP epoch.
+  // Database reads and bcrypt may cross a 30-second wall-clock boundary; JWT,
+  // challenge and Redis clocks continue to use their real time.
+  const previousOptions = authenticator.options;
+  authenticator.options = { epoch: Date.UTC(2026, 9, 6, 0, 0, 15) };
+  t.after(() => { authenticator.resetOptions(); authenticator.options = previousOptions; });
   const f = await fixture(true);
   const login = await auth.login({ identifier: f.identifier, password: 'synthetic-password-1', totpCode: authenticator.generate(f.user.totpSecret!) });
   let challenge: TwoFactorRequiredError['challenge'];

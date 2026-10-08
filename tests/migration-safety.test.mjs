@@ -12,7 +12,7 @@ test('schema bootstrap refuses partial schemas and unrelated existing objects', 
   }
 });
 
-test('beta bootstrap action identifies an empty database that needs the base schema push', () => {
+test('beta bootstrap action identifies an empty database that needs reviewed base SQL', () => {
   const required = ['users', 'posts'];
   assert.equal(determineBootstrapAction([], required), 'bootstrap');
   assert.equal(determineBootstrapAction(['users', 'posts', 'other_table'], required), 'migrate');

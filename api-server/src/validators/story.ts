@@ -5,7 +5,7 @@ import { storyTextStyleSchema } from "../features/story-text-style.js";
 const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 
 export const createStorySchema = z.object({
-  mediaUrl: z.string().url().or(z.literal("")),
+  mediaId: z.string().uuid().optional(),
   type: z.enum(["image", "video", "text", "voice"]),
   textContent: z.string().optional(),
   backgroundGradient: z.string().optional(),
@@ -26,12 +26,13 @@ export const createStorySchema = z.object({
     question: z.string().trim().min(1).max(240),
     options: z.array(z.object({ text: z.string().trim().min(1).max(80) })).min(2).max(4),
   }).optional(),
-}).superRefine((value, context) => {
-  if ((value.type === "image" || value.type === "video") && !value.mediaUrl) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["mediaUrl"], message: "Media URL is required for image and video stories" });
+}).strict().superRefine((value, context) => {
+  if (value.type === "text" && (!value.textContent?.trim() || value.mediaId)) context.addIssue({ code: "custom", path: ["textContent"], message: "Text stories require text and cannot attach media" });
+  if ((value.type === "image" || value.type === "video") && !value.mediaId) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["mediaId"], message: "Approved media ID is required for image and video stories" });
   }
-  if ((value.type === "text" || value.type === "voice") && !value.textContent && !value.mediaUrl) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["textContent"], message: "Text or voice content is required" });
+  if (value.type === "voice" && !value.mediaId) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["textContent"], message: "Approved audio is required for voice stories" });
   }
 });
 
@@ -56,5 +57,5 @@ export const storyPollVoteSchema = z.object({
 
 export const createHighlightSchema = z.object({
   title: z.string().trim().min(1).max(60),
-  coverUrl: z.string().url().max(2_000).optional(),
-});
+  coverMediaId: z.string().uuid().optional(),
+}).strict();

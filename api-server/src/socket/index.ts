@@ -1,3 +1,5 @@
+import { hydrateMediaValue } from "../services/media-response.js";
+import { MediaLifecycleError } from "../services/media-service.js";
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "node:http";
 import { createAdapter } from "@socket.io/redis-adapter";
@@ -41,6 +43,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
   const conversationRepository = new ConversationRepository();
   const userRepository = new UserRepository();
   const redisRepository = new RedisRepository();
+  let closing=false;
+  const presenceTasks=new Set<Promise<unknown>>();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const liveStreamRepository = new LiveStreamRepository();
   const contentSafetyService = new ContentSafetyService(userRepository);
@@ -52,9 +56,10 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
     callTimeouts.delete(callId);
   };
   httpServer.once("close", () => {
-    pubClient.disconnect();
-    subClient.disconnect();
-    void redisRepository.disconnect();
+    closing=true;
+    void Promise.allSettled([...presenceTasks]).finally(()=>{
+      pubClient.disconnect();subClient.disconnect();void redisRepository.disconnect();
+    });
   });
 
   io.use(async (socket, next) => {
@@ -204,9 +209,9 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
     });
 
     // Modified to support group chats via conversationId
-    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; textStyleId?: unknown; idempotencyKey?: unknown } = {}) => {
-      const { recipientId, conversationId, content, textStyleId, idempotencyKey } = payload;
-      if (typeof content !== "string" || !content.trim()) {
+    on("message:send", async (payload: { recipientId?: unknown; conversationId?: unknown; content?: unknown; mediaId?: unknown; textStyleId?: unknown; idempotencyKey?: unknown } = {}) => {
+      const { recipientId, conversationId, content = "", mediaId, textStyleId, idempotencyKey } = payload;
+      if (typeof content !== "string" || (!content.trim() && typeof mediaId !== "string")) {
         socket.emit("message:error", { error: "Invalid message payload" });
         return;
       }
@@ -215,9 +220,9 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         let actualConversationId = conversationId;
 
         if (typeof conversationId === "string" && conversationId) {
-          message = await messageService.sendMessageToConversation(userId, conversationId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
+          message = await messageService.sendMessageToConversation(userId, conversationId, content, { ...(typeof mediaId === "string" ? { mediaId } : {}), ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
         } else if (typeof recipientId === "string" && recipientId) {
-          message = await messageService.sendMessage(userId, recipientId, content, { ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
+          message = await messageService.sendMessage(userId, recipientId, content, { ...(typeof mediaId === "string" ? { mediaId } : {}), ...(typeof textStyleId === "string" ? { textStyleId } : {}), ...(typeof idempotencyKey === "string" ? { idempotencyKey } : {}) });
           actualConversationId = message.conversationId;
           
           // Join every connected device of both members before the first emit.
@@ -230,12 +235,20 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         // Multicast to all conversation members (including the sender's other devices via the room)
         // Personal rooms exist from connection time. Include them for direct
         // messages: a Redis adapter's remote room join may arrive after this emit.
-        const deliveryRooms = [`conversation:${actualConversationId}`];
-        if (typeof recipientId === 'string') deliveryRooms.push(userId, recipientId);
-        io.to(deliveryRooms).emit("message:receive", message);
-        socket.emit("message:sent", message); // Confirm to sender's current device
+        if(messageService.consumeNewPublication(message)) {
+          const memberIds=await messageService.getConversationMemberIds(message.conversationId,userId);
+          for(const memberId of memberIds){
+            const delivered=await hydrateMediaValue(message,undefined,memberId);
+            if(delivered)io.to(memberId).emit("message:receive",delivered);
+          }
+        }
+        const delivered=await hydrateMediaValue(message,undefined,userId);
+        if(delivered)socket.emit("message:sent", delivered);
+        else socket.emit("message:error",{error:"Message is no longer available",code:"message_unavailable"});
       } catch (err) {
-        if (err instanceof MessageBlockedError) {
+        if (err instanceof MediaLifecycleError) {
+          socket.emit("message:error", { error: err.message, code: err.code });
+        } else if (err instanceof MessageBlockedError) {
           socket.emit("message:error", { error: err.message });
         } else if (err instanceof InvalidMessageContentError || err instanceof InvalidMessageStyleError || err instanceof PremiumFeatureUnavailableError) {
           socket.emit("message:error", { error: err.message });
@@ -255,7 +268,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           // Vanish-mode reads remove the message for every connected device;
           // regular reads only update the receipt.
           if (updated.deletedAt) {
-            socket.to(`conversation:${updated.conversationId}`).emit("message:update", updated);
+            const memberIds=await messageService.getConversationMemberIds(updated.conversationId,userId);
+            for(const memberId of memberIds)io.to(memberId).emit("message:update",updated);
           } else {
             socket.to(`conversation:${updated.conversationId}`).emit("message:seen:update", { messageId, userId, seenAt: updated.seenAt });
           }
@@ -397,7 +411,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         emitCallError("That account is already on another call or this call identifier is in use");
         return;
       }
-      io.to(targetUserId).emit("call:invite", {
+      io.to(targetUserId).emit("call:invite", await hydrateMediaValue({
         callId,
         callType,
         offer,
@@ -407,7 +421,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           username: caller.username,
           avatarUrl: caller.avatarUrl,
         },
-      });
+      }));
       const timeout = setTimeout(() => {
         callTimeouts.delete(callId);
         void redisRepository.expireRingingSocketCallStrict(callId).then((expired) => {
@@ -476,7 +490,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       for (const streamId of joinedStreams) {
         socket.to(`stream:${streamId}`).emit("stream:peer-left", { userId, socketId: socket.id });
       }
-      void (async () => {
+      if(closing)return;
+      const task=(async () => {
         const remainingSockets = await io.in(userId).fetchSockets();
         if (remainingSockets.length === 0) {
           const callId = await redisRepository.getSocketCallIdForUserStrict(userId);
@@ -490,26 +505,28 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
             }
           }
         }
-        if (remainingSockets.length > 0) return;
+        if (remainingSockets.length > 0 || closing) return;
         const conversations = await conversationRepository.listForUser(userId);
+        if(closing)return;
         for (const conversation of conversations) {
           io.to(`conversation:${conversation.id}`).emit("presence:update", { online: false, userId });
         }
       })().catch((error) => logger.warn({ error, userId }, "Could not broadcast offline presence"));
+      presenceTasks.add(task);void task.finally(()=>presenceTasks.delete(task));
       logger.info({ userId }, "socket disconnected");
     });
 
     // Register listeners before awaiting room hydration: clients may send their
     // first event immediately after the connection acknowledgement.
-      void conversationRepository.listForUser(userId).then((conversations) => {
-      if (!socket.connected) return;
+      const hydration=conversationRepository.listForUser(userId).then(async(conversations) => {
+      if (!socket.connected||closing) return;
       for (const conv of conversations) {
-        void (async () => {
           await socket.join(`conversation:${conv.id}`);
+          if(!socket.connected||closing)return;
           io.to(`conversation:${conv.id}`).emit("presence:update", { online: true, userId });
-        })().catch((error) => logger.warn({ error, userId, conversationId: conv.id }, "Could not broadcast online presence"));
       }
     }).catch((err) => logger.error({ err, userId }, "Failed to join conversation rooms"));
+    presenceTasks.add(hydration);void hydration.finally(()=>presenceTasks.delete(hydration));
   });
 
   return io;

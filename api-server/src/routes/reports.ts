@@ -35,8 +35,7 @@ router.get("/grievance/:ticketId", grievanceStatusRateLimiter, validateParams(gr
   if (!ticket) {
     return res.status(404).json({ success: false, message: "Ticket not found", data: null, errors: ["Ticket not found"], meta: {} });
   }
-  const { reporterEmail: _reporterEmail, description: _description, ...publicTicket } = ticket;
-  return res.status(200).json({ success: true, message: "Grievance status loaded", data: publicTicket, errors: [], meta: {} });
+  return res.status(200).json({ success: true, message: "Grievance status loaded", data: ticket, errors: [], meta: {} });
 });
 
 router.get("/grievances", authenticate, requireRole("admin", "moderator"), async (req, res) => {

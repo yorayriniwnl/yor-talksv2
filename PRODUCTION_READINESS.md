@@ -2,6 +2,12 @@
 
 Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
 
+For current working-copy repairs and exact verification evidence, use the
+[8 October production hardening report](docs/PRODUCTION_HARDENING_2026-10-08.md).
+This report retains historical results. Operator, territory and age scope,
+provider acceptance, the approved proxy topology and operational release gates
+remain separate decisions; these documents do not approve public launch.
+
 ## Executive summary
 
 This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an isolated restore drill remain external launch gates.
@@ -155,18 +161,18 @@ Before enabling a real deployment, complete all of the following:
 5. Verify the API startup path and health endpoints on the real deployment target.
 6. Validate login, refresh, and auth flows with real credentials and allowed-domain rules.
 7. Test all required external providers with real accounts.
-8. Confirm TLS, reverse proxy, and browser-origin behavior.
-9. Run a smoke test against the deployed site and API.
+8. Confirm TLS, browser-origin behavior and owner-approved proxy peers in `TRUSTED_PROXY_CIDRS` and, when used, `TRUSTED_EDGE_CIDRS`; verify distinct client limits and reject spoofed forwarding.
+9. Run normal smoke against the deployed site and API with `details.media.ready=true`, decoder readiness and healthy notification/lifecycle workers. Synthetic provider smoke is CI-loopback-only.
 10. Verify monitoring, alerting, and rollback steps are tested.
 
 ## Rollback checklist
 
 If production deployment issues appear:
 
-1. Stop the deployment stack and restore the previous image or Compose revision.
-2. Restore the database from the most recent verified backup.
-3. Revert to the last known-good configuration values.
-4. Confirm Redis and Postgres are clean and healthy before reattempting startup.
+1. Pause the rollout or affected traffic, preserve evidence, and check migration compatibility before selecting an older image or Compose revision.
+2. Retain the database and additive schema. An application rollback must preserve authentication revocation, shared-message history, media and financial invariants; do not automatically restore a production database.
+3. Revert compatible configuration values through the approved deployment process.
+4. Confirm Redis and Postgres are healthy without erasing durable state or flushing queues. Database recovery is a separate operator-approved procedure: verify the backup into an isolated empty target with an explicit matching `RESTORE_TARGET_DATABASE`, validate it, then separately approve promotion.
 5. Re-run health and readiness checks before enabling traffic.
 6. Reassess provider credentials and deployment environment variables before retry.
 7. Do not re-enable optional features until they have been live-tested.
@@ -177,4 +183,4 @@ The repository is not “fully production verified” and should not be treated 
 
 ## No commit or push claim
 
-This session did not commit or push any changes. The readiness file is documentation-only and intentionally scoped to the approved backend production hardening work.
+The earlier report update did not commit or push changes and was documentation-only. Current implementation scope and verification belong to the linked 8 October report.

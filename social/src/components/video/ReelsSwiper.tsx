@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { 
   Heart, MessageCircle, Share2, X, Music, Volume2, VolumeX, 
-  Bookmark, Copy, Zap, Gauge, Subtitles
+  Bookmark, Copy, Zap, Gauge, Subtitles, Play
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
@@ -16,6 +16,7 @@ import { RichCommentComposer, RichCommentData } from '@/components/comments/Rich
 import { RichCommentList, CommentItem } from '@/components/comments/RichCommentList';
 import { toast } from 'sonner';
 import { api, type BackendComment } from '@/lib/api-client';
+import { ReelVideoPlayer } from './ReelVideoPlayer';
 
 interface ReelsSwiperProps {
   videos: Video[];
@@ -61,6 +62,8 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
   // Double-tap heart burst effect
   const [heartBurst, setHeartBurst] = useState<{ visible: boolean; x: number; y: number }>({ visible: false, x: 0, y: 0 });
   const lastTapRef = useRef<number>(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const singleTapTimerRef = useRef<number | null>(null);
 
   // Comments drawer & share modal
   const [showComments, setShowComments] = useState(false);
@@ -81,6 +84,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     const target = containerRef.current?.children[boundedIndex] as HTMLElement | undefined;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setPlayingIndex(boundedIndex);
+    setIsPaused(false);
   }, [videos.length]);
 
   const loadVideoComments = useCallback(async (videoId: string) => {
@@ -177,23 +181,6 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     return () => { commentsRequestSequence.current += 1; };
   }, [playingIndex, videos, loadVideoComments]);
 
-  useEffect(() => {
-    const players = containerRef.current?.querySelectorAll('video');
-    if (!players) return;
-    players.forEach((player, index) => {
-      player.muted = isMuted;
-      player.playbackRate = playbackSpeed;
-      if (index === playingIndex) {
-        void player.play().catch(() => {
-          // Autoplay can be blocked until the viewer interacts with the page.
-        });
-      } else {
-        player.pause();
-        player.currentTime = 0;
-      }
-    });
-  }, [playingIndex, isMuted, playbackSpeed, videos]);
-
   const handleDoubleTap = (e: React.MouseEvent, videoId: string) => {
     const now = Date.now();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -201,7 +188,11 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     const y = e.clientY - rect.top;
 
     if (now - lastTapRef.current < 350) {
-      // Double tap recognized!
+      // Double tap recognized: cancel single-tap pause timer
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
       sounds.playLike();
       const target = videos.find((video) => video.id === videoId);
       const alreadyLiked = likedVideos[videoId] ?? target?.likedByMe ?? false;
@@ -214,6 +205,12 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
 
       setHeartBurst({ visible: true, x, y });
       setTimeout(() => setHeartBurst({ visible: false, x: 0, y: 0 }), 1000);
+    } else {
+      // Single tap: toggle play/pause after double-tap window expires
+      singleTapTimerRef.current = window.setTimeout(() => {
+        setIsPaused((paused) => !paused);
+        singleTapTimerRef.current = null;
+      }, 350);
     }
     lastTapRef.current = now;
   };
@@ -222,13 +219,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
     const video = videos[playingIndex];
     if (!video) return;
     sounds.playPop();
-    const media = data.voiceNoteUrl
-      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
-      : data.gifUrl
-        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
-        : data.imageUrl
-          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
-          : {};
+    const media = data.mediaId ? { mediaId: data.mediaId, mediaType: data.mediaType, mediaDuration: data.voiceDuration } : {};
     const result = await api.commentOnVideo(video.id, { content: data.text.trim(), ...media });
     setComments((prev) => [mapVideoComment({ ...result.comment, author: {
       id: currentUser?.id || result.comment.authorId,
@@ -368,18 +359,25 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
                 inert={!isPlaying}
               >
                 <div className="operator-reel-slide__media">
-                  <video
-                    src={video.videoUrl}
-                    poster={video.thumbnailUrl}
-                    className="operator-reel-video"
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    preload={isPlaying ? 'auto' : 'metadata'}
-                    aria-label={video.title}
-                  />
+                  <ReelVideoPlayer video={video} active={isPlaying} muted={isMuted} playbackSpeed={playbackSpeed} paused={isPlaying && isPaused} />
                   <div className="operator-reel-scrim" />
                 </div>
+
+                {/* Center Play Icon when Paused */}
+                <AnimatePresence>
+                  {isPlaying && isPaused && (
+                    <motion.div
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 0.95 }}
+                      exit={{ scale: 0.7, opacity: 0 }}
+                      className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-2xl border border-white/20">
+                        <Play className="w-8 h-8 fill-white ml-1" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Double Tap Heart Burst Animation */}
                 <AnimatePresence>
@@ -569,6 +567,7 @@ export default function ReelsSwiper({ videos, initialIndex, onClose }: ReelsSwip
 
               <div className="operator-reels-comments__composer">
                 <RichCommentComposer
+                  mediaPurpose="video_comment"
                   postId={videos[playingIndex]?.id || 'reel'}
                   creatorUser={users[videos[playingIndex]?.authorId]}
                   placeholder="Add a comment, photo, GIF or tip..."

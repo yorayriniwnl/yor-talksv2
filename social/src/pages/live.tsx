@@ -5,6 +5,8 @@ import { Calendar, Loader2, Mic, Radio, Signal, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { api, type BackendLiveStream } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +18,12 @@ import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
-const DEFAULT_COVER = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80';
-
 function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ContentCategory | ''>('');
   const [kind, setKind] = useState<'video' | 'audio'>('video');
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +39,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
         title: title.trim(),
         category,
         kind,
-        coverUrl: DEFAULT_COVER,
+        coverMediaId: coverFiles[0] ? (await uploadApprovedMedia(coverFiles[0], 'live_stream')).mediaId : undefined,
         startsAt: new Date().toISOString(),
         contentRating,
       });
@@ -47,6 +48,7 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
       setTitle('');
       setCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
+      setCoverFiles([]);
       onCreated(liveStream);
       toast.success('You are live');
     } catch (error) {
@@ -64,15 +66,22 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
       <DialogContent className="rounded-3xl">
         <DialogHeader><DialogTitle className="font-display font-black">Start a live room</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What are you sharing?" minLength={2} maxLength={200} required />
+          <div className="space-y-1.5">
+            <label htmlFor="live-room-title" className="text-xs font-semibold text-foreground">Room Title</label>
+            <Input id="live-room-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What are you sharing?" minLength={2} maxLength={200} required />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <ContentCategorySelect id="stream-content-category" value={category} onChange={setCategory} />
-            <select value={kind} onChange={(event) => setKind(event.target.value as 'video' | 'audio')} className="h-10 rounded-md border bg-background px-3 text-sm">
-              <option value="video">Video + audio</option>
-              <option value="audio">Audio only</option>
-            </select>
+            <div className="space-y-1.5">
+              <label htmlFor="stream-kind-select" className="text-xs font-semibold text-foreground">Room Format</label>
+              <select id="stream-kind-select" value={kind} onChange={(event) => setKind(event.target.value as 'video' | 'audio')} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+                <option value="video">Video + audio</option>
+                <option value="audio">Audio only</option>
+              </select>
+            </div>
           </div>
           <ContentRatingSelect id="stream-content-rating" value={contentRating} onChange={setContentRating} />
+          <MediaImageField id="stream-cover" label="Room cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={loading} />
           <p className="text-xs text-muted-foreground">Your browser will ask for camera and microphone permission after the LiveKit room connects.</p>
           <Button type="submit" disabled={loading || title.trim().length < 2 || !category} className="w-full rounded-xl">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -257,7 +266,7 @@ export default function Live() {
           {streams.map((stream) => (
             <button key={stream.id} onClick={() => setLocation(`/live/${stream.id}`)} className="group overflow-hidden rounded-2xl border border-border/50 bg-card/40 text-left transition hover:border-primary/50">
               <div className="relative aspect-video overflow-hidden bg-muted">
-                <img src={stream.coverUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                {stream.coverUrl && <img src={stream.coverUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
                 <span className={`absolute left-3 top-3 rounded-lg px-2 py-1 text-[0.65rem] font-bold text-white ${stream.status === 'live' ? 'bg-rose-500' : 'bg-black/60'}`}>
                   {stream.status === 'live' ? 'LIVE' : stream.status.toUpperCase()}
                 </span>

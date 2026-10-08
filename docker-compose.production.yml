@@ -74,12 +74,25 @@ services:
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set CLIENT_ORIGIN in .env.production}
       AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_MEDIA_IMAGE_PRESET: ${CLOUDINARY_MEDIA_IMAGE_PRESET:-}
+      CLOUDINARY_MEDIA_VIDEO_PRESET: ${CLOUDINARY_MEDIA_VIDEO_PRESET:-}
+      CLOUDINARY_MEDIA_AUDIO_PRESET: ${CLOUDINARY_MEDIA_AUDIO_PRESET:-}
+      MEDIA_FFPROBE_PATH: ${MEDIA_FFPROBE_PATH:-ffprobe}
+      MEDIA_FFMPEG_PATH: ${MEDIA_FFMPEG_PATH:-ffmpeg}
+      MEDIA_DECODE_TIMEOUT_MS: ${MEDIA_DECODE_TIMEOUT_MS:-30000}
+      MEDIA_DECODE_CONCURRENCY: ${MEDIA_DECODE_CONCURRENCY:-2}
+      MEDIA_PROVIDER_TIMEOUT_MS: ${MEDIA_PROVIDER_TIMEOUT_MS:-15000}
+      MEDIA_MODERATION_TIMEOUT_MS: ${MEDIA_MODERATION_TIMEOUT_MS:-30000}
+      MEDIA_SIGNED_URL_TTL_SECONDS: ${MEDIA_SIGNED_URL_TTL_SECONDS:-300}
+      MEDIA_DELIVERY_ORIGIN: ${MEDIA_DELIVERY_ORIGIN:-}
+      MEDIA_GEMINI_MODEL: ${MEDIA_GEMINI_MODEL:-gemini-2.5-flash}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
@@ -211,16 +224,13 @@ services:
     restart: unless-stopped
 
   alertmanager:
-    image: prom/alertmanager:v0.28.1
-    command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
-      - --config.expand-env
-      - --storage.path=/alertmanager
+    build:
+      context: .
+      dockerfile: ops/prometheus/Dockerfile.alertmanager
     environment:
       ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.production}
       ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.production}
     volumes:
-      - ./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     secrets:
       - source: alertmanager_webhook_password
@@ -231,6 +241,8 @@ services:
     restart: unless-stopped
 
   web:
+    environment:
+      TRUSTED_EDGE_CIDRS: ${TRUSTED_EDGE_CIDRS:-}
     build:
       context: .
       dockerfile: social/Dockerfile

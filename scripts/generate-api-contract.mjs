@@ -20,6 +20,56 @@ const mountPrefixes = {
 };
 
 const methodOrder = ["get", "post", "put", "patch", "delete"];
+const mediaPurposes = ["avatar", "post", "comment", "video_comment", "message", "story", "video", "product", "article", "event", "live_stream", "broadcast_channel", "highlight", "showcase", "business", "community"];
+const mediaMimes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "audio/mpeg", "audio/wav", "audio/webm", "audio/ogg"];
+const mediaId = { type: "string", format: "uuid", description: "An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose." };
+const reservationId = { type: "string", format: "uuid", description: "Server-generated lifecycle record ID." };
+const mediaIds = { type: "array", maxItems: 10, uniqueItems: true, items: mediaId };
+const rawMediaFields = ["images", "mediaUrl", "videoUrl", "thumbnailUrl", "avatarUrl", "coverUrl", "logoUrl", "customImageUrl"];
+const mediaSchemas = {
+  PublicGrievanceTicket: { type: "object", additionalProperties: false, required: ["ticketId", "status", "createdAt"], properties: {
+    ticketId: { type: "string", pattern: "^YT-GRV-[A-Z0-9]{10}$" }, status: { type: "string", enum: ["received", "under_review", "resolved", "dismissed"] },
+    createdAt: { type: "string", format: "date-time" },
+  } },
+  MediaPresignRequest: { type: "object", additionalProperties: false, required: ["filename", "mimeType", "size", "purpose"], properties: {
+    filename: { type: "string", minLength: 1, maxLength: 255 }, mimeType: { type: "string", enum: mediaMimes },
+    size: { type: "integer", minimum: 1, maximum: 10485760, description: "Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side." }, purpose: { type: "string", enum: mediaPurposes },
+  } },
+  MediaFinalizeRequest: { type: "object", additionalProperties: false },
+  MediaReservation: { type: "object", required: ["id", "mediaId", "status", "purpose", "mimeType", "maxFileSize", "mode", "uploadUrl"], properties: {
+    id: reservationId, mediaId: reservationId, status: { const: "pending" }, purpose: { type: "string", enum: mediaPurposes }, mimeType: { type: "string", enum: mediaMimes },
+    maxFileSize: { type: "integer" }, mode: { type: "string", enum: ["server", "direct"] }, uploadUrl: { type: "string" },
+    fields: { type: "object", additionalProperties: { type: "string" }, description: "Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials." },
+  }, allOf: [{ if: { properties: { mode: { const: "direct" } } }, then: { required: ["fields"] }, else: { not: { required: ["fields"] } } }] },
+  MediaResult: { type: "object", required: ["id", "mediaId", "status"], properties: {
+    id: reservationId, mediaId: reservationId, status: { type: "string", enum: ["pending", "uploaded", "verifying", "approved", "rejected", "failed", "deleted"] },
+    purpose: { type: "string", enum: mediaPurposes }, url: { type: "string", description: "Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval." },
+    thumbnailUrl: { type: ["string", "null"] }, mimeType: { type: "string", enum: mediaMimes }, size: { type: "integer" }, width: { type: "integer" }, height: { type: "integer" }, duration: { type: "number", description: "Verified seconds." },
+  }, allOf: [{ if: { properties: { status: { const: "approved" } } }, then: { required: ["purpose", "url", "mimeType", "size"] },
+    else: { not: { anyOf: [{ required: ["url"] }, { required: ["thumbnailUrl"] }] } } }] },
+};
+const publicationMediaFields = {
+  "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
+  "post /posts/{postId}/comments": { mediaId }, "post /videos/{id}/comments": { mediaId },
+  "post /videos": { mediaId, thumbnailMediaId: mediaId, externalVideoUrl: { type: "string", format: "uri", description: "Separate allowlisted external embed; requires an approved video-purpose image thumbnail." } },
+  "put /users/me": { avatarMediaId: mediaId }, "post /articles": { coverMediaId: mediaId }, "post /events": { coverMediaId: mediaId },
+  "post /streams": { coverMediaId: mediaId }, "post /broadcast-channels": { coverMediaId: mediaId }, "post /highlights": { coverMediaId: mediaId },
+  "post /users/{userId}/showcases": { customImageMediaId: mediaId },
+  "post /business": { logoMediaId: mediaId }, "post /communities": { coverMediaId: mediaId },
+};
+function mediaRequest(route) {
+  if (route.path === "/media/presign") return { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/MediaPresignRequest" } } } };
+  if (route.path === "/media/{id}/finalize") return { required: false, content: { "application/json": { schema: { $ref: "#/components/schemas/MediaFinalizeRequest" } } } };
+  const fileField = route.path === "/posts/upload-image" ? "image" : route.path === "/users/me/avatar" ? "avatar" : "file";
+  if (["/media/upload", "/media/{id}/upload", "/posts/upload-image", "/users/me/avatar"].includes(route.path)) return { required: true, content: { "multipart/form-data": { schema: {
+    type: "object", additionalProperties: false, required: route.path === "/media/upload" ? [fileField, "purpose"] : [fileField],
+    properties: { [fileField]: { type: "string", format: "binary" }, ...(route.path === "/media/upload" ? { purpose: { type: "string", enum: mediaPurposes } } : {}) },
+  } } } };
+  const properties = publicationMediaFields[`${route.method} ${route.path}`];
+  if (properties) return { required: true, description: "Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.",
+    content: { "application/json": { schema: { type: "object", properties, additionalProperties: true,
+      not: { anyOf: rawMediaFields.map(field => ({ required: [field] })) } } } } };
+}
 
 function findInvocationEnd(source, start) {
   const opening = source.indexOf("(", start);
@@ -172,7 +222,7 @@ function renderYaml(routes) {
         `operationId: ${route.operationId}`,
         `summary: ${route.summary}`,
         `tags: [${route.tag}]`,
-        ...(route.authenticated ? ["security:", "  - bearerAuth: []"] : ["security: []"]),
+        ...(route.path === '/media/{id}/content' ? ['security:', '  - mediaGrant: []'] : route.authenticated ? ["security:", "  - bearerAuth: []"] : ["security: []"]),
       ], 6));
 
       const parameters = [...route.path.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]);
@@ -190,7 +240,9 @@ function renderYaml(routes) {
       }
 
       if (["post", "put", "patch"].includes(route.method)) {
-        lines.push(...indent([
+        const request = mediaRequest(route);
+        if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
+        else lines.push(...indent([
           "requestBody:",
           "  required: false",
           "  content:",
@@ -201,19 +253,32 @@ function renderYaml(routes) {
         ], 6));
       }
 
-      lines.push(...indent([
+      const publicGrievance = (route.method === "post" && route.path === "/reports/grievance") || (route.method === "get" && route.path === "/reports/grievance/{ticketId}");
+      const resultSchema = publicGrievance ? "PublicGrievanceTicket" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined;
+      const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
+      if (route.path === '/media/{id}/content') {
+        const binary = { description: 'Approved original bytes or a JPEG poster derived from verified original bytes', content: Object.fromEntries(mediaMimes.map(mime => [mime, { schema: { type: 'string', format: 'binary' } }])) };
+        lines.push(`      responses: ${JSON.stringify({ '200': binary, '206': binary, '403': { description: 'Invalid or expired delivery grant' }, '404': { description: 'Media revoked or unavailable' }, '415': { description: 'Provider bytes no longer match the approved hash' }, '416': { description: 'Invalid or unsatisfiable single byte range' }, '502': { description: 'Provider unavailable' }, '503': { description: 'Media delivery busy or unavailable' } })}`);
+      } else lines.push(...indent([
         "responses:",
-        '  "200":',
+        `  "${publicGrievance && route.method === "post" ? "201" : "200"}":`,
         "    description: Successful response",
         "    content:",
         "      application/json:",
         "        schema:",
-        '          $ref: "#/components/schemas/ApiEnvelope"',
+        responseSchema,
         '  "400":',
         "    description: Invalid request",
         ...(route.authenticated ? ['  "401":', "    description: Authentication required"] : []),
         ...(route.roles.length > 0 ? ['  "403":', `    description: "Required role: ${route.roles.join(", ")}"`] : []),
       ], 6));
+      if (route.path.startsWith("/media/") && route.method !== "get") {
+        if (route.path === "/media/{id}/finalize") lines.push('        "202":', '          description: Verification already in progress; retry the same media ID');
+        if (route.path === "/media/upload") lines.push('        "201":', '          description: Media verified and approved');
+        for (const [status, description] of [["403", "Media owner mismatch"], ["409", "Media closed, unapproved or in use"], ["413", "Purpose-specific byte limit exceeded"], ["415", "Unsupported type or verified metadata/byte mismatch"], ["502", "Provider unavailable"], ["503", "Storage, decoder or moderation unavailable; approval fails closed"]]) {
+          lines.push(`        "${status}":`, `          description: ${description}`);
+        }
+      }
     }
   }
 
@@ -224,6 +289,10 @@ function renderYaml(routes) {
     "      type: http",
     "      scheme: bearer",
     "      bearerFormat: JWT",
+    "    mediaGrant:",
+    "      type: apiKey",
+    "      in: query",
+    "      name: token",
     "  schemas:",
     "    ApiEnvelope:",
     "      type: object",
@@ -239,6 +308,7 @@ function renderYaml(routes) {
     "          type: object",
     "          additionalProperties: true",
   );
+  for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }
 

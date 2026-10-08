@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { api, type BackendUser } from '@/lib/api-client';
+import { MediaImageField } from '@/components/media/MediaImageField';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
@@ -44,7 +46,6 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
   const [textContent, setTextContent] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(STORY_GRADIENTS[0]);
-  const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [storyType, setStoryType] = useState<'text' | 'image' | 'voice'>('text');
@@ -53,6 +54,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [highlightTitle, setHighlightTitle] = useState('');
+  const [highlightCoverFiles, setHighlightCoverFiles] = useState<File[]>([]);
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [audience, setAudience] = useState<StoryAudience>('followers');
@@ -170,10 +172,10 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       const supportedMimeType = [
         'audio/webm;codecs=opus',
         'audio/webm',
-        'audio/mp4',
         'audio/ogg',
       ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
-      const recorder = supportedMimeType ? new MediaRecorder(stream, { mimeType: supportedMimeType }) : new MediaRecorder(stream);
+      if (!supportedMimeType) { stream.getTracks().forEach(track => track.stop()); throw new Error('This browser cannot record supported audio. Choose a WebM, Ogg, MP3 or WAV file.'); }
+      const recorder = new MediaRecorder(stream, { mimeType: supportedMimeType });
       recordingStreamRef.current = stream;
       recordingChunksRef.current = [];
       recorder.ondataavailable = (event) => {
@@ -221,15 +223,15 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
   const handleImageFile = (file: File | undefined) => {
     if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size === 0 || file.size > 5 * 1024 * 1024) { toast.error('Choose a static JPEG, PNG or WebP image up to 5 MB.'); return; }
     if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     setImageFile(file);
-    setImageUrl('');
     setImagePreviewUrl(URL.createObjectURL(file));
   };
 
   const handlePublishStory = async () => {
     if (storyType === 'text' && !textContent.trim()) return;
-    if (storyType === 'image' && !imageUrl.trim() && !imageFile) return;
+    if (storyType === 'image' && !imageFile) return;
     if (storyType === 'voice' && !voiceFile) return;
     if (isRecording) return;
     if (!contentCategory) return;
@@ -258,27 +260,26 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
     setPublishing(true);
     try {
-      let mediaUrl = imageUrl.trim();
-      if (storyType === 'image' && imageFile) {
-        const uploaded = await api.uploadMedia(imageFile);
-        mediaUrl = uploaded.url;
-      }
-      if (storyType === 'voice' && voiceFile) {
-        const uploaded = await api.uploadMedia(voiceFile);
-        mediaUrl = uploaded.url;
-      }
+      const mediaFile = storyType === 'image' ? imageFile : storyType === 'voice' ? voiceFile : null;
+      const mediaId = mediaFile ? (await uploadApprovedMedia(mediaFile, 'story')).mediaId : undefined;
       let targetHighlightId = highlightDestination === 'existing' ? highlightId : undefined;
       let targetHighlightTitle = highlightTitle.trim();
       if (highlightDestination === 'new') {
-        const createdHighlight = await api.createHighlight({ title: targetHighlightTitle || 'Highlights' });
+        const cover = highlightCoverFiles[0] ? await uploadApprovedMedia(highlightCoverFiles[0], 'highlight') : undefined;
+        const createdHighlight = await api.createHighlight({ title: targetHighlightTitle || 'Highlights', coverMediaId: cover?.mediaId });
         targetHighlightId = createdHighlight.id;
         targetHighlightTitle = createdHighlight.title;
         setHighlights((items) => [createdHighlight, ...items]);
+        // Highlight creation has committed even if the Story write fails.
+        // Keep that acknowledged destination so retry does not create it again.
+        setHighlightId(createdHighlight.id);
+        setHighlightTitle(createdHighlight.title);
+        setHighlightDestination('existing');
       }
       await addStory({
         type: storyType,
         textContent: storyType === 'text' || storyType === 'voice' ? textContent.trim() || undefined : undefined,
-        mediaUrl: storyType === 'image' || storyType === 'voice' ? mediaUrl : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+        mediaId,
         backgroundGradient: selectedGradient.css,
         storyFontId,
         storyTextStyle,
@@ -299,7 +300,6 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       triggerConfetti();
       toast.success(isHighlight ? 'Story added to your highlights! ✨' : 'Story published for 24 hours! ✨');
       setTextContent('');
-      setImageUrl('');
       setImageFile(null);
       setImagePreviewUrl('');
       setVoiceFile(null);
@@ -307,6 +307,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       setRecordingSeconds(0);
       setStoryType('text');
       setHighlightTitle('');
+      setHighlightCoverFiles([]);
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setAudience('followers');
@@ -340,9 +341,10 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-3xl font-sans overflow-hidden p-0 border-border/50">
+      <DialogContent className="sm:max-w-[480px] max-h-[92dvh] flex flex-col rounded-3xl font-sans overflow-hidden p-0 border-border/50">
+        <DialogTitle className="sr-only">Create Story</DialogTitle>
         {/* Story Canvas Live Preview */}
-        <div className={cn("relative w-full h-80 bg-gradient-to-br flex flex-col justify-between p-6 transition-all duration-500", selectedGradient.css)}>
+        <div className={cn("relative w-full h-72 shrink-0 bg-gradient-to-br flex flex-col justify-between p-6 transition-all duration-500", selectedGradient.css)}>
           {/* Header Bar */}
           <div className="flex items-center justify-between text-white relative z-10">
             <div className="flex items-center gap-2">
@@ -350,7 +352,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
                 {(currentUser?.displayName || currentUser?.username || 'User')}'s Story
               </span>
             </div>
-            <button onClick={() => handleDialogChange(false)} className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">
+            <button type="button" onClick={() => handleDialogChange(false)} aria-label="Close story creator" className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -367,8 +369,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
                 {voicePreviewUrl ? <audio controls src={voicePreviewUrl} className="story-controls w-full max-w-[280px]" /> : <p className="text-sm text-white/70">Record or upload a voice Story</p>}
                 {textContent && <p className="text-sm font-semibold leading-snug">{textContent}</p>}
               </div>
-            ) : (imagePreviewUrl || imageUrl.trim()) ? (
-              <img src={imagePreviewUrl || imageUrl} alt="Story preview" className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
+            ) : imagePreviewUrl ? (
+              <img src={imagePreviewUrl} alt="Story preview" className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
             ) : (
               <p className="text-white/70 text-sm font-mono">Enter image URL below...</p>
             )}
@@ -380,7 +382,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         </div>
 
         {/* Controls Drawer */}
-        <div className="p-5 space-y-4 surface-1">
+        <div className="p-5 space-y-4 surface-1 flex-1 overflow-y-auto">
           {/* Type Toggle */}
           <div className="flex rounded-2xl surface-2 p-1 border border-border/40">
             <button
@@ -415,14 +417,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               <label htmlFor="story-image-file" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
                 <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Upload a photo'}
               </label>
-              <input id="story-image-file" type="file" accept="image/*" onChange={(event) => handleImageFile(event.target.files?.[0])} className="sr-only" />
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => { setImageUrl(e.target.value); setImageFile(null); setImagePreviewUrl(''); }}
-                placeholder="Or paste an image URL…"
-                className="w-full h-10 rounded-xl surface-2 border border-border/40 px-3 text-xs outline-none focus:border-primary/50 font-mono"
-              />
+              <input id="story-image-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => handleImageFile(event.target.files?.[0])} className="sr-only" />
             </div>
           ) : (
             <div className="space-y-3 rounded-2xl border border-border/40 bg-background/30 p-3">
@@ -435,7 +430,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               <label htmlFor="story-voice-file" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
                 <Upload className="h-4 w-4" /> {voiceFile && !isRecording ? voiceFile.name : 'Upload an audio file'}
               </label>
-              <input id="story-voice-file" type="file" accept="audio/*" onChange={(event) => handleVoiceFile(event.target.files?.[0])} className="sr-only" />
+              <input id="story-voice-file" type="file" accept="audio/webm,audio/ogg,audio/mpeg,audio/wav" onChange={(event) => handleVoiceFile(event.target.files?.[0])} className="sr-only" />
               {voicePreviewUrl && <audio controls src={voicePreviewUrl} className="w-full" />}
               <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} placeholder="Add an optional caption…" maxLength={500} className="h-16 w-full resize-none rounded-xl border border-border/40 bg-background/60 p-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary/50" />
               <p className="text-[0.68rem] text-muted-foreground">Voice Stories can be up to 60 seconds and are uploaded securely with the same content controls.</p>
@@ -489,6 +484,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
             <label className="block space-y-1.5 text-xs font-semibold"><span>Highlight destination</span><select value={highlightDestination} onChange={(event) => setHighlightDestination(event.target.value as typeof highlightDestination)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="none">No Highlight</option>{highlights.length > 0 && <option value="existing">Existing Highlight</option>}<option value="new">Create a new Highlight</option></select></label>
             {highlightDestination === 'existing' && <label className="block space-y-1.5 text-xs font-semibold"><span>Choose a Highlight</span><select value={highlightId} onChange={(event) => setHighlightId(event.target.value)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="">Select a collection…</option>{highlights.map((highlight) => <option key={highlight.id} value={highlight.id}>{highlight.title} · {highlight.storyIds.length} items</option>)}</select></label>}
             {highlightDestination === 'new' && <input value={highlightTitle} onChange={(event) => setHighlightTitle(event.target.value)} placeholder="Highlight name (for example, Field notes)" maxLength={60} className="h-10 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" aria-label="New Highlight name" />}
+            {highlightDestination === 'new' && <MediaImageField id="highlight-cover" label="Highlight cover (optional)" files={highlightCoverFiles} onChange={setHighlightCoverFiles} disabled={publishing} />}
             <label className="block space-y-1.5 text-xs font-semibold"><span>Publish mode</span><select value={publishMode} onChange={(event) => setPublishMode(event.target.value as typeof publishMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value="active">Active Story + Highlight</option><option value="highlight_only" disabled={highlightDestination === 'none'}>Highlight only · Premium</option></select></label>
             <div className="grid gap-2 sm:grid-cols-2"><label className="block space-y-1.5 text-xs font-semibold"><span>Duration</span><select value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"><option value={24}>24 hours</option><option value={48}>48 hours · Advanced</option><option value={72}>72 hours · Advanced</option></select></label><label className="flex min-h-10 items-center gap-2 rounded-xl border border-border/50 bg-background/40 px-3 text-xs font-semibold"><input type="checkbox" checked={priority} onChange={(event) => setPriority(event.target.checked)} className="h-4 w-4 accent-primary" /><span><span className="block">Priority story</span><span className="block text-[0.65rem] font-normal text-muted-foreground">Capped ranking signal</span></span>{priority && <Check className="ml-auto h-4 w-4 text-primary" />}</label></div>
             {storyStyles.length > 0 && <label className="block space-y-1.5 text-xs font-semibold"><span>Story typography</span><select value={storyFontId} onChange={(event) => setStoryFontId(event.target.value as typeof storyFontId)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">{storyStyles.map((style) => <option key={style.id} value={style.id} disabled={style.id !== 'default' && premiumFeatures?.STORY_FONT === false}>{style.label}{style.id !== 'default' && premiumFeatures?.STORY_FONT === false ? ' · locked' : ''}</option>)}</select><span className="block text-[0.68rem] font-normal text-muted-foreground">The selected curated style travels with this Story and never changes its text.</span></label>}
@@ -550,10 +546,16 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
             </div>
           </div>
 
+          {!contentCategory && (
+            <p className="text-[0.7rem] font-semibold text-amber-400/90 text-center">
+              Please choose a content category above to enable publishing.
+            </p>
+          )}
+
           <DialogFooter>
             <Button
               onClick={handlePublishStory}
-              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageUrl.trim() && !imageFile) || (storyType === 'voice' && !voiceFile) || isRecording || !contentCategory || publishing || (pollOpen && (!pollQuestion.trim() || pollOptions.filter((option) => option.trim()).length < 2))}
+              disabled={(storyType === 'text' && !textContent.trim()) || (storyType === 'image' && !imageFile) || (storyType === 'voice' && !voiceFile) || isRecording || !contentCategory || publishing || (pollOpen && (!pollQuestion.trim() || pollOptions.filter((option) => option.trim()).length < 2))}
               className="w-full rounded-xl font-bold text-xs h-11 glow-neon-primary bg-primary text-primary-foreground"
             >
               <Send className="w-3.5 h-3.5 mr-1.5" /> {publishing ? 'Publishing…' : 'Share Story Live'}

@@ -83,8 +83,8 @@
     "zod": "^3.25.76"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.0",
-    "@capacitor/ios": "^8.5.0",
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "@types/d3-force": "^3.0.10",
     "@types/three": "^0.185.4",
     "d3-force": "^3.0.0",

@@ -1,22 +1,37 @@
 import { eq, or, and, asc, desc, inArray, isNull, gt, lt, sql } from "drizzle-orm";
-import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
+import { currentMessageCondition, conversationMembershipCondition, previewEntitlementCondition } from './message-visibility.js';
+import { messageTombstone, type MessageTombstone } from '../services/message-view.js';
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
+    return (await this.createWithResult(message)).message;
+  }
+
+  async createWithResult(message: MessageRecord): Promise<{ message: MessageRecord; created: boolean }> {
     return db.transaction(async (tx) => {
+      const [sender]=await tx.select({id:usersTable.id,status:usersTable.accountStatus}).from(usersTable).where(eq(usersTable.id,message.senderId)).for('share');
+      if(!sender||(sender.status??'active')!=='active')throw new Error('Sender unavailable');
+      // This transaction updates inbox ordering. Take UPDATE up front so two
+      // simultaneous sends cannot deadlock while upgrading shared locks.
+      const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id,message.conversationId)).for('update');
+      if(!conversation)throw new Error('Conversation unavailable');
+      const memberships=await tx.select().from(conversationMembersTable).where(and(eq(conversationMembersTable.conversationId,message.conversationId),eq(conversationMembersTable.userId,message.senderId))).for('share');
+      if(conversation.isGroup?!memberships.length:conversation.participantA!==message.senderId&&conversation.participantB!==message.senderId&&!memberships.length)
+        throw new Error('Conversation membership unavailable');
       const [created] = await tx.insert(messagesTable).values(message).onConflictDoNothing().returning();
       if (!created) {
         const [existing] = await tx.select().from(messagesTable).where(eq(messagesTable.id, message.id));
         if (!existing) throw new Error("Message insert conflicted without an existing message");
-        return existing as MessageRecord;
+        return { message: existing as MessageRecord, created: false };
       }
       await tx.update(conversationsTable).set({
         updatedAt: sql`greatest(${conversationsTable.updatedAt}, ${message.createdAt}::timestamp)`,
       }).where(eq(conversationsTable.id, message.conversationId));
-      return created as MessageRecord;
+      return { message: created as MessageRecord, created: true };
     });
   }
 
@@ -29,8 +44,7 @@ export class MessageRepository {
     const direction = options.direction ?? "latest";
     const conditions = [
       eq(messagesTable.conversationId, conversationId),
-      isNull(messagesTable.deletedAt),
-      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      currentMessageCondition(),
     ];
     if (options.cursorAt && options.cursorId && direction === "older") {
       conditions.push(or(
@@ -62,8 +76,7 @@ export class MessageRepository {
       .from(messagesTable)
       .where(and(
         eq(messagesTable.conversationId, conversationId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+        currentMessageCondition(),
       ))
       .orderBy(desc(messagesTable.createdAt))
       .limit(1);
@@ -71,16 +84,61 @@ export class MessageRepository {
   }
 
   async findById(messageId: string): Promise<MessageRecord | undefined> {
+    const [message] = await db.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition()));
+    return message as MessageRecord | undefined;
+  }
+
+  /** Internal idempotency lookup only. Never serialize a retained row. */
+  async findRetainedById(messageId: string): Promise<MessageRecord | undefined> {
     const [message] = await db.select().from(messagesTable).where(eq(messagesTable.id, messageId));
     return message as MessageRecord | undefined;
   }
 
-  async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    await db.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
-      target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-      set: { previewedAt },
+  async findCurrentForUser(messageId: string, userId: string): Promise<MessageRecord | undefined> {
+    const [message] = await db.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition(), conversationMembershipCondition(userId)));
+    return message as MessageRecord | undefined;
+  }
+
+  private async withCurrent<T>(messageId: string, userId: string,
+    work: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0], message: MessageRecord) => Promise<T>): Promise<T | undefined> {
+    return db.transaction(async tx => {
+      const [viewer]=await tx.select({id:usersTable.id,status:usersTable.accountStatus}).from(usersTable).where(eq(usersTable.id,userId)).for('share');
+      if(!viewer||(viewer.status??'active')!=='active')return undefined;
+      // Lock the conversation before the message: direct-thread account
+      // erasure uses the same order before cascading to its messages.
+      const [message] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition(), conversationMembershipCondition(userId)));
+      if (!message) return undefined;
+      const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id, message.conversationId)).for('share');
+      if (!conversation) return undefined;
+      // Hold an actual membership row, not just the snapshot used by EXISTS.
+      // Deleting an account or membership must wait for this operation.
+      const membership = await tx.select().from(conversationMembersTable).where(and(eq(conversationMembersTable.conversationId, message.conversationId), eq(conversationMembersTable.userId, userId))).for('share');
+      if (conversation.isGroup && !membership.length) return undefined;
+      if (!conversation.isGroup && conversation.participantA !== userId && conversation.participantB !== userId && !membership.length) return undefined;
+      // Re-evaluate wall time AFTER acquiring locks.
+      // All content mutations and previews take this same lock. A previously
+      // observed body cannot survive a committed concurrent mutation.
+      const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).for('update');
+      if (!current) return undefined;
+      const [available] = await tx.select({id:messagesTable.id}).from(messagesTable).where(and(eq(messagesTable.id,messageId),currentMessageCondition()));
+      if(!available)return undefined;
+      return work(tx, current as MessageRecord);
     });
-    return this.findById(messageId);
+  }
+
+  async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
+    return this.withCurrent(messageId, userId, async (tx, message) => {
+      if (message.senderId === userId || (message.recipientId === userId && message.seenAt != null)) return undefined;
+      const [receipt] = await tx.select().from(messageReadsTable).where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId)));
+      if (receipt) return undefined;
+      const [authorized] = await tx.select({id:messagesTable.id}).from(messagesTable).where(and(eq(messagesTable.id,messageId),currentMessageCondition(),previewEntitlementCondition(userId)));
+      if(!authorized)return undefined;
+      await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+        target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId], set: { previewedAt },
+      });
+      const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition(),previewEntitlementCondition(userId)));
+      return current as MessageRecord | undefined;
+    });
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
@@ -97,9 +155,52 @@ export class MessageRepository {
   async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
     const [updated] = await db.update(messagesTable)
       .set({ ...updates })
-      .where(eq(messagesTable.id, messageId))
+      .where(and(eq(messagesTable.id, messageId), currentMessageCondition()))
       .returning();
     return updated as MessageRecord | undefined;
+  }
+
+  async updateForUser(messageId: string, userId: string, updates: Partial<MessageRecord>, senderOnly = false): Promise<MessageRecord | undefined> {
+    return this.withCurrent(messageId, userId, async (tx, message) => {
+      if (senderOnly && message.senderId !== userId) return undefined;
+      const [updated] = await tx.update(messagesTable).set(updates).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async deleteForUser(messageId: string, userId: string): Promise<MessageTombstone | undefined> {
+    return this.withCurrent(messageId, userId, async (tx, message) => {
+      if (message.senderId !== userId) return undefined;
+      const [updated] = await tx.update(messagesTable).set({ deletedAt: sql`clock_timestamp()` }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
+      return updated ? messageTombstone(updated as MessageRecord) : undefined;
+    });
+  }
+
+  async markSeenForUser(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
+    return this.withCurrent(messageId, userId, async (tx, message) => {
+      if (message.senderId === userId) return message;
+      const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id, message.conversationId));
+      const readAt = new Date().toISOString();
+      await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
+      if (conversation.vanishMode) {
+        const [updated] = await tx.update(messagesTable).set({ seenAt: readAt, deletedAt: sql`clock_timestamp()` }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
+        return updated ? messageTombstone(updated as MessageRecord) : undefined;
+      }
+      const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition()));
+      if (!current) return undefined;
+      if (conversation.isGroup) return { ...current, seenAt: readAt } as MessageRecord;
+      const [updated] = await tx.update(messagesTable).set({ seenAt: readAt }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async addReactionForUser(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
+    return this.withCurrent(messageId, userId, async (tx, message) => {
+      const reactions = { ...(message.reactions ?? {}) };
+      reactions[reaction] = [...new Set([...(reactions[reaction] ?? []), userId])];
+      const [updated] = await tx.update(messagesTable).set({ reactions }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 }
 
@@ -136,8 +237,8 @@ export class ConversationRepository {
     return db.transaction(async (tx) => {
       const [created] = await tx.insert(conversationsTable).values({
         id: randomUUID(),
-        participantA: creatorId, // Legacy column
-        participantB: creatorId, // Legacy column
+        participantA: null, // Legacy direct-only columns
+        participantB: null,
         participantIds: [creatorId, ...memberIds],
         isGroup: true,
         title,
@@ -186,9 +287,9 @@ export class ConversationRepository {
       return members.map(m => m.userId);
     }
     
-    // Fallback to legacy array if members table is empty
+    // Groups have one membership authority; stale JSON never restores access.
     const conv = await this.findById(conversationId);
-    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : []);
+    return !conv || conv.isGroup ? [] : [conv.participantA, conv.participantB].filter((id): id is string => Boolean(id));
   }
 
   async listForUser(userId: string): Promise<ConversationRecord[]> {
@@ -205,8 +306,7 @@ export class ConversationRepository {
         .select()
         .from(conversationsTable)
         .where(or(
-          eq(conversationsTable.participantA, userId),
-          eq(conversationsTable.participantB, userId),
+          and(eq(conversationsTable.isGroup, false), or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId))),
           inArray(conversationsTable.id, convIds)
         ))
         .orderBy(desc(conversationsTable.updatedAt))
@@ -215,7 +315,7 @@ export class ConversationRepository {
       return (await db
         .select()
         .from(conversationsTable)
-        .where(or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId)))
+        .where(and(eq(conversationsTable.isGroup, false), or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId))))
         .orderBy(desc(conversationsTable.updatedAt))
         .limit(100)) as ConversationRecord[];
     }

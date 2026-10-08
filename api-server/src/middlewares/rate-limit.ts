@@ -69,7 +69,7 @@ export async function closeRateLimitRedis(): Promise<void> {
   rateLimitRedisConnectPromise = null;
 }
 
-function createLimiter(prefix: string, windowMs: number, max: number) {
+export function createLimiter(prefix: string, windowMs: number, max: number) {
   const config = {
     windowMs,
     max,

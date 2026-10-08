@@ -1,0 +1,181 @@
+{
+  "generatedAt": "2026-10-08T02:49:56.053Z",
+  "branch": "codex/media-lifecycle-20261006",
+  "committedHead": "ba31c9fd443659bcacc9d2c8760086adf63ee082",
+  "candidate": "uncommitted working copy",
+  "implementationSha256": "44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2",
+  "implementationFiles": 489,
+  "releaseDecision": "not approved; owner scope and deployed/provider gates remain",
+  "tools": {
+    "node": "24.19.0",
+    "pnpm": "9.15.4",
+    "postgres": "16.4",
+    "redis": "7.2.8",
+    "ffmpeg": "9.0.2",
+    "alertmanager": "0.28.1",
+    "prometheus": "3.5.0"
+  },
+  "checks": [
+    {
+      "command": "corepack pnpm@9.15.4 install --frozen-lockfile",
+      "exitCode": 0,
+      "log": "install-frozen-final.log"
+    },
+    {
+      "command": "corepack pnpm@9.15.4 contract:check",
+      "exitCode": 0,
+      "log": "contract-final.log",
+      "operations": 231,
+      "paths": 195
+    },
+    {
+      "command": "corepack pnpm@9.15.4 design:check",
+      "exitCode": 0,
+      "log": "design-final.log"
+    },
+    {
+      "command": "corepack pnpm@9.15.4 production-config:check",
+      "exitCode": 0,
+      "log": "config-final.log",
+      "schemaKeys": 65
+    },
+    {
+      "command": "corepack pnpm@9.15.4 test:unit",
+      "exitCode": 0,
+      "log": "root-unit-final.log",
+      "passed": 59,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "corepack pnpm@9.15.4 --filter @workspace/api-server typecheck",
+      "exitCode": 0,
+      "log": "api-typecheck-final.log"
+    },
+    {
+      "command": "corepack pnpm@9.15.4 --filter @workspace/social typecheck",
+      "exitCode": 0,
+      "log": "web-typecheck-final.log"
+    },
+    {
+      "command": "NODE_ENV=production corepack pnpm@9.15.4 build:pnpm",
+      "exitCode": 0,
+      "log": "build-full-final.log",
+      "chunkWarnings": "retained"
+    },
+    {
+      "command": "corepack pnpm@9.15.4 audit --prod",
+      "exitCode": 0,
+      "log": "audit-final.log",
+      "knownVulnerabilities": 0
+    },
+    {
+      "command": "node --import tsx --test --test-concurrency=1 --test-timeout=180000 src/__tests__/*.test.ts",
+      "exitCode": 0,
+      "log": "api-full-final.log",
+      "passed": 323,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 167516.7588,
+      "requiredDecoder": true,
+      "database": "yor_hardening_full_20261008_verified",
+      "redisDatabase": 7
+    },
+    {
+      "command": "corepack pnpm test:e2e --workers=2 --output=test-results/production-pinned-final",
+      "exitCode": 0,
+      "log": "test-results/production-pinned-final.log",
+      "passed": 69,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0,
+      "productionReact": true
+    },
+    {
+      "command": "bootstrap-schema.integration.test.ts (focused serial)",
+      "exitCode": 0,
+      "log": "yor-hardening-message-20261008/bootstrap-empty-guards.log",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node ops/prometheus/acceptance.mjs",
+      "exitCode": 0,
+      "log": "monitoring-acceptance-final.log",
+      "runtime": "native pinned binaries",
+      "receiver": "authenticated local only",
+      "productionReceiver": false
+    },
+    {
+      "command": "node ops/backup/acceptance.mjs",
+      "exitCode": 0,
+      "log": "backup-acceptance-guard-final.log",
+      "runtime": "native",
+      "transport": "local synthetic rclone remote",
+      "restoreMilliseconds": 3854,
+      "productionOffHost": false
+    },
+    {
+      "command": "native Compose production + CI overlay config --quiet",
+      "exitCode": 0,
+      "log": "compose-config-final.log",
+      "engineExecution": false
+    },
+    {
+      "command": "scripts/measure-mobile-performance.mjs",
+      "exitCode": 1,
+      "evidence": "docs/hardening/mobile-performance-final.json",
+      "failedBudgets": [
+        "fcpMs",
+        "longTaskBlockingMs"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 2,
+      "evidence": "diff-check-final.log",
+      "cause": "three preserved baseline trailing-whitespace additions; all new/scoped changes passed"
+    },
+    {
+      "command": "production container build/start/smoke, Nginx validator and backup image drill",
+      "status": "not run",
+      "cause": "Docker Engine/WSL unavailable; uncommitted candidate has not run in CI"
+    }
+  ],
+  "historical": [
+    {
+      "scope": "supplied 7 October full production Chromium",
+      "passed": 57,
+      "failed": 3,
+      "targetedRetryPassDoesNotReplaceFailure": true
+    },
+    {
+      "scope": "first complete API run",
+      "exitCode": 1,
+      "passed": 321,
+      "failed": 1,
+      "skipped": 0,
+      "log": "api-full-first-failed.log",
+      "cause": "expired-terminal media sweep recovery regression repaired"
+    },
+    {
+      "scope": "second API run",
+      "exitCode": -1,
+      "status": "stopped after observed assertion failure and leaked worker connection",
+      "completeCount": null,
+      "log": "api-full-second-stalled.log",
+      "cause": "test local abort/database heartbeat publication race; fixture barrier/cleanup repaired"
+    }
+  ],
+  "finalChangedPaths": 508,
+  "ownedInfrastructureShutdown": {
+    "exitCode": 0,
+    "postgresPort": 55447,
+    "redisPorts": [
+      6397,
+      6398
+    ],
+    "artifactsRetained": true
+  }
+}

@@ -11,6 +11,7 @@ import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { publicBetaConfig } from '@/lib/public-beta-config';
+import type { PublicGrievanceTicket } from '../../../lib/api-zod/src/grievance';
 
 type GrievanceField = 'reporterName' | 'reporterEmail' | 'reportedUrl' | 'description';
 type GrievanceErrors = Partial<Record<GrievanceField, string>>;
@@ -25,7 +26,7 @@ export default function GrievancePortal() {
   const [reporterEmail, setReporterEmail] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submittedTicket, setSubmittedTicket] = useState<any>(null);
+  const [submittedTicket, setSubmittedTicket] = useState<PublicGrievanceTicket | null>(null);
   const [formErrors, setFormErrors] = useState<GrievanceErrors>({});
   const [formError, setFormError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
@@ -33,7 +34,7 @@ export default function GrievancePortal() {
   // Track State
   const [trackTicketId, setTrackTicketId] = useState('');
   const [trackingLoading, setTrackingLoading] = useState(false);
-  const [trackedTicket, setTrackedTicket] = useState<any>(null);
+  const [trackedTicket, setTrackedTicket] = useState<PublicGrievanceTicket | null>(null);
   const [trackError, setTrackError] = useState('');
 
   const clearFieldError = (field: GrievanceField) => {
@@ -70,7 +71,7 @@ export default function GrievancePortal() {
     sounds.playPop();
 
     try {
-      const res = await api.request<any>('/reports/grievance', {
+      const res = await api.request<PublicGrievanceTicket>('/reports/grievance', {
         method: 'POST',
         body: JSON.stringify({ category, reportedUrl, reporterName, reporterEmail, description }),
       });
@@ -103,7 +104,7 @@ export default function GrievancePortal() {
     sounds.playPop();
 
     try {
-      const ticket = await api.request<any>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
+      const ticket = await api.request<PublicGrievanceTicket>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
       setTrackedTicket(ticket);
     } catch (error) {
       setTrackError('We could not find that ticket right now. Check the ID or try again in a moment.');
@@ -114,7 +115,7 @@ export default function GrievancePortal() {
   };
 
   return (
-    <div className="operator-grievance-page w-full max-w-5xl mx-auto p-4 lg:p-8 font-sans">
+    <main aria-labelledby="grievance-title" className="operator-grievance-page w-full max-w-5xl mx-auto p-4 lg:p-8 font-sans">
       {/* Header */}
       <div className="operator-grievance__header text-center max-w-2xl mx-auto mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full surface-1 border border-primary/30 text-primary text-xs font-mono font-bold mb-3">
@@ -159,7 +160,7 @@ export default function GrievancePortal() {
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-xl">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="font-display font-black text-2xl text-foreground">Grievance Ticket Acknowledged</h3>
+            <h2 className="font-display font-black text-2xl text-foreground">Grievance Ticket Acknowledged</h2>
             <p className="text-xs text-muted-foreground">
               Your report has been logged in the Yor Talks trust queue. Keep this ticket ID for status tracking.
             </p>
@@ -174,8 +175,8 @@ export default function GrievancePortal() {
                 <span className="font-bold text-emerald-400 uppercase">{submittedTicket.status}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Statutory SLA Deadline:</span>
-                <span className="text-foreground">{new Date(submittedTicket.slaDeadline).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">Received:</span>
+                <span className="text-foreground">{new Date(submittedTicket.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -257,7 +258,7 @@ export default function GrievancePortal() {
                 onChange={(e) => { setReportedUrl(e.target.value); clearFieldError('reportedUrl'); }}
                 aria-invalid={Boolean(formErrors.reportedUrl)}
                 aria-describedby={formErrors.reportedUrl ? 'reportedUrl-error' : undefined}
-                maxLength={2048}
+                maxLength={500}
                 placeholder="https://yortalks.in/p/... or @username"
                 className="rounded-xl surface-2 border-border/40 text-xs h-10"
               />
@@ -304,7 +305,7 @@ export default function GrievancePortal() {
                 aria-invalid={Boolean(trackError)}
                 aria-describedby={trackError ? 'trackTicketId-error' : undefined}
                 autoComplete="off"
-                placeholder="e.g. YT-GRV-849201"
+                placeholder="e.g. YT-GRV-ABCDEF1234"
                 className="min-w-0 flex-1 rounded-2xl surface-2 border-border/50 text-xs h-11"
               />
               <Button
@@ -331,10 +332,9 @@ export default function GrievancePortal() {
                   {trackedTicket.status.replace('_', ' ')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{trackedTicket.officerNote || 'A reviewer has not added a note yet. Your ticket remains in the trust queue.'}</p>
+              <p className="text-xs text-muted-foreground">This page shows your ticket status. Reporter details and internal review notes remain private.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
-                <span>Resolution SLA: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>
               </div>
             </motion.div>
           )}
@@ -343,14 +343,14 @@ export default function GrievancePortal() {
 
       {/* Statutory Disclosures */}
       <div className="mt-12 p-6 rounded-3xl surface-1 border border-border/30 text-xs text-muted-foreground space-y-2">
-        <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
-          <Building className="w-4 h-4 text-primary" /> Statutory Grievance Redressal Officer
-        </h4>
+        <h2 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
+          <Building className="w-4 h-4 text-primary" /> Grievance review contact
+        </h2>
         <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
         <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>
         <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured in this development build.'}</p>
-        <p><strong>Handling:</strong> Tickets are persisted, assigned for review, and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
+        <p><strong>Handling:</strong> Tickets are saved for review and can be tracked with the ticket ID. Review deadlines depend on the operator and applicable territory. Do not submit emergencies through Yor.</p>
       </div>
-    </div>
+    </main>
   );
 }
