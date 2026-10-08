@@ -36,6 +36,8 @@ type StoredLoginApprovalChallenge = LoginApprovalChallenge & {
   approvedAt?: string;
   emailOtpKey?: string;
   emailOtpChallengeId?: string;
+  googleSubject?: string;
+  googleEmail?: string;
 };
 
 const emailOtpSchema = z.object({
@@ -53,8 +55,10 @@ const loginApprovalSchema = z.object({
   expiresAtMs: z.number().int().positive().safe(), createdAt: z.string().datetime(),
   status: z.enum(['pending', 'approved']), approvedAt: z.string().datetime().optional(),
   emailOtpKey: z.string().regex(/^email-login-otp:[a-f0-9]{64}$/).optional(), emailOtpChallengeId: z.string().uuid().optional(),
+  googleSubject: z.string().min(1).optional(), googleEmail: z.string().email().optional(),
 }).refine(state => Date.parse(state.expiresAt) === state.expiresAtMs
-  && Boolean(state.emailOtpKey) === Boolean(state.emailOtpChallengeId));
+  && Boolean(state.emailOtpKey) === Boolean(state.emailOtpChallengeId)
+  && Boolean(state.googleSubject) === Boolean(state.googleEmail));
 
 export type LoginApprovalChallengeStatus = {
   challengeId: string;
@@ -71,7 +75,20 @@ export class TwoFactorRequiredError extends Error {
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
 export class GoogleSignInNotConfiguredError extends Error {}
+export class GoogleLinkVerificationRequiredError extends Error {}
 export class RegistrationNotAllowedError extends Error {}
+
+/**
+ * For Google sign-in, Gmail addresses and hosted-domain (Workspace) addresses
+ * can be treated as Google-authoritative. email_verified on a third-party
+ * Google Account does NOT establish current ownership of its email address.
+ */
+export function isGoogleAuthoritativeEmail(email: string, hostedDomain?: string): boolean {
+  const domain = email.trim().toLowerCase().split("@")[1];
+  if (!domain) return false;
+  return domain === "gmail.com" || domain === "googlemail.com"
+    || Boolean(hostedDomain && hostedDomain.trim().toLowerCase() === domain);
+}
 export class UserAlreadyExistsError extends Error {}
 
 export class AuthService {
@@ -248,31 +265,36 @@ export class AuthService {
     if (!user) {
       throw new Error("No Yor account exists for this Google email. Create an account first.");
     }
-    if (user.googleSubject && user.googleSubject !== googleSubject) {
-      throw new Error("This Google account is not linked to the Yor account for that email");
+    if (user.email.trim().toLowerCase() !== googleEmail || (user.googleSubject && user.googleSubject !== googleSubject)) {
+      throw new Error("Google identity does not match the Yor account");
     }
+    // A third-party Google Account may retain email_verified after losing
+    // ownership of that mailbox. Never silently link it to a Yor account.
+    if (!linkedUser && !isGoogleAuthoritativeEmail(googleEmail, payload?.hd)) {
+      throw new GoogleLinkVerificationRequiredError(
+        "This Google email cannot be linked automatically. Sign in using your Yor password or email code.",
+      );
+    }
+    this.assertAccountActive(user);
 
-    const linked = user.googleSubject ? user : await this.userRepository.update(user.id, {
-      googleSubject,
-      emailVerified: true,
-    });
-    const finalUser = linked ?? user;
-    this.assertAccountActive(finalUser);
-
-    const totpSecret = await this.readTotpSecret(finalUser);
+    // Do not write the Google subject until the account's second factor has
+    // succeeded. Persist the verified identity inside the short-lived pending
+    // device approval so completion can link it securely as well.
+    const totpSecret = await this.readTotpSecret(user);
     if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(finalUser),
+          await this.createLoginApprovalChallenge(user, { subject: googleSubject, email: googleEmail }),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
-      if (input.challengeId) await this.cancelLoginApprovalChallenge(finalUser.id, input.challengeId);
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
+    const finalUser = await this.finishGoogleLink(user, googleSubject, googleEmail);
     return this.createSession(finalUser, { emailVerified: true });
   }
 
@@ -438,6 +460,17 @@ export class AuthService {
     }
     const user = await this.userRepository.findById(challenge.userId);
     if (!user || !this.isAccountActive(user) || (user.authVersion ?? 0) !== challenge.authVersion || !(await this.readTotpSecret(user))) return undefined;
+    if (challenge.googleSubject && challenge.googleEmail) {
+      // The Google credential was validated when this short-lived approval was
+      // created. Enforce that its identity still matches the same account.
+      if (user.email.trim().toLowerCase() !== challenge.googleEmail) return undefined;
+      try {
+        const linked = await this.finishGoogleLink(user, challenge.googleSubject, challenge.googleEmail);
+        return this.createSession(linked, { emailVerified: true });
+      } catch {
+        return undefined;
+      }
+    }
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -679,7 +712,8 @@ export class AuthService {
   }
 
   private buildLoginApprovalChallenge(user: UserRecord, expiresAtMs: number,
-    otp?: { key: string; challengeId: string }): StoredLoginApprovalChallenge {
+    otp?: { key: string; challengeId: string },
+    google?: { subject: string; email: string }): StoredLoginApprovalChallenge {
     return {
       schemaVersion: 1,
       challengeId: randomUUID(),
@@ -692,11 +726,13 @@ export class AuthService {
       attempts: 0,
       createdAt: new Date().toISOString(),
       ...(otp ? { emailOtpKey: otp.key, emailOtpChallengeId: otp.challengeId } : {}),
+      ...(google ? { googleSubject: google.subject, googleEmail: google.email } : {}),
     };
   }
 
-  private async createLoginApprovalChallenge(user: UserRecord): Promise<LoginApprovalChallenge> {
-    const challenge = this.buildLoginApprovalChallenge(user, Date.now() + 5 * 60 * 1000);
+  private async createLoginApprovalChallenge(user: UserRecord,
+    google?: { subject: string; email: string }): Promise<LoginApprovalChallenge> {
+    const challenge = this.buildLoginApprovalChallenge(user, Date.now() + 5 * 60 * 1000, undefined, google);
     if (!(await this.redisRepository.reserveExpiringValueStrict(this.loginApprovalKey(challenge.challengeId),
       JSON.stringify(challenge), challenge.expiresAtMs))) throw new Error('Could not reserve login approval');
     await this.redisRepository.addToSetStrict(this.loginApprovalIndexKey(user.id), challenge.challengeId);
@@ -753,6 +789,17 @@ export class AuthService {
       ...challengeIds.map((id) => this.redisRepository.delStrict(this.loginApprovalKey(id))),
       this.redisRepository.delStrict(indexKey),
     ]);
+  }
+
+  private async finishGoogleLink(user: UserRecord, subject: string, email: string): Promise<UserRecord> {
+    if (user.email.trim().toLowerCase() !== email) throw new Error("Google email changed during sign-in");
+    if (user.googleSubject === subject) return user;
+    if (user.googleSubject) throw new Error("A different Google identity is already linked");
+    // Conditional compare-and-set plus the unique subject constraint guarantee
+    // a concurrent link, logout-all or account suspension cannot be overwritten.
+    const linked = await this.userRepository.linkGoogleSubjectForLogin(user, subject);
+    if (!linked) throw new Error("Google identity could not be linked; retry sign-in");
+    return linked;
   }
 
   private async createSession(

@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError } from "../services/auth-service.js";
+import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, GoogleLinkVerificationRequiredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
@@ -108,6 +108,10 @@ export class AuthController {
     } catch (error) {
       if (error instanceof GoogleSignInNotConfiguredError) {
         return res.status(503).json(createResponse("Google sign-in is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof GoogleLinkVerificationRequiredError) {
+        // Fixed generic guidance, independent of whether a Yor account exists.
+        return res.status(403).json(createResponse("Use another sign-in method", null, {}, [error.message]));
       }
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
