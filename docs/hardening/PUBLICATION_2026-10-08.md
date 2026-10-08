@@ -14,6 +14,16 @@ authentication, messaging or worker behavior. `publication-candidate.json`
 records the ensuing indexed implementation bytes separately from the original
 verification manifest.
 
+The initial published commit `55e1242` failed both GitHub checks at API
+typechecking: the clean runner had not built the referenced `api-zod` declaration
+output. CI and both root build entrypoints now explicitly build that package
+before validation. A forced declaration rebuild, API/frontend typechecks and
+scoped whitespace check passed locally. The updated root unit suite passed
+63/63 with zero skips. A targeted integration attempt against the previously
+stopped private PostgreSQL fixture returned `ECONNREFUSED`; it is not recorded as
+a passing integration result. Remote CI is required for the publication delta
+and actual container acceptance.
+
 The existing deployment project is Vercel `yor-talks` under
 `yorayriniwnl-1218s-projects`, with Node 24 and deployment protection enabled for
 preview URLs. Its preview and production scopes share the configured database

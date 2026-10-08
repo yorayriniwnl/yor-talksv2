@@ -2,8 +2,8 @@
   "date": "2026-10-08",
   "baseCommit": "ba31c9fd443659bcacc9d2c8760086adf63ee082",
   "scope": "Indexed modified/new/deleted implementation/configuration/test blobs; documentation excluded; unchanged source anchored by baseCommit. Git clean normalization uses existing core.autocrlf configuration.",
-  "aggregateAlgorithm": "SHA256 of sorted Git diff path order: path + NUL + SHA256(indexed blob bytes), or DELETED + LF",
-  "aggregateSha256": "4f0f5d3ce5197ac44fafac1df57ed448f68558de76cdfd96ddc82aaf466d07f2",
+  "aggregateAlgorithm": "SHA256 of Git diff --no-renames path order: path + NUL + SHA256(indexed blob bytes), or DELETED + LF",
+  "aggregateSha256": "4e74a8917d566f2cc0eef690e1405e2d4103680253bf148149ff75b7d2075396",
   "priorVerificationAggregateSha256": "44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2",
   "verificationDeltaPaths": [
     "ops/test-infrastructure-guard.mjs",
@@ -16,7 +16,10 @@
     "api-server/src/__tests__/notification-retention.integration.test.ts",
     "api-server/src/__tests__/notification-delivery-migration.integration.test.ts",
     "api-server/src/scripts/backup-fixture.ts",
-    "ops/backup/acceptance.mjs"
+    "ops/backup/acceptance.mjs",
+    ".github/workflows/ci.yml",
+    "build.mjs",
+    "package.json"
   ],
   "postDeltaChecks": {
     "rootUnit": {
@@ -31,12 +34,27 @@
     "targetedIntegration": {
       "exitCode": 1,
       "reason": "Previously stopped private PostgreSQL55447 unavailable (ECONNREFUSED); remote CI remains necessary."
+    },
+    "contractDeclarationBuild": {
+      "command": "corepack pnpm@9.15.4 exec tsc -b lib/api-zod --force",
+      "exitCode": 0
+    },
+    "webTypecheck": {
+      "exitCode": 0
+    },
+    "initialRemoteCI": {
+      "commit": "55e12429baecde8b3ea07e76b0b7e1f6e824a463",
+      "runIds": [
+        37794521179,
+        37794513016
+      ],
+      "result": "failed at API typecheck (missing referenced api-zod declarations); build-order correction applied"
     }
   },
   "files": [
     {
       "file": ".github/workflows/ci.yml",
-      "sha256": "207d4c8582c1f145bdf3f8f4e499e48fd2bd951d400604a8f99302537d2d9c07"
+      "sha256": "3b364d7b13e3ce704d6d1418a10bafdce92ad97d5faf0bdf5b7b73c16518863e"
     },
     {
       "file": "api-server/src/__tests__/account-integrity.test.ts",
@@ -267,6 +285,10 @@
       "sha256": "23cc170f25bf427a67c6fcc519bc67577f77f2d866779b543e52eb9207025987"
     },
     {
+      "file": "build.mjs",
+      "sha256": "fecb6770c8bda9c68e00f012a0b8edc0904236cd4c5d6270d4a51fb51f58b060"
+    },
+    {
       "file": "docker-compose.production.yml",
       "sha256": "27a755d136337315e3bcb2e9393a44aa88aa0acb7c5c2780450b47c42c22a223"
     },
@@ -393,6 +415,10 @@
     {
       "file": "lib/api-zod/src/generated/types/postMediaPresign200.ts",
       "sha256": "56f7ed2132ec184f06011fa2572be277b7264a8a80e5c00c54caf1973620b775"
+    },
+    {
+      "file": "lib/api-zod/src/generated/types/postMediaPresignBody.ts",
+      "sha256": null
     },
     {
       "file": "lib/api-zod/src/generated/types/postMediaUpload200.ts",
@@ -581,6 +607,10 @@
     {
       "file": "ops/test-infrastructure-guard.mjs",
       "sha256": "03534144bfea497c0173225730a1eea2116dadfd2afdb46150dddb71c005d251"
+    },
+    {
+      "file": "package.json",
+      "sha256": "2ba98ea8a81af7fbd1abca7db16d5b08b72f7bd2dac11095d57d5b70e0974d28"
     },
     {
       "file": "playwright.config.ts",

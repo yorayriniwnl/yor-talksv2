@@ -74,6 +74,9 @@ jobs:
       - name: Build database package
         run: pnpm --filter @workspace/db build
 
+      - name: Build shared contract declarations
+        run: pnpm exec tsc -b lib/api-zod
+
       - name: Apply schema migration
         run: pnpm --filter @workspace/db migrate:beta
         env:
