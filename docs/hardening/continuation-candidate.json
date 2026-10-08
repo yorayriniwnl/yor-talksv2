@@ -1,7 +1,18 @@
 {
   "localEvidenceDate": "2026-10-09",
-  "baseCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
-  "scope": "Indexed follow-up implementation, deployment packaging and browser-regression blobs; documentation and measurement reports excluded; unchanged implementation anchored by baseCommit. Historical manifests are preserved.",
+  "baseCommit": "23bfdc7678543d797593a731e5f3caa228bba7d9",
+  "measurementBaselineCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+  "scope": "Follow-up implementation, deployment packaging and browser-regression blobs relative to the integrated remote branch; documentation and measurement reports excluded. Frontend measurements used measurementBaselineCommit; the inherited Google authentication changes do not change measured frontend bytes. Historical manifests are preserved.",
+  "concurrentRemoteIntegration": {
+    "commit": "23bfdc7678543d797593a731e5f3caa228bba7d9",
+    "description": "Preserved concurrent Google sign-in security hardening already pushed to the same branch; full combined-revision CI remains required.",
+    "paths": [
+      "api-server/src/__tests__/google-auth.test.ts",
+      "api-server/src/controllers/auth-controller.ts",
+      "api-server/src/repositories/user-repository.ts",
+      "api-server/src/services/auth-service.ts"
+    ]
+  },
   "aggregateAlgorithm": "SHA256 of Git diff --no-renames path order: path + NUL + SHA256(indexed blob bytes) + LF; Git clean normalization uses existing core.autocrlf configuration",
   "aggregateSha256": "e6982111ac3a48f5e631dfddcc0d24923e2af9f39cdd16b3e09025d41c8f7edc",
   "fileCount": 4,
