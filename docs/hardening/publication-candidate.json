@@ -3,7 +3,7 @@
   "baseCommit": "ba31c9fd443659bcacc9d2c8760086adf63ee082",
   "scope": "Indexed modified/new/deleted implementation/configuration/test blobs; documentation excluded; unchanged source anchored by baseCommit. Git clean normalization uses existing core.autocrlf configuration.",
   "aggregateAlgorithm": "SHA256 of Git diff --no-renames path order: path + NUL + SHA256(indexed blob bytes), or DELETED + LF",
-  "aggregateSha256": "d3d93a179e1239c5461cdc9c55f44245f14019981b825b80bb5c4b1c1c459269",
+  "aggregateSha256": "7b9c9819faa8b792c0b90bd2b3c765a5f1494355e0b3854ecef9f82c2c7e7a02",
   "priorVerificationAggregateSha256": "44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2",
   "verificationDeltaPaths": [
     "ops/test-infrastructure-guard.mjs",
@@ -19,7 +19,8 @@
     "ops/backup/acceptance.mjs",
     ".github/workflows/ci.yml",
     "build.mjs",
-    "package.json"
+    "package.json",
+    "lib/db/scripts/backup-database.sh"
   ],
   "postDeltaChecks": {
     "rootUnit": {
@@ -76,6 +77,38 @@
     "finalBackupDrillSyntax": {
       "command": "node --check ops/backup/acceptance.mjs",
       "exitCode": 0
+    },
+    "secondRemoteCheckedCommit": {
+      "commit": "8fdd14d7129090fa9375478f0073b4f8526c2ce3",
+      "runIds": [
+        37797994566,
+        37798003141
+      ],
+      "api": {
+        "passed": 323,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "browser": {
+        "passed": 69,
+        "failed": 0,
+        "skipped": 0
+      },
+      "monitoring": "passed",
+      "compose": "passed",
+      "containerImages": "passed",
+      "backupImage": "failed141: early-exit archive metadata awk closed pg_restore listing pipe; parser changed to consume complete input",
+      "stackSmoke": "skipped after backup failure"
+    },
+    "backupMetadataPipelineProof": {
+      "listingLines": 50000,
+      "oldPipelineExitCode": 141,
+      "fixedPipelineExitCode": 0,
+      "upstreamFailureExitCode": 23,
+      "firstNameOnly": true,
+      "bashSyntaxExitCode": 0,
+      "scopedDiffExitCode": 0
     }
   },
   "files": [
@@ -533,7 +566,7 @@
     },
     {
       "file": "lib/db/scripts/backup-database.sh",
-      "sha256": "10ed083b20414456a595dc143fa630a078a437940c608e649fe3065ef1dfd8e0"
+      "sha256": "dde8b8a89508c15cef15c3ba302406cf4e34e88273ce506f59f72954cfdb2b2a"
     },
     {
       "file": "lib/db/scripts/bootstrap-schema.mjs",

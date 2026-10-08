@@ -144,7 +144,8 @@ restore() {
   cleanup_file="$temporary_file"
   age --decrypt --identity "$BACKUP_AGE_IDENTITY" "$backup_file" > "$temporary_file"
   pg_restore --list "$temporary_file" >/dev/null
-  archive_database=$(pg_restore --list "$temporary_file" | awk '/dbname:/ { sub(/^.*dbname: /, ""); print; exit }')
+  # Read the full listing: exiting awk early can SIGPIPE pg_restore under pipefail.
+  archive_database=$(pg_restore --list "$temporary_file" | awk '/dbname:/ && !found { sub(/^.*dbname: /, ""); print; found=1 }')
   if [[ -z "$archive_database" || "$archive_database" == "$actual_database" ]]; then
     echo "Error: archive source and isolated restore target must be distinct." >&2
     exit 1

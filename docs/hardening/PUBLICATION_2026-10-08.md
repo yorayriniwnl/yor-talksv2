@@ -33,6 +33,16 @@ numeric UID/GID while preserving private permissions and every encryption,
 restore and failure assertion. Syntax and scoped whitespace checks passed;
 remote CI must validate this final drill correction.
 
+Both `8fdd14d` runs again passed the API/browser suites, monitoring, Compose and
+image builds. Backup progressed to restore and failed with exit 141: metadata
+parsing stopped reading `pg_restore --list` early under `pipefail`, causing a
+broken pipe on a large listing. The parser now consumes the full listing and
+prints the first database name once. A 50,000-line shell reproduction changed
+from exit 141 to exit 0; an injected upstream failure still returned exit 23.
+Bash syntax and scoped whitespace checks passed. Restore safeguards and strict
+pipeline failure handling are retained; final full-container validation is
+recorded by the subsequent exact-commit GitHub checks.
+
 The existing deployment project is Vercel `yor-talks` under
 `yorayriniwnl-1218s-projects`, with Node 24 and deployment protection enabled for
 preview URLs. Its preview and production scopes share the configured database
