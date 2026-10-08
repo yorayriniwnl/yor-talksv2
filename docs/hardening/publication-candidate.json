@@ -3,7 +3,7 @@
   "baseCommit": "ba31c9fd443659bcacc9d2c8760086adf63ee082",
   "scope": "Indexed modified/new/deleted implementation/configuration/test blobs; documentation excluded; unchanged source anchored by baseCommit. Git clean normalization uses existing core.autocrlf configuration.",
   "aggregateAlgorithm": "SHA256 of Git diff --no-renames path order: path + NUL + SHA256(indexed blob bytes), or DELETED + LF",
-  "aggregateSha256": "4e74a8917d566f2cc0eef690e1405e2d4103680253bf148149ff75b7d2075396",
+  "aggregateSha256": "d3d93a179e1239c5461cdc9c55f44245f14019981b825b80bb5c4b1c1c459269",
   "priorVerificationAggregateSha256": "44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2",
   "verificationDeltaPaths": [
     "ops/test-infrastructure-guard.mjs",
@@ -49,6 +49,33 @@
         37794513016
       ],
       "result": "failed at API typecheck (missing referenced api-zod declarations); build-order correction applied"
+    },
+    "remoteCheckedCommit": {
+      "commit": "9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb",
+      "runIds": [
+        37795734028,
+        37795742970
+      ],
+      "api": {
+        "passed": 323,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "browser": {
+        "passed": 69,
+        "failed": 0,
+        "skipped": 0
+      },
+      "monitoring": "passed",
+      "compose": "passed",
+      "containerImages": "passed",
+      "backupImage": "failed: private bind mount root ownership prevents host runner scandir; Linux host UID/GID utility-container correction applied",
+      "stackSmoke": "skipped after backup failure"
+    },
+    "finalBackupDrillSyntax": {
+      "command": "node --check ops/backup/acceptance.mjs",
+      "exitCode": 0
     }
   },
   "files": [
@@ -562,7 +589,7 @@
     },
     {
       "file": "ops/backup/acceptance.mjs",
-      "sha256": "369041c89e53762ec8b4ac7720d89a21b04b72c368a666fef10f2e245ef02b87"
+      "sha256": "5b21d9b1f3a93b297e6312b7a663a3a9585472178f75cc3fb3ba0e9429322e12"
     },
     {
       "file": "ops/check-readiness.mjs",

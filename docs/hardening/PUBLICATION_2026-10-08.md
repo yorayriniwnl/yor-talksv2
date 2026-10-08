@@ -24,6 +24,15 @@ stopped private PostgreSQL fixture returned `ECONNREFUSED`; it is not recorded a
 a passing integration result. Remote CI is required for the publication delta
 and actual container acceptance.
 
+Both GitHub runs for `9ef28b5` subsequently passed 323 API tests and 69 browser
+tests with zero failures/skips, monitoring acceptance, Compose validation and
+production container builds. Backup image acceptance failed when a root-owned
+private bind-mount directory was unreadable by the host runner; stack smoke was
+therefore skipped. The drill now runs its Linux utility containers with the host
+numeric UID/GID while preserving private permissions and every encryption,
+restore and failure assertion. Syntax and scoped whitespace checks passed;
+remote CI must validate this final drill correction.
+
 The existing deployment project is Vercel `yor-talks` under
 `yorayriniwnl-1218s-projects`, with Node 24 and deployment protection enabled for
 preview URLs. Its preview and production scopes share the configured database
@@ -44,3 +53,15 @@ remaining release-scope/provider acceptance recorded in
 `../PRODUCTION_HARDENING_2026-10-08.md`. Existing age restrictions and disabled
 payments/live/push/RTC remain in force. Commit, push, CI and preview URLs are
 reported separately as publication results.
+
+The [protected frontend preview](https://yor-talks-e7ykqt6cs-yorayriniwnl-1218s-projects.vercel.app)
+is deployed (`dpl_Djw6ZvnT8qsuFpi4LJe45Y3wcNoK`, Vercel READY). Its artifact was
+built from the frontend in `55e1242`; subsequent publication corrections change
+build ordering and drill infrastructure only. Fourteen verification checks
+passed: anonymous access requires Vercel authentication, authorized SPA routes
+load, a served JavaScript asset matches the local artifact, missing assets return
+404, unexpected POST routes return 405, API/Socket.IO requests return 503 for the
+tested methods, security/cache headers apply, and production Chromium renders
+the mobile sign-in page without JavaScript errors or external API/realtime
+requests. Backend sign-in and other data journeys remain unavailable in this
+frontend review deployment.

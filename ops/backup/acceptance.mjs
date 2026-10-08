@@ -33,7 +33,10 @@ const forward = value => value.replaceAll('\\', '/');
 function execute(executable, args, environment = env, success = true, input) {
   let command = executable, commandArgs = args;
   if (docker && executable !== process.execPath) {
-    command = 'docker'; commandArgs = ['run', '--rm', ...(input === undefined ? [] : ['-i']), '--network', 'host', '-v', `${temp}:${temp}`, '--entrypoint', executable];
+    // Bind-mounted private files must belong to the host runner, not root.
+    // Keep the backup's restrictive modes; Linux Docker can use numeric IDs.
+    const user = process.platform === 'linux' ? ['--user', `${process.getuid()}:${process.getgid()}`] : [];
+    command = 'docker'; commandArgs = ['run', '--rm', ...user, ...(input === undefined ? [] : ['-i']), '--network', 'host', '-v', `${temp}:${temp}`, '--entrypoint', executable];
     for (const key of ['DATABASE_URL', 'BACKUP_DIR', 'BACKUP_METRICS_FILE', 'BACKUP_REMOTE', 'BACKUP_AGE_IDENTITY', 'BACKUP_AGE_RECIPIENT', 'RCLONE_CONFIG', 'RESTORE_TARGET_DATABASE']) {
       if (environment[key]) commandArgs.push('-e', `${key}=${environment[key]}`);
     }
