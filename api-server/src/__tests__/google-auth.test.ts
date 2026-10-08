@@ -14,7 +14,7 @@ import { createTestUser } from "./test-helpers.js";
 // returned by Google's verifier, not Google's cryptographic JWT verification.
 type Payload = { sub: string; email: string; email_verified: boolean; hd?: string };
 const credentials = new Map<string, Payload>();
-const verified = mock.method(OAuth2Client.prototype, "verifyIdToken", async ({ idToken }) =>
+const verified = mock.method(OAuth2Client.prototype, "verifyIdToken", async ({ idToken }: { idToken: string }) =>
   ({ getPayload: () => credentials.get(idToken) }) as never);
 const originalClientId = env.GOOGLE_CLIENT_ID;
 env.GOOGLE_CLIENT_ID = "1234567890-test.apps.googleusercontent.com";
