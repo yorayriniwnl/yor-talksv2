@@ -148,7 +148,6 @@ export class MessageRepository {
       return current as MessageRecord | undefined;
     });
   }
-  }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
     const [receipt] = await db.select({ messageId: messageReadsTable.messageId })
