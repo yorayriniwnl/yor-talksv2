@@ -84,10 +84,14 @@ export class RegistrationNotAllowedError extends Error {}
  * Google Account does NOT establish current ownership of its email address.
  */
 export function isGoogleAuthoritativeEmail(email: string, hostedDomain?: string): boolean {
-  const domain = email.trim().toLowerCase().split("@")[1];
+  const normalized = email.trim().toLowerCase();
+  const lastAtIndex = normalized.lastIndexOf("@");
+  if (lastAtIndex <= 0) return false;
+  const domain = normalized.slice(lastAtIndex + 1);
   if (!domain) return false;
+  const normalizedHd = hostedDomain ? hostedDomain.trim().toLowerCase().replace(/\.$/, "") : undefined;
   return domain === "gmail.com" || domain === "googlemail.com"
-    || Boolean(hostedDomain && hostedDomain.trim().toLowerCase() === domain);
+    || Boolean(normalizedHd && normalizedHd === domain);
 }
 export class UserAlreadyExistsError extends Error {}
 
@@ -251,26 +255,59 @@ export class AuthService {
       });
       payload = ticket.getPayload();
     } catch {
+      this.securityService.createAuditEvent("login_failure", "Invalid or expired Google credential");
       throw new Error("The Google credential is invalid or expired");
     }
 
-    const googleSubject = payload?.sub;
-    const googleEmail = payload?.email?.trim().toLowerCase();
-    if (!googleSubject || !googleEmail || payload?.email_verified !== true || !isAllowedEmail(googleEmail)) {
+    if (!payload) {
+      this.securityService.createAuditEvent("login_failure", "Missing Google credential payload");
+      throw new Error("The Google credential is invalid or expired");
+    }
+
+    if (payload.aud) {
+      const aud: unknown = payload.aud;
+      const matchesAudience = typeof aud === "string" ? aud === env.GOOGLE_CLIENT_ID : Array.isArray(aud) && (aud as string[]).includes(env.GOOGLE_CLIENT_ID);
+      if (!matchesAudience) {
+        this.securityService.createAuditEvent("login_failure", "Google credential audience mismatch", payload.email);
+        throw new Error("The Google credential audience is invalid");
+      }
+    }
+
+    if (payload.iss && payload.iss !== "accounts.google.com" && payload.iss !== "https://accounts.google.com") {
+      this.securityService.createAuditEvent("login_failure", "Invalid Google token issuer", payload.email);
+      throw new Error("The Google credential issuer is invalid");
+    }
+
+    if (typeof payload.exp === "number" && payload.exp <= Math.floor(Date.now() / 1000)) {
+      this.securityService.createAuditEvent("login_failure", "Expired Google token", payload.email);
+      throw new Error("The Google credential is invalid or expired");
+    }
+
+    const googleSubject = payload.sub?.trim();
+    const googleEmail = payload.email?.trim().toLowerCase();
+    if (!googleSubject || !googleEmail || payload.email_verified !== true || !isAllowedEmail(googleEmail)) {
+      this.securityService.createAuditEvent("login_failure", "Disallowed, incomplete, or unverified Google account", googleEmail || "unknown");
       throw new Error("Use a verified Google account from an allowed email domain");
+    }
+
+    if (await this.securityService.detectAbuse(googleEmail, "login_failure")) {
+      throw new TooManyAttemptsError("Too many failed attempts. Try again later.");
     }
 
     const linkedUser = await this.userRepository.findByGoogleSubject(googleSubject);
     const user = linkedUser ?? await this.userRepository.findByEmail(googleEmail);
     if (!user) {
+      this.securityService.createAuditEvent("login_failure", "No Yor account for Google identity", googleEmail);
       throw new Error("No Yor account exists for this Google email. Create an account first.");
     }
     if (user.email.trim().toLowerCase() !== googleEmail || (user.googleSubject && user.googleSubject !== googleSubject)) {
+      this.securityService.createAuditEvent("login_failure", "Google identity does not match Yor account", googleEmail);
       throw new Error("Google identity does not match the Yor account");
     }
     // A third-party Google Account may retain email_verified after losing
     // ownership of that mailbox. Never silently link it to a Yor account.
-    if (!linkedUser && !isGoogleAuthoritativeEmail(googleEmail, payload?.hd)) {
+    if (!linkedUser && !isGoogleAuthoritativeEmail(googleEmail, payload.hd)) {
+      this.securityService.createAuditEvent("login_failure", "Untrusted Google email automatic linking rejected", googleEmail);
       throw new GoogleLinkVerificationRequiredError(
         "This Google email cannot be linked automatically. Sign in using your Yor password or email code.",
       );
@@ -289,12 +326,14 @@ export class AuthService {
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
+        this.securityService.createAuditEvent("login_failure", "Invalid two-factor code for Google login", googleEmail);
         throw new Error("Invalid two-factor code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
     const finalUser = await this.finishGoogleLink(user, googleSubject, googleEmail);
+    this.securityService.createAuditEvent("login_success", "Google sign-in succeeded", googleEmail);
     return this.createSession(finalUser, { emailVerified: true });
   }
 
@@ -466,6 +505,7 @@ export class AuthService {
       if (user.email.trim().toLowerCase() !== challenge.googleEmail) return undefined;
       try {
         const linked = await this.finishGoogleLink(user, challenge.googleSubject, challenge.googleEmail);
+        this.securityService.createAuditEvent("login_success", "Google sign-in completed via two-factor approval", challenge.googleEmail);
         return this.createSession(linked, { emailVerified: true });
       } catch {
         return undefined;

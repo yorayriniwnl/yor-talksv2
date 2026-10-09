@@ -176,18 +176,25 @@ export class UserRepository {
    * prevents the same identity from being attached to another Yor account.
    */
   async linkGoogleSubjectForLogin(user: UserRecord, googleSubject: string): Promise<UserRecord | undefined> {
-    const [linked] = await db.update(usersTable).set({
-      googleSubject,
-      emailVerified: true,
-      updatedAt: new Date().toISOString(),
-    }).where(and(
-      eq(usersTable.id, user.id),
-      eq(usersTable.email, user.email),
-      eq(usersTable.authVersion, user.authVersion ?? 0),
-      isNull(usersTable.googleSubject),
-      sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`,
-    )).returning();
-    return linked as UserRecord | undefined;
+    try {
+      const [linked] = await db.update(usersTable).set({
+        googleSubject,
+        emailVerified: true,
+        updatedAt: new Date().toISOString(),
+      }).where(and(
+        eq(usersTable.id, user.id),
+        eq(usersTable.email, user.email),
+        eq(usersTable.authVersion, user.authVersion ?? 0),
+        isNull(usersTable.googleSubject),
+        sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`,
+      )).returning();
+      return linked as UserRecord | undefined;
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   async findByUsername(username: string): Promise<UserRecord | undefined> {
