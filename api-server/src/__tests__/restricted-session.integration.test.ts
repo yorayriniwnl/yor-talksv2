@@ -142,8 +142,10 @@ function createRestrictedFixture(t: TestContext) {
 
 test('restricted session cannot bypass policy on direct social, media, and feed endpoints', async (t) => {
   const previousPublicBeta = env.PUBLIC_BETA;
+  const previousNodeEnv = env.NODE_ENV;
   env.PUBLIC_BETA = true;
-  t.after(() => { env.PUBLIC_BETA = previousPublicBeta; });
+  env.NODE_ENV = "production";
+  t.after(() => { env.PUBLIC_BETA = previousPublicBeta; env.NODE_ENV = previousNodeEnv; });
   const app = createRestrictedFixture(t);
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
