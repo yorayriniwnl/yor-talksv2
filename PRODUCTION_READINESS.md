@@ -1,16 +1,22 @@
 # Production Readiness Report
 
-Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+Status as of 9 October: repository and isolated container checks pass; the protected frontend preview is verified. Full production launch remains blocked by the gates below.
 
-For current working-copy repairs and exact verification evidence, use the
-[8 October production hardening report](docs/PRODUCTION_HARDENING_2026-10-08.md).
-This report retains historical results. Operator, territory and age scope,
-provider acceptance, the approved proxy topology and operational release gates
-remain separate decisions; these documents do not approve public launch.
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
+
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
+
+The [current mobile measurements](docs/hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](docs/hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+
+Earlier phase-specific evidence follows; it does not replace the current result above.
 
 ## Executive summary
 
-This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an isolated restore drill remain external launch gates.
+The publication result above is current; the earlier checks below retain their
+historical scope. The completed CI restore uses an isolated local rclone remote.
+Live providers, the selected production backend/worker host and public ingress,
+delivery to the actual alert receiver, approved off-host recovery and agreed
+retention/legal scope remain launch gates.
 
 ## Scope and boundary
 
@@ -28,7 +34,7 @@ This report does not claim:
 - live provider acceptance
 - production TLS or DNS validation
 - remote monitoring/alert verification
-- backup/restore drill success
+- production off-host backup/restore acceptance
 - real end-user traffic validation
 - public deployment safety beyond repo-level checks
 
@@ -94,12 +100,14 @@ Status: acceptable in repo, not live-verified
 
 ### Docker and deployment wiring
 
-Status: configuration validated, runtime not executed here
+Status: published production images and isolated stack passed in CI; intended
+production target acceptance remains open.
 
 - production Compose file is structurally valid
 - env example and CI fixture values are present and non-secret
 - Dockerfiles are production-oriented and use Node 24 and non-root runtime sets
-- actual image build/run in a real Docker engine remains unverified in this environment
+- exact-commit CI built and ran the images, backup drill and native Nginx checks
+- the local Windows host lacked Docker; deployment on the intended host remains unverified
 
 ### Security posture
 
@@ -129,9 +137,9 @@ The following remain intentionally unverified and must be treated as launch gate
    - Google OAuth, Resend, Cloudinary, moderation, LiveKit, and other provider boundaries are not live-verified.
    - Missing production credentials correctly block startup or feature use, but a real provider flow is still required.
 
-2. Runtime Docker validation
-   - A real Docker Engine was not available here for container execution.
-   - Images need a real run/test in a proper deployment environment.
+2. Intended backend and worker deployment
+   - Docker image and isolated container-stack checks passed for `990fc06` in CI.
+   - The persistent production host, matching API/workers and real configuration still require deployment acceptance.
 
 3. TLS and domain verification
    - HTTPS, cookie policy, CORS, WebSocket upgrades, and browser trust need real deployment validation.
@@ -141,11 +149,12 @@ The following remain intentionally unverified and must be treated as launch gate
 
 ### P1 remaining risks
 
-1. Backup and restore drill
-   - database backups and restore procedures need testing in a real environment
+1. Approved off-host backup and recovery
+   - CI encryption, retrieval, application restore and failure guards passed with an isolated local transport.
+   - Actual off-host retrieval/restore, recovery owners and RPO/RTO still require approval and testing.
 
 2. Production smoke deployment
-   - only repository-oriented checks are complete; actual public edge availability is not proven
+   - isolated production container smoke passed; actual public backend/edge acceptance remains open
 
 3. Operational readiness
    - queue health, worker recoverability, and long-running service behavior need production evidence
@@ -154,7 +163,7 @@ The following remain intentionally unverified and must be treated as launch gate
 
 Before enabling a real deployment, complete all of the following:
 
-1. Validate Docker runtime with a real engine.
+1. Deploy and validate the reviewed images on the intended persistent host.
 2. Set production secrets in a secure environment file.
 3. Confirm Postgres and Redis are healthy and compatible with the expected versions.
 4. Validate the production Compose stack with `.env.production` and the project’s configuration checks.
@@ -179,8 +188,16 @@ If production deployment issues appear:
 
 ## Honest release note
 
-The repository is not “fully production verified” and should not be treated as such. The codebase has reached a realistic backend production-hardening baseline, but real deployment confidence requires live acceptance checks outside the repository. Until those are completed, this project is best described as “code-ready and deployment-blocked on external runtime verification.”
+Published repository and isolated container checks pass, and a protected frontend
+review preview is available. Full production launch remains blocked by the
+intended backend/worker deployment, live provider and operational acceptance,
+owner/legal/retention decisions and the recorded performance failures. The
+discarded editor-splitting experiment failed FCP/blocking in all three samples
+and LCP in two; the original two failed metrics remain historical evidence. The retained
+continuation also fails FCP/blocking in all three final samples and LCP in two.
 
-## No commit or push claim
+## Earlier documentation phase
 
-The earlier report update did not commit or push changes and was documentation-only. Current implementation scope and verification belong to the linked 8 October report.
+The earlier report update was documentation-only and made no commit or push.
+Subsequent publication and exact-commit CI are recorded above and in the linked
+8 October reports; those later results do not rewrite the historical checks.

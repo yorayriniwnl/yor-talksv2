@@ -4,6 +4,12 @@ This repository now has a production Compose profile, but a public launch still 
 
 **Current release decision: public launch remains blocked.** Use the [8 October production hardening report](PRODUCTION_HARDENING_2026-10-08.md) for current repairs, exact verification and remaining gates. The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) retains historical defect observations. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research; operator, territory, age and feature scope still need owner approval. No global or minors launch is approved by this runbook.
 
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
+
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
+
+The [current mobile measurements](hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+
 The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
 current media controls, source-specific repository checks and the remaining
 provider/runtime acceptance gates. CI requires `pnpm audit --prod`, actual decoder

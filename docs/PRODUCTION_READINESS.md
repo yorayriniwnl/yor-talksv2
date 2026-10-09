@@ -1,17 +1,14 @@
 # Production Readiness
 
-Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+Status as of 9 October: repository and isolated container checks pass; the protected frontend preview is verified. Full production launch remains blocked by the gates below.
 
-The October 4 media change implements server-owned reservations, complete byte decoding, strict Gemini decisions, transactional approved-ID publication, retry-safe cleanup and approval/hash-checked API delivery. Its current validation evidence and configuration requirements are in [the media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Unconfigured media remains unavailable; production no longer rejects it solely because `NODE_ENV=production`. Historical checks below do not validate the October change or real provider acceptance.
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
 
-This file and the root [Production Readiness Report](../PRODUCTION_READINESS.md) use the same evidence boundary. Checks below are historical reports, not checks performed by the current implementation session unless its final results say otherwise.
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
 
-Previously documented repository controls (historical; not re-verified in this session):
-- Enhanced production smoke test with detailed service verification
-- Added `/api/diagnostics` endpoint for queue and worker health
-- Improved `/api/readyz` with environment and version reporting
-- Added PostgreSQL backup/restore script with verification
-- Improved error reporting and logging in deployment verification
+The [current mobile measurements](hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+
+Earlier phase-specific evidence follows; it does not replace the current result above.
 
 ## Verification boundary
 
@@ -44,7 +41,7 @@ Previously documented repository controls (historical; not re-verified in this s
 - Redis failover, multi-instance behavior, rolling restart, and sustained load.
 - Live backup/restore drills to verify recovery procedures
 
-The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
+The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. Production Compose now wires internal Prometheus and Alertmanager; exact-commit CI verified local authenticated firing/resolved delivery. The actual production receiver and responder acceptance remain open.
 
 ### Requires manual acceptance testing
 
@@ -52,7 +49,7 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 - Any later enablement of Razorpay, LiveKit, Web Push, or RTC.
 - Real-device browser coverage and operational support/abuse drills.
 
-## Changes in this hardening pass
+## Historical deployment hardening pass
 
 ### Deployment Verification
 - Enhanced `ops/smoke-test.mjs` with structured logging, detailed error reporting, and comprehensive service checks
@@ -68,14 +65,12 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 
 ### Database Backup & Restore
 
-Use the current encrypted age/rclone workflow in the [production launch runbook](docs/PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
-
-Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
+Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#5-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 ### Documentation
 - Updated PRODUCTION_READINESS.md with deployment verification procedures
 - Documented smoke test usage and interpretation
 
-## Files changed in this pass
+## Files changed in the earlier pass
 
 **New files:**
 - `api-server/src/routes/diagnostics.ts` - Queue/Redis diagnostics endpoint
@@ -215,6 +210,12 @@ Migration validation completed with `pnpm --filter @workspace/db migrate:beta` a
 
 ## Release judgment
 
-Do not treat the repository as launch-approved based on this document. The listed historical checks do not establish current-commit readiness. Complete the current CI gates and all live provider, security, monitoring, and recovery acceptance steps before enabling public traffic.
+The published implementation passed its current CI gates; the older results
+above remain historical. Public traffic still requires the intended persistent
+API/workers, live providers, approved ingress, actual alert receiver and off-host
+restore, owner/legal/retention decisions, and resolution or explicit owner
+acceptance of the recorded performance failures. The discarded editor-splitting
+experiment failed FCP/blocking in all three samples and LCP in two. The current
+unified artifact has the same failed timing gates, documented separately above.
 
 The new deployment verification tooling (smoke tests, diagnostics endpoint, backup/restore scripts) improves operational confidence and reduces manual deployment validation burden.

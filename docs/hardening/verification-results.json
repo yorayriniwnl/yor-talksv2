@@ -6,6 +6,279 @@
   "implementationSha256": "44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2",
   "implementationFiles": 489,
   "releaseDecision": "not approved; owner scope and deployed/provider gates remain",
+  "evidencePhase": "historical local working-copy verification before publication; original baseline HEAD, manifest, checks and changed-path count are preserved below",
+  "publicationStatusCheckedOn": "2026-10-09",
+  "currentPublicationRole": "accepted historical 990fc06 baseline; current unified release is recorded in unifiedPublication",
+  "currentPublication": {
+    "implementationCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+    "commitUrl": "https://github.com/yorayriniwnl/yor-talksv2/commit/990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+    "implementationSha256": "7b9c9819faa8b792c0b90bd2b3c765a5f1494355e0b3854ecef9f82c2c7e7a02",
+    "ci": {
+      "status": "completed",
+      "conclusion": "success",
+      "runs": [
+        {
+          "event": "push",
+          "id": 37800072226,
+          "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37800072226",
+          "conclusion": "success",
+          "backupRestoreMilliseconds": 1034
+        },
+        {
+          "event": "pull_request",
+          "id": 37800086580,
+          "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37800086580",
+          "conclusion": "success",
+          "backupRestoreMilliseconds": 1160
+        }
+      ],
+      "perRun": {
+        "api": {
+          "passed": 323,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        "browser": {
+          "passed": 69,
+          "failed": 0,
+          "skipped": 0,
+          "didNotRun": 0
+        },
+        "unit": {
+          "passed": 63,
+          "failed": 0,
+          "skipped": 0
+        },
+        "auditContractsDesignMigrationTypechecksBuildsConfiguration": "passed",
+        "monitoring": "passed: local authenticated firing/resolved delivery and invalid receiver authentication rejection",
+        "productionImages": "passed",
+        "backup": "passed: encrypted retrieval, restored application, rejection guards, failed-upload metrics and transactional failed-restore rollback with isolated local rclone transport",
+        "nativeNginx": {
+          "acceptedValid": 3,
+          "rejectedInvalid": 8
+        },
+        "productionStack": "passed with explicit isolated synthetic providers",
+        "conditionalBrowserFailureArtifact": "skipped because there was no failure; all required checks completed and no tests skipped"
+      },
+      "privateLogDirectory": "yor-hardening-20261007/ci-head-990fc06"
+    },
+    "frontendPreview": {
+      "id": "dpl_Djw6ZvnT8qsuFpi4LJe45Y3wcNoK",
+      "url": "https://yor-talks-e7ykqt6cs-yorayriniwnl-1218s-projects.vercel.app/",
+      "scope": "protected frontend review preview",
+      "readyState": "READY",
+      "checksPassed": 14,
+      "sourceCommit": "55e12429baecde8b3ea07e76b0b7e1f6e824a463",
+      "frontendMatchesImplementationCommit": true,
+      "backendJourneys": "unavailable; API and Socket.IO routes return 503"
+    },
+    "remainingGates": [
+      "intended persistent backend/worker host and matching reviewed migration/API/worker deployment",
+      "actual public ingress, production providers and media readiness",
+      "production alert receiver and approved off-host backup retrieval/restore with recovery owners and RPO/RTO",
+      "owner/operator/territory/age/legal and retention acceptance",
+      "two recorded performance failures; pending performance changes are outside this verified implementation"
+    ],
+    "productionOffHostBackupExercised": false,
+    "productionAlertReceiverExercised": false,
+    "performanceEvidence": "docs/hardening/mobile-performance-final.json",
+    "failedPerformanceBudgets": [
+      "fcpMs",
+      "longTaskBlockingMs"
+    ]
+  },
+  "continuation": {
+    "date": "2026-10-09",
+    "record": "docs/hardening/CONTINUATION_2026-10-09.md",
+    "baselineImplementationCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+    "candidateState": "published as e45b10d and incorporated into verified unified release 3887cc4; four-path manifest and earlier measurements remain phase-specific",
+    "integratedBaseCommit": "23bfdc7678543d797593a731e5f3caa228bba7d9",
+    "measurementBaselineCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+    "concurrentRemoteIntegration": {
+      "initialLocalCommit": "ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7",
+      "initialPush": "rejected because the same remote branch advanced",
+      "remoteCommit": "23bfdc7678543d797593a731e5f3caa228bba7d9",
+      "resolution": "fetched and merged without conflicts; both change sets preserved; no force push",
+      "scope": "four API paths preserve concurrent Google identity, MFA, revocation and account-linking security work and tests",
+      "combinedRevisionCi": "completed successfully for unified release 3887cc4; 392 API / 73 browser / 71 unit tests per run",
+      "mainCompatibilityIntegration": "completed in the unified release by a separate session; duplicate local merge attempt aborted after discovery; adult age18 and optional-feature gates retained",
+      "minorsEnabled": false
+    },
+    "candidateManifest": "docs/hardening/continuation-candidate.json",
+    "candidateAggregateSha256": "e6982111ac3a48f5e631dfddcc0d24923e2af9f39cdd16b3e09025d41c8f7edc",
+    "implementationFileCount": 4,
+    "normalizedFrontendSourceSha256": "57b3658e67cf65b0c156c32a369cfd5a1e63a96b5598595640d919a310cee420",
+    "runtimeScope": "billing-validator deferral is the only runtime change in the four-path continuation delta; packaging exclusions, performance diagnostics and three real-client browser regressions complete that delta; combined candidate also preserves remote Google sign-in API security changes",
+    "localChecks": {
+      "unit": {
+        "passed": 63,
+        "failed": 0,
+        "skipped": 0
+      },
+      "contract": {
+        "status": "passed",
+        "operations": 231,
+        "paths": 195
+      },
+      "design": "passed",
+      "configuration": "passed",
+      "frontendTypecheckExitCode": 0,
+      "browser": {
+        "status": "superseded by complete unified-release CI",
+        "preIntegrationPlannedTests": 72,
+        "verifiedUnifiedTests": 73
+      },
+      "focusedBrowserRegressions": {
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "retries": 0,
+        "exitCode": 0,
+        "durationSeconds": 33.4,
+        "freshProductionBuild": true,
+        "warnings": "retained",
+        "privateLog": "continuation-final-deferred-browser.log"
+      },
+      "packaging": "three CLI62.1.0 dry calls passed; 27 synthetic source exclusions plus 3 CI credential fixtures excluded; required build/runtime/prebuilt artifacts retained",
+      "prebuiltBoundary": "source ignore rules do not sanitize authoritative prebuilt output; initial negative assertion failed with 3 synthetic private sentinels included"
+    },
+    "performance": {
+      "report": "docs/hardening/mobile-performance-continuation-2026-10-09.md",
+      "measurements": "docs/hardening/mobile-performance-continuation-2026-10-09.json",
+      "result": "failed",
+      "acceptanceRule": "all three fixed final cold observations must meet every unchanged proposed gate; no best-of selection; profiling-only observations excluded",
+      "samples": [
+        {
+          "fcpMs": 5136,
+          "lcpMs": 5136,
+          "longTaskBlockingMs": 1539,
+          "exitCode": 1
+        },
+        {
+          "fcpMs": 3108,
+          "lcpMs": 4076,
+          "longTaskBlockingMs": 851,
+          "exitCode": 1
+        },
+        {
+          "fcpMs": 3144,
+          "lcpMs": 3904,
+          "longTaskBlockingMs": 841,
+          "exitCode": 1
+        }
+      ],
+      "failedMetricsAcrossSamples": [
+        "fcpMs",
+        "longTaskBlockingMs",
+        "lcpMs"
+      ],
+      "fcpFailedSamples": 3,
+      "blockingFailedSamples": 3,
+      "lcpFailedSamples": 2,
+      "proposedTimingBudgets": {
+        "fcpMs": 2500,
+        "lcpMs": 4000,
+        "longTaskBlockingMs": 300
+      },
+      "javascriptDecodedBytes": 873364,
+      "javascriptDeliveredBytes": 273662,
+      "javascriptEstimatedGzipBytes": 273173,
+      "stylesheetDeliveredGzipBytes": 62171,
+      "decodedJavascriptReductionBytes": 55097,
+      "estimatedGzipJavascriptReductionBytes": 12659,
+      "payloadBudgets": {
+        "javascriptGzipBytes": 358400,
+        "stylesheetGzipBytes": 102400,
+        "passedEveryObservation": true
+      },
+      "retainedObservations": 15,
+      "frontendRawFileHashesVerifiedAfterMeasurements": 336,
+      "hostCpuUtilizationWhenOwnedWorkIdlePercent": [
+        54.64,
+        55.64,
+        61.03
+      ],
+      "hostVariation": "material; total host CPU utilization was sampled while owned build/browser work was idle; these are not idle percentages",
+      "timingImprovementAccepted": false,
+      "allBudgetsPassed": false,
+      "originalObservationPreserved": "docs/hardening/mobile-performance-final.json retains FCP2716/LCP3264/blocking418 and two failed metrics",
+      "scope": "historical billing-only continuation before unified dependency/grievance changes"
+    },
+    "discardedEditorSplit": {
+      "status": "discarded; no post or comment editor split retained",
+      "reason": "extra route-load waterfall and cached lazy-import rejection that defeats surface retry",
+      "candidateAggregateSha256": "7e04f253e50ef86effccbeb05cf05c9f9b41b4ba9fcb2761c4c7f6f8ea03152f",
+      "implementationFileCount": 6,
+      "normalizedFrontendSourceSha256": "a8336697e9924d8833c7196d6f9596e502f12fe4e148298c6243569571ec6c66",
+      "localBrowser": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "scope": "discarded experiment; does not establish final candidate acceptance"
+      },
+      "performance": {
+        "result": "failed",
+        "timingImprovementAccepted": false,
+        "allBudgetsPassed": false,
+        "samples": [
+          {
+            "fcpMs": 3068,
+            "lcpMs": 4152,
+            "longTaskBlockingMs": 870
+          },
+          {
+            "fcpMs": 3140,
+            "lcpMs": 4548,
+            "longTaskBlockingMs": 1380
+          },
+          {
+            "fcpMs": 3200,
+            "lcpMs": 3200,
+            "longTaskBlockingMs": 900
+          }
+        ],
+        "failedMetricsAcrossSamples": [
+          "fcpMs",
+          "longTaskBlockingMs",
+          "lcpMs"
+        ],
+        "fcpFailedSamples": 3,
+        "blockingFailedSamples": 3,
+        "lcpFailedSamples": 2,
+        "proposedTimingBudgets": {
+          "fcpMs": 2500,
+          "lcpMs": 4000,
+          "longTaskBlockingMs": 300
+        },
+        "baselineControl": {
+          "fcpMs": 3236,
+          "lcpMs": 4024,
+          "longTaskBlockingMs": 792
+        },
+        "hostVariation": "material; no timing improvement accepted",
+        "javascriptDecodedBytes": 863190,
+        "javascriptDeliveredBytes": 275353,
+        "javascriptEstimatedGzipBytes": 273695,
+        "stylesheetDeliveredGzipBytes": 62171,
+        "originalJavascriptDecodedBytes": 928461,
+        "originalJavascriptEstimatedGzipBytes": 285832,
+        "payloadBudgets": {
+          "javascriptGzipBytes": 358400,
+          "stylesheetGzipBytes": 102400,
+          "passed": true
+        },
+        "originalObservationPreserved": "docs/hardening/mobile-performance-final.json retains FCP2716/LCP3264/blocking418 and two failed metrics"
+      }
+    },
+    "publication": {
+      "status": "incorporated in verified unified release",
+      "implementationCommit": "3887cc47aa8d0abb718f44952fbfb33d6233e109",
+      "newCommitCiOrPreviewRecorded": true
+    },
+    "backendTarget": "not found; provider, exact app/server ID or hostname, stage, backend HTTPS domain and deployment access question remains pending"
+  },
   "tools": {
     "node": "24.19.0",
     "pnpm": "9.15.4",
@@ -140,7 +413,7 @@
     {
       "command": "production container build/start/smoke, Nginx validator and backup image drill",
       "status": "not run",
-      "cause": "Docker Engine/WSL unavailable; uncommitted candidate has not run in CI"
+      "cause": "local pre-publication phase lacked Docker Engine/WSL; subsequent exact-commit CI container acceptance is recorded in currentPublication"
     }
   ],
   "historical": [
@@ -177,5 +450,146 @@
       6398
     ],
     "artifactsRetained": true
+  },
+  "unifiedPublication": {
+    "date": "2026-10-09",
+    "implementationCommit": "3887cc47aa8d0abb718f44952fbfb33d6233e109",
+    "branch": "release/unified-release-20261009",
+    "documentationSuccessor": "documentation only; implementation and acceptance anchored to implementationCommit",
+    "ci": {
+      "status": "completed",
+      "conclusion": "success",
+      "runs": [
+        {
+          "event": "push",
+          "id": 37868624235,
+          "jobId": 113621242318,
+          "backupRestoreMilliseconds": 1160,
+          "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235",
+          "conclusion": "success"
+        },
+        {
+          "event": "pull_request",
+          "id": 37869588581,
+          "jobId": 113624346204,
+          "backupRestoreMilliseconds": 1182,
+          "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581",
+          "conclusion": "success"
+        }
+      ],
+      "perRun": {
+        "api": {
+          "passed": 392,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        "browser": {
+          "passed": 73,
+          "failed": 0,
+          "skipped": 0,
+          "didNotRun": 0
+        },
+        "unit": {
+          "passed": 71,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        "allRequiredChecks": "passed",
+        "nativeNginx": {
+          "validAccepted": 3,
+          "invalidRejected": 8
+        },
+        "backup": "local isolated rclone encrypted retrieval, restored application and rejection/rollback guards passed",
+        "monitoring": "local authenticated scrape, firing/resolved and bad receiver-auth rejection passed",
+        "productionStack": "passed with isolated synthetic providers"
+      }
+    },
+    "preview": {
+      "id": "dpl_8XdZqPNgddMDinvfHGbzvm9oiKvV",
+      "url": "https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/",
+      "sourceCommit": "3887cc47aa8d0abb718f44952fbfb33d6233e109",
+      "state": "READY",
+      "scope": "protected static frontend review",
+      "checksPassed": 14,
+      "cliVersion": "63.1.0",
+      "artifactFiles": 108,
+      "artifactAggregateSha256": "9a57f74f99e2b2ef476021266c34cbf612a76489a50e1d9dc08f7a046e092b4d",
+      "backendJourneys": "unavailable; API and Socket.IO routes return 503",
+      "productionAliasChanged": false
+    },
+    "performance": {
+      "file": "docs/hardening/mobile-performance-unified-2026-10-09.json",
+      "result": "failed",
+      "acceptance": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observations": [
+            273075,
+            273075,
+            273075
+          ],
+          "passedObservations": 3,
+          "totalObservations": 3,
+          "passedEveryObservation": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observations": [
+            62171,
+            62171,
+            62171
+          ],
+          "passedObservations": 3,
+          "totalObservations": 3,
+          "passedEveryObservation": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observations": [
+            6272,
+            3160,
+            3140
+          ],
+          "passedObservations": 0,
+          "totalObservations": 3,
+          "passedEveryObservation": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observations": [
+            6272,
+            4312,
+            3140
+          ],
+          "passedObservations": 1,
+          "totalObservations": 3,
+          "passedEveryObservation": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observations": [
+            1367,
+            1174,
+            1177
+          ],
+          "passedObservations": 0,
+          "totalObservations": 3,
+          "passedEveryObservation": false
+        }
+      },
+      "ownerApprovedBudgets": false
+    },
+    "productionOffHostRecoveryExercised": false,
+    "productionAlertReceiverExercised": false,
+    "remainingGates": [
+      "persistent backend/worker target and complete runtime bindings",
+      "reviewed production migrations and matched API/workers",
+      "actual providers/media and public ingress",
+      "actual alert receiver and approved off-host recovery objectives",
+      "operator/territory/age/legal/retention acceptance",
+      "failed proposed timing budgets and controlled device/edge acceptance"
+    ]
   }
 }
