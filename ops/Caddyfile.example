@@ -2,10 +2,20 @@
 # Caddy obtains and renews HTTPS certificates automatically.
 app.yor-talks.example {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:8080
+	reverse_proxy 127.0.0.1:8080 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up -Forwarded
+	}
 }
 
 api.yor-talks.example {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:4000
+	reverse_proxy 127.0.0.1:4000 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up -Forwarded
+	}
 }

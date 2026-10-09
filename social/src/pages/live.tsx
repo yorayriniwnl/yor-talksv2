@@ -66,13 +66,19 @@ function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) =>
       <DialogContent className="rounded-3xl">
         <DialogHeader><DialogTitle className="font-display font-black">Start a live room</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What are you sharing?" minLength={2} maxLength={200} required />
+          <div className="space-y-1.5">
+            <label htmlFor="live-room-title" className="text-xs font-semibold text-foreground">Room Title</label>
+            <Input id="live-room-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What are you sharing?" minLength={2} maxLength={200} required />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <ContentCategorySelect id="stream-content-category" value={category} onChange={setCategory} />
-            <select value={kind} onChange={(event) => setKind(event.target.value as 'video' | 'audio')} className="h-10 rounded-md border bg-background px-3 text-sm">
-              <option value="video">Video + audio</option>
-              <option value="audio">Audio only</option>
-            </select>
+            <div className="space-y-1.5">
+              <label htmlFor="stream-kind-select" className="text-xs font-semibold text-foreground">Room Format</label>
+              <select id="stream-kind-select" value={kind} onChange={(event) => setKind(event.target.value as 'video' | 'audio')} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+                <option value="video">Video + audio</option>
+                <option value="audio">Audio only</option>
+              </select>
+            </div>
           </div>
           <ContentRatingSelect id="stream-content-rating" value={contentRating} onChange={setContentRating} />
           <MediaImageField id="stream-cover" label="Room cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={loading} />

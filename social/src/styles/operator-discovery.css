@@ -1277,8 +1277,8 @@
 }
 
 .operator-reels-progress strong { font-size: 0.7rem; }
-.operator-reels-progress span { color: hsl(0 0% 100% / 0.45); font-size: 0.55rem; }
-.operator-reels-progress small { margin-left: 0.35rem; color: hsl(0 0% 100% / 0.38); font-size: 0.48rem; text-transform: uppercase; }
+.operator-reels-progress span { color: hsl(0 0% 100% / 0.6); font-size: 0.7rem; }
+.operator-reels-progress small { margin-left: 0.35rem; color: hsl(0 0% 100% / 0.5); font-size: 0.65rem; text-transform: uppercase; }
 
 .operator-reels-track {
   position: relative;
@@ -1361,7 +1361,7 @@
 .operator-reel-actions > div > span {
   color: hsl(0 0% 100% / 0.88);
   font-family: var(--app-font-mono);
-  font-size: 0.48rem;
+  font-size: 0.7rem;
   font-weight: 750;
 }
 
@@ -1397,7 +1397,7 @@
 .operator-reel-creator strong {
   overflow: hidden;
   color: white;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1406,7 +1406,7 @@
 .operator-reel-creator small {
   color: hsl(0 0% 100% / 0.6);
   font-family: var(--app-font-mono);
-  font-size: 0.5rem;
+  font-size: 0.72rem;
 }
 
 .operator-reel-creator > button {
@@ -1417,7 +1417,7 @@
   border-radius: 0.4rem;
   background: white;
   color: black;
-  font-size: 0.57rem;
+  font-size: 0.75rem;
   font-weight: 800;
 }
 
@@ -1460,7 +1460,7 @@
   backdrop-filter: blur(12px);
   color: hsl(0 0% 100% / 0.82);
   font-family: var(--app-font-mono);
-  font-size: 0.48rem;
+  font-size: 0.7rem;
   font-weight: 750;
 }
 

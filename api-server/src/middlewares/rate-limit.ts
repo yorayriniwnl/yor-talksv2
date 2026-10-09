@@ -70,7 +70,7 @@ export async function closeRateLimitRedis(): Promise<void> {
   rateLimitRedisConnectPromise = null;
 }
 
-function createLimiter(prefix: string, windowMs: number, max: number, keyGenerator = (req: Request) => ipKeyGenerator(req.ip || 'unknown')) {
+export function createLimiter(prefix: string, windowMs: number, max: number, keyGenerator = (req: Request) => ipKeyGenerator(req.ip || 'unknown')) {
   const config = {
     windowMs,
     max,

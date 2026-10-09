@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WebRtcCallModal } from './WebRtcCallModal';
 import { connectSocket } from '@/lib/socket-client';
+import { sounds } from '@/lib/sound';
 
 interface IncomingCallState {
   callId: string;
@@ -17,6 +18,24 @@ interface IncomingCallState {
 /** Keeps incoming calls visible even when the user is browsing another route. */
 export function IncomingCallManager() {
   const [incomingCall, setIncomingCall] = useState<IncomingCallState | null>(null);
+
+  useEffect(() => {
+    if (!incomingCall) return;
+
+    sounds.playRingtone();
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([300, 150, 300]);
+    }
+
+    const interval = setInterval(() => {
+      sounds.playRingtone();
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([300, 150, 300]);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [incomingCall]);
 
   useEffect(() => {
     const socket = connectSocket();

@@ -237,7 +237,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                   <button 
                     type="button" 
                     onClick={() => removeMedia(url)} 
-                    className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/75 text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 shadow-sm transition-opacity cursor-pointer"
                     aria-label="Remove image"
                   >
                     <X className="h-4 w-4" />
@@ -248,7 +248,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
           )}
 
           {pollOpen && (
-            <div className="mb-3 mt-2 rounded-2xl border border-border/40 bg-surface-2/50 p-4">
+            <div className="mb-3 mt-2 rounded-2xl border border-border/40 bg-card/80 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-semibold">Poll options</p>
                 <button type="button" onClick={() => setPollOpen(false)} className="text-xs font-medium text-muted-foreground hover:text-foreground">Remove poll</button>
@@ -260,7 +260,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                       value={option} 
                       onChange={(event) => setPollOptions((options) => options.map((value, optionIndex) => optionIndex === index ? event.target.value : value))} 
                       placeholder={`Option ${index + 1}`} 
-                      className="h-10 rounded-xl bg-surface-1" 
+                      className="h-10 rounded-xl bg-muted/50" 
                     />
                     {pollOptions.length > 2 && (
                       <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground" onClick={() => setPollOptions((options) => options.filter((_, optionIndex) => optionIndex !== index))} aria-label={`Remove option ${index + 1}`}>
@@ -332,7 +332,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                   {content.length}/{MAX_POST_LENGTH}
                 </span>
               )}
-              {draftSaved && !isUploading && <span className="yor-composer__draft-status">Draft saved</span>}
+              {!contentCategory && content.trim() ? <span className="text-xs font-semibold text-amber-500">Category required</span> : draftSaved && !isUploading ? <span className="yor-composer__draft-status">Draft saved</span> : null}
               <Button 
                 type="button" 
                 className={cn("h-9 rounded-full px-5 font-semibold transition-all duration-300", isSuccess && "shadow-[0_0_15px_rgba(var(--primary),0.6)] bg-primary scale-105")} 
@@ -370,6 +370,16 @@ export function PostCard({ post }: { post: PostType }) {
   const [authorLoading, setAuthorLoading] = useState(true);
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
+  const handleCardClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement;
+    // React events bubble through portals; ignore clicks from portaled dialogs/menus.
+    if (!event.currentTarget.contains(target)) return;
+    // Let interactive descendants (video controls, links, buttons, inputs, menus) handle their own clicks.
+    if (target.closest('a, button, input, textarea, select, video, audio, label, [role="button"], [role="menuitem"], [data-no-card-nav]')) return;
+    // Don't hijack a click that ends a text selection.
+    if (window.getSelection()?.toString()) return;
+    handleOpen();
+  }, [handleOpen]);
   const retryAuthor = useCallback(async () => {
     setAuthorLoading(true);
     try { await loadUserProfile(post.authorId); } finally { setAuthorLoading(false); }
@@ -455,7 +465,7 @@ export function PostCard({ post }: { post: PostType }) {
       return <div className="yor-post-media mt-3 flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-border/20">
         {post.media.map((url, index) => <div key={url} className="min-w-full snap-center bg-muted">
           {isVideo(url)
-            ? <video src={url} controls playsInline preload="metadata" aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
+            ? <video src={url} controls playsInline preload="metadata" onClick={(e) => e.stopPropagation()} aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
             : <button type="button" className="w-full" aria-label={`Open image ${index + 1} of ${len}`} onClick={event => openMediaViewer(event, index)}><img src={url} alt={`${authorDisplayName}'s post`} loading="lazy" className="w-full object-cover max-h-[480px]" /></button>}
         </div>)}
       </div>;
@@ -578,7 +588,7 @@ export function PostCard({ post }: { post: PostType }) {
         animate="animate"
         tabIndex={0}
         className="yor-post group cursor-pointer px-5 py-5 transition-colors sm:px-6"
-        onClick={handleOpen}
+        onClick={handleCardClick}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
           if (event.key === 'Enter' || event.key === ' ') {
@@ -660,7 +670,7 @@ export function PostCard({ post }: { post: PostType }) {
                       key={option.id} 
                       className={cn(
                         'relative flex h-10 w-full items-center overflow-hidden rounded-xl border transition-colors', 
-                        post.poll!.votedOptionId ? 'border-transparent' : 'border-border/60 hover:bg-surface-2', 
+                        post.poll!.votedOptionId ? 'border-transparent' : 'border-border/60 hover:bg-muted', 
                         isVoted && 'font-medium'
                       )} 
                       onClick={() => !post.poll!.votedOptionId && votePoll(post.id, option.id)}
@@ -729,7 +739,7 @@ export function PostCard({ post }: { post: PostType }) {
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
                     onClick={(event) => { event.stopPropagation(); setShowCommentInput(prev => !prev); }}
                   >
-                    <div className="p-1.5 rounded-full group-hover:bg-surface-2 transition-colors">
+                    <div className="p-1.5 rounded-full group-hover:bg-muted transition-colors">
                       <MessageCircle className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
                     </div>
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.comments > 0 && post.comments}</span>
@@ -749,7 +759,7 @@ export function PostCard({ post }: { post: PostType }) {
                         onClick={(event) => event.stopPropagation()}
                       >
                         <RippleEffect className="rounded-full">
-                        <div className="p-1.5 rounded-full group-hover:bg-surface-2 transition-colors">
+                        <div className="p-1.5 rounded-full group-hover:bg-muted transition-colors">
                           <SendHorizonal className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
                         </div>
                         </RippleEffect>

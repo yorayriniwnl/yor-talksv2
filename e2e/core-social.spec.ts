@@ -678,6 +678,187 @@ test('Studio Post captures camera pixels as a bounded approved JPEG and rejects 
   expect(publications).toBe(1);
 });
 
+async function openCancellationStudio(page: Page) {
+  const reel = { id: '30000000-0000-4000-8000-000000000142', authorId: user.id, title: 'Camera lifecycle entry', videoUrl: 'https://example.test/lifecycle.mp4', thumbnailUrl: 'https://example.test/lifecycle.jpg', type: 'short', views: 0, likes: 0, createdAt: user.createdAt };
+  await page.route('**/api/videos', route => json(route, [reel]));
+  await page.route(`**/api/videos/${reel.id}/comments`, route => json(route, []));
+  if (!page.url().endsWith('/videos')) await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Camera lifecycle entry', exact: true }).click();
+  await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
+  return page.getByRole('dialog').filter({ hasText: 'Ultra Studio Camera' });
+}
+
+test('Studio cancels permission results after close, camera flip and route unmount', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    const harness = { pending: [] as Array<(stream: MediaStream) => void>, streams: [] as MediaStream[] };
+    (window as any).__cameraHarness = harness;
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: () => new Promise<MediaStream>(resolve => { harness.pending.push(resolve); }) });
+    (window as any).__resolveCamera = (index: number) => {
+      const canvas = document.createElement('canvas'); canvas.width = 40; canvas.height = 40;
+      canvas.getContext('2d')!.fillRect(0, 0, 40, 40);
+      const stream = canvas.captureStream(10);
+      harness.streams[index] = stream;
+      harness.pending[index](stream);
+    };
+  });
+  const studio = await openCancellationStudio(page);
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(1);
+  await studio.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await page.evaluate(() => (window as any).__resolveCamera(0));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[0].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(2);
+  await studio.getByRole('button', { name: 'Flip Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(3);
+  await page.evaluate(() => (window as any).__resolveCamera(1));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[1].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.evaluate(() => (window as any).__resolveCamera(2));
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
+  await studio.getByRole('button', { name: 'Flip Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.pending.length)).toBe(4);
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[2].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+  await page.evaluate(() => { window.history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  await expect(studio).toBeHidden();
+  await page.evaluate(() => (window as any).__resolveCamera(3));
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraHarness.streams[3].getTracks().every((track: MediaStreamTrack) => track.readyState === 'ended'))).toBe(true);
+});
+
+test('Studio timer stop, recording close and obsolete preview cleanup preserve capture boundaries', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    const streams: MediaStream[] = [];
+    (window as any).__cameraStreams = streams;
+    (window as any).__studioUrls = { created: [] as string[], revoked: [] as string[] };
+    const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = blob => { const url = create(blob); (window as any).__studioUrls.created.push(url); return url; };
+    URL.revokeObjectURL = url => { (window as any).__studioUrls.revoked.push(url); revoke(url); };
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => {
+      const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
+      const paint = () => { const context = canvas.getContext('2d')!; context.fillStyle = 'green'; context.fillRect(0, 0, 320, 240); };
+      paint(); const timer = setInterval(paint, 100);
+      const stream = canvas.captureStream(10); streams.push(stream);
+      for (const track of stream.getTracks()) { const stop = track.stop.bind(track); track.stop = () => { clearInterval(timer); stop(); }; }
+      return stream;
+    } });
+  });
+  const studio = await openCancellationStudio(page);
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
+  await page.clock.install();
+  await page.clock.fastForward(30_000);
+  await expect(studio.getByRole('button', { name: 'Stop recording', exact: true })).toHaveCount(0);
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeEnabled();
+  const videoUrl = await page.evaluate(() => (window as any).__studioUrls.created.at(-1));
+  await studio.getByRole('button', { name: 'Photo Post mode', exact: true }).click();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeDisabled();
+  await expect.poll(() => page.evaluate(url => (window as any).__studioUrls.revoked.includes(url), videoUrl)).toBe(true);
+  await studio.getByRole('button', { name: 'Capture photo', exact: true }).click();
+  await expect(studio.getByRole('img', { name: 'Captured Post photo', exact: true })).toBeVisible();
+  const photoUrl = await page.evaluate(() => (window as any).__studioUrls.created.at(-1));
+  await studio.getByRole('button', { name: 'Video Reel mode', exact: true }).click();
+  await expect.poll(() => page.evaluate(url => (window as any).__studioUrls.revoked.includes(url), photoUrl)).toBe(true);
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByRole('button', { name: 'Stop recording', exact: true })).toBeVisible();
+  await studio.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await expect(studio).toBeHidden();
+  await expect.poll(() => page.evaluate(() => (window as any).__cameraStreams.every((stream: MediaStream) => stream.getTracks().every(track => track.readyState === 'ended')))).toBe(true);
+});
+
+test('Studio permission denial keeps recording and publication unavailable', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => { throw new DOMException('Permission denied', 'NotAllowedError'); } }));
+  const studio = await openCancellationStudio(page);
+  await expect(studio.getByRole('heading', { name: 'Camera unavailable', exact: true })).toBeVisible();
+  await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeDisabled();
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
+  await studio.getByRole('button', { name: 'Photo Post mode', exact: true }).click();
+  await expect(studio.getByRole('button', { name: 'Capture photo', exact: true })).toBeDisabled();
+  await expect(studio.getByRole('button', { name: /Publish POST/ })).toBeDisabled();
+});
+
+for (const mode of ['reel', 'story'] as const) test(`Studio ${mode} publishes only its approved camera video`, async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => {
+    const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
+    const paint = () => { canvas.getContext('2d')!.fillRect(0, 0, 320, 240); };
+    paint(); const timer = setInterval(paint, 100); const stream = canvas.captureStream(10);
+    for (const track of stream.getTracks()) { const stop = track.stop.bind(track); track.stop = () => { clearInterval(timer); stop(); }; }
+    return stream;
+  } }));
+  const mediaId = '40000000-0000-4000-8000-000000000143';
+  let finalizes = 0, declaredSize = 0, publications = 0;
+  let mimeType = '';
+  let release!: () => void;
+  const moderation = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/media/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/presign')) {
+      const payload = route.request().postDataJSON(); declaredSize = payload.size; mimeType = payload.mimeType;
+      expect(payload.purpose).toBe(mode === 'reel' ? 'video' : 'story');
+      expect(['video/webm', 'video/mp4']).toContain(payload.mimeType);
+      expect(payload.filename).toMatch(/\.(webm|mp4)$/); expect(declaredSize).toBeGreaterThan(0);
+      return json(route, { id: mediaId, mediaId, status: 'pending', purpose: payload.purpose, mimeType, maxFileSize: 10 * 1024 * 1024, mode: 'server', uploadUrl: `/api/media/${mediaId}/upload` });
+    }
+    if (path.endsWith('/upload')) { expect(route.request().postDataBuffer()!.length).toBeGreaterThan(declaredSize); return json(route, { id: mediaId, mediaId, status: 'uploaded' }); }
+    if (path.endsWith('/finalize')) { finalizes++; await moderation; return json(route, { id: mediaId, mediaId, status: 'approved', mimeType, size: declaredSize, url: `/api/media/${mediaId}/content?token=synthetic.signed`, thumbnailUrl: `/api/media/${mediaId}/content?token=synthetic.poster&variant=poster` }); }
+    if (path.endsWith('/content')) return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII=', 'base64') });
+    throw new Error(`Unexpected Studio video media request: ${path}`);
+  });
+  const studio = await openCancellationStudio(page);
+  if (mode === 'story') await studio.getByRole('button', { name: 'Video Story mode', exact: true }).click();
+  await studio.locator('#studio-content-category').selectOption('technology');
+  await page.route('**/api/videos/50000000-0000-4000-8000-000000000143/comments', route => json(route, []));
+  await page.route(`**/api/${mode === 'reel' ? 'videos' : 'stories'}`, route => {
+    expect(route.request().method()).toBe('POST'); const payload = route.request().postDataJSON();
+    expect(payload.mediaId).toBe(mediaId); expect(payload.mediaUrl).toBeUndefined(); expect(payload.videoUrl).toBeUndefined();
+    expect(payload.contentCategory).toBe('technology'); expect(payload.type).toBe(mode === 'reel' ? 'short' : 'video'); publications++;
+    return json(route, { id: '50000000-0000-4000-8000-000000000143', authorId: user.id, ...payload, mediaUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, videoUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, createdAt: user.createdAt, expiresAt: '2026-08-29T09:00:00.000Z', views: [], likes: 0 });
+  });
+  await studio.getByRole('button', { name: 'Record video', exact: true }).click();
+  await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
+  const stop = studio.getByRole('button', { name: 'Stop recording', exact: true });
+  await stop.focus(); await stop.press('Enter');
+  const publish = studio.getByRole('button', { name: new RegExp(`Publish ${mode.toUpperCase()}`) });
+  await expect(publish).toBeEnabled(); await publish.click();
+  await expect.poll(() => finalizes).toBe(1); expect(publications).toBe(0);
+  await expect(studio.getByRole('button', { name: 'Photo Post mode', exact: true })).toBeDisabled();
+  release(); await expect(studio).toBeHidden(); expect(publications).toBe(1);
+});
+
+for (const width of [390, 1280]) test(`grievance receipts and keyboard tracking expose public status only at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 850 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await installApiBoundary(page);
+  const receipt = { ticketId: 'YT-GRV-ABCDEF1234', status: 'received', createdAt: user.createdAt };
+  await page.route('**/api/reports/grievance', route => json(route, receipt));
+  await page.route(`**/api/reports/grievance/${receipt.ticketId}`, route => json(route, { ...receipt, status: 'under_review' }));
+  await page.goto('/grievance');
+  await page.getByRole('button', { name: 'Submit Grievance to Redressal Officer' }).click();
+  await expect(page.getByLabel('Your Full Name *', { exact: true })).toBeFocused();
+  await expect(page.getByRole('alert').filter({ hasText: 'A few details need attention.' })).toBeVisible();
+  await page.getByLabel('Your Full Name *', { exact: true }).fill('Private Reporter');
+  await page.getByLabel('Email Address *', { exact: true }).fill('private@example.test');
+  await page.getByLabel('Reported Post / Reel / Profile URL *', { exact: true }).fill('@private-test');
+  await page.getByLabel('Detailed Description & Evidence *', { exact: true }).fill('Private report explanation for the staff review queue.');
+  const submit = page.getByRole('button', { name: 'Submit Grievance to Redressal Officer' });
+  await submit.focus(); await submit.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Grievance Ticket Acknowledged', exact: true })).toBeVisible();
+  await expect(page.getByText(receipt.ticketId, { exact: true })).toBeVisible();
+  await expect(page.getByText(/Statutory SLA|Resolution SLA/)).toHaveCount(0);
+  const trackTab = page.getByRole('button', { name: 'Track Existing Ticket', exact: true });
+  await trackTab.focus(); await trackTab.press('Enter');
+  await page.getByLabel('Ticket ID', { exact: true }).fill(receipt.ticketId);
+  await page.getByLabel('Ticket ID', { exact: true }).press('Enter');
+  await expect(page.getByText('under review', { exact: true })).toBeVisible();
+  await expect(page.getByText('This page shows your ticket status. Reporter details and internal review notes remain private.', { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const accessibility = await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
 const premiumPlan = { key: 'yor-premium:synthetic-browser-1', name: 'Yor Premium', priceMinor: 19900, currency: 'INR', durationDays: 30,
   features: ['MESSAGE_FONT', 'STORY_FONT'], termsVersion: 'synthetic-browser-1', refundPolicy: 'Synthetic browser-test policy only. Contact test support for a refund request.' };
 
@@ -1341,7 +1522,8 @@ test('inbox failures offer a retry without claiming an empty or live-connected i
   expect(accessibility.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
 });
 
-for (const isGroup of [false, true]) test(`message image approval and send retries preserve the draft: ${isGroup ? 'group' : 'direct'}`, async ({ page }) => {
+for (const width of [390, 1280]) for (const isGroup of [false, true]) test(`message image approval and send retries preserve the draft: ${isGroup ? 'group' : 'direct'} at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 850 });
   await installApiBoundary(page);
   const peer = { ...user, id: '10000000-0000-4000-8000-000000000131', username: 'media_peer', fullName: 'Media Peer' };
   const conversation = { id: '20000000-0000-4000-8000-000000000131', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt, isGroup, title: isGroup ? 'Media group' : null };
@@ -1374,13 +1556,13 @@ for (const isGroup of [false, true]) test(`message image approval and send retri
   await page.route('**/api/messages', async route => {
     expect(approvals, 'Messages may only publish after media approval').toBeGreaterThan(0);
     const payload = route.request().postDataJSON();
-    expect(payload.mediaId).toBe(mediaIds[publications.length < 2 ? 0 : 1]);
+    expect(payload.mediaId).toBe(mediaIds[publications.length < 3 ? 0 : 1]);
     expect(payload.mediaUrl).toBeUndefined();
     expect(payload.content).not.toContain('📷');
     if (isGroup) { expect(payload.conversationId).toBe(conversation.id); expect(payload.recipientId).toBeUndefined(); }
     else { expect(payload.recipientId).toBe(peer.id); expect(payload.conversationId).toBeUndefined(); }
     publications.push(payload);
-    if (publications.length === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Message publication is temporarily unavailable' }) });
+    if (publications.length <= 2) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Message publication is temporarily unavailable' }) });
     return json(route, { id: `sent-media-${publications.length}`, conversationId: conversation.id, senderId: user.id, recipientId: peer.id, content: payload.content, mediaId: payload.mediaId, mediaUrl: `/api/media/${payload.mediaId}/content?token=synthetic.signed`, mediaType: 'image', mediaLegacy: false, createdAt: user.createdAt, seenAt: null });
   });
   await page.goto(`/messages/${conversation.id}`);
@@ -1392,6 +1574,7 @@ for (const isGroup of [false, true]) test(`message image approval and send retri
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   const failure = page.getByRole('alert').filter({ hasText: 'Could not send this message.' });
   await expect(failure).toBeVisible();
+  await expect(page.getByText('Message not sent. Your draft is still here.', { exact: true })).toHaveCount(0);
   await expect(composer).toHaveValue('Keep this caption and image until publication succeeds.');
   await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
   expect(publications).toHaveLength(0);
@@ -1403,18 +1586,27 @@ for (const isGroup of [false, true]) test(`message image approval and send retri
   await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
   expect([prepares, uploads, finalizes]).toEqual([1, 1, 2]);
   await failure.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect.poll(() => publications.length).toBe(2);
+  await expect(failure).toBeVisible();
+  await expect(composer).toHaveValue('Keep this caption and image until publication succeeds.');
+  await expect(page.getByText('retained-message.png', { exact: true })).toBeVisible();
+  await expect(failure).toHaveCount(1);
+  const retry = failure.getByRole('button', { name: 'Retry', exact: true });
+  await retry.focus();
+  await retry.press('Enter');
   await expect(composer).toHaveValue('');
-  expect(publications).toHaveLength(2);
+  expect(publications).toHaveLength(3);
   expect(publications[0]).toEqual(publications[1]);
+  expect(publications[1]).toEqual(publications[2]);
   expect([prepares, uploads, finalizes]).toEqual([1, 1, 2]);
   await expect(page.getByRole('img', { name: 'Shared attachment', exact: true })).toHaveCount(1);
   await expect(page.getByText('retained-message.png', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Add image attachment', exact: true }).click();
   await fileInput.setInputFiles({ name: 'image-only.png', mimeType: 'image/png', buffer: image });
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
-  await expect.poll(() => publications.length).toBe(3);
-  expect(publications[2].content).toBe('');
-  expect(publications[2].mediaId).toBe(mediaIds[1]);
+  await expect.poll(() => publications.length).toBe(4);
+  expect(publications[3].content).toBe('');
+  expect(publications[3].mediaId).toBe(mediaIds[1]);
   await expect(page.getByRole('img', { name: 'Shared attachment', exact: true })).toHaveCount(2);
   expect([prepares, uploads, finalizes]).toEqual([2, 2, 3]);
 });

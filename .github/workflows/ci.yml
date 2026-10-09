@@ -74,6 +74,9 @@ jobs:
       - name: Build database package
         run: pnpm --filter @workspace/db build
 
+      - name: Build shared contract declarations
+        run: pnpm exec tsc -b lib/api-zod
+
       - name: Apply schema migration
         run: pnpm --filter @workspace/db migrate:beta
         env:
@@ -91,7 +94,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes ffmpeg
 
       - name: Run API tests serially
-        run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
+        run: node --import tsx --test --test-concurrency=1 --test-timeout=90000 src/__tests__/*.test.ts
         working-directory: api-server
         env:
           MEDIA_REQUIRE_DECODER_TESTS: 'true'
@@ -127,11 +130,43 @@ jobs:
       - name: Verify production configuration wiring
         run: pnpm production-config:check
 
+      - name: Accept pinned monitoring runtimes and authenticated local alert delivery
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yor-monitoring-runtime
+          cd /tmp/yor-monitoring-runtime
+          curl -fsSLO https://github.com/prometheus/alertmanager/releases/download/v0.28.1/alertmanager-0.28.1.linux-amd64.tar.gz
+          curl -fsSL https://github.com/prometheus/alertmanager/releases/download/v0.28.1/sha256sums.txt > alertmanager-sha256sums.txt
+          grep '  alertmanager-0.28.1.linux-amd64.tar.gz$' alertmanager-sha256sums.txt | sha256sum --check --strict
+          curl -fsSLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
+          curl -fsSL https://github.com/prometheus/prometheus/releases/download/v3.5.0/sha256sums.txt > prometheus-sha256sums.txt
+          grep '  prometheus-3.5.0.linux-amd64.tar.gz$' prometheus-sha256sums.txt | sha256sum --check --strict
+          tar -xzf alertmanager-0.28.1.linux-amd64.tar.gz
+          tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
+          cd "$GITHUB_WORKSPACE"
+          AMTOOL_BIN=/tmp/yor-monitoring-runtime/alertmanager-0.28.1.linux-amd64/amtool \
+          ALERTMANAGER_BIN=/tmp/yor-monitoring-runtime/alertmanager-0.28.1.linux-amd64/alertmanager \
+          PROMTOOL_BIN=/tmp/yor-monitoring-runtime/prometheus-3.5.0.linux-amd64/promtool \
+          PROMETHEUS_BIN=/tmp/yor-monitoring-runtime/prometheus-3.5.0.linux-amd64/prometheus \
+            node ops/prometheus/acceptance.mjs
+
       - name: Validate production Compose file
         run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet
 
       - name: Build production container images
-        run: docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml build migrate api web
+        run: docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml --profile ops build migrate api web alertmanager backup
+
+      - name: Exercise backup image encryption, retrieval, restore and failure guards
+        run: node ops/backup/acceptance.mjs
+        env:
+          NODE_ENV: test
+          BACKUP_USE_DOCKER: 'true'
+          BACKUP_IMAGE: yor-talks-ci-release-backup
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/yor_talks
+          REDIS_URL: redis://127.0.0.1:6379/5
+          CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
+          JWT_SECRET: ci-access-secret-012345678901234567890123456789
+          JWT_REFRESH_SECRET: ci-refresh-secret-012345678901234567890123456789
 
       - name: Smoke test production container stack
         env:
@@ -157,15 +192,20 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz > /tmp/yor-talks-ci-readiness.json
           node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.details?.media?.decoder!==true)throw new Error('Production media decoder is unavailable'); if(report.details?.media?.ready!==false)throw new Error('Synthetic unavailable providers must not enable production media');"
-          BASE_URL=http://127.0.0.1:18080 pnpm smoke
+          SMOKE_SYNTHETIC_PROVIDERS=true BASE_URL=http://127.0.0.1:18080 pnpm smoke
           curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
 
           migration_id=$("${compose[@]}" ps --all --quiet migrate)
           api_id=$("${compose[@]}" ps --quiet api)
           redis_id=$("${compose[@]}" ps --quiet redis)
+          alertmanager_id=$("${compose[@]}" ps --quiet alertmanager)
           test -n "$migration_id"
           test -n "$api_id"
           test -n "$redis_id"
+          test -n "$alertmanager_id"
+          docker exec "$alertmanager_id" wget -q -O /dev/null http://127.0.0.1:9093/-/ready
+          web_image=$(docker inspect --format '{{.Config.Image}}' "$("${compose[@]}" ps --quiet web)")
+          node ops/ingress/check-web-image.mjs "$web_image"
           test "$(docker inspect --format '{{.State.ExitCode}}' "$migration_id")" = "0"
           test "$(docker inspect --format '{{.Config.User}}' "$api_id")" = "node"
           test "$(docker inspect --format '{{json .HostConfig.Dns}}' "$api_id")" = '["127.0.0.1"]'

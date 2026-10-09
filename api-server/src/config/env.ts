@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseTrustedProxyCidrs } from './trusted-proxies.js';
 
 const defaultNodeEnvironment = process.env.NODE_ENV || (process.env.VERCEL ? "production" : "development");
 const booleanFromEnv = (value: unknown, fallback = false): unknown => {
@@ -16,6 +17,7 @@ const booleanFromEnv = (value: unknown, fallback = false): unknown => {
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default(defaultNodeEnvironment as "development" | "test" | "production"),
   PORT: z.string().default(process.env.PORT || process.env.API_PORT || "4000"),
+  TRUSTED_PROXY_CIDRS: z.string().default(''),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || "change-me-access"),
   JWT_REFRESH_SECRET: z.string().default(process.env.JWT_REFRESH_SECRET || "change-me-refresh"),
   // Provider-backed uploads are optional in local development and required for
@@ -226,6 +228,7 @@ if (parsedEnv.WEB_PUSH_ENABLED && (!parsedEnv.WEB_PUSH_VAPID_PUBLIC_KEY || !pars
 }
 
 export const env = parsedEnv;
+export const trustedProxyCidrs = parseTrustedProxyCidrs(parsedEnv.TRUSTED_PROXY_CIDRS);
 export const corsOrigins: string[] = parsedEnv.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean);
 export const allowedEmailDomains: string[] = parsedEnv.ALLOWED_EMAIL_DOMAINS
   .split(",")

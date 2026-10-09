@@ -2,7 +2,9 @@ import { StorageService } from "./storage-service.js";
 import { MediaModerationService } from "./media-moderation-service.js";
 import { FFmpegMediaDecoder } from "./media-byte-verification.js";
 
-/** Media is an optional feature: core health remains independent, while upload gates fail closed. No inference/provider writes. */
+/** Dependency health and core-media release acceptance are distinct. Deployment
+ * smoke requires ready=true; isolated CI explicitly exercises unavailable
+ * providers. Upload/finalize gates fail closed. No inference/provider writes. */
 async function readMediaReadiness() {
   const [provider, decoder, moderation] = await Promise.all([
     new StorageService().inspectReadiness(),

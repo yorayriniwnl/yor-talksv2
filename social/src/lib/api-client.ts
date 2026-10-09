@@ -4,8 +4,6 @@
 // VITE_API_BASE_URL without changing application code.
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
-import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
-import { parseCheckoutHistory } from './checkout-contract';
 
 export interface Tokens {
   accessToken: string;
@@ -325,6 +323,29 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
 async function request<T>(path: string, options: RequestInit = {}, includeAuthorization = true): Promise<T> {
   return (await requestEnvelope<T>(path, options, false, sessionEpoch, includeAuthorization)).data;
 }
+
+// Billing schemas are needed when a billing response arrives, rather than when
+// the feed boots. Keep validation mandatory and reject a response whose session
+// changes while its validator chunk is loading.
+async function validateDeferredResponse<T>(value: unknown, loadParser: () => Promise<(value: unknown) => T>): Promise<T> {
+  const epoch = sessionEpoch;
+  let parse: (value: unknown) => T;
+  try {
+    parse = await loadParser();
+  } catch {
+    if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+    throw new ApiError('Billing details could not be loaded. Reload this page and try again.', 503);
+  }
+  if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+  return parse(value);
+}
+
+const parsePremiumBilling = (value: unknown) => validateDeferredResponse(value,
+  () => import('./premium-billing-contract').then(module => module.parsePremiumBilling));
+const parsePremiumOrder = (value: unknown) => validateDeferredResponse(value,
+  () => import('./premium-billing-contract').then(module => module.parsePremiumOrder));
+const parseCheckoutHistory = (value: unknown) => validateDeferredResponse(value,
+  () => import('./checkout-contract').then(module => module.parseCheckoutHistory));
 
 export interface PaginatedResult<T> {
   data: T;

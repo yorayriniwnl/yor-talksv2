@@ -6,10 +6,12 @@ import jwt from "jsonwebtoken";
 import { pool } from "@workspace/db";
 import { env } from "../config/env.js";
 import { closeAuthenticationDependencies } from "../middlewares/auth.js";
+import { closeRateLimitRedis } from "../middlewares/rate-limit.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { createTestUser } from "./test-helpers.js";
 import { reportRoutes } from "../routes/reports.js";
+import type { PublicGrievanceTicket } from "@workspace/api-zod";
 
 const redis = new RedisRepository();
 const app = express();
@@ -21,6 +23,7 @@ const address = server.address();
 assert.ok(address && typeof address !== "string");
 const baseUrl = `http://127.0.0.1:${address.port}`;
 const user = await createTestUser(new UserRepository());
+const tickets: string[] = [];
 const deviceId = randomUUID();
 const token = jwt.sign({ sub: user.id, role: "user", permissions: [], deviceId }, env.JWT_SECRET, { expiresIn: "5m" });
 const sessionKey = `session:${user.id}:${deviceId}`;
@@ -28,12 +31,16 @@ await redis.setStrict(sessionKey, "active", 300);
 const grievanceTicketIds: string[] = [];
 
 after(async () => {
-  await pool.query("DELETE FROM grievance_tickets WHERE ticket_id = ANY($1::text[])", [grievanceTicketIds]);
+  const allTickets = [...grievanceTicketIds, ...tickets];
+  if (allTickets.length > 0) {
+    await pool.query("DELETE FROM grievance_tickets WHERE ticket_id = ANY($1::text[])", [allTickets]);
+  }
   await pool.query("DELETE FROM reports WHERE reporter_id = $1", [user.id]);
   await pool.query("DELETE FROM users WHERE id = $1", [user.id]);
   await redis.del(sessionKey);
   await redis.disconnect();
   await closeAuthenticationDependencies();
+  await closeRateLimitRedis();
   await pool.end();
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
@@ -114,4 +121,17 @@ test("report routes reject anonymous access and keep moderation queue role-restr
   assert.equal(authenticatedSubmission.status, 201);
   const rows = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM reports WHERE reporter_id = $1", [user.id]);
   assert.equal(Number(rows.rows[0]?.count), 1);
+});
+
+test("grievance staff details and status changes reject anonymous and ordinary users", async () => {
+  const targetId = grievanceTicketIds[0] ?? (await submitPrivateGrievance()).ticketId;
+  for (const [headers, expected] of [[{}, 401], [{ Authorization: `Bearer ${token}` }, 403]] as const) {
+    const queue = await fetch(`${baseUrl}/reports/grievances`, { headers });
+    assert.equal(queue.status, expected);
+    const response = await fetch(`${baseUrl}/reports/grievance/${targetId}/status`, {
+      method: "PATCH", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ status: "resolved", officerNote: "Unauthorized mutation" }),
+    });
+    assert.equal(response.status, expected);
+    assert.ok(!JSON.stringify(await response.json()).includes("Private investigation note"));
+  }
 });

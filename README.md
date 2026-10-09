@@ -10,6 +10,12 @@ an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
 
+Current working-copy status and source-specific verification are recorded in the
+[8 October production hardening report](docs/PRODUCTION_HARDENING_2026-10-08.md).
+The dated evidence below remains historical. Public release still requires
+approved operator, territory and age scope, real providers, deployment and
+operational acceptance; no minors or global-launch approval is implied.
+
 ## Public-beta status — 6 October 2026
 
 **Verified-media lifecycle implemented; public deployment acceptance remains open.** Uploaded media uses server-owned IDs,
@@ -146,10 +152,11 @@ the four optional feature flags disabled until separately approved and tested.
   on the API and set `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter
   must point to a long-lived Socket.IO process. The Vercel `api/index.ts`
   function is HTTP-only: it does not start Socket.IO or background workers.
-  If REST requests use that function, deploy a separate persistent notification
-  worker with the same `DATABASE_URL` and `REDIS_URL` using
-  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` checks the
-  worker's Redis heartbeat and stays unhealthy until that process is running.
+  If REST requests use that function, deploy a separate persistent worker for
+  notification and lifecycle work with the same `DATABASE_URL` and `REDIS_URL` using
+  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` requires
+  notification health and fresh lifecycle health with the required handlers;
+  stopped or stalled lifecycle work blocks readiness.
   A Vercel function alone is not a supported realtime or push-delivery setup.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
@@ -162,28 +169,32 @@ the four optional feature flags disabled until separately approved and tested.
 After changing provider variables:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml up --build -d api web
+set -e
 # For an existing populated database, take a backup first and run the
-# additive/idempotent beta migration. Never run `push --force` against it.
+# reviewed additive/idempotent migration. Do not use schema push in production.
+docker compose --env-file .env.production -f docker-compose.production.yml build --pull migrate api web
 docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate
+docker compose --env-file .env.production -f docker-compose.production.yml up -d api web
 ```
 
 `migrate:beta` backfills the normalized community-member, event-RSVP,
 marketplace-save, story-view, and story-reaction tables before removing their
 legacy JSON relationship columns. Take a database backup before applying it to
-an existing deployment. The migration is idempotent so it can also run after a
-fresh schema push. For a brand-new empty database, use
+an existing deployment. For a brand-new empty database, use
 `docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate`
-(which runs `migrate:production`) before starting the API. Bootstrap refuses
+(which runs `migrate:production`) before starting the API. Its bootstrap runs
+the reviewed, checked-in `lib/db/scripts/production-base.sql` under a transaction
+and advisory lock, then the additive migrations. Bootstrap refuses
 nonempty incomplete schemas, including unrelated tables, views and sequences.
 The migration must use the same unique `CONTACT_SHIELD_SECRET` as the API.
-Use `pnpm --filter
-@workspace/db push` only for additive changes on an empty/local database, and
-review its SQL prompt before accepting it.
+Do not use schema push for any production database, including a fresh one.
 
 Inspect API and migration logs. A listening API or a passing `/api/livez` is
 not readiness: `/api/healthz`, `/api/readyz`, workers, and the production smoke
-checks must also pass. An unsupported Redis version is a launch blocker.
+checks must also pass. Normal smoke requires `details.media.ready=true`, a
+working decoder, and notification/lifecycle readiness. The synthetic-provider
+exception is restricted to explicitly marked CI smoke on loopback; it cannot
+accept a deployed service. An unsupported Redis version is a launch blocker.
 
 ## Local development
 
@@ -263,6 +274,10 @@ through a public scraper configuration.
 - Keep `AUTH_COOKIE_SAME_SITE=lax` for a same-site deployment. Use `none` only
   for an HTTPS cross-site frontend/API pair and retain the trusted-origin
   refresh protection.
+- Approve the actual reachable proxy topology and configure exact trusted peers
+  in `TRUSTED_PROXY_CIDRS` at the API and, when used, `TRUSTED_EDGE_CIDRS` at
+  Nginx. Verify client identity, spoof rejection and forwarded HTTPS through
+  every enabled route; the defaults trust no forwarded headers.
 - Set `NODE_ENV=production` on every deployed API, including an API hosted
   outside the included Docker stack. Vercel is detected as production by
   default, but explicitly setting it prevents platform-specific surprises.
