@@ -2,6 +2,14 @@
 
 Status as of 9 October: repository and isolated container checks pass; the protected frontend preview is verified. Full production launch remains blocked by the gates below.
 
+### Restricted-session enforcement (10 October integration candidate)
+
+- The API enforces the eligibility decision before authenticated social, messaging, publication and media routes while `PUBLIC_BETA=true`. Only a narrow allowlist for account rights, consent, security, age-assurance/guardian progress and harm reporting is permitted to unverified accounts.
+- Optional authenticated reads must not elevate a restricted account to a personalized session. The own-profile endpoint returns a minimised identity/security view while restricted.
+- Socket.IO rejects restricted beta sessions at handshake and rechecks eligibility before every event. Registration defaults to a private, child-safe account with no unsolicited direct messages.
+- **Fail-closed consequence:** the approved territory policy registry and real age/guardian assurance provider are currently unavailable. An actual public-beta activation will therefore block unverified accounts rather than invent eligibility approval. This code change does not authorize public launch or provider substitution.
+- Automated source tests are required; legal jurisdiction selection, operator policy approval, provider tests and live acceptance remain release blockers.
+
 Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
 
 The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.

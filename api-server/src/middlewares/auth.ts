@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { createResponse } from "../utils/response.js";
 import { hasCurrentConsent } from "../utils/consent.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { isRestrictedRouteAllowed } from "../eligibility/restricted-routes.js";
 
 interface JwtPayload {
   sub: string;
@@ -21,6 +24,7 @@ declare global {
         role: string;
         permissions: string[];
       };
+      eligibility?: EligibilityDecision;
     }
   }
 }
@@ -29,6 +33,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
+const eligibilityService = new EligibilityService();
 
 export async function closeAuthenticationDependencies(): Promise<void> {
   await redisRepository.disconnect();
@@ -91,6 +96,20 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         ["Accept the current Terms and confirm the minimum age to continue"],
       ));
     }
+    // The approved eligibility registry is separate from a self-declared age
+    // checkbox. Public beta must fail closed when assurance is unavailable.
+    if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+      const decision = await eligibilityService.decisionFor(user.id);
+      req.eligibility = decision;
+      if (!decision.activated && !isRestrictedRouteAllowed(req.method, req.originalUrl)) {
+        return res.status(403).json(createResponse(
+          "Eligibility verification required",
+          null,
+          { eligibilityRequired: true, reason: decision.reason, experience: decision.experience },
+          ["Account eligibility verification is required to access this resource"],
+        ));
+      }
+    }
     return next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
@@ -109,7 +128,17 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
     const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
     if (activeSession && user && (decoded.authVersion ?? 0) === (user.authVersion ?? 0) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
-      req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+      if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+        // Restricted sessions may read approved self-service routes but must
+        // never gain personalized social reads through optional authentication.
+        const decision = await eligibilityService.decisionFor(user.id);
+        req.eligibility = decision;
+        if (decision.activated) {
+          req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+        }
+      } else {
+        req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+      }
     }
   } catch (error) {
     if (!(error instanceof jwt.JsonWebTokenError)) return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));

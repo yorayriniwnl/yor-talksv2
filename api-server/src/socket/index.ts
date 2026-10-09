@@ -15,6 +15,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
 import { hasCurrentConsent } from "../utils/consent.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
 import { parseSocketPayload, socketErrorEvent } from "./policy.js";
 
@@ -43,6 +44,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
   const conversationRepository = new ConversationRepository();
   const userRepository = new UserRepository();
   const redisRepository = new RedisRepository();
+  const eligibilityService = new EligibilityService();
   let closing=false;
   const presenceTasks=new Set<Promise<unknown>>();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
@@ -83,6 +85,10 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         return next(new Error("Session revoked"));
       }
       if (!hasCurrentConsent(user)) return next(new Error("Current terms acceptance required"));
+      if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+        const decision = await eligibilityService.decisionFor(user.id);
+        if (!decision.activated) return next(new Error("Account eligibility verification required"));
+      }
       socket.data.userId = decoded.sub;
       socket.data.deviceId = decoded.deviceId;
       socket.data.expiresAt = decoded.exp * 1000;
@@ -107,7 +113,18 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           userRepository.findById(userId),
         ]);
         if (Date.now() < socket.data.expiresAt && session && user && hasCurrentConsent(user)
-          && (user.authVersion ?? 0) === socket.data.authVersion && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) return true;
+          && (user.authVersion ?? 0) === socket.data.authVersion && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
+          // Reassess at the event boundary so withdrawn/expired eligibility
+          // cannot continue using an already-connected realtime session.
+          if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+            const decision = await eligibilityService.decisionFor(user.id);
+            if (!decision.activated) {
+              socket.disconnect(true);
+              return false;
+            }
+          }
+          return true;
+        }
       } catch (error) {
         logger.warn({ error, userId }, "Could not validate socket session");
       }
