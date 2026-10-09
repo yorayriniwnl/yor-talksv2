@@ -116,7 +116,8 @@ export class MessageRepository {
 
   private async withCurrent<T>(messageId: string, userId: string,
     work: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0], message: MessageRecord) => Promise<T>): Promise<T | undefined> {
-    return db.transaction(async tx => {
+    try {
+      return await db.transaction(async tx => {
       const [viewer]=await tx.select({id:usersTable.id,status:usersTable.accountStatus}).from(usersTable).where(eq(usersTable.id,userId)).for('share');
       if(!viewer||(viewer.status??'active')!=='active')return undefined;
       const [message] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition(), conversationMembershipCondition(userId)));
@@ -131,7 +132,11 @@ export class MessageRepository {
       const [available] = await tx.select({id:messagesTable.id}).from(messagesTable).where(and(eq(messagesTable.id,messageId),currentMessageCondition()));
       if(!available)return undefined;
       return work(tx, current as MessageRecord);
-    });
+      });
+    } catch (error) {
+      if (error instanceof PreviewNoLongerVisible) return undefined;
+      throw error;
+    }
   }
 
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
@@ -145,6 +150,7 @@ export class MessageRepository {
         target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId], set: { previewedAt },
       });
       const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition(),previewEntitlementCondition(userId)));
+      if (!current) throw new PreviewNoLongerVisible();
       return current as MessageRecord | undefined;
     });
   }
