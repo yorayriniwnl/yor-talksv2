@@ -43,3 +43,14 @@ test('private eligibility migration shares the release transaction and cannot ba
   assert.doesNotMatch(eligibility, /new\s+(?:pg\.)?(?:Client|Pool)|query\(['"](?:BEGIN|COMMIT)/);
   assert.doesNotMatch(eligibility, /INSERT\s+INTO\s+eligibility_assessments[^;]*SELECT[^;]*age_confirmed_at/i);
 });
+
+test('message integrity migration shares the release transaction and decouples group cascade', async () => {
+  const release = await readFile(new URL('../lib/db/scripts/migrate-release.mjs', import.meta.url), 'utf8');
+  assert.ok(release.includes('await migrateMessageIntegrity(client)'));
+  assert.ok(release.indexOf('await migrateMessageIntegrity(client)') < release.indexOf("INSERT INTO release_schema_versions"));
+  const messageIntegrity = await readFile(new URL('../lib/db/scripts/message-integrity-migration.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(messageIntegrity, /new\s+(?:pg\.)?(?:Client|Pool)/);
+  assert.ok(messageIntegrity.includes('ON DELETE SET NULL'));
+  assert.ok(messageIntegrity.includes('conversation_members'));
+});
+

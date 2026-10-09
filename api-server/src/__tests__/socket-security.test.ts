@@ -10,6 +10,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 
 const userId = "10000000-0000-4000-8000-000000000001";
 const recipientId = "10000000-0000-4000-8000-000000000002";
@@ -27,13 +28,23 @@ async function fixture(t: TestContext) {
   const original = { PUBLIC_BETA: env.PUBLIC_BETA, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
   Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false });
   t.after(() => Object.assign(env, original));
-  const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0 };
+  const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0, activated: true };
   t.mock.method(RedisRepository.prototype, "getStrict", async () => state.active ? "session" : null);
   t.mock.method(RedisRepository.prototype, "consumeBudgetStrict", async () => state.budget);
   t.mock.method(UserRepository.prototype, "findById", async (id: string) => {
     state.lookups++;
-    return { id, authVersion: state.authVersion, accountStatus: "active", termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
+    return { id, role: "user", authVersion: state.authVersion, accountStatus: "active", termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
   });
+  t.mock.method(EligibilityService.prototype, "decisionFor", async () => ({
+    activated: state.activated,
+    experience: "adult_18_plus" as const,
+    capabilities: { messaging: true, social: true, publish: true, payments: false, seller: false, memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "regular" as const,
+    policyVersions: [],
+    revision: "test-rev",
+    reason: state.activated ? null : "verification_required" as const,
+    publicBrowsingAllowed: false,
+  }));
   t.mock.method(ConversationRepository.prototype, "listForUser", async () => []);
   t.mock.method(ConversationRepository.prototype, "getMembers", async () => {
     if (state.joinsFail) throw new Error("Database unavailable");
@@ -154,4 +165,20 @@ test('connected sockets reject a revoked database epoch even if Redis still has 
   await disconnected;
   assert.equal(state.active, true);
   assert.equal(client.connected, false);
+});
+
+test('restricted socket sessions reject social actions when unverified', async t => {
+  const { state, connect } = await fixture(t);
+  state.activated = false;
+  const client = await connect();
+  const messageError = event(client, 'message:error');
+  client.emit('message:send', { recipientId, content: 'should be blocked' });
+  const err = await messageError;
+  assert.match(err.error, /eligibility/i);
+  assert.equal(state.sent, 0);
+
+  const joinError = event(client, 'realtime:error');
+  client.emit('conversation:join', { conversationId });
+  const joinErr = await joinError;
+  assert.match(joinErr.error, /eligibility/i);
 });

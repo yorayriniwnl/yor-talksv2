@@ -166,7 +166,7 @@ export interface MessageRecord {
   id: string;
   conversationId: string;
   senderId: string;
-  recipientId: string;
+  recipientId?: string | null;
   content: string;
   mediaId?: string | null;
   mediaUrl?: string | null;
@@ -191,8 +191,8 @@ export type MessageLifecycleState = "MESSAGE_DELIVERED" | "MESSAGE_PREVIEWED" | 
 
 export interface ConversationRecord {
   id: string;
-  participantA: string;
-  participantB: string;
+  participantA?: string | null;
+  participantB?: string | null;
   updatedAt: string;
   participantIds?: string[];
   isGroup?: boolean;

@@ -115,9 +115,9 @@ export class AuthService {
       settings: {
         theme: "light",
         notificationsEnabled: true,
-        privateAccount: false,
+        privateAccount: true,
         allowMentions: true,
-        contentFilter: "regular",
+        contentFilter: "child_safe",
         onboardingCompleted: false,
       },
       emailVerified: false,
@@ -128,9 +128,9 @@ export class AuthService {
       blockedUsers: [],
       mutedUsers: [],
       privacy: {
-        profileVisibility: "public",
-        messageRequests: true,
-        allowDmFromStrangers: true,
+        profileVisibility: "private",
+        messageRequests: false,
+        allowDmFromStrangers: false,
       },
     };
 
