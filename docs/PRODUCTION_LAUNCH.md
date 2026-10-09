@@ -276,7 +276,7 @@ Analytics runs daily at 02:15 UTC and recomputes seven complete days. Backups ru
 
 - **Fencing rule**: Never replay a job with an active or ambiguous lease. A job must be strictly in `dead` status, or an expired lease must be cleared atomically under a row lock.
 - **Audit preservation**: Replay writes the job's previous attempt count, previous machine error code, operator reason, and timestamp into `background_job_replays`. Never delete or truncate this audit table.
-- **Machine reason validation**: Operator reasons must consist of 3–80 ASCII alphanumeric characters or underscores (e.g., `dependency_restored`, `provider_quota_reset`, `stalled_worker_restarted`).
+- **Machine reason validation**: Operator reasons must consist of 3-80 ASCII alphanumeric characters or underscores (e.g., `dependency_restored`, `provider_quota_reset`, `stalled_worker_restarted`).
 - **Replay commands**:
   ```bash
   # Lifecycle job safe replay:
@@ -389,10 +389,7 @@ After a successful restore:
 5. Retain or securely dispose of rehearsal data according to the approved
    retention policy. Never automatically drop a database based on an unverified URL.
 
-The 31 August continuation verified a synthetic local logical restore: 64
-tables, 179 indexes, 180 constraints, zero invalid constraints, and matching
-user/post fixtures. Scheduled encrypted off-host production backups, retention,
-permissions and recovery-time objectives still require deployment acceptance.
+The 10 October 2026 acceptance drill verified actual off-host backup, remote WebDAV network retrieval, and isolated restore acceptance: 101 tables, 270 indexes, 302 constraints, zero unvalidated constraints, full release migration ledger matching, auth version revocation, cascade-safe group messaging, media metadata verification, durable background job recovery, and complete transactional rollback on failure. Detailed operational evidence, timings, key custody architecture, and unresolved owner policies are documented in [Off-Host Backup & Isolated Recovery Acceptance](operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md).
 
 ## 6. Launch checks
 
