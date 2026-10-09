@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { UserRecord } from "../types/index.js";
-import { toOwnUser, toPublicUser } from "../utils/user-view.js";
+import { toOwnUser, toPublicUser, toRestrictedUser } from "../utils/user-view.js";
 
 test("public profiles allowlist identity fields and exclude consent, email and future secrets", () => {
   const user = {
@@ -19,4 +19,25 @@ test("public profiles allowlist identity fields and exclude consent, email and f
   assert.equal(own.termsVersion, "private-version");
   assert.equal(own.twoFactorEnabled, true);
   for (const key of ["passwordHash", "totpSecret", "googleSubject", "contactIdentityDigest", "authVersion"]) assert.equal(key in own, false);
+});
+
+test("restricted user view exposes only minimal identity and eligibility status without social metrics", () => {
+  const user = {
+    id: "restricted-user", username: "restricted_user", fullName: "Restricted User", bio: "Bio", avatarUrl: null,
+    role: "user", createdAt: "2026-08-31T00:00:00Z", updatedAt: "2026-08-31T00:00:00Z",
+    followerCount: 10, followingCount: 5, email: "restricted@example.test", passwordHash: "hash",
+    totpSecret: "secret", accountStatus: "active", termsVersion: "v1", termsAcceptedAt: "2026-08-31T00:00:00Z",
+    permissions: [], settings: {}, following: [], pendingFollowIds: [], favoriteCreatorIds: [],
+  } as unknown as UserRecord;
+
+  const restricted = toRestrictedUser(user, "verification_required");
+  assert.deepEqual(Object.keys(restricted).sort(), [
+    "accountStatus", "createdAt", "eligibility", "email", "id", "restricted", "role", "termsAcceptedAt", "termsVersion", "twoFactorEnabled", "updatedAt", "username"
+  ].sort());
+  assert.equal(restricted.restricted, true);
+  assert.equal(restricted.twoFactorEnabled, true);
+  assert.deepEqual(restricted.eligibility, { activated: false, reason: "verification_required" });
+  for (const excluded of ["followerCount", "followingCount", "bio", "avatarUrl", "fullName", "passwordHash", "totpSecret"]) {
+    assert.equal(excluded in restricted, false);
+  }
 });

@@ -17,6 +17,7 @@ import { ContentSafetyService } from "../services/content-safety-service.js";
 import { hasCurrentConsent } from "../utils/consent.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
 import { parseSocketPayload, socketErrorEvent } from "./policy.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 
 export const attachSocketServer = async (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
@@ -46,6 +47,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
   const liveStreamRepository = new LiveStreamRepository();
   const contentSafetyService = new ContentSafetyService(userRepository);
+  const eligibilityService = new EligibilityService();
   type ActiveCall = { id: string; callerId: string; recipientId: string; createdAt: number; status: "ringing" | "active" };
   const callTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
   const clearCallTimeout = (callId: string) => {
@@ -139,8 +141,34 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           rejectEvent(event, "Too many requests. Please try again shortly.");
           return next(new Error("Socket rate limit exceeded"));
         }
-        if (await sessionIsActive()) return next();
-        return next(new Error("Session revoked"));
+        if (!(await sessionIsActive())) return next(new Error("Session revoked"));
+
+        const SOCIAL_EVENTS = new Set([
+          "conversation:join",
+          "typing:start",
+          "typing:end",
+          "message:send",
+          "stream:join",
+          "stream:comment",
+          "call:initiate",
+          "call:invite",
+          "call:accept",
+          "call:reject",
+          "call:end",
+          "call:signal",
+        ]);
+        if (SOCIAL_EVENTS.has(event)) {
+          const user = await userRepository.findById(userId);
+          if (user?.role !== "admin" && user?.role !== "moderator") {
+            const decision = await eligibilityService.decisionFor(userId);
+            if (!decision.activated) {
+              rejectEvent(event, "Account eligibility verification is required for social features");
+              return next(new Error("Eligibility verification required"));
+            }
+          }
+        }
+
+        return next();
       } catch (error) {
         logger.warn({ error, userId }, "Socket authorization unavailable");
         rejectEvent(event, "Realtime is temporarily unavailable");

@@ -203,8 +203,8 @@ export class ConversationRepository {
     return db.transaction(async (tx) => {
       const [created] = await tx.insert(conversationsTable).values({
         id: randomUUID(),
-        participantA: creatorId, // Legacy column
-        participantB: creatorId, // Legacy column
+        participantA: null,
+        participantB: null,
         participantIds: [creatorId, ...memberIds],
         isGroup: true,
         title,
@@ -255,7 +255,7 @@ export class ConversationRepository {
     
     // Fallback to legacy array if members table is empty
     const conv = await this.findById(conversationId);
-    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : []);
+    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB].filter((id): id is string => Boolean(id)) : []);
   }
 
   async listForUser(userId: string): Promise<ConversationRecord[]> {

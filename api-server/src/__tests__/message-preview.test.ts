@@ -22,7 +22,7 @@ const message: MessageRecord = {
 function createPreviewService(enabled: boolean, alreadyRead = false, row: MessageRecord = message, returnedRow = row) {
   let recordedPreview: { messageId: string; userId: string } | undefined;
   const conversationRepository = {
-    getMembers: async () => [message.senderId, message.recipientId],
+    getMembers: async () => [message.senderId, message.recipientId!],
   } as unknown as ConversationRepository;
   const messageRepository = {
     findById: async () => row,
@@ -49,19 +49,19 @@ function createPreviewService(enabled: boolean, alreadyRead = false, row: Messag
 test("message preview records a preview lifecycle without creating a read receipt", async () => {
   const { service, getRecordedPreview } = createPreviewService(true);
 
-  const preview = await service.previewMessage(message.id, message.recipientId);
+  const preview = await service.previewMessage(message.id, message.recipientId!);
 
   assert.equal(preview?.messageState, "MESSAGE_PREVIEWED");
   assert.equal(preview?.seenAt, null);
   assert.match(preview?.previewedAt ?? "", /^2026|^20/);
-  assert.deepEqual(getRecordedPreview(), { messageId: message.id, userId: message.recipientId });
+  assert.deepEqual(getRecordedPreview(), { messageId: message.id, userId: message.recipientId! });
 });
 
 test("message preview is entitlement-gated before any preview event is recorded", async () => {
   const { service, getRecordedPreview } = createPreviewService(false);
 
   await assert.rejects(
-    () => service.previewMessage(message.id, message.recipientId),
+    () => service.previewMessage(message.id, message.recipientId!),
     PremiumFeatureUnavailableError,
   );
   assert.equal(getRecordedPreview(), undefined);
@@ -70,7 +70,7 @@ test("message preview is entitlement-gated before any preview event is recorded"
 test("message preview does not reopen a message that already has a recipient read receipt", async () => {
   const { service, getRecordedPreview } = createPreviewService(true, true);
 
-  const preview = await service.previewMessage(message.id, message.recipientId);
+  const preview = await service.previewMessage(message.id, message.recipientId!);
 
   assert.equal(preview, undefined);
   assert.equal(getRecordedPreview(), undefined);
@@ -91,7 +91,7 @@ test("premium cannot reopen expired or deleted messages or preview as a non-memb
     { ...message, deletedAt: new Date().toISOString() },
   ]) {
     const { service, getRecordedPreview } = createPreviewService(true, false, row);
-    assert.equal(await service.previewMessage(row.id, row.recipientId), undefined);
+    assert.equal(await service.previewMessage(row.id, row.recipientId!), undefined);
     assert.equal(getRecordedPreview(), undefined);
   }
   const { service, getRecordedPreview } = createPreviewService(true);
@@ -105,7 +105,7 @@ test("preview return boundary rejects a row that expired or was deleted during t
     { ...message, deletedAt: new Date().toISOString(), mediaUrl: "private-attachment" },
   ]) {
     const { service } = createPreviewService(true, false, message, returnedRow);
-    assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
+    assert.equal(await service.previewMessage(message.id, message.recipientId!), undefined);
   }
 });
 

@@ -159,3 +159,62 @@ test("account deletion rolls back ledger anonymization when user deletion fails"
   await pool.query("DELETE FROM ledger_transactions WHERE id = $1", [ledgerId]);
   await pool.query("DELETE FROM users WHERE id = $1", [counterparty.id]);
 });
+
+test("deleting a group creator or recipient preserves surviving members' conversation and contributions", async () => {
+  const password = "GroupCascadePassword123!";
+  const hash = await bcrypt.hash(password, 4);
+  const makeUser = async (name: string) => {
+    const id = randomUUID();
+    await userRepository.create({
+      id,
+      username: `cascade_${name}_${id.slice(0, 6)}`,
+      email: `cascade_${name}_${id.slice(0, 6)}@example.invalid`,
+      passwordHash: hash,
+      fullName: `Cascade ${name}`,
+      bio: "",
+      avatarUrl: null,
+      role: "user",
+      permissions: ["read:profile"],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: { theme: "light", notificationsEnabled: true, privateAccount: false },
+      emailVerified: true,
+    });
+    fixtureUsers.push(id);
+    return id;
+  };
+
+  const creator = await makeUser("creator");
+  const memberB = await makeUser("memberB");
+  const memberC = await makeUser("memberC");
+
+  const conversations = new ConversationRepository();
+  const messages = new MessageRepository();
+  const messageService = new MessageService(conversations, messages);
+  const accountService = new AccountService(userRepository, redisRepository);
+
+  const group = await conversations.createGroupChat(creator, [memberB, memberC], "Cascade Test Group");
+  const msgB = await messageService.sendMessageToConversation(memberB, group.id, "Surviving contribution from B");
+  const msgC = await messageService.sendMessageToConversation(memberC, group.id, "Surviving contribution from C");
+
+  // Deleting group creator must NOT delete group or other members' messages
+  assert.equal(await accountService.deleteAccount(creator, password), true);
+  const groupAfterCreatorDelete = await conversations.findById(group.id);
+  assert.ok(groupAfterCreatorDelete, "Group conversation must survive creator account deletion");
+
+  const membersAfterCreatorDelete = await conversations.getMembers(group.id);
+  assert.deepEqual(membersAfterCreatorDelete.sort(), [memberB, memberC].sort());
+
+  const messagesAfterCreatorDelete = await messageService.listConversation(group.id, memberB);
+  assert.equal(messagesAfterCreatorDelete.length, 2, "Both surviving members' messages must remain");
+  assert.ok(messagesAfterCreatorDelete.some(m => m.id === msgB.id));
+  assert.ok(messagesAfterCreatorDelete.some(m => m.id === msgC.id));
+
+  // Now delete memberB (who was sender of msgB and member of group)
+  assert.equal(await accountService.deleteAccount(memberB, password), true);
+  const groupAfterMemberBDelete = await conversations.findById(group.id);
+  assert.ok(groupAfterMemberBDelete, "Group conversation must survive non-creator deletion");
+
+  const messagesAfterMemberBDelete = await messageService.listConversation(group.id, memberC);
+  assert.ok(messagesAfterMemberBDelete.some(m => m.id === msgC.id), "Member C's contribution must survive Member B deletion");
+});

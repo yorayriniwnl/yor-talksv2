@@ -154,7 +154,7 @@ export class MessageService {
       id: options?.idempotencyKey ?? randomUUID(),
       conversationId,
       senderId,
-      recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
+      recipientId: conversation.isGroup ? null : (members.find((memberId) => memberId !== senderId) ?? null),
       content: normalizedContent,
       textStyleId,
       createdAt: createdAt.toISOString(),

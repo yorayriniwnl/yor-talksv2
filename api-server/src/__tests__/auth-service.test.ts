@@ -29,6 +29,11 @@ test("registration requires email verification before password login", async () 
   });
 
   assert.equal(registered.user.emailVerified, false);
+  assert.equal(registered.user.settings.privateAccount, true);
+  assert.equal(registered.user.settings.contentFilter, "child_safe");
+  assert.equal(registered.user.privacy?.profileVisibility, "private");
+  assert.equal(registered.user.privacy?.allowDmFromStrangers, false);
+  assert.equal(registered.user.privacy?.messageRequests, false);
   assert.ok(registered.verificationToken);
 
   await assert.rejects(
