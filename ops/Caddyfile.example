@@ -1,21 +1,61 @@
 # Replace both example hostnames with domains whose DNS points at this host.
-# Caddy obtains and renews HTTPS certificates automatically.
+# Caddy obtains and renews HTTPS certificates automatically via ACME (Let's Encrypt/ZeroSSL)
+# and redirects all plain HTTP (port 80) requests to HTTPS (port 443).
+#
+# Topology: Separate frontend and backend origins on the same registrable domain.
+# - Frontend: https://app.yor-talks.example (proxied to Nginx container at 127.0.0.1:8080)
+# - API & Realtime: https://api.yor-talks.example (proxied to API container at 127.0.0.1:4000)
+# - Cookies: SameSite=Lax is preserved across subdomains on the same registered domain.
+# - Proxy Trust: Caddy emits a single sanitized client IP in X-Forwarded-For ({remote_host}),
+#   preventing client header spoofing.
+
 app.yor-talks.example {
 	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+	}
+
 	reverse_proxy 127.0.0.1:8080 {
 		header_up X-Forwarded-For {remote_host}
 		header_up X-Forwarded-Proto {scheme}
 		header_up X-Forwarded-Host {host}
 		header_up -Forwarded
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 30s
+		}
 	}
 }
 
 api.yor-talks.example {
 	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	# Keep edge limit at 12MB so Multer's 10MB media upload limit plus multipart boundaries
+	# and metadata are accommodated without premature rejection.
+	request_body {
+		max_size 12MB
+	}
+
+	# Proxies HTTP API and Socket.IO WebSocket connections directly to API container.
+	# Caddy automatically handles WebSocket upgrade headers and duplex streaming.
 	reverse_proxy 127.0.0.1:4000 {
 		header_up X-Forwarded-For {remote_host}
 		header_up X-Forwarded-Proto {scheme}
 		header_up X-Forwarded-Host {host}
 		header_up -Forwarded
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 90s
+			read_timeout 3600s
+			write_timeout 3600s
+		}
 	}
 }
+

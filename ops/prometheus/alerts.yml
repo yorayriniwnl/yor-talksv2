@@ -113,6 +113,7 @@ groups:
         annotations:
           summary: The latest database backup failed
           description: Check the backup service journal and preserve the encrypted local artifact if upload failed.
+
   - name: yor-infrastructure
     rules:
       - alert: YorHostDiskSpaceLow
@@ -149,5 +150,4 @@ groups:
           severity: critical
         annotations:
           summary: TLS certificate will expire within 3 days
-          description: Immediate manual renewal required.
-
+          description: Ingress TLS certificate expires imminently. Immediate manual renewal required.
