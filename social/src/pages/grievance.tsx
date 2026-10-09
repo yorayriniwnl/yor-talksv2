@@ -336,7 +336,7 @@ export default function GrievancePortal() {
                   {trackedTicket.status.replace('_', ' ')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">Use this receipt to follow your ticket status. Case evidence and reviewer notes remain private.</p>
+              <p className="text-xs text-muted-foreground">This page shows your ticket status. Reporter details and internal review notes remain private.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
                 {trackedTicket.slaDeadline && <span>Operational review target: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>}
