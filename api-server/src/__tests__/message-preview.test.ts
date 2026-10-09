@@ -1,3 +1,4 @@
+import type { MessageTombstone } from "../services/message-view.js";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { randomUUID } from "node:crypto";
@@ -128,6 +129,7 @@ async function createPreviewFixture() {
   const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
   const row = await messages.create({ ...message, id: randomUUID(), conversationId: conversation.id,
     senderId: sender.id, recipientId: recipient.id, createdAt: new Date().toISOString() });
+  await pool.query("INSERT INTO user_feature_overrides(user_id,feature_key,enabled,expires_at) VALUES($1,'MESSAGE_UNREAD_PREVIEW',true,now()+interval '1 hour')", [recipient.id]);
   return { sender, recipient, service, messages, conversation, row };
 }
 
@@ -192,7 +194,7 @@ test("recipient reads serialize with previews using the same real message row lo
   for (const firstOperation of ['read', 'preview'] as const) {
     const { row, recipient, service } = await createPreviewFixture();
     const blocker = await pool.connect();
-    let reading: Promise<MessageRecord | undefined> | undefined;
+    let reading: Promise<MessageRecord | MessageTombstone | undefined> | undefined;
     let previewing: Promise<MessageRecord | undefined> | undefined;
     try {
       await blocker.query('BEGIN');

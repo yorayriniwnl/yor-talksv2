@@ -193,7 +193,7 @@ export class MessageRepository {
     });
   }
 
-  async markSeenForUser(messageId: string, userId: string): Promise<MessageRecord | undefined> {
+  async markSeenForUser(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
     return this.withCurrent(messageId, userId, async (tx, message) => {
       if (message.senderId === userId) return message;
       const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id, message.conversationId));
@@ -201,7 +201,7 @@ export class MessageRepository {
       await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
       if (conversation.vanishMode) {
         const [updated] = await tx.update(messagesTable).set({ seenAt: readAt, deletedAt: sql`clock_timestamp()` }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
-        return updated ? toMessageTombstone(updated as MessageRecord) : undefined;
+        return updated ? messageTombstone(updated as MessageRecord) : undefined;
       }
       const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition()));
       if (!current) return undefined;

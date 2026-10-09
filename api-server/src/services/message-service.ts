@@ -278,10 +278,8 @@ export class MessageService {
       .map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
   }
 
-  async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const result = await this.messageRepository.markSeenForUser(messageId, userId);
-    if (!result || ("deletedAt" in result && result.deletedAt && !("content" in result && result.content))) return result;
-    return isMessageVisible(result, new Date()) ? result : undefined;
+  async markSeen(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
+    return this.messageRepository.markSeenForUser(messageId, userId);
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
