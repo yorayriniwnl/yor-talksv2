@@ -271,6 +271,8 @@ function main() {
   process.exit(0);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
+import { pathToFileURL } from "node:url";
+
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
   main();
 }
