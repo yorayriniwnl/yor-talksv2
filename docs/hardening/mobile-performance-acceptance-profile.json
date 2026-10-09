@@ -1,0 +1,341 @@
+{
+  "generatedAt": "2026-10-09T23:34:15.720Z",
+  "scope": "Cold synthetic authenticated feed; local production assets; 390x844; 150ms latency; 1.6Mbps down; 4x CPU; gzip level5 test-server delivery, not Nginx runtime acceptance; no provider timing. Budgets are proposed repository gates, pending owner agreement. One observation is not field percentile data.",
+  "directory": "C:\\Users\\yoray\\Projects\\yor-talks-release\\social\\dist\\e2e",
+  "measured": {
+    "javascriptBytes": 873062,
+    "stylesheetBytes": 417129,
+    "javascriptDeliveredBytes": 273496,
+    "stylesheetDeliveredBytes": 62177,
+    "javascriptGzipBytes": 273007,
+    "stylesheetGzipBytes": 62177,
+    "fcpMs": 1888,
+    "lcpMs": 3424,
+    "longTaskBlockingMs": 339,
+    "fixtureReadyMs": 3604
+  },
+  "budgets": {
+    "javascriptGzipBytes": {
+      "maximum": 358400,
+      "observed": 273007,
+      "passed": true
+    },
+    "stylesheetGzipBytes": {
+      "maximum": 102400,
+      "observed": 62177,
+      "passed": true
+    },
+    "fcpMs": {
+      "maximum": 2500,
+      "observed": 1888,
+      "passed": true
+    },
+    "lcpMs": {
+      "maximum": 4000,
+      "observed": 3424,
+      "passed": true
+    },
+    "longTaskBlockingMs": {
+      "maximum": 300,
+      "observed": 339,
+      "passed": false
+    }
+  },
+  "assets": [
+    {
+      "path": "/assets/index-Kx9Ao3sC.js",
+      "bytes": 414695,
+      "deliveredBytes": 124465,
+      "gzipBytes": 124465
+    },
+    {
+      "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+      "bytes": 236,
+      "deliveredBytes": 236,
+      "gzipBytes": 180
+    },
+    {
+      "path": "/assets/vendor-react-DO5q2pGw.js",
+      "bytes": 185689,
+      "deliveredBytes": 58897,
+      "gzipBytes": 58897
+    },
+    {
+      "path": "/assets/clsx-B-dksMZM.js",
+      "bytes": 374,
+      "deliveredBytes": 374,
+      "gzipBytes": 238
+    },
+    {
+      "path": "/assets/vendor-motion-C12fIHo-.js",
+      "bytes": 127830,
+      "deliveredBytes": 42251,
+      "gzipBytes": 42251
+    },
+    {
+      "path": "/assets/vendor-icons-C2JR4Ep_.js",
+      "bytes": 49684,
+      "deliveredBytes": 16497,
+      "gzipBytes": 16497
+    },
+    {
+      "path": "/assets/vendor-state-Da2V9HYc.js",
+      "bytes": 2685,
+      "deliveredBytes": 1331,
+      "gzipBytes": 1331
+    },
+    {
+      "path": "/assets/index-DZWemJ72.js",
+      "bytes": 29166,
+      "deliveredBytes": 9637,
+      "gzipBytes": 9637
+    },
+    {
+      "path": "/assets/vendor-socket-UYxAN2L3.js",
+      "bytes": 12495,
+      "deliveredBytes": 4102,
+      "gzipBytes": 4102
+    },
+    {
+      "path": "/assets/vendor-date-PTKEOwdC.js",
+      "bytes": 21832,
+      "deliveredBytes": 6259,
+      "gzipBytes": 6259
+    },
+    {
+      "path": "/assets/index-DVuJBMcZ.css",
+      "bytes": 417129,
+      "deliveredBytes": 62177,
+      "gzipBytes": 62177
+    },
+    {
+      "path": "/assets/home-O2wz8K_N.js",
+      "bytes": 27111,
+      "deliveredBytes": 8182,
+      "gzipBytes": 8182
+    },
+    {
+      "path": "/assets/textarea-UH8lfAkC.js",
+      "bytes": 495,
+      "deliveredBytes": 495,
+      "gzipBytes": 344
+    },
+    {
+      "path": "/assets/Metric-BFxPyyA1.js",
+      "bytes": 278,
+      "deliveredBytes": 278,
+      "gzipBytes": 216
+    },
+    {
+      "path": "/assets/SignalLabel-skybHait.js",
+      "bytes": 231,
+      "deliveredBytes": 231,
+      "gzipBytes": 196
+    },
+    {
+      "path": "/assets/StatusBadge-FtzJD1y-.js",
+      "bytes": 261,
+      "deliveredBytes": 261,
+      "gzipBytes": 212
+    }
+  ],
+  "diagnostics": {
+    "profilingOverhead": true,
+    "longTasks": [
+      {
+        "startTime": 2097.7000000029802,
+        "duration": 59
+      },
+      {
+        "startTime": 2161.89999999851,
+        "duration": 52
+      },
+      {
+        "startTime": 2233.39999999851,
+        "duration": 51
+      },
+      {
+        "startTime": 2302.7000000029802,
+        "duration": 89
+      },
+      {
+        "startTime": 2395.89999999851,
+        "duration": 182
+      },
+      {
+        "startTime": 2578.2000000029802,
+        "duration": 98
+      },
+      {
+        "startTime": 2692.89999999851,
+        "duration": 85
+      },
+      {
+        "startTime": 2790.5,
+        "duration": 114
+      },
+      {
+        "startTime": 3010.39999999851,
+        "duration": 59
+      }
+    ],
+    "resources": [
+      {
+        "url": "http://127.0.0.1:51310/assets/index-Kx9Ao3sC.js",
+        "encodedBytes": 124465,
+        "transferredBytes": 124765,
+        "startTime": 199,
+        "responseStart": 226.60000000149012,
+        "responseEnd": 2083.2999999970198,
+        "duration": 1884.2999999970198
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/_commonjsHelpers-Cpj98o6Y.js",
+        "encodedBytes": 236,
+        "transferredBytes": 536,
+        "startTime": 199.79999999701977,
+        "responseStart": 228.39999999850988,
+        "responseEnd": 398.5,
+        "duration": 198.70000000298023
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-react-DO5q2pGw.js",
+        "encodedBytes": 58897,
+        "transferredBytes": 59197,
+        "startTime": 200.60000000149012,
+        "responseStart": 232.39999999850988,
+        "responseEnd": 1690.2999999970198,
+        "duration": 1489.6999999955297
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/clsx-B-dksMZM.js",
+        "encodedBytes": 374,
+        "transferredBytes": 674,
+        "startTime": 201.10000000149012,
+        "responseStart": 232.89999999850988,
+        "responseEnd": 414.29999999701977,
+        "duration": 213.19999999552965
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-motion-C12fIHo-.js",
+        "encodedBytes": 42251,
+        "transferredBytes": 42551,
+        "startTime": 201.39999999850988,
+        "responseStart": 235.89999999850988,
+        "responseEnd": 1439.2000000029802,
+        "duration": 1237.8000000044703
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-icons-C2JR4Ep_.js",
+        "encodedBytes": 16497,
+        "transferredBytes": 16797,
+        "startTime": 202,
+        "responseStart": 237.20000000298023,
+        "responseEnd": 840.8999999985099,
+        "duration": 638.8999999985099
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-state-Da2V9HYc.js",
+        "encodedBytes": 1331,
+        "transferredBytes": 1631,
+        "startTime": 202.39999999850988,
+        "responseStart": 415.6000000014901,
+        "responseEnd": 651,
+        "duration": 448.6000000014901
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/index-DZWemJ72.js",
+        "encodedBytes": 9637,
+        "transferredBytes": 9937,
+        "startTime": 202.89999999850988,
+        "responseStart": 653,
+        "responseEnd": 1092.8999999985099,
+        "duration": 890
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-socket-UYxAN2L3.js",
+        "encodedBytes": 4102,
+        "transferredBytes": 4402,
+        "startTime": 203.5,
+        "responseStart": 842.5,
+        "responseEnd": 1124.5,
+        "duration": 921
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/vendor-date-PTKEOwdC.js",
+        "encodedBytes": 6259,
+        "transferredBytes": 6559,
+        "startTime": 203.89999999850988,
+        "responseStart": 1094.6000000014901,
+        "responseEnd": 1439.3999999985099,
+        "duration": 1235.5
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/index-DVuJBMcZ.css",
+        "encodedBytes": 62177,
+        "transferredBytes": 62477,
+        "startTime": 204.29999999701977,
+        "responseStart": 405,
+        "responseEnd": 1801.2999999970198,
+        "duration": 1597
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/home-O2wz8K_N.js",
+        "encodedBytes": 8182,
+        "transferredBytes": 8482,
+        "startTime": 2505.7999999970198,
+        "responseStart": 2589.2000000029802,
+        "responseEnd": 2827,
+        "duration": 321.20000000298023
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/textarea-UH8lfAkC.js",
+        "encodedBytes": 495,
+        "transferredBytes": 795,
+        "startTime": 2507,
+        "responseStart": 2589.7999999970198,
+        "responseEnd": 2764.2999999970198,
+        "duration": 257.29999999701977
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/Metric-BFxPyyA1.js",
+        "encodedBytes": 278,
+        "transferredBytes": 578,
+        "startTime": 2508,
+        "responseStart": 2590.39999999851,
+        "responseEnd": 2779.7000000029802,
+        "duration": 271.70000000298023
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/SignalLabel-skybHait.js",
+        "encodedBytes": 231,
+        "transferredBytes": 531,
+        "startTime": 2508.89999999851,
+        "responseStart": 2590.7000000029802,
+        "responseEnd": 2779.89999999851,
+        "duration": 271
+      },
+      {
+        "url": "http://127.0.0.1:51310/assets/StatusBadge-FtzJD1y-.js",
+        "encodedBytes": 261,
+        "transferredBytes": 561,
+        "startTime": 2509.89999999851,
+        "responseStart": 2591,
+        "responseEnd": 2795.60000000149,
+        "duration": 285.70000000298023
+      }
+    ],
+    "browserMetrics": {
+      "Nodes": 1012,
+      "LayoutCount": 4,
+      "RecalcStyleCount": 18,
+      "LayoutDuration": 0.205804,
+      "RecalcStyleDuration": 0.379252,
+      "ScriptDuration": 0.550201,
+      "TaskDuration": 1.584243
+    },
+    "cpuProfile": "C:\\Users\\yoray\\Projects\\yor-talks-release\\docs\\hardening\\mobile-performance-acceptance-profile.cpuprofile",
+    "trace": "C:\\Users\\yoray\\Projects\\yor-talks-release\\docs\\hardening\\mobile-performance-acceptance-profile.trace.json",
+    "screenshot": "C:\\Users\\yoray\\Projects\\yor-talks-release\\docs\\hardening\\mobile-performance-acceptance-profile.png"
+  }
+}

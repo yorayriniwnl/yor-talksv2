@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { BarChart2, Bookmark, Globe2, Heart, ImagePlus, LockKeyhole, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, UsersRound, X, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
@@ -368,6 +368,11 @@ export function PostCard({ post }: { post: PostType }) {
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
   const [showHeartOverlay, setShowHeartOverlay] = useState(false);
   const [authorLoading, setAuthorLoading] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const ArticleTag = (reduceMotion ? 'article' : motion.article) as React.ElementType;
+  const motionProps = reduceMotion ? {} : { variants: fadeInUp, initial: 'initial', animate: 'animate' };
+  const ButtonTag = (reduceMotion ? 'button' : motion.button) as React.ElementType;
+  const tapProps = reduceMotion ? {} : tapScale;
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
   const handleCardClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
@@ -561,16 +566,6 @@ export function PostCard({ post }: { post: PostType }) {
 
   return (
     <div className="yor-post-shell w-full">
-      <style>{`
-        @keyframes heart-pop {
-          0% { transform: scale(0); opacity: 0; }
-          15% { transform: scale(1.2); opacity: 1; }
-          30% { transform: scale(0.95); opacity: 1; }
-          45% { transform: scale(1.05); opacity: 0.9; }
-          80% { transform: scale(1); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 0; }
-        }
-      `}</style>
       {post.media && post.media.length > 0 && (
         <CinematicMediaLightbox
           media={post.media}
@@ -582,14 +577,12 @@ export function PostCard({ post }: { post: PostType }) {
           caption={post.content}
         />
       )}
-      <motion.article 
-        variants={fadeInUp}
-        initial="initial"
-        animate="animate"
+      <ArticleTag 
+        {...motionProps}
         tabIndex={0}
         className="yor-post group cursor-pointer px-5 py-5 transition-colors sm:px-6"
         onClick={handleCardClick}
-        onKeyDown={(event) => {
+        onKeyDown={(event: React.KeyboardEvent) => {
           if (event.target !== event.currentTarget) return;
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -703,17 +696,17 @@ export function PostCard({ post }: { post: PostType }) {
             <div className="yor-post__actions mt-4 flex max-w-md items-center justify-between text-muted-foreground pr-4 -ml-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.button 
-                    {...tapScale}
+                  <ButtonTag 
+                    {...tapProps}
                     aria-label={post.likedByMe ? 'Unlike post' : 'Like post'}
                     className="group relative flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); heartBurst(event); }}
+                    onClick={(event: React.MouseEvent) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); heartBurst(event); }}
                   >
                     <RippleEffect className="rounded-full">
                     <div className="relative p-1.5 -ml-1.5 rounded-full group-hover:bg-primary/10 transition-colors">
                       <Heart className={cn('h-[18px] w-[18px] transition-colors', post.likedByMe ? 'fill-primary text-primary' : 'group-hover:text-foreground')} />
                       <AnimatePresence>
-                        {post.likedByMe && (
+                        {!reduceMotion && post.likedByMe && (
                           <motion.div
                             initial={{ scale: 0.5, opacity: 1 }}
                             animate={{ scale: 2, opacity: 0 }}
@@ -726,24 +719,24 @@ export function PostCard({ post }: { post: PostType }) {
                     </div>
                     </RippleEffect>
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.likes > 0 && post.likes}</span>
-                  </motion.button>
+                  </ButtonTag>
                 </TooltipTrigger>
                 <TooltipContent>{post.likedByMe ? 'Unlike' : 'Like'}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.button 
-                    {...tapScale}
+                  <ButtonTag 
+                    {...tapProps}
                     aria-label="Reply to post"
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); setShowCommentInput(prev => !prev); }}
+                    onClick={(event: React.MouseEvent) => { event.stopPropagation(); setShowCommentInput(prev => !prev); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-muted transition-colors">
                       <MessageCircle className="h-[18px] w-[18px] transition-colors group-hover:text-foreground" />
                     </div>
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.comments > 0 && post.comments}</span>
-                  </motion.button>
+                  </ButtonTag>
                 </TooltipTrigger>
                 <TooltipContent>Reply</TooltipContent>
               </Tooltip>
@@ -752,11 +745,11 @@ export function PostCard({ post }: { post: PostType }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <motion.button 
-                        {...tapScale}
+                      <ButtonTag 
+                        {...tapProps}
                         aria-label="Share post"
                         className="group flex items-center gap-1.5 focus-visible:outline-none"
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={(event: React.MouseEvent) => event.stopPropagation()}
                       >
                         <RippleEffect className="rounded-full">
                         <div className="p-1.5 rounded-full group-hover:bg-muted transition-colors">
@@ -764,7 +757,7 @@ export function PostCard({ post }: { post: PostType }) {
                         </div>
                         </RippleEffect>
                         <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.shares > 0 && post.shares}</span>
-                      </motion.button>
+                      </ButtonTag>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
                   <TooltipContent>Share</TooltipContent>
@@ -792,33 +785,33 @@ export function PostCard({ post }: { post: PostType }) {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.button
-                    {...tapScale}
+                  <ButtonTag
+                    {...tapProps}
                     aria-label={post.repostedByMe ? 'Remove repost' : 'Repost'}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); void toggleRepost(post.id); }}
+                    onClick={(event: React.MouseEvent) => { event.stopPropagation(); void toggleRepost(post.id); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-emerald-500/10 transition-colors">
                       <Repeat2 className={cn('h-[18px] w-[18px] transition-colors', post.repostedByMe ? 'text-emerald-500' : 'group-hover:text-foreground')} />
                     </div>
                     <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.reposts > 0 && post.reposts}</span>
-                  </motion.button>
+                  </ButtonTag>
                 </TooltipTrigger>
                 <TooltipContent>{post.repostedByMe ? 'Remove repost' : 'Repost'}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.button 
-                    {...tapScale}
+                  <ButtonTag 
+                    {...tapProps}
                     aria-label={post.savedByMe ? 'Remove from saved' : 'Save post'}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); toggleSavePost(post.id); toast({ title: post.savedByMe ? 'Removed from saved' : 'Saved for later' }); }}
+                    onClick={(event: React.MouseEvent) => { event.stopPropagation(); toggleSavePost(post.id); toast({ title: post.savedByMe ? 'Removed from saved' : 'Saved for later' }); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-amber-500/10 transition-colors">
                       <Bookmark className={cn('h-[18px] w-[18px] transition-colors', post.savedByMe ? 'fill-accent text-accent' : 'group-hover:text-foreground')} />
                     </div>
-                  </motion.button>
+                  </ButtonTag>
                 </TooltipTrigger>
                 <TooltipContent>{post.savedByMe ? 'Unsave' : 'Save'}</TooltipContent>
               </Tooltip>
@@ -847,7 +840,7 @@ export function PostCard({ post }: { post: PostType }) {
           />
         </div>
       )}
-    </motion.article>
+    </ArticleTag>
     <HeartBurstLayer particles={particles} />
     </div>
   );

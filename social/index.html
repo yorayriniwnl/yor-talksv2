@@ -22,7 +22,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Mono:wght@400;500;600&family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div role="status" aria-busy="true" aria-label="Loading content" class="min-h-screen bg-background px-4 py-8 sm:px-6">
+        <header class="premium-topbar mx-auto max-w-4xl flex items-center justify-between pb-6">
+          <h1 class="premium-topbar__heading text-2xl font-bold tracking-tight">Yor</h1>
+        </header>
+        <div class="mx-auto max-w-4xl space-y-5">
+          <div class="surface-1 overflow-hidden rounded-2xl border border-border/40 p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="skeleton-aurora h-11 w-11 shrink-0 rounded-full"></div>
+              <div class="min-w-0 flex-1 space-y-2">
+                <div class="skeleton-aurora h-3 w-28"></div>
+                <div class="skeleton-aurora h-2.5 w-20 opacity-70"></div>
+              </div>
+            </div>
+            <div class="mt-5 space-y-3">
+              <div class="skeleton-aurora h-3 w-full"></div>
+              <div class="skeleton-aurora h-3 w-4/5"></div>
+              <div class="skeleton-aurora h-56 w-full"></div>
+            </div>
+          </div>
+          <div class="surface-1 rounded-2xl border border-border/40 p-5 shadow-sm">
+            <div class="skeleton-aurora h-3 w-2/5"></div>
+            <div class="mt-4 grid grid-cols-3 gap-3">
+              <div class="skeleton-aurora h-24"></div>
+              <div class="skeleton-aurora h-24"></div>
+              <div class="skeleton-aurora h-24"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

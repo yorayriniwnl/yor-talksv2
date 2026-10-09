@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, 
   Music, Maximize2, Minimize2, Sparkles, Disc, Radio, ListMusic, X 
@@ -67,6 +67,7 @@ export function GlobalAudioPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [speed, setSpeed] = useState<number>(1.0);
+  const reduceMotion = useReducedMotion();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number | null>(null);
@@ -125,9 +126,9 @@ export function GlobalAudioPlayer() {
 
         // Gradient bar
         const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-      gradient.addColorStop(0, '#671515');
-      gradient.addColorStop(0.5, '#e84b4b');
-      gradient.addColorStop(1, '#ff8a7f');
+        gradient.addColorStop(0, '#671515');
+        gradient.addColorStop(0.5, '#e84b4b');
+        gradient.addColorStop(1, '#ff8a7f');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -139,8 +140,10 @@ export function GlobalAudioPlayer() {
         ctx.fill();
       }
 
-      if (isPlaying) phase += 0.08;
-      animRef.current = requestAnimationFrame(render);
+      if (isPlaying) {
+        phase += 0.08;
+        animRef.current = requestAnimationFrame(render);
+      }
     };
 
     render();
@@ -159,8 +162,9 @@ export function GlobalAudioPlayer() {
     <>
       {/* Floating Bottom Ambient Music Dock */}
       <motion.div
-        initial={{ y: 100, opacity: 0 }}
+        initial={reduceMotion ? false : { y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        transition={reduceMotion ? { duration: 0 } : undefined}
         className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 sm:w-[440px] z-50 rounded-3xl surface-1 border border-border/60 backdrop-blur-2xl shadow-2xl p-3 font-sans text-foreground select-none"
       >
         <div className="flex items-center gap-3">
@@ -173,7 +177,7 @@ export function GlobalAudioPlayer() {
               "w-12 h-12 rounded-2xl overflow-hidden border border-border/40 shadow-md transition-transform",
               isPlaying && "animate-[spin_8s_linear_infinite]"
             )}>
-              <img src={currentTrack.coverUrl} alt="" className="w-full h-full object-cover" />
+              <img src={currentTrack.coverUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
               <Disc className="w-5 h-5" />
