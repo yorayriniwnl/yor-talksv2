@@ -149,6 +149,10 @@ export class MessageRepository {
     });
   }
 
+  async recordVisiblePreview(messageId: string, userId: string, now: Date = new Date()): Promise<MessageRecord | undefined> {
+    return this.recordPreview(messageId, userId, now.toISOString());
+  }
+
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
     const [receipt] = await db.select({ messageId: messageReadsTable.messageId })
       .from(messageReadsTable)
@@ -189,7 +193,7 @@ export class MessageRepository {
     });
   }
 
-  async markSeenForUser(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
+  async markSeenForUser(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     return this.withCurrent(messageId, userId, async (tx, message) => {
       if (message.senderId === userId) return message;
       const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id, message.conversationId));
@@ -197,7 +201,7 @@ export class MessageRepository {
       await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
       if (conversation.vanishMode) {
         const [updated] = await tx.update(messagesTable).set({ seenAt: readAt, deletedAt: sql`clock_timestamp()` }).where(and(eq(messagesTable.id, messageId), currentMessageCondition())).returning();
-        return updated ? messageTombstone(updated as MessageRecord) : undefined;
+        return updated ? toMessageTombstone(updated as MessageRecord) : undefined;
       }
       const [current] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentMessageCondition()));
       if (!current) return undefined;

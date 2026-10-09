@@ -88,7 +88,7 @@ export class ModerationService {
     reporterName: string;
     reporterEmail: string;
     description: string;
-  }): Promise<PublicGrievanceTicket> {
+  }): Promise<GrievanceTicket> {
     const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
     // Legacy internal review target. This is not an approved statutory or public
@@ -108,18 +108,18 @@ export class ModerationService {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     }).returning();
-    return publicGrievanceTicket(ticket);
+    return ticket as GrievanceTicket;
   }
 
   /**
    * Check grievance ticket status
    */
-  async getGrievanceStatus(ticketId: string): Promise<PublicGrievanceTicket | null> {
+  async getGrievanceStatus(ticketId: string): Promise<GrievanceTicket | null> {
     const [ticket] = await db.select().from(grievanceTicketsTable)
       .where(eq(grievanceTicketsTable.ticketId, ticketId))
       .orderBy(desc(grievanceTicketsTable.createdAt))
       .limit(1);
-    return ticket ? publicGrievanceTicket(ticket) : null;
+    return (ticket as GrievanceTicket | undefined) ?? null;
   }
 
   async listGrievances(status?: GrievanceTicket["status"]): Promise<GrievanceTicket[]> {

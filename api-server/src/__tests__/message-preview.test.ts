@@ -91,7 +91,7 @@ test("premium cannot reopen expired or deleted messages or preview as a non-memb
     { ...message, deletedAt: new Date().toISOString() },
   ]) {
     const { service, getRecordedPreview } = createPreviewService(true, false, row);
-    assert.equal(await service.previewMessage(row.id, row.recipientId), undefined);
+    assert.equal(await service.previewMessage(row.id, row.recipientId!), undefined);
     assert.equal(getRecordedPreview(), undefined);
   }
   const { service, getRecordedPreview } = createPreviewService(true);
@@ -105,7 +105,7 @@ test("preview return boundary rejects a row that expired or was deleted during t
     { ...message, deletedAt: new Date().toISOString(), mediaUrl: "private-attachment" },
   ]) {
     const { service } = createPreviewService(true, false, message, returnedRow);
-    assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
+    assert.equal(await service.previewMessage(message.id, message.recipientId!), undefined);
   }
 });
 
