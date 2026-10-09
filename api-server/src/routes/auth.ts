@@ -32,7 +32,7 @@ router.post("/auth/otp/verify", async (req, res): Promise<void> => {
 
 router.post("/auth/register", validateBody(registerSchema), authController.register);
 router.post("/auth/login", validateBody(loginSchema), authController.login);
-router.post("/auth/google", validateBody(googleLoginSchema), authController.googleLogin);
+router.post("/auth/google", requireTrustedOrigin, validateBody(googleLoginSchema), authController.googleLogin);
 router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
 router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
 router.post("/auth/refresh", requireTrustedOrigin, authController.refresh);
