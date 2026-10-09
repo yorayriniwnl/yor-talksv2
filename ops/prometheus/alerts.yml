@@ -113,3 +113,41 @@ groups:
         annotations:
           summary: The latest database backup failed
           description: Check the backup service journal and preserve the encrypted local artifact if upload failed.
+
+  - name: yor-infrastructure
+    rules:
+      - alert: YorHostDiskSpaceLow
+        expr: node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host root filesystem space is low (<15% free)
+          description: Host root filesystem available space is below 15%. Inspect container volumes and logs.
+
+      - alert: YorHostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host available memory is low (<10% available)
+          description: Host available memory is below 10%. Inspect host and container memory allocations.
+
+      - alert: YorTlsCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 15
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: TLS certificate will expire within 15 days
+          description: Ingress TLS certificate expires soon. Verify automated Caddy or proxy certificate renewal.
+
+      - alert: YorTlsCertificateExpiringCritical
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 3
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: TLS certificate will expire within 3 days
+          description: Ingress TLS certificate expires imminently. Immediate manual renewal required.

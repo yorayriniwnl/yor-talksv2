@@ -217,53 +217,88 @@ journalctl -u yor-talks-analytics.service -u yor-talks-backup.service --since to
 
 Analytics runs daily at 02:15 UTC and recomputes seven complete days. Backups run daily at 01:00 UTC; the encrypted staging volume retains local artifacts for 14 days. Set `BACKUP_AGE_RECIPIENT` to the generated public recipient, `BACKUP_REMOTE` to the configured rclone remote:path, and `RCLONE_CONFIG_FILE` to the protected config. A backup alert fires when no successful off-host upload is visible for 25 hours; a rollup alert fires at 26 hours stale.
 
-### Incident response
+### Incident response and alert catalog
 
-- **API or database unavailable:** preserve logs, inspect `readyz`, Postgres and Redis health, and pause rollout. Do not bypass readiness or expose database/cache ports.
-- **Worker failures:** inspect notification/lifecycle logs, Redis health, `details.lifecycle` and `yor_worker_failed_jobs_total`. Check lifecycle heartbeat, overdue/running age, expired leases, dead letters and last cleanup/progress metrics; preserve durable jobs and follow the recovery procedure below.
-- **Stale analytics:** inspect the systemd timer and `journalctl -u yor-talks-analytics.service`, then query authorized pipeline status. Re-run only after dependencies recover; the last seven days recompute idempotently.
-- **Backup failure or suspected data loss:** stop schema changes, preserve the encrypted local staging file, inspect rclone and remote object/version, verify with the protected age identity, and restore only into a separate empty database. Promote a restore only after operator approval and application validation; never overwrite production during an incident drill.
-- **Credential compromise:** disable the affected provider/feature flag, rotate only the affected secret through the approved secret manager, and review session revocation and provider audit logs. A contact-shield secret rotation requires a reviewed digest migration.
+| Alert | Severity | Meaning | First response | Escalation owner | Evidence required to close |
+| --- | --- | --- | --- | --- | --- |
+| `YorLifecycleUnavailable` | Critical | Lifecycle worker process missing, heartbeat >45s stale, or required handlers (`account_cleanup`, `media_cleanup`) missing/stopping. | Inspect container status and `/api/readyz`; restart worker if crashed; verify Postgres connectivity. | Backend Reliability Lead | `yor_lifecycle_ready == 1`, `heartbeat_age < 45s`, Alertmanager `resolved` notification. |
+| `YorLifecycleOverdue` | Warning | Jobs pending past `available_at` (>300s) or active leases expired. | Check worker pool capacity, handler concurrency, and database locks. | Backend Reliability Lead | `yor_lifecycle_oldest_overdue_seconds == 0`, `yor_lifecycle_expired_leases == 0`. |
+| `YorLifecycleStalled` | Critical | Active lifecycle handler executing >300s without progress. | Inspect worker logs for stuck external call; initiate bounded graceful shutdown; handler aborts via `AbortSignal`. | Backend Reliability Lead | Stalled handler terminates, job reclaims cleanly, `yor_lifecycle_oldest_running_seconds == 0`. |
+| `YorLifecycleDeadLetters` | Critical | Background job retries exhausted (8 attempts reached) or lease expired at terminal attempt. | Run `lifecycle-jobs.ts inspect`; diagnose failure reason; fix root cause before replay. | Operations Lead | Safe replay completed with audit reason in `background_job_replays`; `yor_lifecycle_dead_letters == 0`. |
+| `YorLifecycleCleanupStale` | Warning | No successful account/media cleanup cycle for >600s. | Check media/account cleanup handler execution and storage provider availability. | Platform Engineer | `yor_lifecycle_last_cleanup_timestamp_seconds` updated; alert resolves. |
+| `YorLifecycleRecoveryFailures` | Warning | Background worker encountered lease extension or dependency failure. | Check datastore latency, connection pool saturation, and network stability. | Platform Engineer | `increase(yor_lifecycle_recovery_failures_total[10m]) == 0`. |
+| `YorApiMetricsUnavailable` | Critical | Prometheus unable to scrape `/api/metrics` for >2m. | Check API container health, port 4000 reachability, and `metrics_bearer_token` secret mount. | Platform Engineer | Scrape returns HTTP 200 with valid Prometheus metrics; `up{job="yor-api"} == 1`. |
+| `YorSharedMetricsStoreUnavailable` | Warning | Redis cluster metrics store offline; API falling back to local memory counters. | Check Redis container status, ping Redis, verify password in `REDIS_URL`. | Platform Engineer | Redis connectivity restored; `yor_http_metrics_shared_store_up == 1`. |
+| `YorBackgroundJobsFailing` | Warning | Notification or feed worker job failures increasing over trailing 10m. | Inspect `notification_delivery_state` and provider (Resend/WebPush) error codes. | Backend Reliability Lead | Provider recovered or bad input quarantined; `increase(yor_worker_failed_jobs_total[10m]) == 0`. |
+| `YorAnalyticsRollupFailed` | Warning | Analytics daily rollup job failed during execution. | Check `journalctl -u yor-talks-analytics.service` and `product_analytics_job_runs` error code. | Data Platform Owner | Re-run `analytics:rollup` completes successfully with `status='succeeded'`. |
+| `YorAnalyticsRollupStale` | Warning | No successful analytics rollup in >26 hours. | Verify `yor-talks-analytics.timer` is enabled and triggered; run manually if needed. | Data Platform Owner | `yor_analytics_rollup_last_success_timestamp_seconds` updated to today's epoch. |
+| `YorDatabaseBackupStale` | Critical | No successful off-host encrypted backup recorded in >25 hours. | Check `yor-talks-backup.timer`, disk space, rclone remote credentials and provider quota. | Operations Lead | New encrypted backup uploaded to remote; `yor_backup_last_success_timestamp_seconds` updated. |
+| `YorDatabaseBackupLastRunFailed` | Warning | Most recent backup script run exited with failure. | Inspect backup log/journal; verify local staging directory and age recipient key. | Operations Lead | Manual/scheduled backup succeeds; `yor_backup_last_run_success == 1`. |
+| `YorHostDiskSpaceLow` | Warning | Root filesystem has <15% free disk space. | Inspect container volume usage, Docker log sizes (`journalctl --vacuum-time`), prune unused images. | Infrastructure Lead | Root filesystem free space > 20%. |
+| `YorHostMemoryLow` | Warning | Available host memory is below 10%. | Identify top memory consumers (`top`/`ps`); restart leaky containers if necessary. | Infrastructure Lead | Available memory > 15%. |
+| `YorTlsCertificateExpiringSoon` | Warning | Ingress TLS certificate will expire in <15 days. | Check Caddy automated ACME renewal logs; verify port 80/443 reachability for ACME challenge. | Infrastructure Lead | TLS certificate renewed; expiration > 30 days. |
+| `YorTlsCertificateExpiringCritical` | Critical | Ingress TLS certificate will expire in <3 days. | Trigger manual certificate renewal (`caddy reload` or force renew); inspect DNS and CA rate limits. | Infrastructure Lead | TLS certificate renewed and reloaded; alert clears. |
 
-### Lifecycle inspection and recovery
+### Protected diagnostics locations and inspection commands
 
-Readiness requires a fresh, healthy, non-stopping lifecycle heartbeat with all
-required handlers and bounded active work. `/api/readyz` exposes
-`details.lifecycle`; `/api/metrics` includes the bounded `yor_lifecycle_*`
-series for heartbeat age, oldest overdue/running work, expired leases, dead
-letters, last progress/cleanup and recovery failures. A process that merely
-continues to emit heartbeats while its handler stalls is insufficient.
+1. **API readiness and dependencies**:
+   ```bash
+   curl -fsS http://127.0.0.1:4000/api/readyz | jq .
+   ```
+   *Protected boundary*: Internal port only (unpublished in production Compose). Returns detailed status for database, Redis, and lifecycle (`details.lifecycle`).
 
-Use approved database credentials and a reviewed source checkout with frozen
-dependencies in a protected operator environment. The source CLI reports at
-most 100 noncomplete jobs and omits job payloads:
+2. **Authenticated application metrics**:
+   ```bash
+   curl -fsS -H "Authorization: Bearer $(cat /run/secrets/metrics_bearer_token)" http://127.0.0.1:4000/api/metrics
+   ```
+   *Protected boundary*: Secret file `/run/secrets/metrics_bearer_token` (mode 0600, root-owned with reader ACLs). Unauthenticated requests return 401.
 
-```bash
-# Load the explicitly approved DATABASE_URL through the normal secret mechanism.
-corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/lifecycle-jobs.ts inspect
-```
+3. **Lifecycle job inspection (payloads scrubbed)**:
+   ```bash
+   corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/lifecycle-jobs.ts inspect
+   ```
+   *Protected boundary*: Bounds output to at most 100 noncomplete jobs. Never prints user IDs, message text, tokens, or job payloads.
 
-Diagnose the failed dependency or handler, confirm publication revocation and
-lease ownership, then recover the dependency or restart the worker as required.
-Only dead jobs without a live or ambiguous lease may be replayed. A legacy
-terminal lease proven expired by the database clock is cleared atomically under
-the row lock, fencing the old worker and preserving replay audit. A future
-lease or a token with no expiry remains blocked for inspection. Record the
-incident and use a machine reason containing 3–80 letters, digits or underscores:
+4. **Notification delivery inspection**:
+   ```bash
+   corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/notification-delivery.ts inspect
+   ```
+   *Protected boundary*: Displays only notification UUIDs, attempt counts, machine error codes, and delivery status. Omits recipient emails and push payloads.
 
-```bash
-# Set LIFECYCLE_JOB_ID to the reviewed dead-job UUID from inspect output.
-corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/lifecycle-jobs.ts replay "$LIFECYCLE_JOB_ID" provider_recovered
-```
+5. **Backup status and textfile metrics**:
+   ```bash
+   cat /metrics/yor-talks-backup.prom
+   rclone ls "$BACKUP_REMOTE" --config /etc/yor-talks/rclone.conf
+   ```
+   *Protected boundary*: Mounted in exporter container with mode 0644; rclone configuration stays 0600.
 
-Replay records the previous attempt count, error and operator reason in
-`background_job_replays` before scheduling a new attempt; preserve that history.
-Do not manually delete/reset jobs or steal active leases. Confirm the expected
-side effect, renewed cleanup/progress and readiness, then close the alert.
-The 8 October work also bounds lifecycle handlers and durable notification
-attempts; use the current hardening report for final source/test evidence before
-accepting their rollout. Redis transport retention does not replace the durable
-delivery-attempt authority or justify automatically retrying exhausted work.
+### Safe replay and recovery procedures
+
+- **Fencing rule**: Never replay a job with an active or ambiguous lease. A job must be strictly in `dead` status, or an expired lease must be cleared atomically under a row lock.
+- **Audit preservation**: Replay writes the job's previous attempt count, previous machine error code, operator reason, and timestamp into `background_job_replays`. Never delete or truncate this audit table.
+- **Machine reason validation**: Operator reasons must consist of 3-80 ASCII alphanumeric characters or underscores (e.g., `dependency_restored`, `provider_quota_reset`, `stalled_worker_restarted`).
+- **Replay commands**:
+  ```bash
+  # Lifecycle job safe replay:
+  corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/lifecycle-jobs.ts replay "$JOB_UUID" dependency_restored
+
+  # Notification delivery safe replay:
+  corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/notification-delivery.ts replay "$NOTIFICATION_UUID" provider_recovered
+  ```
+
+### Escalation hierarchy and on-call owners
+
+1. **Level 1 (Triage & First Response)**: Operations On-Call / Platform Engineer (`ops@yor-talks.internal`). Responsible for inspecting container state, verifying `/api/readyz`, checking secret permissions, and executing standard runbook recovery within 15 minutes.
+2. **Level 2 (Technical Escalation)**: Backend Reliability Lead (`backend-leads@yor-talks.internal`). Responsible for dead-letter diagnosis, stuck worker thread dumps, database query deadlock resolution, and provider outage handling.
+3. **Level 3 (Incident Authority & Acceptance)**: Production Release Coordinator / Architect (`release-authority@yor-talks.internal`). Responsible for signing off on service rollback decisions, data restore promotions, and closing Sev-1/Sev-2 incidents.
+
+### Evidence required before closing an incident
+
+An incident cannot be marked resolved merely because an alert stopped firing or a container was restarted. The following four artifacts are mandatory before closing:
+1. **Target metric confirmation**: Scraped metric series must be within healthy bounds for at least two consecutive scrape intervals (e.g. `yor_lifecycle_ready == 1`, `yor_lifecycle_dead_letters == 0`, `yor_http_metrics_shared_store_up == 1`).
+2. **Alertmanager resolution receipt**: Receiver log must confirm receipt of the matching `resolved` payload from Alertmanager.
+3. **Audit trail entry**: For dead-letter or worker recovery, confirm that `background_job_replays` records the corresponding replay row with the operator machine reason and historical attempts.
+4. **Post-recovery `/api/readyz` check**: Clean HTTP 200 receipt from `/api/readyz` showing all subsystems green (`database: true`, `redis: true`, `lifecycle.ready: true`).
 
 ## 5. Backups and recovery
 
