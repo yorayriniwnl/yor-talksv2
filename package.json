@@ -61,6 +61,7 @@
     "contract:check": "node ./scripts/generate-api-contract.mjs --check",
     "design:check": "node ./scripts/check-design-tokens.mjs",
     "production-config:check": "node ./scripts/check-production-config.mjs",
+    "deployment-config:validate": "node ./ops/validate-deployment-config.mjs",
     "test:e2e": "playwright test",
     "test:unit": "node --test tests/*.test.mjs",
     "smoke": "node ./ops/smoke-test.mjs",

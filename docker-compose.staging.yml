@@ -2,13 +2,21 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-yor_talks}
-      POSTGRES_USER: ${POSTGRES_USER:-yor_talks}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-yor_talks_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-yor_talks_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.staging}
     volumes:
-      - postgres_data_production:/var/lib/postgresql/data
+      - postgres_data_staging:/var/lib/postgresql/data
     networks:
-      - backend
+      - staging_backend
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -18,13 +26,21 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.staging}"]
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.staging}
     volumes:
-      - redis_data_production:/data
+      - redis_data_staging:/data
     networks:
-      - backend
+      - staging_backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
     healthcheck:
       test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 10s
@@ -38,11 +54,11 @@ services:
     command: ["pnpm", "--filter", "@workspace/db", "migrate:production"]
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
-      CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
-      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.production}
-      PUBLIC_BETA: ${PUBLIC_BETA:-true}
-      TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.staging}
+      CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.staging}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.staging}
+      PUBLIC_BETA: ${PUBLIC_BETA:-false}
+      TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.staging}
       MINIMUM_AGE: ${MINIMUM_AGE:-18}
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
@@ -50,7 +66,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - backend
+      - staging_backend
     restart: "no"
 
   api:
@@ -60,22 +76,22 @@ services:
     environment:
       PORT: 4000
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
-      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.production}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.production}
-      CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
-      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.staging}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.staging}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.staging}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.staging}
+      CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.staging}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.staging}
       METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_bearer_token
-      PUBLIC_BETA: ${PUBLIC_BETA:-true}
-      TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.production}
+      PUBLIC_BETA: ${PUBLIC_BETA:-false}
+      TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.staging}
       MINIMUM_AGE: ${MINIMUM_AGE:-18}
-      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:?Set ALLOWED_EMAIL_DOMAINS in .env.staging for staging test audience}
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
-      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.staging}
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
-      CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set CLIENT_ORIGIN in .env.production}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set CLIENT_ORIGIN in .env.staging}
       AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -138,24 +154,32 @@ services:
       WEB_PUSH_VAPID_SUBJECT: ${WEB_PUSH_VAPID_SUBJECT:-}
       WEB_PUSH_ENABLED: ${WEB_PUSH_ENABLED:-false}
       RTC_CALLS_ENABLED: ${RTC_CALLS_ENABLED:-false}
-      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:?Set LEGAL_OPERATOR_NAME in .env.production}
-      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:?Set LEGAL_OPERATOR_ADDRESS in .env.production}
-      LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:?Set LEGAL_EFFECTIVE_DATE in .env.production}
-      LEGAL_GOVERNING_LAW: ${LEGAL_GOVERNING_LAW:?Set LEGAL_GOVERNING_LAW in .env.production}
-      PRIVACY_CONTACT_EMAIL: ${PRIVACY_CONTACT_EMAIL:?Set PRIVACY_CONTACT_EMAIL in .env.production}
-      SUPPORT_EMAIL: ${SUPPORT_EMAIL:?Set SUPPORT_EMAIL in .env.production}
-      GRIEVANCE_OFFICER_NAME: ${GRIEVANCE_OFFICER_NAME:?Set GRIEVANCE_OFFICER_NAME in .env.production}
-      GRIEVANCE_CONTACT_EMAIL: ${GRIEVANCE_CONTACT_EMAIL:?Set GRIEVANCE_CONTACT_EMAIL in .env.production}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:?Set LEGAL_OPERATOR_NAME in .env.staging}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:?Set LEGAL_OPERATOR_ADDRESS in .env.staging}
+      LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:?Set LEGAL_EFFECTIVE_DATE in .env.staging}
+      LEGAL_GOVERNING_LAW: ${LEGAL_GOVERNING_LAW:?Set LEGAL_GOVERNING_LAW in .env.staging}
+      PRIVACY_CONTACT_EMAIL: ${PRIVACY_CONTACT_EMAIL:?Set PRIVACY_CONTACT_EMAIL in .env.staging}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:?Set SUPPORT_EMAIL in .env.staging}
+      GRIEVANCE_OFFICER_NAME: ${GRIEVANCE_OFFICER_NAME:?Set GRIEVANCE_OFFICER_NAME in .env.staging}
+      GRIEVANCE_CONTACT_EMAIL: ${GRIEVANCE_CONTACT_EMAIL:?Set GRIEVANCE_CONTACT_EMAIL in .env.staging}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
     expose:
       - "4000"
     ports:
-      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+      - "127.0.0.1:${API_HOST_PORT:-4001}:4000"
     networks:
-      - edge
-      - backend
+      - staging_edge
+      - staging_backend
     secrets:
       - metrics_bearer_token
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1536M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -175,21 +199,21 @@ services:
       context: .
       dockerfile: ops/backup/Dockerfile
     environment:
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
-      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?Set BACKUP_AGE_RECIPIENT in .env.production}
-      BACKUP_REMOTE: ${BACKUP_REMOTE:?Set BACKUP_REMOTE in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.staging}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?Set BACKUP_AGE_RECIPIENT in .env.staging}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:?Set BACKUP_REMOTE in .env.staging}
       BACKUP_DIR: /backups
       BACKUP_METRICS_FILE: /metrics/yor-talks-backup.prom
-      BACKUP_LOCAL_RETENTION_DAYS: ${BACKUP_LOCAL_RETENTION_DAYS:-14}
+      BACKUP_LOCAL_RETENTION_DAYS: ${BACKUP_LOCAL_RETENTION_DAYS:-7}
     volumes:
-      - backup_staging:/backups
-      - backup_metrics:/metrics
+      - backup_staging_data:/backups
+      - backup_metrics_staging:/metrics
     secrets:
       - source: rclone_config
         target: /root/.config/rclone/rclone.conf
     networks:
-      - backend
-      - edge
+      - staging_backend
+      - staging_edge
     depends_on:
       postgres:
         condition: service_healthy
@@ -202,9 +226,14 @@ services:
       - --collector.textfile
       - --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
     volumes:
-      - backup_metrics:/var/lib/node_exporter/textfile_collector:ro
+      - backup_metrics_staging:/var/lib/node_exporter/textfile_collector:ro
     networks:
-      - backend
+      - staging_backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
     restart: unless-stopped
 
   prometheus:
@@ -212,16 +241,21 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=90d
+      - --storage.tsdb.retention.time=14d
       - --web.enable-lifecycle
     volumes:
       - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus_data:/prometheus
+      - prometheus_data_staging:/prometheus
     secrets:
       - metrics_bearer_token
     networks:
-      - backend
+      - staging_backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     depends_on:
       - api
       - alertmanager
@@ -233,21 +267,24 @@ services:
       context: .
       dockerfile: ops/prometheus/Dockerfile.alertmanager
     environment:
-      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.production}
-      ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.production}
+      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.staging}
+      ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.staging}
     volumes:
-      - alertmanager_data:/alertmanager
+      - alertmanager_data_staging:/alertmanager
     secrets:
       - source: alertmanager_webhook_password
         target: /run/secrets/alertmanager_webhook_password
     networks:
-      - edge
-      - backend
+      - staging_edge
+      - staging_backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
     restart: unless-stopped
 
   web:
-    environment:
-      TRUSTED_EDGE_CIDRS: ${TRUSTED_EDGE_CIDRS:-}
     build:
       context: .
       dockerfile: social/Dockerfile
@@ -257,7 +294,7 @@ services:
         VITE_REALTIME_ENABLED: ${VITE_REALTIME_ENABLED:-true}
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
         VITE_RTC_ICE_SERVERS: ${VITE_RTC_ICE_SERVERS:-[{"urls":"stun:stun.l.google.com:19302"}]}
-        VITE_PUBLIC_BETA: ${PUBLIC_BETA:-true}
+        VITE_PUBLIC_BETA: ${PUBLIC_BETA:-false}
         VITE_TERMS_VERSION: ${TERMS_VERSION:-}
         VITE_MINIMUM_AGE: ${MINIMUM_AGE:-18}
         VITE_LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
@@ -273,10 +310,20 @@ services:
         VITE_WEB_PUSH_ENABLED: ${WEB_PUSH_ENABLED:-false}
         VITE_WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
         VITE_RTC_CALLS_ENABLED: ${RTC_CALLS_ENABLED:-false}
+    environment:
+      TRUSTED_EDGE_CIDRS: ${TRUSTED_EDGE_CIDRS:-}
     ports:
-      - "127.0.0.1:${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-8081}:80"
     networks:
-      - edge
+      - staging_edge
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
     depends_on:
       api:
         condition: service_healthy
@@ -288,22 +335,22 @@ services:
     restart: unless-stopped
 
 networks:
-  edge:
-  backend:
+  staging_edge:
+  staging_backend:
     internal: true
 
 secrets:
   metrics_bearer_token:
-    file: ${METRICS_BEARER_TOKEN_FILE:?Set METRICS_BEARER_TOKEN_FILE in .env.production}
+    file: ${METRICS_BEARER_TOKEN_FILE:?Set METRICS_BEARER_TOKEN_FILE in .env.staging}
   rclone_config:
-    file: ${RCLONE_CONFIG_FILE:?Set RCLONE_CONFIG_FILE in .env.production}
+    file: ${RCLONE_CONFIG_FILE:?Set RCLONE_CONFIG_FILE in .env.staging}
   alertmanager_webhook_password:
-    file: ${ALERTMANAGER_WEBHOOK_PASSWORD_FILE:?Set ALERTMANAGER_WEBHOOK_PASSWORD_FILE in .env.production}
+    file: ${ALERTMANAGER_WEBHOOK_PASSWORD_FILE:?Set ALERTMANAGER_WEBHOOK_PASSWORD_FILE in .env.staging}
 
 volumes:
-  postgres_data_production:
-  redis_data_production:
-  backup_staging:
-  backup_metrics:
-  prometheus_data:
-  alertmanager_data:
+  postgres_data_staging:
+  redis_data_staging:
+  backup_staging_data:
+  backup_metrics_staging:
+  prometheus_data_staging:
+  alertmanager_data_staging:

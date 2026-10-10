@@ -7,6 +7,7 @@ dist.bak
 .env.*
 !.env.example
 !ops/.env.production.example
+!ops/.env.staging.example
 *.bak
 *.tmp
 update-*.js
