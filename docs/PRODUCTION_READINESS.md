@@ -1,6 +1,37 @@
 # Production Readiness
 
-Status as of 9 October: repository and isolated container checks pass; the protected frontend preview is verified. Full production launch remains blocked by the gates below.
+Status as of 10–11 October 2026: repository and isolated candidate checks pass; verified candidate revision is **`aca6ccb`** (`feat(release): integrate staging hosting target preparation and release-scope verification into unified release candidate`). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
+
+### Unified Release Candidate Acceptance (Revision `aca6ccb`)
+
+1. **Repository & Local Release Verification:**
+   - **Root unit tests (`pnpm test:unit`):** **104 passed**, 0 failed, 0 skipped.
+   - **Browser E2E acceptance (`pnpm test:e2e`):** **73 passed**, 0 failed, 0 skipped (production Vite preview mode, 0 retries).
+   - **Contract drift checks (`pnpm contract:check`):** Verified 237 operations across 200 paths, zero drift.
+   - **Design token check (`pnpm design:check`):** YOR design tokens valid.
+   - **Production config wiring (`pnpm production-config:check`):** Covers 70 schema keys.
+   - **Production dependency audit (`pnpm audit --prod`):** No known vulnerabilities found.
+   - **Workspace builds & typechecks:** `@workspace/db` (clean), `lib/api-zod` (clean), `@workspace/api-server` (clean typecheck and build), `@workspace/social` (clean typecheck and Vite production client build).
+   - **Deployment configuration validation (`pnpm deployment-config:validate`):** Fail-closed verification with secret entropy, placeholder detection, and permission checks.
+
+2. **Mobile Performance Acceptance:**
+   - **10 October repair (`9ceaf52`):** Embedded accessible shell, resolved long-task blocking from Framer Motion over-instantiation under reduced motion, gated background canvas RAF, and removed duplicate keyframe tags.
+   - **Throttled mobile emulation acceptance (3/3 passed):**
+     - **FCP:** 1,884 / 1,880 / 1,848 ms ($\le 2,500$ ms budget) — **Passed 3/3**
+     - **LCP:** 3,068 / 3,088 / 3,088 ms ($\le 4,000$ ms budget) — **Passed 3/3**
+     - **Long-task blocking:** 178 / 228 / 206 ms ($\le 300$ ms budget) — **Passed 3/3**
+     - **JS Gzip:** 273,007 bytes ($\le 358,400$ bytes budget) — **Passed 3/3**
+     - **CSS Gzip:** 62,177 bytes ($\le 102,400$ bytes budget) — **Passed 3/3**
+     - **Exit code:** 0 / 0 / 0 (All passed). Evidence in `docs/hardening/mobile-performance-unified-2026-10-10.md`.
+
+3. **Off-Host Backup & Disaster Recovery Acceptance:**
+   - **10 October operational drill (`c885e29`):** Full 101-table catalog, 270 indexes, 302 constraints, release migration ledgers, asymmetric `age` encryption, remote WebDAV retrieval over TCP HTTP, and transactional restore with rollback. Evidence in `docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md`.
+
+4. **Release-Scope & Policy Guard Alignment:**
+   - **Scope determination (`9450914`):** Strictly bounded as **Adult (18+) Closed Testing Beta**. Age 18 strictly enforced, closed-audience allowlists active, and unaccepted capabilities (payments, live rooms, web push, RTC direct calls, creator memberships) fail closed before database queries. Evidence in `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md`.
+
+5. **Live Origin Smoke Test Result:**
+   - Live smoke test executed against `https://yor-talks.vercel.app` with `SMOKE_SYNTHETIC_PROVIDERS=false` exits **1**. Vercel serves static frontend assets (200), but lacks CSP headers and returns HTTP 500 (`FUNCTION_INVOCATION_FAILED`) on `/api/readyz` because Vercel serverless execution cannot host persistent PostgreSQL, Redis, Socket.IO, BullMQ, or the in-container ffmpeg decoder. Promoting this static preview to production without a persistent backend target remains explicitly blocked.
 
 ### Restricted-session enforcement (10 October integration candidate)
 
@@ -14,7 +45,7 @@ Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/
 
 The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
 
-The [current mobile measurements](hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+The historical mobile measurements from 9 October (`hardening/mobile-performance-unified-2026-10-09.json`) recorded earlier FCP/blocking failures prior to the 10 October repair (`9ceaf52`). Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
 
 Earlier phase-specific evidence follows; it does not replace the current result above.
 
