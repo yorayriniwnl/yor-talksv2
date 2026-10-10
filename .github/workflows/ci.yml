@@ -170,7 +170,7 @@ jobs:
 
       - name: Smoke test production container stack
         env:
-          WEB_PORT: 127.0.0.1:18080
+          WEB_PORT: '18080'
         run: |
           set -euo pipefail
           compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml)
