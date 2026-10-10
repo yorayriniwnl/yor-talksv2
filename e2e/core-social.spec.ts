@@ -811,11 +811,36 @@ for (const mode of ['reel', 'story'] as const) test(`Studio ${mode} publishes on
   if (mode === 'story') await studio.getByRole('button', { name: 'Video Story mode', exact: true }).click();
   await studio.locator('#studio-content-category').selectOption('technology');
   await page.route('**/api/videos/50000000-0000-4000-8000-000000000143/comments', route => json(route, []));
+  await page.route('**/api/videos/50000000-0000-4000-8000-000000000143', route => json(route, {
+    id: '50000000-0000-4000-8000-000000000143',
+    authorId: user.id,
+    title: 'New Cinematic Reel ✨',
+    mediaUrl: `/api/media/${mediaId}/content?token=synthetic.signed`,
+    videoUrl: `/api/media/${mediaId}/content?token=synthetic.signed`,
+    thumbnailUrl: `/api/media/${mediaId}/content?token=synthetic.poster&variant=poster`,
+    createdAt: user.createdAt,
+    views: 0,
+    likes: 0,
+    type: 'short',
+    contentCategory: 'technology',
+    contentRating: 'regular',
+  }));
   await page.route(`**/api/${mode === 'reel' ? 'videos' : 'stories'}`, route => {
     expect(route.request().method()).toBe('POST'); const payload = route.request().postDataJSON();
     expect(payload.mediaId).toBe(mediaId); expect(payload.mediaUrl).toBeUndefined(); expect(payload.videoUrl).toBeUndefined();
     expect(payload.contentCategory).toBe('technology'); expect(payload.type).toBe(mode === 'reel' ? 'short' : 'video'); publications++;
-    return json(route, { id: '50000000-0000-4000-8000-000000000143', authorId: user.id, ...payload, mediaUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, videoUrl: `/api/media/${mediaId}/content?token=synthetic.signed`, createdAt: user.createdAt, expiresAt: '2026-08-29T09:00:00.000Z', views: [], likes: 0 });
+    return json(route, {
+      id: '50000000-0000-4000-8000-000000000143',
+      authorId: user.id,
+      ...payload,
+      mediaUrl: `/api/media/${mediaId}/content?token=synthetic.signed`,
+      videoUrl: `/api/media/${mediaId}/content?token=synthetic.signed`,
+      thumbnailUrl: `/api/media/${mediaId}/content?token=synthetic.poster&variant=poster`,
+      createdAt: user.createdAt,
+      expiresAt: '2026-08-29T09:00:00.000Z',
+      views: [],
+      likes: 0,
+    });
   });
   await studio.getByRole('button', { name: 'Record video', exact: true }).click();
   await expect(studio.getByText('REC 1s / 30s', { exact: true })).toBeVisible();
