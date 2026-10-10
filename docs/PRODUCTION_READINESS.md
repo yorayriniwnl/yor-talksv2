@@ -1,8 +1,8 @@
 # Production Readiness
 
-Status as of 10–11 October 2026: repository and isolated candidate checks pass; verified candidate revision is **`aca6ccb`** (`feat(release): integrate staging hosting target preparation and release-scope verification into unified release candidate`). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
+Status as of 11 October 2026: repository, isolated candidate checks, and GitHub Actions CI pass with 100% green status; verified candidate revision is **`28cd967`** (`fix(ci): pass numeric WEB_PORT to production compose stack smoke test`). Verified passing CI run: [38086946998](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38086946998) (420 API tests, 73 browser E2E tests, 104 unit tests, all container and recovery drills passed). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
 
-### Unified Release Candidate Acceptance (Revision `aca6ccb`)
+### Unified Release Candidate Acceptance (Revision `28cd967`)
 
 1. **Repository & Local Release Verification:**
    - **Root unit tests (`pnpm test:unit`):** **104 passed**, 0 failed, 0 skipped.
