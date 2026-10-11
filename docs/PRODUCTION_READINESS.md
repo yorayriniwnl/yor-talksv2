@@ -1,8 +1,8 @@
 # Production Readiness
 
-Status as of 11 October 2026: repository, isolated candidate checks, and GitHub Actions CI pass with 100% green status; verified candidate revision is **`28cd967`** (`fix(ci): pass numeric WEB_PORT to production compose stack smoke test`). Verified passing CI run: [38086946998](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38086946998) (420 API tests, 73 browser E2E tests, 104 unit tests, all container and recovery drills passed). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
+Status as of 11 October 2026: application-code revision **`30fb713`** passed [CI run 38087635379](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38087635379) (420 API tests, 73 browser E2E tests, 104 unit tests, and container and recovery checks). At the time of this update, branch revision **`7eedeec`** added documentation only; its Vercel check passed, while the check on `30fb713` reported a build-rate-limit failure. The newer check establishes a frontend build/preview result only, not backend runtime acceptance. Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
 
-### Unified Release Candidate Acceptance (Revision `28cd967`)
+### Unified Release Candidate Acceptance (Application Revision `30fb713`)
 
 1. **Repository & Local Release Verification:**
    - **Root unit tests (`pnpm test:unit`):** **104 passed**, 0 failed, 0 skipped.
@@ -30,7 +30,7 @@ Status as of 11 October 2026: repository, isolated candidate checks, and GitHub 
 4. **Release-Scope & Policy Guard Alignment:**
    - **Scope determination (`9450914`):** Strictly bounded as **Adult (18+) Closed Testing Beta**. Age 18 strictly enforced, closed-audience allowlists active, and unaccepted capabilities (payments, live rooms, web push, RTC direct calls, creator memberships) fail closed before database queries. Evidence in `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md`.
 
-5. **Live Origin Smoke Test Result:**
+5. **Historical Live Origin Smoke Test:**
    - Live smoke test executed against `https://yor-talks.vercel.app` with `SMOKE_SYNTHETIC_PROVIDERS=false` exits **1**. Vercel serves static frontend assets (200), but lacks CSP headers and returns HTTP 500 (`FUNCTION_INVOCATION_FAILED`) on `/api/readyz` because Vercel serverless execution cannot host persistent PostgreSQL, Redis, Socket.IO, BullMQ, or the in-container ffmpeg decoder. Promoting this static preview to production without a persistent backend target remains explicitly blocked.
 
 ### Restricted-session enforcement (10 October integration candidate)
@@ -43,7 +43,7 @@ Status as of 11 October 2026: repository, isolated candidate checks, and GitHub 
 
 Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
 
-The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) previously passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. The Vercel check for documentation-only revision `7eedeec` passed. These checks cover the static frontend; API and Socket.IO runtime acceptance remains open, and the production domain was not promoted.
 
 The historical mobile measurements from 9 October (`hardening/mobile-performance-unified-2026-10-09.json`) recorded earlier FCP/blocking failures prior to the 10 October repair (`9ceaf52`). Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
 
