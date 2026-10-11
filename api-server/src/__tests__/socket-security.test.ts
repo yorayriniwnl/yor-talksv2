@@ -134,6 +134,25 @@ test("production socket blocks message actions when current messaging capability
   assert.deepEqual({ event: result.name, sends: state.sent }, { event: "message:error", sends: 0 });
 });
 
+test("message delivery rechecks each recipient's current messaging capability", async (t) => {
+  t.mock.method(EligibilityService.prototype, "decisionFor", async (id: string) => ({
+    experience: "teen_13_17", activated: true,
+    capabilities: { social: true, publish: true, messaging: id === userId, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "regular", policyVersions: ["fixture:1"], revision: "2", reason: null,
+    publicBrowsingAllowed: true,
+  } satisfies EligibilityDecision));
+  const { connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  const sender = await connect(userId);
+  const recipient = await connect(recipientId);
+  let recipientMessages = 0;
+  recipient.on("message:receive", () => recipientMessages++);
+  const sent = event(sender, "message:sent");
+  sender.emit("message:send", { recipientId, content: "recipient has no messaging grant" });
+  await sent;
+  assert.equal(recipientMessages, 0);
+});
+
 test("connected sockets recheck consent and revocation before an action", async (t) => {
   const { state, connect } = await fixture(t);
   const client = await connect();

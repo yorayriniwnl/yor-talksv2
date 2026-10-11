@@ -1,7 +1,7 @@
 import { MediaLifecycleError } from "../services/media-service.js";
 import { hydrateMediaValue } from "../services/media-response.js";
 import { type Request, type Response } from "express";
-import { getIo } from "../lib/realtime.js";
+import { emitToRoom, emitToUser } from "../lib/realtime.js";
 import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageUnavailableError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
@@ -10,11 +10,10 @@ export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   private async publish(conversationId:string,userId:string,event:string,message:unknown):Promise<void> {
-    const io=getIo();if(!io)return;
     const members=await this.messageService.getConversationMemberIds(conversationId,userId);
     for(const memberId of members){
       const current=await hydrateMediaValue(message,undefined,memberId);
-      if(current)io.to(memberId).emit(event,current);
+      if(current)await emitToUser(memberId,event,current);
     }
   }
 
@@ -77,14 +76,10 @@ export class MessageController {
       }
       const group = await this.messageService.createGroupChat(req.user?.id ?? "", memberIds, title);
       
-      const io = getIo();
-      if (io) {
-        // Invite members to room
-        for (const id of [req.user?.id, ...memberIds]) {
-          io.in(id!).socketsJoin(`conversation:${group.id}`);
-          io.to(id!).emit("conversation:created", group);
-        }
-      }
+      // Members join through the authenticated conversation:join event. Do not
+      // silently place every connected device in a governed room here.
+      for (const id of new Set([req.user?.id, ...memberIds].filter((value): value is string => typeof value === "string")))
+        await emitToUser(id, "conversation:created", group);
       
       return res.status(201).json(createResponse("Group chat created", group));
     } catch (error) {
@@ -131,7 +126,7 @@ export class MessageController {
     try {
       const conversation = await this.messageService.setVanishMode(conversationId, req.user?.id ?? "", req.body.enabled);
       if (!conversation) return res.status(404).json(createResponse("Conversation not found", null, {}, ["Conversation not found"]));
-      getIo()?.to(`conversation:${conversationId}`).emit("conversation:vanish:update", conversation);
+      await emitToRoom(`conversation:${conversationId}`, "conversation:vanish:update", conversation);
       return res.status(200).json(createResponse("Vanish mode updated", conversation));
     } catch (error) {
       if (error instanceof UnauthorizedError) return res.status(403).json(createResponse("Cannot update vanish mode", null, {}, [error.message]));
@@ -146,17 +141,14 @@ export class MessageController {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
     
-    const io = getIo();
-    if (io) {
-      if (message.deletedAt) {
-        await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
-      } else {
-        io.to(`conversation:${message.conversationId}`).emit("message:seen:update", {
-          messageId,
-          userId: req.user?.id,
-          seenAt: message.seenAt,
-        });
-      }
+    if (message.deletedAt) {
+      await this.publish(message.conversationId,req.user?.id??'',"message:update",message);
+    } else {
+      await emitToRoom(`conversation:${message.conversationId}`, "message:seen:update", {
+        messageId,
+        userId: req.user?.id,
+        seenAt: message.seenAt,
+      });
     }
 
     return res.status(200).json(createResponse("Message marked as seen", message));

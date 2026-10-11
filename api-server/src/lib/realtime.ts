@@ -1,16 +1,37 @@
-import type { Server } from "socket.io";
+export type RealtimeTargetKind = "user" | "room" | "socket";
+export type AuthorizedRealtimeDispatcher = (
+  kind: RealtimeTargetKind,
+  target: string,
+  event: string,
+  payload: unknown,
+  excludeSocketId?: string,
+) => Promise<number>;
 
-let ioInstance: Server | null = null;
+let dispatcher: AuthorizedRealtimeDispatcher | null = null;
 
-export function setIo(io: Server): void {
-  ioInstance = io;
+export function setAuthorizedRealtimeDispatcher(next: AuthorizedRealtimeDispatcher | null): void {
+  dispatcher = next;
 }
 
-/** Emits to a user's room if the socket server is attached and that user is connected. No-op otherwise (e.g. in tests, or if nobody's listening). */
-export function emitToUser(userId: string, event: string, payload: unknown): void {
-  ioInstance?.to(userId).emit(event, payload);
+export function clearAuthorizedRealtimeDispatcher(current: AuthorizedRealtimeDispatcher): void {
+  if (dispatcher === current) dispatcher = null;
 }
 
-export function getIo(): Server | null {
-  return ioInstance;
+function dispatch(kind: RealtimeTargetKind, target: string, event: string, payload: unknown, excludeSocketId?: string): Promise<number> {
+  if (!dispatcher) return Promise.resolve(0);
+  // Delivery is best-effort for callers that publish domain events after commit.
+  // The configured dispatcher logs infrastructure failures and always fails closed.
+  return dispatcher(kind, target, event, payload, excludeSocketId).catch(() => 0);
+}
+
+export function emitToUser(userId: string, event: string, payload: unknown): Promise<number> {
+  return dispatch("user", userId, event, payload);
+}
+
+export function emitToRoom(room: string, event: string, payload: unknown, excludeSocketId?: string): Promise<number> {
+  return dispatch("room", room, event, payload, excludeSocketId);
+}
+
+export function emitToSocket(socketId: string, event: string, payload: unknown): Promise<number> {
+  return dispatch("socket", socketId, event, payload);
 }
