@@ -72,6 +72,7 @@ CREATE TABLE "comments" (
 	"author_id" uuid NOT NULL,
 	"parent_id" uuid,
 	"content" text NOT NULL,
+	"content_rating" text DEFAULT 'regular' NOT NULL,
 	"media_url" text,
 	"media_type" text,
 	"media_duration" integer,
@@ -584,6 +585,7 @@ CREATE TABLE "profile_comments" (
 	"profile_id" uuid NOT NULL,
 	"author_id" uuid NOT NULL,
 	"content" text NOT NULL,
+	"content_rating" text DEFAULT 'regular' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -908,6 +910,7 @@ CREATE TABLE "video_comments" (
 	"video_id" uuid NOT NULL,
 	"author_id" uuid NOT NULL,
 	"content" text NOT NULL,
+	"content_rating" text DEFAULT 'regular' NOT NULL,
 	"media_url" text,
 	"media_type" text,
 	"media_duration" integer,

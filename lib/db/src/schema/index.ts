@@ -127,6 +127,7 @@ export const commentsTable = pgTable("comments", {
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
   parentId: uuid("parent_id"), // Self-referencing for nested replies
   content: text("content").notNull(),
+  contentRating: text("content_rating").notNull().default("regular"),
   mediaUrl: text("media_url"),
   mediaType: text("media_type"),
   mediaDuration: integer("media_duration"),
@@ -147,6 +148,7 @@ export const profileCommentsTable = pgTable("profile_comments", {
   profileId: uuid("profile_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),
+  contentRating: text("content_rating").notNull().default("regular"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (t) => ({
@@ -543,6 +545,7 @@ export const videoCommentsTable = pgTable("video_comments", {
   videoId: uuid("video_id").references(() => videosTable.id, { onDelete: "cascade" }).notNull(),
   authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),
+  contentRating: text("content_rating").notNull().default("regular"),
   mediaUrl: text("media_url"),
   mediaType: text("media_type"),
   mediaDuration: integer("media_duration"),

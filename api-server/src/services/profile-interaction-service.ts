@@ -5,21 +5,40 @@ import { db } from "@workspace/db";
 import { profileCommentsTable, profileShowcasesTable } from "@workspace/db/schema";
 import { UserRepository } from "../repositories/user-repository.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { ContentSafetyService } from "./content-safety-service.js";
+import { EligibilityService } from "./eligibility-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 import type { ProfileCommentRecord, ProfileShowcaseRecord, UserRecord } from "../types/index.js";
 
 export class ProfileInteractionRequestError extends Error {}
 export class ProfileInteractionForbiddenError extends Error {}
 export class ProfileInteractionService {
-  constructor(private readonly userRepository = new UserRepository()) {}
+  constructor(
+    private readonly userRepository = new UserRepository(),
+    private readonly eligibilityService = new EligibilityService(),
+    private readonly contentSafetyService = new ContentSafetyService(userRepository, eligibilityService),
+  ) {}
 
   private async assertVisible(profileId: string, viewerId: string): Promise<UserRecord> {
     const profile = await this.userRepository.findById(profileId);
     if (!profile) throw new ProfileInteractionRequestError("Profile not found");
     if (profileId === viewerId) return profile;
+    if (["suspended", "deactivated", "deleted"].includes(profile.accountStatus ?? "active")) throw new ProfileInteractionForbiddenError("This profile is unavailable");
+    let minorProfile = false;
+    if (isEligibilityEnforcementEnabled()) {
+      if (!viewerId) throw new ProfileInteractionForbiddenError("This profile is unavailable");
+      const [viewerDecision, profileDecision] = await Promise.all([
+        this.eligibilityService.decisionFor(viewerId), this.eligibilityService.decisionFor(profileId),
+      ]);
+      if (!viewerDecision.activated || !viewerDecision.capabilities.social || !profileDecision.activated) {
+        throw new ProfileInteractionForbiddenError("This profile is unavailable");
+      }
+      minorProfile = profileDecision.experience !== "adult_18_plus";
+    }
     if (profile.blockedUsers?.includes(viewerId)) throw new ProfileInteractionForbiddenError("This profile is unavailable");
     const viewer = await this.userRepository.findById(viewerId);
     if (viewer?.blockedUsers?.includes(profileId)) throw new ProfileInteractionForbiddenError("This profile is unavailable");
-    const visibility = profile.privacy?.profileVisibility ?? (profile.settings?.privateAccount ? "private" : "public");
+    const visibility = minorProfile ? "private" : profile.privacy?.profileVisibility ?? (profile.settings?.privateAccount ? "private" : "public");
     if (visibility === "private" || (visibility === "followers" && !(await this.userRepository.isFollowing(viewerId, profileId)))) {
       throw new ProfileInteractionForbiddenError("Follow this profile to view its interactions");
     }
@@ -29,7 +48,8 @@ export class ProfileInteractionService {
   async listCommentsWithAuthors(profileId: string, viewerId: string) {
     await this.assertVisible(profileId, viewerId);
     const rows = await db.select().from(profileCommentsTable).where(eq(profileCommentsTable.profileId, profileId)).orderBy(asc(profileCommentsTable.createdAt));
-    return Promise.all(rows.map(async (comment) => ({ comment: comment as ProfileCommentRecord, author: await this.userRepository.findById(comment.authorId) })));
+    const visibleRows = await this.contentSafetyService.filterVisibleByAuthor(rows, viewerId, comment => comment.authorId);
+    return Promise.all(visibleRows.map(async (comment) => ({ comment: comment as ProfileCommentRecord, author: await this.userRepository.findById(comment.authorId) })));
   }
 
   async createComment(profileId: string, authorId: string, content: string) {

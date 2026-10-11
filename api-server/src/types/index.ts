@@ -128,6 +128,7 @@ export interface CommentRecord {
   id: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   mediaUrl?: string | null;
   mediaType?: "image" | "gif" | "audio" | null;
   mediaDuration?: number | null;
@@ -330,9 +331,9 @@ export interface ProfileCommentRecord {
   profileId: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   createdAt: string;
   updatedAt: string;
-  contentRating?: ContentRating;
 }
 
 export interface ProfileShowcaseRecord {
@@ -384,6 +385,7 @@ export interface VideoCommentRecord {
   videoId: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   mediaUrl?: string | null;
   mediaType?: "image" | "gif" | "audio" | null;
   mediaDuration?: number | null;
