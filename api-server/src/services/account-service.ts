@@ -119,7 +119,7 @@ export class AccountService {
       financialHistory,
       paymentOrders,
       marketplaceOrders,
-    },userId);
+    },userId,exportBoundary);
   }
 
   async deleteAccount(userId: string, password: string): Promise<boolean> {

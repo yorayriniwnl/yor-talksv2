@@ -17,7 +17,7 @@ type Context={entityId?:string;previewId?:string;avatarOwner?:string};
 /** Final publication boundary for text as well as media. Stale service results
  * are revalidated after any asynchronous hydration work, never resurfaced.
  * Preview gets the additional unread/sender boundary without adding receipts. */
-export async function currentMessageResponse<T>(value:T,viewerId?:string):Promise<T> {
+export async function currentMessageResponse<T>(value:T,viewerId?:string,visibilityBoundary?:Date):Promise<T> {
   const wanted=new Set<string>(),previews=new Set<string>(),conversations=new Set<string>();
   const isMessage=(item:Record<string,unknown>)=>typeof item.id==='string'&&/^[0-9a-f-]{36}$/i.test(item.id)
     &&typeof item.conversationId==='string'&&typeof item.content==='string';
@@ -33,12 +33,15 @@ export async function currentMessageResponse<T>(value:T,viewerId?:string):Promis
     }
   }
   visit(value);if(!wanted.size&&!conversations.size)return value;
+  const messageVisibilitySql=visibilityBoundary
+    ? "m.deleted_at IS NULL AND (m.expires_at IS NULL OR extract(epoch from m.expires_at) > extract(epoch from $3::timestamp))"
+    : MESSAGE_CURRENT_SQL;
   const [current,currentConversations]=await Promise.all([
     viewerId&&wanted.size?pool.query<{id:string;unread:boolean}>(`SELECT m.id,
     (${messagePreviewEntitledSql('$2')} AND m.sender_id<>$2::uuid AND (m.recipient_id IS DISTINCT FROM $2::uuid OR m.seen_at IS NULL)
       AND NOT EXISTS(SELECT 1 FROM message_reads mr WHERE mr.message_id=m.id AND mr.user_id=$2::uuid)) unread
-    FROM messages m WHERE m.id=ANY($1::uuid[]) AND ${MESSAGE_CURRENT_SQL} AND ${messageMembershipSql('$2')}`,
-    [[...wanted],viewerId]).then(result=>result.rows):Promise.resolve([]),
+    FROM messages m WHERE m.id=ANY($1::uuid[]) AND ${messageVisibilitySql} AND ${messageMembershipSql('$2')}`,
+    visibilityBoundary ? [[...wanted],viewerId,visibilityBoundary.toISOString()] : [[...wanted],viewerId]).then(result=>result.rows):Promise.resolve([]),
     viewerId&&conversations.size?pool.query<{id:string}>(`SELECT c.id FROM conversations c WHERE c.id=ANY($1::uuid[]) AND ${conversationAuthorizationSql('$2')}`,
       [[...conversations],viewerId]).then(result=>result.rows):Promise.resolve([]),
   ]);
@@ -58,9 +61,18 @@ export async function currentMessageResponse<T>(value:T,viewerId?:string):Promis
   }
   return filter(value)as T;
 }
+function accountExportBoundary(value:unknown):Date|undefined {
+  if(!value||typeof value!=='object'||Array.isArray(value))return undefined;
+  const row=value as Record<string,unknown>;
+  if(row.format==='yor-talks-account-export'&&typeof row.exportedAt==='string'){
+    const boundary=new Date(row.exportedAt);if(Number.isFinite(boundary.getTime()))return boundary;
+  }
+  return accountExportBoundary(row.data);
+}
 /** Only actual entity references, or an authenticated owner's completion DTO,
  * may mint URLs. A marker in free text/arbitrary JSON is never sufficient. */
 export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,'signedDeliveryUrl'|'signedPosterUrl'>,viewerId?:string):Promise<T> {
+  const visibilityBoundary=accountExportBoundary(value);
   const wanted=new Set<string>(),entities=new Set<string>();
   function context(item:Record<string,unknown>,parent:Context,key:string):Context {
     const id=typeof item.id==='string'?item.id:parent.entityId;
@@ -76,7 +88,7 @@ export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,
       for(const [childKey,child]of Object.entries(item))if(trusted(childKey))discover(child,childKey,scopeNext);
     }
   }
-  discover(value);if(!wanted.size)return currentMessageResponse(value,viewerId);
+  discover(value);if(!wanted.size)return currentMessageResponse(value,viewerId,visibilityBoundary);
   const safeEntities=[...entities].filter(id=>/^[0-9a-f-]{36}$/i.test(id));
   const [assets,references]=await Promise.all([
     pool.query<MediaAssetRow>(`SELECT * FROM media_assets WHERE id=ANY($1::uuid[]) AND status='approved' AND deletion_status='none'`,[[...wanted]]),
@@ -106,7 +118,7 @@ export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,
     }
     return item;
   }
-  return currentMessageResponse(transform(value)as T,viewerId);
+  return currentMessageResponse(transform(value)as T,viewerId,visibilityBoundary);
 }
 export const mediaResponse:RequestHandler=(req,res,next)=>{
   const json=res.json.bind(res);
