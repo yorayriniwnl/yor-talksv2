@@ -37,7 +37,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { toOwnUser } from "../utils/user-view.js";
 import { visibleMessagePredicate } from "../utils/message-visibility.js";
-import { currentMessageCondition, conversationMembershipCondition } from "../repositories/message-visibility.js";
+import { conversationMembershipCondition } from "../repositories/message-visibility.js";
 import { currentMessageResponse } from "./media-response.js";
 
 export class InvalidAccountPasswordError extends Error {}
@@ -61,8 +61,8 @@ export class AccountService {
       db.select().from(postsTable).where(eq(postsTable.authorId, userId)),
       db.select().from(commentsTable).where(eq(commentsTable.authorId, userId)),
       db.select().from(storiesTable).where(eq(storiesTable.authorId, userId)),
-      db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), currentMessageCondition(), conversationMembershipCondition(userId))),
-      db.select().from(messagesTable).where(and(ne(messagesTable.senderId, userId), currentMessageCondition(), conversationMembershipCondition(userId))),
+      db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), visibleMessagePredicate(exportBoundary), conversationMembershipCondition(userId))),
+      db.select().from(messagesTable).where(and(ne(messagesTable.senderId, userId), visibleMessagePredicate(exportBoundary), conversationMembershipCondition(userId))),
       db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
       db.select().from(storyReactionsTable).where(eq(storyReactionsTable.userId, userId)),
       db.select().from(postLikesTable).where(eq(postLikesTable.userId, userId)),
