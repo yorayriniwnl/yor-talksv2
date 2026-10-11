@@ -108,8 +108,8 @@ test('current teen ceiling filters story and note candidates before the SQL page
   await users.update(f.viewer.id, { settings: { ...f.viewer.settings, contentFilter: 'mature' } });
   const author = await f.create();
   const noteAuthors: UserRecord[] = [];
-  for (let i = 0; i < 105; i++) noteAuthors.push(await f.create());
-  const noteAuthorIds = new Set(noteAuthors.map(item => item.id));
+  for (let i = 0; i < 210; i++) noteAuthors.push(await f.create());
+  const noteAuthorIds = new Set(noteAuthors.slice(0, 105).map(item => item.id));
   const now = Date.now(), expiresAt = new Date(now + 3_600_000).toISOString();
   const storiesToInsert: typeof storiesTable.$inferInsert[] = [];
   const notesToInsert: typeof userNotesTable.$inferInsert[] = [];
@@ -145,7 +145,7 @@ test('current teen ceiling filters story and note candidates before the SQL page
     if (approved) { childSafeStoryIds.add(storyId); childSafeNoteIds.add(noteId); approvedIds.push(storyId, noteId); }
     const story = { id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Child-safe page fixture', contentCategory: 'other',
       audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: 'child_safe' } as const;
-    const note = { id: noteId, authorId: noteAuthors[i]!.id, content: 'Child-safe page fixture', createdAt, expiresAt,
+    const note = { id: noteId, authorId: noteAuthors[i + 105]!.id, content: 'Child-safe page fixture', createdAt, expiresAt,
       audience: 'public', contentCategory: 'other', contentRating: 'child_safe' } as const;
     childSafeStories.push(story);
     childSafeNotes.push(note);
