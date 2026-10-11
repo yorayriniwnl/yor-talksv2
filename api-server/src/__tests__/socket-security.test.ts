@@ -11,6 +11,8 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { EligibilityRepository } from "../repositories/eligibility-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 
 const userId = "10000000-0000-4000-8000-000000000001";
 const recipientId = "10000000-0000-4000-8000-000000000002";
@@ -21,6 +23,19 @@ function event(socket: Socket, name: string): Promise<any> {
     const timeout = setTimeout(() => { socket.off(name, listener); reject(new Error(`Timed out waiting for ${name}`)); }, 4000);
     const listener = (value: unknown) => { clearTimeout(timeout); resolve(value); };
     socket.once(name, listener);
+  });
+}
+
+function eitherEvent(socket: Socket, names: string[], timeoutMs = 2000): Promise<{ name: string; payload: any }> {
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      for (const name of names) socket.off(name, handlers.get(name)!);
+    };
+    const finish = (name: string, payload: any) => { cleanup(); resolve({ name, payload }); };
+    const handlers = new Map(names.map((name) => [name, (payload: unknown) => finish(name, payload)]));
+    const timer = setTimeout(() => finish("timeout", null), timeoutMs);
+    for (const [name, handler] of handlers) socket.once(name, handler);
   });
 }
 
@@ -45,6 +60,7 @@ async function fixture(t: TestContext, runtime: Partial<Pick<typeof env, "PUBLIC
     return { id: "message", senderId, conversationId, content };
   });
   t.mock.method(MessageService.prototype, "consumeNewPublication", () => true);
+  t.mock.method(MessageService.prototype, "getConversationMemberIds", async () => [userId, recipientId]);
   const server = createServer();
   const sockets = await attachSocketServer(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -99,6 +115,23 @@ test("production socket keeps eligibility enforcement when PUBLIC_BETA is false"
   const { connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
   await assert.rejects(connect(), /eligibility verification required/i,
     "production sockets must not bypass current eligibility when public beta is disabled");
+});
+
+test("production socket blocks message actions when current messaging capability is false", async (t) => {
+  const decision: EligibilityDecision = {
+    experience: "teen_13_17", activated: true,
+    capabilities: { social: true, publish: true, messaging: false, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "regular", policyVersions: ["fixture:1"], revision: "2", reason: null,
+    publicBrowsingAllowed: true,
+  };
+  t.mock.method(EligibilityService.prototype, "decisionFor", async () => decision);
+  const { state, connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  const client = await connect();
+  const outcome = eitherEvent(client, ["message:error", "message:sent"]);
+  client.emit("message:send", { recipientId, content: "must not be sent" });
+  const result = await outcome;
+  assert.deepEqual({ event: result.name, sends: state.sent }, { event: "message:error", sends: 0 });
 });
 
 test("connected sockets recheck consent and revocation before an action", async (t) => {
