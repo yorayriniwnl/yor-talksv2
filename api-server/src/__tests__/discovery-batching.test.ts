@@ -107,6 +107,9 @@ test('current teen ceiling filters story and note candidates before the SQL page
   const f = await fixture(t, 0);
   await users.update(f.viewer.id, { settings: { ...f.viewer.settings, contentFilter: 'mature' } });
   const author = await f.create();
+  const noteAuthors: UserRecord[] = [];
+  for (let i = 0; i < 105; i++) noteAuthors.push(await f.create());
+  const noteAuthorIds = new Set(noteAuthors.map(item => item.id));
   const now = Date.now(), expiresAt = new Date(now + 3_600_000).toISOString();
   const storiesToInsert: typeof storiesTable.$inferInsert[] = [];
   const notesToInsert: typeof userNotesTable.$inferInsert[] = [];
@@ -118,7 +121,7 @@ test('current teen ceiling filters story and note candidates before the SQL page
     if (allowed) { allowedStoryIds.add(storyId); allowedNoteIds.add(noteId); }
     storiesToInsert.push({ id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Policy page fixture',
       audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: allowed ? 'regular' : 'mature' });
-    notesToInsert.push({ id: noteId, authorId: author.id, content: 'Policy page fixture', createdAt, expiresAt,
+    notesToInsert.push({ id: noteId, authorId: noteAuthors[i]!.id, content: 'Policy page fixture', createdAt, expiresAt,
       audience: 'public', contentRating: allowed ? 'regular' : 'mature' });
   }
   await db.insert(storiesTable).values(storiesToInsert);
@@ -126,7 +129,7 @@ test('current teen ceiling filters story and note candidates before the SQL page
   const storyService = new StoryService(stories, new ContentSafetyService(users), undefined, users);
   const noteService = new NoteService(notes, users, new ContentSafetyService(users));
   const visibleStories = (await storyService.listActiveStories(f.viewer.id)).filter(row => row.authorId === author.id);
-  const visibleNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => row.authorId === author.id);
+  const visibleNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => noteAuthorIds.has(row.authorId));
   assert.deepEqual(new Set(visibleStories.map(row => row.id)), allowedStoryIds);
   assert.deepEqual(new Set(visibleNotes.map(row => row.id)), allowedNoteIds);
 
@@ -142,7 +145,7 @@ test('current teen ceiling filters story and note candidates before the SQL page
     if (approved) { childSafeStoryIds.add(storyId); childSafeNoteIds.add(noteId); approvedIds.push(storyId, noteId); }
     const story = { id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Child-safe page fixture', contentCategory: 'other',
       audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: 'child_safe' } as const;
-    const note = { id: noteId, authorId: author.id, content: 'Child-safe page fixture', createdAt, expiresAt,
+    const note = { id: noteId, authorId: noteAuthors[i]!.id, content: 'Child-safe page fixture', createdAt, expiresAt,
       audience: 'public', contentCategory: 'other', contentRating: 'child_safe' } as const;
     childSafeStories.push(story);
     childSafeNotes.push(note);
