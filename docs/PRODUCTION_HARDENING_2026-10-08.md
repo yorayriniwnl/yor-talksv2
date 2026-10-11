@@ -1,6 +1,20 @@
 # Production hardening implementation and verification — 8 October 2026
 
-**Release decision: deployment acceptance remains blocked.** The owner has not selected adult closed beta, adult public service, or global service including minors. Shared security and data-integrity repairs were implemented without choosing a release scope. Existing adult restrictions remain; payments, live rooms, push and RTC remain disabled. No minors policy, deleted-author retention policy, operator identity, jurisdictional deadline or public ingress topology was approved during this work.
+**Release decision: production deployment acceptance remains blocked.** The 10 October scope decision selects an Adult (18+) Closed Testing Beta only; it does not approve an adult public service or a global service including minors. Shared security and data-integrity repairs continue under that boundary. Existing age restrictions remain; payments, live rooms, push and RTC remain disabled. Deleted-author retention, operator identity, jurisdictional deadline, public ingress and production backend/worker host still require owner acceptance. See [scope decisions](RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md).
+
+## 11 October continuation — verified source candidate `40d7150`
+
+The isolated source candidate [`40d71503915e30c79f5faacfcfb0297d73bf61d2`](https://github.com/yorayriniwnl/yor-talksv2/commit/40d71503915e30c79f5faacfcfb0297d73bf61d2) passed [CI run 38144356220](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38144356220): 440 API tests, 73 production-mode Chromium tests and 104 unit tests passed with no failures or skips. Typechecks, builds, dependency audit, API contract/design/config checks, pinned monitoring plus authenticated local alert delivery, production image builds, encrypted backup/restore guards and production container smoke also passed.
+
+The CI run exposed and verified three source/test repairs:
+
+- **Classification migration:** PostgreSQL rejected the 256-character regex repetition bound used by the content-revision constraint. The migration now uses `length(content_revision) BETWEEN 1 AND 256`, detects and repairs the previous constraint on existing installs, and tests acceptance at 256 and rejection at 257 characters.
+- **Comment audience policy:** post, video and profile comments now persist content ratings and invalidate classifications when content changes. Post/video listing and comment-like responses apply the viewer's current rating ceiling; post aggregate and hidden-reply counts no longer disclose filtered comments. A database-backed test covers an approved comment, an unclassified comment/reply and the like-response path.
+- **Migration and pagination fixtures:** the eligibility migration now skips absent or incomplete content tables and scopes trigger existence to the actual relation, so it remains repeatable on isolated partial baselines. Discovery pagination fixtures create one note per author and separate author cohorts for distinct note states, matching the schema's unique author constraint.
+
+The full 73-test production-mode browser suite passed, including the Studio stop-recording control and direct/group attachment retries; no retries or weakened assertions were used. This resolves the previously reported browser smoke failures for this exact source candidate.
+
+The public Vercel origin was probed separately on 11 October: the homepage returned 200, while `/api/livez` and `/api/readyz` returned 500. The unauthenticated protected preview API probe returned 302. CI's local receiver, synthetic providers and isolated container stack do not establish public backend, real provider, operational alert-receiver or off-host recovery acceptance. No backend deployment is claimed.
 
 ## Historical accepted publication baseline — checked 9 October
 

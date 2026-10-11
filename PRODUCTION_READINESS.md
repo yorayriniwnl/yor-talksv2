@@ -1,8 +1,18 @@
 # Production Readiness Report
 
-Status as of 10–11 October 2026: repository and isolated candidate checks pass; verified candidate revision is **`aca6ccb`** (`feat(release): integrate staging hosting target preparation and release-scope verification into unified release candidate`). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
+Status as of 11 October 2026: source candidate **`40d71503915e30c79f5faacfcfb0297d73bf61d2`** passed the complete [CI run 38144356220](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38144356220). Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
 
-### Unified Release Candidate Acceptance (Revision `aca6ccb`)
+### Latest Source Candidate Acceptance (Revision `40d7150`)
+
+- **CI:** 440 API / 73 production-mode browser / 104 unit tests passed, with zero failures or skips. API and web typechecks, database/shared-contract builds, contract/design/config checks, production dependency audit, production image builds, pinned monitoring and authenticated local alert delivery, encrypted backup/restore guards, and production container smoke all passed.
+- **PostgreSQL constraint repair:** replaced the invalid 256-character regular-expression bound with a length check and made migration repair existing installations that already have the old constraint. The regression accepts 256 characters and rejects 257.
+- **Audience-rated comments:** added persisted ratings for post, video, and profile comments; invalidation triggers; child-ceiling filtering for list and like responses; hidden aggregate/reply counts; and regression coverage for unclassified comments and replies.
+- **Current origin probe (11 October):** `https://yor-talks.vercel.app/` returned 200; `/api/livez` and `/api/readyz` each returned 500. The unauthenticated protected-preview `/api/readyz` request redirected (302). These results do not establish a persistent backend deployment.
+- **Launch boundary:** CI's authenticated local alert receiver, synthetic media providers, isolated backup target, and test stack are repository acceptance only. Real provider delivery, the production alert receiver, backend/worker host, public ingress, off-host restore objectives, and owner/legal/retention approvals remain open.
+
+The 10 October acceptance and mobile/backup measurements for revision `aca6ccb` remain below as historical evidence; they do not replace the newer CI result or live-origin probes.
+
+### Previous Unified Release Candidate Acceptance (Revision `aca6ccb`)
 
 1. **Repository & Local Release Verification:**
    - **Root unit tests (`pnpm test:unit`):** **104 passed**, 0 failed, 0 skipped.
