@@ -8,6 +8,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
+import { hydrateMediaValue } from "../services/media-response.js";
 import { createTestUser } from "./test-helpers.js";
 
 const redisRepository = new RedisRepository();
@@ -72,6 +73,11 @@ test("account export uses its captured timestamp as the message visibility bound
   await new Promise(resolve => setTimeout(resolve, 350));
   context.mock.timers.enable({ apis: ["Date"], now: exportBoundary });
   try {
+    const sanitized = await hydrateMediaValue({ data: { format: "yor-talks-account-export",
+      exportedAt: exportBoundary.toISOString(), content: { sentMessages: [expiringMessage], receivedMessages: [] } } },
+    undefined, sender.id) as { data: { content: { sentMessages: Array<{ id: string }> } } };
+    assert.equal(sanitized.data.content.sentMessages.some(message => message.id === expiringMessage.id), true);
+
     const exported = await new AccountService(userRepository, redisRepository).exportAccount(sender.id);
     const sentMessages = (exported?.content as { sentMessages: Array<{ id: string }> }).sentMessages;
     assert.equal(exported?.exportedAt, exportBoundary.toISOString());
