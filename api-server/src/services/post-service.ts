@@ -538,7 +538,7 @@ export class PostService {
       let shouldRefreshCache = false;
 
       if (firstPage && cachedCandidates?.length) {
-        const fresh = await this.postRepository.findByIds(cachedCandidates.map((post) => post.id));
+        const fresh = await this.postRepository.findByIds(cachedCandidates.map((post) => post.id), contentFilter);
         const byId = new Map(fresh.map((post) => [post.id, post]));
         const cacheStillValid = cachedCandidates.every((old) => {
           const current = byId.get(old.id);
@@ -556,11 +556,11 @@ export class PostService {
             return current ? [current] : [];
           });
         } else {
-          posts = await this.postRepository.listTrending(nextCursor, pageSize);
+          posts = await this.postRepository.listTrending(nextCursor, pageSize, excludedAuthorIds, contentFilter);
           shouldRefreshCache = true;
         }
       } else {
-        posts = await this.postRepository.listTrending(nextCursor, pageSize);
+        posts = await this.postRepository.listTrending(nextCursor, pageSize, excludedAuthorIds, contentFilter);
         shouldRefreshCache = firstPage;
       }
 

@@ -9,6 +9,8 @@ import { ContactShieldService } from "./contact-shield-service.js";
 import { CreatorAnalyticsService } from "./creator-analytics-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, PREMIUM_MESSAGE_STYLES, PREMIUM_STORY_STYLES, requiredPremiumFeatures, type PremiumProfileSelection } from "../features/premium-profile.js";
+import { EligibilityService } from "./eligibility-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 
 export class PremiumProfileFeatureUnavailableError extends Error {}
 export class PremiumStoryViewFeatureUnavailableError extends Error {}
@@ -21,6 +23,7 @@ export class UserService {
     private readonly contactShieldService: ContactShieldService = new ContactShieldService(),
     private readonly creatorAnalyticsService: CreatorAnalyticsService = new CreatorAnalyticsService(),
     private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
@@ -101,7 +104,9 @@ export class UserService {
   }
 
   async searchUsers(search: string, viewerId?: string): Promise<UserRecord[]> {
-    return this.contactShieldService.filterVisibleUsers(viewerId, await this.userRepository.list(search));
+    const candidates = await this.userRepository.list(search);
+    const visible = await Promise.all(candidates.map(async user => await this.canViewProfile(user, viewerId) ? user : undefined));
+    return this.contactShieldService.filterVisibleUsers(viewerId, visible.filter((user): user is UserRecord => !!user));
   }
 
   async followUser(userId: string, targetId: string): Promise<{ follower: UserRecord; target: UserRecord; status: "accepted" | "pending" } | undefined> {
@@ -318,12 +323,26 @@ export class UserService {
   }
 
   private async canViewProfile(user: UserRecord, viewerId?: string): Promise<boolean> {
-    const viewer = viewerId ?? user.id;
-    if (!(await this.contactShieldService.canView(viewer, user.id))) return false;
-    if (viewer === user.id) return true;
-    const visibility = user.privacy?.profileVisibility ?? (user.settings?.privateAccount ? "private" : "public");
-    if (visibility === "private") return false;
-    if (visibility === "followers") return this.userRepository.isFollowing(viewer, user.id);
+    if (viewerId === user.id) return true;
+    if (['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) return false;
+    let minorProfile = false;
+    if (isEligibilityEnforcementEnabled()) {
+      // This service has no trusted request-territory context for a guest. A
+      // profile must not turn an unknown public decision into public access.
+      if (!viewerId) return false;
+      const [viewerDecision, targetDecision] = await Promise.all([
+        this.eligibilityService.decisionFor(viewerId), this.eligibilityService.decisionFor(user.id),
+      ]);
+      if (!viewerDecision.activated || !viewerDecision.capabilities.social || !targetDecision.activated) return false;
+      minorProfile = targetDecision.experience !== 'adult_18_plus';
+    }
+    if (viewerId && !(await this.contactShieldService.canView(viewerId, user.id))) return false;
+    // Underage accounts stay private even if a stale/client-written profile
+    // preference says public. Contact-aware exceptions are handled separately.
+    const visibility = minorProfile ? 'private'
+      : user.privacy?.profileVisibility ?? (user.settings?.privateAccount ? 'private' : 'public');
+    if (visibility === "private") return viewerId ? this.userRepository.isFollowing(viewerId, user.id) : false;
+    if (visibility === "followers") return viewerId ? this.userRepository.isFollowing(viewerId, user.id) : false;
     return true;
   }
 }

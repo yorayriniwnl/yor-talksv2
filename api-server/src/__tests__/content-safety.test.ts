@@ -5,6 +5,7 @@ import { ContentSafetyService } from "../services/content-safety-service.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 import type { EligibilityDecision } from "../eligibility/types.js";
 import { env } from "../config/env.js";
+import { CONTENT_CLASSIFICATION_POLICY_VERSION, contentHashFor, contentRevisionFor, effectiveContentRating } from "../eligibility/content-policy.js";
 
 test("content ratings default to regular", () => {
   assert.equal(normalizeContentRating(undefined), "regular");
@@ -17,6 +18,18 @@ test("viewer filters are cumulative by audience level", () => {
   assert.equal(canViewContent("regular", "regular"), true);
   assert.equal(canViewContent("mature", "regular"), false);
   assert.equal(canViewContent("mature", "mature"), true);
+});
+
+test("an author supplied child-safe rating needs approval for the exact current revision", () => {
+  const item = { id: "post-id", content: "Reviewed text", contentRating: "child_safe", updatedAt: "2026-10-11T00:00:00.000Z" };
+  const contentHash = contentHashFor(item);
+  const approval = { entityType: "posts", entityId: item.id, contentRevision: contentRevisionFor(item, contentHash), contentHash,
+    classification: "child_safe", issuer: "fixture:reviewer", status: "approved", policyVersion: CONTENT_CLASSIFICATION_POLICY_VERSION,
+    approvedAt: "2026-10-11T00:01:00.000Z" } as const;
+  assert.equal(effectiveContentRating(item, "posts"), "regular", "self-rating cannot unlock child-safe browsing");
+  assert.equal(effectiveContentRating(item, "posts", approval), "child_safe");
+  assert.equal(effectiveContentRating({ ...item, content: "Changed text" }, "posts", approval), "regular",
+    "an older approval cannot carry over after content changes");
 });
 
 test("current eligibility ceiling overrides a mature saved preference", async (t) => {

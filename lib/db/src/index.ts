@@ -43,6 +43,7 @@ export async function runInDatabaseTransaction<T>(work: (tx: DbTransaction) => P
 export {
   mediaAssetsTable,
   mediaReferencesTable,
+  contentSafetyClassificationsTable,
   usersTable,
   contactShieldsTable,
   postsTable,

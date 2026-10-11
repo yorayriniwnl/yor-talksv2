@@ -11,6 +11,7 @@ import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { type AudienceKind } from "../utils/audience-policy.js";
 import { calculateStoryScore, resolveStoryDurationHours, selectViewerExposure, type StoryAnalyticsSummary, type StoryViewExposure } from "./story-analytics-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
@@ -159,10 +160,11 @@ export class StoryService {
   }
 
   async listActiveStories(viewerId?: string): Promise<StoryRecord[]> {
-    const stories = await this.storyRepository.listActive(viewerId);
+    const viewerCeiling = isEligibilityEnforcementEnabled() ? await this.contentSafetyService.getViewerFilter(viewerId) : undefined;
+    const stories = await this.storyRepository.listActive(viewerId, viewerCeiling);
     if (!stories.length) return [];
     const [context, audience] = await Promise.all([
-      this.contentSafetyService.prepareContext(stories.map(story => story.authorId), viewerId, { discovery: true }),
+      this.contentSafetyService.prepareContext(stories.map(story => story.authorId), viewerId, { discovery: true }, stories),
       this.storyRepository.audienceForViewer(stories.map(story => story.id), viewerId),
     ]);
     const visibleStories = stories.filter(story => context.allows({ ...story,
