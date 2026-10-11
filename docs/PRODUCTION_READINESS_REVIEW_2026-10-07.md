@@ -1,5 +1,12 @@
 # Production readiness review — 7 October 2026
 
+This is the historical 7 October defect review. The
+[8 October production hardening report](PRODUCTION_HARDENING_2026-10-08.md)
+records subsequent working-copy repairs, exact verification and remaining
+owner/provider/deployment gates. Preserve the failures and probes below as
+evidence of the reviewed source; they are not the current repair status or
+approval for the proposed global and minor-age scope.
+
 **Decision: not ready for the requested global launch.** Passing development checks do not close the confirmed defects or establish that the real operating service meets its release requirements.
 
 **Scope:** EU-based operator; intended global availability; under-13, 13–17 and 18+ experiences. The actual EU member state and legal entity are unknown. This is a source and validation review, not certification of legal compliance or a deployed-service acceptance.
@@ -19,6 +26,7 @@
 | Local database/API/frontend build | Passed | Windows build completed; large frontend chunk warnings remain |
 | Local Chromium browser suite, current working copy | 56 passed, 4 failed | Initial run used development React; camera control regression confirmed |
 | Targeted Chromium rerun with `NODE_ENV=production` | 3 passed, 1 failed | Media renewal and both billing recovery cases passed; missing Studio stop control reproduced |
+| Subsequent 7 October full production-mode Chromium review | 57 passed, 3 failed | Historical full-suite failure; an isolated successful attachment retry rerun does not replace it. Later repair evidence is in the [8 October report](PRODUCTION_HARDENING_2026-10-08.md) |
 | Fresh PostgreSQL 16.4 production migration and account-deletion probe | Migration and probe completed; shared-history loss reproduced | Actual current schema and account/conversation services confirm the defect in a separate synthetic cluster |
 | GitHub CI, push run 37522534217 | Completed successfully, attempt 1 | 57 unit, 262 API and 60 browser tests passed with no skips/failures; migrations, builds and container smoke steps passed on this commit |
 | GitHub CI, pull-request run 37522541152 | Completed successfully, attempt 1 | The same test counts and release checks passed on this commit |

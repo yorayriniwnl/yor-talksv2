@@ -11,6 +11,9 @@ const ciFixture = read("ops/ci-production.env");
 const prometheusConfig = read("ops/prometheus/prometheus.yml");
 const alertRules = read("ops/prometheus/alerts.yml");
 const alertmanagerConfig = read("ops/prometheus/alertmanager.yml");
+const vercelConfig = JSON.parse(read("vercel.json"));
+const vercelGlobalHeaderRule = vercelConfig.headers?.find((rule) => rule.source === "/(.*)");
+const vercelHeaders = new Map((vercelGlobalHeaderRule?.headers ?? []).map(({ key, value }) => [key.toLowerCase(), value]));
 const dockerIgnore = read(".dockerignore").split(/\r?\n/).map((line) => line.trim());
 
 const schemaKeys = [...envSource.matchAll(/^\s{2}([A-Z][A-Z0-9_]*)\s*:\s*z\./gm)].map((match) => match[1]);
@@ -36,6 +39,22 @@ const missingExampleKeys = [...new Set(requiredComposeKeys)].filter((key) => !ex
 const missingFixtureKeys = [...new Set(requiredComposeKeys)].filter((key) => !fixtureKeys.has(key));
 
 const failures = [];
+if (composeSource.includes('--config.expand-env')) failures.push('Pinned Alertmanager does not support --config.expand-env');
+for (const header of ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy", "strict-transport-security"]) {
+  if (!vercelHeaders.has(header)) failures.push(`Vercel production headers are missing ${header}`);
+}
+const contentSecurityPolicy = vercelHeaders.get("content-security-policy") ?? "";
+for (const directive of ["default-src 'self'", "object-src 'none'", "frame-ancestors 'self'"]) {
+  if (!contentSecurityPolicy.includes(directive)) failures.push(`Vercel Content-Security-Policy is missing ${directive}`);
+}
+const scriptPolicy = contentSecurityPolicy.split(";").find((directive) => directive.trim().startsWith("script-src ")) ?? "";
+if (!scriptPolicy || /'unsafe-inline'|'unsafe-eval'/.test(scriptPolicy)) {
+  failures.push("Vercel Content-Security-Policy must restrict scripts to explicit sources");
+}
+if (!read('ops/prometheus/Dockerfile.alertmanager').includes('FROM prom/alertmanager:v0.28.1 AS runtime')) failures.push('Alertmanager runtime must retain the reviewed exact version');
+if (!read('.github/workflows/ci.yml').includes('ops/prometheus/acceptance.mjs')) failures.push('CI must exercise pinned monitoring runtimes and authenticated firing/resolved delivery');
+if (!read('.github/workflows/ci.yml').includes('ops/backup/acceptance.mjs') || !read('.github/workflows/ci.yml').includes("BACKUP_USE_DOCKER: 'true'")) failures.push('CI must exercise the real backup image and restore failure guards');
+if (!read('.github/workflows/ci.yml').includes('ops/ingress/check-web-image.mjs')) failures.push('CI must validate ingress configuration with the actual built Nginx image');
 if (!dockerIgnore.includes('**/.env*')) failures.push('Docker build context must exclude every .env variant, including production credentials');
 for (const dockerfile of ['api-server/Dockerfile', 'social/Dockerfile']) {
   if (!/^FROM node:24-alpine(?: AS \w+)?$/m.test(read(dockerfile))) failures.push(`${dockerfile} must use the supported Node 24 LTS runtime`);
@@ -76,7 +95,7 @@ for (const [frontendKey, backendKey] of frontendProviderWires) {
 for (const metric of ["/api/metrics", "metrics_bearer_token", "backup-metrics-exporter:9100"]) {
   if (!prometheusConfig.includes(metric)) failures.push(`Prometheus scrape configuration is missing ${metric}`);
 }
-for (const alert of ["YorBackgroundJobsFailing", "YorAnalyticsRollupStale", "YorDatabaseBackupStale"]) {
+for (const alert of ["YorBackgroundJobsFailing", "YorAnalyticsRollupStale", "YorDatabaseBackupStale", "YorLifecycleUnavailable", "YorLifecycleStalled", "YorLifecycleDeadLetters"]) {
   if (!alertRules.includes(`alert: ${alert}`)) failures.push(`Prometheus alert rules are missing ${alert}`);
 }
 for (const file of ["ops/ci-metrics-bearer-token", "ops/ci-rclone.conf", "ops/ci-alertmanager-password"]) {

@@ -321,13 +321,13 @@ export function AppShell({ children }: AppShellProps) {
       {/* ── MAIN CONTENT AREA ────────────────────────────────────────────── */}
       <div className="app-shell__content min-h-screen min-w-0 flex-1">
         <AppTopbar onCompose={() => setIsComposing(true)} />
-        <main id="main-content" tabIndex={-1} className="w-full h-full outline-none">
+        <main id="main-content" tabIndex={-1} className="w-full h-full outline-none pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </main>
       </div>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
-      <nav aria-label="Primary navigation" className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 lg:hidden">
+      <nav aria-label="Primary navigation" className="app-shell__mobile-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/40 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-background/95 backdrop-blur-md lg:hidden">
         <button
           type="button"
           aria-label="Home"

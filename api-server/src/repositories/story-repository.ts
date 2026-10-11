@@ -16,6 +16,8 @@ import {
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import { discoveryScope } from './discovery-scope.js';
+import type { ContentRating } from '../utils/content-safety.js';
+import { isEligibilityEnforcementEnabled } from '../eligibility/enforcement.js';
 import type { HighlightRecord, StoryRecord } from "../types/index.js";
 import { calculateStoryReactionCounts, type StoryAnalyticsSummary, type StoryViewExposure } from "../services/story-analytics-service.js";
 
@@ -122,12 +124,13 @@ export class StoryRepository {
   }
 
   /** Only stories that haven't expired yet — matches the 24-hour-expiry pattern of the feature itself. */
-  async listActive(viewerId?: string): Promise<StoryRecord[]> {
+  async listActive(viewerId?: string, viewerCeiling?: ContentRating): Promise<StoryRecord[]> {
     return this.hydrateViewerInteractions((await db
       .select()
       .from(storiesTable)
       .where(and(eq(storiesTable.publishMode, "active"), gt(storiesTable.expiresAt, new Date().toISOString()),
-        discoveryScope({ ...storiesTable, storyId: storiesTable.id }, viewerId)))
+        discoveryScope({ ...storiesTable, storyId: storiesTable.id, entityId: storiesTable.id, entityType: 'stories' }, viewerId, viewerCeiling,
+          isEligibilityEnforcementEnabled())))
       .orderBy(desc(storiesTable.publishedAt), desc(storiesTable.createdAt), desc(storiesTable.id))
       .limit(100)) as StoryRecord[], viewerId);
   }

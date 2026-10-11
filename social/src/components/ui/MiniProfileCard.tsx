@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useRef, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,6 +8,25 @@ import { useAppStore } from '@/lib/store';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
+
+const ESPORTS_TITLES = [
+  'BGMI: Battlegrounds Mobile India',
+  'Valorant (Ranked Competitive)',
+  'Counter-Strike 2 (Premier Matchmaking)',
+  'Dota 2 (South Asia Regional)',
+  'Apex Legends (Master Lobby)',
+  'Cyberpunk 2077: Phantom Liberty',
+  'Elden Ring: Shadow of the Erdtree'
+];
+
+function getGameForUser(user: User): string {
+  const seed = user.id || user.username || 'gamer';
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) & 0xffffffff;
+  }
+  return ESPORTS_TITLES[Math.abs(hash) % ESPORTS_TITLES.length];
+}
 
 interface MiniProfileCardProps {
   user: User;
@@ -20,19 +39,25 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
   const followUser = useAppStore((s) => s.followUser);
   const unfollowUser = useAppStore((s) => s.unfollowUser);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const isOwnProfile = currentUser?.id === user.id;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(user.id);
   const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(user.id);
 
-  const handleMouseEnter = () => {
-    const timer = setTimeout(() => setIsOpen(true), 300);
+  const handleOpen = () => {
+    if (containerRef.current && typeof window !== 'undefined') {
+      const rect = containerRef.current.getBoundingClientRect();
+      setAlignRight(rect.left + 320 > window.innerWidth);
+    }
+    const timer = setTimeout(() => setIsOpen(true), 250);
     setTimeoutId(timer);
   };
 
-  const handleMouseLeave = () => {
+  const handleClose = () => {
     if (timeoutId) clearTimeout(timeoutId);
     setIsOpen(false);
   };
@@ -44,7 +69,23 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
   };
 
   return (
-    <div className="relative inline-block" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div
+      ref={containerRef}
+      className="relative inline-block"
+      onMouseEnter={handleOpen}
+      onMouseLeave={handleClose}
+      onFocus={handleOpen}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+          handleClose();
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          handleClose();
+        }
+      }}
+    >
       {children}
 
       <AnimatePresence>
@@ -54,7 +95,10 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute left-0 top-full mt-2 z-50 w-80 rounded-3xl overflow-hidden glass-heavy border border-border/60 shadow-2xl font-sans text-left bg-zinc-950/95"
+            className={cn(
+              "absolute top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-3xl overflow-hidden glass-heavy border border-border/60 shadow-2xl font-sans text-left bg-zinc-950/95",
+              alignRight ? "right-0" : "left-0"
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cover Banner */}
@@ -125,7 +169,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[0.62rem] font-mono uppercase text-zinc-400">Currently Playing</div>
-                  <div className="text-xs font-bold text-white truncate">Cyberpunk 2077: Phantom Liberty</div>
+                  <div className="text-xs font-bold text-white truncate">{getGameForUser(user)}</div>
                 </div>
               </div>
 

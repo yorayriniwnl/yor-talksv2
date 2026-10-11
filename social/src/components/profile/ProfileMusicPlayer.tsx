@@ -58,9 +58,10 @@ export function ProfileMusicPlayer() {
         {TRACK_EQUALIZER_BARS.map((height, i) => (
           <motion.div
             key={i}
-            animate={isPlaying ? { height: [`${Math.max(15, height * 0.2)}%`, `${height}%`, `${Math.max(10, height * 0.3)}%`] } : { height: '20%' }}
+            style={{ transformOrigin: 'bottom' }}
+            animate={isPlaying ? { scaleY: [Math.max(0.15, height * 0.002), height * 0.01, Math.max(0.1, height * 0.003)] } : { scaleY: 0.2 }}
             transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.05, ease: 'easeInOut' }}
-            className={cn("w-1 rounded-full transition-colors", isPlaying ? "bg-primary glow-neon-primary" : "bg-muted-foreground/30")}
+            className={cn("w-1 h-full rounded-full transition-colors", isPlaying ? "bg-primary glow-neon-primary" : "bg-muted-foreground/30")}
           />
         ))}
       </div>

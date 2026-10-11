@@ -1,4 +1,4 @@
-import { bigint, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, check, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { usersTable } from './index';
 
@@ -60,3 +60,21 @@ export const guardianAuthorizationsTable = pgTable('guardian_authorizations', {
 }, table => [index('guardian_authorizations_user_idx').on(table.userId, table.status, table.expiresAt),
   index('guardian_authorizations_enrollment_idx').on(table.enrollmentId, table.status, table.expiresAt),
   index('guardian_authorizations_guardian_idx').on(table.guardianUserId, table.status)]);
+
+/** Exact, private evidence that a content revision received an approved age rating. */
+export const contentSafetyClassificationsTable = pgTable('content_safety_classifications', {
+  id: uuid('id').primaryKey(), entityType: text('entity_type').notNull(), entityId: uuid('entity_id').notNull(),
+  contentRevision: text('content_revision').notNull(), contentHash: text('content_hash').notNull(),
+  classification: text('classification').notNull(), issuer: text('issuer').notNull(),
+  status: text('status').notNull().default('pending'), policyVersion: text('policy_version').notNull(),
+  approvedAt: instant('approved_at'), createdAt: instant('created_at').notNull().defaultNow(),
+}, table => [
+  uniqueIndex('content_safety_classifications_revision_idx').on(table.entityType, table.entityId, table.contentRevision, table.policyVersion),
+  index('content_safety_classifications_lookup_idx').on(table.entityType, table.entityId, table.status, table.policyVersion),
+  check('content_safety_classifications_valid', sql`entity_type IN ('posts','stories','user_notes','videos','articles','communities','community_discussions','products','events','live_streams','broadcast_channels','broadcast_channel_messages','comments','video_comments','profile_comments')
+    AND length(content_revision) BETWEEN 1 AND 256 AND content_hash ~ '^[a-f0-9]{64}$'
+    AND classification IN ('child_safe','regular','mature') AND status IN ('pending','approved','rejected','revoked','superseded')
+    AND length(issuer) BETWEEN 1 AND 128 AND length(policy_version) BETWEEN 1 AND 128
+    AND ((status='approved' AND approved_at IS NOT NULL) OR (status IN ('revoked','superseded') AND approved_at IS NOT NULL)
+      OR (status IN ('pending','rejected') AND approved_at IS NULL))`),
+]);

@@ -173,6 +173,8 @@ export * from './postVideosByIdCommentsByCommentIdLikeBody';
 export * from './postVideosByIdLikeBody';
 export * from './publicGrievanceReceipt';
 export * from './publicGrievanceReceiptStatus';
+export * from './publicGrievanceTicket';
+export * from './publicGrievanceTicketStatus';
 export * from './putConversationsByConversationIdVanishBody';
 export * from './putCreatorWorkspaceBody';
 export * from './putMessagesByMessageIdBody';

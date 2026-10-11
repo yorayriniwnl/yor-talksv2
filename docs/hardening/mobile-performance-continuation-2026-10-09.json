@@ -1,0 +1,3392 @@
+{
+  "schemaVersion": 1,
+  "evidenceDate": "2026-10-09",
+  "generatedAt": "2026-10-08T23:03:45.363Z",
+  "result": "failed",
+  "acceptanceRule": "All three fixed final cold observations must meet each unchanged proposed gate; no best-of selection. Profiling-only observations are excluded.",
+  "ownerApprovedBudgets": false,
+  "source": {
+    "baseCommit": "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+    "uncommittedAtMeasurement": true,
+    "trackedFrontendFiles": 336,
+    "normalization": "SHA256 of text source with CRLF normalized to LF; binary files use exact bytes; raw SHA256 retained per file",
+    "baselineFrontendSourceSha256": "47368aafb61daaf281e667d90e8bb8e68e417d9ec0a3d531154d28de837c780c",
+    "billingOnlyFrontendSourceSha256": "ddb065e20cfff8d3b297421f3ee59252686c6c62ec40889c66515a0c4ed2892c",
+    "finalFrontendSourceSha256": "57b3658e67cf65b0c156c32a369cfd5a1e63a96b5598595640d919a310cee420",
+    "finalFrontendRawHashesVerifiedAfterMeasurements": true,
+    "sourceMismatches": [],
+    "measurementScriptSha256": "802f629c5c5b933a72f89cb172973580ab4b07c1e8aafc2598c47ec78d11742a",
+    "changedFrontendPaths": [
+      "social/src/lib/api-client.ts"
+    ],
+    "implementation": "Billing/checkout schemas validate lazily after successful HTTP responses, fenced by session epoch. Validator-load failure gives readable503 reload guidance; schema validation remains mandatory. AppShell/Post were restored to exact HEAD bytes. Gallery, authentication, store, messaging, CSS, design and feature gates are unchanged."
+  },
+  "setup": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "deviceScaleFactor": 1,
+    "reducedMotion": "reduce",
+    "cache": "new browser/context per observation; CDP cache disabled",
+    "latencyMs": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 100000,
+    "cpuSlowdown": 4,
+    "delivery": "local static server, gzip level5 for eligible bodies >=1024 bytes; not Nginx/container acceptance",
+    "api": "strict synthetic authenticated feed; no production data/accounts/provider calls",
+    "externalHosts": "DNS blocked except loopback; fonts/media/provider delivery excluded",
+    "sourceBuild": "corepack pnpm9.15.4; production env and synthetic public-beta/operator fixture values from playwright.config.ts; private hidden source maps and visualizer for diagnostics only"
+  },
+  "host": {
+    "processor": "AMD Ryzen5 3600XT6-Core Processor",
+    "logicalProcessors": 12,
+    "reportedCurrentAndMaximumClockMHz": 3801,
+    "clockCaveat": "CIM-reported diagnostic, not continuous frequency telemetry",
+    "hostCpuUtilizationWhenOwnedWorkIdlePercent": [
+      54.6382048277734,
+      55.6365690805965,
+      61.0288088968253
+    ],
+    "samplesAtLocalTime": [
+      "2026-10-09 02:02:33",
+      "2026-10-09 02:02:34",
+      "2026-10-09 02:02:35"
+    ],
+    "timezone": "Asia/Calcutta",
+    "context": "No owned build or measurement browser active during these counter samples. Unrelated user processes were not stopped or altered. Host variation prevents an accepted timing-causality claim."
+  },
+  "finalAcceptance": {
+    "javascriptGzipBytes": {
+      "maximum": 358400,
+      "observations": [
+        273173,
+        273173,
+        273173
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "stylesheetGzipBytes": {
+      "maximum": 102400,
+      "observations": [
+        62171,
+        62171,
+        62171
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "fcpMs": {
+      "maximum": 2500,
+      "observations": [
+        5136,
+        3108,
+        3144
+      ],
+      "passedObservations": 0,
+      "totalObservations": 3,
+      "passedEveryObservation": false
+    },
+    "lcpMs": {
+      "maximum": 4000,
+      "observations": [
+        5136,
+        4076,
+        3904
+      ],
+      "passedObservations": 1,
+      "totalObservations": 3,
+      "passedEveryObservation": false
+    },
+    "longTaskBlockingMs": {
+      "maximum": 300,
+      "observations": [
+        1539,
+        851,
+        841
+      ],
+      "passedObservations": 0,
+      "totalObservations": 3,
+      "passedEveryObservation": false
+    }
+  },
+  "payloadChange": {
+    "decodedJavascriptBytes": {
+      "baseline": 928461,
+      "final": 873364,
+      "reduction": 55097
+    },
+    "deliveredJavascriptBodyBytes": {
+      "baseline": 286323,
+      "final": 273662,
+      "reduction": 12661
+    },
+    "estimatedGzipJavascriptBytes": {
+      "baseline": 285832,
+      "final": 273173,
+      "reduction": 12659
+    },
+    "initialEntry": {
+      "baseline": {
+        "path": "/assets/index-D0ESzvf_.js",
+        "bytes": 470296,
+        "deliveredBytes": 137299,
+        "gzipBytes": 137299,
+        "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+      },
+      "final": {
+        "path": "/assets/index-SRBwjvTQ.js",
+        "bytes": 415199,
+        "deliveredBytes": 124637,
+        "gzipBytes": 124637,
+        "sha256": "5a59e43b4d8a611782d95ddd94446017843ea477fff380091319a2e806421560"
+      }
+    },
+    "stylesheetDeliveredBodyBytes": 62171,
+    "gzipCaveat": "Estimated gzip compresses every loaded JS body. Actual delivery leaves bodies below1024 bytes uncompressed; HTTP headers are excluded from encodedBodySize."
+  },
+  "profilingFindings": {
+    "baseline": "Entry ended at2163ms; Home requested at2631ms. Largest sampled application function was Home(62ms sampled self); baseline Layout157ms, ScriptDuration629ms, RecalcStyle194ms. Zod type module contributed117228 rendered/unminified bytes to the eager entry and moved to a53780-byte deferred chunk.",
+    "discardedEditorSplit": "Entry ended at1983ms; Home requested at2844ms, last dependency at3542ms. Home dependency requests increased5→15 after removing the closed shell composer import; the dependency interval increased by approximately426ms. React task379ms and Layout210ms remained major costs. This split was reverted, not accepted.",
+    "caveat": "Profiling adds overhead; timings compare different host conditions. Source maps/module maps establish payload provenance, not performance causality."
+  },
+  "observations": [
+    {
+      "group": "baseline",
+      "report": "baseline-20261009-1.json",
+      "reportSha256": "8bd4be410fec4ebbc4c982ea3f5165061e182d405ce2c86f53efb845599a4dc9",
+      "generatedAt": "2026-10-08T20:13:17.791Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 928461,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 286323,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 285832,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 4768,
+        "lcpMs": 4768,
+        "longTaskBlockingMs": 1321,
+        "fixtureReadyMs": 5854
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 285832,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 4768,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4768,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 1321,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-D0ESzvf_.js",
+          "bytes": 470296,
+          "deliveredBytes": 137299,
+          "gzipBytes": 137299,
+          "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CpCHf2lT.js",
+          "bytes": 26909,
+          "deliveredBytes": 8175,
+          "gzipBytes": 8175,
+          "sha256": "af14b2478d8d3f47d0158774c85810d2da909073794056f4c48fecfb980f9034"
+        },
+        {
+          "path": "/assets/textarea-FB8pltSf.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "492d536cbfa7952b73ca529948da7bdde2231ed06e52248bdb5a9beb88c42476"
+        },
+        {
+          "path": "/assets/Metric-DrEoP8ld.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 214,
+          "sha256": "a03afa8820026fd1850f83c361f73d3838e7be5e92526f92937ad361616a0fa1"
+        },
+        {
+          "path": "/assets/SignalLabel-yXN_g1yJ.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "3de79b8c2352a940b6f460862a71215dd2b4dd1efa8b34da6139c4822f98f2a7"
+        },
+        {
+          "path": "/assets/StatusBadge-CuUQIBht.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "d48b0067f6ae7ebc2948010d4b7c0f889a9bfb24968c0f87ff30baaae0f4b830"
+        }
+      ]
+    },
+    {
+      "group": "baseline",
+      "report": "baseline-20261009-2.json",
+      "reportSha256": "b12dd5716bef21f6c187ff91890c7957e9e8b73fb00f27ff7f76c8ce11f91477",
+      "generatedAt": "2026-10-08T20:15:30.291Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 928461,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 286323,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 285832,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 2824,
+        "lcpMs": 2824,
+        "longTaskBlockingMs": 623,
+        "fixtureReadyMs": 3730
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 285832,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 2824,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 2824,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 623,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-D0ESzvf_.js",
+          "bytes": 470296,
+          "deliveredBytes": 137299,
+          "gzipBytes": 137299,
+          "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CpCHf2lT.js",
+          "bytes": 26909,
+          "deliveredBytes": 8175,
+          "gzipBytes": 8175,
+          "sha256": "af14b2478d8d3f47d0158774c85810d2da909073794056f4c48fecfb980f9034"
+        },
+        {
+          "path": "/assets/textarea-FB8pltSf.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "492d536cbfa7952b73ca529948da7bdde2231ed06e52248bdb5a9beb88c42476"
+        },
+        {
+          "path": "/assets/Metric-DrEoP8ld.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 214,
+          "sha256": "a03afa8820026fd1850f83c361f73d3838e7be5e92526f92937ad361616a0fa1"
+        },
+        {
+          "path": "/assets/SignalLabel-yXN_g1yJ.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "3de79b8c2352a940b6f460862a71215dd2b4dd1efa8b34da6139c4822f98f2a7"
+        },
+        {
+          "path": "/assets/StatusBadge-CuUQIBht.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "d48b0067f6ae7ebc2948010d4b7c0f889a9bfb24968c0f87ff30baaae0f4b830"
+        }
+      ]
+    },
+    {
+      "group": "baseline",
+      "report": "baseline-20261009-3.json",
+      "reportSha256": "fa31f15e11ea8c4a9b8a264cde0f0103a64b12a2e824226a7cebb8a08fc63962",
+      "generatedAt": "2026-10-08T20:16:11.151Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 928461,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 286323,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 285832,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 2776,
+        "lcpMs": 3352,
+        "longTaskBlockingMs": 477,
+        "fixtureReadyMs": 3526
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 285832,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 2776,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3352,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 477,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-D0ESzvf_.js",
+          "bytes": 470296,
+          "deliveredBytes": 137299,
+          "gzipBytes": 137299,
+          "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CpCHf2lT.js",
+          "bytes": 26909,
+          "deliveredBytes": 8175,
+          "gzipBytes": 8175,
+          "sha256": "af14b2478d8d3f47d0158774c85810d2da909073794056f4c48fecfb980f9034"
+        },
+        {
+          "path": "/assets/textarea-FB8pltSf.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "492d536cbfa7952b73ca529948da7bdde2231ed06e52248bdb5a9beb88c42476"
+        },
+        {
+          "path": "/assets/Metric-DrEoP8ld.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 214,
+          "sha256": "a03afa8820026fd1850f83c361f73d3838e7be5e92526f92937ad361616a0fa1"
+        },
+        {
+          "path": "/assets/SignalLabel-yXN_g1yJ.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "3de79b8c2352a940b6f460862a71215dd2b4dd1efa8b34da6139c4822f98f2a7"
+        },
+        {
+          "path": "/assets/StatusBadge-CuUQIBht.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "d48b0067f6ae7ebc2948010d4b7c0f889a9bfb24968c0f87ff30baaae0f4b830"
+        }
+      ]
+    },
+    {
+      "group": "billing-only",
+      "report": "lazy-billing-20261009-1.json",
+      "reportSha256": "0ceeaeaad7e720f241e4337341b7f9937bf7c3e5f816ede53682fbdc8d9f56b9",
+      "generatedAt": "2026-10-08T20:24:17.040Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873198,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273618,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273123,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3052,
+        "lcpMs": 3692,
+        "longTaskBlockingMs": 682,
+        "fixtureReadyMs": 3821
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273123,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3052,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3692,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 682,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-mqrF2hV9.js",
+          "bytes": 415033,
+          "deliveredBytes": 124590,
+          "gzipBytes": 124590,
+          "sha256": "6b848ce0ad137c4644f73c3370bdd18f7f1bddc09c670b4fe01aaf3b7a23277c"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CHilLM1i.js",
+          "bytes": 26909,
+          "deliveredBytes": 8179,
+          "gzipBytes": 8179,
+          "sha256": "2f1f87b1cb822169b2e829e38deb1901f61d2f857736d923f4d0972365ed8bab"
+        },
+        {
+          "path": "/assets/textarea-ClU3D3LL.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 344,
+          "sha256": "b4d09712b6f3e6205aa63e2812c7cac9cd451330f6ba27cf7c42d1c7136a7527"
+        },
+        {
+          "path": "/assets/Metric-D1OgdYOW.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "1796002b7bfd45d0993c418508b90c823dceadc18212dda1568fbc75eb505ca8"
+        },
+        {
+          "path": "/assets/SignalLabel-B2PMHqgr.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 194,
+          "sha256": "a3be6ae263ce8063d2ec96d44e9ca4fefed4429a6ad99fce0864a50cb47551d6"
+        },
+        {
+          "path": "/assets/StatusBadge-Bu6tDGvb.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 211,
+          "sha256": "58d9fa590380eedd662ce3b11ed32a3d1984657935be77726a38422da4bc7239"
+        }
+      ]
+    },
+    {
+      "group": "billing-only",
+      "report": "lazy-billing-20261009-2.json",
+      "reportSha256": "cf0446d8ade06686050f34952e89afbd2a0dc0ee981b7d11ca178def2f8d09b7",
+      "generatedAt": "2026-10-08T20:28:30.346Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873198,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273618,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273123,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3376,
+        "lcpMs": 4192,
+        "longTaskBlockingMs": 894,
+        "fixtureReadyMs": 4316
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273123,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3376,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4192,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 894,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-mqrF2hV9.js",
+          "bytes": 415033,
+          "deliveredBytes": 124590,
+          "gzipBytes": 124590,
+          "sha256": "6b848ce0ad137c4644f73c3370bdd18f7f1bddc09c670b4fe01aaf3b7a23277c"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CHilLM1i.js",
+          "bytes": 26909,
+          "deliveredBytes": 8179,
+          "gzipBytes": 8179,
+          "sha256": "2f1f87b1cb822169b2e829e38deb1901f61d2f857736d923f4d0972365ed8bab"
+        },
+        {
+          "path": "/assets/textarea-ClU3D3LL.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 344,
+          "sha256": "b4d09712b6f3e6205aa63e2812c7cac9cd451330f6ba27cf7c42d1c7136a7527"
+        },
+        {
+          "path": "/assets/Metric-D1OgdYOW.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "1796002b7bfd45d0993c418508b90c823dceadc18212dda1568fbc75eb505ca8"
+        },
+        {
+          "path": "/assets/SignalLabel-B2PMHqgr.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 194,
+          "sha256": "a3be6ae263ce8063d2ec96d44e9ca4fefed4429a6ad99fce0864a50cb47551d6"
+        },
+        {
+          "path": "/assets/StatusBadge-Bu6tDGvb.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 211,
+          "sha256": "58d9fa590380eedd662ce3b11ed32a3d1984657935be77726a38422da4bc7239"
+        }
+      ]
+    },
+    {
+      "group": "billing-only",
+      "report": "lazy-billing-20261009-3.json",
+      "reportSha256": "1fd1791ced746f0a25bbbb1c6e9564e37ba9602f10410b3f000d29459eed7bc1",
+      "generatedAt": "2026-10-08T20:28:36.595Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873198,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273618,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273123,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3296,
+        "lcpMs": 3296,
+        "longTaskBlockingMs": 1304,
+        "fixtureReadyMs": 4887
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273123,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3296,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3296,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 1304,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-mqrF2hV9.js",
+          "bytes": 415033,
+          "deliveredBytes": 124590,
+          "gzipBytes": 124590,
+          "sha256": "6b848ce0ad137c4644f73c3370bdd18f7f1bddc09c670b4fe01aaf3b7a23277c"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CHilLM1i.js",
+          "bytes": 26909,
+          "deliveredBytes": 8179,
+          "gzipBytes": 8179,
+          "sha256": "2f1f87b1cb822169b2e829e38deb1901f61d2f857736d923f4d0972365ed8bab"
+        },
+        {
+          "path": "/assets/textarea-ClU3D3LL.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 344,
+          "sha256": "b4d09712b6f3e6205aa63e2812c7cac9cd451330f6ba27cf7c42d1c7136a7527"
+        },
+        {
+          "path": "/assets/Metric-D1OgdYOW.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "1796002b7bfd45d0993c418508b90c823dceadc18212dda1568fbc75eb505ca8"
+        },
+        {
+          "path": "/assets/SignalLabel-B2PMHqgr.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 194,
+          "sha256": "a3be6ae263ce8063d2ec96d44e9ca4fefed4429a6ad99fce0864a50cb47551d6"
+        },
+        {
+          "path": "/assets/StatusBadge-Bu6tDGvb.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 211,
+          "sha256": "58d9fa590380eedd662ce3b11ed32a3d1984657935be77726a38422da4bc7239"
+        }
+      ]
+    },
+    {
+      "group": "discarded-editor-split",
+      "report": "final-intent-20261009-1.json",
+      "reportSha256": "09f806fda2e7d5cc39d5627c5b3e62be1797d13ce5e9865e760a4db076a8d761",
+      "generatedAt": "2026-10-08T20:35:59.908Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 863190,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 275353,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273695,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3068,
+        "lcpMs": 4152,
+        "longTaskBlockingMs": 870,
+        "fixtureReadyMs": 4236
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273695,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3068,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4152,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 870,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-COc17K9d.js",
+          "bytes": 344355,
+          "deliveredBytes": 104923,
+          "gzipBytes": 104923,
+          "sha256": "efb26224707f80171e5812d07d382ca6e83292f91b85b113e926ed9fa59785b9"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-DWI0bgj9.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "a4dd9dfec638b2dc6fad39a0a536a35979ee033d19206ca9a0378cd97428cc20"
+        },
+        {
+          "path": "/assets/vendor-icons-CYn_fPBo.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "77d8f03dd69b31d0249fa7e0680bbe92a80334b0dcca23fcf589d721bac4657f"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CFTyWwIB.js",
+          "bytes": 27490,
+          "deliveredBytes": 8395,
+          "gzipBytes": 8395,
+          "sha256": "78fdc0edf96883e5885fea2cc66c321a355462ba7c65457501ad22657629e9d3"
+        },
+        {
+          "path": "/assets/textarea-CfoTU8DK.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 346,
+          "sha256": "5cedbc7a46b93c1a45de4ec83a45dc55372cccbe5edea3e9aaa911f15923dc4e"
+        },
+        {
+          "path": "/assets/Post-DLxy5aM1.js",
+          "bytes": 40353,
+          "deliveredBytes": 12616,
+          "gzipBytes": 12616,
+          "sha256": "5cd5d03a8ee5aaa29af3ba6e457bbdb78d03ad259d167767d82f456a7f8afe8c"
+        },
+        {
+          "path": "/assets/popover-DfBq2M1y.js",
+          "bytes": 5310,
+          "deliveredBytes": 1932,
+          "gzipBytes": 1932,
+          "sha256": "d4702c846f0a24addc2622a627d98229ed09c8a9f0584d831e832be4a53fe764"
+        },
+        {
+          "path": "/assets/motion-BwpD3yrH.js",
+          "bytes": 532,
+          "deliveredBytes": 532,
+          "gzipBytes": 245,
+          "sha256": "489e6a5f6ced0dd7e6692ce6eb2cdb8e4e8612b45c0e5e3c8d44968e7a1d9e25"
+        },
+        {
+          "path": "/assets/SteamTradeModal-D_Pi-xCE.js",
+          "bytes": 11239,
+          "deliveredBytes": 3451,
+          "gzipBytes": 3451,
+          "sha256": "ac821dc487cdf7efc26c7ea4fb146b9bda93df5d7cd457f4d4d2ba95e87a7e08"
+        },
+        {
+          "path": "/assets/media-upload-t1zks-0q.js",
+          "bytes": 326,
+          "deliveredBytes": 326,
+          "gzipBytes": 250,
+          "sha256": "e4bb6b021928f26f9ad4e0b2590be5f2e59eed3d5adbd43ad3e3a9202e450f03"
+        },
+        {
+          "path": "/assets/ContentRatingSelect-CDFBD_fL.js",
+          "bytes": 613,
+          "deliveredBytes": 613,
+          "gzipBytes": 394,
+          "sha256": "86f2e897827faa9787e8ac8ffa7ed32aa772cd1b30170f1fa646c4b0b505e83a"
+        },
+        {
+          "path": "/assets/label-DfYwyeWa.js",
+          "bytes": 565,
+          "deliveredBytes": 565,
+          "gzipBytes": 382,
+          "sha256": "ebf24535ab9b80305a55c0dbadbfb3a29e52ca33a37c0c1d5f14f03f1925872e"
+        },
+        {
+          "path": "/assets/ContentCategorySelect-CD0Gp6S6.js",
+          "bytes": 743,
+          "deliveredBytes": 743,
+          "gzipBytes": 446,
+          "sha256": "7528a18f6b0efad9b0aa28f62e8386b1a27837c1e43b49bbcaacc94d68f9825e"
+        },
+        {
+          "path": "/assets/ContentCategoryBadge-DC-XGoUk.js",
+          "bytes": 408,
+          "deliveredBytes": 408,
+          "gzipBytes": 301,
+          "sha256": "0b42e7fbc17e3b419123df20b4be8809ac54ba5f2693225533c5bd00f0897faf"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/Metric-DXjDV5m3.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "ad10679c2c2d70aecace8222403cdbc174efb5a0e50bb5971c535748da5c74cb"
+        },
+        {
+          "path": "/assets/SignalLabel-Clo971LK.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 196,
+          "sha256": "8631908b943e8d55f83bd5257647b7c83b467d0325f6446dad81bac6a2a1143a"
+        },
+        {
+          "path": "/assets/StatusBadge-DDOAHasx.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 213,
+          "sha256": "5fc91db820ccf9ada84a8c16ab2f04c023d2b258c1823c2cb134da4873c13511"
+        }
+      ]
+    },
+    {
+      "group": "discarded-editor-split",
+      "report": "final-intent-20261009-2.json",
+      "reportSha256": "79ab1fd9d52a8badaf30d66315e3a560cd3517d46d82b8447a699c5d34bab998",
+      "generatedAt": "2026-10-08T20:36:05.962Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 863190,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 275353,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273695,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3140,
+        "lcpMs": 4548,
+        "longTaskBlockingMs": 1380,
+        "fixtureReadyMs": 4631
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273695,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3140,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4548,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 1380,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-COc17K9d.js",
+          "bytes": 344355,
+          "deliveredBytes": 104923,
+          "gzipBytes": 104923,
+          "sha256": "efb26224707f80171e5812d07d382ca6e83292f91b85b113e926ed9fa59785b9"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-DWI0bgj9.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "a4dd9dfec638b2dc6fad39a0a536a35979ee033d19206ca9a0378cd97428cc20"
+        },
+        {
+          "path": "/assets/vendor-icons-CYn_fPBo.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "77d8f03dd69b31d0249fa7e0680bbe92a80334b0dcca23fcf589d721bac4657f"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CFTyWwIB.js",
+          "bytes": 27490,
+          "deliveredBytes": 8395,
+          "gzipBytes": 8395,
+          "sha256": "78fdc0edf96883e5885fea2cc66c321a355462ba7c65457501ad22657629e9d3"
+        },
+        {
+          "path": "/assets/textarea-CfoTU8DK.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 346,
+          "sha256": "5cedbc7a46b93c1a45de4ec83a45dc55372cccbe5edea3e9aaa911f15923dc4e"
+        },
+        {
+          "path": "/assets/Post-DLxy5aM1.js",
+          "bytes": 40353,
+          "deliveredBytes": 12616,
+          "gzipBytes": 12616,
+          "sha256": "5cd5d03a8ee5aaa29af3ba6e457bbdb78d03ad259d167767d82f456a7f8afe8c"
+        },
+        {
+          "path": "/assets/popover-DfBq2M1y.js",
+          "bytes": 5310,
+          "deliveredBytes": 1932,
+          "gzipBytes": 1932,
+          "sha256": "d4702c846f0a24addc2622a627d98229ed09c8a9f0584d831e832be4a53fe764"
+        },
+        {
+          "path": "/assets/motion-BwpD3yrH.js",
+          "bytes": 532,
+          "deliveredBytes": 532,
+          "gzipBytes": 245,
+          "sha256": "489e6a5f6ced0dd7e6692ce6eb2cdb8e4e8612b45c0e5e3c8d44968e7a1d9e25"
+        },
+        {
+          "path": "/assets/SteamTradeModal-D_Pi-xCE.js",
+          "bytes": 11239,
+          "deliveredBytes": 3451,
+          "gzipBytes": 3451,
+          "sha256": "ac821dc487cdf7efc26c7ea4fb146b9bda93df5d7cd457f4d4d2ba95e87a7e08"
+        },
+        {
+          "path": "/assets/media-upload-t1zks-0q.js",
+          "bytes": 326,
+          "deliveredBytes": 326,
+          "gzipBytes": 250,
+          "sha256": "e4bb6b021928f26f9ad4e0b2590be5f2e59eed3d5adbd43ad3e3a9202e450f03"
+        },
+        {
+          "path": "/assets/ContentRatingSelect-CDFBD_fL.js",
+          "bytes": 613,
+          "deliveredBytes": 613,
+          "gzipBytes": 394,
+          "sha256": "86f2e897827faa9787e8ac8ffa7ed32aa772cd1b30170f1fa646c4b0b505e83a"
+        },
+        {
+          "path": "/assets/label-DfYwyeWa.js",
+          "bytes": 565,
+          "deliveredBytes": 565,
+          "gzipBytes": 382,
+          "sha256": "ebf24535ab9b80305a55c0dbadbfb3a29e52ca33a37c0c1d5f14f03f1925872e"
+        },
+        {
+          "path": "/assets/ContentCategorySelect-CD0Gp6S6.js",
+          "bytes": 743,
+          "deliveredBytes": 743,
+          "gzipBytes": 446,
+          "sha256": "7528a18f6b0efad9b0aa28f62e8386b1a27837c1e43b49bbcaacc94d68f9825e"
+        },
+        {
+          "path": "/assets/ContentCategoryBadge-DC-XGoUk.js",
+          "bytes": 408,
+          "deliveredBytes": 408,
+          "gzipBytes": 301,
+          "sha256": "0b42e7fbc17e3b419123df20b4be8809ac54ba5f2693225533c5bd00f0897faf"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/Metric-DXjDV5m3.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "ad10679c2c2d70aecace8222403cdbc174efb5a0e50bb5971c535748da5c74cb"
+        },
+        {
+          "path": "/assets/SignalLabel-Clo971LK.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 196,
+          "sha256": "8631908b943e8d55f83bd5257647b7c83b467d0325f6446dad81bac6a2a1143a"
+        },
+        {
+          "path": "/assets/StatusBadge-DDOAHasx.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 213,
+          "sha256": "5fc91db820ccf9ada84a8c16ab2f04c023d2b258c1823c2cb134da4873c13511"
+        }
+      ]
+    },
+    {
+      "group": "discarded-editor-split",
+      "report": "final-intent-20261009-3.json",
+      "reportSha256": "520ef0bf87d8ef7bc2ef4a1ac0a34292a4a1b46b134ace19750c2d09adb7a26c",
+      "generatedAt": "2026-10-08T20:36:11.583Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 863190,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 275353,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273695,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3200,
+        "lcpMs": 3200,
+        "longTaskBlockingMs": 900,
+        "fixtureReadyMs": 4369
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273695,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3200,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3200,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 900,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-COc17K9d.js",
+          "bytes": 344355,
+          "deliveredBytes": 104923,
+          "gzipBytes": 104923,
+          "sha256": "efb26224707f80171e5812d07d382ca6e83292f91b85b113e926ed9fa59785b9"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-DWI0bgj9.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "a4dd9dfec638b2dc6fad39a0a536a35979ee033d19206ca9a0378cd97428cc20"
+        },
+        {
+          "path": "/assets/vendor-icons-CYn_fPBo.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "77d8f03dd69b31d0249fa7e0680bbe92a80334b0dcca23fcf589d721bac4657f"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CFTyWwIB.js",
+          "bytes": 27490,
+          "deliveredBytes": 8395,
+          "gzipBytes": 8395,
+          "sha256": "78fdc0edf96883e5885fea2cc66c321a355462ba7c65457501ad22657629e9d3"
+        },
+        {
+          "path": "/assets/textarea-CfoTU8DK.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 346,
+          "sha256": "5cedbc7a46b93c1a45de4ec83a45dc55372cccbe5edea3e9aaa911f15923dc4e"
+        },
+        {
+          "path": "/assets/Post-DLxy5aM1.js",
+          "bytes": 40353,
+          "deliveredBytes": 12616,
+          "gzipBytes": 12616,
+          "sha256": "5cd5d03a8ee5aaa29af3ba6e457bbdb78d03ad259d167767d82f456a7f8afe8c"
+        },
+        {
+          "path": "/assets/motion-BwpD3yrH.js",
+          "bytes": 532,
+          "deliveredBytes": 532,
+          "gzipBytes": 245,
+          "sha256": "489e6a5f6ced0dd7e6692ce6eb2cdb8e4e8612b45c0e5e3c8d44968e7a1d9e25"
+        },
+        {
+          "path": "/assets/popover-DfBq2M1y.js",
+          "bytes": 5310,
+          "deliveredBytes": 1932,
+          "gzipBytes": 1932,
+          "sha256": "d4702c846f0a24addc2622a627d98229ed09c8a9f0584d831e832be4a53fe764"
+        },
+        {
+          "path": "/assets/SteamTradeModal-D_Pi-xCE.js",
+          "bytes": 11239,
+          "deliveredBytes": 3451,
+          "gzipBytes": 3451,
+          "sha256": "ac821dc487cdf7efc26c7ea4fb146b9bda93df5d7cd457f4d4d2ba95e87a7e08"
+        },
+        {
+          "path": "/assets/media-upload-t1zks-0q.js",
+          "bytes": 326,
+          "deliveredBytes": 326,
+          "gzipBytes": 250,
+          "sha256": "e4bb6b021928f26f9ad4e0b2590be5f2e59eed3d5adbd43ad3e3a9202e450f03"
+        },
+        {
+          "path": "/assets/ContentRatingSelect-CDFBD_fL.js",
+          "bytes": 613,
+          "deliveredBytes": 613,
+          "gzipBytes": 394,
+          "sha256": "86f2e897827faa9787e8ac8ffa7ed32aa772cd1b30170f1fa646c4b0b505e83a"
+        },
+        {
+          "path": "/assets/label-DfYwyeWa.js",
+          "bytes": 565,
+          "deliveredBytes": 565,
+          "gzipBytes": 382,
+          "sha256": "ebf24535ab9b80305a55c0dbadbfb3a29e52ca33a37c0c1d5f14f03f1925872e"
+        },
+        {
+          "path": "/assets/ContentCategorySelect-CD0Gp6S6.js",
+          "bytes": 743,
+          "deliveredBytes": 743,
+          "gzipBytes": 446,
+          "sha256": "7528a18f6b0efad9b0aa28f62e8386b1a27837c1e43b49bbcaacc94d68f9825e"
+        },
+        {
+          "path": "/assets/ContentCategoryBadge-DC-XGoUk.js",
+          "bytes": 408,
+          "deliveredBytes": 408,
+          "gzipBytes": 301,
+          "sha256": "0b42e7fbc17e3b419123df20b4be8809ac54ba5f2693225533c5bd00f0897faf"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/Metric-DXjDV5m3.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "ad10679c2c2d70aecace8222403cdbc174efb5a0e50bb5971c535748da5c74cb"
+        },
+        {
+          "path": "/assets/SignalLabel-Clo971LK.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 196,
+          "sha256": "8631908b943e8d55f83bd5257647b7c83b467d0325f6446dad81bac6a2a1143a"
+        },
+        {
+          "path": "/assets/StatusBadge-DDOAHasx.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 213,
+          "sha256": "5fc91db820ccf9ada84a8c16ab2f04c023d2b258c1823c2cb134da4873c13511"
+        }
+      ]
+    },
+    {
+      "group": "final",
+      "report": "final-billing-20261009-1.json",
+      "reportSha256": "c3ed47ce7e1ef7342aa187623608bc2d453ed5cceb6cddb1c3b7f0c7f74428cb",
+      "generatedAt": "2026-10-08T23:02:48.233Z",
+      "exitCode": 1,
+      "acceptanceObservation": true,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873364,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273662,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273173,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 5136,
+        "lcpMs": 5136,
+        "longTaskBlockingMs": 1539,
+        "fixtureReadyMs": 6246
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273173,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 5136,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 5136,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 1539,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-SRBwjvTQ.js",
+          "bytes": 415199,
+          "deliveredBytes": 124637,
+          "gzipBytes": 124637,
+          "sha256": "5a59e43b4d8a611782d95ddd94446017843ea477fff380091319a2e806421560"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-DKHTx4Ai.js",
+          "bytes": 26909,
+          "deliveredBytes": 8176,
+          "gzipBytes": 8176,
+          "sha256": "25290262c57798f9038c2b7551c69977eae2ec415ab20c32b43d0023c213e314"
+        },
+        {
+          "path": "/assets/textarea-BVELNHW_.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "2efd6b065ef2cc93c20cff1a5cb533f8eef18dc31cc7864fea14d2b4e44c943f"
+        },
+        {
+          "path": "/assets/Metric-B1aJ9k_A.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 216,
+          "sha256": "f75286e5ac611637924f774f1091493a6a0285d290b0838abc9af2e92b583552"
+        },
+        {
+          "path": "/assets/SignalLabel-UNueV0Yz.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "da096c34bd7d1f75f7c62a0bfca9abf65dff43f4e6cfdeba20ffe8372120bdca"
+        },
+        {
+          "path": "/assets/StatusBadge-Ds5WMm0b.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "fdf4d11700d9c76a98e87475b337b90c0fb17a84e1cec739ab4112bff50bb8cc"
+        }
+      ]
+    },
+    {
+      "group": "final",
+      "report": "final-billing-20261009-2.json",
+      "reportSha256": "1c1d6696bd30b42f3bf87e3aefa5e280aadb54a122106633063a42720bcd1c7d",
+      "generatedAt": "2026-10-08T23:02:53.647Z",
+      "exitCode": 1,
+      "acceptanceObservation": true,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873364,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273662,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273173,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3108,
+        "lcpMs": 4076,
+        "longTaskBlockingMs": 851,
+        "fixtureReadyMs": 4148
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273173,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3108,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4076,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 851,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-SRBwjvTQ.js",
+          "bytes": 415199,
+          "deliveredBytes": 124637,
+          "gzipBytes": 124637,
+          "sha256": "5a59e43b4d8a611782d95ddd94446017843ea477fff380091319a2e806421560"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-DKHTx4Ai.js",
+          "bytes": 26909,
+          "deliveredBytes": 8176,
+          "gzipBytes": 8176,
+          "sha256": "25290262c57798f9038c2b7551c69977eae2ec415ab20c32b43d0023c213e314"
+        },
+        {
+          "path": "/assets/textarea-BVELNHW_.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "2efd6b065ef2cc93c20cff1a5cb533f8eef18dc31cc7864fea14d2b4e44c943f"
+        },
+        {
+          "path": "/assets/Metric-B1aJ9k_A.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 216,
+          "sha256": "f75286e5ac611637924f774f1091493a6a0285d290b0838abc9af2e92b583552"
+        },
+        {
+          "path": "/assets/SignalLabel-UNueV0Yz.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "da096c34bd7d1f75f7c62a0bfca9abf65dff43f4e6cfdeba20ffe8372120bdca"
+        },
+        {
+          "path": "/assets/StatusBadge-Ds5WMm0b.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "fdf4d11700d9c76a98e87475b337b90c0fb17a84e1cec739ab4112bff50bb8cc"
+        }
+      ]
+    },
+    {
+      "group": "final",
+      "report": "final-billing-20261009-3.json",
+      "reportSha256": "4d49a6fc83232d3a7602a83efc25f39787bef9c4e47ec68d0b32c72aff093348",
+      "generatedAt": "2026-10-08T23:02:58.999Z",
+      "exitCode": 1,
+      "acceptanceObservation": true,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 873364,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 273662,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273173,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3144,
+        "lcpMs": 3904,
+        "longTaskBlockingMs": 841,
+        "fixtureReadyMs": 4068
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273173,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3144,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3904,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 841,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-SRBwjvTQ.js",
+          "bytes": 415199,
+          "deliveredBytes": 124637,
+          "gzipBytes": 124637,
+          "sha256": "5a59e43b4d8a611782d95ddd94446017843ea477fff380091319a2e806421560"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-DKHTx4Ai.js",
+          "bytes": 26909,
+          "deliveredBytes": 8176,
+          "gzipBytes": 8176,
+          "sha256": "25290262c57798f9038c2b7551c69977eae2ec415ab20c32b43d0023c213e314"
+        },
+        {
+          "path": "/assets/textarea-BVELNHW_.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "2efd6b065ef2cc93c20cff1a5cb533f8eef18dc31cc7864fea14d2b4e44c943f"
+        },
+        {
+          "path": "/assets/Metric-B1aJ9k_A.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 216,
+          "sha256": "f75286e5ac611637924f774f1091493a6a0285d290b0838abc9af2e92b583552"
+        },
+        {
+          "path": "/assets/SignalLabel-UNueV0Yz.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "da096c34bd7d1f75f7c62a0bfca9abf65dff43f4e6cfdeba20ffe8372120bdca"
+        },
+        {
+          "path": "/assets/StatusBadge-Ds5WMm0b.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "fdf4d11700d9c76a98e87475b337b90c0fb17a84e1cec739ab4112bff50bb8cc"
+        }
+      ]
+    },
+    {
+      "group": "baseline-control",
+      "report": "baseline-control-20261009.json",
+      "reportSha256": "5585f083fd5fc05b26e11c9f6843ae192e43f3c94391bf6543e9dd7e83ff2bfd",
+      "generatedAt": "2026-10-08T20:36:16.934Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": false,
+      "measured": {
+        "javascriptBytes": 928461,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 286323,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 285832,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3236,
+        "lcpMs": 4024,
+        "longTaskBlockingMs": 792,
+        "fixtureReadyMs": 4110
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 285832,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3236,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4024,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 792,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-D0ESzvf_.js",
+          "bytes": 470296,
+          "deliveredBytes": 137299,
+          "gzipBytes": 137299,
+          "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CpCHf2lT.js",
+          "bytes": 26909,
+          "deliveredBytes": 8175,
+          "gzipBytes": 8175,
+          "sha256": "af14b2478d8d3f47d0158774c85810d2da909073794056f4c48fecfb980f9034"
+        },
+        {
+          "path": "/assets/textarea-FB8pltSf.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "492d536cbfa7952b73ca529948da7bdde2231ed06e52248bdb5a9beb88c42476"
+        },
+        {
+          "path": "/assets/Metric-DrEoP8ld.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 214,
+          "sha256": "a03afa8820026fd1850f83c361f73d3838e7be5e92526f92937ad361616a0fa1"
+        },
+        {
+          "path": "/assets/SignalLabel-yXN_g1yJ.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "3de79b8c2352a940b6f460862a71215dd2b4dd1efa8b34da6139c4822f98f2a7"
+        },
+        {
+          "path": "/assets/StatusBadge-CuUQIBht.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "d48b0067f6ae7ebc2948010d4b7c0f889a9bfb24968c0f87ff30baaae0f4b830"
+        }
+      ]
+    },
+    {
+      "group": "profiling-only-baseline",
+      "report": "baseline-20261009-profile.json",
+      "reportSha256": "8870841202b48ae6709d9646878289f68c06e70e83ed2c0ef341681d77eef557",
+      "generatedAt": "2026-10-08T20:14:58.286Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": true,
+      "measured": {
+        "javascriptBytes": 928461,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 286323,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 285832,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 2832,
+        "lcpMs": 3436,
+        "longTaskBlockingMs": 436,
+        "fixtureReadyMs": 3587
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 285832,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 2832,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3436,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 436,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-D0ESzvf_.js",
+          "bytes": 470296,
+          "deliveredBytes": 137299,
+          "gzipBytes": 137299,
+          "sha256": "d264d2c1daf44352095b236ba564402e50ce629ec19f43987c299af6bae72ef0"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-C12fIHo-.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "878acbf69d673cf6bd370044024999af19b858075d88d2188a3fcf48dd46d14e"
+        },
+        {
+          "path": "/assets/vendor-icons-C2JR4Ep_.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "581edf63ad1f67a2bf36987d762022d94d0f6424db1523576d5692b7dcf34847"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CpCHf2lT.js",
+          "bytes": 26909,
+          "deliveredBytes": 8175,
+          "gzipBytes": 8175,
+          "sha256": "af14b2478d8d3f47d0158774c85810d2da909073794056f4c48fecfb980f9034"
+        },
+        {
+          "path": "/assets/textarea-FB8pltSf.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 345,
+          "sha256": "492d536cbfa7952b73ca529948da7bdde2231ed06e52248bdb5a9beb88c42476"
+        },
+        {
+          "path": "/assets/Metric-DrEoP8ld.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 214,
+          "sha256": "a03afa8820026fd1850f83c361f73d3838e7be5e92526f92937ad361616a0fa1"
+        },
+        {
+          "path": "/assets/SignalLabel-yXN_g1yJ.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 195,
+          "sha256": "3de79b8c2352a940b6f460862a71215dd2b4dd1efa8b34da6139c4822f98f2a7"
+        },
+        {
+          "path": "/assets/StatusBadge-CuUQIBht.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 212,
+          "sha256": "d48b0067f6ae7ebc2948010d4b7c0f889a9bfb24968c0f87ff30baaae0f4b830"
+        }
+      ],
+      "diagnostics": {
+        "profilingOverhead": true,
+        "longTasks": [
+          {
+            "startTime": 2179.2000000029802,
+            "duration": 88
+          },
+          {
+            "startTime": 2272.10000000149,
+            "duration": 54
+          },
+          {
+            "startTime": 2434,
+            "duration": 68
+          },
+          {
+            "startTime": 2519.800000000745,
+            "duration": 176
+          },
+          {
+            "startTime": 2696.10000000149,
+            "duration": 118
+          },
+          {
+            "startTime": 2952.2000000029802,
+            "duration": 70
+          },
+          {
+            "startTime": 3178.60000000149,
+            "duration": 212
+          }
+        ],
+        "resources": [
+          {
+            "url": "http://127.0.0.1:65314/assets/index-D0ESzvf_.js",
+            "encodedBytes": 137299,
+            "transferredBytes": 137599,
+            "startTime": 214.5,
+            "responseStart": 247.20000000298023,
+            "responseEnd": 2162.800000000745,
+            "duration": 1948.300000000745
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/_commonjsHelpers-Cpj98o6Y.js",
+            "encodedBytes": 236,
+            "transferredBytes": 536,
+            "startTime": 215.10000000149012,
+            "responseStart": 249.5,
+            "responseEnd": 420.30000000074506,
+            "duration": 205.19999999925494
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-react-DO5q2pGw.js",
+            "encodedBytes": 58897,
+            "transferredBytes": 59197,
+            "startTime": 216.30000000074506,
+            "responseStart": 253.80000000074506,
+            "responseEnd": 1722.6000000014901,
+            "duration": 1506.300000000745
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/clsx-B-dksMZM.js",
+            "encodedBytes": 374,
+            "transferredBytes": 674,
+            "startTime": 217.40000000223517,
+            "responseStart": 254.60000000149012,
+            "responseEnd": 435.9000000022352,
+            "duration": 218.5
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-motion-C12fIHo-.js",
+            "encodedBytes": 42251,
+            "transferredBytes": 42551,
+            "startTime": 218,
+            "responseStart": 257.5,
+            "responseEnd": 1470.4000000022352,
+            "duration": 1252.4000000022352
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-icons-C2JR4Ep_.js",
+            "encodedBytes": 16497,
+            "transferredBytes": 16797,
+            "startTime": 218.60000000149012,
+            "responseStart": 259,
+            "responseEnd": 858.1000000014901,
+            "duration": 639.5
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-state-Da2V9HYc.js",
+            "encodedBytes": 1331,
+            "transferredBytes": 1631,
+            "startTime": 219.10000000149012,
+            "responseStart": 437.80000000074506,
+            "responseEnd": 669.7000000029802,
+            "duration": 450.6000000014901
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/index-DZWemJ72.js",
+            "encodedBytes": 9637,
+            "transferredBytes": 9937,
+            "startTime": 219.60000000149012,
+            "responseStart": 672.1000000014901,
+            "responseEnd": 1109.2000000029802,
+            "duration": 889.6000000014901
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-socket-UYxAN2L3.js",
+            "encodedBytes": 4102,
+            "transferredBytes": 4402,
+            "startTime": 220.20000000298023,
+            "responseStart": 859.7000000029802,
+            "responseEnd": 1140.9000000022352,
+            "duration": 920.6999999992549
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/vendor-date-PTKEOwdC.js",
+            "encodedBytes": 6259,
+            "transferredBytes": 6559,
+            "startTime": 220.60000000149012,
+            "responseStart": 1111.1000000014901,
+            "responseEnd": 1454.4000000022352,
+            "duration": 1233.800000000745
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/index-BHke-62f.css",
+            "encodedBytes": 62171,
+            "transferredBytes": 62471,
+            "startTime": 221,
+            "responseStart": 428.5,
+            "responseEnd": 1832.4000000022352,
+            "duration": 1611.4000000022352
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/home-CpCHf2lT.js",
+            "encodedBytes": 8175,
+            "transferredBytes": 8475,
+            "startTime": 2630.800000000745,
+            "responseStart": 2707.800000000745,
+            "responseEnd": 2947.400000002235,
+            "duration": 316.6000000014901
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/textarea-FB8pltSf.js",
+            "encodedBytes": 495,
+            "transferredBytes": 795,
+            "startTime": 2632,
+            "responseStart": 2708.300000000745,
+            "responseEnd": 2885.800000000745,
+            "duration": 253.80000000074506
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/Metric-DrEoP8ld.js",
+            "encodedBytes": 278,
+            "transferredBytes": 578,
+            "startTime": 2633,
+            "responseStart": 2708.7000000029802,
+            "responseEnd": 2886.300000000745,
+            "duration": 253.30000000074506
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/SignalLabel-yXN_g1yJ.js",
+            "encodedBytes": 231,
+            "transferredBytes": 531,
+            "startTime": 2634.400000002235,
+            "responseStart": 2709.300000000745,
+            "responseEnd": 2901.10000000149,
+            "duration": 266.69999999925494
+          },
+          {
+            "url": "http://127.0.0.1:65314/assets/StatusBadge-CuUQIBht.js",
+            "encodedBytes": 261,
+            "transferredBytes": 561,
+            "startTime": 2635.2000000029802,
+            "responseStart": 2709.800000000745,
+            "responseEnd": 2901.300000000745,
+            "duration": 266.0999999977648
+          }
+        ],
+        "browserMetrics": {
+          "Nodes": 959,
+          "LayoutCount": 6,
+          "RecalcStyleCount": 32,
+          "LayoutDuration": 0.212556,
+          "RecalcStyleDuration": 0.194101,
+          "ScriptDuration": 0.629165,
+          "TaskDuration": 1.472486
+        },
+        "cpuProfile": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\baseline-20261009-profile.cpuprofile",
+        "trace": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\baseline-20261009-profile.trace.json",
+        "screenshot": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\baseline-20261009-profile.png"
+      }
+    },
+    {
+      "group": "profiling-only-discarded-editor-split",
+      "report": "final-intent-20261009-profile.json",
+      "reportSha256": "2e27a34ba23c6b34e4f95d54fbf9b529d4aef9b972dfceb27a30418742d0d73e",
+      "generatedAt": "2026-10-08T20:36:50.968Z",
+      "exitCode": 1,
+      "acceptanceObservation": false,
+      "profilingOverhead": true,
+      "measured": {
+        "javascriptBytes": 863190,
+        "stylesheetBytes": 417083,
+        "javascriptDeliveredBytes": 275353,
+        "stylesheetDeliveredBytes": 62171,
+        "javascriptGzipBytes": 273695,
+        "stylesheetGzipBytes": 62171,
+        "fcpMs": 3148,
+        "lcpMs": 4340,
+        "longTaskBlockingMs": 963,
+        "fixtureReadyMs": 4474
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273695,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62171,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 3148,
+          "passed": false
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 4340,
+          "passed": false
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 963,
+          "passed": false
+        }
+      },
+      "assets": [
+        {
+          "path": "/assets/index-COc17K9d.js",
+          "bytes": 344355,
+          "deliveredBytes": 104923,
+          "gzipBytes": 104923,
+          "sha256": "efb26224707f80171e5812d07d382ca6e83292f91b85b113e926ed9fa59785b9"
+        },
+        {
+          "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+          "bytes": 236,
+          "deliveredBytes": 236,
+          "gzipBytes": 180,
+          "sha256": "9625379badd4849610dfe6c15453cdf0c0071264c90eef177307fac094d2aa6c"
+        },
+        {
+          "path": "/assets/vendor-react-DO5q2pGw.js",
+          "bytes": 185689,
+          "deliveredBytes": 58897,
+          "gzipBytes": 58897,
+          "sha256": "d8faf8c162b27ce33b4aadd3a2a37a46519e0c5aaa83f3bb774ac0004ffd6474"
+        },
+        {
+          "path": "/assets/clsx-B-dksMZM.js",
+          "bytes": 374,
+          "deliveredBytes": 374,
+          "gzipBytes": 238,
+          "sha256": "c7b843bc2bba461110e5ddf916d9c40180a383804ce73658730ec46e5196d2fd"
+        },
+        {
+          "path": "/assets/vendor-motion-DWI0bgj9.js",
+          "bytes": 127830,
+          "deliveredBytes": 42251,
+          "gzipBytes": 42251,
+          "sha256": "a4dd9dfec638b2dc6fad39a0a536a35979ee033d19206ca9a0378cd97428cc20"
+        },
+        {
+          "path": "/assets/vendor-icons-CYn_fPBo.js",
+          "bytes": 49684,
+          "deliveredBytes": 16497,
+          "gzipBytes": 16497,
+          "sha256": "77d8f03dd69b31d0249fa7e0680bbe92a80334b0dcca23fcf589d721bac4657f"
+        },
+        {
+          "path": "/assets/vendor-state-Da2V9HYc.js",
+          "bytes": 2685,
+          "deliveredBytes": 1331,
+          "gzipBytes": 1331,
+          "sha256": "920e113a6cee8f69b1c97a734ff0a00a6c87fde87177997518e1e0bf06d0ffd1"
+        },
+        {
+          "path": "/assets/index-DZWemJ72.js",
+          "bytes": 29166,
+          "deliveredBytes": 9637,
+          "gzipBytes": 9637,
+          "sha256": "34200a02f90421425d01d04a4a0991db81d25d5da8db295f8af4f9e7db9bbb51"
+        },
+        {
+          "path": "/assets/vendor-socket-UYxAN2L3.js",
+          "bytes": 12495,
+          "deliveredBytes": 4102,
+          "gzipBytes": 4102,
+          "sha256": "5dbb132427d736776bcc9ffe1059cee3693eb71d1bdad04ff751c166bbb5882d"
+        },
+        {
+          "path": "/assets/index-BHke-62f.css",
+          "bytes": 417083,
+          "deliveredBytes": 62171,
+          "gzipBytes": 62171,
+          "sha256": "6e0855eceb8a67f05443b0056a5c179f842bde8320f9bf997e21fdaeb42887e0"
+        },
+        {
+          "path": "/assets/home-CFTyWwIB.js",
+          "bytes": 27490,
+          "deliveredBytes": 8395,
+          "gzipBytes": 8395,
+          "sha256": "78fdc0edf96883e5885fea2cc66c321a355462ba7c65457501ad22657629e9d3"
+        },
+        {
+          "path": "/assets/textarea-CfoTU8DK.js",
+          "bytes": 495,
+          "deliveredBytes": 495,
+          "gzipBytes": 346,
+          "sha256": "5cedbc7a46b93c1a45de4ec83a45dc55372cccbe5edea3e9aaa911f15923dc4e"
+        },
+        {
+          "path": "/assets/Post-DLxy5aM1.js",
+          "bytes": 40353,
+          "deliveredBytes": 12616,
+          "gzipBytes": 12616,
+          "sha256": "5cd5d03a8ee5aaa29af3ba6e457bbdb78d03ad259d167767d82f456a7f8afe8c"
+        },
+        {
+          "path": "/assets/popover-DfBq2M1y.js",
+          "bytes": 5310,
+          "deliveredBytes": 1932,
+          "gzipBytes": 1932,
+          "sha256": "d4702c846f0a24addc2622a627d98229ed09c8a9f0584d831e832be4a53fe764"
+        },
+        {
+          "path": "/assets/motion-BwpD3yrH.js",
+          "bytes": 532,
+          "deliveredBytes": 532,
+          "gzipBytes": 245,
+          "sha256": "489e6a5f6ced0dd7e6692ce6eb2cdb8e4e8612b45c0e5e3c8d44968e7a1d9e25"
+        },
+        {
+          "path": "/assets/SteamTradeModal-D_Pi-xCE.js",
+          "bytes": 11239,
+          "deliveredBytes": 3451,
+          "gzipBytes": 3451,
+          "sha256": "ac821dc487cdf7efc26c7ea4fb146b9bda93df5d7cd457f4d4d2ba95e87a7e08"
+        },
+        {
+          "path": "/assets/media-upload-t1zks-0q.js",
+          "bytes": 326,
+          "deliveredBytes": 326,
+          "gzipBytes": 250,
+          "sha256": "e4bb6b021928f26f9ad4e0b2590be5f2e59eed3d5adbd43ad3e3a9202e450f03"
+        },
+        {
+          "path": "/assets/ContentRatingSelect-CDFBD_fL.js",
+          "bytes": 613,
+          "deliveredBytes": 613,
+          "gzipBytes": 394,
+          "sha256": "86f2e897827faa9787e8ac8ffa7ed32aa772cd1b30170f1fa646c4b0b505e83a"
+        },
+        {
+          "path": "/assets/label-DfYwyeWa.js",
+          "bytes": 565,
+          "deliveredBytes": 565,
+          "gzipBytes": 382,
+          "sha256": "ebf24535ab9b80305a55c0dbadbfb3a29e52ca33a37c0c1d5f14f03f1925872e"
+        },
+        {
+          "path": "/assets/ContentCategorySelect-CD0Gp6S6.js",
+          "bytes": 743,
+          "deliveredBytes": 743,
+          "gzipBytes": 446,
+          "sha256": "7528a18f6b0efad9b0aa28f62e8386b1a27837c1e43b49bbcaacc94d68f9825e"
+        },
+        {
+          "path": "/assets/ContentCategoryBadge-DC-XGoUk.js",
+          "bytes": 408,
+          "deliveredBytes": 408,
+          "gzipBytes": 301,
+          "sha256": "0b42e7fbc17e3b419123df20b4be8809ac54ba5f2693225533c5bd00f0897faf"
+        },
+        {
+          "path": "/assets/vendor-date-PTKEOwdC.js",
+          "bytes": 21832,
+          "deliveredBytes": 6259,
+          "gzipBytes": 6259,
+          "sha256": "520095cbc7d29c02e4b5ac0bc52000a955290a5c5dffc22a64e9f0770233dc0e"
+        },
+        {
+          "path": "/assets/Metric-DXjDV5m3.js",
+          "bytes": 278,
+          "deliveredBytes": 278,
+          "gzipBytes": 213,
+          "sha256": "ad10679c2c2d70aecace8222403cdbc174efb5a0e50bb5971c535748da5c74cb"
+        },
+        {
+          "path": "/assets/SignalLabel-Clo971LK.js",
+          "bytes": 231,
+          "deliveredBytes": 231,
+          "gzipBytes": 196,
+          "sha256": "8631908b943e8d55f83bd5257647b7c83b467d0325f6446dad81bac6a2a1143a"
+        },
+        {
+          "path": "/assets/StatusBadge-DDOAHasx.js",
+          "bytes": 261,
+          "deliveredBytes": 261,
+          "gzipBytes": 213,
+          "sha256": "5fc91db820ccf9ada84a8c16ab2f04c023d2b258c1823c2cb134da4873c13511"
+        }
+      ],
+      "diagnostics": {
+        "profilingOverhead": true,
+        "longTasks": [
+          {
+            "startTime": 2000.0999999977648,
+            "duration": 133
+          },
+          {
+            "startTime": 2139.89999999851,
+            "duration": 99
+          },
+          {
+            "startTime": 2411.7999999970198,
+            "duration": 154
+          },
+          {
+            "startTime": 2587.699999999255,
+            "duration": 374
+          },
+          {
+            "startTime": 2966.89999999851,
+            "duration": 158
+          },
+          {
+            "startTime": 3558.89999999851,
+            "duration": 89
+          },
+          {
+            "startTime": 3886.89999999851,
+            "duration": 73
+          },
+          {
+            "startTime": 3960.199999999255,
+            "duration": 283
+          }
+        ],
+        "resources": [
+          {
+            "url": "http://127.0.0.1:52791/assets/index-COc17K9d.js",
+            "encodedBytes": 104923,
+            "transferredBytes": 105223,
+            "startTime": 224.39999999850988,
+            "responseStart": 267,
+            "responseEnd": 1982.5,
+            "duration": 1758.1000000014901
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/_commonjsHelpers-Cpj98o6Y.js",
+            "encodedBytes": 236,
+            "transferredBytes": 536,
+            "startTime": 225.59999999776483,
+            "responseStart": 269.5999999977648,
+            "responseEnd": 428.69999999925494,
+            "duration": 203.10000000149012
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-react-DO5q2pGw.js",
+            "encodedBytes": 58897,
+            "transferredBytes": 59197,
+            "startTime": 226.69999999925494,
+            "responseStart": 274.29999999701977,
+            "responseEnd": 1680.3999999985099,
+            "duration": 1453.699999999255
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/clsx-B-dksMZM.js",
+            "encodedBytes": 374,
+            "transferredBytes": 674,
+            "startTime": 227.79999999701977,
+            "responseStart": 275.19999999925494,
+            "responseEnd": 444,
+            "duration": 216.20000000298023
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-motion-DWI0bgj9.js",
+            "encodedBytes": 42251,
+            "transferredBytes": 42551,
+            "startTime": 228.39999999850988,
+            "responseStart": 278.5999999977648,
+            "responseEnd": 1443.2999999970198,
+            "duration": 1214.8999999985099
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-icons-CYn_fPBo.js",
+            "encodedBytes": 16497,
+            "transferredBytes": 16797,
+            "startTime": 229.09999999776483,
+            "responseStart": 281,
+            "responseEnd": 855.8999999985099,
+            "duration": 626.8000000007451
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-state-Da2V9HYc.js",
+            "encodedBytes": 1331,
+            "transferredBytes": 1631,
+            "startTime": 229.59999999776483,
+            "responseStart": 445.79999999701977,
+            "responseEnd": 682.2999999970198,
+            "duration": 452.69999999925494
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/index-DZWemJ72.js",
+            "encodedBytes": 9637,
+            "transferredBytes": 9937,
+            "startTime": 231,
+            "responseStart": 685.5999999977648,
+            "responseEnd": 1124.3999999985099,
+            "duration": 893.3999999985099
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-socket-UYxAN2L3.js",
+            "encodedBytes": 4102,
+            "transferredBytes": 4402,
+            "startTime": 232.5,
+            "responseStart": 858,
+            "responseEnd": 1140.2999999970198,
+            "duration": 907.7999999970198
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/index-BHke-62f.css",
+            "encodedBytes": 62171,
+            "transferredBytes": 62471,
+            "startTime": 233.5,
+            "responseStart": 436.3999999985099,
+            "responseEnd": 1809.7999999970198,
+            "duration": 1576.2999999970198
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/home-CFTyWwIB.js",
+            "encodedBytes": 8395,
+            "transferredBytes": 8695,
+            "startTime": 2844.2999999970198,
+            "responseStart": 2979.199999999255,
+            "responseEnd": 3273.099999997765,
+            "duration": 428.80000000074506
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/textarea-CfoTU8DK.js",
+            "encodedBytes": 495,
+            "transferredBytes": 795,
+            "startTime": 2846.2999999970198,
+            "responseStart": 2981.2999999970198,
+            "responseEnd": 3146.199999999255,
+            "duration": 299.9000000022352
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/Post-DLxy5aM1.js",
+            "encodedBytes": 12616,
+            "transferredBytes": 12916,
+            "startTime": 2847.699999999255,
+            "responseStart": 2983.2999999970198,
+            "responseEnd": 3305.699999999255,
+            "duration": 458
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/popover-DfBq2M1y.js",
+            "encodedBytes": 1932,
+            "transferredBytes": 2232,
+            "startTime": 2849.39999999851,
+            "responseStart": 2984.699999999255,
+            "responseEnd": 3193.5,
+            "duration": 344.1000000014901
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/motion-BwpD3yrH.js",
+            "encodedBytes": 532,
+            "transferredBytes": 832,
+            "startTime": 2850.199999999255,
+            "responseStart": 2985.2999999970198,
+            "responseEnd": 3177.699999999255,
+            "duration": 327.5
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/SteamTradeModal-D_Pi-xCE.js",
+            "encodedBytes": 3451,
+            "transferredBytes": 3751,
+            "startTime": 2850.7999999970198,
+            "responseStart": 2986.39999999851,
+            "responseEnd": 3225.39999999851,
+            "duration": 374.6000000014901
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/media-upload-t1zks-0q.js",
+            "encodedBytes": 326,
+            "transferredBytes": 626,
+            "startTime": 2852.5,
+            "responseStart": 3147.7999999970198,
+            "responseEnd": 3321.7999999970198,
+            "duration": 469.29999999701977
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/ContentRatingSelect-CDFBD_fL.js",
+            "encodedBytes": 613,
+            "transferredBytes": 913,
+            "startTime": 2853.199999999255,
+            "responseStart": 3179.199999999255,
+            "responseEnd": 3353.39999999851,
+            "duration": 500.19999999925494
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/label-DfYwyeWa.js",
+            "encodedBytes": 565,
+            "transferredBytes": 865,
+            "startTime": 2853.89999999851,
+            "responseStart": 3194.7999999970198,
+            "responseEnd": 3368.5,
+            "duration": 514.6000000014901
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/ContentCategorySelect-CD0Gp6S6.js",
+            "encodedBytes": 743,
+            "transferredBytes": 1043,
+            "startTime": 2854.89999999851,
+            "responseStart": 3226.699999999255,
+            "responseEnd": 3400.099999997765,
+            "duration": 545.1999999992549
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/ContentCategoryBadge-DC-XGoUk.js",
+            "encodedBytes": 408,
+            "transferredBytes": 708,
+            "startTime": 2856.2999999970198,
+            "responseStart": 3274.39999999851,
+            "responseEnd": 3448.2999999970198,
+            "duration": 592
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/vendor-date-PTKEOwdC.js",
+            "encodedBytes": 6259,
+            "transferredBytes": 6559,
+            "startTime": 2857.7999999970198,
+            "responseStart": 3307.5,
+            "responseEnd": 3510.5,
+            "duration": 652.7000000029802
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/Metric-DXjDV5m3.js",
+            "encodedBytes": 278,
+            "transferredBytes": 578,
+            "startTime": 2859.7999999970198,
+            "responseStart": 3322.89999999851,
+            "responseEnd": 3495.199999999255,
+            "duration": 635.4000000022352
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/SignalLabel-Clo971LK.js",
+            "encodedBytes": 231,
+            "transferredBytes": 531,
+            "startTime": 2861.099999997765,
+            "responseStart": 3354.599999997765,
+            "responseEnd": 3527,
+            "duration": 665.9000000022352
+          },
+          {
+            "url": "http://127.0.0.1:52791/assets/StatusBadge-DDOAHasx.js",
+            "encodedBytes": 261,
+            "transferredBytes": 561,
+            "startTime": 2861.699999999255,
+            "responseStart": 3369.699999999255,
+            "responseEnd": 3542.099999997765,
+            "duration": 680.3999999985099
+          }
+        ],
+        "browserMetrics": {
+          "Nodes": 967,
+          "LayoutCount": 6,
+          "RecalcStyleCount": 24,
+          "LayoutDuration": 0.283811,
+          "RecalcStyleDuration": 0.330492,
+          "ScriptDuration": 1.117653,
+          "TaskDuration": 2.431953
+        },
+        "cpuProfile": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\final-intent-20261009-profile.cpuprofile",
+        "trace": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\final-intent-20261009-profile.trace.json",
+        "screenshot": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-hardening-20261007\\performance-continue\\final-intent-20261009-profile.png"
+      }
+    }
+  ],
+  "discardedVariants": [
+    {
+      "name": "editor-split",
+      "frontendSourceSha256": "a8336697e9924d8833c7196d6f9596e502f12fe4e148298c6243569571ec6c66",
+      "reason": "Added10 Home dependency requests/approximately426ms longer dependency interval and cached React.lazy rejection made local Retry ineffective. Payload shrink did not justify shipping the UI split under failing timing gates.",
+      "restoration": "Only our AppShell/Post edits were replaced with exact HEAD object bytes; original design/content and all unrelated edits preserved.",
+      "interimBrowserEvidence": "Root-reported production suite71passed,0failed,0skipped,0retries,exit0,3.3min; applies to discarded editor-split source, not final billing-only source."
+    }
+  ],
+  "privateEvidenceDirectory": "C:/Users/yoray/AppData/Local/Temp/yor-hardening-20261007/performance-continue",
+  "artifacts": [
+    {
+      "file": "baseline-build.log",
+      "sha256": "5a3e6e288ca7f9fc0abb61796600ae82f3fd707dd28067a371e128db0cc0181d"
+    },
+    {
+      "file": "baseline-module-map.json",
+      "sha256": "44ee05a899c4441ee7757a07cc6f182ce9e8198251482f0c09bfa38d22d32af8"
+    },
+    {
+      "file": "baseline-cpu-summary.json",
+      "sha256": "1a320e3cae176f6f0f6f9da4b6a7f87cba3001cbbe8a93441c96f5c817bfd4b3"
+    },
+    {
+      "file": "baseline-20261009-profile.cpuprofile",
+      "sha256": "d8a3f0bcdaa17fa03a694f4dc010527a16e9ee0478b414cfa25e243ec824a0e0"
+    },
+    {
+      "file": "baseline-20261009-profile.trace.json",
+      "sha256": "639115920985eb763f77d20769afc577466461a9ad27bcf32f614e9a5ec1d906"
+    },
+    {
+      "file": "lazy-billing-build.log",
+      "sha256": "24e6d6362984ee2c98867eb1c9f3e1145c2b10ac4703c2bcb6b9fa6a3efb4a57"
+    },
+    {
+      "file": "lazy-billing-module-map.json",
+      "sha256": "97e5191a65573a80b9f8086abdcd46e95ad4e6a5e3b912eb8957ef831a2b51a7"
+    },
+    {
+      "file": "lazy-billing-manifest.json",
+      "sha256": "f2dfccdd29b9d77ef0232ee1fb1e507fbe0b88a80c16ddbc66fd876299ba3e24"
+    },
+    {
+      "file": "final-intent-build.log",
+      "sha256": "22fb972f78d38254007f4b243b0b2ec535c9ca0297531957aae0671ec706ae01"
+    },
+    {
+      "file": "final-intent-module-map.json",
+      "sha256": "859c094f8174bb0700b17a145146bacb041323a8d9e9cdd80961a1d5afdf2af6"
+    },
+    {
+      "file": "final-intent-manifest.json",
+      "sha256": "2f0390ae82be25aa0a3a5faa8e9680b92a188e9c3cfa757b10c6ba179dc8d357"
+    },
+    {
+      "file": "final-intent-20261009-profile.cpuprofile",
+      "sha256": "4c0fba5bb63be0ea8b642837923c13bf5eb1d0d0276f4336ad75d87695654580"
+    },
+    {
+      "file": "final-intent-20261009-profile.trace.json",
+      "sha256": "d8f3b345f2cf696b9331017df28960735d18647fca42c96bae1f6ca545ec9c9f"
+    },
+    {
+      "file": "final-billing-build.log",
+      "sha256": "1231ff215cdb4de7a590e4bb78f66c78746ad7e6d37d7dba03742e7e5bad6ff2"
+    },
+    {
+      "file": "final-billing-module-map.json",
+      "sha256": "35d377e1d57322617615a019f7b65107712d7562ce32eef1d7845624fcc9f55b"
+    },
+    {
+      "file": "final-billing-manifest.json",
+      "sha256": "bf41a56ca2d33a135be6b55ef386a845b6626b57a5e60f2cc27c859f6c0d85af"
+    }
+  ],
+  "remainingGates": [
+    "fcpMs maximum2500 fails3/3",
+    "lcpMs maximum4000 fails2/3",
+    "longTaskBlockingMs maximum300 fails3/3",
+    "owner agreement to proposed budgets",
+    "quiet-host repeat and real edge/device measurements",
+    "actual Nginx/container gzip acceptance",
+    "full final regression checks owned by root; no new commit/CI/deployment acceptance asserted here"
+  ]
+}

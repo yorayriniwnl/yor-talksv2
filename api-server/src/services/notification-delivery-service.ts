@@ -20,7 +20,7 @@ export class NotificationDeliveryService {
 
     webpush.setVapidDetails(env.WEB_PUSH_VAPID_SUBJECT, env.WEB_PUSH_VAPID_PUBLIC_KEY, env.WEB_PUSH_VAPID_PRIVATE_KEY);
     const subscriptions = await this.pushSubscriptionRepository.listForUser(notification.recipientId);
-    const failures: unknown[] = [];
+    let failures = 0;
     await Promise.all(subscriptions.map(async (subscription) => {
       try {
         await webpush.sendNotification({
@@ -36,21 +36,27 @@ export class NotificationDeliveryService {
               ? "/channels"
               : notification.relatedId ? `/post/${notification.relatedId}` : "/notifications",
           },
-        }));
+        }), {
+          // web-push destroys an idle request on socket timeout. This is not
+          // a full-response deadline; provider enablement needs separate soak.
+          timeout: 15_000,
+        });
         await this.pushSubscriptionRepository.markUsed(subscription.id);
       } catch (error: any) {
-        const statusCode = Number(error?.statusCode);
+        const suppliedStatus = Number(error?.statusCode);
+        const statusCode = Number.isInteger(suppliedStatus) && suppliedStatus >= 100 && suppliedStatus <= 599
+          ? suppliedStatus : undefined;
         if (statusCode === 404 || statusCode === 410) {
           await this.pushSubscriptionRepository.removeByEndpoint(subscription.endpoint);
           logger.info({ subscriptionId: subscription.id, statusCode }, "Removed expired Web Push subscription");
           return;
         }
-        logger.warn({ err: error, subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
-        failures.push(error);
+        logger.warn({ code: 'web_push_delivery_failed', statusCode, subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
+        failures++;
       }
     }));
-    if (failures.length > 0) {
-      throw new Error(`Web Push delivery failed for ${failures.length} subscription(s)`);
+    if (failures > 0) {
+      throw new Error('web_push_delivery_failed');
     }
     return notification;
   }

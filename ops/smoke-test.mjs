@@ -1,10 +1,18 @@
+import { assertReadiness } from './check-readiness.mjs';
+
 const baseUrl = (process.env.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+const syntheticProviders = process.env.SMOKE_SYNTHETIC_PROVIDERS === 'true';
+if (syntheticProviders && (process.env.CI !== 'true' || !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(baseUrl).hostname))) {
+  throw new Error('Synthetic provider smoke is restricted to isolated loopback CI');
+}
 
 async function check(path, init, expectedStatus) {
   const response = await fetch(`${baseUrl}${path}`, init);
   if (response.status !== expectedStatus) {
     const body = await response.text().catch(() => "");
-    throw new Error(`${path}: expected ${expectedStatus}, received ${response.status}: ${body.slice(0, 240)}`);
+    const platformError = response.headers.get("x-vercel-error") || "";
+    const platformDiagnostic = /^[A-Za-z0-9_-]{1,80}$/.test(platformError) ? ` (platform: ${platformError})` : "";
+    throw new Error(`${path}: expected ${expectedStatus}, received ${response.status}${platformDiagnostic}: ${body.slice(0, 240)}`);
   }
   return response;
 }
@@ -14,7 +22,7 @@ async function log(category, message) {
 }
 
 try {
-  await log("SMOKE", "Starting production readiness verification...");
+  await log("SMOKE", syntheticProviders ? 'Starting isolated synthetic container smoke...' : 'Starting deployment smoke with required core media readiness...');
 
   // Web shell checks
   await log("WEB", "Checking web shell...");
@@ -28,6 +36,7 @@ try {
   // Security headers
   await log("SECURITY", "Verifying security headers...");
   const requiredHeaders = ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy"];
+  if (new URL(baseUrl).protocol === "https:") requiredHeaders.push("strict-transport-security");
   const missingHeaders = requiredHeaders.filter((header) => !web.headers.get(header));
   if (missingHeaders.length > 0) {
     throw new Error(`/ is missing security headers: ${missingHeaders.join(", ")}`);
@@ -54,9 +63,18 @@ try {
   await log("SW", "Service worker cache policy is correct");
 
   // API readiness and dependency checks
+  await log("API-HEALTH", "Checking API liveness endpoint...");
+  const liveness = await check("/api/livez", undefined, 200);
+  const livenessBody = await liveness.json();
+  if (livenessBody.status !== "live") {
+    throw new Error(`API liveness status is not 'live': ${livenessBody.status || "unknown"}`);
+  }
+  await log("API-HEALTH", "API process is live");
+
   await log("API-HEALTH", "Checking API readiness endpoint...");
   const readiness = await check("/api/readyz", undefined, 200);
   const readinessBody = await readiness.json();
+  assertReadiness(readinessBody, { syntheticProviders });
   
   if (readinessBody.status !== "healthy") {
     throw new Error(`API readiness status is not 'healthy': ${readinessBody.status}`);
@@ -95,12 +113,12 @@ try {
   const uptimeMatch = readinessBody.uptime ? `${Math.round(readinessBody.uptime)}s` : "unknown";
   await log("UPTIME", `API has been running for ${uptimeMatch}`);
 
-  await log("SMOKE", `✅ All production readiness checks passed for ${baseUrl}`);
-  process.exit(0);
+  await log("SMOKE", `Deployment smoke passed for ${baseUrl}; provider journeys and operational acceptance remain separate`);
+  process.exitCode = 0;
 } catch (error) {
   await log("ERROR", `❌ Production readiness check failed: ${error.message}`);
   if (error.stack) {
     console.error(error.stack);
   }
-  process.exit(1);
+  process.exitCode = 1;
 }

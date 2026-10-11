@@ -15,6 +15,23 @@ export interface ApiEnvelope {
   meta?: ApiEnvelopeMeta;
 }
 
+export type PublicGrievanceTicketStatus = typeof PublicGrievanceTicketStatus[keyof typeof PublicGrievanceTicketStatus];
+
+
+export const PublicGrievanceTicketStatus = {
+  received: 'received',
+  under_review: 'under_review',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
+
+export interface PublicGrievanceTicket {
+  /** @pattern ^YT-GRV-[A-Z0-9]{10}$ */
+  ticketId: string;
+  status: PublicGrievanceTicketStatus;
+  createdAt: string;
+}
+
 export type MediaPresignRequestMimeType = typeof MediaPresignRequestMimeType[keyof typeof MediaPresignRequestMimeType];
 
 

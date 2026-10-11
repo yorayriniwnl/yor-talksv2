@@ -210,20 +210,21 @@ export default function Worlds() {
             <DialogTitle className="text-2xl font-display">Create the place you wish existed.</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-3">
-            <label className="yor-field">
-              <span>Name</span>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Midnight filmmakers" maxLength={80} />
-            </label>
-            <label className="yor-field">
-              <span>What pulls people here?</span>
+            <div className="yor-field space-y-1.5">
+              <label htmlFor="world-name-input" className="text-xs font-semibold text-foreground block">Name</label>
+              <Input id="world-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Midnight filmmakers" maxLength={80} />
+            </div>
+            <div className="yor-field space-y-1.5">
+              <label htmlFor="world-description-input" className="text-xs font-semibold text-foreground block">What pulls people here?</label>
               <Textarea
+                id="world-description-input"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="A place for people who want to make strange, beautiful short films after class..."
                 rows={4}
                 maxLength={500}
               />
-            </label>
+            </div>
             <MediaImageField id="world-cover" label="World cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={creating} />
             <ContentRatingSelect id="world-content-rating" value={contentRating} onChange={setContentRating} />
             <div className="yor-dialog-note">

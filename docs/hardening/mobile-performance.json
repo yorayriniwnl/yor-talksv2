@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-10-07T16:59:39.165Z",
+  "scope": "Cold synthetic authenticated feed; local production assets; 390x844; 150ms latency; 1.6Mbps down; 4x CPU; no gzip delivery or provider timing. Budgets are proposed repository gates, pending owner agreement. One observation is not field percentile data.",
+  "directory": "C:\\Users\\yoray\\Projects\\yor-talks-v3\\social\\dist\\e2e",
+  "measured": {
+    "javascriptBytes": 1349517,
+    "stylesheetBytes": 417083,
+    "javascriptGzipBytes": 400609,
+    "stylesheetGzipBytes": 60744,
+    "fcpMs": 10480,
+    "lcpMs": 10480,
+    "longTaskBlockingMs": 1515,
+    "fixtureReadyMs": 12007
+  },
+  "budgets": {
+    "javascriptGzipBytes": {
+      "maximum": 358400,
+      "observed": 400609,
+      "passed": false
+    },
+    "stylesheetGzipBytes": {
+      "maximum": 102400,
+      "observed": 60744,
+      "passed": true
+    },
+    "fcpMs": {
+      "maximum": 2500,
+      "observed": 10480,
+      "passed": false
+    },
+    "lcpMs": {
+      "maximum": 4000,
+      "observed": 10480,
+      "passed": false
+    },
+    "longTaskBlockingMs": {
+      "maximum": 300,
+      "observed": 1515,
+      "passed": false
+    }
+  },
+  "assets": [
+    {
+      "path": "/assets/index-BKNK9p1A.js",
+      "bytes": 646776,
+      "gzipBytes": 192650
+    },
+    {
+      "path": "/assets/vendor-motion-CYU71T98.js",
+      "bytes": 136662,
+      "gzipBytes": 45212
+    },
+    {
+      "path": "/assets/vendor-charts-DYeco2aX.js",
+      "bytes": 378122,
+      "gzipBytes": 104841
+    },
+    {
+      "path": "/assets/vendor-icons-CdcOMay5.js",
+      "bytes": 49685,
+      "gzipBytes": 16399
+    },
+    {
+      "path": "/assets/vendor-socket-85Nn1l6r.js",
+      "bytes": 41548,
+      "gzipBytes": 13010
+    },
+    {
+      "path": "/assets/vendor-state-DOvtQEU0.js",
+      "bytes": 653,
+      "gzipBytes": 411
+    },
+    {
+      "path": "/assets/vendor-date-PTKEOwdC.js",
+      "bytes": 21832,
+      "gzipBytes": 6234
+    },
+    {
+      "path": "/assets/index-BHke-62f.css",
+      "bytes": 417083,
+      "gzipBytes": 60744
+    },
+    {
+      "path": "/assets/home-I8bqLERU.js",
+      "bytes": 25828,
+      "gzipBytes": 7784
+    },
+    {
+      "path": "/assets/Metric-DY-Kb7AK.js",
+      "bytes": 45543,
+      "gzipBytes": 12313
+    },
+    {
+      "path": "/assets/MediaImageField-BgNnliBQ.js",
+      "bytes": 1878,
+      "gzipBytes": 1002
+    },
+    {
+      "path": "/assets/textarea-LTy_7qF6.js",
+      "bytes": 496,
+      "gzipBytes": 348
+    },
+    {
+      "path": "/assets/SignalLabel-DVMRysep.js",
+      "bytes": 232,
+      "gzipBytes": 192
+    },
+    {
+      "path": "/assets/StatusBadge-Dn13ZOvh.js",
+      "bytes": 262,
+      "gzipBytes": 213
+    }
+  ]
+}

@@ -101,21 +101,22 @@ export default defineConfig(async ({ mode }) => {
       emptyOutDir: true,
       rollupOptions: {
         output: {
-          manualChunks: {
-            // Animation framework
-            'vendor-motion': ['framer-motion'],
-            // Date utilities
-            'vendor-date': ['date-fns'],
-            // Heavy charting (used by dashboard)
-            'vendor-charts': ['recharts'],
-            // Icon library
-            'vendor-icons': ['lucide-react'],
-            // State management + data
-            'vendor-state': ['zustand'],
-            // Socket transport is used by the shell; keep its payload separate.
-            'vendor-socket': ['socket.io-client'],
-            // Live calling is route-level and should not block first paint.
-            'vendor-livekit': ['livekit-client'],
+          // Shared dependencies must not be swept into a route-only chunk:
+          // implicit chart dependencies previously placed ReactDOM in charts,
+          // eagerly downloading the entire chart library on the feed.
+          onlyExplicitManualChunks: true,
+          manualChunks(id) {
+            const module = id.replace(/\\/g, '/');
+            // Match the actual package modules, including pnpm/CJS internals.
+            // The object form still collects transitive entry dependencies.
+            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(module)) return 'vendor-react';
+            if (/\/node_modules\/(framer-motion|motion-dom|motion-utils)\//.test(module)) return 'vendor-motion';
+            if (/\/node_modules\/date-fns\//.test(module)) return 'vendor-date';
+            if (/\/node_modules\/recharts\//.test(module)) return 'vendor-charts';
+            if (/\/node_modules\/lucide-react\//.test(module)) return 'vendor-icons';
+            if (/\/node_modules\/zustand\//.test(module)) return 'vendor-state';
+            if (/\/node_modules\/socket.io-client\//.test(module)) return 'vendor-socket';
+            if (/\/node_modules\/livekit-client\//.test(module)) return 'vendor-livekit';
           },
         },
       },

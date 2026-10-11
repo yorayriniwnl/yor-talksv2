@@ -47,7 +47,7 @@ export default function Saved() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary"><Bookmark className="h-4 w-4" /> Private collection</div>
-              <h2 className="mt-2 font-display text-3xl font-black tracking-tight">Saved for later.</h2>
+              <h1 className="mt-2 font-display text-3xl font-black tracking-tight">Saved for later.</h1>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">Your saved posts and Reels stay private to you and respect the same audience and content-safety rules as the original content.</p>
             </div>
             <Button variant="outline" onClick={handleRefresh} disabled={loading || refreshing} className="rounded-2xl"><RefreshCw className={loading || refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /> Refresh</Button>
@@ -56,14 +56,14 @@ export default function Saved() {
 
         {posts.length > 0 && (
           <section className="space-y-4">
-            <h3 className="font-display text-xl font-black">Saved posts</h3>
+            <h2 className="font-display text-xl font-black">Saved posts</h2>
             <div className="space-y-5">{posts.map((post) => <PostCard key={post.id} post={post} />)}</div>
           </section>
         )}
 
         {videos.length > 0 && (
           <section className="space-y-4">
-            <h3 className="font-display text-xl font-black">Saved Reels & videos</h3>
+            <h2 className="font-display text-xl font-black">Saved Reels & videos</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               {videos.map((video) => {
                 const author = users[video.authorId];
@@ -74,7 +74,7 @@ export default function Saved() {
                       <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-[0.62rem] font-mono font-bold text-white"><Play className="h-3 w-3 fill-white" /> {video.type === 'short' ? 'REEL' : 'VIDEO'}</span>
                     </div>
                     <div className="p-4">
-                      <h4 className="font-display font-bold leading-tight">{video.title}</h4>
+                      <h3 className="font-display font-bold leading-tight">{video.title}</h3>
                       <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                         <Avatar className="h-6 w-6"><AvatarImage src={author?.avatarUrl} /><AvatarFallback>{author?.displayName?.charAt(0) ?? '?'}</AvatarFallback></Avatar>
                         <span>{author?.displayName ?? 'Creator'}</span>

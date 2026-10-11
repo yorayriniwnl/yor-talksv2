@@ -23,13 +23,21 @@ export function ScrollReveal({ children, className, delay = 0, direction = 'up' 
   const reduceMotion = useReducedMotion();
   const offset = directionMap[direction];
 
+  if (reduceMotion) {
+    return (
+      <div ref={ref} className={cn(className)}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       ref={ref}
       className={cn(className)}
-      initial={reduceMotion ? false : { opacity: 0, x: offset.x, y: offset.y }}
-      animate={reduceMotion || isInView ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, x: offset.x, y: offset.y }}
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, x: offset.x, y: offset.y }}
+      animate={isInView ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, x: offset.x, y: offset.y }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}
     </motion.div>

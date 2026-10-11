@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'wouter';
 import {
   ArrowRight,
@@ -100,6 +100,7 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const displayName = currentUser?.displayName || currentUser?.username || 'there';
   const firstName = displayName.split(/\s+/)[0];
@@ -327,13 +328,23 @@ export default function Home() {
             {feedLoading && visiblePosts.length === 0 ? (
               <FeedSkeleton count={3} />
             ) : visiblePosts.length > 0 ? (
-              <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="orbit-post-list">
-                {visiblePosts.map((post, index) => (
-                  <ScrollReveal key={post.id} delay={Math.min(index * 0.035, 0.2)} className="orbit-post-card">
-                    <PostCard post={post} />
-                  </ScrollReveal>
-                ))}
-              </motion.div>
+              reduceMotion ? (
+                <div className="orbit-post-list">
+                  {visiblePosts.map((post, index) => (
+                    <ScrollReveal key={post.id} delay={Math.min(index * 0.035, 0.2)} className="orbit-post-card">
+                      <PostCard post={post} />
+                    </ScrollReveal>
+                  ))}
+                </div>
+              ) : (
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="orbit-post-list">
+                  {visiblePosts.map((post, index) => (
+                    <ScrollReveal key={post.id} delay={Math.min(index * 0.035, 0.2)} className="orbit-post-card">
+                      <PostCard post={post} />
+                    </ScrollReveal>
+                  ))}
+                </motion.div>
+              )
             ) : !feedError ? (
               <section className="orbit-empty operator-panel">
                 {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}

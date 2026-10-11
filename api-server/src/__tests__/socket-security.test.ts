@@ -8,8 +8,11 @@ import { attachSocketServer } from "../socket/index.js";
 import { parseSocketPayload } from "../socket/policy.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { EligibilityRepository } from "../repositories/eligibility-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 
 const userId = "10000000-0000-4000-8000-000000000001";
 const recipientId = "10000000-0000-4000-8000-000000000002";
@@ -23,9 +26,22 @@ function event(socket: Socket, name: string): Promise<any> {
   });
 }
 
-async function fixture(t: TestContext) {
-  const original = { PUBLIC_BETA: env.PUBLIC_BETA, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
-  Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false });
+function eitherEvent(socket: Socket, names: string[], timeoutMs = 2000): Promise<{ name: string; payload: any }> {
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      for (const name of names) socket.off(name, handlers.get(name)!);
+    };
+    const finish = (name: string, payload: any) => { cleanup(); resolve({ name, payload }); };
+    const handlers = new Map(names.map((name) => [name, (payload: unknown) => finish(name, payload)]));
+    const timer = setTimeout(() => finish("timeout", null), timeoutMs);
+    for (const [name, handler] of handlers) socket.once(name, handler);
+  });
+}
+
+async function fixture(t: TestContext, runtime: Partial<Pick<typeof env, "PUBLIC_BETA" | "NODE_ENV">> = {}) {
+  const original = { PUBLIC_BETA: env.PUBLIC_BETA, NODE_ENV: env.NODE_ENV, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
+  Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false, ...runtime });
   t.after(() => Object.assign(env, original));
   const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0 };
   t.mock.method(RedisRepository.prototype, "getStrict", async () => state.active ? "session" : null);
@@ -43,6 +59,8 @@ async function fixture(t: TestContext) {
     state.sent++;
     return { id: "message", senderId, conversationId, content };
   });
+  t.mock.method(MessageService.prototype, "consumeNewPublication", () => true);
+  t.mock.method(MessageService.prototype, "getConversationMemberIds", async () => [userId, recipientId]);
   const server = createServer();
   const sockets = await attachSocketServer(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -86,6 +104,53 @@ test("socket handshake rejects stale consent and hostile browser origins", async
   state.consent = true;
   await assert.rejects(connect(userId, "https://attacker.example"), /websocket error/i);
   assert.equal(state.lookups, 1, "origin must be rejected before user lookup");
+});
+
+test("production socket keeps eligibility enforcement when PUBLIC_BETA is false", async (t) => {
+  t.mock.method(EligibilityRepository.prototype, "readFacts", async (id: string) => id === userId ? ({
+    account: { id, status: "active", termsVersion: env.TERMS_VERSION, termsAcceptedAt: "2026-08-31T00:00:00.000Z",
+      contentPreference: "child_safe" as const },
+    revision: "1", assessment: undefined, guardianAuthorizations: [],
+  }) : undefined);
+  const { connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  await assert.rejects(connect(), /eligibility verification required/i,
+    "production sockets must not bypass current eligibility when public beta is disabled");
+});
+
+test("production socket blocks message actions when current messaging capability is false", async (t) => {
+  const decision: EligibilityDecision = {
+    experience: "teen_13_17", activated: true,
+    capabilities: { social: true, publish: true, messaging: false, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "regular", policyVersions: ["fixture:1"], revision: "2", reason: null,
+    publicBrowsingAllowed: true,
+  };
+  t.mock.method(EligibilityService.prototype, "decisionFor", async () => decision);
+  const { state, connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  const client = await connect();
+  const outcome = eitherEvent(client, ["message:error", "message:sent"]);
+  client.emit("message:send", { recipientId, content: "must not be sent" });
+  const result = await outcome;
+  assert.deepEqual({ event: result.name, sends: state.sent }, { event: "message:error", sends: 0 });
+});
+
+test("message delivery rechecks each recipient's current messaging capability", async (t) => {
+  t.mock.method(EligibilityService.prototype, "decisionFor", async (id: string) => ({
+    experience: "teen_13_17", activated: true,
+    capabilities: { social: true, publish: true, messaging: id === userId, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "regular", policyVersions: ["fixture:1"], revision: "2", reason: null,
+    publicBrowsingAllowed: true,
+  } satisfies EligibilityDecision));
+  const { connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  const sender = await connect(userId);
+  const recipient = await connect(recipientId);
+  let recipientMessages = 0;
+  recipient.on("message:receive", () => recipientMessages++);
+  const sent = event(sender, "message:sent");
+  sender.emit("message:send", { recipientId, content: "recipient has no messaging grant" });
+  await sent;
+  assert.equal(recipientMessages, 0);
 });
 
 test("connected sockets recheck consent and revocation before an action", async (t) => {

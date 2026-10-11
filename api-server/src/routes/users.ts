@@ -7,6 +7,7 @@ import { NotificationRepository } from "../repositories/notification-repository.
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 import { QueueService } from "../services/queue-service.js";
 import { UserService } from "../services/user-service.js";
 import { contactShieldSchema, deleteAccountSchema, privacySchema, searchUsersSchema, settingsSchema, updateProfileSchema, premiumProfileSchema } from "../validators/user.js";
@@ -21,7 +22,8 @@ const userRepository = new UserRepository();
 const redisRepository = new RedisRepository();
 const userService = new UserService(userRepository, new NotificationRepository(), new QueueService());
 const authService = new AuthService(userRepository, redisRepository);
-const authController = new AuthController(authService);
+const eligibilityService = new EligibilityService();
+const authController = new AuthController(authService, userId => eligibilityService.decisionFor(userId));
 const userController = new UserController(userService, authService, new AccountService(userRepository, redisRepository));
 
 router.get("/users/search", authenticate, validateQuery(searchUsersSchema), userController.searchUsers);

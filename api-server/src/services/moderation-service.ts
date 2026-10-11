@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { grievanceTicketsTable } from "@workspace/db/schema";
+import { publicGrievanceTicket, type PublicGrievanceTicket } from "@workspace/api-zod";
 
 export interface ModerationResult {
   isSafe: boolean;
@@ -90,7 +91,8 @@ export class ModerationService {
   }): Promise<GrievanceTicket> {
     const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
-    // 24 hours acknowledgment, 15 days redressal as mandated by Indian IT Rules 2021
+    // Legacy internal review target. This is not an approved statutory or public
+    // service commitment; applicable territory/operator deadlines require acceptance.
     const slaDeadline = new Date(now.getTime() + 15 * 86400 * 1000).toISOString();
 
     const [ticket] = await db.insert(grievanceTicketsTable).values({

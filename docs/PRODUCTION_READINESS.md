@@ -1,17 +1,53 @@
 # Production Readiness
 
-Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+Status as of 11 October 2026: application-code revision **`30fb713`** passed [CI run 38087635379](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38087635379) (420 API tests, 73 browser E2E tests, 104 unit tests, and container and recovery checks). At the time of this update, branch revision **`7eedeec`** added documentation only; its Vercel check passed, while the check on `30fb713` reported a build-rate-limit failure. The newer check establishes a frontend build/preview result only, not backend runtime acceptance. Full production launch remains blocked by the persistent backend/worker target deployment and owner policy decisions detailed below.
 
-The October 4 media change implements server-owned reservations, complete byte decoding, strict Gemini decisions, transactional approved-ID publication, retry-safe cleanup and approval/hash-checked API delivery. Its current validation evidence and configuration requirements are in [the media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Unconfigured media remains unavailable; production no longer rejects it solely because `NODE_ENV=production`. Historical checks below do not validate the October change or real provider acceptance.
+### Unified Release Candidate Acceptance (Application Revision `30fb713`)
 
-This file and the root [Production Readiness Report](../PRODUCTION_READINESS.md) use the same evidence boundary. Checks below are historical reports, not checks performed by the current implementation session unless its final results say otherwise.
+1. **Repository & Local Release Verification:**
+   - **Root unit tests (`pnpm test:unit`):** **104 passed**, 0 failed, 0 skipped.
+   - **Browser E2E acceptance (`pnpm test:e2e`):** **73 passed**, 0 failed, 0 skipped (production Vite preview mode, 0 retries).
+   - **Contract drift checks (`pnpm contract:check`):** Verified 237 operations across 200 paths, zero drift.
+   - **Design token check (`pnpm design:check`):** YOR design tokens valid.
+   - **Production config wiring (`pnpm production-config:check`):** Covers 70 schema keys.
+   - **Production dependency audit (`pnpm audit --prod`):** No known vulnerabilities found.
+   - **Workspace builds & typechecks:** `@workspace/db` (clean), `lib/api-zod` (clean), `@workspace/api-server` (clean typecheck and build), `@workspace/social` (clean typecheck and Vite production client build).
+   - **Deployment configuration validation (`pnpm deployment-config:validate`):** Fail-closed verification with secret entropy, placeholder detection, and permission checks.
 
-Previously documented repository controls (historical; not re-verified in this session):
-- Enhanced production smoke test with detailed service verification
-- Added `/api/diagnostics` endpoint for queue and worker health
-- Improved `/api/readyz` with environment and version reporting
-- Added PostgreSQL backup/restore script with verification
-- Improved error reporting and logging in deployment verification
+2. **Mobile Performance Acceptance:**
+   - **10 October repair (`9ceaf52`):** Embedded accessible shell, resolved long-task blocking from Framer Motion over-instantiation under reduced motion, gated background canvas RAF, and removed duplicate keyframe tags.
+   - **Throttled mobile emulation acceptance (3/3 passed):**
+     - **FCP:** 1,884 / 1,880 / 1,848 ms ($\le 2,500$ ms budget) — **Passed 3/3**
+     - **LCP:** 3,068 / 3,088 / 3,088 ms ($\le 4,000$ ms budget) — **Passed 3/3**
+     - **Long-task blocking:** 178 / 228 / 206 ms ($\le 300$ ms budget) — **Passed 3/3**
+     - **JS Gzip:** 273,007 bytes ($\le 358,400$ bytes budget) — **Passed 3/3**
+     - **CSS Gzip:** 62,177 bytes ($\le 102,400$ bytes budget) — **Passed 3/3**
+     - **Exit code:** 0 / 0 / 0 (All passed). Evidence in `docs/hardening/mobile-performance-unified-2026-10-10.md`.
+
+3. **Off-Host Backup & Disaster Recovery Acceptance:**
+   - **10 October operational drill (`c885e29`):** Full 101-table catalog, 270 indexes, 302 constraints, release migration ledgers, asymmetric `age` encryption, remote WebDAV retrieval over TCP HTTP, and transactional restore with rollback. Evidence in `docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md`.
+
+4. **Release-Scope & Policy Guard Alignment:**
+   - **Scope determination (`9450914`):** Strictly bounded as **Adult (18+) Closed Testing Beta**. Age 18 strictly enforced, closed-audience allowlists active, and unaccepted capabilities (payments, live rooms, web push, RTC direct calls, creator memberships) fail closed before database queries. Evidence in `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md`.
+
+5. **Historical Live Origin Smoke Test:**
+   - Live smoke test executed against `https://yor-talks.vercel.app` with `SMOKE_SYNTHETIC_PROVIDERS=false` exits **1**. Vercel serves static frontend assets (200), but lacks CSP headers and returns HTTP 500 (`FUNCTION_INVOCATION_FAILED`) on `/api/readyz` because Vercel serverless execution cannot host persistent PostgreSQL, Redis, Socket.IO, BullMQ, or the in-container ffmpeg decoder. Promoting this static preview to production without a persistent backend target remains explicitly blocked.
+
+### Restricted-session enforcement (10 October integration candidate)
+
+- The API enforces the eligibility decision before authenticated social, messaging, publication and media routes while `PUBLIC_BETA=true`. Only a narrow allowlist for account rights, consent, security, age-assurance/guardian progress and harm reporting is permitted to unverified accounts.
+- Optional authenticated reads must not elevate a restricted account to a personalized session. The own-profile endpoint returns a minimised identity/security view while restricted.
+- Socket.IO rejects restricted beta sessions at handshake and rechecks eligibility before every event. Registration defaults to a private, child-safe account with no unsolicited direct messages.
+- **Fail-closed consequence:** the approved territory policy registry and real age/guardian assurance provider are currently unavailable. An actual public-beta activation will therefore block unverified accounts rather than invent eligibility approval. This code change does not authorize public launch or provider substitution.
+- Automated source tests are required; legal jurisdiction selection, operator policy approval, provider tests and live acceptance remain release blockers.
+
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
+
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) previously passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. The Vercel check for documentation-only revision `7eedeec` passed. These checks cover the static frontend; API and Socket.IO runtime acceptance remains open, and the production domain was not promoted.
+
+The historical mobile measurements from 9 October (`hardening/mobile-performance-unified-2026-10-09.json`) recorded earlier FCP/blocking failures prior to the 10 October repair (`9ceaf52`). Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+
+Earlier phase-specific evidence follows; it does not replace the current result above.
 
 ## Verification boundary
 
@@ -44,7 +80,7 @@ Previously documented repository controls (historical; not re-verified in this s
 - Redis failover, multi-instance behavior, rolling restart, and sustained load.
 - Live backup/restore drills to verify recovery procedures
 
-The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
+The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. Production Compose now wires internal Prometheus and Alertmanager; exact-commit CI verified local authenticated firing/resolved delivery. The actual production receiver and responder acceptance remain open.
 
 ### Requires manual acceptance testing
 
@@ -52,7 +88,7 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 - Any later enablement of Razorpay, LiveKit, Web Push, or RTC.
 - Real-device browser coverage and operational support/abuse drills.
 
-## Changes in this hardening pass
+## Historical deployment hardening pass
 
 ### Deployment Verification
 - Enhanced `ops/smoke-test.mjs` with structured logging, detailed error reporting, and comprehensive service checks
@@ -68,14 +104,12 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 
 ### Database Backup & Restore
 
-Use the current encrypted age/rclone workflow in the [production launch runbook](docs/PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
-
-Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
+Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#5-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 ### Documentation
 - Updated PRODUCTION_READINESS.md with deployment verification procedures
 - Documented smoke test usage and interpretation
 
-## Files changed in this pass
+## Files changed in the earlier pass
 
 **New files:**
 - `api-server/src/routes/diagnostics.ts` - Queue/Redis diagnostics endpoint
@@ -215,6 +249,13 @@ Migration validation completed with `pnpm --filter @workspace/db migrate:beta` a
 
 ## Release judgment
 
-Do not treat the repository as launch-approved based on this document. The listed historical checks do not establish current-commit readiness. Complete the current CI gates and all live provider, security, monitoring, and recovery acceptance steps before enabling public traffic.
+The published implementation passed its current CI gates; the older results
+above remain historical. Public traffic still requires the intended persistent
+API/workers, live providers, approved ingress, actual alert receiver and off-host
+restore, plus owner/legal/retention decisions. The discarded editor-splitting
+experiment failed FCP/blocking in all three samples and LCP in two. The repaired
+10 October artifact passes the proposed timing and payload budgets in all three
+local throttled-Chromium observations; owner approval of those budgets and
+physical-device or field validation remain separate acceptance items.
 
 The new deployment verification tooling (smoke tests, diagnostics endpoint, backup/restore scripts) improves operational confidence and reduces manual deployment validation burden.

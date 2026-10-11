@@ -1,6 +1,9 @@
 export default function RouteSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading content" className="min-h-screen bg-background px-4 py-8 sm:px-6">
+      <header className="premium-topbar mx-auto max-w-4xl flex items-center justify-between pb-6">
+        <h1 className="premium-topbar__heading text-2xl font-bold tracking-tight">Yor</h1>
+      </header>
       <div className="mx-auto max-w-4xl space-y-5">
         <div className="surface-1 overflow-hidden rounded-2xl border border-border/40 p-5 shadow-sm">
           <div className="flex items-center gap-3">

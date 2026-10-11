@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { createResponse } from "../utils/response.js";
 import { hasCurrentConsent } from "../utils/consent.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { consentExemptForSafetyRoute, enforceEligibilityRoute } from "./eligibility.js";
 
 interface JwtPayload {
   sub: string;
@@ -21,6 +25,7 @@ declare global {
         role: string;
         permissions: string[];
       };
+      eligibility?: EligibilityDecision;
     }
   }
 }
@@ -29,6 +34,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
+const eligibilityService = new EligibilityService();
 
 export async function closeAuthenticationDependencies(): Promise<void> {
   await redisRepository.disconnect();
@@ -52,6 +58,7 @@ function consentExempt(req: Request): boolean {
 }
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  if (req.sessionVerified) return next();
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     return res.status(401).json(createResponse("Authentication required", null, {}, ["Missing bearer token"]));
@@ -83,7 +90,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       permissions: user.permissions ?? [],
     };
-    if (!hasCurrentConsent(user) && !consentExempt(req)) {
+    if (!hasCurrentConsent(user) && !consentExempt(req) && !consentExemptForSafetyRoute(req)) {
       return res.status(428).json(createResponse(
         "Current terms acceptance required",
         null,
@@ -91,7 +98,13 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         ["Accept the current Terms and confirm the minimum age to continue"],
       ));
     }
-    return next();
+    // The approved eligibility registry is separate from a self-declared age
+    // checkbox. Deployed production and public beta fail closed when assurance is unavailable.
+    if (isEligibilityEnforcementEnabled()) req.eligibility = await eligibilityService.decisionFor(user.id);
+    return enforceEligibilityRoute(req, res, () => {
+      req.sessionVerified = true;
+      return next();
+    });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
     return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
@@ -108,8 +121,19 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
     if (typeof decoded.sub !== 'string' || typeof decoded.deviceId !== 'string' || (decoded.type && decoded.type !== 'access')) return next();
     const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
-    if (activeSession && user && (decoded.authVersion ?? 0) === (user.authVersion ?? 0) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
-      req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+    if (activeSession && user && hasCurrentConsent(user) && (decoded.authVersion ?? 0) === (user.authVersion ?? 0)
+      && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
+      if (isEligibilityEnforcementEnabled()) {
+        // Restricted sessions may read approved self-service routes but must
+        // never gain personalized social reads through optional authentication.
+        const decision = await eligibilityService.decisionFor(user.id);
+        req.eligibility = decision;
+        if (decision.activated && decision.capabilities.social) {
+          req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+        }
+      } else {
+        req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+      }
     }
   } catch (error) {
     if (!(error instanceof jwt.JsonWebTokenError)) return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));

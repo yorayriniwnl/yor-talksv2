@@ -128,6 +128,7 @@ export interface CommentRecord {
   id: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   mediaUrl?: string | null;
   mediaType?: "image" | "gif" | "audio" | null;
   mediaDuration?: number | null;
@@ -166,7 +167,7 @@ export interface MessageRecord {
   id: string;
   conversationId: string;
   senderId: string;
-  recipientId: string;
+  recipientId: string | null;
   content: string;
   mediaId?: string | null;
   mediaUrl?: string | null;
@@ -191,8 +192,8 @@ export type MessageLifecycleState = "MESSAGE_DELIVERED" | "MESSAGE_PREVIEWED" | 
 
 export interface ConversationRecord {
   id: string;
-  participantA: string;
-  participantB: string;
+  participantA: string | null;
+  participantB: string | null;
   updatedAt: string;
   participantIds?: string[];
   isGroup?: boolean;
@@ -330,9 +331,9 @@ export interface ProfileCommentRecord {
   profileId: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   createdAt: string;
   updatedAt: string;
-  contentRating?: ContentRating;
 }
 
 export interface ProfileShowcaseRecord {
@@ -384,6 +385,7 @@ export interface VideoCommentRecord {
   videoId: string;
   authorId: string;
   content: string;
+  contentRating?: ContentRating;
   mediaUrl?: string | null;
   mediaType?: "image" | "gif" | "audio" | null;
   mediaDuration?: number | null;

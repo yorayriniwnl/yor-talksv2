@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PhoneOff, Mic, MicOff, Video, VideoOff, RotateCcw, Shield, Phone, X } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
@@ -264,15 +264,78 @@ export function WebRtcCallModal({ isOpen, onClose, peerUser, callType = 'video',
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) closeCall(isIncoming && callStatus === 'incoming'); }}>
       <DialogContent className="max-w-md h-[88vh] max-h-[720px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans text-white bg-black">
+        <DialogTitle className="sr-only">Call with {displayName}</DialogTitle>
         <div className="relative w-full h-full flex flex-col justify-between p-6">
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-purple-950/40 to-black overflow-hidden pointer-events-none"><div className="absolute inset-0 aurora-bg opacity-30" /><div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" /></div>
           <div className="relative z-20 flex items-center justify-between"><div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-mono"><span className={cn('w-2 h-2 rounded-full', callStatus === 'ended' ? 'bg-zinc-500' : callStatus === 'connected' ? 'bg-emerald-400' : 'bg-amber-400 animate-ping')} />{callStatus === 'incoming' ? 'Incoming call' : callStatus === 'calling' ? 'Calling…' : callStatus === 'connecting' ? 'Connecting…' : callStatus === 'connected' ? 'Connected' : 'Call ended'}</div><div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 text-[0.68rem] font-mono font-bold"><Shield className="w-3 h-3" /> WebRTC encrypted</div></div>
 
-          {remoteReady ? <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 z-10 w-full h-full object-cover" /> : <div className="relative z-20 flex flex-col items-center justify-center text-center space-y-4 py-8 m-auto"><div className="relative"><Avatar className="w-28 h-28 border-4 border-primary shadow-2xl ring-8 ring-primary/20"><AvatarImage src={peerUser.avatarUrl} /><AvatarFallback className="font-display font-black text-3xl">{initialLetter}</AvatarFallback></Avatar>{callStatus !== 'ended' && <div className="absolute inset-0 rounded-full border-4 border-primary animate-ping opacity-40" />}</div><div><h3 className="font-display font-black text-2xl text-white">{displayName}</h3><p className="text-xs text-white/70 font-mono mt-1">@{peerUser.username}</p><p className="mt-3 max-w-[18rem] text-xs leading-relaxed text-white/70">{callStatus === 'incoming' ? 'Accept to connect your microphone and camera.' : 'Waiting for the other device to join.'}</p>{mediaError && <p className="mt-2 max-w-[18rem] text-xs leading-relaxed text-amber-300">{mediaError}</p>}</div></div>}
+          {remoteReady && callType === 'video' ? <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 z-10 w-full h-full object-cover" /> : <div className="relative z-20 flex flex-col items-center justify-center text-center space-y-4 py-8 m-auto"><div className="relative"><Avatar className="w-28 h-28 border-4 border-primary shadow-2xl ring-8 ring-primary/20"><AvatarImage src={peerUser.avatarUrl} /><AvatarFallback className="font-display font-black text-3xl">{initialLetter}</AvatarFallback></Avatar>{callStatus !== 'ended' && <div className="absolute inset-0 rounded-full border-4 border-primary animate-ping opacity-40" />}</div><div><h3 className="font-display font-black text-2xl text-white">{displayName}</h3><p className="text-xs text-white/70 font-mono mt-1">@{peerUser.username}</p><p className="mt-3 max-w-[18rem] text-xs leading-relaxed text-white/70">{callStatus === 'incoming' ? 'Accept to connect your microphone and camera.' : 'Waiting for the other device to join.'}</p>{mediaError && <p className="mt-2 max-w-[18rem] text-xs leading-relaxed text-amber-300">{mediaError}</p>}</div></div>}
 
-          {mediaReady && !isVideoOff && <motion.div drag dragConstraints={{ left: -100, right: 100, top: -200, bottom: 200 }} className="absolute top-16 right-4 z-30 w-28 h-40 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl bg-zinc-900 cursor-grab"><video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" /></motion.div>}
+          {mediaReady && !isVideoOff && callType === 'video' && <motion.div drag dragConstraints={{ left: -100, right: 100, top: -200, bottom: 200 }} className="absolute top-16 right-4 z-30 w-28 h-40 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl bg-zinc-900 cursor-grab"><video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" /></motion.div>}
 
-          <div className="relative z-20 flex items-center justify-center gap-3 pt-6">{isIncoming && callStatus === 'incoming' && <><button onClick={() => closeCall(true)} className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"><X className="w-5 h-5" /></button><button onClick={() => void acceptCall()} className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-2xl"><Phone className="w-6 h-6 fill-white" /></button></>}{!isIncoming || callStatus !== 'incoming' ? <><button onClick={() => { setIsMuted(!isMuted); sounds.playPop(); }} className={cn('w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20', isMuted ? 'bg-red-500' : 'bg-black/60')}>{isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}</button><button onClick={() => { setIsVideoOff(!isVideoOff); sounds.playPop(); }} className={cn('w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20', isVideoOff ? 'bg-red-500' : 'bg-black/60')}>{isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}</button>{callType === 'video' && <button onClick={() => void flipCamera()} className="w-12 h-12 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md border border-white/20"><RotateCcw className="w-5 h-5" /></button>}<button onClick={() => closeCall(false)} className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-2xl"><PhoneOff className="w-6 h-6 fill-white" /></button></> : null}{callStatus === 'ended' && mediaError && <span className="sr-only">{mediaError}</span>}</div>
+          <div className="relative z-20 flex items-center justify-center gap-3 pt-6">
+            {isIncoming && callStatus === 'incoming' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => closeCall(true)}
+                  aria-label="Decline call"
+                  className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void acceptCall()}
+                  aria-label="Accept call"
+                  className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-2xl cursor-pointer transition-colors"
+                >
+                  <Phone className="w-6 h-6 fill-white" />
+                </button>
+              </>
+            )}
+            {!isIncoming || callStatus !== 'incoming' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setIsMuted(!isMuted); sounds.playPop(); }}
+                  aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+                  aria-pressed={isMuted}
+                  className={cn('w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 cursor-pointer transition-colors', isMuted ? 'bg-red-500' : 'bg-black/60')}
+                >
+                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsVideoOff(!isVideoOff); sounds.playPop(); }}
+                  aria-label={isVideoOff ? "Turn on camera" : "Turn off camera"}
+                  aria-pressed={!isVideoOff}
+                  className={cn('w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 cursor-pointer transition-colors', isVideoOff ? 'bg-red-500' : 'bg-black/60')}
+                >
+                  {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                </button>
+                {callType === 'video' && (
+                  <button
+                    type="button"
+                    onClick={() => void flipCamera()}
+                    aria-label="Flip camera"
+                    className="w-12 h-12 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => closeCall(false)}
+                  aria-label="End call"
+                  className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-2xl cursor-pointer transition-colors"
+                >
+                  <PhoneOff className="w-6 h-6 fill-white" />
+                </button>
+              </>
+            ) : null}
+            {callStatus === 'ended' && mediaError && <span className="sr-only">{mediaError}</span>}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

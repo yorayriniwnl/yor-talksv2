@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  SendHorizontal, Image as ImageIcon, Film, Smile, 
+  SendHorizontal, Image as ImageIcon, Smile, 
   Mic, Zap, X, Trash2, Sparkles, Loader2 
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
-import { GifPickerModal, GifItem } from './GifPickerModal';
 import { VoiceNoteRecorder } from '@/components/messages/VoiceNoteRecorder';
 import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { sounds } from '@/lib/sound';
@@ -145,8 +144,11 @@ export function RichCommentComposer({
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    void handleSend();
+                    const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+                    if (!isTouch) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
                   }
                 }}
                 placeholder={placeholder}
@@ -169,9 +171,9 @@ export function RichCommentComposer({
                       aria-label="Remove image attachment"
                       disabled={sending}
                       onClick={() => { releaseSelectedImage(); setSelectedImage(null); setSelectedImageFile(null); }}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-rose-600 transition-colors"
+                      className="absolute top-1 right-1 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full bg-black/75 text-white hover:bg-rose-600 transition-colors shadow-md"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </motion.div>
                 )}
@@ -236,17 +238,6 @@ export function RichCommentComposer({
                 title="Attach Photo"
               >
                 <ImageIcon className="w-4 h-4" />
-              </button>
-
-              {/* GIF Search */}
-              <button
-                type="button"
-                onClick={() => toast.info('Animated GIF attachments are unavailable. Choose a static JPEG, PNG or WebP image.')}
-                aria-label="GIF attachments unavailable"
-                className="p-1.5 rounded-xl hover:bg-amber-500/10 text-muted-foreground hover:text-amber-400 transition-colors cursor-pointer"
-                title="Animated GIF attachments unavailable"
-              >
-                <Film className="w-4 h-4" />
               </button>
 
               {/* Voice Memo */}

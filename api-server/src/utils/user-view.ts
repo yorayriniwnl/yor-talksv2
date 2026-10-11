@@ -15,6 +15,39 @@ export function toPublicUser(user: UserRecord): PublicUserView {
   return { id, username, fullName, bio, bioStyleId, avatarUrl, role, createdAt, updatedAt, followerCount, followingCount };
 }
 
+export type RestrictedUserView = Pick<UserRecord, "id" | "username" | "email" | "role" | "createdAt" | "updatedAt"> & {
+  twoFactorEnabled: boolean;
+  accountStatus: string;
+  termsVersion: string | null;
+  termsAcceptedAt: string | null;
+  restricted: true;
+  eligibility: {
+    activated: false;
+    reason: string | null;
+  };
+};
+
+/** For restricted account sessions viewing their own account on GET /users/me: returns only account ID, username, email, role, security & eligibility status. Excludes social metrics, following/followers, and profile discovery fields. */
+export function toRestrictedUser(user: UserRecord, reason: string | null = "verification_required"): RestrictedUserView {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    twoFactorEnabled: !!user.totpSecret,
+    accountStatus: user.accountStatus ?? "active",
+    termsVersion: user.termsVersion ?? null,
+    termsAcceptedAt: user.termsAcceptedAt ?? null,
+    restricted: true,
+    eligibility: {
+      activated: false,
+      reason,
+    },
+  };
+}
+
 export function toPublicUsers(users: UserRecord[]): PublicUserView[] {
   return users.map(toPublicUser);
 }

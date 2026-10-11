@@ -1,5 +1,5 @@
 import { runInDatabaseTransaction } from "@workspace/db";
-import { mediaReferencesTable, usersTable } from "@workspace/db/schema";
+import { contentSafetyClassificationsTable, mediaReferencesTable, usersTable } from "@workspace/db/schema";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 import { getApprovedMedia, MediaLifecycleError, type MediaUploadResult } from "./media-service.js";
 import type { MediaPurpose } from "./media-provider.js";
@@ -57,6 +57,11 @@ export async function withApprovedMedia<T>(
     // Serialize replacements before taking any asset locks. NO KEY UPDATE is
     // compatible with the owner's KEY SHARE lock, including avatar writes.
     await tx.execute(sql`SELECT id FROM ${sql.raw(`"${entity.type}"`)} WHERE id=${entity.id}::uuid FOR NO KEY UPDATE`);
+    // A changed media binding changes the content under review. Retain the
+    // approval record for audit, but it cannot authorize the new revision.
+    await tx.update(contentSafetyClassificationsTable).set({ status: "superseded" })
+      .where(and(eq(contentSafetyClassificationsTable.entityType, entity.type),
+        eq(contentSafetyClassificationsTable.entityId, entity.id), eq(contentSafetyClassificationsTable.status, "approved")));
     const previous = await tx.select({ id: mediaReferencesTable.mediaId }).from(mediaReferencesTable).where(and(eq(mediaReferencesTable.entityType, entity.type), eq(mediaReferencesTable.entityId, entity.id)));
     const lockIds = [...new Set([...ids, ...previous.map(row => row.id)])].sort();
     if (lockIds.length) await tx.execute(sql`SELECT id FROM media_assets WHERE id IN (${sql.join(lockIds.map(id => sql`${id}::uuid`), sql`, `)}) ORDER BY id FOR UPDATE`);

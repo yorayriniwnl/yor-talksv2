@@ -58,9 +58,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const currentStories = groupedStories[currentAuthorId] || [];
   const currentStory = currentStories[storyIndex];
 
+  const [replyFocused, setReplyFocused] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  // Voice and video stories advance from their own media timeline, not the fixed timer.
+  const isMediaDriven = currentStory?.type === 'voice' || currentStory?.type === 'video';
+  // Never auto-advance while the viewer is holding, typing a reply, tipping, or reading insights.
+  const effectivePaused = isPaused || replyFocused || tippingOpen || insightsOpen;
+
   // Auto-advance logic
   useEffect(() => {
-    if (isPaused || !currentStory) return;
+    if (effectivePaused || !currentStory || isMediaDriven) return;
 
     const interval = 50;
     const step = (interval / STORY_DURATION) * 100;
@@ -76,12 +83,27 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     }, interval);
 
     return () => clearInterval(timer);
-  }, [authorIndex, storyIndex, isPaused, currentStory]);
+  }, [authorIndex, storyIndex, effectivePaused, currentStory, isMediaDriven]);
 
   useEffect(() => {
     setProgress(0);
     setIsPaused(currentStory?.type === 'voice');
   }, [currentStory?.id, currentStory?.type]);
+
+  // Keep video playback in sync with the pause state.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || currentStory?.type !== 'video') return;
+    if (effectivePaused) {
+      video.pause();
+      return;
+    }
+    video.play().catch(() => {
+      // Autoplay with sound can be blocked; retry muted so the story still plays.
+      video.muted = true;
+      void video.play().catch(() => undefined);
+    });
+  }, [effectivePaused, currentStory?.id, currentStory?.type]);
 
   useEffect(() => {
     let active = true;
@@ -168,13 +190,30 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     // Don't trigger if clicking controls or interactive elements
     if ((e.target as HTMLElement).closest('.story-controls')) return;
 
-    const x = e.clientX;
-    const width = window.innerWidth;
-    if (x < width * 0.35) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width * 0.35) {
       handlePrev();
     } else {
       handleNext();
     }
+  };
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('input, textarea, select, [contenteditable="true"]')) {
+      if (event.key === 'Escape') target.blur();
+      return;
+    }
+    if (event.key === 'ArrowRight') { event.preventDefault(); handleNext(); }
+    else if (event.key === 'ArrowLeft') { event.preventDefault(); handlePrev(); }
+    else if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+    else if (event.key === ' ' && target === dialogRef.current) { event.preventDefault(); setIsPaused((paused) => !paused); }
   };
 
   const handleQuickReaction = (emoji: string) => {
@@ -251,8 +290,14 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
         className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col sm:p-4 md:p-8 items-center justify-center font-sans"
       >
         <div 
-          className="relative w-full h-full sm:max-w-[420px] sm:h-[820px] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10"
-          onPointerDown={() => setIsPaused(true)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Story from ${displayName}`}
+          tabIndex={-1}
+          ref={dialogRef}
+          onKeyDown={handleKeyDown}
+          className="relative w-full h-full sm:max-w-[420px] sm:h-[min(820px,calc(100dvh-2rem))] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10 outline-none"
+          onPointerDown={(event) => { if (!(event.target as HTMLElement).closest('.story-controls')) setIsPaused(true); }}
           onPointerUp={() => setIsPaused(false)}
           onPointerLeave={() => setIsPaused(false)}
         >
@@ -316,8 +361,10 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               )}
 
               <button 
+                type="button"
+                aria-label="Close stories"
                 onClick={(e) => { e.stopPropagation(); onClose(); }} 
-                className="p-2 text-white/80 hover:text-white bg-black/40 rounded-full backdrop-blur-md transition-colors"
+                className="p-2.5 text-white/80 hover:text-white bg-black/40 rounded-full backdrop-blur-md transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -365,9 +412,28 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             className="flex-1 relative cursor-pointer flex items-center justify-center select-none"
             onClick={handleTap}
           >
-            {currentStory.type === 'image' || currentStory.type === 'video' ? (
-              <img src={currentStory.mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
-            ) : null}
+            {currentStory.type === 'image' && (
+              <img src={currentStory.mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt={currentStory.textContent ? `Story: ${currentStory.textContent}` : `Story from ${displayName}`} />
+            )}
+
+            {currentStory.type === 'video' && (
+              <video
+                key={currentStory.id}
+                ref={videoRef}
+                src={currentStory.mediaUrl}
+                className="absolute inset-0 w-full h-full object-cover"
+                playsInline
+                autoPlay
+                preload="auto"
+                aria-label={`Video story from ${displayName}`}
+                onTimeUpdate={(event) => {
+                  const video = event.currentTarget;
+                  if (video.duration > 0 && Number.isFinite(video.duration)) setProgress((video.currentTime / video.duration) * 100);
+                }}
+                onEnded={handleNext}
+                onError={() => toast.error('This video story could not be played.')}
+              />
+            )}
             
             {currentStory.type === 'text' && (
               <div 
@@ -404,7 +470,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
             {currentStory.poll && (
               <div className="absolute z-20 w-4/5 max-w-[280px] story-controls pointer-events-auto">
-                <div className="surface-1/90 backdrop-blur-xl p-4 rounded-3xl border-2 border-primary/50 shadow-2xl text-center">
+                <div className="bg-card/95 backdrop-blur-xl p-4 rounded-3xl border-2 border-primary/50 shadow-2xl text-center">
                   <span className="text-[0.62rem] font-mono font-bold uppercase text-primary tracking-wider flex items-center justify-center gap-1 mb-1">
                     <BarChart2 className="w-3 h-3" /> Audience poll
                   </span>
@@ -436,8 +502,10 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               {FAST_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
+                  type="button"
+                  aria-label={`React with ${emoji}`}
                   onClick={() => handleQuickReaction(emoji)}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-lg hover:scale-125 active:scale-95 transition-transform cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-lg hover:scale-125 active:scale-95 transition-transform cursor-pointer"
                 >
                   {emoji}
                 </button>
@@ -450,12 +518,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               <Input
                 value={reactionText}
                 onChange={(e) => setReactionText(e.target.value)}
+                onFocus={() => setReplyFocused(true)}
+                onBlur={() => setReplyFocused(false)}
+                aria-label={currentAuthorId === currentUser?.id ? 'Replies are disabled on your own story' : `Reply to ${displayName}`}
                 placeholder={currentAuthorId === currentUser?.id ? 'Your own story' : `Reply to ${displayName}…`}
                 disabled={currentAuthorId === currentUser?.id || isSendingReply}
-                className="rounded-full bg-white/10 border-white/20 text-xs h-10 text-white placeholder:text-white/60 focus:border-primary/60"
+                className="rounded-full bg-white/10 border-white/20 text-base sm:text-xs h-10 text-white placeholder:text-white/60 focus:border-primary/60"
               />
               <button
                 type="submit"
+                aria-label="Send reply"
                 disabled={!reactionText.trim() || currentAuthorId === currentUser?.id || isSendingReply}
                 className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
               >

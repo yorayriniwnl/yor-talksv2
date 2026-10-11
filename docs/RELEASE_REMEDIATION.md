@@ -4,6 +4,11 @@ Working standard: **FOUND -> FIXED -> VERIFIED**. This document adds evidence;
 the historical `docs/audits/2026-09-26` audit and defect-observation probes remain
 unchanged. Those probes are not release tests. No public/paid launch is approved.
 
+Current repairs, verification and remaining release gates are tracked in the
+[8 October production hardening report](PRODUCTION_HARDENING_2026-10-08.md).
+The findings, deployment observations and test counts below retain their
+September dates; they are not fresh acceptance of the current working copy.
+
 ## Release candidate and preservation
 
 - Remote refreshed before integration. Base: `origin/main` at
@@ -68,11 +73,15 @@ production evidence are separate categories.
 ## Migration and rollback protocol
 
 Use `pnpm --filter @workspace/db migrate:production` with an explicitly isolated
-URL for tests; never use `push` against existing data. The production runner
-bootstraps only an empty schema and runs additive migrations. New changes must
+URL for tests; do not use schema push for production, including an empty
+database. The production runner bootstraps only an empty schema from reviewed,
+checked-in `lib/db/scripts/production-base.sql` under a transaction and advisory
+lock, then runs additive migrations. New changes must
 remain additive and restartable. Record the exact migration order and expected
 version here before deployment. Back up before migration and restore into a
-separate database for verification. Roll back application images only after
+separate, isolated empty database for verification, with an explicit matching
+`RESTORE_TARGET_DATABASE`; do not automatically restore production as an
+application rollback. Roll back application images only after
 compatibility review; retain new tables/columns and never destructively revert
 financial/media evidence. Payment/media write compatibility must be reviewed
 before restoring an older application image.

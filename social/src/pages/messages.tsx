@@ -186,7 +186,6 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       if (conv) setLocation(`/messages/${conv.id}`);
     } catch (err) {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     }
     sendingRef.current = false;
     setSending(false);
@@ -773,7 +772,6 @@ export default function Messages() {
       if (inputRef.current) inputRef.current.style.height = 'auto';
     } catch {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -1135,7 +1133,7 @@ export default function Messages() {
                         aria-describedby={sendError ? 'operator-composer-error' : undefined}
                       />
 
-                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-[0.65rem] font-semibold text-muted-foreground outline-none focus:border-primary/50">
+                      <select value={textStyleId} onChange={(event) => setTextStyleId(event.target.value as DirectMessage['textStyleId'])} disabled={sending} aria-label="Message typography" title="Message typography" className="h-9 max-w-24 rounded-lg border border-border/50 bg-background/60 px-1.5 text-base sm:text-xs font-semibold text-muted-foreground outline-none focus:border-primary/50">
                         <option value="default">YOR</option>
                         <option value="mono" disabled={!messageFontEnabled}>Mono · Advanced</option>
                         <option value="rounded" disabled={!messageFontEnabled}>Round · Advanced</option>

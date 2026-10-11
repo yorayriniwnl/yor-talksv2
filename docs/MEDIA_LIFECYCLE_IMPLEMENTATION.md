@@ -1,5 +1,11 @@
 # Production media lifecycle implementation
 
+Current source-specific repairs and release gates are recorded in the
+[8 October production hardening report](PRODUCTION_HARDENING_2026-10-08.md),
+with frontend/browser evidence in the [focused report](hardening/frontend-grievance.md).
+The implementation checkpoints and test counts below retain their original
+dates; they do not establish real-provider or public-deployment acceptance.
+
 Work is based on GitHub `main` revision `608746f2594b09bc2508fc1bfaefeb11954935a8`. Earlier `v3` audit work was preserved in the named stash `Preserve v3 audit remediation before main media lifecycle 2026-10-04`; it is not part of this change.
 
 ## Gaps established before implementation
@@ -88,7 +94,14 @@ The follow-up migration also records `20261005-media-2` for the historical messa
 
 Production media requires working Cloudinary credentials, three signed presets (`CLOUDINARY_MEDIA_IMAGE_PRESET`, `CLOUDINARY_MEDIA_VIDEO_PRESET`, `CLOUDINARY_MEDIA_AUDIO_PRESET`), FFmpeg/FFprobe and `GEMINI_API_KEY` plus an accessible `MEDIA_GEMINI_MODEL`. Presets must use `unsigned=false`, `type=authenticated`, `overwrite=false`, and exact supported format allowlists (images `jpg,png,webp`; video `mp4,webm`; audio `mp3,wav,webm,ogg`), without transformations, public-ID overrides or access-control overrides. Cloudinary credentials or an OpenAI-only text provider do not enable media. The production API image installs FFmpeg; a serverless runtime without both binaries cannot handle this lifecycle. Use the long-lived production API container for verification and delivery.
 
-`/readyz` reports `details.media` storage/preset/decoder/moderation readiness independently. Core readiness does not imply that media is ready. Presign fails closed when its provider/moderator checks are unavailable; finalization fails closed if actual verification fails. Payment, live-room, push and RTC flags stay disabled.
+`/readyz` reports `details.media` storage/preset/decoder/moderation readiness independently. Core readiness does not imply that media is ready. Normal release smoke requires `details.media.ready=true`, `details.media.decoder=true`, healthy database/Redis/notification services and `details.lifecycle.ready=true`. Only `CI=true` plus `SMOKE_SYNTHETIC_PROVIDERS=true` with a loopback `BASE_URL` permits synthetic smoke that explicitly expects unavailable providers; it cannot accept a real deployment. Presign fails closed when its provider/moderator checks are unavailable; finalization fails closed if actual verification fails. Payment, live-room, push and RTC flags stay disabled.
+
+Lifecycle recovery must preserve durable jobs, media leases and audit history.
+Use the [current operations runbook](PRODUCTION_LAUNCH.md#lifecycle-inspection-and-recovery)
+to inspect overdue work, expired leases, dead letters and cleanup progress, and
+to record a reason when replaying an eligible dead job. Do not delete or reset
+job rows to hide an incident. Accept the 8 October handler bounds and durable
+notification attempt cap only against the final evidence in the current report.
 
 ## Validation status
 

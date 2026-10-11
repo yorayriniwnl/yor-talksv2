@@ -24,9 +24,10 @@ export class PaymentOperationsService {
   }
   async retry(actorId: string, jobId: string, reason: string) {
     await paymentTransaction(async client => {
-      const job=(await client.query('SELECT id,kind,status FROM background_jobs WHERE id=$1 FOR UPDATE',[jobId])).rows[0];
+      const job=(await client.query('SELECT id,kind,status,attempts,last_error FROM background_jobs WHERE id=$1 FOR UPDATE',[jobId])).rows[0];
       if (!job || !paymentKinds.includes(job.kind) || job.status!=='dead') throw new CheckoutRequestError('Only a failed payment job can be retried');
       await client.query(`INSERT INTO payment_operation_audit(id,actor_id,action,target_id,reason) VALUES($1,$2,'retry_payment_job',$3,$4)`,[randomUUID(),actorId,jobId,reason]);
+      await client.query(`INSERT INTO background_job_replays(job_id,previous_attempts,previous_error,operator_reason) VALUES($1,$2,$3,'staff_payment_retry')`, [jobId,job.attempts,job.last_error]);
       await client.query(`UPDATE background_jobs SET status='pending',attempts=0,available_at=now(),last_error=NULL,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE id=$1`,[jobId]);
     });
   }

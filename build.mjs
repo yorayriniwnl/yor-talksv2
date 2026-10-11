@@ -17,9 +17,10 @@ function run(cmd, cwd) {
 import fs from "node:fs";
 
 try {
-  // 1. Build DB types and declarations
+  // 1. Build shared types and referenced package declarations
   run("npx tsc -b", "lib/shared");
   run("npx tsc -b", "lib/db");
+  run("npx tsc -b", "lib/api-zod");
 
   // 2. Build Standalone API Server bundle
   run("node ./build.mjs", "api-server");

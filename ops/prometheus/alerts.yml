@@ -1,4 +1,54 @@
 groups:
+  - name: yor-lifecycle
+    rules:
+      - alert: YorLifecycleUnavailable
+        expr: yor_lifecycle_ready == 0 or yor_lifecycle_metrics_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Required lifecycle worker is unavailable or stalled
+          description: Inspect authenticated diagnostics and durable lifecycle jobs; a heartbeat cannot hide a stuck handler.
+      - alert: YorLifecycleOverdue
+        expr: yor_lifecycle_oldest_overdue_seconds > 300 or yor_lifecycle_expired_leases > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Lifecycle jobs are overdue or have expired leases
+          description: Check dependency recovery and worker handler availability before replaying any work.
+      - alert: YorLifecycleStalled
+        expr: yor_lifecycle_oldest_running_seconds > 300
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Lifecycle handler has exceeded its progress deadline
+          description: Drain and restart the stalled worker after inspecting lease ownership; handlers must remain idempotent.
+      - alert: YorLifecycleDeadLetters
+        expr: yor_lifecycle_dead_letters > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Lifecycle retries are exhausted
+          description: Inspect machine error codes and replay only unleased dead jobs with an audited reason.
+      - alert: YorLifecycleCleanupStale
+        expr: yor_lifecycle_last_cleanup_timestamp_seconds == 0 or time() - yor_lifecycle_last_cleanup_timestamp_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: No successful lifecycle cleanup progress
+          description: Cleanup completion is recorded separately from heartbeat freshness.
+      - alert: YorLifecycleRecoveryFailures
+        expr: increase(yor_lifecycle_recovery_failures_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Lifecycle dependency or lease recovery has failed
+          description: Inspect worker dependencies and durable jobs without logging payloads.
   - name: yor-talks-production
     rules:
       - alert: YorApiMetricsUnavailable
@@ -63,3 +113,41 @@ groups:
         annotations:
           summary: The latest database backup failed
           description: Check the backup service journal and preserve the encrypted local artifact if upload failed.
+
+  - name: yor-infrastructure
+    rules:
+      - alert: YorHostDiskSpaceLow
+        expr: node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host root filesystem space is low (<15% free)
+          description: Host root filesystem available space is below 15%. Inspect container volumes and logs.
+
+      - alert: YorHostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host available memory is low (<10% available)
+          description: Host available memory is below 10%. Inspect host and container memory allocations.
+
+      - alert: YorTlsCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 15
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: TLS certificate will expire within 15 days
+          description: Ingress TLS certificate expires soon. Verify automated Caddy or proxy certificate renewal.
+
+      - alert: YorTlsCertificateExpiringCritical
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 3
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: TLS certificate will expire within 3 days
+          description: Ingress TLS certificate expires imminently. Immediate manual renewal required.

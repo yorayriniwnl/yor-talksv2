@@ -7,13 +7,14 @@ export type RedisCompatibility = {
 };
 
 /**
- * BullMQ 5 requires Redis 5 or newer. Keep this check in one place so the
- * API readiness probe, queue producers, and workers agree about support.
+ * The deployed stack requires Redis 7 features for credential state and queue
+ * recovery. Readiness, queue producers, and workers share that runtime gate.
  */
 export function isRedisCompatibleVersion(redisVersion: string | undefined): boolean {
   if (!redisVersion) return false;
+  if (!/^\d+\.\d+\.\d+(?:[.-][A-Za-z0-9.-]+)?$/.test(redisVersion)) return false;
   const major = Number(redisVersion.split(".")[0]);
-  return Number.isInteger(major) && major >= 5;
+  return Number.isInteger(major) && major >= 7;
 }
 
 export async function inspectRedisCompatibility(redisUrl: string): Promise<RedisCompatibility> {

@@ -1,0 +1,148 @@
+{
+  "generatedAt": "2026-10-07T17:06:26.997Z",
+  "scope": "Cold synthetic authenticated feed; local production assets; 390x844; 150ms latency; 1.6Mbps down; 4x CPU; gzip level5 test-server delivery, not Nginx runtime acceptance; no provider timing. Budgets are proposed repository gates, pending owner agreement. One observation is not field percentile data.",
+  "directory": "C:\\Users\\yoray\\Projects\\yor-talks-v3\\social\\dist\\performance",
+  "measured": {
+    "javascriptBytes": 974677,
+    "stylesheetBytes": 417083,
+    "javascriptDeliveredBytes": 299170,
+    "stylesheetDeliveredBytes": 62171,
+    "javascriptGzipBytes": 298736,
+    "stylesheetGzipBytes": 62171,
+    "fcpMs": 3808,
+    "lcpMs": 3808,
+    "longTaskBlockingMs": 1153,
+    "fixtureReadyMs": 4978
+  },
+  "budgets": {
+    "javascriptGzipBytes": {
+      "maximum": 358400,
+      "observed": 298736,
+      "passed": true
+    },
+    "stylesheetGzipBytes": {
+      "maximum": 102400,
+      "observed": 62171,
+      "passed": true
+    },
+    "fcpMs": {
+      "maximum": 2500,
+      "observed": 3808,
+      "passed": false
+    },
+    "lcpMs": {
+      "maximum": 4000,
+      "observed": 3808,
+      "passed": true
+    },
+    "longTaskBlockingMs": {
+      "maximum": 300,
+      "observed": 1153,
+      "passed": false
+    }
+  },
+  "assets": [
+    {
+      "path": "/assets/index-F1lqy0pl.js",
+      "bytes": 470303,
+      "deliveredBytes": 137290,
+      "gzipBytes": 137290
+    },
+    {
+      "path": "/assets/_commonjsHelpers-Cpj98o6Y.js",
+      "bytes": 236,
+      "deliveredBytes": 236,
+      "gzipBytes": 180
+    },
+    {
+      "path": "/assets/vendor-react-DO5q2pGw.js",
+      "bytes": 185689,
+      "deliveredBytes": 58897,
+      "gzipBytes": 58897
+    },
+    {
+      "path": "/assets/clsx-B-dksMZM.js",
+      "bytes": 374,
+      "deliveredBytes": 374,
+      "gzipBytes": 238
+    },
+    {
+      "path": "/assets/vendor-motion-C12fIHo-.js",
+      "bytes": 127830,
+      "deliveredBytes": 42251,
+      "gzipBytes": 42251
+    },
+    {
+      "path": "/assets/vendor-icons-C8Iq2zQm.js",
+      "bytes": 49684,
+      "deliveredBytes": 16496,
+      "gzipBytes": 16496
+    },
+    {
+      "path": "/assets/vendor-state-Da2V9HYc.js",
+      "bytes": 2685,
+      "deliveredBytes": 1331,
+      "gzipBytes": 1331
+    },
+    {
+      "path": "/assets/index-DZWemJ72.js",
+      "bytes": 29166,
+      "deliveredBytes": 9637,
+      "gzipBytes": 9637
+    },
+    {
+      "path": "/assets/vendor-socket-DX6lVkzA.js",
+      "bytes": 12505,
+      "deliveredBytes": 4110,
+      "gzipBytes": 4110
+    },
+    {
+      "path": "/assets/vendor-date-PTKEOwdC.js",
+      "bytes": 21832,
+      "deliveredBytes": 6259,
+      "gzipBytes": 6259
+    },
+    {
+      "path": "/assets/index-BHke-62f.css",
+      "bytes": 417083,
+      "deliveredBytes": 62171,
+      "gzipBytes": 62171
+    },
+    {
+      "path": "/assets/home-cegUwoTx.js",
+      "bytes": 25926,
+      "deliveredBytes": 7876,
+      "gzipBytes": 7876
+    },
+    {
+      "path": "/assets/Metric-DJ9m2YJl.js",
+      "bytes": 45583,
+      "deliveredBytes": 12426,
+      "gzipBytes": 12426
+    },
+    {
+      "path": "/assets/MediaImageField-BwtkWmIa.js",
+      "bytes": 1877,
+      "deliveredBytes": 1000,
+      "gzipBytes": 1000
+    },
+    {
+      "path": "/assets/textarea-CLkY4jSF.js",
+      "bytes": 495,
+      "deliveredBytes": 495,
+      "gzipBytes": 340
+    },
+    {
+      "path": "/assets/SignalLabel-CAU1RVyY.js",
+      "bytes": 231,
+      "deliveredBytes": 231,
+      "gzipBytes": 194
+    },
+    {
+      "path": "/assets/StatusBadge-CZ3Z3zgM.js",
+      "bytes": 261,
+      "deliveredBytes": 261,
+      "gzipBytes": 211
+    }
+  ]
+}

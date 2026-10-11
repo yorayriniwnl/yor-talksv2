@@ -2,13 +2,19 @@
 
 ![Yor Talks realtime communication system](assets/hero.svg)
 
-`DEMO` · `CODE-READY` · `DEPLOYMENT BLOCKED`
+`DEMO` · `CI VERIFIED` · `PUBLIC LAUNCH BLOCKED`
 
 Yor Talks is a full-stack social product prototype for identity, conversation,
 communities, stories, live surfaces and creator tools. The repository contains
 an Express + Socket.IO API, a React + Vite frontend, and shared
 Postgres/Drizzle packages. It is a codebase with a bounded beta path, not a
 claim of a verified public service.
+
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
+
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
+
+The [current mobile measurements](docs/hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](docs/hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
 
 ## Public-beta status — 6 October 2026
 
@@ -146,10 +152,11 @@ the four optional feature flags disabled until separately approved and tested.
   on the API and set `VITE_API_BASE_URL` and `VITE_REALTIME_URL`; the latter
   must point to a long-lived Socket.IO process. The Vercel `api/index.ts`
   function is HTTP-only: it does not start Socket.IO or background workers.
-  If REST requests use that function, deploy a separate persistent notification
-  worker with the same `DATABASE_URL` and `REDIS_URL` using
-  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` checks the
-  worker's Redis heartbeat and stays unhealthy until that process is running.
+  If REST requests use that function, deploy a separate persistent worker for
+  notification and lifecycle work with the same `DATABASE_URL` and `REDIS_URL` using
+  `pnpm --filter @workspace/api-server start:worker`. `/api/readyz` requires
+  notification health and fresh lifecycle health with the required handlers;
+  stopped or stalled lifecycle work blocks readiness.
   A Vercel function alone is not a supported realtime or push-delivery setup.
 - Google Identity Services: create a Web OAuth client ID in Google Cloud,
   add the local/deployed frontend origins as authorized JavaScript origins,
@@ -162,28 +169,32 @@ the four optional feature flags disabled until separately approved and tested.
 After changing provider variables:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml up --build -d api web
+set -e
 # For an existing populated database, take a backup first and run the
-# additive/idempotent beta migration. Never run `push --force` against it.
+# reviewed additive/idempotent migration. Do not use schema push in production.
+docker compose --env-file .env.production -f docker-compose.production.yml build --pull migrate api web
 docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate
+docker compose --env-file .env.production -f docker-compose.production.yml up -d api web
 ```
 
 `migrate:beta` backfills the normalized community-member, event-RSVP,
 marketplace-save, story-view, and story-reaction tables before removing their
 legacy JSON relationship columns. Take a database backup before applying it to
-an existing deployment. The migration is idempotent so it can also run after a
-fresh schema push. For a brand-new empty database, use
+an existing deployment. For a brand-new empty database, use
 `docker compose --env-file .env.production -f docker-compose.production.yml run --rm migrate`
-(which runs `migrate:production`) before starting the API. Bootstrap refuses
+(which runs `migrate:production`) before starting the API. Its bootstrap runs
+the reviewed, checked-in `lib/db/scripts/production-base.sql` under a transaction
+and advisory lock, then the additive migrations. Bootstrap refuses
 nonempty incomplete schemas, including unrelated tables, views and sequences.
 The migration must use the same unique `CONTACT_SHIELD_SECRET` as the API.
-Use `pnpm --filter
-@workspace/db push` only for additive changes on an empty/local database, and
-review its SQL prompt before accepting it.
+Do not use schema push for any production database, including a fresh one.
 
 Inspect API and migration logs. A listening API or a passing `/api/livez` is
 not readiness: `/api/healthz`, `/api/readyz`, workers, and the production smoke
-checks must also pass. An unsupported Redis version is a launch blocker.
+checks must also pass. Normal smoke requires `details.media.ready=true`, a
+working decoder, and notification/lifecycle readiness. The synthetic-provider
+exception is restricted to explicitly marked CI smoke on loopback; it cannot
+accept a deployed service. An unsupported Redis version is a launch blocker.
 
 ## Local development
 
@@ -207,6 +218,8 @@ pnpm contract:check
 pnpm design:check
 pnpm production-config:check
 pnpm test:unit
+pnpm --filter @workspace/db build
+pnpm exec tsc -b lib/api-zod
 pnpm --filter @workspace/api-server typecheck
 pnpm --filter @workspace/social typecheck
 pnpm build:pnpm
@@ -263,6 +276,10 @@ through a public scraper configuration.
 - Keep `AUTH_COOKIE_SAME_SITE=lax` for a same-site deployment. Use `none` only
   for an HTTPS cross-site frontend/API pair and retain the trusted-origin
   refresh protection.
+- Approve the actual reachable proxy topology and configure exact trusted peers
+  in `TRUSTED_PROXY_CIDRS` at the API and, when used, `TRUSTED_EDGE_CIDRS` at
+  Nginx. Verify client identity, spoof rejection and forwarded HTTPS through
+  every enabled route; the defaults trust no forwarded headers.
 - Set `NODE_ENV=production` on every deployed API, including an API hosted
   outside the included Docker stack. Vercel is detected as production by
   default, but explicitly setting it prevents platform-specific surprises.

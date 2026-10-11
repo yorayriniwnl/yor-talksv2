@@ -93,6 +93,25 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+
+    const newOtp = [...otpDigits];
+    for (let i = 0; i < pasted.length; i++) {
+      newOtp[i] = pasted[i];
+    }
+    setOtpDigits(newOtp);
+
+    const nextIndex = Math.min(pasted.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+
+    if (pasted.length === 6) {
+      handleVerifyOtp(pasted);
+    }
+  };
+
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
@@ -242,10 +261,13 @@ export function OtpLoginModal({ trigger, isOpen, onOpenChange }: OtpLoginModalPr
                     ref={(el) => { inputRefs.current[idx] = el; }}
                     type="text"
                     inputMode="numeric"
+                    autoComplete={idx === 0 ? "one-time-code" : "off"}
+                    aria-label={`Digit ${idx + 1} of 6`}
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
+                    onPaste={handlePaste}
                     className={cn(
                       "w-12 h-14 rounded-2xl surface-2 border-2 text-center text-xl font-mono font-black text-foreground outline-none transition-all",
                       digit ? "border-primary glow-neon-primary bg-primary/10" : "border-border/60 focus:border-primary/60"

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, Variants, useReducedMotion } from 'framer-motion';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import type { ReactNode } from 'react';
@@ -32,10 +32,15 @@ const pageVariants: Variants = {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const [location] = useLocation();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location]);
+
+  if (reduceMotion) {
+    return <div className="w-full h-full">{children}</div>;
+  }
 
   return (
     <AnimatePresence mode="wait">

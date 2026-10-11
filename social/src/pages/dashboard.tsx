@@ -81,9 +81,9 @@ export default function Dashboard() {
         >
           {stats.map((stat, i) => (
             <motion.div key={i} variants={staggerItem} className="surface-1 rounded-3xl p-5 border border-border/40 hover:border-primary/40 transition-all duration-300 shadow-sm">
-              <h3 className="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-mono font-bold mb-2">
+              <p className="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-mono font-bold mb-2">
                 {stat.label}
-              </h3>
+              </p>
               <div className="flex items-end justify-between">
                 <span className="font-display text-3xl font-extrabold text-foreground">{stat.value}</span>
                 <span className="text-[0.62rem] font-mono font-semibold text-muted-foreground text-right">{stat.detail}</span>
@@ -103,7 +103,7 @@ export default function Dashboard() {
           >
             <div className="showcase-section-title mb-6">
               <Sparkles className="w-4 h-4 text-primary" />
-              <h3>Interactions & Resonance Over Time</h3>
+              <h2 className="text-base font-bold font-display text-foreground">Interactions & Resonance Over Time</h2>
             </div>
             <div className="h-64 w-full">
               <Suspense fallback={<div className="w-full h-full skeleton-aurora rounded-2xl" />}>
@@ -121,7 +121,7 @@ export default function Dashboard() {
           >
             <div className="showcase-section-title mb-4">
               <Gamepad2 className="w-4 h-4 text-cyan-400" />
-              <h3>Recent Yor Activity</h3>
+              <h2 className="text-base font-bold font-display text-foreground">Recent Yor Activity</h2>
             </div>
             <div className="flex-1 space-y-4">
               {recentActivity.length === 0 && <p className="rounded-2xl border border-dashed border-border/40 p-5 text-xs leading-relaxed text-muted-foreground">Notifications from your network will appear here as people interact with your posts, stories, and profile.</p>}

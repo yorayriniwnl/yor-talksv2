@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useAppStore, type Story } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import StoryViewer from './StoryViewer';
-import { StoryBuilderModal } from './StoryBuilderModal';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Plus } from 'lucide-react';
+
+const StoryViewer = lazyWithRetry(() => import('./StoryViewer'));
+const StoryBuilderModal = lazyWithRetry(() => import('./StoryBuilderModal').then(module => ({ default: module.StoryBuilderModal })));
 
 export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: boolean }) {
   const stories = useAppStore((s) => s.stories);
@@ -14,6 +16,8 @@ export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: bo
 
   const [activeAuthorId, setActiveAuthorId] = useState<string | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [builderVisited, setBuilderVisited] = useState(false);
+  const openBuilder = () => { setBuilderVisited(true); setBuilderOpen(true); };
 
   useEffect(() => {
     for (const id of new Set(stories.map((story) => story.authorId))) void loadUserProfile(id);
@@ -50,40 +54,67 @@ export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: bo
   });
 
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'You';
+  const currentUserStories = currentUser ? groupedStories[currentUser.id] || [] : [];
+  const hasOwnStories = currentUserStories.length > 0;
+  const hasUnseenOwn = currentUserStories.some((s) => !s.viewed);
+  const otherAuthors = authors.filter((id) => id !== currentUser?.id);
 
   return (
     <>
-      <StoryBuilderModal isOpen={builderOpen} onOpenChange={setBuilderOpen} />
+      {builderVisited && <Suspense fallback={<p role="status">Opening Story editor…</p>}><StoryBuilderModal isOpen={builderOpen} onOpenChange={setBuilderOpen} /></Suspense>}
 
       {compactEmpty && authors.length === 0 ? (
-        <button type="button" className="home-moment-action" onClick={() => setBuilderOpen(true)} aria-label="Add a story">
+        <button type="button" className="home-moment-action" onClick={openBuilder} aria-label="Add a story">
           <span className="home-moment-action__icon"><Plus className="h-5 w-5" /></span>
           <span><strong>Your story starts here</strong><small>Share a moment · 24 hours</small></span>
         </button>
       ) : <div className="home-story-row flex gap-3 overflow-x-auto hide-scrollbar py-2 px-2 sm:px-4 snap-x snap-proximity">
-        {/* Add Story Button */}
+        {/* Unified Current User Story Item */}
         {currentUser && (
-          <button
-            type="button"
-            onClick={() => setBuilderOpen(true)}
-            aria-label="Add a story"
-            className="story-item story-item--create flex flex-col items-center gap-2 shrink-0 w-[72px] group"
-          >
-            <div className="story-ring story-ring--create relative w-16 h-16 rounded-full flex items-center justify-center">
-              <Avatar className="w-14 h-14 opacity-70 group-hover:opacity-100 transition-opacity">
-                <AvatarImage src={currentUser.avatarUrl} />
-                <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="story-add absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+          <div className="story-item flex flex-col items-center gap-2 shrink-0 w-[72px] group relative">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasOwnStories) {
+                    setActiveAuthorId(currentUser.id);
+                  } else {
+                    openBuilder();
+                  }
+                }}
+                aria-label={hasOwnStories ? "View your story" : "Add a story"}
+                className={cn(
+                  "story-ring rounded-full block transition-transform group-hover:scale-105",
+                  hasOwnStories
+                    ? (hasUnseenOwn ? 'story-ring--unseen' : 'story-ring--seen')
+                    : 'story-ring--create'
+                )}
+              >
+                <Avatar className="w-16 h-16 border-2 border-background">
+                  <AvatarImage src={currentUser.avatarUrl} alt={currentDisplayName} />
+                  <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </button>
+
+              {/* Plus button to add a new story */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openBuilder();
+                }}
+                aria-label="Create new story"
+                className="story-add absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform border-2 border-background z-10"
+              >
                 <Plus className="w-3.5 h-3.5" />
-              </div>
+              </button>
             </div>
-            <span className="text-xs font-bold truncate w-full text-center text-foreground">
-              Add Story
+            <span className="text-xs font-medium truncate w-full text-center text-foreground/80">
+              {hasOwnStories ? 'Your Story' : 'Add Story'}
             </span>
-          </button>
+          </div>
         )}
-        {authors.map((authorId) => {
+        {otherAuthors.map((authorId) => {
           const author = users[authorId];
           if (!author) return null; // Defensive
 
@@ -96,7 +127,7 @@ export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: bo
               key={authorId}
               type="button"
               onClick={() => setActiveAuthorId(authorId)}
-              aria-label={`Open ${authorId === currentUser?.id ? 'your story' : `${authorDisplayName}'s story`}`}
+              aria-label={`Open ${authorDisplayName}'s story`}
               className="story-item flex flex-col items-center gap-2 shrink-0 w-[72px] snap-start"
             >
               <div
@@ -111,7 +142,7 @@ export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: bo
                 </Avatar>
               </div>
               <span className="text-xs font-medium truncate w-full text-center text-foreground/80">
-                {authorId === currentUser?.id ? 'Your Story' : authorDisplayName}
+                {authorDisplayName}
               </span>
             </button>
           );
@@ -119,12 +150,12 @@ export default function StoriesRow({ compactEmpty = false }: { compactEmpty?: bo
       </div>}
 
       {activeAuthorId && (
-        <StoryViewer
+        <Suspense fallback={<p role="status">Opening Story…</p>}><StoryViewer
           initialAuthorId={activeAuthorId}
           groupedStories={groupedStories}
           authors={authors}
           onClose={() => setActiveAuthorId(null)}
-        />
+        /></Suspense>
       )}
     </>
   );

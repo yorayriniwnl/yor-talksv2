@@ -1,0 +1,32 @@
+# ==============================================================================
+# Yor Talks Staging Caddyfile Example
+# Replace staging hostnames with verified staging DNS records pointing at this host.
+# Caddy obtains and renews Let's Encrypt / ZeroSSL HTTPS certificates automatically.
+# Staging ports default to 8081 (web) and 4001 (api).
+# ==============================================================================
+
+staging.your-domain.example {
+	encode zstd gzip
+
+	# Optional: restrict staging web access to office/VPN IPs or basic auth
+	# @blocked not remote_ip 203.0.113.0/24 198.51.100.0/24
+	# respond @blocked "Access Denied: Staging is restricted to authorized testers" 403
+
+	reverse_proxy 127.0.0.1:8081 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up -Forwarded
+	}
+}
+
+staging-api.your-domain.example {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:4001 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up -Forwarded
+	}
+}

@@ -26,7 +26,7 @@ import type { LiveKitService } from "../services/livekit-service.js";
 import { BroadcastChannelService } from "../services/broadcast-channel-service.js";
 import { ProfileInteractionService } from "../services/profile-interaction-service.js";
 import { UserService } from "../services/user-service.js";
-import { MessageService } from "../services/message-service.js";
+import { MessageService, MessageUnavailableError } from "../services/message-service.js";
 import { withApprovedMedia } from "../services/media-publication.js";
 import { MediaLifecycleError } from "../services/media-service.js";
 import { hydrateMediaValue } from "../services/media-response.js";
@@ -248,7 +248,7 @@ test("concurrent message retries attach exactly the winning image/audio asset; s
   assert.deepEqual(await references(idempotencyKey), [{ media_id: messages[0].mediaId, entity_type: "messages", slot: "mediaUrl" }]);
   await service.deleteMessage(idempotencyKey, sender.id);
   assert.deepEqual(await references(idempotencyKey), []);
-  await service.sendMessageToConversation(sender.id, conversation.id, "", { idempotencyKey, mediaId: audio.id });
+  await assert.rejects(() => service.sendMessageToConversation(sender.id, conversation.id, "", { idempotencyKey, mediaId: audio.id }), MessageUnavailableError);
   assert.deepEqual(await references(idempotencyKey), []);
   const text = await service.sendMessageToConversation(sender.id, conversation.id, "📷 https://example.test/unapproved.png");
   assert.equal(text.mediaLegacy, false);

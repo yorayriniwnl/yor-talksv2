@@ -1,4 +1,45 @@
 mockup-sandbox
 .git
+
+# Environment files and private credentials must use platform secret bindings.
+.env
+.env.*
+**/.env
+**/.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+ops/secrets/
+ops/.secrets/
+ops/private/
+ops/secret-files/
+ops/ci-metrics-bearer-token
+ops/ci-alertmanager-password
+ops/ci-rclone.conf
+
+# Local verification output, caches and rebuildable workspace artifacts.
+test-results/
+playwright-report/
+coverage/
+.cache/
+.turbo/
+.vite/
+**/test-results/**
+**/playwright-report/**
+**/coverage/**
+**/.cache/**
+**/.turbo/**
+**/.vite/**
+social/dist/
 *.log
+**/*.log
 *.tsbuildinfo
+**/*.tsbuildinfo
+
+# Keep .vercel/output and traced API/library dist files for deploy --prebuilt.
+# The CLI treats prebuilt output as authoritative; inspect that output separately.

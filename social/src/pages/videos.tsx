@@ -335,7 +335,7 @@ export default function Videos() {
   }, []);
 
   const refreshPoster = async (video: Parameters<typeof hasUploadedVideoDelivery>[0]) => {
-    if (!presentRef.current || !hasUploadedVideoDelivery(video) || posterRefreshAttempts.current.has(video.id)) return;
+    if (!presentRef.current || !hasUploadedVideoDelivery(video) || !video.thumbnailUrl || posterRefreshAttempts.current.has(video.id)) return;
     posterRefreshAttempts.current.add(video.id);
     const sessionUser = useAppStore.getState().currentUser;
     try {
@@ -498,7 +498,9 @@ export default function Videos() {
                     aria-label={`Watch ${video.title}`}
                   >
                     <span className="operator-video-card__media">
-                      <img src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
+                      {video.thumbnailUrl ? (
+                        <img src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
+                      ) : null}
                       <span className="operator-video-card__play"><Play aria-hidden="true" /></span>
                       <span className="operator-video-card__format">{video.type === 'short' ? 'Reel' : 'Video'}</span>
                       <ContentCategoryBadge value={video.contentCategory} className="operator-video-card__category" />

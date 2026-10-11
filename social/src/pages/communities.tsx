@@ -265,7 +265,9 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
               </DialogHeader>
               <form onSubmit={handleCreateThread} className="space-y-4">
                 <div className="space-y-1.5">
+                  <label htmlFor="thread-title-input" className="text-xs font-semibold text-foreground">Thread Title</label>
                   <Input
+                    id="thread-title-input"
                     value={threadTitle}
                     onChange={(e) => setThreadTitle(e.target.value)}
                     placeholder="Thread title or question…"
@@ -274,7 +276,9 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
                   />
                 </div>
                 <div className="space-y-1.5">
+                  <label htmlFor="thread-content-input" className="text-xs font-semibold text-foreground">Content</label>
                   <Textarea
+                    id="thread-content-input"
                     value={threadContent}
                     onChange={(e) => setThreadContent(e.target.value)}
                     placeholder="Provide details, guides, or squad recruitment info…"
@@ -283,7 +287,9 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
                   />
                 </div>
                 <div className="space-y-1.5">
+                  <label htmlFor="thread-tag-select" className="text-xs font-semibold text-foreground">Category Tag</label>
                   <select
+                    id="thread-tag-select"
                     value={threadTag}
                     onChange={(e) => setThreadTag(e.target.value)}
                     className="w-full h-11 rounded-xl border border-border bg-background px-3 text-xs font-medium"

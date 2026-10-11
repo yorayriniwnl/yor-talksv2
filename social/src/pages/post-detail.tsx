@@ -142,7 +142,7 @@ export default function PostDetail() {
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h2>
+          <h1 className="font-display font-black text-base leading-tight text-foreground">Thread & Conversation</h1>
           <p className="text-xs text-muted-foreground">A thought worth talking about.</p>
         </div>
       </div>
@@ -161,9 +161,9 @@ export default function PostDetail() {
         <div className="mb-10 space-y-4">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            <h3 className="font-display font-extrabold text-sm text-foreground">
+            <h2 className="font-display font-extrabold text-sm text-foreground">
               Replies{!commentsLoading && !commentsError ? ` (${commentList.length})` : ''}
-            </h3>
+            </h2>
           </div>
           
           {/* Rich Composer */}

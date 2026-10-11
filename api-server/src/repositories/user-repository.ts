@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
@@ -168,6 +168,33 @@ export class UserRepository {
   async findByGoogleSubject(googleSubject: string): Promise<UserRecord | undefined> {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSubject, googleSubject));
     return user as UserRecord | undefined;
+  }
+
+  /**
+   * Link an authenticated Google identity only if the account has not changed
+   * since its second-factor check. The unique google_subject constraint also
+   * prevents the same identity from being attached to another Yor account.
+   */
+  async linkGoogleSubjectForLogin(user: UserRecord, googleSubject: string): Promise<UserRecord | undefined> {
+    try {
+      const [linked] = await db.update(usersTable).set({
+        googleSubject,
+        emailVerified: true,
+        updatedAt: new Date().toISOString(),
+      }).where(and(
+        eq(usersTable.id, user.id),
+        eq(usersTable.email, user.email),
+        eq(usersTable.authVersion, user.authVersion ?? 0),
+        isNull(usersTable.googleSubject),
+        sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`,
+      )).returning();
+      return linked as UserRecord | undefined;
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   async findByUsername(username: string): Promise<UserRecord | undefined> {

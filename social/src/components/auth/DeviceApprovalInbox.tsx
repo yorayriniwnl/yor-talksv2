@@ -137,6 +137,12 @@ export function DeviceApprovalInbox() {
             aria-label="Number shown on the other device"
             className="h-14 rounded-2xl text-center font-mono text-2xl font-bold tracking-[0.25em]"
           />
+          {challenge?.expiresAt && (
+            <div className="flex items-center justify-between text-[0.68rem] font-mono text-muted-foreground px-1">
+              <span>Session expires:</span>
+              <span>{new Date(challenge.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button type="button" variant="destructive" onClick={() => void deny()} disabled={busy} className="flex-1 rounded-xl">
               Deny

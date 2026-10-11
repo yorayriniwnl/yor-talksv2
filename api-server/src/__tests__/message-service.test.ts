@@ -21,7 +21,7 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   const deleted = await messageService.deleteMessage(sent.id, sender.id);
 
   const forged = await messageService.sendMessageToConversation(sender.id, sent.conversationId, "forged fields", {
-    replyToId: sent.id,
+    replyToId: reply.id,
     senderId: recipient.id,
     recipientId: sender.id,
     pinned: true,
@@ -38,7 +38,7 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   assert.equal(forged.recipientId, recipient.id);
   assert.equal(forged.pinned, false);
   assert.equal(forged.deletedAt, null);
-  assert.equal(forged.replyToId, sent.id);
+  assert.equal(forged.replyToId, reply.id);
 });
 
 test("message content length is bounded before transport-specific persistence", async () => {

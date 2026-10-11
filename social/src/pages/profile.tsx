@@ -781,10 +781,19 @@ export default function Profile() {
                       <motion.div
                         key={video.id}
                         variants={staggerItem}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Watch reel: ${video.title}`}
                         onClick={() => {
                           setActiveReelIndex(idx);
                         }}
-                        className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setActiveReelIndex(idx);
+                          }
+                        }}
+                        className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none focus-visible:ring-2 focus-visible:ring-primary outline-none"
                       >
                         <img
                           src={video.thumbnailUrl}

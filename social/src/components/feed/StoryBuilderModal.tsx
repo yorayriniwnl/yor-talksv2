@@ -341,9 +341,10 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-3xl font-sans overflow-hidden p-0 border-border/50">
+      <DialogContent className="sm:max-w-[480px] max-h-[92dvh] flex flex-col rounded-3xl font-sans overflow-hidden p-0 border-border/50">
+        <DialogTitle className="sr-only">Create Story</DialogTitle>
         {/* Story Canvas Live Preview */}
-        <div className={cn("relative w-full h-80 bg-gradient-to-br flex flex-col justify-between p-6 transition-all duration-500", selectedGradient.css)}>
+        <div className={cn("relative w-full h-72 shrink-0 bg-gradient-to-br flex flex-col justify-between p-6 transition-all duration-500", selectedGradient.css)}>
           {/* Header Bar */}
           <div className="flex items-center justify-between text-white relative z-10">
             <div className="flex items-center gap-2">
@@ -351,7 +352,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
                 {(currentUser?.displayName || currentUser?.username || 'User')}'s Story
               </span>
             </div>
-            <button onClick={() => handleDialogChange(false)} className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">
+            <button type="button" onClick={() => handleDialogChange(false)} aria-label="Close story creator" className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -381,7 +382,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
         </div>
 
         {/* Controls Drawer */}
-        <div className="p-5 space-y-4 surface-1">
+        <div className="p-5 space-y-4 surface-1 flex-1 overflow-y-auto">
           {/* Type Toggle */}
           <div className="flex rounded-2xl surface-2 p-1 border border-border/40">
             <button
@@ -544,6 +545,12 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               ))}
             </div>
           </div>
+
+          {!contentCategory && (
+            <p className="text-[0.7rem] font-semibold text-amber-400/90 text-center">
+              Please choose a content category above to enable publishing.
+            </p>
+          )}
 
           <DialogFooter>
             <Button

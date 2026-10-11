@@ -7,7 +7,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { AccountService } from "../services/account-service.js";
 import { createTestUser } from "./test-helpers.js";
-import { MessageService } from "../services/message-service.js";
+import { MessageService, MessageUnavailableError } from "../services/message-service.js";
 
 test("vanish-mode messages receive a bounded expiry", async () => {
   const conversation = {
@@ -68,13 +68,11 @@ test("expired retained messages cannot leak through send retries, edits, reactio
   const expired = await messages.create({ id: randomUUID(), conversationId: conversation.id, senderId: sender.id,
     recipientId: recipient.id, content: 'Retained private expiry body', mediaUrl: 'https://example.test/expired-private.jpg',
     createdAt: new Date().toISOString(), seenAt: null, expiresAt: new Date(Date.now() - 1000).toISOString() });
-  const retry = await service.sendMessageToConversation(sender.id, conversation.id, 'Retry', { idempotencyKey: expired.id });
-  assert.equal(retry.content, '');
-  assert.equal(retry.mediaUrl, null);
+  await assert.rejects(() => service.sendMessageToConversation(sender.id, conversation.id, 'Retry', { idempotencyKey: expired.id }), MessageUnavailableError);
   assert.equal(await service.editMessage(expired.id, sender.id, 'Resurrected'), undefined);
   await assert.rejects(() => service.addReaction(expired.id, recipient.id, 'like'), /Message not found/);
   await assert.rejects(() => service.pinMessage(expired.id, recipient.id), /Message not found/);
-  assert.equal((await messages.findById(expired.id))?.content, expired.content);
+  assert.equal((await messages.findRetainedById(expired.id))?.content, expired.content);
 });
 
 const fixtureUsers: string[] = [];
@@ -102,10 +100,7 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
     mediaId: null, createdAt: new Date().toISOString(), seenAt: null,
     expiresAt: new Date(Date.now() + 86_400_000).toISOString() });
   const opened = await service.markSeen(vanished.id, recipient.id);
-  assert.equal(opened?.content, '');
-  assert.equal(opened?.mediaUrl, null);
-  assert.equal(opened?.mediaId, null);
-  assert.equal(opened?.mediaLegacy, false);
+  assert.equal((opened as any)?.tombstone, true);
   assert.ok(opened?.deletedAt);
   assert.doesNotMatch(JSON.stringify(opened), /Private vanished body|private-vanished/);
   for (const userId of [sender.id, recipient.id]) {
@@ -114,5 +109,5 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
     assert.doesNotMatch(JSON.stringify(await new AccountService(users, redis).exportAccount(userId)), /Private vanished body|private-vanished/);
   }
   assert.equal(await service.previewMessage(vanished.id, recipient.id), undefined);
-  assert.equal((await messages.findById(vanished.id))?.content, 'Private vanished body');
+  assert.equal((await messages.findRetainedById(vanished.id))?.content, 'Private vanished body');
 });

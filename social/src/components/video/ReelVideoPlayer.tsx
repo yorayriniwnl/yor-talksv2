@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore, type Video } from '@/lib/store';
 import { applyFreshVideoDelivery, hasUploadedVideoDelivery, readFreshVideoDelivery } from '@/lib/video-delivery';
 
-export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
-  video: Video; active: boolean; muted: boolean; playbackSpeed: number;
+export function ReelVideoPlayer({ video, active, muted, playbackSpeed, paused = false }: {
+  video: Video; active: boolean; muted: boolean; playbackSpeed: number; paused?: boolean;
 }) {
   const playerRef = useRef<HTMLVideoElement>(null);
   const mountedRef = useRef(true);
@@ -17,6 +17,7 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
   const resumeRef = useRef<{ time: number; playing: boolean } | null>(null);
   const [delivery, setDelivery] = useState<{ previous: string; videoUrl: string; thumbnailUrl: string } | null>(null);
   const [recovery, setRecovery] = useState<'idle' | 'pending' | 'failed'>('idle');
+  const [progress, setProgress] = useState(0);
   if (activeRef.current !== active) selectionSequenceRef.current++;
   activeRef.current = active;
   videoRef.current = video;
@@ -88,15 +89,20 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
     player.muted = muted;
     player.playbackRate = playbackSpeed;
     if (active) {
-      if (player.error) void refreshDelivery();
-      else restorePlayback();
+      if (paused) {
+        player.pause();
+      } else {
+        if (player.error) void refreshDelivery();
+        else restorePlayback();
+      }
     } else {
       player.pause();
       player.currentTime = 0;
       lastTimeRef.current = 0;
       playbackIntentRef.current = true;
+      setProgress(0);
     }
-  }, [active, muted, playbackSpeed, source, refreshDelivery, restorePlayback]);
+  }, [active, muted, playbackSpeed, paused, source, refreshDelivery, restorePlayback]);
 
   return (
     <>
@@ -118,6 +124,9 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
           // Keep the last decoded position; deliberate seeks (including zero)
           // update it separately below.
           if (!resumeRef.current && event.currentTarget.readyState >= 2 && event.currentTarget.currentTime > 0) lastTimeRef.current = event.currentTarget.currentTime;
+          if (event.currentTarget.duration) {
+            setProgress((event.currentTarget.currentTime / event.currentTarget.duration) * 100);
+          }
         }}
         onSeeked={event => {
           if (!resumeRef.current && event.currentTarget.readyState >= 2) lastTimeRef.current = event.currentTarget.currentTime;
@@ -136,6 +145,11 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
               <button type="button" className="mt-3 rounded-lg border border-white/50 px-4 py-2" onClick={() => void refreshDelivery(true)}>Retry video</button>
             </div>
           )}
+        </div>
+      )}
+      {active && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-30 pointer-events-none">
+          <div className="h-full bg-primary transition-all duration-100 ease-linear" style={{ width: `${progress}%` }} />
         </div>
       )}
     </>

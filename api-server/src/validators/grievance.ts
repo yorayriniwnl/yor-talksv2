@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { grievancePublicStatusSchema } from "@workspace/api-zod";
 
 export const grievanceSchema = z.object({
   category: z.enum(["copyright", "hate_speech", "harassment", "impersonation", "privacy_violation", "other"]),
@@ -13,6 +14,6 @@ export const grievanceTicketParamSchema = z.object({
 });
 
 export const grievanceStatusSchema = z.object({
-  status: z.enum(["received", "under_review", "resolved", "dismissed"]),
+  status: grievancePublicStatusSchema,
   officerNote: z.string().trim().max(5000).optional(),
 });

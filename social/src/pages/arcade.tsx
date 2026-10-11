@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -90,6 +90,28 @@ export default function Arcade() {
     }
     setDraft((current) => current.length < PASSWORD_LENGTH ? `${current}${key}` : current);
   };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (status !== 'playing') return;
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') && target.id !== 'fake-password-input') {
+        return;
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        setDraft((current) => current.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        submitGuess();
+      } else if (/^[a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setDraft((current) => current.length < PASSWORD_LENGTH ? `${current}${e.key.toUpperCase()}` : current);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [status, draft, evaluations]);
 
   return (
     <div className="arcade-page min-h-screen pb-24 font-sans">

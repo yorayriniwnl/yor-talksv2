@@ -3,6 +3,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { productAnalyticsJobsTable } from "@workspace/db/schema";
+import { renderLifecycleMetrics } from './lifecycle-health.js';
 
 type RequestMetric = {
   count: number;
@@ -197,6 +198,7 @@ export class OperationalMetricsService {
       );
     }
 
+    lines.push(...await renderLifecycleMetrics());
     const memory = process.memoryUsage();
     lines.push(
       "# HELP yor_http_metrics_shared_store_up Whether shared Redis HTTP counters are available.",

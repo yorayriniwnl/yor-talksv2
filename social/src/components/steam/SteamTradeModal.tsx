@@ -160,7 +160,7 @@ export function SteamTradeModal({
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border border-border/50 glass-heavy shadow-2xl font-sans text-foreground">
+      <DialogContent className="max-w-4xl max-h-[92dvh] overflow-y-auto p-0 rounded-3xl border border-border/50 glass-heavy shadow-2xl font-sans text-foreground">
         {/* Header Bar */}
         <div className="p-4 sm:p-5 border-b border-border/40 bg-zinc-950/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -205,8 +205,12 @@ export function SteamTradeModal({
                     <motion.div
                       layout
                       key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Remove ${item.name} from your offer`}
                       onClick={() => toggleYourItem(item)}
-                      className="relative w-16 h-16 rounded-xl border border-border/60 bg-zinc-900/90 overflow-hidden cursor-pointer hover:border-red-400 group p-1"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleYourItem(item); } }}
+                      className="relative w-16 h-16 rounded-xl border border-border/60 bg-zinc-900/90 overflow-hidden cursor-pointer hover:border-red-400 group p-1 focus-visible:ring-2 focus-visible:ring-primary outline-none"
                     >
                       <img src={item.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                       <div className="absolute inset-0 bg-red-600/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
@@ -234,8 +238,12 @@ export function SteamTradeModal({
                     <motion.div
                       layout
                       key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Remove ${item.name} from ${partnerName}'s offer`}
                       onClick={() => toggleTheirItem(item)}
-                      className="relative w-16 h-16 rounded-xl border border-border/60 bg-zinc-900/90 overflow-hidden cursor-pointer hover:border-red-400 group p-1"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheirItem(item); } }}
+                      className="relative w-16 h-16 rounded-xl border border-border/60 bg-zinc-900/90 overflow-hidden cursor-pointer hover:border-red-400 group p-1 focus-visible:ring-2 focus-visible:ring-primary outline-none"
                     >
                       <img src={item.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                       <div className="absolute inset-0 bg-red-600/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
@@ -280,9 +288,14 @@ export function SteamTradeModal({
               return (
                 <div
                   key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`${isSelected ? 'Remove' : 'Add'} ${item.name}, ₹${item.inrPrice}`}
                   onClick={() => (activeTab === 'your' ? toggleYourItem(item) : toggleTheirItem(item))}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (activeTab === 'your' ? toggleYourItem(item) : toggleTheirItem(item)); } }}
                   className={cn(
-                    "p-2.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 relative group flex flex-col justify-between",
+                    "p-2.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 relative group flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-primary outline-none",
                     isSelected
                       ? "border-emerald-400 bg-emerald-500/20 shadow-lg"
                       : "border-border/40 bg-zinc-900/70 hover:border-border"

@@ -3,6 +3,8 @@
 # without sending even synthetic credentials to external provider endpoints.
 services:
   api:
+    environment:
+      TRUSTED_PROXY_CIDRS: 172.30.92.10/32
     dns:
       - 127.0.0.1
     extra_hosts:
@@ -14,3 +16,12 @@ services:
       - "api.razorpay.com:127.0.0.1"
       - "oauth2.googleapis.com:127.0.0.1"
       - "www.googleapis.com:127.0.0.1"
+  web:
+    networks:
+      edge:
+        ipv4_address: 172.30.92.10
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.92.0/24

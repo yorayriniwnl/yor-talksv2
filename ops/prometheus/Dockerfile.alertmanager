@@ -1,0 +1,8 @@
+FROM prom/alertmanager:v0.28.1 AS runtime
+FROM node:24-alpine
+COPY --from=runtime /bin/alertmanager /bin/amtool /usr/local/bin/
+COPY ops/prometheus/render-alertmanager.mjs /opt/yor/render-alertmanager.mjs
+COPY ops/prometheus/alertmanager.yml /etc/alertmanager/template.yml
+RUN mkdir -p /alertmanager /tmp/yor-alertmanager && chown -R node:node /alertmanager /tmp/yor-alertmanager
+USER node
+ENTRYPOINT ["/bin/sh", "-ec", "node /opt/yor/render-alertmanager.mjs && amtool check-config /tmp/yor-alertmanager/alertmanager.yml >/dev/null && exec alertmanager --config.file=/tmp/yor-alertmanager/alertmanager.yml --storage.path=/alertmanager"]

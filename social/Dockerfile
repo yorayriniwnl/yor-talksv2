@@ -62,6 +62,8 @@ FROM nginx:1.30-alpine
 
 COPY --from=build /app/social/dist/public /usr/share/nginx/html
 COPY social/nginx.conf /etc/nginx/conf.d/default.conf
+COPY social/docker/15-trusted-edge.sh /docker-entrypoint.d/15-trusted-edge.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/15-trusted-edge.sh && chmod 0755 /docker-entrypoint.d/15-trusted-edge.sh
 
 EXPOSE 80
 

@@ -1,6 +1,6 @@
 import { Queue, Worker, type Job } from "bullmq";
 import { and, asc, eq, gt, isNull, or } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { notificationsTable } from "@workspace/db/schema";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
@@ -11,6 +11,9 @@ import { NotificationRepository } from "../repositories/notification-repository.
 import type { NotificationRecord } from "../types/index.js";
 import { operationalMetrics } from "../services/operational-metrics-service.js";
 import { closeNotificationWorkerHealthDependencies, isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
+import { notificationJobIdentity, notificationJobPolicy } from '../lib/notification-job-policy.js';
+import { maintainNotificationQueue } from '../lib/notification-queue-maintenance.js';
+import { deliverDurableNotification } from '../services/durable-notification-delivery.js';
 
 export type NotificationWorkerHandle = {
   close: () => Promise<void>;
@@ -22,9 +25,7 @@ const RECOVERY_INTERVAL_MS = 30_000;
 const RECOVERY_PAGE_SIZE = 250;
 const notificationJobOptions = (notification: Pick<NotificationRecord, "id">) => ({
   jobId: notification.id,
-  removeOnComplete: false,
-  attempts: 5,
-  backoff: { type: "exponential" as const, delay: 30_000 },
+  ...notificationJobPolicy,
 });
 
 /**
@@ -80,17 +81,23 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
               // Not ours — other job types may be added to this queue later.
               return;
             }
-            const notification = job.data as NotificationRecord;
-            const recipient = await userRepository.findById(notification.recipientId);
-            await deliveryService.deliver(notification, recipient);
-            await notificationRepository.markPushDelivered(notification.id);
+            try {
+              const minimal = notificationJobIdentity(job.data);
+              if (Object.keys(job.data).length !== 1) await job.updateData(minimal);
+              await deliverDurableNotification(minimal.id, deliveryService, userRepository, notificationRepository);
+            } catch (error) {
+              // Never retain provider bodies, subscription endpoints, SQL values,
+              // or a legacy queue payload in BullMQ failure diagnostics.
+              throw new Error(error instanceof Error && ['notification_delivery_failed', 'notification_datastore_unavailable', 'invalid_notification_job'].includes(error.message)
+                ? error.message : 'notification_job_failed');
+            }
           },
           { connection: { url: env.REDIS_URL } },
         );
 
         worker.on("failed", (job, err) => {
           void operationalMetrics.recordWorkerFailure("notifications");
-          logger.error({ jobId: job?.id, err }, "Notification delivery job failed");
+          logger.error({ jobId: job?.id, code: err.name }, "Notification delivery job failed; inspect durable outbox and bounded retry state");
         });
         worker.on("error", (error) => {
           setNotificationWorkerHealthy(false);
@@ -199,6 +206,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
     if (this.closed) return;
     if (this.recovering) return this.recovering;
     const recovery = (async () => {
+      await maintainNotificationQueue(queue);
       let cursor: { createdAt: string; id: string } | null = null;
       while (!this.closed) {
         const conditions = [isNull(notificationsTable.pushDeliveredAt)];
@@ -215,16 +223,27 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
         if (pending.length === 0) return;
 
         for (const notification of pending) {
+          const authority = (await pool.query(`SELECT status,attempts,next_retry_at>clock_timestamp() AS retry_pending FROM notification_delivery_state WHERE notification_id=$1`, [notification.id])).rows[0];
+          if (authority && (authority.status === 'dead' || authority.attempts >= 5 || authority.retry_pending)) continue;
           const existing = await queue.getJob(notification.id);
           if (existing) {
             const current = await db.select({ pushDeliveredAt: notificationsTable.pushDeliveredAt })
               .from(notificationsTable).where(eq(notificationsTable.id, notification.id)).limit(1);
             if (current[0]?.pushDeliveredAt) continue;
             const state = await existing.getState();
-            if (state === "failed" || state === "completed") await existing.remove();
+            if (state === 'failed') {
+              // Import exhausted legacy transport history before replacing the
+              // job. New jobs already recorded their attempts in PostgreSQL.
+              await pool.query(`INSERT INTO notification_delivery_state(notification_id,attempts,status,last_error)
+                SELECT id,least(5,$2::integer),CASE WHEN $2::integer>=5 THEN 'dead' ELSE 'pending' END,'notification_delivery_failed'
+                FROM notifications WHERE id=$1 ON CONFLICT(notification_id) DO NOTHING`, [notification.id, existing.attemptsMade]);
+              const latest = (await pool.query('SELECT status FROM notification_delivery_state WHERE notification_id=$1', [notification.id])).rows[0];
+              if (latest?.status === 'dead') continue;
+              await existing.remove();
+            } else if (state === "completed") await existing.remove();
             else continue;
           }
-          await queue.add("notification:deliver", notification, notificationJobOptions(notification));
+          await queue.add("notification:deliver", { id: notification.id }, notificationJobOptions(notification));
         }
 
         const last = pending[pending.length - 1];
