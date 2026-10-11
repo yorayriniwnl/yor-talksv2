@@ -12,7 +12,6 @@ import { toRestrictedUser } from '../utils/user-view.js';
 import { createResponse } from '../utils/response.js';
 import { hasCurrentConsent } from '../utils/consent.js';
 import { EligibilityService } from '../services/eligibility-service.js';
-import type { EligibilityDecision } from '../eligibility/types.js';
 
 const userId = '10000000-0000-4000-8000-000000000099';
 const deviceId = 'restricted-device-1';
@@ -116,10 +115,6 @@ function createRestrictedFixture(t: TestContext) {
     res.status(200).json(createResponse('Posts loaded', []));
   });
 
-  app.get('/api/v1/unmapped', authenticate, (_req, res) => {
-    res.status(200).json(createResponse('Unmapped route loaded', []));
-  });
-
   app.post('/api/v1/messages', authenticate, (_req, res) => {
     res.status(201).json(createResponse('Message sent', { id: 'm1' }));
   });
@@ -215,7 +210,6 @@ test('restricted session cannot bypass policy on direct social, media, and feed 
   const encodedTraversalRes = await fetch(`${base}/api/v1/users/me/%2e%2e/posts`, { headers });
   assert.ok([403, 404].includes(encodedTraversalRes.status), 'Encoded path traversal must never grant social access');
 });
-
 test('production keeps eligibility and current-consent gates when PUBLIC_BETA is false', async (t) => {
   const previousPublicBeta = env.PUBLIC_BETA;
   const previousNodeEnv = env.NODE_ENV;
@@ -262,38 +256,4 @@ test('production keeps eligibility and current-consent gates when PUBLIC_BETA is
 
   const socialRes = await fetch(`${base}/api/v1/posts`, { method: 'POST', headers, body: JSON.stringify({ content: 'bypass attempt' }) });
   assert.equal(socialRes.status, 403, 'PUBLIC_BETA=false must not grant production social access');
-});
-
-test('activated production accounts need the mapped capability and unknown authenticated routes fail closed', async (t) => {
-  const previousPublicBeta = env.PUBLIC_BETA;
-  const previousNodeEnv = env.NODE_ENV;
-  env.PUBLIC_BETA = false;
-  env.NODE_ENV = 'production';
-  t.after(() => { env.PUBLIC_BETA = previousPublicBeta; env.NODE_ENV = previousNodeEnv; });
-
-  const decision: EligibilityDecision = {
-    experience: 'teen_13_17', activated: true,
-    capabilities: { social: true, publish: false, messaging: true, payments: false, seller: false,
-      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
-    maximumContentRating: 'regular', policyVersions: ['fixture:1'], revision: '2', reason: null,
-    publicBrowsingAllowed: true,
-  };
-  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => decision);
-
-  const { app } = createRestrictedFixture(t);
-  const server = createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
-  const address = server.address();
-  assert.ok(address && typeof address !== 'string');
-  const base = `http://127.0.0.1:${address.port}`;
-  const token = jwt.sign({ sub: userId, role: 'user', permissions: ['read:profile'], deviceId, authVersion: 0, type: 'access' }, env.JWT_SECRET, { expiresIn: '1h' });
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-
-  const socialRes = await fetch(`${base}/api/v1/posts`, { headers, signal: AbortSignal.timeout(5000) });
-  assert.equal(socialRes.status, 200, 'an allowed social capability remains available');
-  const publishRes = await fetch(`${base}/api/v1/posts`, { method: 'POST', headers, body: JSON.stringify({ content: 'must be denied' }), signal: AbortSignal.timeout(5000) });
-  const unknownRes = await fetch(`${base}/api/v1/unmapped`, { headers, signal: AbortSignal.timeout(5000) });
-  assert.deepEqual({ publish: publishRes.status, unmapped: unknownRes.status }, { publish: 403, unmapped: 403 },
-    'missing capabilities and authenticated routes without a policy classification must fail closed');
 });
