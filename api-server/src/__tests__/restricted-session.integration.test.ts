@@ -10,6 +10,7 @@ import { UserRepository } from '../repositories/user-repository.js';
 import { EligibilityRepository } from '../repositories/eligibility-repository.js';
 import { toRestrictedUser } from '../utils/user-view.js';
 import { createResponse } from '../utils/response.js';
+import { hasCurrentConsent } from '../utils/consent.js';
 
 const userId = '10000000-0000-4000-8000-000000000099';
 const deviceId = 'restricted-device-1';
@@ -203,4 +204,35 @@ test('restricted session cannot bypass policy on direct social, media, and feed 
   // 4. Encoded path traversal attempt: GET /api/v1/users/me/%2e%2e/posts
   const encodedTraversalRes = await fetch(`${base}/api/v1/users/me/%2e%2e/posts`, { headers });
   assert.ok([403, 404].includes(encodedTraversalRes.status), 'Encoded path traversal must never grant social access');
+});
+
+test('production keeps eligibility and current-consent gates when PUBLIC_BETA is false', async (t) => {
+  const previousPublicBeta = env.PUBLIC_BETA;
+  const previousNodeEnv = env.NODE_ENV;
+  env.PUBLIC_BETA = false;
+  env.NODE_ENV = 'production';
+  t.after(() => { env.PUBLIC_BETA = previousPublicBeta; env.NODE_ENV = previousNodeEnv; });
+
+  assert.equal(hasCurrentConsent({ termsVersion: 'old-terms', termsAcceptedAt: '2026-01-01T00:00:00.000Z',
+    ageConfirmedAt: '2026-01-01T00:00:00.000Z' }), false,
+  'turning off public beta must not make stale consent current in production');
+
+  const app = createRestrictedFixture(t);
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  const base = `http://127.0.0.1:${address.port}`;
+  const token = jwt.sign({ sub: userId, role: 'user', permissions: ['read:profile'], deviceId, authVersion: 0, type: 'access' }, env.JWT_SECRET, { expiresIn: '1h' });
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const meRes = await fetch(`${base}/api/v1/users/me`, { headers });
+  assert.equal(meRes.status, 200);
+  assert.equal((await meRes.json() as any).data.restricted, true,
+    'unverified accounts must stay restricted even when PUBLIC_BETA is false');
+
+  const socialRes = await fetch(`${base}/api/v1/posts`, { method: 'POST', headers, body: JSON.stringify({ content: 'bypass attempt' }) });
+  assert.equal(socialRes.status, 403, 'PUBLIC_BETA=false must not grant production social access');
 });
