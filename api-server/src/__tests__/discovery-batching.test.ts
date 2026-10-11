@@ -55,8 +55,8 @@ async function fixture(t: TestContext, size: number) {
     noteRows.push({id:randomUUID(),authorId:author.id,content:'Synthetic note fixture',createdAt:now,expiresAt,
       audience:kind===4?'public':kind===5?'close_friends':audience,contentRating:kind===9?'mature':'regular'});
   }
-  await db.insert(storiesTable).values(storyRows);
-  await db.insert(userNotesTable).values(noteRows);
+  if (storyRows.length > 0) await db.insert(storiesTable).values(storyRows);
+  if (noteRows.length > 0) await db.insert(userNotesTable).values(noteRows);
   for (let i=0; i<size; i++) {
     if (i%10===4) await pool.query('INSERT INTO story_audience_members(story_id,user_id) VALUES($1,$2)',[storyRows[i].id,viewer.id]);
     if (i%10===5) await pool.query('INSERT INTO story_audience_exclusions(story_id,user_id) VALUES($1,$2)',[storyRows[i].id,viewer.id]);
