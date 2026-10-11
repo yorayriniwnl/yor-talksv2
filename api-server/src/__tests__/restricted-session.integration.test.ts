@@ -4,13 +4,14 @@ import { test, type TestContext } from 'node:test';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
-import { authenticate } from '../middlewares/auth.js';
+import { authenticate, optionalAuthenticate } from '../middlewares/auth.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { EligibilityRepository } from '../repositories/eligibility-repository.js';
 import { toRestrictedUser } from '../utils/user-view.js';
 import { createResponse } from '../utils/response.js';
 import { hasCurrentConsent } from '../utils/consent.js';
+import { EligibilityService } from '../services/eligibility-service.js';
 
 const userId = '10000000-0000-4000-8000-000000000099';
 const deviceId = 'restricted-device-1';
@@ -138,7 +139,11 @@ function createRestrictedFixture(t: TestContext) {
     res.status(200).json(createResponse('Logged out', null));
   });
 
-  return app;
+  app.get('/api/v1/public-personalized', optionalAuthenticate, (req, res) => {
+    res.status(200).json({ authenticated: Boolean(req.user) });
+  });
+
+  return { app, user };
 }
 
 test('restricted session cannot bypass policy on direct social, media, and feed endpoints', async (t) => {
@@ -147,7 +152,7 @@ test('restricted session cannot bypass policy on direct social, media, and feed 
   env.PUBLIC_BETA = true;
   env.NODE_ENV = "production";
   t.after(() => { env.PUBLIC_BETA = previousPublicBeta; env.NODE_ENV = previousNodeEnv; });
-  const app = createRestrictedFixture(t);
+  const { app } = createRestrictedFixture(t);
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -217,7 +222,7 @@ test('production keeps eligibility and current-consent gates when PUBLIC_BETA is
     ageConfirmedAt: '2026-01-01T00:00:00.000Z' }), false,
   'turning off public beta must not make stale consent current in production');
 
-  const app = createRestrictedFixture(t);
+  const { app, user } = createRestrictedFixture(t);
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -227,6 +232,18 @@ test('production keeps eligibility and current-consent gates when PUBLIC_BETA is
   const base = `http://127.0.0.1:${address.port}`;
   const token = jwt.sign({ sub: userId, role: 'user', permissions: ['read:profile'], deviceId, authVersion: 0, type: 'access' }, env.JWT_SECRET, { expiresIn: '1h' });
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => ({
+    experience: 'adult_18_plus', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: true, seller: true,
+      memberships: true, live: true, rtc: true, ai: true, analytics: false, profiling: false },
+    maximumContentRating: 'mature', policyVersions: [], revision: '1', reason: null, publicBrowsingAllowed: true,
+  }));
+  user.termsVersion = 'old-terms';
+  const personalizedRes = await fetch(`${base}/api/v1/public-personalized`, { headers });
+  assert.equal((await personalizedRes.json() as any).authenticated, false,
+    'stale terms must not grant personalized public access through optional authentication');
+  user.termsVersion = env.TERMS_VERSION;
 
   const meRes = await fetch(`${base}/api/v1/users/me`, { headers });
   assert.equal(meRes.status, 200);
