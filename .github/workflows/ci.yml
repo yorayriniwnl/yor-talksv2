@@ -127,6 +127,9 @@ jobs:
           pnpm --filter @workspace/api-server build
           pnpm --filter @workspace/social build
 
+      - name: Verify Vercel API initialization fails closed
+        run: node ops/test-vercel-runtime-init.mjs
+
       - name: Verify production configuration wiring
         run: pnpm production-config:check
 
