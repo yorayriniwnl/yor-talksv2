@@ -225,6 +225,8 @@ Analytics runs daily at 02:15 UTC and recomputes seven complete days. Backups ru
 
 ### Incident response and alert catalog
 
+The owner labels in this alert catalog describe proposed responsibilities, not assigned people or monitored contacts. No production on-call roster or response-time commitment has been approved. Assign real contacts and escalation coverage before enabling production traffic.
+
 | Alert | Severity | Meaning | First response | Escalation owner | Evidence required to close |
 | --- | --- | --- | --- | --- | --- |
 | `YorLifecycleUnavailable` | Critical | Lifecycle worker process missing, heartbeat >45s stale, or required handlers (`account_cleanup`, `media_cleanup`) missing/stopping. | Inspect container status and `/api/readyz`; restart worker if crashed; verify Postgres connectivity. | Backend Reliability Lead | `yor_lifecycle_ready == 1`, `heartbeat_age < 45s`, Alertmanager `resolved` notification. |
@@ -292,11 +294,11 @@ Analytics runs daily at 02:15 UTC and recomputes seven complete days. Backups ru
   corepack pnpm --filter @workspace/api-server exec node --import tsx src/scripts/notification-delivery.ts replay "$NOTIFICATION_UUID" provider_recovered
   ```
 
-### Escalation hierarchy and on-call owners
+### Proposed escalation responsibilities (assignment pending)
 
-1. **Level 1 (Triage & First Response)**: Operations On-Call / Platform Engineer (`ops@yor-talks.internal`). Responsible for inspecting container state, verifying `/api/readyz`, checking secret permissions, and executing standard runbook recovery within 15 minutes.
-2. **Level 2 (Technical Escalation)**: Backend Reliability Lead (`backend-leads@yor-talks.internal`). Responsible for dead-letter diagnosis, stuck worker thread dumps, database query deadlock resolution, and provider outage handling.
-3. **Level 3 (Incident Authority & Acceptance)**: Production Release Coordinator / Architect (`release-authority@yor-talks.internal`). Responsible for signing off on service rollback decisions, data restore promotions, and closing Sev-1/Sev-2 incidents.
+1. **Triage and first response:** Assign an operations/platform on-call contact to inspect container state, verify `/api/readyz`, and check secret permissions. Contact and response-time target are unassigned.
+2. **Technical escalation:** Assign a backend reliability contact for dead-letter diagnosis, stuck worker investigation, database lock issues, and provider outages.
+3. **Incident authority:** Assign a release incident commander authorized to approve compatible application rollback and isolated restore promotion.
 
 ### Evidence required before closing an incident
 
@@ -395,7 +397,7 @@ After a successful restore:
 5. Retain or securely dispose of rehearsal data according to the approved
    retention policy. Never automatically drop a database based on an unverified URL.
 
-The 10 October 2026 acceptance drill verified actual off-host backup, remote WebDAV network retrieval, and isolated restore acceptance: 101 tables, 270 indexes, 302 constraints, zero unvalidated constraints, full release migration ledger matching, auth version revocation, cascade-safe group messaging, media metadata verification, durable background job recovery, and complete transactional rollback on failure. Detailed operational evidence, timings, key custody architecture, and unresolved owner policies are documented in [Off-Host Backup & Isolated Recovery Acceptance](operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md).
+The 10 October 2026 synthetic drill exercised encrypted backup, WebDAV transfer to a test server bound to `127.0.0.1` on the same workstation, retrieval from its temporary directory, and isolated transactional restore. It checked a 101-table schema-shaped database, indexes, constraints, migration ledger, authentication version, group-message integrity, media metadata, durable jobs, and rollback on restore failure. It did not test independent off-host storage, a production recovery host, production key custody, or an approved RPO/RTO. Those remain launch gates; see the [backup and isolated recovery drill record](operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md).
 
 ## 6. Launch checks
 

@@ -35,16 +35,16 @@ for (const [toolName, toolFile] of Object.entries({
 const forward = p => p.replaceAll('\\', '/');
 
 // Drill working directories
-const drillDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yor-offhost-drill-'));
+const drillDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yor-backup-recovery-drill-'));
 const pgDataDir = path.join(drillDir, 'pgdata');
-const remoteStorageDir = path.join(drillDir, 'remote-storage');
+const remoteStorageDir = path.join(drillDir, 'loopback-webdav-storage');
 const stagingDir = path.join(drillDir, 'local-staging');
 const retrievedDir = path.join(drillDir, 'retrieved-artifacts');
-const offlineVaultDir = path.join(drillDir, 'offline-custody-vault');
+const testKeyDir = path.join(drillDir, 'test-key-material');
 const logsDir = path.join(drillDir, 'evidence-logs');
 const metricsFile = path.join(drillDir, 'metrics', 'yor-talks-backup.prom');
 
-for (const dir of [remoteStorageDir, stagingDir, retrievedDir, offlineVaultDir, logsDir, path.dirname(metricsFile)]) {
+for (const dir of [remoteStorageDir, stagingDir, retrievedDir, testKeyDir, logsDir, path.dirname(metricsFile)]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -136,7 +136,7 @@ async function startIsolatedServices() {
   }
   console.log('[drill setup] Redis is accepting connections on loopback port', REDIS_PORT);
 
-  console.log(`[drill setup] Starting off-host WebDAV storage server on 127.0.0.1:${WEBDAV_PORT}...`);
+  console.log(`[drill setup] Starting loopback WebDAV test server on 127.0.0.1:${WEBDAV_PORT}...`);
   const webdavLog = fs.openSync(path.join(logsDir, 'webdav-remote-server.log'), 'w');
   webdavProcess = spawn(RCLONE, [
     'serve', 'webdav',
@@ -147,7 +147,7 @@ async function startIsolatedServices() {
   ], { stdio: ['ignore', webdavLog, webdavLog], windowsHide: true });
 
   await sleep(1000);
-  console.log('[drill setup] Off-host WebDAV server launched.');
+  console.log('[drill setup] Loopback WebDAV test server launched.');
 }
 
 async function stopIsolatedServices() {
@@ -171,6 +171,8 @@ async function stopIsolatedServices() {
 async function main() {
   const executionEvidence = {
     drillTimestamp: new Date().toISOString(),
+    evidenceScope: 'synthetic-loopback-drill',
+    productionOffHostAcceptance: false,
     sourceEnvironment: {
       type: 'Isolated synthetic production candidate cluster',
       postgresVersion: 'PostgreSQL 16.4, 64-bit',
@@ -180,18 +182,20 @@ async function main() {
       targetDatabase: targetDb,
       failedTargetDatabase: failedTargetDb,
     },
-    offHostDestination: {
+    testRemoteDestination: {
       protocol: 'WebDAV (RFC 4918) over TCP HTTP',
       endpoint: `http://127.0.0.1:${WEBDAV_PORT}`,
-      remoteName: 'offhost-remote',
-      remoteBucketPath: 'offhost-remote:yor-talks',
+      boundInterface: '127.0.0.1',
+      remoteName: 'loopback-test',
+      remoteBucketPath: 'loopback-test:yor-talks',
       authenticatedUser: WEBDAV_USER,
       authMethod: 'Basic Auth with obscured password configuration in rclone.conf',
     },
-    custodyArchitecture: {
+    testKeyHandling: {
       encryptionPublicRecipient: null,
-      decryptionIdentityLocation: forward(path.join(offlineVaultDir, 'custodian.agekey')),
-      custodySeparation: 'Public recipient configured in scheduler environment; private key kept strictly in offline vault',
+      decryptionIdentityLocation: forward(path.join(testKeyDir, 'drill-generated.agekey')),
+      productionCustodyValidated: false,
+      description: 'A drill-generated private key is kept in this isolated working directory; no production key custody separation is exercised.',
     },
     backupRun: {},
     retrievalRun: {},
@@ -205,11 +209,11 @@ async function main() {
     await startIsolatedServices();
 
     // 1. Configure rclone client
-    console.log('[step 1] Configuring rclone with off-host remote...');
+    console.log('[step 1] Configuring rclone with the loopback WebDAV test remote...');
     const obscuredPassRes = runCmd(RCLONE, ['obscure', WEBDAV_PASS]);
     const obscuredPass = obscuredPassRes.stdout.trim();
     const rcloneConfPath = path.join(drillDir, 'rclone.conf');
-    const rcloneConfContent = `[offhost-remote]
+    const rcloneConfContent = `[loopback-test]
 type = webdav
 url = http://127.0.0.1:${WEBDAV_PORT}
 vendor = other
@@ -219,21 +223,21 @@ pass = ${obscuredPass}
     fs.writeFileSync(rcloneConfPath, rcloneConfContent, { mode: 0o600 });
 
     // Verify rclone remote connectivity and create remote bucket directory
-    runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'mkdir', 'offhost-remote:yor-talks']);
-    const listCheck = runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'lsd', 'offhost-remote:']);
+    runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'mkdir', 'loopback-test:yor-talks']);
+    const listCheck = runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'lsd', 'loopback-test:']);
     assert.match(listCheck.stdout, /yor-talks/);
-    console.log('[step 1] Verified rclone off-host connection and bucket structure.');
+    console.log('[step 1] Verified rclone loopback test connection and bucket structure.');
 
-    // 2. Setup age key custody
-    console.log('[step 2] Generating age encryption keypair with separated custody...');
-    const privateKeyPath = path.join(offlineVaultDir, 'custodian.agekey');
+  // 2. Generate an ephemeral key used only by this isolated test.
+    console.log('[step 2] Generating an ephemeral age keypair for the isolated drill...');
+    const privateKeyPath = path.join(testKeyDir, 'drill-generated.agekey');
     runCmd(AGE_KEYGEN, ['-o', forward(privateKeyPath)]);
     fs.chmodSync(privateKeyPath, 0o600);
     const pubKeyRes = runCmd(AGE_KEYGEN, ['-y', forward(privateKeyPath)]);
     const publicRecipient = pubKeyRes.stdout.trim();
     assert.match(publicRecipient, /^age1[a-z0-9]+$/);
-    executionEvidence.custodyArchitecture.encryptionPublicRecipient = publicRecipient;
-    console.log(`[step 2] Public recipient generated: ${publicRecipient.slice(0, 10)}... (private key preserved in offline vault)`);
+    executionEvidence.testKeyHandling.encryptionPublicRecipient = publicRecipient;
+    console.log(`[step 2] Ephemeral test recipient generated: ${publicRecipient.slice(0, 10)}... (test key remains in this temporary work directory)`);
 
     // 3. Prepare source database & run migrations
     console.log(`[step 3] Creating and migrating source database ${sourceDb}...`);
@@ -344,8 +348,8 @@ pass = ${obscuredPass}
 
     console.log(`[step 4] Source inventory: ${sourceTableCount} tables, ${sourceIndexCount} indexes, ${sourceConstraintCount} constraints, ${sourceUserCount} users, ${sourceMsgCount} messages, ${sourceMediaCount} media assets, ${sourceJobCount} jobs.`);
 
-    // 5. Execute authorized backup via backup-database.sh
-    console.log('[step 5] Executing authorized backup with encryption and off-host upload...');
+    // 5. Exercise the backup script against isolated test services.
+    console.log('[step 5] Executing isolated backup with encryption and loopback WebDAV upload...');
     const backupStartMs = Date.now();
     const backupTimestamp = new Date().toISOString();
     const backupScript = forward(path.join(root, 'lib/db/scripts/backup-database.sh'));
@@ -353,7 +357,7 @@ pass = ${obscuredPass}
     const backupEnv = {
       DATABASE_URL: SOURCE_DB_URL,
       BACKUP_AGE_RECIPIENT: publicRecipient,
-      BACKUP_REMOTE: 'offhost-remote:yor-talks',
+      BACKUP_REMOTE: 'loopback-test:yor-talks',
       BACKUP_DIR: forward(stagingDir),
       BACKUP_METRICS_FILE: forward(metricsFile),
       BACKUP_LOCAL_RETENTION_DAYS: '14',
@@ -373,8 +377,8 @@ pass = ${obscuredPass}
     const archiveStats = fs.statSync(stagingArchiveFile);
     const archiveSha256 = createHash('sha256').update(fs.readFileSync(stagingArchiveFile)).digest('hex');
 
-    // Verify upload to off-host remote
-    const remoteListRes = runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'lsjson', 'offhost-remote:yor-talks']);
+    // Verify upload to the loopback WebDAV test remote.
+    const remoteListRes = runCmd(RCLONE, ['--config', forward(rcloneConfPath), 'lsjson', 'loopback-test:yor-talks']);
     const remoteObjects = JSON.parse(remoteListRes.stdout);
     const uploadedObj = remoteObjects.find(obj => obj.Name === archiveFileName);
     assert.ok(uploadedObj, `Remote destination missing uploaded object: ${archiveFileName}`);
@@ -395,7 +399,7 @@ pass = ${obscuredPass}
       sourceIndexCount,
       sourceConstraintCount,
       archiveFileName,
-      remotePath: `offhost-remote:yor-talks/${archiveFileName}`,
+      remotePath: `loopback-test:yor-talks/${archiveFileName}`,
       sizeBytes: archiveStats.size,
       sha256: archiveSha256,
       uploadStatus: 'HTTP PUT WebDAV network upload succeeded (201 Created)',
@@ -403,20 +407,20 @@ pass = ${obscuredPass}
     };
     console.log(`[step 5] Encrypted archive: ${archiveFileName} (${archiveStats.size} bytes, SHA256: ${archiveSha256}) verified on remote.`);
 
-    // 6. Delete local staging copy to ensure retrieval from off-host remote
+    // 6. Delete local staging copy so retrieval exercises the separate test remote directory.
     console.log('[step 6] Removing local staging copy to prevent satisfying retrieval from local storage...');
     fs.rmSync(stagingArchiveFile, { force: true });
     assert.ok(!fs.existsSync(stagingArchiveFile), 'Local staging file should be gone');
     console.log('[step 6] Local staging copy removed. Local path confirmed empty.');
 
-    // 7. Retrieve encrypted object from off-host remote
-    console.log('[step 7] Retrieving encrypted backup from off-host WebDAV storage...');
+    // 7. Retrieve the encrypted object from the loopback WebDAV test remote.
+    console.log('[step 7] Retrieving encrypted backup from loopback WebDAV test storage...');
     const retrievalStartMs = Date.now();
     const retrievedFilePath = path.join(retrievedDir, archiveFileName);
     runCmd(RCLONE, [
       '--config', forward(rcloneConfPath),
       'copyto',
-      `offhost-remote:yor-talks/${archiveFileName}`,
+      `loopback-test:yor-talks/${archiveFileName}`,
       forward(retrievedFilePath),
     ]);
     const retrievalDurationMs = Date.now() - retrievalStartMs;
@@ -427,16 +431,17 @@ pass = ${obscuredPass}
 
     executionEvidence.retrievalRun = {
       retrievalDurationMs,
-      sourceRemotePath: `offhost-remote:yor-talks/${archiveFileName}`,
+      sourceRemotePath: `loopback-test:yor-talks/${archiveFileName}`,
       localDestinationPath: forward(retrievedFilePath),
       sizeBytes: fs.statSync(retrievedFilePath).size,
       sha256: retrievedSha256,
       integrityMatch: true,
-      retrievedFromOffHostNetwork: true,
+      retrievedFromLoopbackTestRemote: true,
+      productionOffHostAcceptance: false,
     };
 
-    // 8. Verify archive integrity using offline recovery key
-    console.log('[step 8] Verifying archive integrity and listability using custodian offline identity...');
+    // 8. Verify archive integrity using the ephemeral test key.
+    console.log('[step 8] Verifying archive integrity and listability using the drill-generated test key...');
     const verifyRes = runCmd(BASH, [backupScript, 'verify', forward(retrievedFilePath)], {
       env: { BACKUP_AGE_IDENTITY: forward(privateKeyPath) }
     });
@@ -750,18 +755,20 @@ pass = ${obscuredPass}
     const backupAgeSeconds = Math.round((Date.now() - backupStartMs) / 1000);
 
     executionEvidence.timingComparison = {
-      recoveryPointActualSeconds: backupAgeSeconds,
+      observedSyntheticBackupAgeSeconds: backupAgeSeconds,
       retrievalTimeMs: retrievalDurationMs,
       restoreTimeMs: restoreDurationMs,
       validationTimeMs: validationDurationMs,
       totalRecoveryDurationMs,
-      approvedRpoObjective: '<= 24 hours (implied by 25h Prometheus alert YorDatabaseBackupStale; formal SLA unassigned)',
-      approvedRtoObjective: 'PENDING OWNER/STAKEHOLDER POLICY (synthetic drill was ~' + (totalRecoveryDurationMs / 1000).toFixed(1) + 's; production RTO depends on real database gigabytes and remote transfer bandwidth; tiny fixture timings must NOT be claimed as production RTO)',
+      productionRpoObjective: null,
+      productionRpoStatus: 'not approved or measured; the backup alert threshold is not an RPO commitment',
+      productionRtoObjective: null,
+      productionRtoStatus: 'not approved or measured; this duration is a synthetic loopback drill only',
     };
 
     logEvidence('final-acceptance-report.json', executionEvidence);
     console.log('\n============================================================');
-    console.log('OFF-HOST BACKUP & ISOLATED RECOVERY ACCEPTANCE DRILL COMPLETE');
+    console.log('SYNTHETIC LOOPBACK BACKUP & ISOLATED RESTORE DRILL COMPLETE');
     console.log('============================================================');
     console.log(JSON.stringify(executionEvidence, null, 2));
 

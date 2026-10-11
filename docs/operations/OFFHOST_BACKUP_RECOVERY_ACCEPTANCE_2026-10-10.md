@@ -1,14 +1,14 @@
-# Yor Talks (v3) Off-Host Backup & Isolated Recovery Acceptance Dossier
+# Yor Talks (v3) Backup and Isolated Recovery Drill Evidence
 
 **Document Reference:** `docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md`  
 **Evaluation Date:** 10 October 2026  
 **Target Repository:** `yor-talks-v3` (`codex/hosting-target-preparation`)  
-**Status:** **OPERATIONAL ACCEPTANCE PASSED (EXIT 0)**  
+**Status:** **SYNTHETIC LOOPBACK DRILL PASSED (EXIT 0); PRODUCTION OFF-HOST ACCEPTANCE NOT ESTABLISHED**
 **Evidence Artifacts:** Generated via automated drill `ops/backup/offhost-recovery-drill.mjs`  
 
 ---
 
-## 1. Executive Summary & Distinction from Local CI Fixtures
+## 1. Scope and Distinction from CI Fixtures and Production Acceptance
 
 Historical continuous integration (CI runs `37868624235` and `37869588581`) tested database backup logic using tiny synthetic in-memory fixtures (`backup-fixture.ts`) restoring 2 users and 1 message in ~1.1 seconds using local filesystem storage (`type = local` rclone transport). Those test logs explicitly recorded:
 ```json
@@ -16,7 +16,7 @@ Historical continuous integration (CI runs `37868624235` and `37869588581`) test
 ```
 **Those historical local CI timings (~1.1s) must never be conflated with or claimed as an operational Recovery Time Objective (RTO).**
 
-This acceptance dossier establishes actual off-host backup, remote network retrieval over TCP HTTP, and isolated disaster recovery acceptance for `yor-talks-v3`. All operations were conducted against a full production schema candidate containing 101 tables, 270 indexes, 302 constraints, release migration ledgers, authentication versions, decoupled group conversations, media asset metadata, and durable background jobs.
+This dossier records a synthetic, isolated loopback drill. It exercises encrypted backup, WebDAV upload and retrieval, and restore into an empty PostgreSQL database using a full schema-shaped candidate (101 tables, 270 indexes, 302 constraints, release migration ledgers, authentication versions, group conversations, media metadata, and durable jobs). The source database and the WebDAV server both bind to `127.0.0.1` on the same workstation; the WebDAV data directory is a temporary local directory. This proves the backup and restore code paths against the tested schema. It does **not** establish off-host independence, production storage durability, production key custody, or an approved operational RPO/RTO.
 
 ---
 
@@ -24,23 +24,25 @@ This acceptance dossier establishes actual off-host backup, remote network retri
 
 In strict adherence to governance standards, recovery objectives must not be invented, nor can retention policies be silently chosen. The operational parameters and unresolved decisions are established as follows:
 
-| Dimension | Operational Status & Approved Specification | Source & Binding | Unresolved Owner / Policy Decision |
+| Dimension | Tested Configuration / Current State | Source & Binding | Remaining Production Acceptance |
 | :--- | :--- | :--- | :--- |
-| **Backup Scope** | **Full Logical Database Archive**: PostgreSQL custom-format (`pg_dump -Fc -Z9`) capturing all schemas, tables, indexes, constraints, types, enums, triggers, and sequences. | `lib/db/scripts/backup-database.sh` | **Resolved**: Full catalog dump in single transaction. |
-| **Backup Frequency** | **Daily at 01:00:00 UTC** with `Persistent=true` and `RandomizedDelaySec=10min`. Additional manual dumps required prior to schema migrations. | `ops/systemd/yor-talks-backup.timer`, `ops/systemd/yor-talks-backup.service` | Formal sign-off on 24-hour cycle vs sub-daily WAL archiving. |
-| **Local Retention** | **14 Days**: Local encrypted staging volume automatically prunes archives older than 14 days (`find -mtime +14`). | `lib/db/scripts/backup-database.sh` (`BACKUP_LOCAL_RETENTION_DAYS=14`) | **Resolved** for local staging volume. |
-| **Remote Retention** | **Immutable Remote Object Storage**: Recommended 35–90 days with provider-side object versioning and object lock. The backup helper intentionally *never* issues remote deletion or pruning calls. | `docs/PRODUCTION_LAUNCH.md` | **PENDING OWNER POLICY**: Formal organizational retention schedule and remote cloud bucket lifecycle policy. |
-| **Remote Destination** | **Off-Host Remote Storage**: Network-isolated storage daemon (WebDAV over TCP HTTP / S3-compatible API) accessed via authenticated `rclone`. | `rclone.conf`, `ops/backup/Dockerfile` | Formal selection of production cloud bucket (e.g. AWS S3, Cloudflare R2, Backblaze B2) and region. |
-| **Recovery Owner** | **Designated Custodian Role**: Infrastructure Operations Lead / Incident Commander. Host scheduler runs under `yor-talks` service account. | `docs/PRODUCTION_LAUNCH.md` | Formal named individual and on-call escalation roster. |
-| **Approved Access Process** | **Separated Access**: Scheduler host has write/upload credentials only. Retrieval requires authorized operations staff with MFA. Decryption requires offline key custodian. | Asymmetric `age` cryptography architecture | Approval protocol for break-glass production disaster recovery. |
-| **RPO Target** | **<= 24 Hours**: Implied by Prometheus alert `YorDatabaseBackupStale` firing at >25 hours (90,000s) stale. | `ops/prometheus/alerts.yml` | Formal SLA sign-off (e.g. 24h vs RPO < 1h requiring continuous WAL archiving). |
-| **RTO Target** | **PENDING OWNER SLA SIGN-OFF**: Synthetic full recovery drill measured **5.13 seconds**. Real production RTO is governed by database size in gigabytes and remote network ingress bandwidth. | Measured operational drill evidence | Formal RTO SLA approval (e.g. 2 hours or 4 hours). Tiny CI fixture timings (~1.1s) are explicitly forbidden as RTO claims. |
-| **Encryption-Key Custody** | **Strict Asymmetric Separation**: Encrypted with public recipient (`age1...`) stored in scheduler env. Decryption identity (`AGE-SECRET-KEY-1...`) stored strictly in offline custodian vault. | `age` v1.3.2 asymmetric key custody | Physical security and key-ceremony protocol for the offline custodian private key. |
-| **Legal & Retention Constraints** | **GDPR Art. 17 Reconciliation**: Immutable backup archives retain historical user rows until lifecycle expiry. Live account deletion (`DELETE /users/me`) immediately cascades in live DB. | GDPR (EU) 2016/679 Art. 17; `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md` | Formal legal policy confirming that restored backups must re-apply deletion tombstone records prior to live service reconnection. |
+| **Backup Scope** | Synthetic PostgreSQL 16.4 database restored from a custom-format archive. The schema-shaped fixture exercises 101 tables, indexes, constraints, and representative records; no production database was used. | `lib/db/scripts/backup-database.sh`; `ops/backup/offhost-recovery-drill.mjs` | Approve and rehearse the production database backup scope. |
+| **Backup Frequency** | A daily 01:00 UTC systemd timer is present in the repository. It was not installed or observed on a production host. | `ops/systemd/yor-talks-backup.timer`, `ops/systemd/yor-talks-backup.service` | Select the production schedule and approve daily backups versus sub-daily/WAL recovery. |
+| **Local Retention** | The script defaults local staging retention to 14 days. This is a technical default, not an organization-wide retention policy. | `lib/db/scripts/backup-database.sh` (`BACKUP_LOCAL_RETENTION_DAYS`) | Approve the data retention schedule and production setting. |
+| **Remote Retention** | The helper does not delete remote objects. No cloud bucket lifecycle, versioning, or object-lock policy was configured in this drill. | `lib/db/scripts/backup-database.sh`; `docs/PRODUCTION_LAUNCH.md` | Select a provider, region, versioning, and approved retention lifecycle. |
+| **Remote Destination** | The test used `rclone serve webdav` bound to `127.0.0.1`; the archive directory was on the same workstation. This is not off-host storage. | `ops/backup/offhost-recovery-drill.mjs` | Provision an independent production destination and repeat upload, retrieval, and restore through its approved access process. |
+| **Recovery Owner** | No production recovery owner or on-call roster is designated. Role names in the runbook are proposed responsibilities only. | `docs/PRODUCTION_LAUNCH.md`; `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md` | Name the accountable owner and escalation contacts. |
+| **Approved Access Process** | The drill generated a temporary test key and WebDAV credential locally. No production MFA, break-glass approval, or offline key-custody process was exercised. | `ops/backup/offhost-recovery-drill.mjs` | Approve and test production retrieval authorization and key custody. |
+| **RPO Target** | Not approved or measured. The `YorDatabaseBackupStale` alert threshold is a detection rule, not an RPO commitment. | `ops/prometheus/alerts.yml` | Approve the production RPO and implement a backup/WAL schedule that meets it. |
+| **RTO Target** | Not approved or measured. The approximately 5.13-second result is from a synthetic loopback drill and cannot predict production recovery time. | Drill timing evidence in this dossier | Approve the production RTO and measure it against the selected host, remote storage, and representative database size. |
+| **Encryption-Key Custody** | The drill-generated private key was stored under the same temporary working directory and used by the same workstation. Production key separation was not tested. | `ops/backup/offhost-recovery-drill.mjs` | Establish and verify independent production encryption and recovery key custody. |
+| **Deletion and Retention** | The drill verifies database restore invariants only. It does not exercise applying post-backup deletion records before a restored database returns to service. | `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md` | Approve retention policy and a recovery procedure for reconciling deletion requests before reconnecting restored service. |
 
 ---
 
-## 3. Asymmetric Key Custody & Remote Storage Architecture
+## 3. Proposed Key Custody and Remote Storage Design (Not Exercised)
+
+The diagram below describes a possible production design. It was not deployed or validated by the drill. The drill-generated key and loopback WebDAV credentials were temporary test material on one workstation.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -64,9 +66,9 @@ In strict adherence to governance standards, recovery objectives must not be inv
 
 ---
 
-## 4. Operational Acceptance Drill Execution & Sanitized Evidence
+## 4. Synthetic Loopback Drill Execution & Sanitized Evidence
 
-The end-to-end acceptance drill was executed in an isolated loopback cluster using PostgreSQL 16.4, Redis 7.2.8, and a dedicated network WebDAV remote storage daemon.
+The drill ran an isolated PostgreSQL 16.4 cluster, Redis 7.2.8, and an `rclone serve webdav` process on the same workstation. That WebDAV server bound to `127.0.0.1`; it was a protocol test endpoint, not an independent host or cloud provider.
 
 ### 4.1 Source Database & Backup Run Evidence
 - **Source Environment**: Isolated synthetic production cluster on `127.0.0.1:55480` (PostgreSQL 16.4, 64-bit).
@@ -85,7 +87,7 @@ The end-to-end acceptance drill was executed in an isolated loopback cluster usi
 - **Encrypted Archive Identifier**: `backup_20261010_043729_20335.dump.age`
 - **Archive Size**: 285,478 bytes (~278.8 KiB)
 - **Archive SHA-256**: `e2f345206270f096e2d35a8e9d17de97c1248a4118cf8743b248bfb6add89fe0`
-- **Upload Result**: Network HTTP PUT WebDAV upload succeeded (`201 Created` / `rclone copyto` exit 0).
+- **Upload Result**: HTTP PUT to the loopback WebDAV test endpoint succeeded (`201 Created` / `rclone copyto` exit 0). This verifies the upload path, not off-host durability.
 - **Prometheus Metrics Recorded** (`metrics/yor-talks-backup.prom`):
   ```prometheus
   # HELP yor_backup_last_success_timestamp_seconds Unix timestamp of the latest encrypted off-host backup.
@@ -101,12 +103,12 @@ The end-to-end acceptance drill was executed in an isolated loopback cluster usi
 
 ---
 
-## 5. Remote Network Retrieval & Isolated Restore Verification
+## 5. Loopback WebDAV Retrieval & Isolated Restore Verification
 
-### 5.1 Remote Retrieval (No Staging Bypass)
-To guarantee genuine disaster recovery verification, the local staging copy was completely removed (`fs.rmSync` / verified nonexistent on disk).
-- **Retrieval Remote Source**: `offhost-remote:yor-talks/backup_20261010_043729_20335.dump.age`
-- **Retrieval Transport**: TCP HTTP network stream via `rclone copyto`
+### 5.1 Loopback Test Retrieval (No Staging Bypass)
+The local staging copy was removed and the archive was fetched from a separate temporary directory served by the loopback WebDAV process. Both directories and the server were on the same workstation; this does not establish independent off-host recovery.
+- **Retrieval Test Source**: `loopback-test:yor-talks/backup_20261010_043729_20335.dump.age`
+- **Retrieval Transport**: TCP HTTP stream over loopback via `rclone copyto`
 - **Retrieval Duration**: **172 ms**
 - **Retrieved File Size**: 285,478 bytes
 - **Retrieved SHA-256**: `e2f345206270f096e2d35a8e9d17de97c1248a4118cf8743b248bfb6add89fe0` (100% bit-for-bit integrity match)
@@ -114,7 +116,7 @@ To guarantee genuine disaster recovery verification, the local staging copy was 
 ### 5.2 Isolated Restore Target Verification
 - **Target Database**: `yor_backup_acceptance_target_ab8180aa257e`
 - **Target Isolation Invariant**: Verified strictly empty prior to restore using `schema-object-inspection.sql` (0 tables, 0 routines, 0 types, 0 custom schemas, 0 extensions).
-- **Decryption & Inspection**: Verified with `age --decrypt` using custodian offline identity; `pg_restore --list` parsed table catalog successfully.
+- **Decryption & Inspection**: Verified with `age --decrypt` using the drill-generated test key in the temporary working directory; `pg_restore --list` parsed the table catalog successfully.
 - **Transactional Restore Duration**: **4,318 ms** (`--single-transaction` mode confirmed).
 
 ### 5.3 Post-Restore Application & Schema Invariant Verification (Duration: 641 ms)
@@ -159,18 +161,18 @@ Six negative failure modes were exercised on isolated targets to verify fail-clo
 
 ## 7. Objective Comparison & Recovery Timings
 
-| Metric | Historical CI Fixture | Operational Drill Acceptance | Approved Objective / Target | Compliance Status |
+| Metric | Historical CI Fixture | Synthetic Loopback Drill | Production Objective / Acceptance | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Transport Protocol** | In-memory local alias (`type = local`) | **WebDAV over TCP HTTP** | Off-host independent remote | **COMPLIANT** |
-| **Dataset Scale** | 2 synthetic users, 1 message | **101 tables, 270 indexes, 302 constraints** | Full production schema candidate | **COMPLIANT** |
-| **Recovery Point (RPO)** | Not measured | **13 seconds** (at drill time) | <= 24 hours (implied by 25h alert) | **COMPLIANT** |
-| **Retrieval Time** | 0 ms (local bypass) | **172 ms** (network transfer) | Bound by remote bandwidth | **MEASURED** |
-| **Restore Time** | ~1,160 ms | **4,318 ms** (single transaction) | Bound by database gigabytes | **MEASURED** |
-| **Validation Time** | ~20 ms | **641 ms** (full invariant suite) | Bound by test catalog | **MEASURED** |
-| **Total Recovery Duration** | ~1,180 ms | **5,131 ms (~5.1 seconds)** | **PENDING OWNER SLA APPROVAL** | **MEASURED (Synthetic)** |
+| **Transport Protocol** | In-memory local alias (`type = local`) | **WebDAV over loopback TCP HTTP** | Independent approved off-host destination and retrieval | **Not established** |
+| **Dataset Scale** | 2 synthetic users, 1 message | **101 tables, 270 indexes, 302 constraints** in a synthetic schema-shaped database | Representative production schema/data and approved restore host | **Schema-shaped test passed; production unverified** |
+| **Recovery Point** | Not measured | Backup age observed at about 13 seconds during the drill | Owner-approved RPO and an acceptance test that meets it | **Not approved or measured** |
+| **Retrieval Time** | 0 ms (local bypass) | **172 ms** on loopback | Retrieval from approved independent storage at representative size | **Synthetic measurement only** |
+| **Restore Time** | ~1,160 ms | **4,318 ms** (single transaction) | Restore on the approved target using representative database size | **Synthetic measurement only** |
+| **Validation Time** | ~20 ms | **641 ms** (test invariant suite) | Production recovery validation plan | **Synthetic measurement only** |
+| **Total Recovery Duration** | ~1,180 ms | **5,131 ms (~5.1 seconds)** | Owner-approved production RTO | **Not approved; synthetic measurement only** |
 
 > [!WARNING]
-> **RTO Baseline Notice**: The measured ~5.1s recovery duration is an isolated synthetic benchmark on loopback storage. Real production disaster recovery RTO must factor in remote cloud transfer latency and production database volume in gigabytes. Do not report 5.1s as a production disaster recovery SLA guarantee.
+> **Production acceptance notice**: The measured durations are isolated synthetic loopback results. They are not production RPO/RTO evidence, off-host durability evidence, or an operational SLA. The 25-hour backup alert threshold does not establish a 24-hour RPO.
 
 ---
 
@@ -184,60 +186,75 @@ Six negative failure modes were exercised on isolated targets to verify fail-clo
 
 ---
 
-## 9. Exact Repeatable Recovery Runbook Commands
+## 9. Production Recovery Command Template (Not Exercised)
 
-### Step 1: Securely Retrieve Encrypted Archive from Off-Host Remote
+The following is a template for a future approved production recovery. The loopback WebDAV test server and its temporary archive were removed after the drill; no production remote archive, recovery host, or production key was available. Replace every placeholder only after the owner approves the provider, access process, target, and key custody. These commands are not evidence that those resources exist.
+
+### Step 1: Retrieve an Archive from the Approved Independent Remote
 ```bash
-# Retrieve the specified backup archive to an isolated working directory
-rclone --config /etc/yor-talks/rclone.conf copyto \
-  "offhost-remote:yor-talks/backup_20261010_043729_20335.dump.age" \
-  "/var/tmp/recovery/backup_20261010_043729_20335.dump.age"
+APPROVED_REMOTE_ARCHIVE="<approved-rclone-remote:path/to/archive.dump.age>"
+LOCAL_ARCHIVE="/var/tmp/recovery/archive.dump.age"
 
-# Verify archive SHA-256 against recorded backup manifest
-sha256sum "/var/tmp/recovery/backup_20261010_043729_20335.dump.age"
+# Retrieve the selected backup archive to an isolated working directory
+rclone --config /etc/yor-talks/rclone.conf copyto \
+  "$APPROVED_REMOTE_ARCHIVE" "$LOCAL_ARCHIVE"
+
+# Verify the checksum against the separately retained backup manifest
+sha256sum "$LOCAL_ARCHIVE"
 ```
 
-### Step 2: Verify Decryption & Archive Listability (Offline Custodian Key)
+### Step 2: Verify Decryption & Archive Listability (Approved Recovery Key)
 ```bash
+LOCAL_ARCHIVE="/var/tmp/recovery/archive.dump.age"
+: "${BACKUP_AGE_IDENTITY:?set the approved recovery key path}"
 # Verify archive integrity without touching any database
-BACKUP_AGE_IDENTITY="/secure/offline-vault/custodian.agekey" \
+BACKUP_AGE_IDENTITY="$BACKUP_AGE_IDENTITY" \
   lib/db/scripts/backup-database.sh verify \
-  "/var/tmp/recovery/backup_20261010_043729_20335.dump.age"
+  "$LOCAL_ARCHIVE"
 ```
 
 ### Step 3: Provision and Verify Strictly Empty Isolated Target Database
 ```bash
-# Create isolated empty target database on designated recovery cluster
-createdb -h 127.0.0.1 -p 5432 -U postgres yor_recovery_isolated_target
+: "${RESTORE_ADMIN_DATABASE_URL:?set the approved isolated recovery cluster connection}"
+: "${RESTORE_TARGET_DATABASE_URL:?set the connection to the explicitly isolated target}"
+: "${RESTORE_TARGET_DATABASE:?set the exact target database name}"
+
+# Create the isolated target on the approved recovery cluster
+createdb --maintenance-db="$RESTORE_ADMIN_DATABASE_URL" "$RESTORE_TARGET_DATABASE"
 
 # Verify target has exactly zero catalog objects
-psql -h 127.0.0.1 -p 5432 -U postgres -d yor_recovery_isolated_target \
+psql "$RESTORE_TARGET_DATABASE_URL" \
   --no-psqlrc -Atq --file lib/db/scripts/schema-object-inspection.sql
 # Output must be empty (0 rows).
 ```
 
 ### Step 4: Execute Single-Transaction Restore
 ```bash
+LOCAL_ARCHIVE="/var/tmp/recovery/archive.dump.age"
+: "${BACKUP_AGE_IDENTITY:?set the approved recovery key path}"
+: "${RESTORE_TARGET_DATABASE_URL:?set the connection to the explicitly isolated target}"
+: "${RESTORE_TARGET_DATABASE:?set the exact target database name}"
 # Restore into verified isolated target (requires typing 'restore' confirmation)
-DATABASE_URL="postgresql://postgres:password@127.0.0.1:5432/yor_recovery_isolated_target" \
-RESTORE_TARGET_DATABASE="yor_recovery_isolated_target" \
-BACKUP_AGE_IDENTITY="/secure/offline-vault/custodian.agekey" \
+DATABASE_URL="$RESTORE_TARGET_DATABASE_URL" \
+RESTORE_TARGET_DATABASE="$RESTORE_TARGET_DATABASE" \
+BACKUP_AGE_IDENTITY="$BACKUP_AGE_IDENTITY" \
   lib/db/scripts/backup-database.sh restore \
-  "/var/tmp/recovery/backup_20261010_043729_20335.dump.age"
+  "$LOCAL_ARCHIVE"
 ```
 
 ### Step 5: Post-Restore Catalog & Invariant Validation
 ```bash
+: "${RESTORE_TARGET_DATABASE_URL:?set the connection to the isolated restored target}"
 # 1. Verify zero unvalidated constraints
-psql -d "$DATABASE_URL" -Atq -c \
+psql "$RESTORE_TARGET_DATABASE_URL" -Atq -c \
   "SELECT count(*) FROM pg_constraint WHERE connamespace='public'::regnamespace AND NOT convalidated;"
 
 # 2. Verify migration ledger versions
-psql -d "$DATABASE_URL" -c \
+psql "$RESTORE_TARGET_DATABASE_URL" -c \
   "SELECT version, applied_at FROM release_schema_versions ORDER BY applied_at ASC;"
 
 # 3. Verify total table and index counts
-psql -d "$DATABASE_URL" -c \
+psql "$RESTORE_TARGET_DATABASE_URL" -c \
   "SELECT (SELECT count(*) FROM information_schema.tables WHERE table_schema='public') AS tables,
           (SELECT count(*) FROM pg_indexes WHERE schemaname='public') AS indexes;"
 ```
@@ -250,7 +267,7 @@ The following policy and governance decisions remain pending human owner approva
 
 1. **Recovery Owner & On-Call Custodian**: Formally name the operational individual and emergency escalation roster authorized to hold decryption credentials.
 2. **Formal Production RTO SLA**: Approve production Recovery Time Objective SLA (e.g. 2 hours vs 4 hours) based on actual multi-gigabyte production database sizing and remote network transfer bandwidth.
-3. **Formal Production RPO SLA**: Confirm whether daily backup (RPO <= 24h) is acceptable or if sub-daily continuous WAL streaming is required.
+3. **Formal Production RPO SLA**: Approve a numeric RPO, then confirm whether daily backups meet it or whether sub-daily backups or continuous WAL archiving are required. The 25-hour alert threshold is not an approved RPO.
 4. **Remote Cloud Storage Provider & Region**: Formally approve the production remote backup bucket provider (e.g. AWS S3, Cloudflare R2, Backblaze B2) and target jurisdiction/region.
 5. **Remote Retention Lifecycle**: Approve formal bucket object lock and lifecycle retention rules (e.g. 35 days, 90 days).
 6. **GDPR Art. 17 vs Immutable Backup Reconciliation**: Formally adopt operational runbook for re-applying user deletion tombstones prior to bringing a restored backup into service.

@@ -34,8 +34,8 @@ The 10 October acceptance and mobile/backup measurements for revision `aca6ccb` 
      - **CSS Gzip:** 62,177 bytes ($\le 102,400$ bytes budget) — **Passed 3/3**
      - **Exit code:** 0 / 0 / 0 (All passed). Evidence in `docs/hardening/mobile-performance-unified-2026-10-10.md`.
 
-3. **Off-Host Backup & Disaster Recovery Acceptance:**
-   - **10 October operational drill (`c885e29`):** Full 101-table catalog, 270 indexes, 302 constraints, release migration ledgers, asymmetric `age` encryption, remote WebDAV retrieval over TCP HTTP, and transactional restore with rollback. Evidence in `docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md`.
+3. **Backup and Disaster Recovery Drill:**
+   - **10 October synthetic drill (`c885e29`):** Exercised the 101-table schema-shaped candidate, encryption, WebDAV upload/retrieval, and transactional restore. The WebDAV test server bound to `127.0.0.1` on the same workstation; this is not off-host acceptance. Production remote storage, key custody, restore access, and owner-approved RPO/RTO remain unverified. Evidence in `docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md`.
 
 4. **Release-Scope & Policy Guard Alignment:**
    - **Scope determination (`9450914`):** Strictly bounded as **Adult (18+) Closed Testing Beta**. Age 18 strictly enforced, closed-audience allowlists active, and unaccepted capabilities (payments, live rooms, web push, RTC direct calls, creator memberships) fail closed before database queries. Evidence in `docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md`.
