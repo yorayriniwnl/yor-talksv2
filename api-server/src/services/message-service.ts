@@ -11,6 +11,8 @@ import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { isPremiumMessageStyle } from "../features/premium-profile.js";
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
 import { isMessageVisible, toMessageTombstone } from "../utils/message-visibility.js";
+import type { MessageTombstone } from './message-view.js';
+import { currentMessageResponse } from './media-response.js';
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -18,6 +20,7 @@ export class InvalidMessageContentError extends Error {}
 export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
+export class MessageUnavailableError extends Error {}
 
 type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string; mediaId?: string };
 
@@ -31,6 +34,14 @@ const normalizeMessageContent = (content: string, hasMedia = false): string => {
 };
 
 export class MessageService {
+  private readonly newPublications = new WeakSet<MessageRecord>();
+
+  /** Only the winner of an idempotent insert may publish a receive event. */
+  consumeNewPublication(message: MessageRecord): boolean {
+    const created = this.newPublications.has(message);
+    this.newPublications.delete(message);
+    return created;
+  }
   constructor(
     private readonly conversationRepository: ConversationRepository,
     private readonly messageRepository: MessageRepository,
@@ -106,12 +117,14 @@ export class MessageService {
     // client key returns that exact row without invoking moderation or writing
     // a second message.
     if (options?.idempotencyKey) {
-      const existing = await this.messageRepository.findById(options.idempotencyKey);
+      const existing = await this.messageRepository.findRetainedById(options.idempotencyKey);
       if (existing) {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
-        return isMessageVisible(existing, new Date()) ? existing : toMessageTombstone(existing);
+        const current = await this.messageRepository.findCurrentForUser(existing.id, senderId);
+        if (!current) throw new MessageUnavailableError('This message is no longer available');
+        return isMessageVisible(current, new Date()) ? current : toMessageTombstone(current);
       }
     }
 
@@ -154,7 +167,7 @@ export class MessageService {
       id: options?.idempotencyKey ?? randomUUID(),
       conversationId,
       senderId,
-      recipientId: members.find((memberId) => memberId !== senderId) ?? senderId,
+      recipientId: conversation.isGroup ? null : members.find((memberId) => memberId !== senderId) ?? senderId,
       content: normalizedContent,
       textStyleId,
       createdAt: createdAt.toISOString(),
@@ -173,6 +186,7 @@ export class MessageService {
       const attachment = media.mediaUrl?.[0];
       const result = await this.messageRepository.createWithResult({ ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null });
       persisted = result.message;
+      if (result.created) this.newPublications.add(result.message);
       // Conflict losers return the winning row without creating or replacing
       // its attachment references, including a text-only winning message.
       return result.created ? result.message : undefined;
@@ -181,7 +195,12 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
-    return isMessageVisible(persisted, new Date()) ? persisted : toMessageTombstone(persisted);
+    if (!this.newPublications.has(persisted)) {
+      const current = await this.messageRepository.findCurrentForUser(persisted.id, senderId);
+      if (!current) throw new MessageUnavailableError('This message is no longer available');
+      return isMessageVisible(current, new Date()) ? current : toMessageTombstone(current);
+    }
+    return persisted;
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
@@ -199,7 +218,8 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => isMessageVisible(message, new Date())), userId);
+    const visible = messages.filter((message: MessageRecord) => isMessageVisible(message, new Date()));
+    return currentMessageResponse(await this.withReadReceipts(visible, userId), userId);
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -240,7 +260,7 @@ export class MessageService {
     );
     const lastMessages = results.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
+    return currentMessageResponse(results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined })),userId);
   }
 
   private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
@@ -258,10 +278,8 @@ export class MessageService {
       .map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
   }
 
-  async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.recordVisibleRead(messageId, userId);
-    if (!message || message.deletedAt) return message;
-    return isMessageVisible(message, new Date()) ? message : undefined;
+  async markSeen(messageId: string, userId: string): Promise<MessageRecord | MessageTombstone | undefined> {
+    return this.messageRepository.markSeenForUser(messageId, userId);
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
@@ -275,17 +293,11 @@ export class MessageService {
     message.editedAt = new Date().toISOString();
     // Compatibility rendering is bound to the historical body. An edit is a
     // new publication and cannot mint an attachment from an arbitrary text URL.
-    return this.messageRepository.updateVisible(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
+    return this.messageRepository.updateForUser(messageId, userId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false }, true);
   }
 
-  async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || message.senderId !== userId) {
-      return undefined; // Only sender can delete for now
-    }
-    message.deletedAt = new Date().toISOString();
-    const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
-    return deleted ? toMessageTombstone(deleted) : undefined;
+  async deleteMessage(messageId: string, userId: string): Promise<MessageTombstone | undefined> {
+    return this.messageRepository.deleteForUser(messageId, userId);
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
@@ -301,19 +313,12 @@ export class MessageService {
   }
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
-    const message = await this.assertParticipant(messageId, userId);
-    const reactions = message.reactions ?? {};
-    const current = reactions[reaction] ?? [];
-    if (!current.includes(userId)) {
-      current.push(userId);
-      reactions[reaction] = current;
-      message.reactions = reactions;
-    }
-    return this.messageRepository.updateVisible(messageId, { reactions: message.reactions });
+    await this.assertParticipant(messageId, userId);
+    return this.messageRepository.addReactionForUser(messageId, userId, reaction);
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     await this.assertParticipant(messageId, userId);
-    return this.messageRepository.updateVisible(messageId, { pinned: true });
+    return this.messageRepository.updateForUser(messageId, userId, { pinned: true });
   }
 }

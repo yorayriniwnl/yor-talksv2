@@ -101,7 +101,7 @@ test('durable jobs deduplicate, recover abandoned leases, fence stale workers an
   await pool.query(`UPDATE background_jobs SET lease_until=now()-interval '1 second' WHERE id=$1`, [id]);
   const retry = (await jobs.claim([kind]))!;
   assert.notEqual(retry.lease_token, first.lease_token);
-  await jobs.finish(first);
+  await assert.rejects(jobs.finish(first), /lease_lost/);
   assert.equal((await pool.query('SELECT status FROM background_jobs WHERE id=$1', [id])).rows[0].status, 'running');
   await pool.query('UPDATE background_jobs SET attempts=8 WHERE id=$1', [id]);
   await jobs.fail(retry, 'provider_unavailable');

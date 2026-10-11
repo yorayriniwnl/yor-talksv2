@@ -1,0 +1,221 @@
+{
+  "localEvidenceDate": "2026-10-10",
+  "scope": "Three fixed cold synthetic authenticated-feed observations of the exact repaired frontend preview assets. New browser/context, 390x844, reduced motion, cache disabled, 150ms latency, 1.6Mbps down, 4x CPU, local gzip level5. Strict API fixtures and blocked external hosts; no live providers or public database.",
+  "build": {
+    "trackedSourceOnly": true,
+    "install": "pnpm9.15.4 install --offline --frozen-lockfile --prod=false",
+    "node": "24.19.0",
+    "mode": "production",
+    "publicBeta": false,
+    "minimumAge": 18,
+    "paymentsLivePushRtc": false,
+    "apiBase": "/api",
+    "realtime": false,
+    "artifactAggregateSha256": "3fb58abd5d05fb995db2f1e042845bdc5a28662311f2809e8e8f5ebb2c6c0429",
+    "artifactFiles": 106
+  },
+  "result": "passed",
+  "ownerApprovedBudgets": false,
+  "acceptanceRule": "Every one of the three fixed observations must pass each unchanged proposed budget. All observations are retained; no best-of selection.",
+  "comparability": "Tested on AMD Ryzen 5 3600XT under standard throttled mobile emulation. Strict synthetic API fixtures, cold context, disabled cache, blocked external hosts. Profiling runs excluded from acceptance calculations.",
+  "acceptance": {
+    "javascriptGzipBytes": {
+      "maximum": 358400,
+      "observations": [
+        273007,
+        273007,
+        273007
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "stylesheetGzipBytes": {
+      "maximum": 102400,
+      "observations": [
+        62177,
+        62177,
+        62177
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "fcpMs": {
+      "maximum": 2500,
+      "observations": [
+        1884,
+        1880,
+        1848
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "lcpMs": {
+      "maximum": 4000,
+      "observations": [
+        3068,
+        3088,
+        3088
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    },
+    "longTaskBlockingMs": {
+      "maximum": 300,
+      "observations": [
+        178,
+        228,
+        206
+      ],
+      "passedObservations": 3,
+      "totalObservations": 3,
+      "passedEveryObservation": true
+    }
+  },
+  "observations": [
+    {
+      "number": 1,
+      "sourceReportSha256": "e16d5e1d02b1e488620eb055c99efa240cf3e9f110051784f5c1fda0bf929d83",
+      "generatedAt": "2026-10-09T23:33:28.910Z",
+      "exitCode": 0,
+      "measured": {
+        "javascriptBytes": 873062,
+        "stylesheetBytes": 417129,
+        "javascriptDeliveredBytes": 273496,
+        "stylesheetDeliveredBytes": 62177,
+        "javascriptGzipBytes": 273007,
+        "stylesheetGzipBytes": 62177,
+        "fcpMs": 1884,
+        "lcpMs": 3068,
+        "longTaskBlockingMs": 178,
+        "fixtureReadyMs": 3347
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273007,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62177,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 1884,
+          "passed": true
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3068,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 178,
+          "passed": true
+        }
+      }
+    },
+    {
+      "number": 2,
+      "sourceReportSha256": "f82db195d85b00856ed7b38b8a5571e234327dd637fc0cb9c4fb7b6947a6bfb0",
+      "generatedAt": "2026-10-09T23:33:44.200Z",
+      "exitCode": 0,
+      "measured": {
+        "javascriptBytes": 873062,
+        "stylesheetBytes": 417129,
+        "javascriptDeliveredBytes": 273496,
+        "stylesheetDeliveredBytes": 62177,
+        "javascriptGzipBytes": 273007,
+        "stylesheetGzipBytes": 62177,
+        "fcpMs": 1880,
+        "lcpMs": 3088,
+        "longTaskBlockingMs": 228,
+        "fixtureReadyMs": 3366
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273007,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62177,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 1880,
+          "passed": true
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3088,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 228,
+          "passed": true
+        }
+      }
+    },
+    {
+      "number": 3,
+      "sourceReportSha256": "70c2f69f3b07c663eea2fcbaeaf6f7b75a994c94883e94039957d4c11e09fa83",
+      "generatedAt": "2026-10-09T23:33:57.900Z",
+      "exitCode": 0,
+      "measured": {
+        "javascriptBytes": 873062,
+        "stylesheetBytes": 417129,
+        "javascriptDeliveredBytes": 273496,
+        "stylesheetDeliveredBytes": 62177,
+        "javascriptGzipBytes": 273007,
+        "stylesheetGzipBytes": 62177,
+        "fcpMs": 1848,
+        "lcpMs": 3088,
+        "longTaskBlockingMs": 206,
+        "fixtureReadyMs": 3367
+      },
+      "budgets": {
+        "javascriptGzipBytes": {
+          "maximum": 358400,
+          "observed": 273007,
+          "passed": true
+        },
+        "stylesheetGzipBytes": {
+          "maximum": 102400,
+          "observed": 62177,
+          "passed": true
+        },
+        "fcpMs": {
+          "maximum": 2500,
+          "observed": 1848,
+          "passed": true
+        },
+        "lcpMs": {
+          "maximum": 4000,
+          "observed": 3088,
+          "passed": true
+        },
+        "longTaskBlockingMs": {
+          "maximum": 300,
+          "observed": 206,
+          "passed": true
+        }
+      }
+    }
+  ],
+  "diagnostics": {
+    "profileReportSha256": "e8398a232a3133ffdf20da54bd27d169a05736fea4637d917b3a3cabb32c030e",
+    "cpuProfile": "docs/hardening/mobile-performance-acceptance-profile.cpuprofile",
+    "trace": "docs/hardening/mobile-performance-acceptance-profile.trace.json",
+    "screenshot": "docs/hardening/mobile-performance-acceptance-profile.png"
+  }
+}

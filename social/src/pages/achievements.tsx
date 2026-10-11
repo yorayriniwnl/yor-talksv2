@@ -181,9 +181,9 @@ export default function Achievements() {
           <div className="space-y-6">
             <div className="surface-1 p-6 rounded-3xl border border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+                <h2 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
                   <Hammer className="w-5 h-5 text-amber-400" /> Steam Trading Card Sets
-                </h3>
+                </h2>
                 <p className="text-xs text-muted-foreground font-mono mt-1">Collect all 5 cards to preview a badge craft. Account rewards are granted only after the backend ledger is connected.</p>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function Achievements() {
                       </div>
                       <div className="absolute bottom-3 left-3">
                         <span className="text-[0.62rem] font-mono uppercase text-zinc-300 font-bold block">{set.game}</span>
-                        <h4 className="font-display font-bold text-sm text-white">{set.badgeName}</h4>
+                        <h3 className="font-display font-bold text-sm text-white">{set.badgeName}</h3>
                       </div>
                     </div>
 
@@ -285,7 +285,7 @@ export default function Achievements() {
                     </div>
                   </div>
 
-                  <h4 className="font-display font-bold text-base text-foreground mb-1">{a.title}</h4>
+                  <h2 className="font-display font-bold text-base text-foreground mb-1">{a.title}</h2>
                   <p className="text-xs font-serif text-muted-foreground mb-4 line-clamp-2 leading-relaxed">{a.description}</p>
 
                   <div className="mt-auto w-full pt-3 border-t border-border/30 flex items-center justify-between font-mono text-xs">

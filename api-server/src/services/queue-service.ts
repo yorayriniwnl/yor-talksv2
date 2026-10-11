@@ -2,6 +2,7 @@ import { Queue, type Job } from "bullmq";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
+import { notificationJobIdentity, notificationJobPolicy } from '../lib/notification-job-policy.js';
 
 export class QueueService {
   private queue: Queue | null = null;
@@ -69,10 +70,12 @@ export class QueueService {
       ? String((payload as { id: unknown }).id)
       : undefined;
     const options = {
-      ...(jobId ? { jobId, removeOnComplete: false } : {}),
-      ...(type === "notification:deliver" ? { attempts: 5, backoff: { type: "exponential" as const, delay: 30_000 } } : {}),
+      ...(jobId ? { jobId } : {}),
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 7 * 86400, count: 1000 },
+      ...(type === "notification:deliver" ? notificationJobPolicy : {}),
     };
-    return queue.add(type, payload, options);
+    return queue.add(type, type === 'notification:deliver' ? notificationJobIdentity(payload) : payload, options);
   }
 
   /** Removes and returns the next waiting job for administrative/manual processing. */

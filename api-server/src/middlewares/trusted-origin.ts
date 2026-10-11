@@ -4,7 +4,9 @@ import { createResponse } from "../utils/response.js";
 
 function normalizedOrigin(value: string): string | null {
   try {
-    return new URL(value).origin;
+    const parsed = new URL(value);
+    return parsed.origin === value && !parsed.username && !parsed.password
+      && ['http:', 'https:'].includes(parsed.protocol) ? parsed.origin : null;
   } catch {
     return null;
   }

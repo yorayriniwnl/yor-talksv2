@@ -43,6 +43,7 @@ async function fixture(t: TestContext) {
     state.sent++;
     return { id: "message", senderId, conversationId, content };
   });
+  t.mock.method(MessageService.prototype, "consumeNewPublication", () => true);
   const server = createServer();
   const sockets = await attachSocketServer(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

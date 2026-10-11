@@ -1,12 +1,13 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import compression from "compression";
-import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import pinoHttpFactory from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
-import { env, corsOrigins } from "./config/env.js";
+import { env, corsOrigins, trustedProxyCidrs } from "./config/env.js";
+import { configureProxyTrust } from './config/trusted-proxies.js';
+import { credentialedCors } from './middlewares/browser-origin.js';
 import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 import { apiRateLimiter } from "./middlewares/rate-limit.js";
@@ -15,9 +16,8 @@ import { mediaResponse } from "./services/media-response.js";
 import { skipAssuranceCallbackParser } from './middlewares/assurance-body.js';
 
 const app: Express = express();
-// The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
-// rate limiting and secure-cookie decisions use the real client address.
-app.set("trust proxy", 1);
+// Only the approved infrastructure peers may supply canonical edge headers.
+configureProxyTrust(app, trustedProxyCidrs);
 const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void)({
   logger,
   serializers: {
@@ -46,14 +46,7 @@ app.use(recordOperationalMetrics);
 app.use(mediaResponse);
 app.use(createHelmetMiddleware());
 app.use(compression());
-app.use(
-  cors({
-    origin(origin, callback) {
-      callback(null, !origin || corsOrigins.includes(origin));
-    },
-    credentials: true,
-  }),
-);
+app.use(credentialedCors);
 
 // Apply Redis-backed rate limiting to all requests. Sensitive route groups add
 // stricter limiters in their own routers.

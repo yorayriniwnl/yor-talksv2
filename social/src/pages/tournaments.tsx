@@ -175,9 +175,9 @@ export default function Tournaments() {
   );
 
   const handlePredictWinner = (matchId: string, teamName: string) => {
-    void matchId;
-    void teamName;
-    toast.info('Tournament predictions are not connected to a server ledger yet.');
+    setPickemPredictions((prev) => ({ ...prev, [matchId]: teamName }));
+    sounds.playPop();
+    toast.success(`Predicted ${teamName} to win!`);
   };
 
   return (
@@ -225,11 +225,11 @@ export default function Tournaments() {
 
               <div className="flex gap-2">
                 <Button
+                  variant="secondary"
                   onClick={() => toast.info('Tournament viewing is not connected to an official broadcast yet.')}
-                  disabled
-                  className="rounded-2xl font-bold text-xs px-6 h-11 bg-muted text-muted-foreground"
+                  className="rounded-2xl font-bold text-xs px-6 h-11 border border-border/50 text-foreground"
                 >
-                  <Play className="w-4 h-4 mr-1.5" /> Live viewing unavailable
+                  <Play className="w-4 h-4 mr-1.5" /> Broadcast Info
                 </Button>
               </div>
             </div>
@@ -241,12 +241,23 @@ export default function Tournaments() {
           {tournaments.map((t) => (
             <div
               key={t.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selectedTournament.id === t.id}
+              aria-label={`Select ${t.title} (${t.game})`}
               onClick={() => {
                 sounds.playPop();
                 setSelectedTournament(t);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  sounds.playPop();
+                  setSelectedTournament(t);
+                }
+              }}
               className={cn(
-                "p-4 rounded-3xl border text-left cursor-pointer transition-all duration-200 flex items-center justify-between",
+                "p-4 rounded-3xl border text-left cursor-pointer transition-all duration-200 flex items-center justify-between focus-visible:ring-2 focus-visible:ring-primary outline-none",
                 selectedTournament.id === t.id
                   ? "border-primary bg-primary/10 shadow-md"
                   : "border-border/40 surface-1 hover:border-border"
@@ -330,11 +341,11 @@ export default function Tournaments() {
                     {match.status === 'live' && (
                       <Button
                         size="sm"
+                        variant="secondary"
                         onClick={() => toast.info('Tournament viewing is not connected to an official broadcast yet.')}
-                        disabled
-                        className="mt-4 w-full rounded-xl font-bold text-xs h-8 bg-muted text-muted-foreground"
+                        className="mt-4 w-full rounded-xl font-bold text-xs h-8 border border-border/40 text-foreground"
                       >
-                        <Play className="w-3 h-3 mr-1" /> Live viewing unavailable
+                        <Play className="w-3 h-3 mr-1" /> Stream Info
                       </Button>
                     )}
                   </div>
@@ -367,10 +378,9 @@ export default function Tournaments() {
                         <Button
                           variant="outline"
                           onClick={() => handlePredictWinner(match.id, match.teamA.name)}
-                          disabled
                           className={cn(
-                            "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all",
-                            currentPick === match.teamA.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60"
+                            "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all cursor-pointer",
+                            currentPick === match.teamA.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60 hover:border-amber-400/60"
                           )}
                         >
                           <span className="text-xs truncate">{match.teamA.name}</span>
@@ -380,10 +390,9 @@ export default function Tournaments() {
                         <Button
                           variant="outline"
                           onClick={() => handlePredictWinner(match.id, match.teamB.name)}
-                          disabled
                           className={cn(
-                            "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all",
-                            currentPick === match.teamB.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60"
+                            "h-16 rounded-2xl flex flex-col items-center justify-center p-2 text-center transition-all cursor-pointer",
+                            currentPick === match.teamB.name ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold" : "border-border/60 hover:border-amber-400/60"
                           )}
                         >
                           <span className="text-xs truncate">{match.teamB.name}</span>

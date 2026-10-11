@@ -1,0 +1,139 @@
+# Production hardening implementation and verification — 8 October 2026
+
+**Release decision: deployment acceptance remains blocked.** The owner has not selected adult closed beta, adult public service, or global service including minors. Shared security and data-integrity repairs were implemented without choosing a release scope. Existing adult restrictions remain; payments, live rooms, push and RTC remain disabled. No minors policy, deleted-author retention policy, operator identity, jurisdictional deadline or public ingress topology was approved during this work.
+
+## Historical accepted publication baseline — checked 9 October
+
+The earlier published implementation was
+[`990fc062a7661eb8dafc4a33e8f3f252a6fb0715`](https://github.com/yorayriniwnl/yor-talksv2/commit/990fc062a7661eb8dafc4a33e8f3f252a6fb0715).
+Both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37800072226)
+and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37800086580)
+completed successfully: **323 API / 69 browser / 63 unit tests per run, zero
+failures/skips**. Monitoring, production image builds, encrypted backup/restore
+and failure guards, native Nginx (3 valid configurations accepted, 8 invalid
+rejected) and the isolated synthetic container stack passed. Full job logs remain
+private; the [publication record](hardening/PUBLICATION_2026-10-08.md) records the
+earlier failed CI phases and their subsequent outcomes.
+
+The protected frontend preview passed 14 checks. Its frontend artifact from
+`55e1242` matches the frontend in `990fc06`; backend/API/Socket.IO journeys are
+unavailable there. Full backend deployment, actual public ingress/providers,
+production alert receiver, approved off-host restore and owner/legal/retention
+acceptance remain open. The original two measured performance failures below are
+preserved; subsequent continuation changes are outside this verified implementation.
+
+## Verified unified release — 9 October
+
+Published unified release [3887cc4](https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109) passed both [push CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37868624235) and [PR CI](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/37869588581): **392 API / 73 browser / 71 unit tests per run, zero failures/skips**. Audit, contracts, typechecks, builds, monitoring, production images, encrypted backup/restore, native Nginx (3 valid accepted / 8 invalid rejected) and the isolated synthetic stack passed.
+
+The [protected frontend preview](https://yor-talks-jpub2ler5-yorayriniwnl-1218s-projects.vercel.app/) is READY and passed **14 deployment checks**, including mobile Chromium, security headers and a served JavaScript hash match. It contains static frontend assets; API and Socket.IO routes return 503, so sign-in and backend journeys remain unavailable. The production domain was not promoted.
+
+The [current mobile measurements](hardening/mobile-performance-unified-2026-10-09.json) retain all three observations of the deployed artifact: payload budgets pass, FCP and blocking fail 3/3, and LCP fails 2/3. No timing pass or field-percentile claim is made. Full production launch still requires the persistent backend/worker target and runtime bindings, real providers/public ingress, actual alert receiver, approved off-host recovery and owner/legal/retention acceptance. Minimum age 18 and disabled payments/live/push/RTC remain in force. See the [continuation record](hardening/CONTINUATION_2026-10-09.md) for exact source, artifact and historical evidence.
+
+The earlier four-path billing/packaging continuation, discarded editor experiment and their measurements are preserved in the continuation record. The unified release also integrates the Google authentication work, main’s eligibility foundation, dependency fixes and message-preview race fixes. Its public grievance DTO allows the three receipt fields plus an optional deadline labeled Operational review target; private staff fields remain excluded.
+
+## Local verification phase: candidate and preservation
+
+Repository: `C:\Users\yoray\Projects\yor-talks-v3`. Branch: `codex/media-lifecycle-20261006`. The local verification phase used baseline HEAD `ba31c9fd443659bcacc9d2c8760086adf63ee082` and an **uncommitted working copy**; no commit, push, CI dispatch or deployment had been performed at that phase. The [implementation manifest](hardening/candidate-files.json) records **489** modified/new/deleted implementation/configuration/test files, including preserved baseline edits, with aggregate SHA256 `44dba238f481d2d2364830c64ec33112a9eef6a32b58a8bb11efd6ead7ddf8a2`. All listed bytes remained unchanged throughout that final local API run; unchanged files are anchored by the baseline HEAD. Documentation is outside this implementation hash. Publication corrections and the ensuing implementation manifest are recorded separately in the publication evidence.
+
+The local verification snapshot had **508** changed paths, recorded in `working-copy-status-final.txt`; the implementation manifest separates 489 source/configuration/test paths from documentation and other records. The baseline already contained 233 modified frontend paths (36 normalized content changes, 609 insertions/175 deletions). `baseline-status.txt` and `baseline-working-copy.patch` were saved before these repairs. Existing design and unrelated edits were retained. No applicable `AGENTS.md` was found in the repository or ancestor directories. The six requested readiness documents were read and their historical evidence retained.
+
+Private evidence directory: `C:\Users\yoray\AppData\Local\Temp\yor-hardening-20261007`. Browser logs/artifacts are under repository `test-results/` and `playwright-report/`. Synthetic fixture credentials are explicitly scoped to loopback infrastructure; production `.env` values were not printed or used.
+
+Tools: Node **24.19.0**, pinned pnpm **9.15.4** via `corepack pnpm@9.15.4` (global pnpm 9.15.9 was not used for final checks), PostgreSQL **16.4**, actual Redis **7.2.8**, FFmpeg/FFprobe **9.0.2**, Alertmanager/amtool **0.28.1**, Prometheus/promtool **3.5.0**, native Compose config parser **5.6.0**. This Windows host has no Docker Engine or WSL. Compose parsing and native runtime exercises do not establish container execution.
+
+Whole-tree `git diff --check` exits **2** for exactly three pre-existing trailing-whitespace additions in `RichCommentComposer.tsx` and `Post.tsx`; all three were matched to the saved baseline patch and preserved. Scoped checks for the other changes exit **0**, and new source/docs files have no trailing-whitespace violations. Windows LF/CRLF notices are retained.
+
+## Historical evidence remains historical
+
+The supplied 7 October review recorded root unit **57 passed**, passing typechecks/builds/contract/design/config checks, no known production dependency advisories, and a full production Chromium run of **57 passed, 3 failed**. Studio lacked manual Stop; stacked direct/group message errors obstructed Retry. Its isolated successful serial rerun of the two retry cases does not replace that failed full-suite result. The earlier development-mode and targeted results in the original review are also retained with their original dates and scope.
+
+The repaired full browser result below is a new observation against changed source, with added regression coverage and zero retries. Earlier failed verification attempts are recorded in the individual evidence files rather than erased.
+
+## Findings, repairs and regression evidence
+
+| Finding and original impact | Files and resulting behavior | Verification and remaining boundary |
+| --- | --- | --- |
+| Email OTP had no issuance credential epoch; non-atomic read/write/delete allowed repeated authority and lost guesses. | `auth-service.ts`, `redis-repository.ts`, `auth-challenge-scripts.ts`: versioned account/email/expiry/challenge state, atomic reservation/attempt/consume Lua, replacement identity checks, original-epoch conditional session creation, one MFA authority. Malformed state and datastore failures fail closed; consumed OTP is not restored after session failure. | Real Redis/service/HTTP focused **34 passed** (new nested OTP cases **26**). Logout-all/reset/revocation races, TTL/attempt concurrency, replacement/outage, TOTP/device approval and late session write are covered. [Auth evidence](hardening/EMAIL_OTP_2026-10-07.md). Deployed email/provider journeys remain open. |
+| Retained deleted/expired messages leaked through reads, previews, exports, retries/events and media grants. | `message-visibility.ts`, message repository/service/controller/socket, `message-view.ts`, `media-response.ts`, `media-delivery.ts`: one database-clock visibility/membership policy, locked unread preview entitlement/read checks, return-boundary rechecks, allowlisted vanish/deletion tombstones, parent/viewer-scoped media grants checked after cache/provider reads. | Focused real PostgreSQL/HTTP/socket **60 passed**, final migration/message follow-up **9 passed**. Exact expiry, stopped cleanup, both exports, preview races, expired retry 410 and previously issued grants are covered. [Message evidence](hardening/message-integrity.md). Synthetic provider bytes do not prove Cloudinary/Gemini acceptance. |
+| Legacy group participant/recipient cascades erased surviving members' history. | Drizzle schema, `message-integrity-migration.mjs`, message/account services: nullable legacy references with SET NULL, normalized membership, group legacy columns cleared, direct-pair uniqueness retained, reply/forward references SET NULL, transactional survivor promotion and identity scrubbing. | Migrated three-member creator/recipient deletion, direct deletion, legacy upgrade, membership non-resurrection, injected deletion/enqueue rollback, financial/media invariants pass. Existing deleted-author erasure remains the conservative behavior pending owner approval; surviving contributions persist. Do not reinterpret this as approval for retained anonymized author content. |
+| Grievance receipts returned private rows and universal deadline claims. | Shared strict DTO in `lib/api-zod/src/grievance.ts`, reports/moderation service, regenerated client/Zod/OpenAPI and grievance UI: exactly ticketId/status/createdAt; private data remains staff-only; universal deadline/officer notes removed. Orval explicitly targets Zod 3. | Actual PostgreSQL/Redis HTTP **4 passed**, including fully populated private fields and anonymous/ordinary staff rejection; 390/1280px keyboard/axe cases pass. [Frontend/grievance evidence](hardening/frontend-grievance.md). Operator/territory deadline approval remains open. |
+| Alertmanager used an unsupported expansion flag and unresolved mounted placeholders. | Compose, renderer, pinned runtime image, monitoring acceptance, config checker and CI: protected validated/quoted config rendering, mounted password file, actual amtool startup check, internal-only monitoring. | Actual pinned native tools pass config/rules, startup, authenticated scrape, firing/resolved delivery and invalid receiver authentication rejection. Published CI also passes the production image and stack checks. [Operations evidence](hardening/monitoring-backup.md). Real receiver/operator delivery remains open. |
+| Readiness ignored lifecycle progress; fresh heartbeat could conceal a hung handler. | Lifecycle worker/repository/health/diagnostics/metrics, alerts and operator CLI: required handlers, heartbeat age, handler deadline, lease fencing, bounded shutdown, overdue/running/dead/progress/recovery metrics and audited dead replay. | Real PostgreSQL stop/stall/outage/expired lease/restart/exhaustion tests; final counts are in the lifecycle evidence and complete API result below. [Lifecycle/queue evidence](hardening/lifecycle-queue.md). Readiness fails for unavailable/stalled required workers; backlog/dead letters remain separately visible operational gates. |
+| Studio lacked Stop and leaked late permission results; retry toasts covered recovery controls. | Studio modal adds accessible manual Stop and generation cancellation, recorder/track/URL cleanup and correct photo/video transitions. Message inline alert owns send recovery; unrelated Sonner notices move top-right. Playwright forces production React and pinned pnpm. | Full production Chromium **69 passed**, no failures/skips/retries, including manual/timer stop, permission/close/flip/unmount/error cases and consecutive direct/group pointer/keyboard retries at mobile/desktop sizes. No forced clicks or arbitrary retry sleeps. |
+| Reaction JSON replacement lost concurrent updates; BullMQ retained private payloads indefinitely. | Reactions serialize under a database row lock and deduplicate users. Notification queue carries only IDs; completed retention 1 hour/1000, failed 7 days/1000; idle maintenance scrubs legacy payloads. Durable delivery/attempt state survives Redis pruning/loss, with a five-attempt cap and audited replay. | Real PostgreSQL concurrent reactions and real Redis count/age/pruning/recovery/erasure tests pass in focused work and full API verification. External send acknowledged before SQL commit can still duplicate after a crash; no cross-provider exactly-once claim. Retention defaults require operator approval before deployment. |
+| Hop-count trust differed across reachable ingress paths. | Explicit API `TRUSTED_PROXY_CIDRS`, Nginx `TRUSTED_EDGE_CIDRS`, canonical forwarded headers, Caddy example and actual-image validator. Default trusts no proxy; broad aliases/CIDRs and malformed chains fail closed. Nginx access logging excludes media grant query strings. | Actual local HTTP/TCP/socket proxy tests **7 passed**, including independent client Redis limiter budgets, spoof/short path, HTTPS/cookies, CORS/refresh origin and upgrades/reconnect. Published native Nginx configuration checks accept **3** valid cases and reject **8** invalid cases. The intended public Caddy/Nginx/API topology remains unselected and untested. [Ingress evidence](hardening/INGRESS_2026-10-07.md). |
+| Fresh bootstrap relied on schema push; backup smoke did not prove restore or safe targets. | Checked-in transactional base SQL replaces runtime push/force. Additive migrations and strict empty/incomplete guards are tested. Backup script/fixture/acceptance and CI exercise encryption, retrieval, restore, failure metrics and database/application invariants. | Fresh/repeat/legacy/rollback migration tests, native backup acceptance and the published backup image drill pass. CI restores the application and proves rejection/rollback guards with isolated local rclone transport. Approved off-host restore, production RPO/RTO and compatible rollback image remain open. |
+| UI implied supported compositions and unmeasured performance. | Studio labels preview-only music/stickers/video effects accurately; existing unsupported HLS/phone OTP paths remain unavailable. Chart chunk dependencies and Story editor/viewer loading reduced initial delivery; gzip configured. | Baseline full browser suite retains core accessibility coverage plus repaired-flow keyboard/reflow/axe tests. The original mobile observation below failed two metrics; both the discarded editor-splitting experiment and retained continuation fail three timing metrics across their samples. Rights-cleared composed media, real assistive technology and deployed provider/device journeys require acceptance for the selected scope. |
+
+## Local verification command and result matrix
+
+These are the pre-publication local observations, including retained failures;
+the current exact-commit CI result is recorded above. Commands use pinned pnpm
+9.15.4. Exit 0 indicates the listed check passed, not launch approval.
+[Machine-readable results](hardening/verification-results.json) retain both phases.
+
+| Command / exercise | Observed result and evidence |
+| --- | --- |
+| `corepack pnpm@9.15.4 install --frozen-lockfile` | Exit **0**, `install-frozen-final.log`; lockfile unchanged. |
+| `corepack pnpm@9.15.4 contract:check` | Exit **0**, **231 operations / 195 paths**, `contract-final.log`. |
+| `corepack pnpm@9.15.4 design:check` | Exit **0**, `design-final.log`. |
+| `corepack pnpm@9.15.4 production-config:check` | Exit **0**, **65 API environment keys**, `config-final.log`. |
+| `corepack pnpm@9.15.4 test:unit` | Exit **0**, **59 passed, 0 failed/skipped**, `root-unit-final.log`. |
+| API/frontend typechecks | Both exit **0**, `api-typecheck-final.log` and `web-typecheck-final.log`. |
+| `NODE_ENV=production corepack pnpm@9.15.4 build:pnpm` | Exit **0**, `build-full-final.log`; database/API/frontend rebuilt after the lifecycle recovery repair; chunk warnings retained. |
+| `corepack pnpm@9.15.4 audit --prod` | Exit **0**, **no known vulnerabilities**, `audit-final.log`; Node deprecation warning retained. |
+| Complete serial API suite, actual decoder required | First complete run: exit **1**, **321 passed / 1 failed / 0 skipped** in 171.55 seconds (`api-full-first-failed.log`). It exposed legacy expired-terminal-lease recovery. A second run observed a lifecycle readiness assertion failure and stalled because failed-fixture cleanup left Redis open; it was stopped, exit **-1**, and retained as `api-full-second-stalled.log` (no complete count claimed). The fixture now controls and observes the durable heartbeat commit and guarantees cleanup. **Final complete run: exit 0, 323 passed / 0 failed / 0 skipped**, 167.52 seconds, `api-full-final.log`; no retries. |
+| Complete production Chromium | Exit **0**, **69 passed, 0 failed/skipped, zero retries**, 2 workers, 1.5 minutes, `test-results/production-pinned-final.log`. Parent `NODE_ENV=development` deliberately verifies explicit production configuration. |
+| Fresh/repeat/representative upgrade/injected rollback migrations | Final strict-empty PostgreSQL suite: **5 passed**, exit **0**, `yor-hardening-message-20261008/bootstrap-empty-guards.log`, including user functions in system catalogs. |
+| Pinned monitoring acceptance | Exit **0**, `monitoring-acceptance-final.log`, `yor-monitoring-fNXNML`; actual local receiver only. |
+| Expanded encrypted backup/restore acceptance | Exit **0**, `backup-acceptance-guard-final.log`, `yor-backup-vOCoA5`; restore **3,854 ms**. User functions in public/system schemas, type-only, empty custom-schema and public-extension targets rejected; encrypted retrieval/application verification and actual failed-restore rollback pass. |
+| Production Compose + CI overlay `config --quiet` | Exit **0** with native parser; configuration parsing only. |
+| Production image build/start/smoke, built Nginx validator, backup image exercise | **Not run in the local phase: Docker Engine unavailable.** Subsequent exact-commit push and PR CI for `990fc06` both pass production images, backup drill, native Nginx and synthetic stack acceptance. Earlier failed CI attempts remain in the publication record. |
+| Mobile measurement | Exit **1**: **FCP and blocking budgets fail**; no assertions or warning limits were weakened. |
+
+The full API infrastructure is a freshly created private PostgreSQL database `yor_hardening_full_20261008_verified` at `127.0.0.1:55447`, postgres test role, with zero public objects verified before migration, and actual Redis 7.2.8 at `127.0.0.1:6398/7`. `NODE_ENV=test`, explicit synthetic JWT/contact secrets, `DB_SSL=false`, decoder paths and `MEDIA_REQUIRE_DECODER_TESTS=true` are set. The first full run used `yor_hardening_full_20261008` and Redis DB 4; its logs and data remain retained. The second, stopped run used `yor_hardening_full_20261008_final` and Redis DB 6. Final rerun used a separately created/migrated database and initially empty Redis DB 7. The owned temporary PostgreSQL cluster and both owned Redis processes were stopped after checks, exit 0; database files, keys, encrypted artifacts and logs remain private for inspection. No unrelated process was stopped. No repository development database defaults are accepted. The final local command from `api-server/` was `node --import tsx --test --test-concurrency=1 --test-timeout=180000 src/__tests__/*.test.ts`. The native host had just spent over 107 seconds in bootstrap file synchronization, so local tests received a 180-second test budget. CI uses 90 seconds plus its existing 25-minute whole-job limit. These are test execution bounds; they do not replace handle cleanup or change runtime readiness, security assertions or retry counts.
+
+## Original local mobile measurement
+
+The [saved measurement](hardening/mobile-performance-final.json) uses a cold synthetic authenticated feed, local production assets at 390×844, 1.6 Mbps/150 ms network and 4× CPU, gzip level 5. It is one observation with no live provider timing or field percentiles. Native Nginx configuration now passes CI; this remains a local gzip measurement, not deployed compression or performance acceptance.
+
+| Measure | Observed | Proposed budget | Result |
+| --- | --- | --- | --- |
+| Delivered JavaScript | 286,323 bytes (gzip estimate 285,832) | 350 KiB gzip | Pass |
+| Delivered CSS | 62,171 bytes | 100 KiB gzip | Pass |
+| FCP | 2,716 ms | 2,500 ms | **Fail** |
+| LCP | 3,264 ms | 4,000 ms | Pass |
+| Long-task blocking | 418 ms | 300 ms | **Fail** |
+
+The owner must agree on performance budgets and representative measurements;
+these two original failures remain visible. The separate
+[continuation record](hardening/CONTINUATION_2026-10-09.md) preserves the discarded
+editor-splitting experiment's LCP failures in two of three samples and
+FCP/blocking failures in every sample. The [final performance report](hardening/mobile-performance-continuation-2026-10-09.md)
+records the retained candidate: FCP **5,136 / 3,108 / 3,144 ms**, LCP
+**5,136 / 4,076 / 3,904 ms**, blocking **1,539 / 851 / 841 ms**. FCP/blocking
+fail 3/3 and LCP fails 2/3. Existing chunk warnings are diagnostic evidence, not
+substituted for measured performance.
+
+## Rollout, rollback and remaining acceptance
+
+Deploy reviewed migrations first, then matching API/workers/contracts/frontend. The message migration ledger is `20261007-message-integrity-1`; private durable notification state is `20261008-notification-delivery-1`. Lifecycle migration adds success timestamps and replay history. Fresh databases use the checked-in SQL; existing databases use additive reviewed migrations. See individual reports and [the runbook](PRODUCTION_LAUNCH.md) for order, inspection/replay and exact restore commands. Retain additive evidence on rollback; previous images must preserve credential epochs, OTP authority, message/media availability, nullable groups, grievance privacy and durable job/delivery fencing. Database recovery is separate from application rollback.
+
+| Acceptance category | Completed here | Precise remaining gate |
+| --- | --- | --- |
+| Source defects | Implemented, committed and regressed in published `990fc06`; both exact-commit CI runs pass. | Deploy matching reviewed API/worker/contracts/frontend versions to the intended target. |
+| Repository/native runtime | Pinned checks, production browser journeys, isolated PostgreSQL/Redis, decoder, monitoring and backup/application restore; published production images, native Nginx and synthetic container stack pass CI. | Acceptance on the intended persistent deployment host with actual provider configuration. |
+| Release scope and retention | Existing adult restrictions/erasure and disabled optional providers retained. | Owner selects scope, territories/allow-list, deleted-author history and queue retention; legal/operator review. No minor/global experience approval inferred. |
+| Core media and identity | Fail-closed implementation and decoder exercised with synthetic fixtures. | Real Cloudinary authenticated presets/ceilings, Gemini formats/unsafe scenes/outages/retries/deletion, `media.ready=true`; approved-account email/reset/OTP/Google and origin/allow-list journeys. |
+| Public ingress | Explicit trust model and local proxy regression. | Owner records every reachable Caddy/Nginx/API/Vercel path and CIDRs; actual HTTPS/DNS, separate-client limits, spoof/short-path, cookies/CORS, socket reconnect at public edge. Persistent realtime/workers required for Vercel remain separate infrastructure. |
+| Operations | Local authenticated alerts and local encrypted restore. | Actual receiver firing/resolved delivery to named responders; approved off-host artifact retrieval and isolated restore; agreed RPO/RTO, recovery and rollback owners. |
+| Product/accessibility/performance | Production React regression, keyboard/axe/mobile/reduced-motion coverage, accurate preview-only labels and measured payload. | Timing failures, approved budgets, deployed devices/assistive technology; rights-cleared persisted composition if included in scope. |
+| Optional features | Payments/live/push/RTC disabled. | Separate approved provider test environments and signed/idempotent/outage/refund/reconnect/permission acceptance before enabling. |
+
+Deployment acceptance completed for the protected frontend review preview only;
+full backend/provider acceptance remains open. For global/minors scope, approved
+age/territory/guardian/contact/commerce/telemetry consent and withdrawal policy,
+current primary-source legal research, existing-account migration and enforcement
+across HTTP/sockets/media/discovery/workers remain required work dependent on that
+scope decision. This report does not invent those decisions.

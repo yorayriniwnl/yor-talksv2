@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, ShieldCheck } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, Redirect } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { publicBetaConfig } from '@/lib/public-beta-config';
@@ -31,7 +31,7 @@ export default function ConsentPage() {
     }
   };
 
-  if (!currentUser) return null;
+  if (!currentUser) return <Redirect to="/auth" />;
 
   return (
     <main className="min-h-screen bg-background px-4 py-10 text-foreground sm:px-6">
@@ -51,19 +51,24 @@ export default function ConsentPage() {
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          <label className="flex items-start gap-3 rounded-2xl border border-border/60 p-4 text-sm leading-relaxed hover:border-primary/60">
-            <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-primary" />
-            <span>I have read and accept the <Link href="/terms" className="font-semibold text-primary underline-offset-4 hover:underline">Terms</Link>, <Link href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</Link>, and <Link href="/community-guidelines" className="font-semibold text-primary underline-offset-4 hover:underline">Community Guidelines</Link>.</span>
-          </label>
-          <label className="flex items-start gap-3 rounded-2xl border border-border/60 p-4 text-sm leading-relaxed hover:border-primary/60">
-            <input type="checkbox" checked={confirmedAge} onChange={(event) => setConfirmedAge(event.target.checked)} className="mt-1 h-4 w-4 accent-primary" />
-            <span>I confirm that I am at least {publicBetaConfig.minimumAge} years old and will not use Yor to share or solicit harmful content involving minors.</span>
-          </label>
+          <div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4 text-sm leading-relaxed hover:border-primary/60">
+            <input id="consent-terms" type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} aria-describedby="consent-terms-links" className="mt-1 h-5 w-5 shrink-0 accent-primary" />
+            <div>
+              <label htmlFor="consent-terms" className="cursor-pointer">I have read and accept the Yor public-beta terms and policies.</label>
+              <p id="consent-terms-links" className="mt-1 text-muted-foreground">
+                Read the <Link href="/terms" onClick={(e) => e.stopPropagation()} className="font-semibold text-primary underline-offset-4 hover:underline">Terms</Link>, <Link href="/privacy" onClick={(e) => e.stopPropagation()} className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</Link>, and <Link href="/community-guidelines" onClick={(e) => e.stopPropagation()} className="font-semibold text-primary underline-offset-4 hover:underline">Community Guidelines</Link>.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4 text-sm leading-relaxed hover:border-primary/60">
+            <input id="consent-age" type="checkbox" checked={confirmedAge} onChange={(event) => setConfirmedAge(event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-primary" />
+            <label htmlFor="consent-age" className="cursor-pointer">I confirm that I am at least {publicBetaConfig.minimumAge} years old and will not use Yor to share or solicit harmful content involving minors.</label>
+          </div>
           {error && <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full rounded-2xl py-6 font-bold">{busy ? 'Saving…' : <><Check className="mr-2 h-4 w-4" />Accept and continue</>}</Button>
         </form>
 
-        <button type="button" onClick={() => void logout()} className="mt-5 w-full text-center text-xs font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Sign out instead</button>
+        <button type="button" onClick={() => void logout()} className="mt-3 min-h-11 w-full rounded-xl text-center text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Sign out instead</button>
       </div>
     </main>
   );

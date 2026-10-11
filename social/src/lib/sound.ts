@@ -132,6 +132,28 @@ class SoundSystem {
       }
     } catch {}
   }
+
+  // Synthesized incoming call ringtone
+  public playRingtone() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      [440, 480].forEach((freq) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+        osc.start(now);
+        osc.stop(now + 0.8);
+      });
+    } catch {}
+  }
 }
 
 export const sounds = new SoundSystem();

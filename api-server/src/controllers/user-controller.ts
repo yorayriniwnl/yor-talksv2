@@ -4,7 +4,7 @@ import { AuthService } from "../services/auth-service.js";
 import { MediaModerationUnavailableError } from "../services/storage-service.js";
 import { PremiumProfileFeatureUnavailableError, PremiumStoryViewFeatureUnavailableError, UserService } from "../services/user-service.js";
 import { createResponse } from "../utils/response.js";
-import { toOwnUser, toPublicUser, toPublicUsers } from "../utils/user-view.js";
+import { toOwnUser, toPublicUser, toPublicUsers, toRestrictedUser } from "../utils/user-view.js";
 import { ContactShieldService, type ContactShieldInput } from "../services/contact-shield-service.js";
 import { AccountService, InvalidAccountPasswordError } from "../services/account-service.js";
 import { env } from "../config/env.js";
@@ -42,6 +42,9 @@ export class UserController {
     const user = await this.userService.getProfile(req.user?.id ?? "", req.user?.id);
     if (!user) {
       return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    }
+    if (req.eligibility && !req.eligibility.activated) {
+      return res.status(200).json(createResponse("Profile loaded", toRestrictedUser(user, req.eligibility.reason)));
     }
     return res.status(200).json(createResponse("Profile loaded", toOwnUser(user)));
   };
