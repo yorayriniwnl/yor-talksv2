@@ -56,6 +56,31 @@ test("both account export directions exclude entire deleted and expired text or 
   }
 });
 
+test("account export uses its captured timestamp as the message visibility boundary", async (context) => {
+  const sender = await createTestUser(userRepository);
+  const recipient = await createTestUser(userRepository);
+  fixtureUsers.push(sender.id, recipient.id);
+  const conversations = new ConversationRepository();
+  const messages = new MessageRepository();
+  const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
+  const exportBoundary = new Date();
+  const expiresAt = new Date(exportBoundary.getTime() + 250).toISOString();
+  const expiringMessage = await messages.create({ id: randomUUID(), conversationId: conversation.id,
+    senderId: sender.id, recipientId: recipient.id, content: "Visible at export start",
+    createdAt: exportBoundary.toISOString(), seenAt: null, expiresAt });
+
+  await new Promise(resolve => setTimeout(resolve, 350));
+  context.mock.timers.enable({ apis: ["Date"], now: exportBoundary });
+  try {
+    const exported = await new AccountService(userRepository, redisRepository).exportAccount(sender.id);
+    const sentMessages = (exported?.content as { sentMessages: Array<{ id: string }> }).sentMessages;
+    assert.equal(exported?.exportedAt, exportBoundary.toISOString());
+    assert.equal(sentMessages.some(message => message.id === expiringMessage.id), true);
+  } finally {
+    context.mock.timers.reset();
+  }
+});
+
 test("account export excludes authentication secrets and deletion removes the account", async () => {
   const id = randomUUID();
   const email = `${String(Date.now()).slice(-7)}@kiit.ac.in`;
