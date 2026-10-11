@@ -233,12 +233,17 @@ test('production keeps eligibility and current-consent gates when PUBLIC_BETA is
   const token = jwt.sign({ sub: userId, role: 'user', permissions: ['read:profile'], deviceId, authVersion: 0, type: 'access' }, env.JWT_SECRET, { expiresIn: '1h' });
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => ({
-    experience: 'adult_18_plus', activated: true,
-    capabilities: { social: true, publish: true, messaging: true, payments: true, seller: true,
-      memberships: true, live: true, rtc: true, ai: true, analytics: false, profiling: false },
-    maximumContentRating: 'mature', policyVersions: [], revision: '1', reason: null, publicBrowsingAllowed: true,
-  }));
+  const originalDecisionFor = EligibilityService.prototype.decisionFor;
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async function (this: EligibilityService, subjectId: string) {
+    const subject = await UserRepository.prototype.findById(subjectId);
+    if (subject?.termsVersion === 'old-terms') return {
+      experience: 'adult_18_plus' as const, activated: true,
+      capabilities: { social: true, publish: true, messaging: true, payments: true, seller: true,
+        memberships: true, live: true, rtc: true, ai: true, analytics: false, profiling: false },
+      maximumContentRating: 'mature' as const, policyVersions: [], revision: '1', reason: null, publicBrowsingAllowed: true,
+    };
+    return originalDecisionFor.call(this, subjectId);
+  });
   user.termsVersion = 'old-terms';
   const personalizedRes = await fetch(`${base}/api/v1/public-personalized`, { headers });
   assert.equal((await personalizedRes.json() as any).authenticated, false,

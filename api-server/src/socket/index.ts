@@ -16,6 +16,7 @@ import { LiveStreamRepository } from "../repositories/live-stream-repository.js"
 import { ContentSafetyService } from "../services/content-safety-service.js";
 import { hasCurrentConsent } from "../utils/consent.js";
 import { EligibilityService } from "../services/eligibility-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
 import { parseSocketPayload, socketErrorEvent } from "./policy.js";
 
@@ -85,7 +86,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         return next(new Error("Session revoked"));
       }
       if (!hasCurrentConsent(user)) return next(new Error("Current terms acceptance required"));
-      if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+      if (isEligibilityEnforcementEnabled() && user.role !== "admin" && user.role !== "moderator") {
         const decision = await eligibilityService.decisionFor(user.id);
         if (!decision.activated) return next(new Error("Account eligibility verification required"));
       }
@@ -116,7 +117,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           && (user.authVersion ?? 0) === socket.data.authVersion && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
           // Reassess at the event boundary so withdrawn/expired eligibility
           // cannot continue using an already-connected realtime session.
-          if (env.PUBLIC_BETA && env.NODE_ENV !== "test" && user.role !== "admin" && user.role !== "moderator") {
+          if (isEligibilityEnforcementEnabled() && user.role !== "admin" && user.role !== "moderator") {
             const decision = await eligibilityService.decisionFor(user.id);
             if (!decision.activated) {
               socket.disconnect(true);
