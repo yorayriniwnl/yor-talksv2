@@ -292,7 +292,7 @@ export default function GrievancePortal() {
               aria-busy={submitting}
               className="w-full rounded-2xl font-display font-extrabold text-xs h-11 bg-primary text-primary-foreground glow-neon-primary cursor-pointer"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Grievance to Redressal Officer <ArrowRight className="w-4 h-4 ml-1.5" /></>}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Grievance <ArrowRight className="w-4 h-4 ml-1.5" /></>}
             </Button>
           </form>
         )
