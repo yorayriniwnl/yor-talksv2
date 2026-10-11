@@ -252,9 +252,10 @@ Migration validation completed with `pnpm --filter @workspace/db migrate:beta` a
 The published implementation passed its current CI gates; the older results
 above remain historical. Public traffic still requires the intended persistent
 API/workers, live providers, approved ingress, actual alert receiver and off-host
-restore, owner/legal/retention decisions, and resolution or explicit owner
-acceptance of the recorded performance failures. The discarded editor-splitting
-experiment failed FCP/blocking in all three samples and LCP in two. The current
-unified artifact has the same failed timing gates, documented separately above.
+restore, plus owner/legal/retention decisions. The discarded editor-splitting
+experiment failed FCP/blocking in all three samples and LCP in two. The repaired
+10 October artifact passes the proposed timing and payload budgets in all three
+local throttled-Chromium observations; owner approval of those budgets and
+physical-device or field validation remain separate acceptance items.
 
 The new deployment verification tooling (smoke tests, diagnostics endpoint, backup/restore scripts) improves operational confidence and reduces manual deployment validation burden.
