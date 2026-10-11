@@ -8,6 +8,7 @@ import { attachSocketServer } from "../socket/index.js";
 import { parseSocketPayload } from "../socket/policy.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { EligibilityRepository } from "../repositories/eligibility-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
 
@@ -23,9 +24,9 @@ function event(socket: Socket, name: string): Promise<any> {
   });
 }
 
-async function fixture(t: TestContext) {
-  const original = { PUBLIC_BETA: env.PUBLIC_BETA, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
-  Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false });
+async function fixture(t: TestContext, runtime: Partial<Pick<typeof env, "PUBLIC_BETA" | "NODE_ENV">> = {}) {
+  const original = { PUBLIC_BETA: env.PUBLIC_BETA, NODE_ENV: env.NODE_ENV, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
+  Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false, ...runtime });
   t.after(() => Object.assign(env, original));
   const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0 };
   t.mock.method(RedisRepository.prototype, "getStrict", async () => state.active ? "session" : null);
@@ -87,6 +88,17 @@ test("socket handshake rejects stale consent and hostile browser origins", async
   state.consent = true;
   await assert.rejects(connect(userId, "https://attacker.example"), /websocket error/i);
   assert.equal(state.lookups, 1, "origin must be rejected before user lookup");
+});
+
+test("production socket keeps eligibility enforcement when PUBLIC_BETA is false", async (t) => {
+  t.mock.method(EligibilityRepository.prototype, "readFacts", async (id: string) => id === userId ? ({
+    account: { id, status: "active", termsVersion: env.TERMS_VERSION, termsAcceptedAt: "2026-08-31T00:00:00.000Z",
+      contentPreference: "child_safe" as const },
+    revision: "1", assessment: undefined, guardianAuthorizations: [],
+  }) : undefined);
+  const { connect } = await fixture(t, { PUBLIC_BETA: false, NODE_ENV: "production" });
+  await assert.rejects(connect(), /eligibility verification required/i,
+    "production sockets must not bypass current eligibility when public beta is disabled");
 });
 
 test("connected sockets recheck consent and revocation before an action", async (t) => {
