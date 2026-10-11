@@ -33,7 +33,7 @@ try {
 
   // Security headers
   await log("SECURITY", "Verifying security headers...");
-  const requiredHeaders = ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy"];
+  const requiredHeaders = ["x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy", "content-security-policy", "strict-transport-security"];
   const missingHeaders = requiredHeaders.filter((header) => !web.headers.get(header));
   if (missingHeaders.length > 0) {
     throw new Error(`/ is missing security headers: ${missingHeaders.join(", ")}`);
@@ -103,11 +103,11 @@ try {
   await log("UPTIME", `API has been running for ${uptimeMatch}`);
 
   await log("SMOKE", `Deployment smoke passed for ${baseUrl}; provider journeys and operational acceptance remain separate`);
-  process.exit(0);
+  process.exitCode = 0;
 } catch (error) {
   await log("ERROR", `❌ Production readiness check failed: ${error.message}`);
   if (error.stack) {
     console.error(error.stack);
   }
-  process.exit(1);
+  process.exitCode = 1;
 }
