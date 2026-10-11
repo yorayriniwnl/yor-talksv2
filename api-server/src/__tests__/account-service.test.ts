@@ -148,6 +148,50 @@ test("account export excludes authentication secrets and deletion removes the ac
   assert.equal(await redisRepository.getStrict(sessionKey), null);
 });
 
+test("account export includes owned records and does not expose buyer shipping data to a seller", async () => {
+  const owner = await createTestUser(userRepository);
+  const buyer = await createTestUser(userRepository);
+  const profileOwner = await createTestUser(userRepository);
+  fixtureUsers.push(owner.id, buyer.id, profileOwner.id);
+
+  const profileCommentId = randomUUID();
+  const eventId = randomUUID();
+  const businessId = randomUUID();
+  const workspaceId = randomUUID();
+  const orderId = randomUUID();
+  await pool.query("INSERT INTO profile_comments (id, profile_id, author_id, content) VALUES ($1,$2,$3,$4)",
+    [profileCommentId, profileOwner.id, owner.id, "My profile comment"]);
+  await pool.query(`INSERT INTO events (id, host_id, title, description, cover_url, category, starts_at, location)
+    VALUES ($1,$2,'My hosted event','Event details','https://example.test/event.jpg','community',now(),'Online')`, [eventId, owner.id]);
+  await pool.query(`INSERT INTO business_profiles (id, owner_id, name, industry, contact_email)
+    VALUES ($1,$2,'My business','Technology','owner-business@example.test')`, [businessId, owner.id]);
+  await pool.query(`INSERT INTO creator_workspace_items (id, owner_id, kind, item_key, payload)
+    VALUES ($1,$2,'draft','export-test',$3::jsonb)`, [workspaceId, owner.id, JSON.stringify({ note: "My private workspace note" })]);
+  await pool.query(`INSERT INTO marketplace_orders (id, buyer_id, seller_id, provider_order_id, amount_minor,
+    currency, status, shipping_name, shipping_address, shipping_phone)
+    VALUES ($1,$2,$3,$4,1200,'INR','paid','Buyer Name','Buyer Address','9999999999')`,
+  [orderId, buyer.id, owner.id, `account-export-${orderId}`]);
+
+  const accountService = new AccountService(userRepository, redisRepository);
+  const sellerExport = await accountService.exportAccount(owner.id);
+  const content = sellerExport?.content as Record<string, Array<Record<string, unknown>>>;
+  const accountData = sellerExport?.accountData as Record<string, Array<Record<string, unknown>>>;
+  const sellerOrder = (sellerExport?.marketplaceOrders as Array<Record<string, unknown>>).find(order => order.id === orderId);
+  assert.equal(sellerExport?.version, 2);
+  assert.equal(content.profileComments?.[0]?.id, profileCommentId);
+  assert.equal(content.events?.[0]?.id, eventId);
+  assert.equal(accountData.businessProfiles?.[0]?.id, businessId);
+  assert.equal(accountData.creatorWorkspaceItems?.[0]?.id, workspaceId);
+  assert.equal(sellerOrder?.shippingName, null);
+  assert.equal(sellerOrder?.shippingAddress, null);
+  assert.equal(sellerOrder?.shippingPhone, null);
+  assert.doesNotMatch(JSON.stringify(sellerExport), /Buyer Address|9999999999/);
+
+  const buyerExport = await accountService.exportAccount(buyer.id);
+  const buyerOrder = (buyerExport?.marketplaceOrders as Array<Record<string, unknown>>).find(order => order.id === orderId);
+  assert.equal(buyerOrder?.shippingAddress, "Buyer Address");
+});
+
 test("account deletion rolls back ledger anonymization when user deletion fails", async () => {
   const owner = await createTestUser(userRepository, { passwordHash: await bcrypt.hash("Supersecret2!", 4) });
   const counterparty = await createTestUser(userRepository);
