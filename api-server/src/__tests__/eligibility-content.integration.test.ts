@@ -11,6 +11,7 @@ import { PostRepository } from '../repositories/post-repository.js';
 import { EligibilityService } from '../services/eligibility-service.js';
 import { ContentSafetyService } from '../services/content-safety-service.js';
 import { createTestUser } from './test-helpers.js';
+import { migrateEligibility } from '../../../lib/db/scripts/migrate-eligibility.mjs';
 
 after(() => pool.end());
 
@@ -57,4 +58,39 @@ test('a child-safe approval applies only to its exact content revision and hash'
   const [stored] = await db.select().from(contentSafetyClassificationsTable)
     .where(eq(contentSafetyClassificationsTable.entityId, post.id));
   assert.equal(stored?.status, 'superseded');
+});
+
+test('eligibility migration repairs the previous PostgreSQL 256-character regex check', async () => {
+  const client = await pool.connect();
+  const classificationId = randomUUID();
+  let committed = false;
+  try {
+    await client.query('BEGIN');
+    await client.query('ALTER TABLE content_safety_classifications DROP CONSTRAINT content_safety_classifications_valid');
+    await client.query(`ALTER TABLE content_safety_classifications
+      ADD CONSTRAINT content_safety_classifications_valid CHECK (content_revision ~ '^.{1,256}$')`);
+
+    await migrateEligibility(client);
+
+    const constraint = await client.query(`SELECT pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE conrelid='content_safety_classifications'::regclass
+        AND conname='content_safety_classifications_valid'`);
+    assert.match(constraint.rows[0]?.definition ?? '', /length\(content_revision\)/);
+    assert.doesNotMatch(constraint.rows[0]?.definition ?? '', /\{1,256\}/);
+
+    const insert = (revision: string) => client.query(`INSERT INTO content_safety_classifications
+      (id, entity_type, entity_id, content_revision, content_hash, classification, issuer, status, policy_version)
+      VALUES ($1,'posts',$2,$3,$4,'regular','fixture:migration','pending','fixture')`,
+    [classificationId, randomUUID(), revision, 'a'.repeat(64)]);
+    await insert('r'.repeat(256));
+    await client.query('SAVEPOINT overlong_revision');
+    await assert.rejects(insert('r'.repeat(257)), /content_safety_classifications_valid/);
+    await client.query('ROLLBACK TO SAVEPOINT overlong_revision');
+    await client.query('DELETE FROM content_safety_classifications WHERE id=$1', [classificationId]);
+    await client.query('COMMIT');
+    committed = true;
+  } finally {
+    if (!committed) await client.query('ROLLBACK').catch(() => {});
+    client.release();
+  }
 });
