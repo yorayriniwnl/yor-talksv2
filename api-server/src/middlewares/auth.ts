@@ -6,7 +6,7 @@ import { hasCurrentConsent } from "../utils/consent.js";
 import type { EligibilityDecision } from "../eligibility/types.js";
 import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 import { EligibilityService } from "../services/eligibility-service.js";
-import { isRestrictedRouteAllowed } from "../eligibility/restricted-routes.js";
+import { consentExemptForSafetyRoute, enforceEligibilityRoute } from "./eligibility.js";
 
 interface JwtPayload {
   sub: string;
@@ -58,6 +58,7 @@ function consentExempt(req: Request): boolean {
 }
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  if (req.sessionVerified) return next();
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     return res.status(401).json(createResponse("Authentication required", null, {}, ["Missing bearer token"]));
@@ -89,7 +90,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       permissions: user.permissions ?? [],
     };
-    if (!hasCurrentConsent(user) && !consentExempt(req)) {
+    if (!hasCurrentConsent(user) && !consentExempt(req) && !consentExemptForSafetyRoute(req)) {
       return res.status(428).json(createResponse(
         "Current terms acceptance required",
         null,
@@ -99,19 +100,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
     // The approved eligibility registry is separate from a self-declared age
     // checkbox. Deployed production and public beta fail closed when assurance is unavailable.
-    if (isEligibilityEnforcementEnabled() && user.role !== "admin" && user.role !== "moderator") {
-      const decision = await eligibilityService.decisionFor(user.id);
-      req.eligibility = decision;
-      if (!decision.activated && !isRestrictedRouteAllowed(req.method, req.originalUrl)) {
-        return res.status(403).json(createResponse(
-          "Eligibility verification required",
-          null,
-          { eligibilityRequired: true, reason: decision.reason, experience: decision.experience },
-          ["Account eligibility verification is required to access this resource"],
-        ));
-      }
-    }
-    return next();
+    if (isEligibilityEnforcementEnabled()) req.eligibility = await eligibilityService.decisionFor(user.id);
+    return enforceEligibilityRoute(req, res, () => {
+      req.sessionVerified = true;
+      return next();
+    });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
     return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
@@ -130,12 +123,12 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
     if (activeSession && user && hasCurrentConsent(user) && (decoded.authVersion ?? 0) === (user.authVersion ?? 0)
       && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
-      if (isEligibilityEnforcementEnabled() && user.role !== "admin" && user.role !== "moderator") {
+      if (isEligibilityEnforcementEnabled()) {
         // Restricted sessions may read approved self-service routes but must
         // never gain personalized social reads through optional authentication.
         const decision = await eligibilityService.decisionFor(user.id);
         req.eligibility = decision;
-        if (decision.activated) {
+        if (decision.activated && decision.capabilities.social) {
           req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
         }
       } else {

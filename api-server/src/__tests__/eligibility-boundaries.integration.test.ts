@@ -8,6 +8,7 @@ import { authenticate, requireRole } from '../middlewares/auth.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { EligibilityService } from '../services/eligibility-service.js';
+import { authenticatedRouteInventory, classifyApiRoute } from '../eligibility/route-capabilities.js';
 import type { EligibilityDecision } from '../eligibility/types.js';
 
 const userId = '10000000-0000-4000-8000-000000000099';
@@ -25,6 +26,23 @@ const restrictedDecision: EligibilityDecision = {
     memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
   reason: 'verification_required',
 };
+
+test('every authenticated API contract operation has an explicit current-authority classification', () => {
+  const inventory = authenticatedRouteInventory();
+  const unclassified = inventory.filter((route) => route.policy === null)
+    .map((route) => `${route.method.toUpperCase()} ${route.path} (${route.operationId})`);
+  assert.deepEqual(unclassified, []);
+  const unmatched = inventory.filter((route) => {
+    const concretePath = route.path.replace(/\{[^{}]+\}/g, 'fixture-value');
+    return classifyApiRoute(route.method, concretePath)?.operationId !== route.operationId;
+  }).map((route) => `${route.method.toUpperCase()} ${route.path} (${route.operationId})`);
+  assert.deepEqual(unmatched, []);
+  assert.equal(classifyApiRoute('GET', '/api/v1/achievements/me')?.policy?.kind, 'capability');
+  assert.deepEqual(classifyApiRoute('POST', '/api/posts')?.policy, { kind: 'capability', capability: 'publish' });
+  assert.deepEqual(classifyApiRoute('POST', '/api/v1/auth/logout')?.policy, { kind: 'restricted' });
+  assert.equal(classifyApiRoute('GET', '/api/v1/unmapped'), null);
+  assert.equal(classifyApiRoute('DELETE', '/api/v1/achievements/me'), null);
+});
 
 function productionEnvironment(t: TestContext) {
   const previous = { publicBeta: env.PUBLIC_BETA, nodeEnv: env.NODE_ENV };

@@ -35,8 +35,16 @@ import premiumRouter from './premium.js';
 import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
 import eligibilityRouter from './eligibility.js';
+import { authenticate } from '../middlewares/auth.js';
+import { classifyApiRequest } from '../middlewares/eligibility.js';
 
 const router: IRouter = Router();
+
+router.use(classifyApiRequest);
+router.use((req, res, next) => {
+  if (req.apiRoute?.authenticated) return authenticate(req, res, next);
+  return next();
+});
 
 router.use(healthRouter);
 router.use(diagnosticsRouter);
