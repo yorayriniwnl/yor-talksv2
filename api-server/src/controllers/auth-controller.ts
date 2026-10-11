@@ -5,16 +5,18 @@ import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toRestrictedUser } from "../utils/user-view.js";
 import { isDatabaseUnavailableError } from "../utils/database-error.js";
-import { EligibilityService } from "../services/eligibility-service.js";
 import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 import { hasCurrentConsent } from "../utils/consent.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 import type { UserRecord } from "../types/index.js";
 
 export class AuthController {
   private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
-  private readonly eligibilityService = new EligibilityService();
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly readEligibilityDecision?: (userId: string) => Promise<EligibilityDecision>,
+  ) {}
 
   private setRefreshCookie(res: Response, refreshToken: string): void {
     res.cookie("refreshToken", refreshToken, {
@@ -45,7 +47,8 @@ export class AuthController {
   private async authenticatedUserView(user: UserRecord) {
     if (!isEligibilityEnforcementEnabled() || user.role === "admin" || user.role === "moderator") return toOwnUser(user);
     try {
-      const decision = await this.eligibilityService.decisionFor(user.id);
+      if (!this.readEligibilityDecision) return toRestrictedUser(user, "verification_required");
+      const decision = await this.readEligibilityDecision(user.id);
       if (decision.activated && hasCurrentConsent(user)) return toOwnUser(user);
       return toRestrictedUser(user, decision.reason ?? "reassessment_required");
     } catch {

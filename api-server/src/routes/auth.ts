@@ -5,6 +5,7 @@ import { validateBody, validateParams } from "../middlewares/validation.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { AuthService } from "../services/auth-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 import { emailOtpRequestSchema, emailOtpVerifySchema, googleLoginSchema, loginSchema, registerSchema, resetPasswordSchema, confirmResetPasswordSchema, totpCodeSchema, twoFactorApprovalSchema } from "../validators/auth.js";
 import { challengeIdParamSchema } from "../validators/params.js";
 import { scopedAuthRateLimiter } from "../middlewares/rate-limit.js";
@@ -14,7 +15,8 @@ const router = Router();
 const userRepo = new UserRepository();
 const redisRepo = new RedisRepository();
 const authService = new AuthService(userRepo, redisRepo);
-const authController = new AuthController(authService);
+const eligibilityService = new EligibilityService();
+const authController = new AuthController(authService, userId => eligibilityService.decisionFor(userId));
 
 // This router is mounted at /api, not /api/auth. Never charge unrelated feed
 // requests (or 2FA status polling) against the credential-attempt allowance.

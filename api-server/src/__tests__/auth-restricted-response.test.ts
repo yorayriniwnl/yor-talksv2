@@ -2,22 +2,22 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Request, Response } from "express";
 import { AuthController } from "../controllers/auth-controller.js";
-import { EligibilityService } from "../services/eligibility-service.js";
 import type { AuthService } from "../services/auth-service.js";
 import { env } from "../config/env.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 import type { UserRecord } from "../types/index.js";
 
 test("login returns the restricted owner view until current eligibility activates the account", async (t) => {
   const original = { NODE_ENV: env.NODE_ENV, PUBLIC_BETA: env.PUBLIC_BETA };
   Object.assign(env, { NODE_ENV: "production", PUBLIC_BETA: false });
   t.after(() => Object.assign(env, original));
-  t.mock.method(EligibilityService.prototype, "decisionFor", async () => ({
+  const decision: EligibilityDecision = {
     experience: "unknown", activated: false,
     capabilities: { social: false, publish: false, messaging: false, payments: false, seller: false,
       memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
     maximumContentRating: "child_safe", policyVersions: [], revision: "1", reason: "verification_required",
     publicBrowsingAllowed: false,
-  }));
+  };
 
   const user = {
     id: "10000000-0000-4000-8000-000000000098", username: "pending_account", email: "pending@example.test",
@@ -28,7 +28,7 @@ test("login returns the restricted owner view until current eligibility activate
   } as unknown as UserRecord;
   const controller = new AuthController({
     login: async () => ({ user, tokens: { accessToken: "access", refreshToken: "refresh" } }),
-  } as unknown as AuthService);
+  } as unknown as AuthService, async () => decision);
   const response = {
     statusCode: 200,
     body: undefined as unknown,
