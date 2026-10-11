@@ -31,8 +31,9 @@ test("login returns the restricted owner view until current eligibility activate
   } as unknown as AuthService);
   const response = {
     statusCode: 200,
-    status(code: number) { this.statusCode = code; return this; },
-    json(body: unknown) { (this as any).body = body; return this; },
+    body: undefined as unknown,
+    status(this: { statusCode: number }, code: number) { this.statusCode = code; return this; },
+    json(this: { body: unknown }, body: unknown) { this.body = body; return this; },
     cookie() { return this; },
   } as unknown as Response & { statusCode: number; body: any };
 

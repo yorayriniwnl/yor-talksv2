@@ -3,11 +3,16 @@ import { env } from "../config/env.js";
 import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, GoogleLinkVerificationRequiredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
-import { toOwnUser } from "../utils/user-view.js";
+import { toOwnUser, toRestrictedUser } from "../utils/user-view.js";
 import { isDatabaseUnavailableError } from "../utils/database-error.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
+import { hasCurrentConsent } from "../utils/consent.js";
+import type { UserRecord } from "../types/index.js";
 
 export class AuthController {
   private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
+  private readonly eligibilityService = new EligibilityService();
 
   constructor(private readonly authService: AuthService) {}
 
@@ -35,6 +40,19 @@ export class AuthController {
 
   private challengeId(req: Request): string {
     return Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
+  }
+
+  private async authenticatedUserView(user: UserRecord) {
+    if (!isEligibilityEnforcementEnabled() || user.role === "admin" || user.role === "moderator") return toOwnUser(user);
+    try {
+      const decision = await this.eligibilityService.decisionFor(user.id);
+      if (decision.activated && hasCurrentConsent(user)) return toOwnUser(user);
+      return toRestrictedUser(user, decision.reason ?? "reassessment_required");
+    } catch {
+      // Identity login remains available during an authority outage, but its
+      // response must keep the account inside the restricted profile boundary.
+      return toRestrictedUser(user, "verification_required");
+    }
   }
 
   register = async (req: Request, res: Response) => {
@@ -69,7 +87,7 @@ export class AuthController {
       if (!user) {
         return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
       }
-      return res.status(200).json(createResponse("Terms accepted", { user: toOwnUser(user) }, { termsVersion: env.TERMS_VERSION }));
+      return res.status(200).json(createResponse("Terms accepted", { user: await this.authenticatedUserView(user) }, { termsVersion: env.TERMS_VERSION }));
     } catch (error) {
       if (error instanceof RegistrationNotAllowedError) {
         return res.status(400).json(createResponse("Terms acceptance required", null, {}, [error.message]));
@@ -82,7 +100,7 @@ export class AuthController {
     try {
       const result = await this.authService.login(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: await this.authenticatedUserView(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TooManyAttemptsError) {
         return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
@@ -104,7 +122,7 @@ export class AuthController {
     try {
       const result = await this.authService.loginWithGoogle(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: await this.authenticatedUserView(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof GoogleSignInNotConfiguredError) {
         return res.status(503).json(createResponse("Google sign-in is unavailable", null, {}, [error.message]));
@@ -151,7 +169,7 @@ export class AuthController {
     try {
       const result = await this.authService.loginWithEmailOtp(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: await this.authenticatedUserView(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
@@ -263,7 +281,7 @@ export class AuthController {
         return res.status(401).json(createResponse("Sign-in approval is missing or expired", null, {}, ["Approval required"]));
       }
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: await this.authenticatedUserView(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (isDatabaseUnavailableError(error) || (error instanceof Error && error.message.includes("Redis"))) {
         return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["auth_service_unavailable"]));
