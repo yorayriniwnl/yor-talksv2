@@ -38,10 +38,11 @@ export class PostService {
 
   private async attachInteractions(posts: PostRecord[], userId?: string) {
     if (posts.length === 0) return posts;
+    const hideCommentCounts = (await this.contentSafetyService.getViewerFilter(userId)) === "child_safe";
     const postIds = posts.map(p => p.id);
     const polls = await this.postRepository.getPolls(postIds, userId);
     if (!userId) {
-      return posts.map((post) => ({ ...post, ...(polls.get(post.id) ? { poll: polls.get(post.id) } : {}) }));
+      return posts.map((post) => ({ ...post, ...(hideCommentCounts ? { commentsCount: 0 } : {}), ...(polls.get(post.id) ? { poll: polls.get(post.id) } : {}) }));
     }
     const [likes, bookmarks, reposts] = await Promise.all([
       db.select({ postId: postLikesTable.postId }).from(postLikesTable).where(and(inArray(postLikesTable.postId, postIds), eq(postLikesTable.userId, userId))),
@@ -55,6 +56,7 @@ export class PostService {
 
     return posts.map(p => ({
       ...p,
+      ...(hideCommentCounts ? { commentsCount: 0 } : {}),
       likedByMe: likedSet.has(p.id),
       savedByMe: bookmarkedSet.has(p.id),
       repostedByMe: repostedSet.has(p.id),
@@ -307,7 +309,8 @@ export class PostService {
       eq(commentsTable.id, commentId),
       eq(commentsTable.postId, postId),
     ));
-    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))) return undefined;
+    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))
+      || !(await this.contentSafetyService.isVisible(comment, userId, comment.authorId))) return undefined;
 
     // Toggle the JSONB membership atomically so two devices cannot overwrite
     // each other's likes with a stale client-side array.
@@ -345,7 +348,8 @@ export class PostService {
     const rows = await db.select().from(commentsTable)
       .where(eq(commentsTable.postId, postId))
       .orderBy(asc(commentsTable.createdAt));
-    const visibleRows = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
+    const ratingVisibleRows = await this.contentSafetyService.filterVisibleByAuthor(rows, viewerId, row => row.authorId);
+    const visibleRows = ratingVisibleRows.filter((row) => !excludedAuthorIds.has(row.authorId));
     const authors = new Map((await this.userRepository.findByIds(visibleRows.filter(row => !row.parentId).map(row => row.authorId))).map(user => [user.id, user]));
     return visibleRows.filter((row) => !row.parentId).map((row) => {
       const author = authors.get(row.authorId);
@@ -369,7 +373,7 @@ export class PostService {
         reactions: (row.reactions ?? {}) as Record<string, string[]>,
         likes: likedBy.length,
         likedByMe: likedBy.includes(viewerId),
-        repliesCount: row.repliesCount ?? replies.length,
+        repliesCount: replies.length,
         parentId: row.parentId,
         author: {
           id: row.authorId,

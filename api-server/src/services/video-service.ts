@@ -95,7 +95,8 @@ export class VideoService {
     if (!video) return [];
     const shielded = await this.contactShieldService.getShieldedUserIds(viewerId);
     const comments = await this.videoCommentRepository.list(videoId);
-    return Promise.all(comments.filter((comment) => !shielded.has(comment.authorId)).map(async (comment) => {
+    const ratingVisible = await this.contentSafetyService.filterVisibleByAuthor(comments, viewerId, comment => comment.authorId);
+    return Promise.all(ratingVisible.filter((comment) => !shielded.has(comment.authorId)).map(async (comment) => {
       const likedBy = Array.isArray(comment.likedBy) ? comment.likedBy : [];
       const author = await this.getAuthor(comment.authorId);
       return {
@@ -138,7 +139,8 @@ export class VideoService {
     if (!video) return undefined;
     const comments = await this.videoCommentRepository.list(videoId);
     const comment = comments.find((item) => item.id === commentId);
-    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))) return undefined;
+    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))
+      || !(await this.contentSafetyService.isVisible(comment, userId, comment.authorId))) return undefined;
     const updated = await this.videoCommentRepository.toggleLike(videoId, commentId, userId);
     return updated ? this.presentComment(updated, userId) : undefined;
   }
