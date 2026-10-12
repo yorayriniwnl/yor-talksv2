@@ -19,6 +19,15 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-.backup}"
 COMMAND="${1:-help}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+temporary_files=()
+cleanup_temporary_files() {
+  local status=$?
+  trap - EXIT
+  for temporary_file in "${temporary_files[@]}"; do rm -f -- "$temporary_file"; done
+  if [[ "$COMMAND" == backup && "$status" != 0 ]]; then record_backup_metrics 0 || true; fi
+  exit "$status"
+}
+trap cleanup_temporary_files EXIT
 
 record_backup_metrics() {
   local succeeded="$1"
@@ -61,10 +70,10 @@ backup() {
 
   umask 077
   mkdir -p "$BACKUP_DIR"
-  local backup_file="$BACKUP_DIR/backup_${TIMESTAMP}.dump.age"
+  local backup_file="$BACKUP_DIR/backup_${TIMESTAMP}_$$.dump.age"
   local temporary_file
   temporary_file=$(mktemp "$BACKUP_DIR/.backup.XXXXXX")
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
 
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating encrypted PostgreSQL backup..."
   if ! pg_dump --no-password --no-owner --no-privileges --format=custom --compress=9 "$DATABASE_URL" \
@@ -75,7 +84,6 @@ backup() {
   fi
   [[ -s "$temporary_file" ]] || { echo "Error: encrypted backup is empty" >&2; exit 1; }
   mv "$temporary_file" "$backup_file"
-  trap - RETURN
 
   if ! rclone copyto "$backup_file" "${BACKUP_REMOTE%/}/$(basename "$backup_file")"; then
     record_backup_metrics 0
@@ -100,7 +108,7 @@ verify() {
   [[ -f "$backup_file" ]] || { echo "Error: Backup file not found: $backup_file" >&2; exit 1; }
   local temporary_file
   temporary_file=$(mktemp)
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
   age --decrypt --identity "$BACKUP_AGE_IDENTITY" "$backup_file" > "$temporary_file"
   pg_restore --list "$temporary_file" >/dev/null
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Encrypted archive integrity verified: $backup_file"
@@ -125,7 +133,7 @@ restore() {
 
   umask 077
   temporary_file=$(mktemp)
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
   age --decrypt --identity "$BACKUP_AGE_IDENTITY" "$backup_file" > "$temporary_file"
   pg_restore --list "$temporary_file" >/dev/null
   echo "Restoring into a verified empty database. Type 'restore' to continue:"

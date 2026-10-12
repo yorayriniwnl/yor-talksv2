@@ -10,6 +10,7 @@ import { NotificationDeliveryService } from "../services/notification-delivery-s
 import { NotificationRepository } from "../repositories/notification-repository.js";
 import type { NotificationRecord } from "../types/index.js";
 import { operationalMetrics } from "../services/operational-metrics-service.js";
+import { notificationJobOptions } from '../lib/notification-job-options.js';
 import { closeNotificationWorkerHealthDependencies, isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
 
 export type NotificationWorkerHandle = {
@@ -20,12 +21,26 @@ export type NotificationWorkerHandle = {
 const RETRY_DELAY_MS = 30_000;
 const RECOVERY_INTERVAL_MS = 30_000;
 const RECOVERY_PAGE_SIZE = 250;
-const notificationJobOptions = (notification: Pick<NotificationRecord, "id">) => ({
-  jobId: notification.id,
-  removeOnComplete: false,
-  attempts: 5,
-  backoff: { type: "exponential" as const, delay: 30_000 },
-});
+/** Prune historical completed jobs even when the queue becomes idle. BullMQ's
+ * age/count removal on completion alone is lazy. Never prune retryable states. */
+export async function pruneCompletedNotifications(queue: Pick<Queue, 'clean'>): Promise<void> {
+  await queue.clean(env.NOTIFICATION_COMPLETED_RETENTION_SECONDS * 1000, 1000, 'completed');
+}
+
+/** The database outbox is the durable deduplication and deletion authority;
+ * a Redis job surviving account deletion or completed-job pruning cannot send
+ * an obsolete payload or redeliver an already acknowledged notification. */
+export async function processNotificationDelivery(id: string,
+  notifications: Pick<NotificationRepository, 'findById' | 'markPushDelivered'>,
+  users: Pick<UserRepository, 'findById'>,
+  delivery: Pick<NotificationDeliveryService, 'deliver'>): Promise<void> {
+  const notification = await notifications.findById(id);
+  if (!notification || notification.pushDeliveredAt) return;
+  const recipient = await users.findById(notification.recipientId);
+  if (!recipient) return;
+  await delivery.deliver(notification, recipient);
+  await notifications.markPushDelivered(notification.id);
+}
 
 /**
  * Keeps the notification worker recoverable when Redis is temporarily down
@@ -80,10 +95,8 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
               // Not ours — other job types may be added to this queue later.
               return;
             }
-            const notification = job.data as NotificationRecord;
-            const recipient = await userRepository.findById(notification.recipientId);
-            await deliveryService.deliver(notification, recipient);
-            await notificationRepository.markPushDelivered(notification.id);
+            if (typeof job.data?.id !== 'string') throw new Error('invalid_notification_job');
+            await processNotificationDelivery(job.data.id, notificationRepository, userRepository, deliveryService);
           },
           { connection: { url: env.REDIS_URL } },
         );
@@ -199,6 +212,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
     if (this.closed) return;
     if (this.recovering) return this.recovering;
     const recovery = (async () => {
+      await pruneCompletedNotifications(queue);
       let cursor: { createdAt: string; id: string } | null = null;
       while (!this.closed) {
         const conditions = [isNull(notificationsTable.pushDeliveredAt)];
@@ -224,7 +238,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
             if (state === "failed" || state === "completed") await existing.remove();
             else continue;
           }
-          await queue.add("notification:deliver", notification, notificationJobOptions(notification));
+          await queue.add("notification:deliver", { id: notification.id }, notificationJobOptions(notification.id));
         }
 
         const last = pending[pending.length - 1];

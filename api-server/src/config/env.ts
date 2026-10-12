@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { trustedProxySetting } from '../lib/trusted-proxy.js';
 
 const defaultNodeEnvironment = process.env.NODE_ENV || (process.env.VERCEL ? "production" : "development");
 const booleanFromEnv = (value: unknown, fallback = false): unknown => {
@@ -36,6 +37,19 @@ const envSchema = z.object({
   MEDIA_DELIVERY_ORIGIN: z.string().url().or(z.literal('')).default(''),
   MEDIA_GEMINI_MODEL: z.enum(["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash", "gemini-3.8-flash"]).default("gemini-2.5-flash"),
   REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6379"),
+  TRUSTED_PROXY_CIDRS: z.string().max(4096).default('').superRefine((value, context) => {
+    try { trustedProxySetting(value); } catch { context.addIssue({ code: z.ZodIssueCode.custom, message: 'Use explicit trusted proxy IP addresses or CIDRs; universal networks are forbidden' }); }
+  }),
+  LIFECYCLE_WORKER_STALE_SECONDS: z.coerce.number().int().min(15).max(300).default(45),
+  LIFECYCLE_JOB_STALL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+  NOTIFICATION_COMPLETED_RETENTION_SECONDS: z.coerce.number().int().min(60).max(604800).default(86400),
+  NOTIFICATION_COMPLETED_MAX_COUNT: z.coerce.number().int().min(1).max(100000).default(10000),
+  ELIGIBILITY_ENABLED: z.preprocess(value => booleanFromEnv(value), z.boolean()),
+  ELIGIBILITY_POLICY_FILE: z.string().trim().default(''),
+  AGE_ASSURANCE_ISSUER: z.string().trim().default(''),
+  AGE_ASSURANCE_CHALLENGE_URL: z.string().trim().default(''),
+  AGE_ASSURANCE_AUDIENCE: z.string().trim().default(''),
+  AGE_ASSURANCE_SECRET_FILE: z.string().trim().default(''),
   DATABASE_URL: z.string().default(process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/yor_talks"),
   // Comma-separated list of allowed browser origins for CORS. Defaults to the
   // Vite dev server's own origin — in dev, /api is same-origin via Vite's proxy

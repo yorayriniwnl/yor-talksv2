@@ -39,6 +39,7 @@ import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { DEFAULT_STORY_TEXT_STYLE, type StoryTextStyle } from '@/lib/story-text-style';
+import { eligibilityApi, hasSocialAccess, type EligibilityStatus } from '@/lib/eligibility';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -400,14 +401,6 @@ function mapPrivacy(user: BackendUser): PrivacySettings {
   };
 }
 
-function needsTermsAcceptance(user: BackendUser | User): boolean {
-  return publicBetaConfig.publicBeta && (
-    user.termsVersion !== publicBetaConfig.termsVersion ||
-    !user.termsAcceptedAt ||
-    !user.ageConfirmedAt
-  );
-}
-
 function mapStory(s: BackendStory, currentUserId?: string): Story {
   const viewerIds = Array.isArray(s.viewerIds) ? s.viewerIds : [];
   return {
@@ -710,6 +703,10 @@ export type MessageDraft = {
 
 interface AppState {
   currentUser: User | null;
+  eligibility: EligibilityStatus | null;
+  eligibilityLoading: boolean;
+  eligibilityError: string | null;
+  refreshEligibility: () => Promise<void>;
   worldPreferences: WorldPreferences;
   tokens: AuthTokens | null;
   isInitializing: boolean;
@@ -886,6 +883,9 @@ function clearPrivateSessionState(
   profileRequests.clear();
   set({
     currentUser: null,
+    eligibility: null,
+    eligibilityLoading: false,
+    eligibilityError: null,
     tokens: null,
     authError: null,
     feedCursor: null,
@@ -961,6 +961,7 @@ let notificationRequestSequence = 0;
 let followRequestSequence = 0;
 let videoRequestSequence = 0;
 let activitySessionSequence = 0;
+let eligibilityRequestSequence = 0;
 const notificationReadRequests = new Map<string, Promise<void>>();
 const safetyRelationshipRequests = new Map<string, Promise<boolean>>();
 const storyReactionToastExpirations = new Map<string, number>();
@@ -1165,6 +1166,9 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      eligibility: null,
+      eligibilityLoading: false,
+      eligibilityError: null,
       worldPreferences: DEFAULT_WORLD_PREFERENCES,
       tokens: null,
       isInitializing: true,
@@ -1229,10 +1233,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
-          }
+          await get().refreshEligibility();
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
@@ -1249,10 +1250,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
-          }
+          await get().refreshEligibility();
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Google sign-in failed' });
@@ -1269,10 +1267,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
-          }
+          await get().refreshEligibility();
           return null;
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
@@ -1288,10 +1283,7 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
-          }
+          await get().refreshEligibility();
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Could not complete sign-in' });
           throw err;
@@ -1322,8 +1314,7 @@ export const useAppStore = create<AppState>()(
             privacy: mapPrivacy(result.user),
             users: { ...state.users, [mapped.id]: mapped },
           }));
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          await get().refreshEligibility();
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Could not save terms acceptance' });
           throw err;
@@ -1352,6 +1343,29 @@ export const useAppStore = create<AppState>()(
 
       requestPasswordReset: async (email) => {
         await api.requestPasswordReset(email);
+      },
+
+      refreshEligibility: async () => {
+        const userId = get().currentUser?.id;
+        if (!userId) return;
+        const sequence = ++eligibilityRequestSequence;
+        const session = activitySessionSequence;
+        const previouslyActive = hasSocialAccess(get().eligibility);
+        stopRealtime();
+        // Identity and unsent drafts survive verification and provider outages.
+        set({ eligibility: null, eligibilityLoading: true, eligibilityError: null });
+        const isCurrent = () => sequence === eligibilityRequestSequence && session === activitySessionSequence && get().currentUser?.id === userId;
+        try {
+          const eligibility = await eligibilityApi.getStatus();
+          if (!isCurrent()) return;
+          set({ eligibility, eligibilityLoading: false });
+          if (hasSocialAccess(eligibility)) {
+            setupRealtime(set, get);
+            if (!previouslyActive) hydrateSessionData(get);
+          }
+        } catch (error) {
+          if (isCurrent()) set({ eligibility: null, eligibilityLoading: false, eligibilityError: error instanceof Error ? error.message : 'Could not confirm account access. Please retry.' });
+        }
       },
 
       initialize: () => {
@@ -1384,10 +1398,7 @@ export const useAppStore = create<AppState>()(
 
           // Identity restoration must not wait on optional social datasets.
           const currentUser = get().currentUser;
-          if (currentUser && !needsTermsAcceptance(currentUser)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
-          }
+          if (currentUser) await get().refreshEligibility();
         })().finally(() => {
           set({ isInitializing: false });
           sessionInitialization = null;

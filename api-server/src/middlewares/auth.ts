@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { createResponse } from "../utils/response.js";
 import { hasCurrentConsent } from "../utils/consent.js";
+import { restrictedSessionAllowed, type EligibilityDecision } from "../features/eligibility-policy.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { eligibilityEnforced } from "../config/eligibility.js";
 
 interface JwtPayload {
   sub: string;
@@ -16,6 +19,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
+      eligibility?: EligibilityDecision;
       user?: {
         id: string;
         role: string;
@@ -29,6 +33,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
+const eligibilityService = new EligibilityService(undefined, userRepository);
 
 export async function closeAuthenticationDependencies(): Promise<void> {
   await redisRepository.disconnect();
@@ -74,7 +79,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
     }
     const user = await userRepository.findById(decoded.sub);
-    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || ['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
+    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || user.accountStatus === 'deleted' ||
+      (['suspended', 'deactivated'].includes(user.accountStatus ?? 'active') && !restrictedSessionAllowed(req.method, req.originalUrl))) {
       return res.status(401).json(createResponse("Account is unavailable", null, {}, ["Unauthorized"]));
     }
 
@@ -83,6 +89,13 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       permissions: user.permissions ?? [],
     };
+    if (eligibilityEnforced()) {
+      req.eligibility = await eligibilityService.decision(user);
+      if (!req.eligibility.active && !restrictedSessionAllowed(req.method, req.originalUrl)) {
+        return res.status(428).json(createResponse('Account verification required', null,
+          { eligibilityRequired: true, eligibility: req.eligibility }, ['eligibility_required']));
+      }
+    }
     if (!hasCurrentConsent(user) && !consentExempt(req)) {
       return res.status(428).json(createResponse(
         "Current terms acceptance required",
@@ -110,6 +123,7 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
     const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
     if (activeSession && user && (decoded.authVersion ?? 0) === (user.authVersion ?? 0) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
       req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+      if (eligibilityEnforced()) req.eligibility = await eligibilityService.decision(user);
     }
   } catch (error) {
     if (!(error instanceof jwt.JsonWebTokenError)) return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
+import { ConversationRepository, MessageRepository, isMessageAvailable } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord, UserRecord } from "../types/index.js";
 import { db } from "@workspace/db";
@@ -110,6 +110,7 @@ export class MessageService {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
+        if (!isMessageAvailable(existing)) throw new InvalidMessageContentError("This message is no longer available");
         return existing;
       }
     }
@@ -180,6 +181,7 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
+    if (!isMessageAvailable(persisted)) throw new InvalidMessageContentError("This message is no longer available");
     return persisted;
   }
 
@@ -198,12 +200,12 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+    return this.withReadReceipts(messages.filter(message => isMessageAvailable(message)), userId);
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
+    if (!message || !isMessageAvailable(message)) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
     if (message.senderId === userId) return undefined;
@@ -218,7 +220,9 @@ export class MessageService {
     }
     const previewedAt = new Date().toISOString();
     const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
-    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
+    // Recording can wait for a competing deletion/read or an expiry boundary.
+    // Never serialize the earlier snapshot after that asynchronous boundary.
+    return previewed && isMessageAvailable(previewed) ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
@@ -250,45 +254,25 @@ export class MessageService {
         or(eq(messageReadsTable.userId, userId), eq(messagesTable.senderId, userId)),
       )).groupBy(messageReadsTable.messageId);
     const byId = new Map(receipts.map((receipt) => [receipt.messageId, receipt.readAt]));
-    return messages.map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
+    const current = new Map((await this.messageRepository.findAvailableByIds(messages.map(message => message.id)))
+      .filter(message => isMessageAvailable(message)).map(message => [message.id, message]));
+    return messages.flatMap(message => {
+      const live = current.get(message.id);
+      return live && isMessageAvailable(live) ? [{ ...live, seenAt: byId.get(live.id) ?? live.seenAt }] : [];
+    });
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
-    
-    const members = await this.conversationRepository.getMembers(message.conversationId);
-    if (!members.includes(userId)) return undefined;
-    // A sender opening their own message is not a recipient read receipt.
-    if (message.senderId === userId) return message;
-
-    // Track read receipt
-    const readAt = new Date().toISOString();
-    await db.insert(messageReadsTable).values({
-      messageId,
-      userId,
-      readAt,
-    }).onConflictDoUpdate({
-      target: [messageReadsTable.messageId, messageReadsTable.userId],
-      set: { readAt },
-    });
-
-    const conversation = await this.conversationRepository.findById(message.conversationId);
-    if (conversation?.vanishMode) {
-      return this.messageRepository.update(messageId, { seenAt: readAt, deletedAt: readAt });
-    }
-    // `seen_at` is a legacy single-recipient field. In a group it would tell
-    // every member that everyone has read the message, so keep group read
-    // receipts in message_reads and only update the legacy field for DMs.
-    if (conversation?.isGroup) return { ...message, seenAt: readAt };
-    message.seenAt = readAt;
-    return this.messageRepository.update(messageId, { seenAt: readAt });
+    const message = await this.messageRepository.recordRead(messageId, userId, new Date().toISOString());
+    if (!message) return undefined;
+    if (message.deletedAt) return this.deletedMessageView(message);
+    return isMessageAvailable(message) ? message : undefined;
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const normalizedContent = normalizeMessageContent(content);
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt || message.senderId !== userId) {
+    if (!message || !isMessageAvailable(message) || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
@@ -296,7 +280,7 @@ export class MessageService {
     message.editedAt = new Date().toISOString();
     // Compatibility rendering is bound to the historical body. An edit is a
     // new publication and cannot mint an attachment from an arbitrary text URL.
-    return this.messageRepository.update(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
+    return this.messageRepository.updateAvailable(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -305,12 +289,18 @@ export class MessageService {
       return undefined; // Only sender can delete for now
     }
     message.deletedAt = new Date().toISOString();
-    return this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
+    const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
+    return deleted ? this.deletedMessageView(deleted) : undefined;
+  }
+
+  private deletedMessageView(message: MessageRecord): MessageRecord {
+    return { ...message, content: "", mediaId: null, mediaUrl: null, mediaType: null,
+      mediaDuration: null, mediaLegacy: false, reactions: {} };
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) {
+    if (!message || !isMessageAvailable(message)) {
       throw new Error("Message not found");
     }
     const members = await this.conversationRepository.getMembers(message.conversationId);
@@ -321,19 +311,12 @@ export class MessageService {
   }
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
-    const message = await this.assertParticipant(messageId, userId);
-    const reactions = message.reactions ?? {};
-    const current = reactions[reaction] ?? [];
-    if (!current.includes(userId)) {
-      current.push(userId);
-      reactions[reaction] = current;
-      message.reactions = reactions;
-    }
-    return this.messageRepository.update(messageId, { reactions: message.reactions });
+    await this.assertParticipant(messageId, userId);
+    return this.messageRepository.addReaction(messageId, userId, reaction);
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     await this.assertParticipant(messageId, userId);
-    return this.messageRepository.update(messageId, { pinned: true });
+    return this.messageRepository.updateAvailable(messageId, { pinned: true });
   }
 }

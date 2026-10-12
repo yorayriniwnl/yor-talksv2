@@ -15,17 +15,17 @@ const message: MessageRecord = {
   seenAt: null,
 };
 
-function createPreviewService(enabled: boolean, alreadyRead = false) {
+function createPreviewService(enabled: boolean, alreadyRead = false, snapshot = message, returned = snapshot) {
   let recordedPreview: { messageId: string; userId: string } | undefined;
   const conversationRepository = {
     getMembers: async () => [message.senderId, message.recipientId],
   } as unknown as ConversationRepository;
   const messageRepository = {
-    findById: async () => message,
+    findById: async () => snapshot,
     hasReadReceipt: async () => alreadyRead,
     recordPreview: async (messageId: string, userId: string) => {
       recordedPreview = { messageId, userId };
-      return message;
+      return returned;
     },
   } as unknown as MessageRepository;
   const entitlementService = {
@@ -74,4 +74,27 @@ test("message preview cannot be used on the sender's own message", async () => {
 
   assert.equal(preview, undefined);
   assert.equal(getRecordedPreview(), undefined);
+});
+
+test("expired or deleted previews are rejected before feature checks and recording", async () => {
+  for (const snapshot of [
+    { ...message, expiresAt: new Date(Date.now() - 1000).toISOString() },
+    { ...message, deletedAt: new Date().toISOString() },
+  ]) {
+    const { service, getRecordedPreview } = createPreviewService(false, false, snapshot);
+    assert.equal(await service.previewMessage(snapshot.id, snapshot.recipientId), undefined);
+    assert.equal(getRecordedPreview(), undefined);
+  }
+});
+
+test("preview return rechecks expiry after the database recording await", async () => {
+  const expired = { ...message, expiresAt: new Date(Date.now() - 1000).toISOString() };
+  const { service } = createPreviewService(true, false, message, expired);
+  assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
+});
+
+test("preview return rechecks a deletion committed while recording waited", async () => {
+  const deleted = { ...message, deletedAt: new Date().toISOString() };
+  const { service } = createPreviewService(true, false, message, deleted);
+  assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
 });

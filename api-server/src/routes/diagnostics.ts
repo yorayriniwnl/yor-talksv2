@@ -3,7 +3,7 @@ import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { logger } from "../lib/logger.js";
 import { authenticate, requireRole } from "../middlewares/auth.js";
-import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { hasHealthyNotificationWorker, hasHealthyLifecycleWorker } from "../lib/worker-health.js";
 
 const router = Router();
 
@@ -17,7 +17,7 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     status: "ok" | "degraded" | "error";
     timestamp: string;
     queue?: { redis: "up" | "down"; version?: string; reason?: string };
-    workers: { status: "initialized" | "unavailable" | "unhealthy" };
+    workers: { status: "initialized" | "unavailable" | "unhealthy"; lifecycle?: 'ready' | 'unavailable' };
     uptime: number;
   } = {
     status: "ok",
@@ -36,8 +36,9 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     };
 
     diagnostics.workers.status = await hasHealthyNotificationWorker() ? "initialized" : "unavailable";
+    diagnostics.workers.lifecycle = await hasHealthyLifecycleWorker() ? 'ready' : 'unavailable';
 
-    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized") {
+    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized" || diagnostics.workers.lifecycle !== 'ready') {
       diagnostics.status = "degraded";
     }
 

@@ -1,0 +1,51 @@
+# Synthetic containers exist only in CI. No production receiver/storage is used.
+services:
+  ci-alert-receiver:
+    image: node:24-alpine
+    command: [node, /app/ci-alert-receiver.mjs]
+    volumes:
+      - ./ops/ci-alert-receiver.mjs:/app/ci-alert-receiver.mjs:ro
+      - ./ops/ci-alert-probe.mjs:/app/ci-alert-probe.mjs:ro
+    secrets:
+      - alertmanager_webhook_password
+    networks: [backend]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:9099/state').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  alertmanager:
+    depends_on:
+      ci-alert-receiver:
+        condition: service_healthy
+  ci-restore-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: yor_ci_restore
+      POSTGRES_USER: restore
+      POSTGRES_PASSWORD: ci-only-restore-password
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U restore -d yor_ci_restore"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  backup:
+    environment:
+      BACKUP_REMOTE: ci-synthetic:/remote
+      BACKUP_AGE_IDENTITY: /identity/identity
+    secrets: !override []
+    volumes:
+      - ci_backup_staging:/backups
+      - backup_metrics:/metrics
+      - ci_backup_remote:/remote
+      - ci_backup_identity:/identity
+      - ./ops/ci-backup-rclone.conf:/root/.config/rclone/rclone.conf:ro
+      - ./ops/ci-backup-rehearsal.sh:/app/ci-backup-rehearsal.sh:ro
+
+volumes:
+  ci_backup_staging:
+  ci_backup_remote:
+  ci_backup_identity:

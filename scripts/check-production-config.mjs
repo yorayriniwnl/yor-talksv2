@@ -76,7 +76,7 @@ for (const [frontendKey, backendKey] of frontendProviderWires) {
 for (const metric of ["/api/metrics", "metrics_bearer_token", "backup-metrics-exporter:9100"]) {
   if (!prometheusConfig.includes(metric)) failures.push(`Prometheus scrape configuration is missing ${metric}`);
 }
-for (const alert of ["YorBackgroundJobsFailing", "YorAnalyticsRollupStale", "YorDatabaseBackupStale"]) {
+for (const alert of ["YorBackgroundJobsFailing", "YorAnalyticsRollupStale", "YorDatabaseBackupStale", 'YorLifecycleWorkerUnavailable', 'YorLifecycleJobsDead', 'YorLifecycleJobsStalled', 'YorLifecycleBacklogOverdue', 'YorMediaCleanupOverdue']) {
   if (!alertRules.includes(`alert: ${alert}`)) failures.push(`Prometheus alert rules are missing ${alert}`);
 }
 for (const file of ["ops/ci-metrics-bearer-token", "ops/ci-rclone.conf", "ops/ci-alertmanager-password"]) {
@@ -85,6 +85,9 @@ for (const file of ["ops/ci-metrics-bearer-token", "ops/ci-rclone.conf", "ops/ci
 if (!alertmanagerConfig.includes("password_file: /run/secrets/alertmanager_webhook_password")) {
   failures.push("Alertmanager webhook authentication must use the mounted password secret, not credentials in the URL");
 }
+if (composeSource.includes('--config.expand-env') || /\$\{/.test(alertmanagerConfig)) failures.push('Pinned Alertmanager configuration must use a complete secret file without unsupported environment expansion');
+if (!composeSource.includes('--config.file=/run/secrets/alertmanager_config') || !composeSource.includes('file: ${ALERTMANAGER_CONFIG_FILE:?')) failures.push('Alertmanager must load its configured receiver YAML from a mounted Docker secret');
+if (!composeSource.includes('http://127.0.0.1:9093/-/ready')) failures.push('Alertmanager requires a container readiness check');
 
 if (failures.length) {
   console.error("[production config] FAILED");

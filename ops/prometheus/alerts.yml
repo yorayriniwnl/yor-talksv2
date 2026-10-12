@@ -26,7 +26,61 @@ groups:
           severity: warning
         annotations:
           summary: Yor Talks background jobs are failing
-          description: A notification or feed worker failure was recorded during the last ten minutes.
+          description: A notification, feed or lifecycle worker failure was recorded during the last ten minutes.
+
+      - alert: YorLifecycleWorkerUnavailable
+        expr: yor_lifecycle_worker_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Required lifecycle worker is stopped or stalled
+          description: Check the API/worker process, PostgreSQL connectivity and active-job progress. Durable jobs remain queued; restore the worker before retrying dead jobs.
+
+      - alert: YorLifecycleDiagnosticsUnavailable
+        expr: yor_lifecycle_metrics_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Lifecycle and cleanup diagnostics cannot query PostgreSQL
+          description: Inspect database connectivity before interpreting backlog gauges.
+
+      - alert: YorLifecycleJobsDead
+        expr: yor_lifecycle_jobs_dead > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Durable lifecycle jobs require dead-letter recovery
+          description: Inspect background_jobs for the reported kind; repair the cause and use the idempotent handler before replay. Do not delete job payloads to clear an alert.
+
+      - alert: YorLifecycleJobsStalled
+        expr: yor_lifecycle_jobs_stalled > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: A lifecycle job has exceeded its progress deadline
+          description: Inspect the active job and worker before restart; leases and idempotency protect durable recovery.
+
+      - alert: YorLifecycleBacklogOverdue
+        expr: yor_lifecycle_jobs_oldest_due_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: A due lifecycle job has waited more than ten minutes
+          description: Inspect worker capacity and job retry/dependency failures for the reported kind.
+
+      - alert: YorMediaCleanupOverdue
+        expr: yor_media_cleanup_oldest_due_seconds > 3600 or yor_media_cleanup_repeated_failures > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Revoked media provider cleanup is overdue or repeatedly failing
+          description: Inspect media_assets deletion metadata and provider credentials/availability. Tombstones must remain revoked while cleanup retries.
 
       - alert: YorAnalyticsRollupFailed
         expr: yor_analytics_rollup_last_run_failed == 1

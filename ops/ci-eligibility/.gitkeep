@@ -1,0 +1,1 @@
+CI intentionally mounts an empty eligibility directory. No provider secret or approved country policy is supplied.

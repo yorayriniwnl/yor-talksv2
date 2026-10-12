@@ -4,6 +4,8 @@ import { BackgroundJobRepository, type BackgroundJob } from '../repositories/bac
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
 import { MediaService } from '../services/media-service.js';
+import { env } from '../config/env.js';
+import { operationalMetrics } from '../services/operational-metrics-service.js';
 
 export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
 
@@ -39,8 +41,11 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
     media_cleanup: async () => { await media.cleanup(); return { retryAfterSeconds: 60 }; },
     ...additionalHandlers,
   };
-  await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
   let stopping = false, busy = false, healthy = true;
+  let activeJob: string | null = null, activeStartedAt: number | null = null;
+  const heartbeat = () => jobs.heartbeat(workerId, { handlers: Object.keys(handlers), healthy: healthy && !stopping,
+    activeJob, activeStartedAt });
+  await heartbeat();
   let running: Promise<void> = Promise.resolve();
 
   const tick = async () => {
@@ -51,12 +56,21 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
         await ensureMediaCleanupLoop();
         nextMediaSweepCheck = Date.now() + 60_000;
       }
-      await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
+      await heartbeat();
       const job = await jobs.claim(Object.keys(handlers));
       healthy = true;
       if (!job) return;
-      const lease = setInterval(() => void Promise.all([jobs.extend(job), jobs.heartbeat(workerId, { activeJob: job.id, handlers: Object.keys(handlers) })])
-        .catch(() => { healthy = false; }), 10_000);
+      activeJob = job.id; activeStartedAt = Date.now();
+      await heartbeat();
+      let refresh: Promise<void> | null = null;
+      const lease = setInterval(() => {
+        if (refresh) return;
+        refresh = (async () => {
+          if (Date.now() - activeStartedAt! >= env.LIFECYCLE_JOB_STALL_SECONDS * 1000) healthy = false;
+          if (!(await jobs.extend(job))) healthy = false;
+          await heartbeat();
+        })().catch(() => { healthy = false; }).finally(() => { refresh = null; });
+      }, 10_000);
       lease.unref();
       try {
         const result = await handlers[job.kind]!(job);
@@ -65,10 +79,12 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
       } catch (error) {
         const code = error instanceof Error ? error.name : 'operation_failed';
         await jobs.fail(job, code);
+        void operationalMetrics.recordWorkerFailure('lifecycle');
         logger.error({ jobId: job.id, kind: job.kind, attempt: job.attempts, code }, 'Lifecycle job failed; retry or dead-letter recorded');
-      } finally { clearInterval(lease); }
+      } finally { clearInterval(lease); await refresh; activeJob = null; activeStartedAt = null; await heartbeat(); }
     } catch {
       healthy = false;
+      await heartbeat().catch(() => undefined);
       logger.error({ workerId }, 'Lifecycle worker dependency unavailable');
     } finally { busy = false; }
   };
@@ -76,7 +92,7 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
   timer.unref();
   running = tick();
   return {
-    isHealthy: () => healthy && !stopping,
+    isHealthy: () => healthy && !stopping && (activeStartedAt === null || Date.now() - activeStartedAt < env.LIFECYCLE_JOB_STALL_SECONDS * 1000),
     async close() {
       stopping = true; clearInterval(timer);
       await running;

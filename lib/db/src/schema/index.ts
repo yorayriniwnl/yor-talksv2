@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 export { mediaAssetsTable, mediaReferencesTable } from "./media";
+export { eligibilityAssessmentsTable, eligibilityChallengesTable, guardianAuthorizationsTable } from "./eligibility";
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -179,8 +180,8 @@ export const profilePostPinsTable = pgTable("profile_post_pins", {
 
 export const conversationsTable = pgTable("conversations", {
   id: uuid("id").primaryKey(),
-  participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  participantB: uuid("participant_b").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'set null' }),
+  participantB: uuid("participant_b").references(() => usersTable.id, { onDelete: 'set null' }),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
   participantIds: jsonb("participant_ids").default([]),
   isGroup: boolean("is_group").default(false),
@@ -195,8 +196,8 @@ export const conversationsTable = pgTable("conversations", {
 export const messagesTable = pgTable("messages", {
   id: uuid("id").primaryKey(),
   conversationId: uuid("conversation_id").references(() => conversationsTable.id, { onDelete: 'cascade' }).notNull(),
-  senderId: uuid("sender_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  senderId: uuid("sender_id").references(() => usersTable.id, { onDelete: 'set null' }),
+  recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'set null' }),
   content: text("content").notNull(),
   mediaId: uuid("media_id"),
   mediaUrl: text("media_url"),
@@ -206,8 +207,8 @@ export const messagesTable = pgTable("messages", {
   textStyleId: text("text_style_id").notNull().default("default"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   seenAt: timestamp("seen_at", { mode: "string" }),
-  replyToId: uuid("reply_to_id").references((): any => messagesTable.id),
-  forwardedFromId: uuid("forwarded_from_id").references((): any => messagesTable.id),
+  replyToId: uuid("reply_to_id").references((): any => messagesTable.id, { onDelete: 'set null' }),
+  forwardedFromId: uuid("forwarded_from_id").references((): any => messagesTable.id, { onDelete: 'set null' }),
   reactions: jsonb("reactions").default({}),
   editedAt: timestamp("edited_at", { mode: "string" }),
   deletedAt: timestamp("deleted_at", { mode: "string" }),
@@ -1370,3 +1371,5 @@ export type FeatureEntitlement = typeof featureEntitlementsTable.$inferSelect;
 export const insertUserFeatureOverrideSchema = createInsertSchema(userFeatureOverridesTable);
 export type InsertUserFeatureOverride = typeof userFeatureOverridesTable.$inferInsert;
 export type UserFeatureOverride = typeof userFeatureOverridesTable.$inferSelect;
+
+export * from './contacts';

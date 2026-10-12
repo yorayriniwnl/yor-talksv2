@@ -1,8 +1,32 @@
 import { eq, or, and, asc, desc, inArray, isNull, gt, lt, sql } from "drizzle-orm";
-import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
+
+/** Timestamp-without-time-zone message columns contain UTC, independent of the server timezone. */
+export function isMessageAvailable(message: Pick<MessageRecord, "deletedAt" | "expiresAt">, now = Date.now()): boolean {
+  if (message.deletedAt) return false;
+  if (!message.expiresAt) return true;
+  const value = message.expiresAt.replace(" ", "T");
+  const expiry = Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`);
+  return Number.isFinite(expiry) && expiry > now;
+}
+
+export const availableMessageCondition = () => and(
+  isNull(messagesTable.deletedAt),
+  or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, sql`timezone('UTC', clock_timestamp())`)),
+);
+
+// Use the same normalized membership rule as getMembers, including old direct
+// conversations whose membership junction was never populated.
+const memberCondition = (userId: string) => sql`EXISTS (
+  SELECT 1 FROM conversations c WHERE c.id=${messagesTable.conversationId} AND (
+    EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
+    OR (NOT EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id)
+      AND (c.participant_ids ? ${userId} OR c.participant_a=${userId} OR c.participant_b=${userId}))
+  )
+)`;
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
@@ -33,8 +57,7 @@ export class MessageRepository {
     const direction = options.direction ?? "latest";
     const conditions = [
       eq(messagesTable.conversationId, conversationId),
-      isNull(messagesTable.deletedAt),
-      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      availableMessageCondition(),
     ];
     if (options.cursorAt && options.cursorId && direction === "older") {
       conditions.push(or(
@@ -66,8 +89,7 @@ export class MessageRepository {
       .from(messagesTable)
       .where(and(
         eq(messagesTable.conversationId, conversationId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+        availableMessageCondition(),
       ))
       .orderBy(desc(messagesTable.createdAt))
       .limit(1);
@@ -79,12 +101,84 @@ export class MessageRepository {
     return message as MessageRecord | undefined;
   }
 
+  async findAvailableByIds(messageIds: string[]): Promise<MessageRecord[]> {
+    if (!messageIds.length) return [];
+    return await db.select().from(messagesTable).where(and(
+      inArray(messagesTable.id, messageIds), availableMessageCondition(),
+    )) as MessageRecord[];
+  }
+
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    await db.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
-      target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-      set: { previewedAt },
+    return db.transaction(async tx => {
+      // Serialize account removal, opening, deletion and reaction changes with
+      // this preview. A receipt checked before waiting on this lock is stale.
+      const [actor] = await tx.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.id, userId)).for('key share');
+      if (!actor) return undefined;
+      const [message] = await tx.select().from(messagesTable).where(and(
+        eq(messagesTable.id, messageId), availableMessageCondition(), memberCondition(userId),
+        sql`${messagesTable.senderId} <> ${userId}`,
+      )).for('update');
+      if (!message || !isMessageAvailable(message as MessageRecord)) return undefined;
+      const [receipt] = await tx.select().from(messageReadsTable).where(and(
+        eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId),
+      ));
+      if (receipt || (message.recipientId === userId && message.seenAt !== null)) return undefined;
+      await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+        target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId], set: { previewedAt },
+      });
+      return isMessageAvailable(message as MessageRecord) ? message as MessageRecord : undefined;
     });
-    return this.findById(messageId);
+  }
+
+  async recordRead(messageId: string, userId: string, readAt: string): Promise<MessageRecord | undefined> {
+    return db.transaction(async tx => {
+      const [actor] = await tx.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.id, userId)).for('key share');
+      if (!actor) return undefined;
+      const [message] = await tx.select().from(messagesTable).where(and(
+        eq(messagesTable.id, messageId), availableMessageCondition(), memberCondition(userId),
+      )).for('update');
+      if (!message || !isMessageAvailable(message as MessageRecord)) return undefined;
+      if (message.senderId === userId) return message as MessageRecord;
+      await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoUpdate({
+        target: [messageReadsTable.messageId, messageReadsTable.userId], set: { readAt },
+      });
+      const [conversation] = await tx.select().from(conversationsTable).where(eq(conversationsTable.id, message.conversationId));
+      if (!isMessageAvailable(message as MessageRecord)) return undefined;
+      if (conversation?.vanishMode || !conversation?.isGroup) {
+        const [updated] = await tx.update(messagesTable).set({
+          seenAt: readAt, ...(conversation?.vanishMode ? { deletedAt: readAt } : {}),
+        }).where(and(eq(messagesTable.id, messageId), availableMessageCondition())).returning();
+        return updated as MessageRecord | undefined;
+      }
+      return { ...message, seenAt: readAt } as MessageRecord;
+    });
+  }
+
+  async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
+    return db.transaction(async tx => {
+      const [actor] = await tx.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.id, userId)).for('key share');
+      if (!actor) return undefined;
+      const [message] = await tx.select().from(messagesTable).where(and(
+        eq(messagesTable.id, messageId), availableMessageCondition(), memberCondition(userId),
+      )).for('update');
+      if (!message || !isMessageAvailable(message as MessageRecord)) return undefined;
+      const reactions = { ...(message.reactions as Record<string, string[]> | null ?? {}) };
+      reactions[reaction] = [...new Set([...(reactions[reaction] ?? []), userId])];
+      const [updated] = await tx.update(messagesTable).set({ reactions }).where(and(
+        eq(messagesTable.id, messageId), availableMessageCondition(),
+      )).returning();
+      return updated && isMessageAvailable(updated as MessageRecord) ? updated as MessageRecord : undefined;
+    });
+  }
+
+  async updateAvailable(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
+    const [updated] = await db.update(messagesTable).set(updates).where(and(
+      eq(messagesTable.id, messageId), availableMessageCondition(),
+    )).returning();
+    return updated && isMessageAvailable(updated as MessageRecord) ? updated as MessageRecord : undefined;
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
@@ -192,7 +286,7 @@ export class ConversationRepository {
     
     // Fallback to legacy array if members table is empty
     const conv = await this.findById(conversationId);
-    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : []);
+    return (conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : [])).filter((id): id is string => Boolean(id));
   }
 
   async listForUser(userId: string): Promise<ConversationRecord[]> {

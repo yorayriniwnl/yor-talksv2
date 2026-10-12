@@ -35,6 +35,7 @@ import premiumRouter from './premium.js';
 import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
 
+import eligibilityRouter from './eligibility.js';
 const router: IRouter = Router();
 
 router.use(healthRouter);
@@ -45,6 +46,7 @@ router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);
 router.use(userRouter);
+router.use(eligibilityRouter);
 router.use(premiumRouter);
 router.use(billingRouter);
 router.use(paymentOperationsRouter);

@@ -41,6 +41,9 @@ export async function runInDatabaseTransaction<T>(work: (tx: DbTransaction) => P
 }
 
 export {
+  eligibilityAssessmentsTable,
+  eligibilityChallengesTable,
+  guardianAuthorizationsTable,
   mediaAssetsTable,
   mediaReferencesTable,
   usersTable,

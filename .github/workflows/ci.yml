@@ -131,14 +131,14 @@ jobs:
         run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet
 
       - name: Build production container images
-        run: docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml build migrate api web
+        run: docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml --profile ops build migrate api web backup
 
       - name: Smoke test production container stack
         env:
           WEB_PORT: 127.0.0.1:18080
         run: |
           set -euo pipefail
-          compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml)
+          compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml -f ops/ci-reliability.compose.yml)
 
           cleanup() {
             status=$?
@@ -177,3 +177,7 @@ jobs:
             printf '%s\n' "$api_logs"
             exit 1
           fi
+          # Startup diagnostics above stay strict. The rehearsal then induces a
+          # temporary Redis outage and verifies recovery rather than treating
+          # its expected connection warnings as startup failures.
+          bash ops/ci-reliability-rehearsal.sh

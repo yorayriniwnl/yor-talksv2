@@ -3,13 +3,14 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { productAnalyticsJobsTable } from "@workspace/db/schema";
+import { renderLifecycleMetrics } from './lifecycle-metrics-service.js';
 
 type RequestMetric = {
   count: number;
   durationSeconds: number;
 };
 
-export type MonitoredWorker = "notifications" | "feed";
+export type MonitoredWorker = "notifications" | "feed" | 'lifecycle';
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -149,7 +150,7 @@ export class OperationalMetricsService {
           "# HELP yor_worker_failed_jobs_total Failed background jobs observed across API replicas and local Redis-outage fallbacks.",
           "# TYPE yor_worker_failed_jobs_total counter",
         );
-        for (const worker of ["notifications", "feed"] as const) {
+        for (const worker of ["notifications", "feed", 'lifecycle'] as const) {
           lines.push(`yor_worker_failed_jobs_total{worker="${worker}",source="redis"} ${Number(shared[`worker_failures:${worker}`] ?? 0)}`);
           lines.push(`yor_worker_failed_jobs_total{worker="${worker}",source="process_fallback"} ${this.localWorkerFailures.get(worker) ?? 0}`);
         }
@@ -159,7 +160,7 @@ export class OperationalMetricsService {
           "# HELP yor_worker_failed_jobs_total Failed background jobs observed on this process while shared storage is unavailable.",
           "# TYPE yor_worker_failed_jobs_total counter",
         );
-        for (const worker of ["notifications", "feed"] as const) {
+        for (const worker of ["notifications", "feed", 'lifecycle'] as const) {
           lines.push(`yor_worker_failed_jobs_total{worker="${worker}",source="process_fallback"} ${this.localWorkerFailures.get(worker) ?? 0}`);
         }
       }
@@ -197,6 +198,7 @@ export class OperationalMetricsService {
       );
     }
 
+    lines.push(...await renderLifecycleMetrics());
     const memory = process.memoryUsage();
     lines.push(
       "# HELP yor_http_metrics_shared_store_up Whether shared Redis HTTP counters are available.",

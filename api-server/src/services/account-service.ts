@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { eq, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { randomUUID } from 'node:crypto';
 import {
   commentsTable,
@@ -34,6 +34,7 @@ import { db } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { toOwnUser } from "../utils/user-view.js";
+import { MessageRepository, availableMessageCondition, isMessageAvailable } from "../repositories/message-repository.js";
 
 export class InvalidAccountPasswordError extends Error {}
 
@@ -55,8 +56,8 @@ export class AccountService {
       db.select().from(postsTable).where(eq(postsTable.authorId, userId)),
       db.select().from(commentsTable).where(eq(commentsTable.authorId, userId)),
       db.select().from(storiesTable).where(eq(storiesTable.authorId, userId)),
-      db.select().from(messagesTable).where(eq(messagesTable.senderId, userId)),
-      db.select().from(messagesTable).where(eq(messagesTable.recipientId, userId)),
+      db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), availableMessageCondition())),
+      db.select().from(messagesTable).where(and(eq(messagesTable.recipientId, userId), availableMessageCondition())),
       db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
       db.select().from(storyReactionsTable).where(eq(storyReactionsTable.userId, userId)),
       db.select().from(postLikesTable).where(eq(postLikesTable.userId, userId)),
@@ -100,12 +101,23 @@ export class AccountService {
         .from(marketplaceOrdersTable).where(or(eq(marketplaceOrdersTable.buyerId, userId), eq(marketplaceOrdersTable.sellerId, userId))),
     ]);
 
+    // Other export queries can wait for locks or take long enough to cross a
+    // disappearing-message boundary. Read the current bodies again at the
+    // final asynchronous boundary, rather than returning the earlier snapshot.
+    const liveMessages = new Map((await new MessageRepository().findAvailableByIds(
+      [...sentMessages, ...receivedMessages].map(message => message.id),
+    )).filter(message => isMessageAvailable(message)).map(message => [message.id, message]));
+    const currentMessages = (rows: typeof sentMessages) => rows.flatMap(message => {
+      const current = liveMessages.get(message.id);
+      return current && isMessageAvailable(current) ? [current] : [];
+    });
+
     return {
       format: "yor-talks-account-export",
       version: 1,
       exportedAt: new Date().toISOString(),
       account: toOwnUser(user),
-      content: { posts, comments, stories, sentMessages, receivedMessages },
+      content: { posts, comments, stories, sentMessages: currentMessages(sentMessages), receivedMessages: currentMessages(receivedMessages) },
       interactions: { storyViews, storyReactions, likes, bookmarks, reposts, postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps },
       relationships: { following, followers, favorites, closeFriends, communityMemberships, channelMemberships, subscriptions },
       reports,
@@ -129,6 +141,31 @@ export class AccountService {
       if (locked.passwordHash !== user.passwordHash) {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
+
+      // Shared conversations belong to their remaining participants too. Keep
+      // their contributions and reply anchors, while erasing this account's
+      // authored bodies, attachments and identity references atomically.
+      await tx.execute(sql`UPDATE messages SET content='',media_id=NULL,media_url=NULL,media_type=NULL,
+        media_duration=NULL,media_legacy=false,text_style_id='default',reactions='{}'::jsonb,
+        pinned=false,edited_at=NULL,seen_at=NULL,expires_at=NULL,deleted_at=timezone('UTC',clock_timestamp()),sender_id=NULL
+        WHERE sender_id=${userId}`);
+      await tx.execute(sql`UPDATE messages SET recipient_id=NULL WHERE recipient_id=${userId}`);
+      await tx.execute(sql`UPDATE messages m SET reactions=coalesce((
+        SELECT jsonb_object_agg(entry.key, cleaned.actors) FROM jsonb_each(coalesce(m.reactions,'{}'::jsonb)) entry
+        CROSS JOIN LATERAL (SELECT coalesce(jsonb_agg(actor),'[]'::jsonb) AS actors
+          FROM jsonb_array_elements(entry.value) actor WHERE actor<>to_jsonb(${userId}::text)) cleaned
+        WHERE jsonb_array_length(cleaned.actors)>0
+      ),'{}'::jsonb) WHERE reactions::text LIKE ${`%${userId}%`}`);
+      await tx.execute(sql`UPDATE conversations SET participant_ids=coalesce(participant_ids,'[]'::jsonb)-${userId}::text,
+        participant_a=CASE WHEN participant_a=${userId} THEN NULL ELSE participant_a END,
+        participant_b=CASE WHEN participant_b=${userId} THEN NULL ELSE participant_b END
+        WHERE participant_a=${userId} OR participant_b=${userId} OR participant_ids ? ${userId}`);
+      await tx.execute(sql`DELETE FROM conversation_members WHERE user_id=${userId}`);
+      // Remove a thread only once there is no surviving participant. A direct
+      // thread with a remaining participant keeps that participant's history.
+      await tx.execute(sql`DELETE FROM conversations c WHERE c.participant_a IS NULL AND c.participant_b IS NULL
+        AND jsonb_array_length(coalesce(c.participant_ids,'[]'::jsonb))=0
+        AND NOT EXISTS(SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id)`);
 
       await tx.update(ledgerTransactionsTable).set({
         creditAccountId: sql`CASE WHEN ${ledgerTransactionsTable.creditAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.creditAccountId} END`,

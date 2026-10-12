@@ -6,6 +6,7 @@ export function hasCurrentConsent(user: {
   termsAcceptedAt?: string | null;
   ageConfirmedAt?: string | null;
 }): boolean {
+  if (env.NODE_ENV === 'production') return Boolean(user.termsVersion === env.TERMS_VERSION && user.termsAcceptedAt);
   return !env.PUBLIC_BETA || Boolean(
     user.termsVersion === env.TERMS_VERSION && user.termsAcceptedAt && user.ageConfirmedAt,
   );

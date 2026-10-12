@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 5m
+route:
+  receiver: ci-isolated
+  group_by: [alertname, severity]
+  group_wait: 1s
+  group_interval: 1s
+  repeat_interval: 4h
+receivers:
+  - name: ci-isolated
+    webhook_configs:
+      - url: http://ci-alert-receiver:9099/webhook
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: ci-alertmanager
+            password_file: /run/secrets/alertmanager_webhook_password

@@ -12,11 +12,11 @@ import { requestContext } from "./middlewares/request-context.js";
 import { apiRateLimiter } from "./middlewares/rate-limit.js";
 import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
 import { mediaResponse } from "./services/media-response.js";
+import { trustedProxySetting } from "./lib/trusted-proxy.js";
 
 const app: Express = express();
-// The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
-// rate limiting and secure-cookie decisions use the real client address.
-app.set("trust proxy", 1);
+// Deployments with more than one proxy identify trusted networks explicitly.
+app.set("trust proxy", trustedProxySetting(env.TRUSTED_PROXY_CIDRS));
 const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, unknown>) => (req: Request, res: Response, next: NextFunction) => void)({
   logger,
   serializers: {
