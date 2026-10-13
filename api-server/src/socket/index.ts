@@ -15,7 +15,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
-import { authorizeSocketAction, dispatchSocketToUsers, parseSocketPayload, socketErrorEvent } from "./policy.js";
+import { authorizeSocketAction, dispatchSocketToUsers, parseSocketPayload, socketErrorEvent, type SocketRequester } from "./policy.js";
 
 export const attachSocketServer = async (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
@@ -238,11 +238,13 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         // Multicast to all conversation members (including the sender's other devices via the room)
         // Personal rooms exist from connection time. Include them for direct
         // messages: a Redis adapter's remote room join may arrive after this emit.
-        const delivered = await hydrateMediaValue(message);
         const members = await conversationRepository.getMembers(actualConversationId);
-        await dispatchSocketToUsers(io, members, "message:receive", delivered, "message:deliver");
+        await dispatchSocketToUsers(io, members, "message:receive",
+          (requester:SocketRequester) => hydrateMediaValue(message, undefined, requester), "message:deliver");
         await authorizeSocketAction(userId, "message:send");
-        socket.emit("message:sent", delivered); // Confirm to sender's current device
+        const senderDelivery = await hydrateMediaValue(message, undefined, { userId, deviceId, authVersion: socket.data.authVersion as number });
+        await authorizeSocketAction(userId, "message:send");
+        socket.emit("message:sent", senderDelivery); // Confirm to sender's current device
       } catch (err) {
         if (err instanceof MediaLifecycleError) {
           socket.emit("message:error", { error: err.message, code: err.code });
@@ -267,7 +269,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           // Vanish-mode reads remove the message for every connected device;
           // regular reads only update the receipt.
           if (updated.deletedAt) {
-            await dispatchSocketToUsers(io, members, "message:update", await hydrateMediaValue(updated), "message:deliver", socket.id);
+            await dispatchSocketToUsers(io, members, "message:update",
+              (requester:SocketRequester) => hydrateMediaValue(updated, undefined, requester), "message:deliver", socket.id);
           } else {
             await dispatchSocketToUsers(io, members, "message:seen:update", { messageId, userId, seenAt: updated.seenAt }, "message:deliver", socket.id);
           }
@@ -418,7 +421,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         emitCallError("That account is already on another call or this call identifier is in use");
         return;
       }
-      await dispatchSocketToUsers(io, [targetUserId], "call:invite", await hydrateMediaValue({
+      const invitation = {
         callId,
         callType,
         offer,
@@ -428,7 +431,9 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           username: caller.username,
           avatarUrl: caller.avatarUrl,
         },
-      }), "rtc:deliver");
+      };
+      await dispatchSocketToUsers(io, [targetUserId], "call:invite",
+        (requester:SocketRequester) => hydrateMediaValue(invitation, undefined, requester), "rtc:deliver");
       const timeout = setTimeout(() => {
         callTimeouts.delete(callId);
         void redisRepository.expireRingingSocketCallStrict(callId).then(async (expired) => {

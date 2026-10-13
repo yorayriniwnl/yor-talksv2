@@ -16,6 +16,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 
 function GoLiveDialog({ onCreated }: { onCreated: (stream: BackendLiveStream) => void }) {
@@ -260,7 +261,7 @@ export default function Live() {
           {streams.map((stream) => (
             <button key={stream.id} onClick={() => setLocation(`/live/${stream.id}`)} className="group overflow-hidden rounded-2xl border border-border/50 bg-card/40 text-left transition hover:border-primary/50">
               <div className="relative aspect-video overflow-hidden bg-muted">
-                {stream.coverUrl && <img src={stream.coverUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
+                {stream.coverUrl && <ProtectedMediaImage src={stream.coverUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
                 <span className={`absolute left-3 top-3 rounded-lg px-2 py-1 text-[0.65rem] font-bold text-white ${stream.status === 'live' ? 'bg-rose-500' : 'bg-black/60'}`}>
                   {stream.status === 'live' ? 'LIVE' : stream.status.toUpperCase()}
                 </span>

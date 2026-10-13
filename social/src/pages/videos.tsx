@@ -22,6 +22,7 @@ import { api } from '@/lib/api-client';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { applyFreshVideoDelivery, hasUploadedVideoDelivery, readFreshVideoDelivery } from '@/lib/video-delivery';
 import { MediaImageField } from '@/components/media/MediaImageField';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 import { useLocation, useRoute } from 'wouter';
 import { OperatorPanel, SectionHeader, SignalLabel, StatusBadge } from '@/components/system';
 import '@/styles/operator-discovery.css';
@@ -498,7 +499,7 @@ export default function Videos() {
                     aria-label={`Watch ${video.title}`}
                   >
                     <span className="operator-video-card__media">
-                      <img src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
+                      <ProtectedMediaImage src={video.thumbnailUrl} alt="" onError={() => void refreshPoster(video)} />
                       <span className="operator-video-card__play"><Play aria-hidden="true" /></span>
                       <span className="operator-video-card__format">{video.type === 'short' ? 'Reel' : 'Video'}</span>
                       <ContentCategoryBadge value={video.contentCategory} className="operator-video-card__category" />

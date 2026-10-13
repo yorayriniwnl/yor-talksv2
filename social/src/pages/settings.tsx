@@ -18,6 +18,7 @@ import { publicBetaConfig } from '@/lib/public-beta-config';
 import { hasTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 type DeviceContact = { name?: string[]; email?: string[] };
 type ContactPickerNavigator = Navigator & {
@@ -238,7 +239,7 @@ function CloseFriendsPanel() {
             return (
               <div key={user.id} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-background/35 px-3 py-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : user.fullName.charAt(0).toUpperCase()}
+                  {user.avatarUrl ? <ProtectedMediaImage src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : user.fullName.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{user.fullName || user.username}</p><p className="truncate text-xs text-muted-foreground">@{user.username}</p></div>
                 <Button type="button" variant={isCloseFriend ? 'outline' : 'default'} onClick={() => void toggle(user)} disabled={updatingId === user.id} className="rounded-xl text-xs">
@@ -583,7 +584,7 @@ export default function Settings() {
       >
         {currentUser && <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
           <h3 className="font-semibold">Profile image</h3>
-          {currentUser.avatarUrl && <img src={currentUser.avatarUrl} alt="Current profile image" className="h-20 w-20 rounded-full object-cover" />}
+          {currentUser.avatarUrl && <ProtectedMediaImage src={currentUser.avatarUrl} alt="Current profile image" className="h-20 w-20 rounded-full object-cover" />}
           <MediaImageField id="profile-avatar" label="New profile image" files={avatarFiles} onChange={setAvatarFiles} disabled={avatarSaving} />
           <Button disabled={avatarSaving || avatarFiles.length === 0} onClick={async () => {
             setAvatarSaving(true);

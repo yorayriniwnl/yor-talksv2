@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
+import { ProtectedMediaAudio, ProtectedMediaImage } from '@/lib/protected-media';
 
 export interface CommentItem {
   id: string;
@@ -108,14 +109,14 @@ export function RichCommentList({
                 {/* Photo Attachment */}
                 {comment.imageUrl && (
                   <div className="mt-2 max-w-xs rounded-xl overflow-hidden border border-border/50 shadow-sm">
-                    <img src={comment.imageUrl} alt="Comment media" className="w-full h-auto max-h-48 object-cover" />
+                    <ProtectedMediaImage src={comment.imageUrl} alt="Comment media" className="w-full h-auto max-h-48 object-cover" />
                   </div>
                 )}
 
                 {/* GIF Attachment */}
                 {comment.gifUrl && (
                   <div className="mt-2 max-w-xs rounded-xl overflow-hidden border border-border/50 shadow-sm">
-                    <img src={comment.gifUrl} alt="GIF" className="w-full h-auto max-h-44 object-cover" />
+                    <ProtectedMediaImage src={comment.gifUrl} alt="GIF" className="w-full h-auto max-h-44 object-cover" />
                   </div>
                 )}
 
@@ -123,7 +124,7 @@ export function RichCommentList({
                 {comment.voiceNoteUrl && (
                   <div className="mt-2 flex items-center gap-2 p-2 rounded-xl surface-2 border border-primary/20 max-w-xs">
                     <Mic className="w-4 h-4 text-primary shrink-0" />
-                    <audio controls src={comment.voiceNoteUrl} className="h-6 max-w-[200px]" />
+                    <ProtectedMediaAudio controls src={comment.voiceNoteUrl} className="h-6 max-w-[200px]" />
                   </div>
                 )}
 

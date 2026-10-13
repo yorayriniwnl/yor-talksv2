@@ -29,6 +29,7 @@ import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { MessageAttachment } from '@/components/messages/MessageAttachment';
+import { useProtectedMediaSource } from '@/lib/protected-media';
 
 const MAX_MESSAGE_LENGTH = 4_000;
 const REPLY_PREFIX = /^\[Reply to ([^\]\n]+)\] ([^\n]+)\n([\s\S]+)$/;
@@ -60,6 +61,10 @@ function MessageContent({ content, isMine, textStyleId = 'default', reply: struc
   const body = legacyReply?.body ?? content;
   const imageMatch = attachment?.mediaLegacy ? body.match(/(?:^|\n)📷\s+(https?:\/\/\S+)\s*$/) : null;
   const imageUrl = attachment?.mediaType === 'image' ? attachment.mediaUrl : imageMatch?.[1];
+  const audioUrlMatch = body.match(/\[Voice Note\]\s*(https?:\/\/[^\s]+|\S+)/);
+  const audioUrl = attachment?.mediaType === 'audio' ? attachment.mediaUrl : audioUrlMatch?.[1];
+  const protectedImageUrl = useProtectedMediaSource(imageUrl);
+  const protectedAudioUrl = useProtectedMediaSource(audioUrl);
   const textBody = imageMatch ? body.slice(0, imageMatch.index).trim() : body;
   const textStyle = textStyleId === 'mono'
     ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }
@@ -86,14 +91,12 @@ function MessageContent({ content, isMine, textStyleId = 'default', reply: struc
   }
 
   if (attachment?.mediaType === 'audio' || (attachment?.mediaLegacy && body.startsWith('[Voice Note]'))) {
-    const audioUrlMatch = body.match(/\[Voice Note\]\s*(https?:\/\/[^\s]+|\S+)/);
-    const audioUrl = attachment?.mediaType === 'audio' ? attachment.mediaUrl : audioUrlMatch?.[1];
     return (
       <>
         {replyMarkup}
         <div className="operator-message-audio">
           <span><Mic aria-hidden="true" /></span>
-          <audio controls src={audioUrl} preload="metadata" />
+          <audio controls src={protectedAudioUrl} preload="metadata" />
         </div>
       </>
     );
@@ -103,7 +106,7 @@ function MessageContent({ content, isMine, textStyleId = 'default', reply: struc
     <>
       {replyMarkup}
       {textBody && <span className="operator-message-text" style={textStyle}>{textBody}</span>}
-      {imageUrl && <img className="operator-message-image" src={imageUrl} alt="Shared attachment" loading="lazy" />}
+      {imageUrl && <img className="operator-message-image" src={protectedImageUrl} alt="Shared attachment" loading="lazy" />}
     </>
   );
 }

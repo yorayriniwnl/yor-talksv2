@@ -19,6 +19,7 @@ import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 interface ForumThread {
   id: string;
@@ -176,7 +177,7 @@ function CommunityHubDetail({ communityId }: { communityId: string }) {
     <div className="min-h-screen bg-background pb-24 font-sans">
       {/* Community Header Banner */}
       <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-muted">
-        <img src={community.coverUrl} alt={community.name} className="w-full h-full object-cover" />
+        <ProtectedMediaImage src={community.coverUrl} alt={community.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-black/40" />
 
         <div className="absolute top-4 left-4 sm:left-6 z-20">
@@ -495,7 +496,7 @@ export default function Communities() {
               {yourCircles.map(community => (
                 <motion.div key={community.id} variants={staggerItem} className="surface-1 rounded-3xl overflow-hidden flex flex-col border border-border/40 hover:border-primary/40 transition-all duration-300 group shadow-sm">
                   <div className="h-36 bg-muted relative shrink-0 overflow-hidden">
-                    <img src={community.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                    <ProtectedMediaImage src={community.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <span className="absolute top-3 right-3 text-[0.65rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-black/50 text-white backdrop-blur-sm">
                       {community.category}
@@ -563,7 +564,7 @@ export default function Communities() {
               {discoverCircles.map(community => (
                 <motion.div key={community.id} variants={staggerItem} className="surface-1 rounded-3xl overflow-hidden flex flex-col border border-border/40 hover:border-accent/40 transition-all duration-300 group shadow-sm">
                   <div className="h-36 bg-muted relative shrink-0 overflow-hidden">
-                    <img src={community.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                    <ProtectedMediaImage src={community.coverUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <span className="absolute top-3 right-3 text-[0.65rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-black/50 text-white backdrop-blur-sm">
                       {community.category}

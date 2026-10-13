@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { PageTransition } from '@/components/ui/PageTransition';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 interface Business {
   id: string;
@@ -119,7 +120,7 @@ export default function BusinessDashboard() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/30">
-                    {biz.logoUrl ? <img src={biz.logoUrl} alt={`${biz.name} logo`} className="h-full w-full object-cover rounded-2xl" /> : <Building2 className="w-8 h-8 text-primary" />}
+                    {biz.logoUrl ? <ProtectedMediaImage src={biz.logoUrl} alt={`${biz.name} logo`} className="h-full w-full object-cover rounded-2xl" /> : <Building2 className="w-8 h-8 text-primary" />}
                   </div>
                   <div>
                     <h3 className="font-bold text-xl font-display tracking-tight flex items-center gap-2">

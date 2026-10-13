@@ -18,6 +18,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 function CreateArticleDialog() {
   const createArticle = useAppStore((s) => s.createArticle);
@@ -224,7 +225,7 @@ export default function Articles() {
               whileHover={{ y: -3 }}
               className="relative h-72 sm:h-80 rounded-3xl overflow-hidden cursor-pointer group border border-border/30 shadow-lg"
             >
-              {featuredArticle.coverUrl && <img src={featuredArticle.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={featuredArticle.title} />}
+              {featuredArticle.coverUrl && <ProtectedMediaImage src={featuredArticle.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={featuredArticle.title} />}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8">
                 <ContentCategoryBadge value={featuredArticle.contentCategory} className="mb-3 w-fit border-white/25 bg-white/15 text-white" />
                 <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-white mb-3 line-clamp-2 leading-tight">{featuredArticle.title}</h2>
@@ -269,7 +270,7 @@ export default function Articles() {
                     className="surface-1 rounded-2xl overflow-hidden flex flex-col group cursor-pointer border border-border/40 hover:border-accent/40 transition-all duration-300"
                   >
                     <div className="h-44 overflow-hidden relative">
-                      {article.coverUrl && <img src={article.coverUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={article.title} />}
+                      {article.coverUrl && <ProtectedMediaImage src={article.coverUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={article.title} />}
                       <ContentCategoryBadge value={article.contentCategory} className="absolute left-3 top-3 border-white/25 bg-black/45 text-white backdrop-blur-md" />
                       <button 
                         onClick={(e) => { e.stopPropagation(); }} 

@@ -11,6 +11,7 @@ import { createTestUser } from './test-helpers.js';
 import { createMediaRouter } from '../routes/media.js';
 import { MediaService, MediaLifecycleError, type MediaModerator } from '../services/media-service.js';
 import { MediaDeliveryService, mediaDeliveryUrl } from '../services/media-delivery.js';
+import type { MediaAuthorizationService, MediaGrantContext } from '../services/media-authorization-service.js';
 import { mediaResponse } from '../services/media-response.js';
 import { closeAuthenticationDependencies } from '../middlewares/auth.js';
 import { closeRateLimitRedis } from '../middlewares/rate-limit.js';
@@ -28,6 +29,7 @@ function provider(overrides:Partial<MediaProvider>={}):MediaProvider{
     verifyIdentity:async()=>{},signedDeliveryUrl:()=>{throw new Error('Provider URL must stay internal');},signedPosterUrl:()=>{throw new Error('Provider URL must stay internal');},deleteAsset:async()=>{},deletePendingUpload:async()=>{},deleteUpload:async()=>{},deleteExpected:async()=>{},inspectReadiness:async()=>({storage:true,presets:true,direct:false,errorCodes:[]}),...overrides};
 }
 const redis=new RedisRepository(),users=new UserRepository();
+const allowMediaAuthorization={authorize:async()=>{}} as unknown as MediaAuthorizationService;
 async function json(response:Response):Promise<any>{return response.json();}
 after(async()=>{await Promise.all([redis.disconnect(),closeAuthenticationDependencies(),closeRateLimitRedis()]);await pool.end();});
 async function account(){
@@ -35,8 +37,8 @@ async function account(){
   const deviceId=randomUUID();await redis.setStrict(`session:${user.id}:${deviceId}`,'active',600);
   return {user,token:jwt.sign({sub:user.id,deviceId,type:'access',authVersion:user.authVersion??0},env.JWT_SECRET,{algorithm:'HS256',expiresIn:600})};
 }
-async function serve(t:{after(fn:()=>Promise<void>):void},storage=provider(),moderator=approved){
-  const service=new MediaService(storage,moderator),delivery=new MediaDeliveryService(storage);
+async function serve(t:{after(fn:()=>Promise<void>):void},storage=provider(),moderator=approved,authorization=allowMediaAuthorization){
+  const service=new MediaService(storage,moderator),delivery=new MediaDeliveryService(storage,undefined,authorization);
   const app=express();app.use(express.json());app.use(mediaResponse);app.use('/api',createMediaRouter(service,delivery));app.use('/api/business',businessRouter);app.use(errorHandler);
   const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
   t.after(()=>new Promise<void>(resolve=>server.close(()=>resolve())));
@@ -44,6 +46,10 @@ async function serve(t:{after(fn:()=>Promise<void>):void},storage=provider(),mod
   const base=`http://127.0.0.1:${address.port}/api`;
   const request=(path:string,token?:string,body?:unknown,method='POST')=>fetch(base+path,{method,headers:{...(token?{Authorization:`Bearer ${token}`}:{'X-Untrusted':'anonymous'}),...(!(body instanceof FormData)&&body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:body instanceof FormData?body:JSON.stringify(body)});
   return {service,delivery,request};
+}
+function ownerPreviewGrant(assetId:string,ownerId:string,deviceId:string,variant:'original'|'poster'='original'){
+  return mediaDeliveryUrl({assetId,entityType:'owner-preview',entityId:ownerId,slot:'ownerPreview',variant,ownerPreview:true,
+    viewer:{kind:'user',userId:ownerId,deviceId,authVersion:0,eligibilityRevision:'fixture-revision'},policyRevision:'fixture-revision'} satisfies Omit<MediaGrantContext,'v'|'exp'>);
 }
 test('production HTTP presign and multipart upload succeed through verified lifecycle; forged fields and cross-owner finalization fail',async t=>{
   const owner=await account(),other=await account();const {request}=await serve(t);
@@ -71,12 +77,12 @@ test('delivery verifies approved bytes, rejects token tampering/cross-ID replay,
   const owner=await account();const {service,delivery,request}=await serve(t);
   const prepared=await service.prepareUpload(owner.user.id,{filename:'a.png',mimeType:'image/png',size:buffer.length,purpose:'post'});
   await service.finalizeUpload(owner.user.id,prepared.id);
-  const url=new URL(mediaDeliveryUrl(prepared.id,'original',true)),token=url.searchParams.get('token')!;
+  const url=new URL(ownerPreviewGrant(prepared.id,owner.user.id,(jwt.decode(owner.token) as {deviceId:string}).deviceId)),token=url.searchParams.get('token')!;
   const response=await request(`/media/${prepared.id}/content?token=${token}`,undefined,undefined,'GET');assert.equal(response.status,200);
   assert.equal(response.headers.get('cache-control'),'private, no-store');assert.deepEqual(Buffer.from(await response.arrayBuffer()),buffer);
   await assert.rejects(()=>delivery.read(randomUUID(),token),MediaLifecycleError);
   await assert.rejects(()=>delivery.read(prepared.id,token.slice(0,-2)+'zz'),MediaLifecycleError);
-  const savedTtl=env.MEDIA_SIGNED_URL_TTL_SECONDS;env.MEDIA_SIGNED_URL_TTL_SECONDS=30;const futureToken=new URL(mediaDeliveryUrl(prepared.id,'original',true)).searchParams.get('token')!;
+  const savedTtl=env.MEDIA_SIGNED_URL_TTL_SECONDS;env.MEDIA_SIGNED_URL_TTL_SECONDS=30;const futureToken=new URL(ownerPreviewGrant(prepared.id,owner.user.id,(jwt.decode(owner.token) as {deviceId:string}).deviceId)).searchParams.get('token')!;
   env.MEDIA_SIGNED_URL_TTL_SECONDS=29;await assert.rejects(()=>delivery.read(prepared.id,futureToken),MediaLifecycleError);env.MEDIA_SIGNED_URL_TTL_SECONDS=savedTtl;
   await service.deleteUpload(owner.user.id,prepared.id);await assert.rejects(()=>delivery.read(prepared.id,token),MediaLifecycleError);
 });
@@ -84,8 +90,8 @@ test('replayed provider bytes after approval never reach the delivery response o
   const owner=await account(),storage=provider(),service=new MediaService(storage,approved);
   const media=await service.prepareUpload(owner.user.id,{filename:'a.png',mimeType:'image/png',size:buffer.length,purpose:'post'});await service.finalizeUpload(owner.user.id,media.id);
   const tampered=provider({verifyUpload:async intent=>{const result=await storage.verifyUpload(intent);return {...result,buffer:Buffer.from('unapproved replacement'),sha256:createHash('sha256').update('unapproved replacement').digest('hex')};}});
-  const token=new URL(mediaDeliveryUrl(media.id,'original',true)).searchParams.get('token')!;
-  await assert.rejects(()=>new MediaDeliveryService(tampered).read(media.id,token),error=>error instanceof MediaLifecycleError&&error.code==='media_verification_failed');
+  const token=new URL(ownerPreviewGrant(media.id,owner.user.id,(jwt.decode(owner.token) as {deviceId:string}).deviceId)).searchParams.get('token')!;
+  await assert.rejects(()=>new MediaDeliveryService(tampered,undefined,allowMediaAuthorization).read(media.id,token),error=>error instanceof MediaLifecycleError&&error.code==='media_verification_failed');
 });
 test('business and community images publish only owned approved purpose-specific IDs',async t=>{
   const owner=await account(),other=await account(),{request}=await serve(t);

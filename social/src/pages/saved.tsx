@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { api, type BackendVideo } from '@/lib/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProtectedMediaVideo } from '@/lib/protected-media';
 
 export default function Saved() {
   const posts = useAppStore((state) => state.posts.filter((post) => post.savedByMe));
@@ -70,7 +71,7 @@ export default function Saved() {
                 return (
                   <article key={video.id} className="surface-1 overflow-hidden rounded-3xl border border-border/40">
                     <div className="relative bg-black">
-                      <video src={video.videoUrl} poster={video.thumbnailUrl} controls preload="metadata" className="aspect-video w-full object-cover" />
+                      <ProtectedMediaVideo src={video.videoUrl} poster={video.thumbnailUrl} controls preload="metadata" className="aspect-video w-full object-cover" />
                       <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-[0.62rem] font-mono font-bold text-white"><Play className="h-3 w-3 fill-white" /> {video.type === 'short' ? 'REEL' : 'VIDEO'}</span>
                     </div>
                     <div className="p-4">

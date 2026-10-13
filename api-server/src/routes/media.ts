@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { MediaService, mediaError, MediaLifecycleError } from '../services/media-service.js';
 import { upload } from '../middlewares/upload.js';
-import { authenticate } from '../middlewares/auth.js';
+import { authenticate, optionalAuthenticate } from '../middlewares/auth.js';
 import { createResponse } from '../utils/response.js';
 import { mediaRateLimiter } from '../middlewares/rate-limit.js';
 import { MediaDeliveryService } from '../services/media-delivery.js';
@@ -12,10 +12,11 @@ const empty=z.object({}).strict();
 const fail=(res:Response,error:unknown)=>{const value=mediaError(error);res.status(value.status).json(createResponse(value.message,null,{},[value.code]));};
 export function createMediaRouter(service=new MediaService(),delivery=new MediaDeliveryService()):Router {
   const router=Router();
-  router.get('/media/:id/content',async(req:Request,res:Response)=>{
+  router.get('/media/:id/content',optionalAuthenticate,async(req:Request,res:Response)=>{
     try{
       if(typeof req.query.token!=='string')throw new MediaLifecycleError('Media delivery grant is required',403,'media_delivery_denied');
-      const content=await delivery.read(req.params.id as string,req.query.token);
+      const requester=req.user&&req.sessionIdentity?{userId:req.user.id,deviceId:req.sessionIdentity.deviceId,authVersion:req.sessionIdentity.authVersion}:{};
+      const content=await delivery.read(req.params.id as string,req.query.token,requester);
       res.setHeader('Content-Type',content.mime);res.setHeader('X-Content-Type-Options','nosniff');
       res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Disposition','inline');
       res.setHeader('Accept-Ranges','bytes');

@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 import { Mic } from 'lucide-react';
 import { useAppStore, type Message } from '@/lib/store';
 import { approvedMessageDeliveryUrl, readFreshMessageDelivery } from '@/lib/message-delivery';
+import { useProtectedMediaSource } from '@/lib/protected-media';
 
 export function MessageAttachment({ message }: { message: Message }) {
   const [location] = useLocation();
@@ -24,6 +25,8 @@ export function MessageAttachment({ message }: { message: Message }) {
   contextRef.current.present = present;
   const original = approvedMessageDeliveryUrl(message);
   const source = original && delivery && delivery.previous === message.mediaUrl ? delivery.url : original;
+  const protectedFailure = useCallback(() => setRecovery('failed'), []);
+  const protectedSource = useProtectedMediaSource(source, protectedFailure);
   const latestRef = useRef({ message, source });
   latestRef.current = { message, source };
 
@@ -87,7 +90,7 @@ export function MessageAttachment({ message }: { message: Message }) {
       {message.mediaType === 'audio' ? (
         <div className="operator-message-audio">
           <span><Mic aria-hidden="true" /></span>
-          <audio ref={audioRef} controls src={source ?? undefined} preload="metadata" aria-label="Voice note"
+          <audio ref={audioRef} controls src={protectedSource} preload="metadata" aria-label="Voice note"
             onError={() => void renew()}
             onCanPlay={restoreAudio}
             onRateChange={event => {
@@ -105,7 +108,7 @@ export function MessageAttachment({ message }: { message: Message }) {
             }}
           />
         </div>
-      ) : <img className="operator-message-image" src={source ?? undefined} alt="Shared attachment" loading="lazy" onError={() => void renew()} />}
+      ) : <img className="operator-message-image" src={protectedSource} alt="Shared attachment" loading="lazy" onError={() => void renew()} />}
       {status === 'pending' ? <p role="status">Refreshing attachment…</p> : status === 'failed' ? (
         <div role="alert">
           <p>Attachment could not load. Your message is still here.</p>

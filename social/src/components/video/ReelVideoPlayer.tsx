@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore, type Video } from '@/lib/store';
 import { applyFreshVideoDelivery, hasUploadedVideoDelivery, readFreshVideoDelivery } from '@/lib/video-delivery';
+import { useProtectedMediaSource } from '@/lib/protected-media';
 
 export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
   video: Video; active: boolean; muted: boolean; playbackSpeed: number;
@@ -22,6 +23,9 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
   videoRef.current = video;
   const source = delivery?.previous === video.videoUrl ? delivery.videoUrl : video.videoUrl;
   const poster = delivery?.previous === video.videoUrl ? delivery.thumbnailUrl : video.thumbnailUrl;
+  const protectedFailure = useCallback(() => setRecovery('failed'), []);
+  const protectedSource = useProtectedMediaSource(source, protectedFailure);
+  const protectedPoster = useProtectedMediaSource(poster, protectedFailure);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -102,8 +106,8 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
     <>
       <video
         ref={playerRef}
-        src={source}
-        poster={poster}
+        src={protectedSource}
+        poster={protectedPoster}
         className="operator-reel-video"
         muted={muted}
         loop

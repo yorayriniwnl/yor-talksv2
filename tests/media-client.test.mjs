@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { build } from 'esbuild';
-const bundled=await build({stdin:{contents:"export { api, setStoredTokens } from './social/src/lib/api-client'; export * from './social/src/lib/message-delivery';",resolveDir:process.cwd(),sourcefile:'media-client-test-entry.ts'},bundle:true,write:false,platform:'browser',format:'esm',define:{'import.meta.env':'{}'}});
+const bundled=await build({stdin:{contents:"export { api, setStoredTokens } from './social/src/lib/api-client'; export * from './social/src/lib/message-delivery'; export * from './social/src/lib/protected-media';",resolveDir:process.cwd(),sourcefile:'media-client-test-entry.ts'},bundle:true,write:false,platform:'browser',format:'esm',define:{'import.meta.env':'{}'}});
 async function clientModule(t){
   for(const [key,value]of Object.entries({localStorage:{getItem:()=>null,removeItem:()=>{}},window:{location:{origin:'https://app.example.test'}}})){
     const descriptor=Object.getOwnPropertyDescriptor(globalThis,key);Object.defineProperty(globalThis,key,{configurable:true,value});
@@ -175,6 +175,28 @@ test('invalid original message delivery fails before any authorized read or prov
     const original=message(invalid);assert.equal(approvedMessageDeliveryUrl(original),null);await assert.rejects(()=>readFreshMessageDelivery(original));
   }
   for(const invalid of [{id:'invalid'},{conversationId:'invalid'},{createdAt:'not-a-timestamp'}])await assert.rejects(()=>readFreshMessageDelivery(message(invalid)));
+  assert.equal(fetch.mock.callCount(),0);
+});
+
+test('protected media fetch uses the current bearer and revokes its object URL on dispose',async t=>{
+  const {fetchProtectedMedia}=await clientModule(t),source=`https://app.example.test/api/media/${mediaId}/content?token=short-lived`;
+  let createdBlob,revoked;
+  t.mock.method(URL,'createObjectURL',blob=>{createdBlob=blob;return 'blob:protected-media';});
+  t.mock.method(URL,'revokeObjectURL',value=>{revoked=value;});
+  const call=t.mock.method(globalThis,'fetch',async(url,options)=>{
+    assert.equal(url,source);assert.equal(options.headers.Authorization,'Bearer synthetic-access');
+    assert.equal(options.credentials,'include');assert.equal(options.cache,'no-store');
+    return new Response(new Blob(['private bytes'],{type:'image/png'}),{status:200});
+  });
+  const media=await fetchProtectedMedia(source);
+  assert.equal(media.objectUrl,'blob:protected-media');assert.equal(createdBlob.type,'image/png');
+  media.dispose();media.dispose();assert.equal(revoked,'blob:protected-media');assert.equal(call.mock.callCount(),1);
+});
+
+test('protected media refuses foreign and malformed proxy URLs before network access',async t=>{
+  const {fetchProtectedMedia}=await clientModule(t),fetch=t.mock.method(globalThis,'fetch',()=>{throw new Error('must not fetch');});
+  await assert.rejects(()=>fetchProtectedMedia(`https://attacker.test/api/media/${mediaId}/content?token=copy`),/invalid/);
+  await assert.rejects(()=>fetchProtectedMedia(`/api/media/${mediaId}/content`),/invalid/);
   assert.equal(fetch.mock.callCount(),0);
 });
 

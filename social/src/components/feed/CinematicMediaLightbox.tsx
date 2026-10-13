@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { fetchProtectedMedia, isGovernedMediaReference, ProtectedMediaImage, useProtectedMediaSource } from '@/lib/protected-media';
 
 interface CinematicMediaLightboxProps {
   media: string[];
@@ -32,6 +33,8 @@ export function CinematicMediaLightbox({
   const currentIndex = Math.min(Math.max(activeIndex, 0), Math.max(media.length - 1, 0));
   const currentMedia = media[currentIndex];
   const canNavigate = media.length > 1;
+  const failCurrentMedia = useCallback(() => setFailedImages(images => new Set(images).add(currentIndex)), [currentIndex]);
+  const currentMediaSource = useProtectedMediaSource(currentMedia, failCurrentMedia);
 
   const moveTo = (nextIndex: number) => {
     if (!canNavigate) return;
@@ -62,12 +65,26 @@ export function CinematicMediaLightbox({
   useEffect(() => {
     if (!open || !canNavigate) return;
 
+    const controllers: AbortController[] = [];
+    const owned: Array<{ dispose(): void }> = [];
     [currentIndex - 1, currentIndex + 1].forEach((index) => {
       const nearbyImage = media[(index + media.length) % media.length];
       if (!nearbyImage) return;
-      const preload = new Image();
-      preload.src = nearbyImage;
+      if (!isGovernedMediaReference(nearbyImage)) {
+        const preload = new Image();
+        preload.src = nearbyImage;
+        return;
+      }
+      const controller = new AbortController();
+      controllers.push(controller);
+      void fetchProtectedMedia(nearbyImage, controller.signal).then((resource) => {
+        owned.push(resource);
+        const preload = new Image();
+        preload.onload = preload.onerror = () => resource.dispose();
+        preload.src = resource.objectUrl;
+      }).catch(() => undefined);
     });
+    return () => { controllers.forEach(controller => controller.abort()); owned.forEach(resource => resource.dispose()); };
   }, [canNavigate, currentIndex, media, open]);
 
   if (!currentMedia) return null;
@@ -121,7 +138,7 @@ export function CinematicMediaLightbox({
               ) : (
                 <motion.img
                   key={currentMedia}
-                  src={currentMedia}
+                  src={currentMediaSource}
                   alt={`${authorName}'s post, image ${currentIndex + 1} of ${media.length}`}
                   initial={reduceMotion ? false : { opacity: 0, x: direction * 18, scale: 0.985 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -174,7 +191,7 @@ export function CinematicMediaLightbox({
                   aria-label={`View image ${index + 1}`}
                   aria-current={index === currentIndex ? 'true' : undefined}
                 >
-                  <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <ProtectedMediaImage src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
                 </button>
               ))}
             </div>

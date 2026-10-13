@@ -67,7 +67,7 @@ let memoryAccessToken: string | null = null;
 let explicitLogoutIntent = false;
 let sessionEpoch = 0;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
-let tokenChangeListener: ((token: string | null) => void) | null = null;
+const tokenChangeListeners = new Set<(token: string | null) => void>();
 
 export function getStoredTokens(): Tokens | null {
   if (memoryAccessToken) return { accessToken: memoryAccessToken };
@@ -128,13 +128,13 @@ function updateMemoryTokens(tokens: Tokens | null): void {
   } catch {
     // A restricted storage context must not prevent a memory-only logout.
   }
-  tokenChangeListener?.(memoryAccessToken);
+  for (const listener of tokenChangeListeners) listener(memoryAccessToken);
 }
 
 export function onStoredTokensChange(listener: (token: string | null) => void): () => void {
-  tokenChangeListener = listener;
+  tokenChangeListeners.add(listener);
   return () => {
-    if (tokenChangeListener === listener) tokenChangeListener = null;
+    tokenChangeListeners.delete(listener);
   };
 }
 

@@ -1,26 +1,36 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Volume2, Mic } from 'lucide-react';
 import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
+import { useProtectedMediaSource } from '@/lib/protected-media';
 
 interface AudioWaveformPlayerProps {
   duration?: string;
+  src?: string;
 }
 
-export function AudioWaveformPlayer({ duration = '0:42' }: AudioWaveformPlayerProps) {
+export function AudioWaveformPlayer({ duration = '0:42', src }: AudioWaveformPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const handleMediaError = useCallback(() => setIsPlaying(false), []);
+  const source = useProtectedMediaSource(src, handleMediaError);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     sounds.playPop();
-    setIsPlaying(!isPlaying);
+    const audio = audioRef.current;
+    if (!audio || !source) return;
+    if (isPlaying) audio.pause();
+    else void audio.play().catch(() => setIsPlaying(false));
   };
 
   const BARS = [30, 60, 45, 80, 100, 70, 40, 90, 65, 85, 50, 75, 95, 60, 40, 70, 90, 55, 35, 65];
 
   return (
     <div className="surface-1 rounded-2xl p-3.5 border border-border/40 flex items-center gap-3.5 max-w-sm my-2 font-sans shadow-sm">
+      <audio ref={audioRef} src={source} preload="metadata" className="sr-only"
+        onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} />
       <button
         onClick={togglePlay}
         className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center glow-neon-primary shrink-0 transition-transform active:scale-95"

@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 const EVENT_CATEGORIES = [
   'AI & Neural Tech',
@@ -246,7 +247,7 @@ export default function EventsPage() {
                 className="surface-1 rounded-2xl overflow-hidden flex flex-col group border border-border/40 hover:border-primary/40 transition-all duration-300"
               >
                 <div className="h-44 relative bg-muted overflow-hidden">
-                  {event.coverUrl && <img src={event.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />}
+                  {event.coverUrl && <ProtectedMediaImage src={event.coverUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   
                   {event.isOnline && (

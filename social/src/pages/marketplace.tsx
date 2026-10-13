@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 const PRODUCT_CATEGORIES = [
   'Hardware & Silicon',
@@ -306,7 +307,7 @@ export default function Marketplace() {
                   className="surface-1 rounded-3xl overflow-hidden border border-border/40 hover:border-emerald-500/50 transition-all duration-300 flex flex-col shadow-sm group p-4"
                 >
                   <div className="aspect-video relative rounded-2xl bg-black/60 overflow-hidden mb-4">
-                    <img src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.name} />
+                    <ProtectedMediaImage src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.name} />
                     {item.floatVal && (
                       <span className="absolute bottom-2 left-2 text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-black/70 text-zinc-300 border border-white/10">
                         Float: {item.floatVal}
@@ -392,7 +393,7 @@ export default function Marketplace() {
                     className="surface-1 rounded-3xl overflow-hidden group cursor-pointer border border-border/40 hover:border-primary/40 transition-all duration-300 flex flex-col shadow-sm"
                   >
                     <div className="aspect-square relative bg-muted overflow-hidden">
-                      <img src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
+                      <ProtectedMediaImage src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
                       <button 
                         onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }} 
                         className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors z-10"

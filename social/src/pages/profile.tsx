@@ -31,6 +31,7 @@ import { MediaImageField } from '@/components/media/MediaImageField';
 import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 import { toast } from 'sonner';
 import { computeLevel } from '@/lib/achievement-progress';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -179,7 +180,7 @@ function ShowcaseCard({ showcase, canRemove, onRemove }: { showcase: Showcase; c
             <h4 className="font-display font-bold text-[0.95rem] text-foreground leading-tight">{showcase.title}</h4>
             {showcase.customImageUrl && (
               <div className="w-full h-40 rounded-xl overflow-hidden mt-1 -mb-1">
-                <img src={showcase.customImageUrl} alt={showcase.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                <ProtectedMediaImage src={showcase.customImageUrl} alt={showcase.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
               </div>
             )}
             {showcase.customText && (
@@ -243,7 +244,7 @@ function PostGridItem({ post, onClick, canPin = false, onTogglePin, pinBusy = fa
     <div className="relative aspect-square overflow-hidden bg-muted group hover-lift">
       <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="h-full w-full cursor-pointer text-left" onClick={onClick}>
       {firstMedia ? (
-        <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+        <ProtectedMediaImage src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 to-accent/5">
           <p className="text-xs text-muted-foreground line-clamp-4 text-center font-serif leading-relaxed">{post.content}</p>
@@ -505,7 +506,7 @@ export default function Profile() {
          CINEMATIC COVER — 3D Parallax Tilt with gradient dissolve
          ══════════════════════════════════════════════════════════════════ */}
       <section className="operator-profile-cover" aria-label={`${profile.displayName}'s cover`}>
-        {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="operator-profile-cover__fallback"><span>YOR // IDENTITY NODE</span></div>}
+        {profile.coverUrl ? <ProtectedMediaImage src={profile.coverUrl} alt="" /> : <div className="operator-profile-cover__fallback"><span>YOR // IDENTITY NODE</span></div>}
         <div className="operator-profile-cover__shade" />
         <SignalLabel className="operator-profile-cover__label">Profile signal</SignalLabel>
       </section>
@@ -701,7 +702,7 @@ export default function Profile() {
             return <button type="button" key={group.title} onClick={() => setHighlightViewerOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group" aria-label={`Open ${group.title} highlights`}>
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-muted-foreground/20 to-muted-foreground/10">
                 <div className={cn("relative w-[58px] h-[58px] overflow-hidden rounded-full bg-gradient-to-br flex items-center justify-center text-xl border-[3px] border-background", gradients[index % gradients.length])}>
-                  {cover.type === 'image' && cover.mediaUrl ? <img src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
+                  {cover.type === 'image' && cover.mediaUrl ? <ProtectedMediaImage src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
                 </div>
               </div>
               <span className="text-[0.62rem] font-semibold text-foreground/80 truncate w-full text-center">{group.title}</span>

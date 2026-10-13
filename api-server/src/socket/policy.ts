@@ -3,6 +3,7 @@ import type { Server } from "socket.io";
 import type { Capability } from "../eligibility/types.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
 
 const id = z.string().uuid();
 const conversation = z.object({ conversationId: id }).strict();
@@ -80,18 +81,25 @@ export class SocketActionDeniedError extends Error {
 type SocketAuthorityDependencies = {
   userRepository?: Pick<UserRepository, "findById">;
   eligibilityService?: Pick<EligibilityService, "decisionFor">;
+  redisRepository?: Pick<RedisRepository, "getStrict">;
 };
 const defaultUserRepository = new UserRepository();
 const defaultEligibilityService = new EligibilityService();
+const defaultRedisRepository = new RedisRepository();
+export type SocketRequester = { userId: string; deviceId: string; authVersion: number };
 
 /** Reloads account status and the current database-backed eligibility decision for every action/delivery. */
-export async function authorizeSocketAction(userId: string, event: string, dependencies: SocketAuthorityDependencies = {}): Promise<void> {
+export async function authorizeSocketAction(userId: string, event: string, dependencies: SocketAuthorityDependencies = {}, requester?: SocketRequester): Promise<void> {
   const capability = SOCKET_EVENT_CAPABILITIES[event];
   if (!capability) throw new SocketActionDeniedError(undefined);
   const repository = dependencies.userRepository ?? defaultUserRepository;
   const eligibility = dependencies.eligibilityService ?? defaultEligibilityService;
   const user = await repository.findById(userId);
   if (!user || (user.accountStatus ?? "active") !== "active") throw new SocketActionDeniedError(capability);
+  if (requester && (requester.userId !== userId || requester.authVersion !== (user.authVersion ?? 0)
+    || !await (dependencies.redisRepository ?? defaultRedisRepository).getStrict(`session:${userId}:${requester.deviceId}`))) {
+    throw new SocketActionDeniedError(capability);
+  }
   const decision = await eligibility.decisionFor(userId);
   if (!decision.activated || !decision.capabilities[capability]) throw new SocketActionDeniedError(capability);
 }
@@ -101,7 +109,7 @@ export async function dispatchSocketToUsers(
   io: Server,
   userIds: string[],
   event: string,
-  payload: unknown,
+  payload: unknown | ((requester: SocketRequester) => unknown | Promise<unknown>),
   authorityEvent: string,
   excludeSocketId?: string,
 ): Promise<number> {
@@ -112,8 +120,12 @@ export async function dispatchSocketToUsers(
     for (const socket of sockets) {
       if (socket.id === excludeSocketId || socket.data.userId !== userId) continue;
       try {
-        await authorizeSocketAction(userId, authorityEvent);
-        io.to(socket.id).emit(event, payload);
+        const requester={userId,deviceId:String(socket.data.deviceId??''),authVersion:Number(socket.data.authVersion??-1)};
+        await authorizeSocketAction(userId, authorityEvent, {}, requester);
+        const recipientPayload=typeof payload==='function'?await payload(requester):payload;
+        // Authority may change while an asynchronous payload is hydrated.
+        await authorizeSocketAction(userId, authorityEvent, {}, requester);
+        io.to(socket.id).emit(event, recipientPayload);
         delivered++;
       } catch {
         // A revoked or restricted recipient receives no governed event.

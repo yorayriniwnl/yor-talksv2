@@ -8,6 +8,7 @@ import { useAppStore } from '@/lib/store';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 interface MiniProfileCardProps {
   user: User;
@@ -60,7 +61,7 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
             {/* Cover Banner */}
             <div className="h-24 w-full relative bg-muted overflow-hidden">
               {user.coverUrl ? (
-                <img src={user.coverUrl} alt="" className="w-full h-full object-cover" />
+                <ProtectedMediaImage src={user.coverUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full aurora-bg" />
               )}

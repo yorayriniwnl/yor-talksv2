@@ -27,6 +27,7 @@ import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -233,7 +234,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
             <div className={cn('mb-3 mt-2 grid gap-2 overflow-hidden rounded-xl', media.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
               {media.map((url) => (
                 <div key={url} className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted">
-                  <img src={url} alt="Selected upload" className="max-h-72 w-full object-cover" />
+                  <ProtectedMediaImage src={url} alt="Selected upload" className="max-h-72 w-full object-cover" />
                   <button 
                     type="button" 
                     onClick={() => removeMedia(url)} 
@@ -455,8 +456,8 @@ export function PostCard({ post }: { post: PostType }) {
       return <div className="yor-post-media mt-3 flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-border/20">
         {post.media.map((url, index) => <div key={url} className="min-w-full snap-center bg-muted">
           {isVideo(url)
-            ? <video src={url} controls playsInline preload="metadata" aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
-            : <button type="button" className="w-full" aria-label={`Open image ${index + 1} of ${len}`} onClick={event => openMediaViewer(event, index)}><img src={url} alt={`${authorDisplayName}'s post`} loading="lazy" className="w-full object-cover max-h-[480px]" /></button>}
+            ? <ProtectedMediaVideo src={url} controls playsInline preload="metadata" aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
+            : <button type="button" className="w-full" aria-label={`Open image ${index + 1} of ${len}`} onClick={event => openMediaViewer(event, index)}><ProtectedMediaImage src={url} alt={`${authorDisplayName}'s post`} loading="lazy" className="w-full object-cover max-h-[480px]" /></button>}
         </div>)}
       </div>;
     }
@@ -482,7 +483,7 @@ export function PostCard({ post }: { post: PostType }) {
             className="relative overflow-hidden bg-muted group/media select-none text-left w-full focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Open image 1 of 1"
           >
-            <img 
+            <ProtectedMediaImage
               src={post.media[0]} 
               alt={`${authorDisplayName}'s post`} 
               className="w-full object-cover transition-transform duration-700 group-hover/media:scale-[1.02] max-h-[480px]" 
@@ -520,7 +521,7 @@ export function PostCard({ post }: { post: PostType }) {
               className="min-w-full snap-center flex-shrink-0 relative bg-muted select-none text-left focus-visible:outline-none"
               aria-label={`Image ${index + 1} of ${len}`}
             >
-              <img 
+              <ProtectedMediaImage
                 src={url} 
                 alt={`${authorDisplayName}'s post`} 
                 className="w-full object-cover max-h-[480px]" 

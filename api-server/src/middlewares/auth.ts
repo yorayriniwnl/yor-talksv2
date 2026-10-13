@@ -26,6 +26,8 @@ declare global {
       };
       /** Current server decision. It is loaded from private DB authority for this request. */
       eligibility?: EligibilityDecision;
+      /** Verified access-token device binding for protected media fetches. */
+      sessionIdentity?: { deviceId: string; authVersion: number };
     }
   }
 }
@@ -74,6 +76,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       accountStatus: user.accountStatus ?? "active",
     };
     req.eligibility = decision;
+    req.sessionIdentity = { deviceId: decoded.deviceId, authVersion: decoded.authVersion ?? 0 };
 
     return enforceRouteAuthority(req, res, next);
   } catch (error) {
@@ -101,6 +104,7 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
     if (decision.activated) {
       req.user = { id: user.id, role: user.role, permissions: user.permissions ?? [], accountStatus: user.accountStatus ?? "active" };
       req.eligibility = decision;
+      req.sessionIdentity = { deviceId: decoded.deviceId, authVersion: decoded.authVersion ?? 0 };
     }
   } catch (error) {
     if (!(error instanceof jwt.JsonWebTokenError)) return unavailable(res);
