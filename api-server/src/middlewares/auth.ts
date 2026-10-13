@@ -6,7 +6,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 import type { EligibilityDecision } from "../eligibility/types.js";
-import { isRestrictedRightsRouteAllowed, isRestrictedRouteAllowed } from "../eligibility/restricted-routes.js";
+import { enforceRouteAuthority } from "./eligibility.js";
 
 interface JwtPayload {
   sub?: string;
@@ -44,17 +44,6 @@ function unavailable(res: Response) {
   return res.status(503).json(createResponse("Session verification is temporarily unavailable", null));
 }
 
-function rejectRestrictedRequest(req: Request, res: Response) {
-  const accountStatus = req.user?.accountStatus ?? "active";
-  const moderationRestricted = accountStatus === "suspended" || accountStatus === "deactivated"
-    || req.eligibility?.reason === "account_restricted";
-  const allowed = moderationRestricted
-    ? isRestrictedRightsRouteAllowed(req.method, req.originalUrl)
-    : isRestrictedRouteAllowed(req.method, req.originalUrl);
-  if (!allowed) return res.status(403).json(createResponse("Account access is restricted", null, {}, ["eligibility_required"]));
-  return undefined;
-}
-
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ") || header.length <= "Bearer ".length) {
@@ -86,11 +75,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     };
     req.eligibility = decision;
 
-    if (!decision.activated) {
-      const blocked = rejectRestrictedRequest(req, res);
-      if (blocked) return blocked;
-    }
-    return next();
+    return enforceRouteAuthority(req, res, next);
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
     return unavailable(res);

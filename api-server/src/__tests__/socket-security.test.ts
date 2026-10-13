@@ -10,6 +10,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 
 const userId = "10000000-0000-4000-8000-000000000001";
 const recipientId = "10000000-0000-4000-8000-000000000002";
@@ -27,12 +28,20 @@ async function fixture(t: TestContext) {
   const original = { PUBLIC_BETA: env.PUBLIC_BETA, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, RTC_CALLS_ENABLED: env.RTC_CALLS_ENABLED };
   Object.assign(env, { PUBLIC_BETA: true, LIVE_ROOMS_ENABLED: false, RTC_CALLS_ENABLED: false });
   t.after(() => Object.assign(env, original));
-  const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0 };
+  const state = { consent: true, active: true, authVersion: 0, budget: true, joinsFail: false, sent: 0, lookups: 0, restrictedUsers: new Set<string>() };
   t.mock.method(RedisRepository.prototype, "getStrict", async () => state.active ? "session" : null);
   t.mock.method(RedisRepository.prototype, "consumeBudgetStrict", async () => state.budget);
   t.mock.method(UserRepository.prototype, "findById", async (id: string) => {
     state.lookups++;
-    return { id, authVersion: state.authVersion, accountStatus: "active", termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
+    return { id, authVersion: state.authVersion, accountStatus: "active", role: "user", permissions: [],
+      termsVersion: state.consent ? env.TERMS_VERSION : "outdated", termsAcceptedAt: "2026-08-31", ageConfirmedAt: "2026-08-31" };
+  });
+  t.mock.method(EligibilityService.prototype, "decisionFor", async (id: string) => {
+    const activated = state.consent && !state.restrictedUsers.has(id);
+    return { experience: activated ? "adult_18_plus" : "unknown", activated,
+      capabilities: Object.fromEntries(["social", "publish", "messaging", "payments", "seller", "memberships", "live", "rtc", "ai", "analytics", "profiling"]
+        .map(capability => [capability, activated])), maximumContentRating: "child_safe", policyVersions: [], revision: "fixture",
+      reason: activated ? null : "verification_required", publicBrowsingAllowed: false } as never;
   });
   t.mock.method(ConversationRepository.prototype, "listForUser", async () => []);
   t.mock.method(ConversationRepository.prototype, "getMembers", async () => {
@@ -66,7 +75,7 @@ async function fixture(t: TestContext) {
       client.connect();
     });
   };
-  return { state, connect };
+  return { state, connect, server: sockets };
 }
 
 test("socket schemas reject null, malformed IDs, mass assignment and oversized messages", () => {
@@ -82,10 +91,11 @@ test("socket schemas reject null, malformed IDs, mass assignment and oversized m
 test("socket handshake rejects stale consent and hostile browser origins", async (t) => {
   const { state, connect } = await fixture(t);
   state.consent = false;
-  await assert.rejects(connect(), /Current terms acceptance required/);
+  await assert.rejects(connect(), /Authentication error/);
   state.consent = true;
+  const lookupsBeforeOrigin = state.lookups;
   await assert.rejects(connect(userId, "https://attacker.example"), /websocket error/i);
-  assert.equal(state.lookups, 1, "origin must be rejected before user lookup");
+  assert.equal(state.lookups, lookupsBeforeOrigin, "origin must be rejected before user lookup");
 });
 
 test("connected sockets recheck consent and revocation before an action", async (t) => {
@@ -131,6 +141,28 @@ test("new direct messages reach the recipient's connected devices on the first e
   const received = event(recipient, "message:receive");
   sender.emit("message:send", { recipientId, content: "First message", textStyleId: 'mono' });
   assert.equal((await received).content, "First message");
+  assert.equal(state.sent, 1);
+});
+
+test("message delivery disconnects a recipient whose current messaging authority was revoked", async t => {
+  const { state, connect, server } = await fixture(t);
+  const sender = await connect();
+  const recipient = await connect(recipientId);
+  let receivedCount = 0;
+  recipient.on("message:receive", () => { receivedCount++; });
+  recipient.emit("conversation:join", { conversationId });
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal((await server.in(`conversation:${conversationId}`).fetchSockets()).length, 1);
+  state.restrictedUsers.add(recipientId);
+  const disconnected = event(recipient, "disconnect");
+  const sent = event(sender, "message:sent");
+  sender.emit("message:send", { recipientId, content: "Must not be delivered" });
+  await sent;
+  await disconnected;
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(recipient.connected, false);
+  assert.equal(receivedCount, 0);
+  assert.equal((await server.in(`conversation:${conversationId}`).fetchSockets()).length, 0, "revoked recipient leaves all social rooms");
   assert.equal(state.sent, 1);
 });
 

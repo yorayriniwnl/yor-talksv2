@@ -35,8 +35,14 @@ import premiumRouter from './premium.js';
 import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
 import eligibilityRouter from './eligibility.js';
+import { rejectUnmappedProtectedRoute } from '../middlewares/eligibility.js';
 
 const router: IRouter = Router();
+
+// Reject a generated authenticated operation as soon as its reviewed route
+// authority is missing. authenticate repeats the current capability check
+// after loading the account and private eligibility decision.
+router.use(rejectUnmappedProtectedRoute);
 
 router.use(healthRouter);
 router.use(diagnosticsRouter);

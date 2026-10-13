@@ -169,6 +169,8 @@ test("HTTP authentication grants only identity and rights routes to restricted a
   } as never, {} as never, {} as never);
   app.get("/api/users/me", authenticate, userController.getCurrentUser);
   app.get("/api/users/me/export", authenticate, (req, res) => res.json({ id: req.user?.id, activated: req.eligibility?.activated }));
+  app.get("/api/users/me/eligibility", authenticate, (req, res) => res.json({ role: req.user?.role }));
+  app.post("/api/reports", authenticate, (_req, res) => res.sendStatus(201));
   app.get("/api/v1/users/me/export", authenticate, (req, res) => res.json({ id: req.user?.id, activated: req.eligibility?.activated }));
   app.post("/api/users/me/eligibility/challenges", authenticate, (_req, res) => res.sendStatus(200));
   app.post("/api/v1/posts", authenticate, (_req, res) => res.sendStatus(201));
@@ -183,7 +185,7 @@ test("HTTP authentication grants only identity and rights routes to restricted a
     server.close(error => error ? reject(error) : resolve());
   }));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const accessToken = () => jwt.sign({ sub: userId, type: "access", authVersion: 4, deviceId: "device-1" }, env.JWT_SECRET, { expiresIn: "10m" });
+  const accessToken = () => jwt.sign({ sub: userId, type: "access", authVersion: 4, deviceId: "device-1", role: "admin", permissions: ["admin"] }, env.JWT_SECRET, { expiresIn: "10m" });
   const headers = () => ({ authorization: `Bearer ${accessToken()}` });
 
   const exportResponse = await fetch(`${base}/api/users/me/export`, { headers: headers() });
@@ -192,6 +194,10 @@ test("HTTP authentication grants only identity and rights routes to restricted a
   assert.equal((await fetch(`${base}/api/v1/posts`, { method: "POST", headers: headers() })).status, 403);
   assert.equal((await fetch(`${base}/api/users/me/eligibility/challenges`, { method: "POST", headers: headers() })).status, 200);
   assert.equal(factReads, 3, "each authenticated request reloads current private eligibility facts");
+  const eligibilityResponse = await fetch(`${base}/api/users/me/eligibility`, { headers: headers() });
+  assert.deepEqual(await eligibilityResponse.json(), { role: "user" }, "JWT role and permission claims are ignored");
+  assert.equal((await fetch(`${base}/api/reports`, { method: "POST", headers: headers() })).status, 201,
+    "the safety reporting route is available without social activation");
   const meResponse = await fetch(`${base}/api/users/me`, { headers: headers() });
   assert.equal(meResponse.status, 200);
   const meBody = await meResponse.json() as { data: Record<string, unknown> };
