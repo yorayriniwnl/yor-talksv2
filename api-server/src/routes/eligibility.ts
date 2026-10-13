@@ -2,13 +2,19 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.js';
 import { validateBody, validateParams } from '../middlewares/validation.js';
 import { assuranceStartIpLimiter, assuranceStartSubjectLimiter, assurancePollLimiter, assuranceCallbackLimiter } from '../middlewares/rate-limit.js';
-import { assuranceChallengeSchema, eligibilityChallengeParams, guardianJourneySchema, guardianAuthorizationParams } from '../validators/eligibility.js';
+import { assuranceChallengeSchema, eligibilityChallengeParams, guardianJourneySchema, guardianAuthorizationParams,
+  enrollmentParams, enrollmentPrescreenSchema, enrollmentCredentialSchema, enrollmentChallengeSchema } from '../validators/eligibility.js';
 import { AssuranceService } from '../services/assurance-service.js';
+import { EligibilityEnrollmentService } from '../services/eligibility-enrollment-service.js';
 import { EligibilityController } from '../controllers/eligibility-controller.js';
 import { assuranceCallbackBody } from '../middlewares/assurance-body.js';
 
-export function createEligibilityRouter(service = new AssuranceService()) {
-  const router = Router(); const controller = new EligibilityController(service);
+export function createEligibilityRouter(service = new AssuranceService(), enrollments = new EligibilityEnrollmentService(service)) {
+  const router = Router(); const controller = new EligibilityController(service,enrollments);
+  router.post('/eligibility/enrollments/prescreen',assuranceStartIpLimiter,validateBody(enrollmentPrescreenSchema),controller.prescreen);
+  router.post('/eligibility/enrollments/:enrollmentId/status',assurancePollLimiter,validateParams(enrollmentParams),validateBody(enrollmentCredentialSchema),controller.enrollmentStatus);
+  router.post('/eligibility/enrollments/:enrollmentId/challenges',assuranceStartIpLimiter,assuranceStartSubjectLimiter,
+    validateParams(enrollmentParams),validateBody(enrollmentChallengeSchema),controller.enrollmentChallenge);
   router.get('/users/me/eligibility',authenticate,assurancePollLimiter,controller.status);
   router.post('/users/me/eligibility/challenges',authenticate,assuranceStartIpLimiter,assuranceStartSubjectLimiter,validateBody(assuranceChallengeSchema),controller.challenge);
   router.get('/users/me/eligibility/challenges/:challengeId',authenticate,assurancePollLimiter,validateParams(eligibilityChallengeParams),controller.challengeStatus);

@@ -32,6 +32,19 @@ export type ChallengeConsumption = EligibilitySubject & {
   challengeId: string; issuer: string; audience: string; purpose: AssurancePurpose;
   nonceHash: string; eventId: string; subjectRevision: string;
 };
+export type EnrollmentStatus = 'pending' | 'authorized' | 'consumed' | 'revoked' | 'expired';
+/** Private pre-account record. Credential digests and proof never enter safe DTOs. */
+export interface EligibilityEnrollment {
+  id: string; credentialHash: string; requestedExperience: Exclude<Experience, 'unknown'>; territory: string;
+  status: EnrollmentStatus; revision: string; registrationNonceHash: string | null;
+  policyVersions: PolicyVersions; noticeVersions: Record<string, string>;
+  authorizedAt: string | null; consumedAt: string | null; expiresAt: string;
+}
+/** Server-private proof transferred atomically when an authorized enrollment creates an account. */
+export interface EnrollmentAuthorization {
+  enrollmentId: string; experience: Exclude<Experience, 'unknown'>; territory: string;
+  assessment: EligibilityAssessment; guardianAuthorizations: GuardianAuthorization[]; policyVersions: PolicyVersions;
+}
 export interface EligibilityFacts {
   account: { id: string; status: string; termsVersion: string | null; termsAcceptedAt: string | null; contentPreference: ContentRating };
   revision: string;

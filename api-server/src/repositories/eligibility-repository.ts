@@ -1,6 +1,6 @@
 import { db, type DbTransaction } from '@workspace/db';
 import { sql } from 'drizzle-orm';
-import type { ChallengeConsumption, EligibilityAssessment, EligibilityFacts, EligibilitySubject, GuardianAuthorization, PrivateAssuranceChallenge } from '../eligibility/types.js';
+import type { ChallengeConsumption, EligibilityAssessment, EligibilityEnrollment, EligibilityFacts, EligibilitySubject, GuardianAuthorization, PrivateAssuranceChallenge, PolicyVersions, Experience } from '../eligibility/types.js';
 
 type PrivateRow = Record<string, unknown>;
 export class EligibilitySubjectUnavailableError extends Error { constructor() { super('Eligibility subject unavailable'); } }
@@ -24,6 +24,57 @@ function authorizationFromRow(row: PrivateRow): GuardianAuthorization {
 
 /** No profile repository, generic export or session claim reads these private records. */
 export class EligibilityRepository {
+  async createEnrollment(value: { id: string; credentialHash: string; registrationNonceHash: string;
+    requestedExperience: Exclude<Experience, 'unknown'>; territory: string; expiresAt: string }, tx: DbTransaction): Promise<void> {
+    await tx.execute(sql`INSERT INTO eligibility_enrollments(id,credential_hash,registration_nonce_hash,requested_experience,territory,expires_at)
+      VALUES(${value.id},${value.credentialHash},${value.registrationNonceHash},${value.requestedExperience},${value.territory},${value.expiresAt})`);
+  }
+
+  async readEnrollment(enrollmentId: string, tx?: DbTransaction): Promise<EligibilityEnrollment | undefined> {
+    const result = await (tx ?? db).execute(sql`SELECT * FROM eligibility_enrollments WHERE id=${enrollmentId}`);
+    const row = result.rows[0];
+    return row ? { id: String(row.id), credentialHash: String(row.credential_hash),
+      requestedExperience: row.requested_experience as EligibilityEnrollment['requestedExperience'], territory: String(row.territory),
+      status: row.status as EligibilityEnrollment['status'], revision: String(row.revision),
+      registrationNonceHash: row.registration_nonce_hash == null ? null : String(row.registration_nonce_hash),
+      policyVersions: row.policy_versions as PolicyVersions, noticeVersions: row.notice_versions as Record<string,string>,
+      authorizedAt: timestamp(row.authorized_at), consumedAt: timestamp(row.consumed_at), expiresAt: timestamp(row.expires_at)! } : undefined;
+  }
+
+  async readEnrollmentEvidence(enrollmentId: string, tx: DbTransaction): Promise<{ assessment?: EligibilityAssessment; guardianAuthorizations: GuardianAuthorization[] }> {
+    const assessmentResult = await tx.execute(sql`SELECT * FROM eligibility_assessments WHERE enrollment_id=${enrollmentId}
+      ORDER BY subject_revision DESC,created_at DESC,id DESC LIMIT 1`);
+    const guardianResult = await tx.execute(sql`SELECT * FROM guardian_authorizations WHERE enrollment_id=${enrollmentId}
+      ORDER BY created_at,id`);
+    return { assessment: assessmentResult.rows[0] ? assessmentFromRow(assessmentResult.rows[0]) : undefined,
+      guardianAuthorizations: guardianResult.rows.map(authorizationFromRow) };
+  }
+
+  async authorizeEnrollment(enrollmentId: string, policyVersions: PolicyVersions, noticeVersions: Record<string,string>, tx: DbTransaction): Promise<boolean> {
+    const result = await tx.execute(sql`UPDATE eligibility_enrollments SET status='authorized',authorized_at=clock_timestamp(),
+      policy_versions=${JSON.stringify(policyVersions)}::jsonb,notice_versions=${JSON.stringify(noticeVersions)}::jsonb
+      WHERE id=${enrollmentId} AND status='pending' AND expires_at>clock_timestamp() AND registration_nonce_hash IS NOT NULL
+      RETURNING id`);
+    return Boolean(result.rowCount);
+  }
+
+  async bindEnrollment(enrollmentId: string, userId: string, credentialHash: string, tx: DbTransaction): Promise<void> {
+    const result = await tx.execute(sql`UPDATE eligibility_enrollments SET status='consumed',bound_user_id=${userId},consumed_at=clock_timestamp()
+      WHERE id=${enrollmentId} AND status='authorized' AND expires_at>clock_timestamp()
+      AND credential_hash=${credentialHash} AND registration_nonce_hash=${credentialHash} RETURNING id`);
+    if (!result.rowCount) throw new EligibilitySubjectUnavailableError();
+    const proof = await tx.execute(sql`UPDATE eligibility_assessments SET user_id=${userId},enrollment_id=NULL
+      WHERE enrollment_id=${enrollmentId} RETURNING id`);
+    const guardians = await tx.execute(sql`UPDATE guardian_authorizations SET user_id=${userId},enrollment_id=NULL
+      WHERE enrollment_id=${enrollmentId} RETURNING id`);
+    let revision = await this.advanceRevision(userId,tx);
+    for (const assessment of proof.rows) await tx.execute(sql`UPDATE eligibility_assessments SET subject_revision=${revision}::bigint WHERE id=${assessment.id}`);
+    for (const authorization of guardians.rows) {
+      revision = await this.advanceRevision(userId,tx);
+      await tx.execute(sql`UPDATE guardian_authorizations SET subject_revision=${revision}::bigint WHERE id=${authorization.id}`);
+    }
+  }
+
   async readFacts(userId: string, tx?: DbTransaction): Promise<EligibilityFacts | undefined> {
     // A single statement keeps account, proof, guardian state and revision on
     // one READ COMMITTED snapshot. Select the latest record, never an older

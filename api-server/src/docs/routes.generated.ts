@@ -634,6 +634,33 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/eligibility/enrollments/{enrollmentId}/challenges",
+    "operationId": "postEligibilityEnrollmentsByEnrollmentIdChallenges",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/{enrollmentId}/challenges",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/eligibility/enrollments/{enrollmentId}/status",
+    "operationId": "postEligibilityEnrollmentsByEnrollmentIdStatus",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/{enrollmentId}/status",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/eligibility/enrollments/prescreen",
+    "operationId": "postEligibilityEnrollmentsPrescreen",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/prescreen",
+    "authenticated": false,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/events",
     "operationId": "getEvents",

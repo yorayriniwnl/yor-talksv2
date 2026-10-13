@@ -5,6 +5,7 @@ import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../
 import { createResponse } from "../utils/response.js";
 import { toOwnUser } from "../utils/user-view.js";
 import { isDatabaseUnavailableError } from "../utils/database-error.js";
+import { EnrollmentUnavailableError } from "../services/eligibility-enrollment-service.js";
 
 export class AuthController {
   private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
@@ -58,6 +59,9 @@ export class AuthController {
       }
       if (error instanceof UserAlreadyExistsError) {
         return res.status(409).json(createResponse("An account already exists for that email or username", null, {}, [error.message]));
+      }
+      if (error instanceof EnrollmentUnavailableError) {
+        return res.status(503).json(createResponse("The approved registration journey is unavailable",null,{},["enrollment_unavailable"]));
       }
       return res.status(503).json(createResponse("Registration is temporarily unavailable", null, {}, ["Please try again shortly"]));
     }

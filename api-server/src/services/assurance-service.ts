@@ -62,7 +62,7 @@ export class AssuranceService {
     finally { if (timer) clearTimeout(timer); }
   }
   async startOwnerChallenge(userId: string,input: AssuranceChallengeInput) { return this.startChallenge({ userId },input); }
-  async startChallenge(subject: EligibilitySubject,input: AssuranceChallengeInput) {
+  async startChallenge(subject: EligibilitySubject,input: AssuranceChallengeInput,precondition?: { subjectRevision: string; policyFingerprint: string }) {
     const parsed = assuranceChallengeSchema.parse(input); this.available();
     const nonce = randomBytes(32).toString('base64url');
     const challenge = await db.transaction(async tx => {
@@ -79,8 +79,13 @@ export class AssuranceService {
         notices[purpose] = values[0];
       }
       if (await this.repository.pendingChallenges(subject,tx)>=(this.options.maxOutstanding ?? 3)) throw new AssuranceRequestError('challenge_limit_exceeded');
+      const currentFingerprint = policyFingerprint(registry,this.operatorIds());
+      const subjectRevision = await this.repository.subjectRevision(subject,tx);
+      if (precondition && (precondition.policyFingerprint!==currentFingerprint || precondition.subjectRevision!==subjectRevision)) {
+        throw new AssuranceRequestError('territory_unavailable');
+      }
       const value: PrivateAssuranceChallenge = { ...subject,id: randomUUID(),issuer: this.adapter.issuer,audience: this.adapter.audience,
-        purpose: parsed.purpose,nonceHash: digest(nonce),subjectRevision: await this.repository.subjectRevision(subject,tx),
+        purpose: parsed.purpose,nonceHash: digest(nonce),subjectRevision,
         policyVersions: Object.fromEntries(policies.map(policy => [policy.id,policy.version])),noticeVersions: notices,requestedPurposes,
         territory: parsed.territory,policyFingerprint: policyFingerprint(registry,this.operatorIds()),expiresAt: new Date(now.getTime()+10*60_000).toISOString() };
       await this.repository.createChallenge(value,tx); return value;
@@ -89,6 +94,16 @@ export class AssuranceService {
       const result = await this.bounded(this.adapter.start({ ...challenge,nonce }));
       const redirect = new URL(result.redirectUrl);
       if (redirect.protocol!=='https:' || redirect.username || redirect.password || !this.adapter.redirectOrigins.includes(redirect.origin)) throw new AssuranceUnavailableError();
+      await db.transaction(async tx => {
+        await this.repository.lockSubject(subject,tx);
+        const now = await this.repository.databaseTime(tx);
+        const currentRegistry = this.registry();
+        const currentPolicies = applicablePolicies({ declaredTerritory: parsed.territory,operatorPolicyIds: this.operatorIds() },currentRegistry,now);
+        const currentRevision = await this.repository.subjectRevision(subject,tx);
+        if (currentRevision!==challenge.subjectRevision || challenge.policyFingerprint!==policyFingerprint(currentRegistry,this.operatorIds())
+          || Date.parse(challenge.expiresAt)<=now.getTime() || !currentPolicies
+          || !sameMap(challenge.policyVersions,Object.fromEntries(currentPolicies.map(policy => [policy.id,policy.version])))) throw new CallbackRejected();
+      });
       return { challengeId: challenge.id,nextStep: 'verification_required' as const,redirectUrl: redirect.href,expiresAt: challenge.expiresAt };
     } catch {
       await this.repository.revokeChallenge(challenge.id).catch(() => undefined);
@@ -137,6 +152,7 @@ export class AssuranceService {
           ...event.assessment,policyVersions: event.policyVersions,verifiedAt: event.verifiedAt,expiresAt: event.expiresAt },tx);
         else await this.repository.storeGuardianAuthorization({ ...subject,id: randomUUID(),status: 'granted',issuer: event.issuer,...event.guardian,
           policyVersions: event.policyVersions,verifiedAt: event.verifiedAt,expiresAt: event.expiresAt,withdrawnAt: null },tx);
+        if (subject.enrollmentId) await this.refreshEnrollmentAuthorization(subject.enrollmentId,tx);
         // Re-check after awaited writes: withdrawal/policy replacement cannot
         // be silently authorised by an earlier in-process registry snapshot.
         await this.finalBoundary(tx,fingerprint,event.expiresAt,challenge.expiresAt,challenge.territory!);
@@ -152,6 +168,47 @@ export class AssuranceService {
     const now = await this.repository.databaseTime(tx); const registry = this.registry();
     if (policyFingerprint(registry,this.operatorIds())!==fingerprint || Math.min(Date.parse(eventExpiry),Date.parse(challengeExpiry))<=now.getTime()
       || !applicablePolicies({ declaredTerritory: territory,operatorPolicyIds: this.operatorIds() },registry,now)) throw new CallbackRejected();
+  }
+  private async refreshEnrollmentAuthorization(enrollmentId: string,tx: DbTransaction) {
+    const enrollment = await this.repository.readEnrollment(enrollmentId,tx);
+    const now = await this.repository.databaseTime(tx);
+    if (!enrollment || enrollment.status!=='pending' || Date.parse(enrollment.expiresAt)<=now.getTime()) return;
+    const registry = this.registry();
+    const policies = applicablePolicies({ declaredTerritory: enrollment.territory,operatorPolicyIds: this.operatorIds() },registry,now);
+    if (!policies || policies.some(policy => !policy.allowedExperiences.includes(enrollment.requestedExperience))) return;
+    const evidence = await this.repository.readEnrollmentEvidence(enrollmentId,tx);
+    const assessment = evidence.assessment;
+    const verifiedExperience = assessment?.experience;
+    if (!assessment || assessment.status!=='verified' || verifiedExperience==='unknown' || verifiedExperience!==enrollment.requestedExperience
+      || assessment.territory!==enrollment.territory || !assessment.verifiedAt || Date.parse(assessment.verifiedAt)>now.getTime()
+      || Date.parse(assessment.expiresAt)<=now.getTime() || !sameMap(assessment.policyVersions,Object.fromEntries(policies.map(policy => [policy.id,policy.version])))) return;
+    const thresholdValue = (age: number): boolean | undefined => {
+      const direct = assessment.thresholds.find(item => item.age===age);
+      if (direct) return direct.atLeast;
+      if (assessment.thresholds.some(item => item.atLeast && item.age>age)) return true;
+      if (assessment.thresholds.some(item => !item.atLeast && item.age<age)) return false;
+      return undefined;
+    };
+    if (policies.some(policy => !policy.allowedExperiences.includes(verifiedExperience)
+      || policy.minimumAccessThreshold!==null && thresholdValue(policy.minimumAccessThreshold)!==true)) return;
+    const requiredPurposes = new Set(policies.flatMap(policy => policy.requiredGuardianPurposes));
+    if (enrollment.requestedExperience==='under_13') requiredPurposes.add('account_collection');
+    const noticeVersions: Record<string,string> = {};
+    for (const purpose of requiredPurposes) {
+      const expected = policies.map(policy => policy.guardianNoticeVersions[purpose]);
+      if (expected.some(version => !version || version!==expected[0])) return;
+      const candidates = evidence.guardianAuthorizations.filter(value => value.purposes.includes(purpose));
+      if (!candidates.length || candidates.some(value => !/^[1-9]\d*$/.test(value.subjectRevision ?? ''))) return;
+      candidates.sort((a,b) => BigInt(a.subjectRevision!) > BigInt(b.subjectRevision!) ? -1 : BigInt(a.subjectRevision!) < BigInt(b.subjectRevision!) ? 1 : 0);
+      const authorization = candidates[0];
+      if (candidates[1]?.subjectRevision===authorization.subjectRevision || authorization.status!=='granted' || authorization.withdrawnAt!==null
+        || Date.parse(authorization.verifiedAt)>now.getTime() || Date.parse(authorization.grantedAt)>now.getTime()
+        || Date.parse(authorization.expiresAt)<=now.getTime() || !sameMap(authorization.policyVersions,Object.fromEntries(policies.map(policy => [policy.id,policy.version])))) return;
+      if (policies.some(policy => policy.requiredGuardianPurposes.includes(purpose)
+        && authorization.noticeVersions[purpose]!==policy.guardianNoticeVersions[purpose])) return;
+      noticeVersions[purpose] = expected[0];
+    }
+    await this.repository.authorizeEnrollment(enrollmentId,Object.fromEntries(policies.map(policy => [policy.id,policy.version])),noticeVersions,tx);
   }
   async ownerStatus(userId: string) {
     return new EligibilityService(this.repository,{ policies: () => this.registry(),operatorPolicyIds: this.operatorIds() }).decisionFor(userId);

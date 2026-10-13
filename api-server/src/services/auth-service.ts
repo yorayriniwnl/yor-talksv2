@@ -7,7 +7,7 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { db } from "@workspace/db";
+import { db, type DbTransaction } from "@workspace/db";
 import { userFollowsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
@@ -16,6 +16,8 @@ import type { AuthTokens, UserRecord } from "../types/index.js";
 import { isAllowedEmail } from "../validators/auth.js";
 import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 import { decryptSecret, encryptSecret } from "../lib/secret-box.js";
+import { AssuranceService } from "./assurance-service.js";
+import { EligibilityEnrollmentService } from "./eligibility-enrollment-service.js";
 
 export class TooManyAttemptsError extends Error {}
 export type LoginApprovalChallenge = {
@@ -63,6 +65,9 @@ export class AuthService {
     redisRepository = new RedisRepository(),
     securityService?: SecurityService,
     emailService = new EmailService(),
+    private readonly enrollmentService = new EligibilityEnrollmentService(new AssuranceService()),
+    private readonly googleClientFactory: (clientId: string) => OAuth2Client = clientId => new OAuth2Client(clientId),
+    private readonly transactionRunner: <T>(operation: (tx: DbTransaction) => Promise<T>) => Promise<T> = operation => db.transaction(operation),
   ) {
     this.userRepository = userRepository;
     this.redisRepository = redisRepository;
@@ -76,74 +81,69 @@ export class AuthService {
     password: string;
     fullName: string;
     acceptedTerms: boolean;
-    confirmedAge: boolean;
+    enrollmentId: string;
+    registrationNonce: string;
   }): Promise<{ user: UserRecord; verificationToken?: string }> {
-    if (input.acceptedTerms !== true || input.confirmedAge !== true) {
-      throw new RegistrationNotAllowedError("You must accept the current terms and confirm the minimum age");
-    }
-    const email = input.email.trim().toLowerCase();
-    if (!isAllowedEmail(email)) {
-      throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
-    }
-
-    const existingEmail = await this.userRepository.findByEmail(email);
     const normalizedUsername = input.username.trim().toLowerCase();
-    const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
-    const existing = existingEmail ?? existingUsername;
-    
-    if (existing) {
-      throw new UserAlreadyExistsError("An account already exists for that email or username");
-    }
+    const email = input.email.trim().toLowerCase();
+    const userId = randomUUID();
+    const user = await this.transactionRunner(async tx => {
+      // Lock and validate the one-time enrollment before querying or storing
+      // ordinary child/profile identifiers. The enrollment is consumed in the
+      // same transaction as account creation, so concurrent attempts cannot
+      // both create a user.
+      const authorization = await this.enrollmentService.consumeAuthorizedEnrollment(input.enrollmentId,input.registrationNonce,tx);
+      if (input.acceptedTerms !== true) throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
+      if (!isAllowedEmail(email)) throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
+      const existingEmail = await this.userRepository.findByEmail(email,tx);
+      const existingUsername = await this.userRepository.findByUsername(normalizedUsername,tx);
+      if (existingEmail || existingUsername) throw new UserAlreadyExistsError("An account already exists for that email or username");
 
-    const passwordHash = await bcrypt.hash(input.password, 10);
-    const consentTimestamp = new Date().toISOString();
-    const user: UserRecord = {
-      id: randomUUID(),
-      username: normalizedUsername,
-      email,
-      passwordHash,
-      termsVersion: env.TERMS_VERSION,
-      termsAcceptedAt: consentTimestamp,
-      ageConfirmedAt: consentTimestamp,
-      fullName: input.fullName,
-      bio: "",
-      avatarUrl: null,
-      role: "user",
-      permissions: ["read:profile", "write:post"],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      settings: {
-        theme: "light",
-        notificationsEnabled: true,
-        privateAccount: false,
-        allowMentions: true,
-        contentFilter: "regular",
-        onboardingCompleted: false,
-      },
-      emailVerified: false,
-      contactIdentityDigest: getContactIdentifierDigest("email", email),
-      passwordResetRequired: false,
-      lastLoginAt: null,
-      devices: [],
-      blockedUsers: [],
-      mutedUsers: [],
-      privacy: {
-        profileVisibility: "public",
-        messageRequests: true,
-        allowDmFromStrangers: true,
-      },
-    };
-
-    await this.userRepository.create(user);
-    let verificationToken: string | undefined;
-    try {
-      verificationToken = await this.requestEmailVerification(user.id);
-    } catch (error) {
-      // Do not leave an account that can never complete onboarding when the
-      // production email provider rejects the first verification message.
-      await this.userRepository.deleteById(user.id);
-      throw error;
-    }
+      const passwordHash = await bcrypt.hash(input.password,10);
+      const consentTimestamp = new Date().toISOString();
+      const minor = authorization.experience !== 'adult_18_plus';
+      const record: UserRecord = {
+        id: userId,
+        username: normalizedUsername,
+        email,
+        passwordHash,
+        termsVersion: env.TERMS_VERSION,
+        termsAcceptedAt: consentTimestamp,
+        // This legacy field remains a self-attestation in old accounts. A
+        // verified enrollment is recorded only in the private eligibility tables.
+        ageConfirmedAt: null,
+        fullName: input.fullName,
+        bio: "",
+        avatarUrl: null,
+        role: "user",
+        permissions: ["read:profile"],
+        createdAt: consentTimestamp,
+        updatedAt: consentTimestamp,
+        settings: {
+          theme: "light",
+          notificationsEnabled: false,
+          privateAccount: true,
+          allowMentions: false,
+          contentFilter: minor ? "child_safe" : "regular",
+          onboardingCompleted: false,
+        },
+        emailVerified: false,
+        contactIdentityDigest: getContactIdentifierDigest("email",email),
+        passwordResetRequired: false,
+        lastLoginAt: null,
+        devices: [],
+        blockedUsers: [],
+        mutedUsers: [],
+        privacy: { profileVisibility: "private",messageRequests: false,allowDmFromStrangers: false },
+      };
+      const created = await this.userRepository.create(record,tx);
+      await this.enrollmentService.bindAuthorizedEnrollment(authorization,input.registrationNonce,userId,tx);
+      return created;
+    });
+    // Email delivery happens after the atomic account/enrollment commit. If a
+    // provider is temporarily unavailable the unverified account can use the
+    // existing resend path; deleting it would also destroy its consumed proof.
+    const verificationToken = await this.requestEmailVerification(user.id);
     return {
       user,
       verificationToken,
@@ -203,7 +203,7 @@ export class AuthService {
       throw new GoogleSignInNotConfiguredError("Google sign-in is not configured");
     }
 
-    const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+    const googleClient = this.googleClientFactory(env.GOOGLE_CLIENT_ID);
     let payload;
     try {
       const ticket = await googleClient.verifyIdToken({

@@ -57,6 +57,32 @@ const authorizationPurposes = ['account_collection','account_activation','social
 const assurancePurposesSchema = { type: 'array',minItems: 1,maxItems: 3,uniqueItems: true,items: { type: 'string',enum: authorizationPurposes } };
 const territorySchema = { type: 'string',pattern: '^[A-Z]{2}$' };
 const eligibilitySchemas = {
+  RegisterRequest: { type: 'object',additionalProperties: false,required: ['enrollmentId','registrationNonce','username','email','password','fullName','acceptedTerms'],properties: {
+    enrollmentId: { type: 'string',format: 'uuid' },registrationNonce: { type: 'string',minLength: 32,maxLength: 128,description: 'Short-lived opaque one-time registration credential. Never place it in a URL or log.' },
+    username: { type: 'string',pattern: '^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$' },email: { type: 'string',format: 'email' },password: { type: 'string',minLength: 8 },
+    fullName: { type: 'string',minLength: 2 },acceptedTerms: { const: true },
+  } },
+  EnrollmentPrescreenRequest: { type: 'object',additionalProperties: false,required: ['requestedExperience','territory'],properties: {
+    requestedExperience: { type: 'string',enum: ['under_13','teen_13_17','adult_18_plus'] },territory: territorySchema,
+  } },
+  EnrollmentCredentialRequest: { type: 'object',additionalProperties: false,required: ['registrationNonce'],properties: {
+    registrationNonce: { type: 'string',minLength: 32,maxLength: 128 },
+  } },
+  EnrollmentChallengeRequest: { type: 'object',additionalProperties: false,required: ['registrationNonce','purpose'],properties: {
+    registrationNonce: { type: 'string',minLength: 32,maxLength: 128 },purpose: { type: 'string',enum: ['guardian_authorization','age_assessment'] },
+  } },
+  SafeEnrollmentStatus: { type: 'object',additionalProperties: false,required: ['status','nextStep'],properties: {
+    status: { type: 'string',enum: ['unavailable','verification_required','authorized'] },nextStep: { type: ['string','null'],enum: [null,'guardian_authorization','age_assessment','complete_registration'] },
+    enrollment: { type: 'object',additionalProperties: false,required: ['id','registrationNonce','expiresAt'],properties: {
+      id: { type: 'string',format: 'uuid' },registrationNonce: { type: 'string',minLength: 32,maxLength: 128 },expiresAt: { type: 'string',format: 'date-time' },
+    } },
+  } },
+  SafeEnrollmentProgress: { type: 'object',additionalProperties: false,required: ['status','nextStep'],properties: {
+    status: { type: 'string',enum: ['unavailable','verification_required','authorized'] },nextStep: { type: ['string','null'],enum: [null,'guardian_authorization','age_assessment','complete_registration'] },
+    enrollment: { type: 'object',additionalProperties: false,required: ['id','expiresAt'],properties: {
+      id: { type: 'string',format: 'uuid' },expiresAt: { type: 'string',format: 'date-time' },
+    } },
+  } },
   AssuranceChallengeRequest: { oneOf: [
     { type: 'object',additionalProperties: false,required: ['purpose','territory'],properties: { purpose: { const: 'age_assessment' },territory: territorySchema } },
     { type: 'object',additionalProperties: false,required: ['purpose','territory','purposes'],properties: { purpose: { const: 'guardian_authorization' },territory: territorySchema,purposes: assurancePurposesSchema } },
@@ -85,6 +111,10 @@ const eligibilitySchemas = {
 function eligibilityContract(route) {
   const key = `${route.method} ${route.path}`;
   const definitions = {
+    'post /auth/register': { request: 'RegisterRequest',created: true },
+    'post /eligibility/enrollments/prescreen': { request: 'EnrollmentPrescreenRequest',result: 'SafeEnrollmentStatus' },
+    'post /eligibility/enrollments/{enrollmentId}/status': { request: 'EnrollmentCredentialRequest',result: 'SafeEnrollmentProgress' },
+    'post /eligibility/enrollments/{enrollmentId}/challenges': { request: 'EnrollmentChallengeRequest',result: 'AssuranceChallengeReceipt',created: true },
     'get /users/me/eligibility': { result: 'EligibilityDecision' },
     'post /users/me/eligibility/challenges': { request: 'AssuranceChallengeRequest',result: 'AssuranceChallengeReceipt',created: true },
     'get /users/me/eligibility/challenges/{challengeId}': { result: 'AssuranceChallengeStatus' },

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
-import { db } from "@workspace/db";
+import { db, type DbTransaction } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
 
 export class UserRepository {
@@ -154,14 +154,18 @@ export class UserRepository {
     ));
   }
 
-  async create(user: UserRecord): Promise<UserRecord> {
+  async create(user: UserRecord, tx?: DbTransaction): Promise<UserRecord> {
     const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUser } = user;
+    if (tx) {
+      const [created] = await tx.insert(usersTable).values(persistedUser).returning();
+      return created as UserRecord;
+    }
     const [created] = await db.insert(usersTable).values(persistedUser).returning();
     return created as UserRecord;
   }
 
-  async findByEmail(email: string): Promise<UserRecord | undefined> {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  async findByEmail(email: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
+    const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.email, email));
     return user as UserRecord | undefined;
   }
 
@@ -170,8 +174,8 @@ export class UserRepository {
     return user as UserRecord | undefined;
   }
 
-  async findByUsername(username: string): Promise<UserRecord | undefined> {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+  async findByUsername(username: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
+    const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.username, username));
     return user as UserRecord | undefined;
   }
 

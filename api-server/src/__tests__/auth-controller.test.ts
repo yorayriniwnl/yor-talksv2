@@ -6,6 +6,8 @@ import { AuthService, TwoFactorRequiredError } from "../services/auth-service.js
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
+import { randomUUID } from "node:crypto";
+import { EligibilityEnrollmentService } from "../services/eligibility-enrollment-service.js";
 
 type CapturedResponse = Response & {
   statusCode: number;
@@ -58,9 +60,15 @@ const makeResponse = () => {
 };
 
 test("auth controller returns success on register", async () => {
-  const controller = new AuthController(new AuthService(new UserRepository(), redisRepository));
+  const enrollmentService = {
+    consumeAuthorizedEnrollment: async (enrollmentId: string) => ({ enrollmentId,experience: 'adult_18_plus' as const,territory: 'US',
+      assessment: {} as never,guardianAuthorizations: [],policyVersions: {} }),
+    bindAuthorizedEnrollment: async () => undefined,
+  } as unknown as EligibilityEnrollmentService;
+  const controller = new AuthController(new AuthService(new UserRepository(),redisRepository,undefined,undefined,enrollmentService));
   const unique = Date.now();
-  const req = { body: { username: `bob-${unique}`, email: `${String(unique).slice(-7)}@kiit.ac.in`, password: "supersecret", fullName: "Bob Example", acceptedTerms: true, confirmedAge: true } } as Request;
+  const req = { body: { enrollmentId: randomUUID(),registrationNonce: randomUUID()+randomUUID(),username: `bob-${unique}`,
+    email: `${String(unique).slice(-7)}@kiit.ac.in`,password: "supersecret",fullName: "Bob Example",acceptedTerms: true } } as Request;
   const res = makeResponse();
 
   await controller.register(req, res);

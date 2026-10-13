@@ -18,6 +18,8 @@ export function isAllowedEmail(email: string): boolean {
 const allowedEmailSchema = z.string().trim().email().refine(isAllowedEmail, "This email domain is not allowed for this deployment");
 
 export const registerSchema = z.object({
+  enrollmentId: z.string().uuid(),
+  registrationNonce: z.string().min(32).max(128),
   username: z.string().trim().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$/, "Username must be 3-24 characters using letters, numbers, underscores, or hyphens"),
   email: allowedEmailSchema,
   password: z
@@ -29,8 +31,7 @@ export const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   fullName: z.string().min(2),
   acceptedTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the current Terms and Privacy Notice" }) }),
-  confirmedAge: z.literal(true, { errorMap: () => ({ message: "You must confirm that you meet the minimum age" }) }),
-});
+}).strict();
 
 export const acceptTermsSchema = z.object({
   acceptedTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the current Terms and Privacy Notice" }) }),
