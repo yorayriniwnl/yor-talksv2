@@ -7,6 +7,7 @@ import { DEFAULT_CONTENT_CATEGORY } from "../utils/content-category.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 
 const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
@@ -45,7 +46,8 @@ export class NoteService {
   }
 
   async listVisibleNotes(viewerId: string): Promise<NoteRecord[]> {
-    const notes = await this.noteRepository.listActive(viewerId);
+    const viewerCeiling = isEligibilityEnforcementEnabled() ? await this.contentSafetyService.getViewerFilter(viewerId) : undefined;
+    const notes = await this.noteRepository.listActive(viewerId, viewerCeiling);
     return this.contentSafetyService.filterVisibleByAuthor(notes, viewerId, note => note.authorId, { discovery: true });
   }
 

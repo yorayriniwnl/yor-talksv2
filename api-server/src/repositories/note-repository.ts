@@ -2,6 +2,8 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import { db, userNotesTable } from "@workspace/db";
 import type { NoteRecord } from "../types/index.js";
 import { discoveryScope } from './discovery-scope.js';
+import type { ContentRating } from '../utils/content-safety.js';
+import { isEligibilityEnforcementEnabled } from '../eligibility/enforcement.js';
 
 export class NoteRepository {
   async replaceForAuthor(note: NoteRecord): Promise<NoteRecord> {
@@ -14,11 +16,13 @@ export class NoteRepository {
     return created as NoteRecord;
   }
 
-  async listActive(viewerId?: string): Promise<NoteRecord[]> {
+  async listActive(viewerId?: string, viewerCeiling?: ContentRating): Promise<NoteRecord[]> {
     return (await db
       .select()
       .from(userNotesTable)
-      .where(and(gt(userNotesTable.expiresAt, new Date().toISOString()), discoveryScope(userNotesTable, viewerId)))
+      .where(and(gt(userNotesTable.expiresAt, new Date().toISOString()),
+        discoveryScope({ ...userNotesTable, entityId: userNotesTable.id, entityType: 'user_notes' }, viewerId, viewerCeiling,
+          isEligibilityEnforcementEnabled())))
       .orderBy(desc(userNotesTable.createdAt), desc(userNotesTable.id))
       .limit(100)) as NoteRecord[];
   }

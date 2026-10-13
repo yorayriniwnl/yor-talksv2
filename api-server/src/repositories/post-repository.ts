@@ -16,12 +16,24 @@ import type { PostRecord } from "../types/index.js";
 
 import { sql } from "drizzle-orm";
 import type { ContentRating } from "../utils/content-safety.js";
+import { CONTENT_CLASSIFICATION_POLICY_VERSION } from "../eligibility/content-policy.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 
 type PostCursor = { createdAt: string; id: string };
 type TrendingCursor = { score: number; createdAt: string; id: string };
 
 export class ProfilePinLimitError extends Error {}
 export class ProfilePinOrderError extends Error {}
+
+function addContentRatingFilters(filters: any[], contentFilter?: ContentRating): void {
+  if (contentFilter === "child_safe") {
+    filters.push(eq(postsTable.contentRating, "child_safe"));
+    if (isEligibilityEnforcementEnabled()) filters.push(sql`exists(select 1 from content_safety_classifications c
+      where c.entity_type='posts' and c.entity_id=${postsTable.id} and c.status='approved'
+        and c.classification='child_safe' and c.policy_version=${CONTENT_CLASSIFICATION_POLICY_VERSION})`);
+  }
+  if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+}
 
 export function encodePostCursor(post: Pick<PostRecord, "id" | "createdAt">): string {
   return Buffer.from(JSON.stringify({ createdAt: post.createdAt, id: post.id }), "utf8").toString("base64url");
@@ -52,9 +64,11 @@ function decodeTrendingCursor(value: string | undefined): TrendingCursor | undef
 export class PostRepository {
   constructor(private readonly searchMode: 'auto' | 'fallback' = 'auto') {}
 
-  async findByIds(ids: string[]): Promise<PostRecord[]> {
+  async findByIds(ids: string[], contentFilter?: ContentRating): Promise<PostRecord[]> {
     if (!ids.length) return [];
-    return await db.select().from(postsTable).where(inArray(postsTable.id, ids)) as PostRecord[];
+    const filters = [inArray(postsTable.id, ids)];
+    addContentRatingFilters(filters, contentFilter);
+    return await db.select().from(postsTable).where(and(...filters)) as PostRecord[];
   }
 
   async pinPost(postId: string, userId: string, maximum = 6): Promise<PostRecord | undefined> {
@@ -186,8 +200,7 @@ export class PostRepository {
   async listBookmarked(userId: string, limit = 100, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters: any[] = [eq(postBookmarksTable.userId, userId)];
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     const rows = await db.select({ post: postsTable })
       .from(postBookmarksTable)
       .innerJoin(postsTable, eq(postBookmarksTable.postId, postsTable.id))
@@ -200,8 +213,7 @@ export class PostRepository {
   async listLiked(userId: string, limit = 100, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {
     const filters: any[] = [eq(postLikesTable.userId, userId)];
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     const rows = await db.select({ post: postsTable })
       .from(postLikesTable)
       .innerJoin(postsTable, eq(postLikesTable.postId, postsTable.id))
@@ -329,8 +341,7 @@ export class PostRepository {
   async findById(id: string, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord | undefined> {
     const filters = [eq(postsTable.id, id)];
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     const [post] = await db.select().from(postsTable).where(and(...filters));
     return post as PostRecord | undefined;
   }
@@ -343,8 +354,7 @@ export class PostRepository {
       if (cursorFilter) filters.push(cursorFilter);
     }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     const rows = await db.select({ post: postsTable, pinnedPosition: profilePostPinsTable.position })
       .from(postsTable)
       .leftJoin(profilePostPinsTable, and(
@@ -369,8 +379,7 @@ export class PostRepository {
     }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     return (await db.select().from(postsTable).where(and(...filters)).orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
   }
 
@@ -380,8 +389,7 @@ export class PostRepository {
     if (parsedCursor) filters.push(or(lt(postsTable.createdAt, parsedCursor.createdAt), and(eq(postsTable.createdAt, parsedCursor.createdAt), lt(postsTable.id, parsedCursor.id))));
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     let q = db.select().from(postsTable).$dynamic();
     if (filters.length > 0) q = q.where(and(...filters));
     return (await q.orderBy(desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
@@ -399,8 +407,7 @@ export class PostRepository {
     }
     if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
     filters.push(eq(postsTable.distributionMode, "feed_and_profile"));
-    if (contentFilter === "child_safe") filters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") filters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(filters, contentFilter);
     let q = db.select().from(postsTable).$dynamic();
     if (filters.length > 0) q = q.where(and(...filters));
     return (await q.orderBy(desc(postsTable.score), desc(postsTable.createdAt)).limit(limit)) as PostRecord[];
@@ -408,10 +415,10 @@ export class PostRepository {
 
   /** DB-level content search, so this doesn't pull the whole table into memory to filter in JS. */
   async search(query: string, limit: number = 50, excludedAuthorIds: string[] = [], contentFilter?: ContentRating, viewerId?: string): Promise<PostRecord[]> {
-    const candidateFilters = [discoveryScope(postsTable, viewerId), eq(postsTable.distributionMode, "feed_and_profile")];
+    const candidateFilters = [discoveryScope({ ...postsTable, entityId: postsTable.id, entityType: 'posts' }, viewerId, contentFilter),
+      eq(postsTable.distributionMode, "feed_and_profile")];
     if (excludedAuthorIds.length > 0) candidateFilters.push(notInArray(postsTable.authorId, excludedAuthorIds));
-    if (contentFilter === "child_safe") candidateFilters.push(eq(postsTable.contentRating, "child_safe"));
-    if (contentFilter === "regular") candidateFilters.push(inArray(postsTable.contentRating, ["child_safe", "regular"]));
+    addContentRatingFilters(candidateFilters, contentFilter);
     const indexState = await pool.query<{ is_ready: boolean }>(`
       SELECT EXISTS (
         SELECT 1

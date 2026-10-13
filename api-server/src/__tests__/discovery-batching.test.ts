@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, test, type TestContext } from 'node:test';
-import { db, pool, storiesTable, userNotesTable, postsTable } from '@workspace/db';
+import { contentSafetyClassificationsTable, db, pool, storiesTable, userNotesTable, postsTable } from '@workspace/db';
 import { inArray } from 'drizzle-orm';
 import { UserRepository } from '../repositories/user-repository.js';
 import { StoryRepository } from '../repositories/story-repository.js';
@@ -11,6 +11,10 @@ import { StoryService } from '../services/story-service.js';
 import { NoteService } from '../services/note-service.js';
 import { PostRepository } from '../repositories/post-repository.js';
 import { SearchService } from '../services/search-service.js';
+import { EligibilityService } from '../services/eligibility-service.js';
+import type { EligibilityDecision } from '../eligibility/types.js';
+import { env } from '../config/env.js';
+import { CONTENT_CLASSIFICATION_POLICY_VERSION, contentHashFor, contentRevisionFor } from '../eligibility/content-policy.js';
 import { createTestUser } from './test-helpers.js';
 import type { StoryRecord, UserRecord } from '../types/index.js';
 
@@ -86,6 +90,82 @@ test('Story and Note discovery batch mixed audiences and retain ranking with con
   assert.deepEqual(result.value.filter(row=>noteIds.has(row.id)).map(row=>row.id).sort(),f.noteRows.filter((_,i)=>[0,1,3,4].includes(i%10)).map(row=>row.id).sort());
   const anonymous = await service.listActiveStories();
   assert.deepEqual(anonymous.filter(row=>storyIds.has(row.id)).map(row=>row.id).sort(),f.storyRows.filter((_,i)=>[0,7,8].includes(i%10)).map(row=>row.id).sort());
+});
+
+test('current teen ceiling filters story and note candidates before the SQL page limit', async t => {
+  const originalNodeEnv = env.NODE_ENV;
+  env.NODE_ENV = 'production';
+  t.after(() => { env.NODE_ENV = originalNodeEnv; });
+  let currentDecision: EligibilityDecision = {
+    experience: 'teen_13_17', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: 'regular', policyVersions: ['fixture:1'], revision: 'ceiling-test', reason: null,
+    publicBrowsingAllowed: true,
+  };
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => currentDecision);
+  const f = await fixture(t, 0);
+  await users.update(f.viewer.id, { settings: { ...f.viewer.settings, contentFilter: 'mature' } });
+  const author = await f.create();
+  const now = Date.now(), expiresAt = new Date(now + 3_600_000).toISOString();
+  const storiesToInsert: typeof storiesTable.$inferInsert[] = [];
+  const notesToInsert: typeof userNotesTable.$inferInsert[] = [];
+  const allowedStoryIds = new Set<string>(), allowedNoteIds = new Set<string>();
+  for (let i = 0; i < 105; i++) {
+    const allowed = i >= 100;
+    const createdAt = new Date(now + (allowed ? -10_000 + i : 10_000 + i)).toISOString();
+    const storyId = randomUUID(), noteId = randomUUID();
+    if (allowed) { allowedStoryIds.add(storyId); allowedNoteIds.add(noteId); }
+    storiesToInsert.push({ id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Policy page fixture',
+      audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: allowed ? 'regular' : 'mature' });
+    notesToInsert.push({ id: noteId, authorId: author.id, content: 'Policy page fixture', createdAt, expiresAt,
+      audience: 'public', contentRating: allowed ? 'regular' : 'mature' });
+  }
+  await db.insert(storiesTable).values(storiesToInsert);
+  await db.insert(userNotesTable).values(notesToInsert);
+  const storyService = new StoryService(stories, new ContentSafetyService(users), undefined, users);
+  const noteService = new NoteService(notes, users, new ContentSafetyService(users));
+  const visibleStories = (await storyService.listActiveStories(f.viewer.id)).filter(row => row.authorId === author.id);
+  const visibleNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => row.authorId === author.id);
+  assert.deepEqual(new Set(visibleStories.map(row => row.id)), allowedStoryIds);
+  assert.deepEqual(new Set(visibleNotes.map(row => row.id)), allowedNoteIds);
+
+  currentDecision = { ...currentDecision, experience: 'under_13', maximumContentRating: 'child_safe' };
+  const childSafeStories: typeof storiesTable.$inferInsert[] = [];
+  const childSafeNotes: typeof userNotesTable.$inferInsert[] = [];
+  const approvedIds: string[] = [];
+  const childSafeStoryIds = new Set<string>(), childSafeNoteIds = new Set<string>();
+  for (let i = 0; i < 105; i++) {
+    const approved = i >= 100;
+    const createdAt = new Date(now + (approved ? -10_000 + i : 30_000 + i)).toISOString();
+    const storyId = randomUUID(), noteId = randomUUID();
+    if (approved) { childSafeStoryIds.add(storyId); childSafeNoteIds.add(noteId); approvedIds.push(storyId, noteId); }
+    const story = { id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Child-safe page fixture', contentCategory: 'other',
+      audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: 'child_safe' } as const;
+    const note = { id: noteId, authorId: author.id, content: 'Child-safe page fixture', createdAt, expiresAt,
+      audience: 'public', contentCategory: 'other', contentRating: 'child_safe' } as const;
+    childSafeStories.push(story);
+    childSafeNotes.push(note);
+  }
+  const savedChildSafeStories = await db.insert(storiesTable).values(childSafeStories).returning();
+  const savedChildSafeNotes = await db.insert(userNotesTable).values(childSafeNotes).returning();
+  const approvedClassifications: typeof contentSafetyClassificationsTable.$inferInsert[] = [];
+  for (const [entityType, items] of [
+    ['stories', savedChildSafeStories.filter(item => childSafeStoryIds.has(item.id))],
+    ['user_notes', savedChildSafeNotes.filter(item => childSafeNoteIds.has(item.id))],
+  ] as const) for (const item of items) {
+    const record = item as unknown as Record<string, unknown>, contentHash = contentHashFor(record);
+    approvedClassifications.push({ id: randomUUID(), entityType, entityId: item.id, contentRevision: contentRevisionFor(record, contentHash),
+      contentHash, classification: 'child_safe', issuer: 'fixture:reviewer', status: 'approved',
+      policyVersion: CONTENT_CLASSIFICATION_POLICY_VERSION, approvedAt: new Date(now).toISOString() });
+    approvedIds.push(item.id);
+  }
+  await db.insert(contentSafetyClassificationsTable).values(approvedClassifications);
+  t.after(async () => { if (approvedIds.length) await pool.query('DELETE FROM content_safety_classifications WHERE entity_id=ANY($1::uuid[])', [approvedIds]); });
+  const visibleChildSafeStories = (await storyService.listActiveStories(f.viewer.id)).filter(row => childSafeStoryIds.has(row.id));
+  const visibleChildSafeNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => childSafeNoteIds.has(row.id));
+  assert.deepEqual(new Set(visibleChildSafeStories.map(row => row.id)), childSafeStoryIds);
+  assert.deepEqual(new Set(visibleChildSafeNotes.map(row => row.id)), childSafeNoteIds);
 });
 
 test('restricted newest candidates cannot starve an older eligible Story or Note', async t => {
