@@ -13,11 +13,13 @@ import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
 import type { AuthTokens, UserRecord } from "../types/index.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 import { isAllowedEmail } from "../validators/auth.js";
 import { getContactIdentifierDigest } from "../utils/contact-shield.js";
 import { decryptSecret, encryptSecret } from "../lib/secret-box.js";
 import { AssuranceService } from "./assurance-service.js";
 import { EligibilityEnrollmentService } from "./eligibility-enrollment-service.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class TooManyAttemptsError extends Error {}
 export type LoginApprovalChallenge = {
@@ -51,8 +53,10 @@ export class TwoFactorRequiredError extends Error {
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
 export class GoogleSignInNotConfiguredError extends Error {}
+export class EligibilityDecisionUnavailableError extends Error { constructor() { super("Current eligibility is unavailable"); } }
 export class RegistrationNotAllowedError extends Error {}
 export class UserAlreadyExistsError extends Error {}
+export type AuthenticatedSession = { user: UserRecord; tokens: AuthTokens; eligibility: EligibilityDecision };
 
 export class AuthService {
   private readonly userRepository: UserRepository;
@@ -68,6 +72,7 @@ export class AuthService {
     private readonly enrollmentService = new EligibilityEnrollmentService(new AssuranceService()),
     private readonly googleClientFactory: (clientId: string) => OAuth2Client = clientId => new OAuth2Client(clientId),
     private readonly transactionRunner: <T>(operation: (tx: DbTransaction) => Promise<T>) => Promise<T> = operation => db.transaction(operation),
+    private readonly eligibilityService = new EligibilityService(),
   ) {
     this.userRepository = userRepository;
     this.redisRepository = redisRepository;
@@ -150,7 +155,7 @@ export class AuthService {
     };
   }
 
-  async login(input: { identifier: string; password: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  async login(input: { identifier: string; password: string; totpCode?: string; challengeId?: string }): Promise<AuthenticatedSession> {
     const normalizedIdentifier = input.identifier.trim().toLowerCase();
     if (await this.securityService.detectAbuse(normalizedIdentifier, "login_failure")) {
       throw new TooManyAttemptsError("Too many failed login attempts. Please try again later.");
@@ -178,7 +183,7 @@ export class AuthService {
       this.securityService.createAuditEvent("login_failure", "Email not verified", normalizedIdentifier);
         throw new EmailVerificationRequiredError("Verify your email before signing in");
     }
-    this.assertAccountActive(user);
+    this.assertSessionAvailable(user);
 
     const totpSecret = await this.readTotpSecret(user);
     if (totpSecret) {
@@ -198,7 +203,7 @@ export class AuthService {
     return this.createSession(user);
   }
 
-  async loginWithGoogle(input: { credential: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  async loginWithGoogle(input: { credential: string; totpCode?: string; challengeId?: string }): Promise<AuthenticatedSession> {
     if (!env.GOOGLE_CLIENT_ID) {
       throw new GoogleSignInNotConfiguredError("Google sign-in is not configured");
     }
@@ -235,7 +240,7 @@ export class AuthService {
       emailVerified: true,
     });
     const finalUser = linked ?? user;
-    this.assertAccountActive(finalUser);
+    this.assertSessionAvailable(finalUser);
 
     const totpSecret = await this.readTotpSecret(finalUser);
     if (totpSecret) {
@@ -291,7 +296,7 @@ export class AuthService {
     return true;
   }
 
-  async loginWithEmailOtp(input: { email: string; code: string; totpCode?: string; challengeId?: string }): Promise<{ user: UserRecord; tokens: AuthTokens }> {
+  async loginWithEmailOtp(input: { email: string; code: string; totpCode?: string; challengeId?: string }): Promise<AuthenticatedSession> {
     const normalizedEmail = input.email.trim().toLowerCase();
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
@@ -325,7 +330,7 @@ export class AuthService {
       await this.redisRepository.delStrict(key);
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
-    this.assertAccountActive(user);
+    this.assertSessionAvailable(user);
     const totpSecret = await this.readTotpSecret(user);
     if (totpSecret) {
       if (!input.totpCode) {
@@ -416,7 +421,7 @@ export class AuthService {
     return true;
   }
 
-  async completeTwoFactorLogin(challengeId: string): Promise<{ user: UserRecord; tokens: AuthTokens } | undefined> {
+  async completeTwoFactorLogin(challengeId: string): Promise<AuthenticatedSession | undefined> {
     const raw = await this.redisRepository.consumeApprovedStrict(this.loginApprovalKey(challengeId), new Date().toISOString());
     if (!raw) return undefined;
 
@@ -430,7 +435,7 @@ export class AuthService {
     if (challenge.emailOtpKey) await this.redisRepository.delStrict(challenge.emailOtpKey);
 
     const user = await this.userRepository.findById(challenge.userId);
-    if (!user || !this.isAccountActive(user) || (user.authVersion ?? 0) !== (challenge.authVersion ?? 0) || !(await this.readTotpSecret(user))) return undefined;
+    if (!user || !this.isSessionAvailable(user) || (user.authVersion ?? 0) !== (challenge.authVersion ?? 0) || !(await this.readTotpSecret(user))) return undefined;
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -480,7 +485,7 @@ export class AuthService {
         return undefined;
       }
       const user = await this.userRepository.findById(userId);
-      if (!user || !this.isAccountActive(user) || (payload.authVersion ?? 0) !== (user.authVersion ?? 0)) {
+      if (!user || !this.isSessionAvailable(user) || (payload.authVersion ?? 0) !== (user.authVersion ?? 0)) {
         return undefined;
       }
       const storedTokenHash = await this.redisRepository.getStrict(`session:${user.id}:${deviceId}`);
@@ -488,7 +493,10 @@ export class AuthService {
       if (!storedTokenHash || storedTokenHash !== refreshTokenHash) {
         return undefined;
       }
-      const nextRefreshToken = this.issueRefreshToken(user, deviceId);
+      await this.currentEligibilityDecision(user.id);
+      const currentUser = await this.userRepository.findById(user.id);
+      if (!currentUser || !this.isSessionAvailable(currentUser) || (payload.authVersion ?? 0) !== (currentUser.authVersion ?? 0)) return undefined;
+      const nextRefreshToken = this.issueRefreshToken(currentUser, deviceId);
       const nextRefreshTokenHash = await this.redisRepository.hashToken(nextRefreshToken);
       const rotated = await this.redisRepository.rotateValueStrict(
         `session:${user.id}:${deviceId}`,
@@ -497,7 +505,7 @@ export class AuthService {
         7 * 24 * 60 * 60,
       );
       if (!rotated) return undefined;
-      return this.issueTokens(user, nextRefreshToken, deviceId);
+      return this.issueTokens(currentUser, nextRefreshToken, deviceId);
   }
 
   /** Generates a single-use, expiring reset token and dispatches it by email. */
@@ -601,15 +609,14 @@ export class AuthService {
     return this.userRepository.patchPrivacy(userId, privacy);
   }
 
-  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge: boolean }): Promise<UserRecord | undefined> {
-    if (input.acceptedTerms !== true || input.confirmedAge !== true) {
-      throw new RegistrationNotAllowedError("You must accept the current terms and confirm the minimum age");
+  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge?: boolean }): Promise<UserRecord | undefined> {
+    if (input.acceptedTerms !== true) {
+      throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
     }
     const now = new Date().toISOString();
     return this.userRepository.update(userId, {
       termsVersion: env.TERMS_VERSION,
       termsAcceptedAt: now,
-      ageConfirmedAt: now,
     });
   }
 
@@ -746,19 +753,30 @@ export class AuthService {
   private async createSession(
     user: UserRecord,
     updates: Partial<Pick<UserRecord, "emailVerified">> = {},
-  ): Promise<{ user: UserRecord; tokens: AuthTokens }> {
-    this.assertAccountActive(user);
-    const updatedUser = await this.userRepository.recordLogin(user, updates);
+  ): Promise<AuthenticatedSession> {
+    const current = await this.userRepository.findById(user.id);
+    if (!current || !this.isSessionAvailable(current) || (current.authVersion ?? 0) !== (user.authVersion ?? 0)) {
+      throw new Error("Account is unavailable or credentials changed");
+    }
+    const updatedUser = await this.userRepository.recordLogin(current, updates);
     if (!updatedUser) throw new Error('Credentials changed; sign in again');
+    // Resolve current proof, policy, consent and moderation state after all
+    // identity/MFA checks and the login write. A restricted result still gets
+    // an identity session; request middleware applies the route boundary.
+    const eligibility = await this.currentEligibilityDecision(updatedUser.id);
+    const finalIdentity = await this.userRepository.findById(updatedUser.id);
+    if (!finalIdentity || !this.isSessionAvailable(finalIdentity) || (finalIdentity.authVersion ?? 0) !== (updatedUser.authVersion ?? 0)) {
+      throw new Error("Account is unavailable or credentials changed");
+    }
     const deviceId = randomUUID();
-    const refreshToken = this.issueRefreshToken(user, deviceId);
+    const refreshToken = this.issueRefreshToken(finalIdentity, deviceId);
     await this.redisRepository.setStrict(
-      `session:${user.id}:${deviceId}`,
+      `session:${finalIdentity.id}:${deviceId}`,
       await this.redisRepository.hashToken(refreshToken),
       7 * 24 * 60 * 60,
     );
-    const finalUser = { ...updatedUser, ...(await this.userRepository.getOwnRelationships(user.id)) };
-    return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId) };
+    const finalUser = { ...finalIdentity, ...(await this.userRepository.getOwnRelationships(finalIdentity.id)) };
+    return { user: finalUser, tokens: this.issueTokens(finalUser, refreshToken, deviceId), eligibility };
   }
 
   private issueTokens(user: UserRecord, refreshToken: string, deviceId: string): AuthTokens {
@@ -774,11 +792,19 @@ export class AuthService {
     });
   }
 
-  private isAccountActive(user: UserRecord): boolean {
-    return !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active');
+  private isSessionAvailable(user: UserRecord): boolean {
+    return (user.accountStatus ?? 'active') !== 'deleted';
   }
 
-  private assertAccountActive(user: UserRecord): void {
-    if (!this.isAccountActive(user)) throw new Error("Account is unavailable");
+  private async currentEligibilityDecision(userId: string): Promise<EligibilityDecision> {
+    try {
+      return await this.eligibilityService.decisionFor(userId);
+    } catch {
+      throw new EligibilityDecisionUnavailableError();
+    }
+  }
+
+  private assertSessionAvailable(user: UserRecord): void {
+    if (!this.isSessionAvailable(user)) throw new Error("Account is unavailable");
   }
 }

@@ -35,8 +35,9 @@ export const registerSchema = z.object({
 
 export const acceptTermsSchema = z.object({
   acceptedTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the current Terms and Privacy Notice" }) }),
-  confirmedAge: z.literal(true, { errorMap: () => ({ message: "You must confirm that you meet the minimum age" }) }),
-});
+  // Accepted from older clients for compatibility, but never treated as proof.
+  confirmedAge: z.boolean().optional(),
+}).strict();
 
 export const loginSchema = z.object({
   identifier: z.string().trim().min(3),

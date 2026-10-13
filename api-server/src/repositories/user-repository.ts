@@ -14,7 +14,7 @@ export class UserRepository {
   async recordLogin(user: UserRecord, updates: Partial<Pick<UserRecord, 'emailVerified'>>): Promise<UserRecord | undefined> {
     const [record] = await db.update(usersTable).set({ ...updates, lastLoginAt: new Date().toISOString() })
       .where(and(eq(usersTable.id, user.id), eq(usersTable.authVersion, user.authVersion ?? 0),
-        sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`)).returning();
+        sql`coalesce(${usersTable.accountStatus}, 'active') <> 'deleted'`)).returning();
     return record as UserRecord | undefined;
   }
 

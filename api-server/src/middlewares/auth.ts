@@ -2,13 +2,15 @@ import { type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { createResponse } from "../utils/response.js";
-import { hasCurrentConsent } from "../utils/consent.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
+import { isRestrictedRightsRouteAllowed, isRestrictedRouteAllowed } from "../eligibility/restricted-routes.js";
 
 interface JwtPayload {
-  sub: string;
-  role: string;
-  permissions: string[];
-  deviceId: string;
+  sub?: string;
+  deviceId?: string;
   authVersion?: number;
   type?: string;
 }
@@ -20,15 +22,17 @@ declare global {
         id: string;
         role: string;
         permissions: string[];
+        accountStatus?: string;
       };
+      /** Current server decision. It is loaded from private DB authority for this request. */
+      eligibility?: EligibilityDecision;
     }
   }
 }
 
-import { RedisRepository } from "../repositories/redis-repository.js";
-import { UserRepository } from "../repositories/user-repository.js";
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
+const eligibilityService = new EligibilityService();
 
 export async function closeAuthenticationDependencies(): Promise<void> {
   await redisRepository.disconnect();
@@ -36,84 +40,86 @@ export async function closeAuthenticationDependencies(): Promise<void> {
 
 export const closeAuthDependencies = closeAuthenticationDependencies;
 
-function normalizedRequestPath(req: Request): string {
-  return req.originalUrl.split("?")[0].replace(/^\/api(?:\/v1)?/, "") || "/";
+function unavailable(res: Response) {
+  return res.status(503).json(createResponse("Session verification is temporarily unavailable", null));
 }
 
-function consentExempt(req: Request): boolean {
-  const path = normalizedRequestPath(req);
-  return (
-    (path === "/users/me" && (req.method === "GET" || req.method === "DELETE")) ||
-    (path === "/users/me/consent" && req.method === "POST") ||
-    (path === "/users/me/export" && req.method === "GET") ||
-    (path === "/auth/logout" && req.method === "POST") ||
-    (path === "/auth/logout-all" && req.method === "POST")
-  );
+function rejectRestrictedRequest(req: Request, res: Response) {
+  const accountStatus = req.user?.accountStatus ?? "active";
+  const moderationRestricted = accountStatus === "suspended" || accountStatus === "deactivated"
+    || req.eligibility?.reason === "account_restricted";
+  const allowed = moderationRestricted
+    ? isRestrictedRightsRouteAllowed(req.method, req.originalUrl)
+    : isRestrictedRouteAllowed(req.method, req.originalUrl);
+  if (!allowed) return res.status(403).json(createResponse("Account access is restricted", null, {}, ["eligibility_required"]));
+  return undefined;
 }
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  if (!header?.startsWith("Bearer ") || header.length <= "Bearer ".length) {
     return res.status(401).json(createResponse("Authentication required", null, {}, ["Missing bearer token"]));
   }
 
-  const token = header.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
-    if (typeof decoded.sub !== 'string' || typeof decoded.deviceId !== 'string' || (decoded.type && decoded.type !== 'access')) {
-      return res.status(401).json(createResponse('Invalid session', null));
+    const decoded = jwt.verify(header.slice("Bearer ".length), env.JWT_SECRET, { algorithms: ["HS256"] }) as JwtPayload;
+    if (typeof decoded.sub !== "string" || typeof decoded.deviceId !== "string" || (decoded.type && decoded.type !== "access")) {
+      return res.status(401).json(createResponse("Invalid session", null));
     }
-    
-    // Check if this specific device's session was revoked (e.g. logout / logoutAllDevices).
-    // Bug fixed: this used to check `session:${sub}` with no deviceId — a key that
-    // auth-service never writes (sessions are stored per-device) — so every request
-    // failed here regardless of the token's validity. If we wanted true stateless
-    // revocation instead of a session-existence check, we'd use a token blacklist.
+
+    // Device revocation and authVersion remain mandatory for restricted and
+    // activated sessions alike.
     const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
-    if (!activeSession) {
-      return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
-    }
+    if (!activeSession) return res.status(401).json(createResponse("Session revoked or expired", null, {}, ["Unauthorized"]));
+
     const user = await userRepository.findById(decoded.sub);
-    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || ['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
+    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0) || (user.accountStatus ?? "active") === "deleted") {
       return res.status(401).json(createResponse("Account is unavailable", null, {}, ["Unauthorized"]));
     }
 
+    const decision = await eligibilityService.decisionFor(user.id);
     req.user = {
       id: decoded.sub,
       role: user.role,
       permissions: user.permissions ?? [],
+      accountStatus: user.accountStatus ?? "active",
     };
-    if (!hasCurrentConsent(user) && !consentExempt(req)) {
-      return res.status(428).json(createResponse(
-        "Current terms acceptance required",
-        null,
-        { termsAcceptanceRequired: true, termsVersion: env.TERMS_VERSION, minimumAge: env.MINIMUM_AGE },
-        ["Accept the current Terms and confirm the minimum age to continue"],
-      ));
+    req.eligibility = decision;
+
+    if (!decision.activated) {
+      const blocked = rejectRestrictedRequest(req, res);
+      if (blocked) return blocked;
     }
     return next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return res.status(401).json(createResponse("Invalid or expired token", null, {}, ["Unauthorized"]));
-    return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
+    return unavailable(res);
   }
 };
 
-/** Public content endpoints can personalize results without rejecting anonymous viewers. */
+/**
+ * Public content treats absent, invalid, expired and restricted credentials
+ * identically. Only a current activated account can personalize a public read.
+ */
 export const optionalAuthenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return next();
+  if (!header?.startsWith("Bearer ") || header.length <= "Bearer ".length) return next();
 
   try {
-    const decoded = jwt.verify(header.split(" ")[1], env.JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
-    if (typeof decoded.sub !== 'string' || typeof decoded.deviceId !== 'string' || (decoded.type && decoded.type !== 'access')) return next();
+    const decoded = jwt.verify(header.slice("Bearer ".length), env.JWT_SECRET, { algorithms: ["HS256"] }) as JwtPayload;
+    if (typeof decoded.sub !== "string" || typeof decoded.deviceId !== "string" || (decoded.type && decoded.type !== "access")) return next();
     const activeSession = await redisRepository.getStrict(`session:${decoded.sub}:${decoded.deviceId}`);
-    const user = activeSession ? await userRepository.findById(decoded.sub) : undefined;
-    if (activeSession && user && (decoded.authVersion ?? 0) === (user.authVersion ?? 0) && !['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) {
-      req.user = { id: decoded.sub, role: user.role, permissions: user.permissions ?? [] };
+    if (!activeSession) return next();
+    const user = await userRepository.findById(decoded.sub);
+    if (!user || (user.accountStatus ?? "active") !== "active" || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0)) return next();
+    const decision = await eligibilityService.decisionFor(user.id);
+    if (decision.activated) {
+      req.user = { id: user.id, role: user.role, permissions: user.permissions ?? [], accountStatus: user.accountStatus ?? "active" };
+      req.eligibility = decision;
     }
   } catch (error) {
-    if (!(error instanceof jwt.JsonWebTokenError)) return res.status(503).json(createResponse('Session verification is temporarily unavailable', null));
-    // An invalid optional credential is treated as anonymous access.
+    if (!(error instanceof jwt.JsonWebTokenError)) return unavailable(res);
+    // Invalid and expired optional credentials use the same public ceiling as anonymous access.
   }
   return next();
 };

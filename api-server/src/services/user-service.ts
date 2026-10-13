@@ -33,6 +33,11 @@ export class UserService {
     return user;
   }
 
+  /** Minimal repository read for the restricted owner account summary. */
+  async getOwnAccount(userId: string): Promise<UserRecord | undefined> {
+    return this.userRepository.findById(userId);
+  }
+
   async getProfileByUsername(username: string, viewerId?: string): Promise<UserRecord | undefined> {
     const user = await this.userRepository.findByUsername(username.trim().toLowerCase());
     if (!user || !(await this.canViewProfile(user, viewerId))) {
