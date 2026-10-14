@@ -73,7 +73,7 @@ test('pending invitees see no group history and accepted membership is added onl
   await assert.rejects(()=>f.messageService.authorizeConversationDelivery(conversation.id,invitee.user.id),UnauthorizedError);
   const result=await f.messageService.acceptGroupInvitation(invitation.id,invitee.user.id,invitation.updatedAt);
   assert.equal(result.invitation.status,'accepted');
-  assert.deepEqual(await f.conversations.getMembers(conversation.id),[creator.user.id,invitee.user.id].sort());
+  assert.deepEqual((await f.conversations.getMembers(conversation.id)).sort(),[creator.user.id,invitee.user.id].sort());
   assert.equal((await f.messageService.listConversation(conversation.id,invitee.user.id)).length,1);
 });
 
@@ -86,7 +86,7 @@ test('a minor cannot add an adult until the guardian approves, and withdrawal re
   assert.deepEqual(await f.conversations.getMembers(created.id),[child.user.id]);
   const approved=await f.messageService.approveGroupInvitation(invitation.id,child.guardian!.id,acceptedByAdult.invitation.updatedAt);
   assert.equal(approved.invitation.status,'accepted');
-  assert.deepEqual(await f.conversations.getMembers(created.id),[child.user.id,adult.user.id].sort());
+  assert.deepEqual((await f.conversations.getMembers(created.id)).sort(),[child.user.id,adult.user.id].sort());
   await f.messageService.sendMessageToConversation(child.user.id,created.id,'Child-approved group');
   await db.transaction(tx=>f.eligibilityRepository.withdrawGuardianAuthorization(child.guardianAuthorization!.id,child.guardian!.id,tx));
   assert.deepEqual(await f.messageService.listConversation(created.id,adult.user.id),[]);
