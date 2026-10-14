@@ -55,6 +55,11 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   privateAccount: boolean;
   allowMentions?: boolean;
+  /** Optional engagement and privacy controls are clamped for non-adult accounts. */
+  autoplayEnabled?: boolean;
+  readReceiptsEnabled?: boolean;
+  streaksEnabled?: boolean;
+  sharePreciseLocation?: boolean;
   /** Whether story views should be aggregate-only for the viewer. */
   storyViewMode?: "identified" | "private";
   /** Highest content rating this viewer wants to see. */

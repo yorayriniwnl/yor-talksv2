@@ -6,6 +6,7 @@ import { PREMIUM_FEATURES, resolveFeatureFlags } from '../features/premium-featu
 import { RazorpayService, PaymentProviderError, PaymentsNotConfiguredError } from './razorpay-service.js';
 import type { CapturedPaymentInput, ProcessedRefundInput, PaymentWebhookHandler } from './payment-webhook-types.js';
 import { FeatureEntitlementService } from './feature-entitlement-service.js';
+import { EligibilityService } from './eligibility-service.js';
 
 export class PremiumRequestError extends Error {}
 export interface PremiumPlan {
@@ -28,7 +29,10 @@ async function transaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T
 
 /** A prepaid platform plan. Creator memberships use their existing separate model. */
 export class PlatformPremiumService implements PaymentWebhookHandler {
-  constructor(private readonly razorpay = new RazorpayService()) {}
+  constructor(
+    private readonly razorpay = new RazorpayService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
+  ) {}
 
   async catalog() {
     const available = env.YOR_PREMIUM_ENABLED && env.PAYMENTS_ENABLED;
@@ -43,10 +47,12 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
 
   async createOrder(userId: string, input: { idempotencyKey: string; acceptedTermsVersion: string; acceptedPriceMinor: number }) {
     this.razorpay.assertConfigured();
+    await this.eligibilityService.requireCapability(userId, 'payments');
     const catalog = await this.catalog();
     if (!catalog.available || !catalog.plan) throw new PaymentsNotConfiguredError();
     const plan = catalog.plan;
     if (input.acceptedTermsVersion !== plan.termsVersion || input.acceptedPriceMinor !== plan.priceMinor) throw new PremiumRequestError('The price or terms changed. Review them before continuing.');
+    await this.eligibilityService.requireCapability(userId, 'payments');
     const result = await transaction(async client => {
       const user = await client.query(`SELECT id FROM users WHERE id=$1 AND coalesce(account_status,'active') NOT IN ('suspended','deactivated','deleted') FOR UPDATE`, [userId]);
       if (!user.rowCount) throw new PremiumRequestError('Account is unavailable');
@@ -67,6 +73,7 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
         [randomUUID(), `premium:${id}`, { orderId: id }]);
       return { order: order.rows[0]!, created: true };
     });
+    await this.eligibilityService.requireCapability(userId, 'payments');
     if (result.created) {
       try {
         const provider = await this.razorpay.createOrder({ amountMinor: plan.priceMinor, receipt: result.order.receipt, notes: { product: 'yor_premium', localOrderId: result.order.id } });
@@ -76,6 +83,7 @@ export class PlatformPremiumService implements PaymentWebhookHandler {
         await pool.query(`UPDATE premium_orders SET status='creation_unknown',updated_at=now() WHERE id=$1 AND status='provider_pending'`, [result.order.id]);
       }
     }
+    await this.eligibilityService.requireCapability(userId, 'payments');
     return this.getOrder(userId, result.order.id);
   }
 

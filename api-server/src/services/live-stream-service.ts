@@ -11,6 +11,7 @@ import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { env } from "../config/env.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 const VALID_STATUSES = ["scheduled", "live", "ended"] as const;
 type StreamStatus = (typeof VALID_STATUSES)[number];
@@ -25,6 +26,7 @@ export class LiveStreamService {
     private readonly liveKitService: LiveKitService = new LiveKitService(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
     private readonly aiService: AIService = new AIService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
   ) {}
 
   async createStream(input: {
@@ -36,10 +38,14 @@ export class LiveStreamService {
     category: string;
     contentRating?: LiveStreamRecord["contentRating"];
   }): Promise<LiveStreamRecord> {
+    await this.eligibilityService.requireCapability(input.hostId, "live");
     if (!this.liveKitService.isConfigured()) {
       throw new LiveKitNotConfiguredError();
     }
     await enforceTextContentPolicy(input.title, this.aiService, "live stream title");
+    // Moderation may call a provider; a withdrawal during that call must stop
+    // the stream write and the later RTC credential flow.
+    await this.eligibilityService.requireCapability(input.hostId, "live");
     rejectRawMedia(input, ["coverUrl"]);
     const stream: LiveStreamRecord = {
       id: randomUUID(),
@@ -50,7 +56,10 @@ export class LiveStreamService {
       guestIds: [],
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return withApprovedMedia(input.hostId, mediaBinding(input.coverMediaId, "live_stream", "coverUrl", "image"), { type: "live_streams", id: stream.id }, media => this.liveStreamRepository.create({ ...stream, coverUrl: media.coverUrl?.[0]?.url ?? "" }));
+    return withApprovedMedia(input.hostId, mediaBinding(input.coverMediaId, "live_stream", "coverUrl", "image"), { type: "live_streams", id: stream.id }, async media => {
+      await this.eligibilityService.requireCapability(input.hostId, "live");
+      return this.liveStreamRepository.create({ ...stream, coverUrl: media.coverUrl?.[0]?.url ?? "" });
+    });
   }
 
   async listStreams(viewerId?: string): Promise<LiveStreamRecord[]> {
@@ -72,6 +81,9 @@ export class LiveStreamService {
     if (!stream || stream.hostId !== hostId) {
       return undefined;
     }
+    // Ending a room is safety cleanup and remains available after a
+    // capability is withdrawn. Starting/reopening requires current authority.
+    if (status !== "ended") await this.eligibilityService.requireCapability(hostId, "live");
     if (stream.status === "ended" && status !== "ended") {
       throw new LiveStreamNotLiveError("An ended stream cannot be reopened");
     }
@@ -93,6 +105,8 @@ export class LiveStreamService {
     if (!this.liveKitService.isConfigured()) {
       throw new LiveKitNotConfiguredError();
     }
+    await this.eligibilityService.requireCapability(userId, "live");
+    await this.eligibilityService.requireCapability(userId, "rtc");
     const stream = await this.liveStreamRepository.findById(id);
     if (!stream) {
       throw new LiveStreamNotFoundError("Stream not found");
@@ -114,6 +128,8 @@ export class LiveStreamService {
     if (!user) {
       throw new LiveStreamNotFoundError("User not found");
     }
+    await this.eligibilityService.requireCapability(userId, "live");
+    await this.eligibilityService.requireCapability(userId, "rtc");
     return this.liveKitService.createRoomToken({
       streamId: id,
       userId,

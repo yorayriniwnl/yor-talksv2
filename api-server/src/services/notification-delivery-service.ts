@@ -2,14 +2,33 @@ import { logger } from "../lib/logger.js";
 import webpush from "web-push";
 import { env } from "../config/env.js";
 import { PushSubscriptionRepository } from "../repositories/push-subscription-repository.js";
+import { UserRepository } from "../repositories/user-repository.js";
 import type { NotificationRecord, UserRecord } from "../types/index.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class NotificationDeliveryService {
-  constructor(private readonly pushSubscriptionRepository = new PushSubscriptionRepository()) {}
+  constructor(
+    private readonly pushSubscriptionRepository = new PushSubscriptionRepository(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
+    private readonly userRepository: UserRepository = new UserRepository(),
+  ) {}
 
   async deliver(notification: NotificationRecord, recipient?: UserRecord): Promise<NotificationRecord> {
-    if (recipient?.settings?.notificationsEnabled === false) {
+    if (notification.channel && notification.channel !== "push") return notification;
+    if (!recipient || recipient.settings?.notificationsEnabled !== true) {
       logger.info({ notificationId: notification.id, recipientId: notification.recipientId }, "Notification delivery skipped by user preference");
+      return notification;
+    }
+
+    try {
+      const [decision, current] = await Promise.all([
+        this.eligibilityService.decisionFor(notification.recipientId),
+        this.userRepository.findById(notification.recipientId),
+      ]);
+      if (!decision.activated || !decision.capabilities.social || decision.experience !== "adult_18_plus" || current?.settings.notificationsEnabled !== true) {
+        return notification;
+      }
+    } catch {
       return notification;
     }
 
@@ -20,6 +39,19 @@ export class NotificationDeliveryService {
 
     webpush.setVapidDetails(env.WEB_PUSH_VAPID_SUBJECT, env.WEB_PUSH_VAPID_PUBLIC_KEY, env.WEB_PUSH_VAPID_PRIVATE_KEY);
     const subscriptions = await this.pushSubscriptionRepository.listForUser(notification.recipientId);
+    // The subscription query can await long enough for settings or eligibility
+    // to change. Recheck directly before crossing the push provider boundary.
+    try {
+      const [decision, latestRecipient] = await Promise.all([
+        this.eligibilityService.decisionFor(notification.recipientId),
+        this.userRepository.findById(notification.recipientId),
+      ]);
+      if (!decision.activated || !decision.capabilities.social || decision.experience !== "adult_18_plus" || latestRecipient?.settings.notificationsEnabled !== true) {
+        return notification;
+      }
+    } catch {
+      return notification;
+    }
     const failures: unknown[] = [];
     await Promise.all(subscriptions.map(async (subscription) => {
       try {

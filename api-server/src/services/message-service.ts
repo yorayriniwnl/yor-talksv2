@@ -13,6 +13,7 @@ import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } fro
 import { isMessageVisible, toMessageTombstone } from "../utils/message-visibility.js";
 import { ContactAuthorizationDeniedError, ContactAuthorizationService } from "./contact-authorization-service.js";
 import type { GroupInvitationAuthorityRecord, GroupInvitationApproval } from "./contact-authorization-service.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -20,6 +21,7 @@ export class InvalidMessageContentError extends Error {}
 export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
+class ReadReceiptUnavailableError extends Error {}
 export type SafeGroupInvite={id:string;conversationId:string;inviterId:string;recipientId:string;status:"pending"|"accepted"|"rejected"|"revoked";
   memberIds:string[];createdAt:string;updatedAt:string;requiresYourAcceptance:boolean;guardianApprovalRequired:boolean};
 export type SafeGroupAcceptanceResult={invitation:SafeGroupInvite;refreshedInvitations:SafeGroupInvite[]};
@@ -43,6 +45,7 @@ export class MessageService {
     private readonly aiService: AIService = new AIService(),
     private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
     private readonly contactAuthorization: ContactAuthorizationService = new ContactAuthorizationService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
@@ -419,6 +422,10 @@ export class MessageService {
 
   private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
     if (!messages.length) return messages;
+    if (!(await this.readReceiptsEnabled(userId))) {
+      return messages.filter(message => isMessageVisible(message, new Date()))
+        .map(message => ({ ...message, seenAt: null }));
+    }
     const receipts = await db.select({ messageId: messageReadsTable.messageId, readAt: sql<string>`min(${messageReadsTable.readAt})` })
       .from(messageReadsTable)
       .innerJoin(messagesTable, eq(messagesTable.id, messageReadsTable.messageId))
@@ -439,12 +446,33 @@ export class MessageService {
     if(!members.includes(userId))return undefined;
     try { await this.requireConversationContacts(members,'read',candidate.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
+    // A minor or unverified account may read messages without creating a
+    // sender-visible receipt. Keep this decision at the storage boundary.
+    if (!(await this.readReceiptsEnabled(userId))) return candidate;
     let message:MessageRecord|undefined;
     try { message = await this.messageRepository.recordVisibleRead(messageId, userId,
-      ()=>this.lockConversationContacts(members,'read',candidate.conversationId)); }
-    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
+      async()=>{
+        if (!(await this.readReceiptsEnabled(userId))) throw new ReadReceiptUnavailableError();
+        await this.lockConversationContacts(members,'read',candidate.conversationId);
+      }); }
+    catch(error) {
+      if (error instanceof ReadReceiptUnavailableError) return candidate;
+      if(error instanceof UnauthorizedError)return undefined;
+      throw error;
+    }
     if (!message || message.deletedAt) return message;
     return isMessageVisible(message, new Date()) ? message : undefined;
+  }
+
+  private async readReceiptsEnabled(userId: string): Promise<boolean> {
+    try {
+      const decision = await this.eligibilityService.decisionFor(userId);
+      if (!decision.activated || decision.experience !== "adult_18_plus") return false;
+      const user = await this.userRepository?.findById(userId);
+      return user?.settings.readReceiptsEnabled !== false;
+    } catch {
+      return false;
+    }
   }
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {

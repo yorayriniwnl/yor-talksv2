@@ -129,6 +129,10 @@ export class AuthService {
           notificationsEnabled: false,
           privateAccount: true,
           allowMentions: false,
+          autoplayEnabled: !minor,
+          readReceiptsEnabled: !minor,
+          streaksEnabled: !minor,
+          sharePreciseLocation: !minor,
           contentFilter: minor ? "child_safe" : "regular",
           onboardingCompleted: false,
         },
@@ -606,7 +610,15 @@ export class AuthService {
   }
 
   async updatePrivacy(userId: string, privacy: Partial<NonNullable<UserRecord["privacy"]>>): Promise<UserRecord | undefined> {
-    return this.userRepository.patchPrivacy(userId, privacy);
+    const decision = await this.currentEligibilityDecision(userId);
+    const mayChooseVisibility = decision.activated && decision.experience === "adult_18_plus" && decision.capabilities.social;
+    const effectivePrivacy = mayChooseVisibility ? privacy : {
+      ...privacy,
+      profileVisibility: "private" as const,
+      messageRequests: false,
+      allowDmFromStrangers: false,
+    };
+    return this.userRepository.patchPrivacy(userId, effectivePrivacy);
   }
 
   async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge?: boolean }): Promise<UserRecord | undefined> {

@@ -9,11 +9,15 @@ import { notificationIdParamSchema } from "../validators/params.js";
 import { z } from "zod";
 import { PushSubscriptionRepository } from "../repositories/push-subscription-repository.js";
 import { env } from "../config/env.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { UserRepository } from "../repositories/user-repository.js";
 
 const router = Router();
 const notificationService = new NotificationService(new NotificationRepository());
 const notificationController = new NotificationController(notificationService);
 const pushSubscriptionRepository = new PushSubscriptionRepository();
+const eligibilityService = new EligibilityService();
+const userRepository = new UserRepository();
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().url().max(2048),
   keys: z.object({
@@ -37,6 +41,11 @@ router.post("/notifications/push/subscribe", authenticate, async (req, res, next
     if (!env.WEB_PUSH_ENABLED) {
       return res.status(503).json({ success: false, message: "Push notifications are not enabled for this beta", data: null, errors: ["push_not_enabled"], meta: {} });
     }
+    const decision = await eligibilityService.decisionFor(req.user!.id);
+    const user = await userRepository.findById(req.user!.id);
+    if (!decision.activated || !decision.capabilities.social || decision.experience !== "adult_18_plus" || user?.settings.notificationsEnabled !== true) {
+      return res.status(403).json({ success: false, message: "Push notifications are unavailable for this account", data: null, errors: ["push_unavailable"], meta: {} });
+    }
     const parsed = pushSubscriptionSchema.parse(req.body);
     const subscription = await pushSubscriptionRepository.upsert({
       userId: req.user!.id,
@@ -52,9 +61,6 @@ router.post("/notifications/push/subscribe", authenticate, async (req, res, next
 });
 router.delete("/notifications/push/subscribe", authenticate, async (req, res, next) => {
   try {
-    if (!env.WEB_PUSH_ENABLED) {
-      return res.status(503).json({ success: false, message: "Push notifications are not enabled for this beta", data: null, errors: ["push_not_enabled"], meta: {} });
-    }
     const parsed = z.object({ endpoint: z.string().url().max(2048) }).parse(req.body);
     await pushSubscriptionRepository.remove(req.user!.id, parsed.endpoint);
     return res.status(200).json({ success: true, message: "Push subscription removed", data: null, errors: [], meta: {} });
