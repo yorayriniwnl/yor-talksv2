@@ -67,8 +67,8 @@ function pathOnly(originalUrl: string): string | undefined {
 }
 
 function templateMatches(template: string, path: string): boolean {
-  const expected = template.toLowerCase().split("/");
-  const actual = path.toLowerCase().split("/");
+  const expected = template.replace(/\/+$/, "").toLowerCase().split("/");
+  const actual = path.replace(/\/+$/, "").toLowerCase().split("/");
   if (expected.length !== actual.length) return false;
   return expected.every((segment, index) => {
     if (segment.startsWith("{") && segment.endsWith("}")) return actual[index].length > 0;

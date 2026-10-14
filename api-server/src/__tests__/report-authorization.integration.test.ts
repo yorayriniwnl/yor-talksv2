@@ -8,7 +8,7 @@ import { env } from "../config/env.js";
 import { closeAuthenticationDependencies } from "../middlewares/auth.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { createTestUser } from "./test-helpers.js";
+import { authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { reportRoutes } from "../routes/reports.js";
 
 const redis = new RedisRepository();
@@ -21,6 +21,7 @@ const address = server.address();
 assert.ok(address && typeof address !== "string");
 const baseUrl = `http://127.0.0.1:${address.port}`;
 const user = await createTestUser(new UserRepository());
+await authorizeTestAdultAccount(user.id);
 const deviceId = randomUUID();
 const token = jwt.sign({ sub: user.id, role: "user", permissions: [], deviceId }, env.JWT_SECRET, { expiresIn: "5m" });
 const sessionKey = `session:${user.id}:${deviceId}`;

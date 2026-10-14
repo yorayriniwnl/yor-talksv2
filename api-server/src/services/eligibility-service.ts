@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { env } from '../config/env.js';
 import { EligibilityRepository } from '../repositories/eligibility-repository.js';
 import { applicablePolicies, evaluateEligibility } from '../eligibility/policy.js';
-import { loadApprovedTerritoryPolicies, loadOperatorPolicyIds } from '../eligibility/territory-policy.js';
+import { loadApprovedTerritoryPolicies, loadOperatorPolicyIds, testPolicyAuthorityForUser } from '../eligibility/territory-policy.js';
 import type { ApprovedTerritoryPolicy, Capability, EligibilityDecision, ReleaseFlags, TerritoryContext } from '../eligibility/types.js';
 
 export class EligibilityCapabilityError extends Error {
@@ -15,17 +15,32 @@ interface EligibilityServiceOptions {
 }
 export class EligibilityService {
   constructor(private readonly repository: EligibilityRepository = new EligibilityRepository(), private readonly options: EligibilityServiceOptions = {}) {}
-  private registry() { return (this.options.policies ?? loadApprovedTerritoryPolicies)(); }
-  private withServerContext(facts: Awaited<ReturnType<EligibilityRepository['readFacts']>>) {
+  private registry(userId?: string) {
+    if (this.options.policies) return this.options.policies();
+    if (userId) {
+      const authority = testPolicyAuthorityForUser(userId);
+      if (authority) return authority.policies;
+    }
+    return loadApprovedTerritoryPolicies();
+  }
+  private operatorPolicyIds(userId?: string) {
+    if (this.options.operatorPolicyIds) return this.options.operatorPolicyIds;
+    if (userId) {
+      const authority = testPolicyAuthorityForUser(userId);
+      if (authority) return authority.operatorPolicyIds;
+    }
+    return loadOperatorPolicyIds();
+  }
+  private withServerContext(facts: Awaited<ReturnType<EligibilityRepository['readFacts']>>, userId?: string) {
     return facts && { ...facts, currentTermsVersion: this.options.currentTermsVersion ?? env.TERMS_VERSION,
       territoryContext: { ...facts.territoryContext, verifiedTerritory: facts.territoryContext?.verifiedTerritory ?? facts.assessment?.territory,
-        operatorPolicyIds: this.options.operatorPolicyIds ?? loadOperatorPolicyIds() },
+        operatorPolicyIds: this.operatorPolicyIds(userId) },
       releaseFlags: this.options.releaseFlags ?? { payments: env.PAYMENTS_ENABLED, seller: env.SELLER_ENABLED, memberships: env.MEMBERSHIPS_ENABLED,
         live: env.LIVE_ROOMS_ENABLED, rtc: env.RTC_CALLS_ENABLED, ai: env.AI_COMPANION_ENABLED } };
   }
   async decisionFor(userId: string): Promise<EligibilityDecision> {
     const facts = await this.repository.readFacts(userId);
-    return evaluateEligibility(this.withServerContext(facts), this.registry(), (this.options.clock ?? (() => new Date()))());
+    return evaluateEligibility(this.withServerContext(facts,userId), this.registry(userId), (this.options.clock ?? (() => new Date()))());
   }
   /** Contact rules come only from the same active, approved territory intersection as activation. */
   async contactRulesFor(userId: string): Promise<{
@@ -34,9 +49,9 @@ export class EligibilityService {
     guardianPolicyVersions: Record<string, string>;
     guardianNoticeVersions: Record<string, string>;
   }> {
-    const policies = this.registry(), now = (this.options.clock ?? (() => new Date()))();
+    const policies = this.registry(userId), now = (this.options.clock ?? (() => new Date()))();
     const facts = await this.repository.readFacts(userId);
-    const serverFacts = this.withServerContext(facts);
+    const serverFacts = this.withServerContext(facts,userId);
     const decision = evaluateEligibility(serverFacts, policies, now);
     const resolved = serverFacts?.territoryContext;
     const relevant = applicablePolicies(resolved, policies, now);

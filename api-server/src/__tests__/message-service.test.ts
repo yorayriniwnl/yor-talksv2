@@ -3,7 +3,7 @@ import { after, test } from "node:test";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { allowTestContacts, createTestUser } from "./test-helpers.js";
+import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
 
 after(() => pool.end());
@@ -71,6 +71,9 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   const sender = await createTestUser(users);
   const first = await createTestUser(users);
   const second = await createTestUser(users);
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(first.id);
+  await authorizeTestAdultAccount(second.id);
   const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
   const created = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
   const group=created;

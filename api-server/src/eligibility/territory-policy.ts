@@ -36,9 +36,27 @@ export function validateApprovedTerritoryPolicies(input: unknown, options: { all
 // Add reviewed records only alongside actual operator/territory/provider approval.
 // Environment flags, a checkbox or CI fixtures cannot populate this registry.
 const approvedRegistry: ApprovedTerritoryPolicy[] = [];
+const isolatedTestAuthorities = new Map<string, { policies: ApprovedTerritoryPolicy[]; operatorPolicyIds: string[] }>();
 export function loadApprovedTerritoryPolicies(): ApprovedTerritoryPolicy[] {
   return validateApprovedTerritoryPolicies(approvedRegistry);
 }
 
 /** Operator applicability is unresolved until the actual establishment is approved. */
 export function loadOperatorPolicyIds(): string[] { return []; }
+
+/** Synthetic authority can be bound to an exact fixture user in test workers only. */
+export function registerTestPolicyAuthority(userId: string, policies: unknown, operatorPolicyIds: string[]): void {
+  if (process.env.NODE_ENV !== 'test') throw new Error('Test policy authority is unavailable outside test mode');
+  if (!/^[0-9a-f-]{36}$/i.test(userId) || !Array.isArray(operatorPolicyIds) || operatorPolicyIds.length === 0) {
+    throw new Error('Test policy authority needs one user and explicit operator policy IDs');
+  }
+  const validated = validateApprovedTerritoryPolicies(policies, { allowSynthetic: true });
+  if (validated.length === 0 || validated.some(policy => !policy.synthetic)) throw new Error('Test authority must use isolated synthetic policies');
+  isolatedTestAuthorities.set(userId, { policies: structuredClone(validated), operatorPolicyIds: [...operatorPolicyIds] });
+}
+
+export function testPolicyAuthorityForUser(userId: string): { policies: ApprovedTerritoryPolicy[]; operatorPolicyIds: string[] } | undefined {
+  if (process.env.NODE_ENV !== 'test') return undefined;
+  const authority = isolatedTestAuthorities.get(userId);
+  return authority ? structuredClone(authority) : undefined;
+}

@@ -101,6 +101,9 @@ jobs:
           JWT_SECRET: ci-access-secret-012345678901234567890123456789
           JWT_REFRESH_SECRET: ci-refresh-secret-012345678901234567890123456789
           CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
+          # Synthetic authority is injected by test-only constructors; the app keeps production defaults.
+          ELIGIBILITY_ASSURANCE_ADAPTER: unavailable
+          ELIGIBILITY_POLICY_SOURCE: approved_registry
 
       - name: Install browser test runtime
         run: pnpm exec playwright install --with-deps chromium

@@ -143,7 +143,7 @@ export const contentSafetyClassificationsTable = pgTable('content_safety_classif
   uniqueIndex('content_safety_classifications_revision_idx').on(table.entityType, table.entityId, table.contentRevision, table.policyVersion),
   index('content_safety_classifications_lookup_idx').on(table.entityType, table.entityId, table.status, table.policyVersion),
   check('content_safety_classifications_valid', sql`entity_type IN ('posts','stories','user_notes','videos','articles','communities','community_discussions','products','events','live_streams','broadcast_channels','broadcast_channel_messages','comments','video_comments','profile_comments')
-    AND content_revision ~ '^.{1,256}$' AND content_hash ~ '^[a-f0-9]{64}$'
+    AND length(content_revision) BETWEEN 1 AND 256 AND length(content_hash)=64 AND content_hash !~ '[^a-f0-9]'
     AND classification IN ('child_safe','regular','mature') AND status IN ('pending','approved','rejected','revoked','superseded')
     AND length(issuer) BETWEEN 1 AND 128 AND length(policy_version) BETWEEN 1 AND 128
     AND ((status='approved' AND approved_at IS NOT NULL) OR (status IN ('revoked','superseded') AND approved_at IS NOT NULL)

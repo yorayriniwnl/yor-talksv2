@@ -60,6 +60,10 @@ export class MediaAuthorizationService {
     private readonly contactAuthorization = new ContactAuthorizationService(),
   ) {}
 
+  async close(): Promise<void> {
+    await this.redis.disconnect();
+  }
+
   async authorize(context: MediaGrantContext, asset: MediaAssetRow, requester: MediaRequester = {}): Promise<void> {
     if (context.v !== 2 || context.assetId !== asset.id || context.ownerPreview !== (context.entityType === 'owner-preview')
       || context.viewer.eligibilityRevision !== context.policyRevision) throw denied();
@@ -171,4 +175,11 @@ export class MediaAuthorizationService {
     if (visibility === 'public') return true;
     return Boolean(viewerId && await this.users.isFollowing(viewerId, ownerId));
   }
+}
+
+/** Share the session verifier across HTTP responses and delivery services. */
+export const defaultMediaAuthorizationService = new MediaAuthorizationService();
+
+export async function closeDefaultMediaAuthorizationService(): Promise<void> {
+  await defaultMediaAuthorizationService.close();
 }

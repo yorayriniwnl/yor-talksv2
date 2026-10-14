@@ -14,11 +14,12 @@ import { PaymentWebhookService } from '../services/payment-webhook-service.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { closeAuthDependencies } from '../middlewares/auth.js';
 import billingRoutes from '../routes/billing.js';
+import { authorizeTestAdultAccount } from './test-helpers.js';
 
 // PostgreSQL and Redis are real isolated services. Provider responses are
 // simulated here; this suite makes no requests to a Razorpay merchant account.
 const previous = { ...env };
-Object.assign(env, { PAYMENTS_ENABLED: true, RAZORPAY_KEY_ID: 'rzp_test_synthetic', RAZORPAY_KEY_SECRET: 'synthetic-key', RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook', RAZORPAY_ACCOUNT_ID: 'acc_synthetic' });
+Object.assign(env, { PAYMENTS_ENABLED: true, SELLER_ENABLED: true, MEMBERSHIPS_ENABLED: true, RAZORPAY_KEY_ID: 'rzp_test_synthetic', RAZORPAY_KEY_SECRET: 'synthetic-key', RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook', RAZORPAY_ACCOUNT_ID: 'acc_synthetic' });
 type ProviderOrder = Awaited<ReturnType<RazorpayService['getOrder']>>;
 type ProviderPayment = Awaited<ReturnType<RazorpayService['getPayment']>>;
 type Refund = Awaited<ReturnType<RazorpayService['getPaymentRefunds']>>[number];
@@ -54,6 +55,7 @@ async function person() {
   const id = randomUUID(); userIds.push(id);
   await pool.query(`INSERT INTO users(id,username,email,password_hash,full_name,terms_version,terms_accepted_at,age_confirmed_at)
     VALUES($1,$2,$3,'synthetic-hash','Checkout test',$4,now(),now())`, [id,`chk-${id.slice(0,8)}`,`${id}@example.test`,env.TERMS_VERSION]);
+  await authorizeTestAdultAccount(id);
   return id;
 }
 async function product(sellerId: string) {

@@ -9,7 +9,7 @@ import { parseSocketPayload } from "../socket/policy.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ConversationRepository } from "../repositories/message-repository.js";
-import { MessageService } from "../services/message-service.js";
+import { MessageService, UnauthorizedError } from "../services/message-service.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 
 const userId = "10000000-0000-4000-8000-000000000001";
@@ -47,6 +47,9 @@ async function fixture(t: TestContext) {
   t.mock.method(ConversationRepository.prototype, "getMembers", async () => {
     if (state.joinsFail) throw new Error("Database unavailable");
     return [userId, recipientId];
+  });
+  t.mock.method(MessageService.prototype, "authorizeConversationDelivery", async (_conversationId: string, actorId: string) => {
+    if (state.restrictedUsers.has(actorId)) throw new UnauthorizedError("Messaging authority was revoked");
   });
   t.mock.method(MessageService.prototype, "sendMessage", async (senderId: string, _recipientId: string, content: string) => {
     state.sent++;

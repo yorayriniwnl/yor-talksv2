@@ -6,7 +6,7 @@ import type { FeatureEntitlementService } from "../services/feature-entitlement-
 import { MessageService, PremiumFeatureUnavailableError } from "../services/message-service.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { createTestUser } from "./test-helpers.js";
+import { authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import type { MessageRecord } from "../types/index.js";
 import { allowTestContacts } from "./test-helpers.js";
 
@@ -23,6 +23,7 @@ const message: MessageRecord = {
 function createPreviewService(enabled: boolean, alreadyRead = false, row: MessageRecord = message, returnedRow = row) {
   let recordedPreview: { messageId: string; userId: string } | undefined;
   const conversationRepository = {
+    findById: async () => ({ id: message.conversationId, isGroup: false }),
     getMembers: async () => [message.senderId, message.recipientId],
   } as unknown as ConversationRepository;
   const messageRepository = {
@@ -120,6 +121,8 @@ async function createPreviewFixture() {
   const users = new UserRepository();
   const sender = await createTestUser(users);
   const recipient = await createTestUser(users);
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(recipient.id);
   fixtureUsers.push(sender.id, recipient.id);
   const conversations = new ConversationRepository();
   const messages = new MessageRepository();

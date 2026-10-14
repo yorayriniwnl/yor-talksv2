@@ -45,7 +45,7 @@ async function fixture(t:{after(fn:()=>Promise<void>):void},providerGate?:{start
     if(createdUsers.length)await pool.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[createdUsers]);
     await redis.delStrict(`session:${viewer.id}:${deviceId}`);
   });
-  const [owner,viewer,other]=await Promise.all([createTestUser(users),createTestUser(users),createTestUser(users)]);
+  const [owner,viewer,other]=await Promise.all([createTestUser(users,{privacy:{profileVisibility:'public',messageRequests:true,allowDmFromStrangers:true}}),createTestUser(users,{settings:{theme:'light',notificationsEnabled:true,privateAccount:false,contentFilter:'mature'}}),createTestUser(users)]);
   createdUsers.push(owner.id,viewer.id,other.id);
   for(const user of [owner,viewer,other]) {
     await users.update(user.id,{termsVersion:env.TERMS_VERSION,termsAcceptedAt:new Date().toISOString()});

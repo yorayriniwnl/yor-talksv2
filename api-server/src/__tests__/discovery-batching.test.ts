@@ -55,8 +55,8 @@ async function fixture(t: TestContext, size: number) {
     noteRows.push({id:randomUUID(),authorId:author.id,content:'Synthetic note fixture',createdAt:now,expiresAt,
       audience:kind===4?'public':kind===5?'close_friends':audience,contentRating:kind===9?'mature':'regular'});
   }
-  await db.insert(storiesTable).values(storyRows);
-  await db.insert(userNotesTable).values(noteRows);
+  if (storyRows.length) await db.insert(storiesTable).values(storyRows);
+  if (noteRows.length) await db.insert(userNotesTable).values(noteRows);
   for (let i=0; i<size; i++) {
     if (i%10===4) await pool.query('INSERT INTO story_audience_members(story_id,user_id) VALUES($1,$2)',[storyRows[i].id,viewer.id]);
     if (i%10===5) await pool.query('INSERT INTO story_audience_exclusions(story_id,user_id) VALUES($1,$2)',[storyRows[i].id,viewer.id]);
@@ -106,15 +106,18 @@ test('current teen ceiling filters story and note candidates before the SQL page
   t.mock.method(EligibilityService.prototype, 'decisionFor', async () => currentDecision);
   const f = await fixture(t, 0);
   await users.update(f.viewer.id, { settings: { ...f.viewer.settings, contentFilter: 'mature' } });
-  const author = await f.create();
   const now = Date.now(), expiresAt = new Date(now + 3_600_000).toISOString();
   const storiesToInsert: typeof storiesTable.$inferInsert[] = [];
   const notesToInsert: typeof userNotesTable.$inferInsert[] = [];
   const allowedStoryIds = new Set<string>(), allowedNoteIds = new Set<string>();
+  const pageStoryIds = new Set<string>(), pageNoteIds = new Set<string>();
   for (let i = 0; i < 105; i++) {
+    // Notes are unique per author, so use one synthetic author per candidate.
+    const author = await f.create();
     const allowed = i >= 100;
     const createdAt = new Date(now + (allowed ? -10_000 + i : 10_000 + i)).toISOString();
     const storyId = randomUUID(), noteId = randomUUID();
+    pageStoryIds.add(storyId); pageNoteIds.add(noteId);
     if (allowed) { allowedStoryIds.add(storyId); allowedNoteIds.add(noteId); }
     storiesToInsert.push({ id: storyId, authorId: author.id, mediaUrl: '', type: 'text', textContent: 'Policy page fixture',
       audience: 'public', createdAt, publishedAt: createdAt, expiresAt, contentRating: allowed ? 'regular' : 'mature' });
@@ -125,8 +128,8 @@ test('current teen ceiling filters story and note candidates before the SQL page
   await db.insert(userNotesTable).values(notesToInsert);
   const storyService = new StoryService(stories, new ContentSafetyService(users), undefined, users);
   const noteService = new NoteService(notes, users, new ContentSafetyService(users));
-  const visibleStories = (await storyService.listActiveStories(f.viewer.id)).filter(row => row.authorId === author.id);
-  const visibleNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => row.authorId === author.id);
+  const visibleStories = (await storyService.listActiveStories(f.viewer.id)).filter(row => pageStoryIds.has(row.id));
+  const visibleNotes = (await noteService.listVisibleNotes(f.viewer.id)).filter(row => pageNoteIds.has(row.id));
   assert.deepEqual(new Set(visibleStories.map(row => row.id)), allowedStoryIds);
   assert.deepEqual(new Set(visibleNotes.map(row => row.id)), allowedNoteIds);
 
@@ -136,6 +139,7 @@ test('current teen ceiling filters story and note candidates before the SQL page
   const approvedIds: string[] = [];
   const childSafeStoryIds = new Set<string>(), childSafeNoteIds = new Set<string>();
   for (let i = 0; i < 105; i++) {
+    const author = await f.create();
     const approved = i >= 100;
     const createdAt = new Date(now + (approved ? -10_000 + i : 30_000 + i)).toISOString();
     const storyId = randomUUID(), noteId = randomUUID();

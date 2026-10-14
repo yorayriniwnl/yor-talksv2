@@ -7,6 +7,7 @@ import { env } from '../config/env.js';
 import { PaymentService } from '../services/payment-service.js';
 import { SubscriptionService } from '../services/subscription-service.js';
 import { PaymentsNotConfiguredError } from '../services/razorpay-service.js';
+import { EligibilityService } from '../services/eligibility-service.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { economyRoutes } from '../routes/economy-routes.js';
@@ -35,6 +36,12 @@ test('disabled beta features stay closed through both HTTP API prefixes without 
   const original = { PUBLIC_BETA: env.PUBLIC_BETA, PAYMENTS_ENABLED: env.PAYMENTS_ENABLED, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, WEB_PUSH_ENABLED: env.WEB_PUSH_ENABLED };
   Object.assign(env, { PUBLIC_BETA: true, PAYMENTS_ENABLED: false, LIVE_ROOMS_ENABLED: false, WEB_PUSH_ENABLED: false });
   t.after(() => Object.assign(env, original));
+  const eligible = { experience: 'adult_18_plus', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: true, seller: true, memberships: true,
+      live: true, rtc: true, ai: true, analytics: false, profiling: false },
+    maximumContentRating: 'regular', policyVersions: ['fixture:1'], revision: 'release-gate-fixture', reason: null,
+    publicBrowsingAllowed: true };
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => eligible as never);
   t.mock.method(RedisRepository.prototype, 'getStrict', async () => 'fixture-session');
   t.mock.method(UserRepository.prototype, 'findById', async () => ({ id: actorId, role: 'user', permissions: [], accountStatus: 'active', termsVersion: env.TERMS_VERSION, termsAcceptedAt: '2026-08-31', ageConfirmedAt: '2026-08-31' }));
   const routes = express.Router();
@@ -71,13 +78,14 @@ test('disabled beta features stay closed through both HTTP API prefixes without 
     ['PUT', `/streams/${targetId}/status`, { status: 'live' }],
     ['GET', '/notifications/push/public-key'],
     ['POST', '/notifications/push/subscribe', {}],
-    ['DELETE', '/notifications/push/subscribe', {}],
+    // Opt-out remains available after the paid/optional feature is disabled.
+    ['DELETE', '/notifications/push/subscribe', { endpoint: 'https://push.example.test/subscription/fixture' }, 200],
     ['GET', '/streams', undefined, 200],
     ['GET', `/streams/${targetId}`, undefined, 404],
   ];
   for (const prefix of ['/api', '/api/v1']) {
     for (const [method, path, body, expected = 503] of cases) {
-      const response = await fetch(`${base}${prefix}${path}`, { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+      const response = await fetch(`${base}${prefix}${path}`, { method, headers: { Authorization: `Bearer ${token}`, Origin: env.CLIENT_ORIGIN, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
       assert.equal(response.status, expected, `${method} ${prefix}${path}`);
       const payload = await response.json() as { data?: unknown };
       if (path === '/streams' && method === 'GET') assert.deepEqual(payload.data, []);

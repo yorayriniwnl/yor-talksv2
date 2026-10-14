@@ -25,8 +25,6 @@ export function MessageAttachment({ message }: { message: Message }) {
   contextRef.current.present = present;
   const original = approvedMessageDeliveryUrl(message);
   const source = original && delivery && delivery.previous === message.mediaUrl ? delivery.url : original;
-  const protectedFailure = useCallback(() => setRecovery('failed'), []);
-  const protectedSource = useProtectedMediaSource(source, protectedFailure);
   const latestRef = useRef({ message, source });
   latestRef.current = { message, source };
 
@@ -68,6 +66,9 @@ export function MessageAttachment({ message }: { message: Message }) {
       if (mountedRef.current && !applied) setRecovery('failed');
     }
   }, []);
+
+  const protectedFailure = useCallback(() => { void renew(); }, [renew]);
+  const protectedSource = useProtectedMediaSource(source, protectedFailure);
 
   const restoreAudio = useCallback(() => {
     const audio = audioRef.current;

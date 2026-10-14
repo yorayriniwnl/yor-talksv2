@@ -17,7 +17,7 @@ import { RedisRepository } from '../repositories/redis-repository.js';
 import { closeAuthDependencies } from '../middlewares/auth.js';
 import premiumRoutes from '../routes/premium.js';
 import type { AIService } from '../services/ai-service.js';
-import { allowTestContacts } from './test-helpers.js';
+import { allowTestContacts, authorizeTestAdultAccount } from './test-helpers.js';
 
 // Real PostgreSQL/Redis; only the Razorpay network boundary is simulated.
 const previous = { ...env };
@@ -55,6 +55,7 @@ async function person() {
   const id = randomUUID(); userIds.push(id);
   await pool.query(`INSERT INTO users(id,username,email,password_hash,full_name,terms_version,terms_accepted_at,age_confirmed_at)
     VALUES($1,$2,$3,'synthetic-hash','Premium test',$4,now(),now())`, [id, `pre-${id.slice(0, 8)}`, `${id}@example.test`, env.TERMS_VERSION]);
+  await authorizeTestAdultAccount(id);
   return id;
 }
 const input = () => ({ idempotencyKey: randomUUID(), acceptedTermsVersion: env.YOR_PREMIUM_TERMS_VERSION, acceptedPriceMinor: env.YOR_PREMIUM_PRICE_MINOR });

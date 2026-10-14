@@ -6,7 +6,7 @@ import { ConversationRepository, MessageRepository } from "../repositories/messa
 import { UserRepository } from "../repositories/user-repository.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { AccountService } from "../services/account-service.js";
-import { allowTestContacts, createTestUser } from "./test-helpers.js";
+import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { MessageService } from "../services/message-service.js";
 
 test("vanish-mode messages receive a bounded expiry", async () => {
@@ -62,6 +62,8 @@ test("expired retained messages cannot leak through send retries, edits, reactio
   const users = new UserRepository();
   const sender = await createTestUser(users);
   const recipient = await createTestUser(users);
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(recipient.id);
   fixtureUsers.push(sender.id, recipient.id);
   const conversations = new ConversationRepository();
   const messages = new MessageRepository();
@@ -91,6 +93,8 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
   const users = new UserRepository();
   const sender = await createTestUser(users);
   const recipient = await createTestUser(users);
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(recipient.id);
   fixtureUsers.push(sender.id, recipient.id);
   const conversations = new ConversationRepository();
   const messages = new MessageRepository();

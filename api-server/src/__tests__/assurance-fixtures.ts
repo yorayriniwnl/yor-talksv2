@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { pool } from '@workspace/db';
 import type { AssuranceAdapter, ProviderChallenge, VerifiedAssuranceEvent } from '../eligibility/assurance-adapter.js';
 import type { ApprovedTerritoryPolicy } from '../eligibility/types.js';
 
@@ -10,8 +11,11 @@ export class FixtureAssuranceAdapter implements AssuranceAdapter {
   readonly redirectOrigins = ['https://assurance.example.test'];
   readonly starts: ProviderChallenge[] = [];
   readonly events = new Map<string, VerifiedAssuranceEvent>();
+  readonly verificationTimes = new Map<string, string>();
   async start(challenge: ProviderChallenge) {
     this.starts.push(challenge);
+    const clock = await pool.query('SELECT clock_timestamp() AS now');
+    this.verificationTimes.set(challenge.id, new Date(clock.rows[0].now as Date).toISOString());
     return { redirectUrl: `https://assurance.example.test/start/${challenge.id}` };
   }
   async verifyCallback(body: Buffer) {
@@ -21,15 +25,16 @@ export class FixtureAssuranceAdapter implements AssuranceAdapter {
   }
   event(challenge = this.starts.at(-1)!): VerifiedAssuranceEvent {
     const subject = challenge.userId ? { userId: challenge.userId } : { enrollmentId: challenge.enrollmentId! };
+    const verifiedAt = this.verificationTimes.get(challenge.id) ?? new Date(Date.now() - 10_000).toISOString();
     const common = { ...subject, issuer: this.issuer, audience: this.audience, eventId: randomUUID(), challengeId: challenge.id,
       nonce: challenge.nonce, purpose: challenge.purpose, policyVersions: challenge.policyVersions,
-      verifiedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString() };
+      verifiedAt, expiresAt: new Date(Date.parse(verifiedAt) + 86_400_000).toISOString() };
     return challenge.purpose === 'age_assessment'
       ? { ...common, purpose: 'age_assessment', assessment: { method: 'synthetic', experience: 'adult_18_plus',
         thresholds: [{ age: 13, atLeast: true }, { age: 18, atLeast: true }], territory: challenge.territory!, evidenceReference: 'private-evidence-reference' } }
       : { ...common, purpose: 'guardian_authorization', guardian: { guardianUserId: null, guardianReference: 'private-parent-reference',
         responsibilityReference: 'private-responsibility-reference', purposes: challenge.requestedPurposes,
-        noticeVersions: challenge.noticeVersions, grantedAt: new Date().toISOString() } };
+        noticeVersions: challenge.noticeVersions, grantedAt: verifiedAt } };
   }
   callback(event = this.event()) {
     const token = randomUUID(); this.events.set(token, event); return Buffer.from(token);

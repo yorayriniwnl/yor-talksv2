@@ -41,6 +41,7 @@ test('eligibility migration is additive and idempotent on fresh and populated ba
       await client.query(`SET search_path TO "${schema}"`);
       await client.query('CREATE TABLE users(id uuid PRIMARY KEY, age_confirmed_at timestamptz)');
       await client.query('CREATE TABLE posts(id uuid PRIMARY KEY, content text)');
+      await client.query('CREATE TABLE conversations(id uuid PRIMARY KEY)');
       const userId = randomUUID();
       const postId = randomUUID();
       if (populated) {

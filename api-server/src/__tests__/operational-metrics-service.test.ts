@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { pool } from "@workspace/db";
 import { OperationalMetricsService } from "../services/operational-metrics-service.js";
 
 test("operational metrics use route templates instead of raw identifiers", async () => {
@@ -24,6 +25,7 @@ test("operational metrics keep unknown paths in one bounded bucket", async () =>
 });
 
 test("rollup status metrics stay alertable before the first successful scheduled run", async () => {
+  await pool.query("DELETE FROM product_analytics_job_runs");
   const metrics = new OperationalMetricsService();
   const output = await metrics.renderPrometheus();
   assert.match(output, /yor_analytics_rollup_last_success_timestamp_seconds 0/);

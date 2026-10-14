@@ -180,12 +180,13 @@ export class ContactAuthorizationService {
   async lockGroupInvitationPairs(memberIds:string[],inviteeId:string,conversationId?:string):Promise<void>{
     const members=[...new Set(memberIds)].sort(),allIds=[...new Set([...members,inviteeId])].sort();
     if(allIds.length<2)throw denied();
+    const allIdList=sql.join(allIds.map(id=>sql`${id}::uuid`),sql`, `);
     if(conversationId)await db.execute(sql`SELECT id FROM conversations WHERE id=${conversationId}::uuid FOR SHARE`);
-    await db.execute(sql`SELECT id FROM users WHERE id IN (${sql.join(allIds.map(id=>sql`${id}::uuid`),sql`, `)}) ORDER BY id FOR SHARE`);
-    await db.execute(sql`SELECT user_id FROM eligibility_revisions WHERE user_id=ANY(${allIds}::uuid[]) ORDER BY user_id FOR SHARE`);
-    await db.execute(sql`SELECT id FROM contact_authorizations WHERE user_a_id=ANY(${allIds}::uuid[]) AND user_b_id=ANY(${allIds}::uuid[])
+    await db.execute(sql`SELECT id FROM users WHERE id IN (${allIdList}) ORDER BY id FOR SHARE`);
+    await db.execute(sql`SELECT user_id FROM eligibility_revisions WHERE user_id IN (${allIdList}) ORDER BY user_id FOR SHARE`);
+    await db.execute(sql`SELECT id FROM contact_authorizations WHERE user_a_id IN (${allIdList}) AND user_b_id IN (${allIdList})
       ORDER BY user_a_id,user_b_id,created_at DESC FOR SHARE`);
-    await db.execute(sql`SELECT id FROM guardian_authorizations WHERE user_id=ANY(${allIds}::uuid[])
+    await db.execute(sql`SELECT id FROM guardian_authorizations WHERE user_id IN (${allIdList})
       AND purposes ? 'social_contact' ORDER BY user_id,subject_revision DESC,id FOR SHARE`);
   }
 
@@ -354,16 +355,17 @@ export class ContactAuthorizationService {
   async lockCurrentPairwiseContacts(userIds:string[],action:'read'|'send'|'deliver',conversationId?:string):Promise<void>{
     const members=[...new Set(userIds)].sort();
     if(!members.length||members.length<2&&!conversationId)return;
+    const memberList=members.length?sql.join(members.map(id=>sql`${id}::uuid`),sql`, `):sql`NULL::uuid`;
     if(conversationId){
       await db.execute(sql`SELECT id FROM conversations WHERE id=${conversationId}::uuid FOR SHARE`);
       await db.execute(sql`SELECT id FROM conversation_invitations WHERE conversation_id=${conversationId}::uuid
         AND state IN ('pending','accepted') ORDER BY id FOR SHARE`);
     }
-    await db.execute(sql`SELECT id FROM users WHERE id IN (${sql.join(members.map(id=>sql`${id}::uuid`),sql`, `)}) ORDER BY id FOR SHARE`);
-    await db.execute(sql`SELECT user_id FROM eligibility_revisions WHERE user_id=ANY(${members}::uuid[]) ORDER BY user_id FOR SHARE`);
-    await db.execute(sql`SELECT id FROM guardian_authorizations WHERE user_id=ANY(${members}::uuid[])
+    await db.execute(sql`SELECT id FROM users WHERE id IN (${memberList}) ORDER BY id FOR SHARE`);
+    await db.execute(sql`SELECT user_id FROM eligibility_revisions WHERE user_id IN (${memberList}) ORDER BY user_id FOR SHARE`);
+    await db.execute(sql`SELECT id FROM guardian_authorizations WHERE user_id IN (${memberList})
       AND purposes ? 'social_contact' ORDER BY user_id,subject_revision DESC,id FOR SHARE`);
-    await db.execute(sql`SELECT id FROM contact_authorizations WHERE user_a_id=ANY(${members}::uuid[]) AND user_b_id=ANY(${members}::uuid[])
+    await db.execute(sql`SELECT id FROM contact_authorizations WHERE user_a_id IN (${memberList}) AND user_b_id IN (${memberList})
       AND state IN ('pending','accepted') ORDER BY user_a_id,user_b_id FOR SHARE`);
     if(conversationId)await this.requirePairwiseGroupContacts(members,conversationId,action);
     else await this.requirePairwiseContacts(members,action);

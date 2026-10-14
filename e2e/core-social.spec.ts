@@ -270,7 +270,7 @@ test('older structured message image and audio grants renew without replacing hi
   const imageRow = page.locator('article.operator-message').filter({ hasText: 'Earlier image caption' });
   await imageRow.scrollIntoViewIfNeeded();
   const image = imageRow.getByRole('img', { name: 'Shared attachment' });
-  await expect(image).toHaveAttribute('src', new URL(`/api/media/${imageId}/content?token=renewed`, page.url()).href);
+  await expect(image).toHaveAttribute('src', /^blob:/);
   await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(2);
   const audioRow = page.locator('article.operator-message').filter({ hasText: 'Earlier voice caption' });
   const audio = audioRow.locator('audio');
@@ -289,10 +289,10 @@ test('older structured message image and audio grants renew without replacing hi
   });
   await expect(audio).toHaveJSProperty('currentTime', 0.4);
   audioExpired = true;
-  const expired = page.waitForResponse(response => response.url().includes(`${audioId}/content?token=original`) && response.status() === 403);
-  await audio.evaluate(element => (element as HTMLAudioElement).load());
-  await expired;
-  await expect(audio).toHaveAttribute('src', new URL(`/api/media/${audioId}/content?token=renewed`, page.url()).href);
+  const renewedAudio = page.waitForRequest(request => request.url().includes(`${audioId}/content?token=renewed`));
+  await audio.evaluate(element => element.dispatchEvent(new Event('error')));
+  await renewedAudio;
+  await expect(audio).toHaveAttribute('src', /^blob:/);
   await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeCloseTo(0.4, 1);
   await expect(audio).toHaveJSProperty('paused', true);
   await expect(audio).toHaveJSProperty('muted', true);
@@ -350,16 +350,14 @@ test('message attachment renewal denies mismatches, bounds errors, and ignores a
   await expect(audioRow.getByRole('alert')).toBeVisible();
   expect(reads).toEqual([1, 1]);
   for (let attempt = 0; attempt < 2; attempt++) {
-    const denied = page.waitForResponse(response => response.url().includes(`${attachments[1].mediaId}/content?token=expired`) && response.status() === 403);
     await audioRow.locator('audio').evaluate(element => (element as HTMLAudioElement).load());
-    await denied;
   }
   expect(reads).toEqual([1, 1]);
   for (const count of [2, 3]) {
     await audioRow.getByRole('button', { name: 'Retry attachment' }).click();
     await expect(audioRow.getByRole('alert')).toBeVisible();
     expect(reads).toEqual([1, count]);
-    await expect(audioRow.locator('audio')).toHaveAttribute('src', new URL(attachments[1].mediaUrl, page.url()).href);
+    await expect(audioRow.locator('audio')).not.toHaveAttribute('src');
   }
   await expect(composer).toHaveValue('Alpha draft stays private.');
   await expect(rows).toHaveCount(2);
@@ -429,10 +427,10 @@ test('expired uploaded-video grants renew through the authorized video read and 
   });
   await expect(player).toHaveJSProperty('currentTime', 0.4);
   expired = true;
-  const denial = page.waitForResponse(response => response.url().includes(`${assetIds[1]}/content?token=original`) && response.status() === 403);
-  await player.evaluate(video => (video as HTMLVideoElement).load());
-  await denial;
-  await expect(player).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  const renewedRequest = page.waitForRequest(request => request.url().includes(`${assetIds[1]}/content?token=renewed`));
+  await player.evaluate(video => video.dispatchEvent(new Event('error')));
+  await renewedRequest;
+  await expect(player).toHaveAttribute('src', /^blob:/);
   await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).readyState)).toBeGreaterThanOrEqual(2);
   await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeCloseTo(0.4, 1);
   await expect(player).toHaveJSProperty('paused', true);
@@ -445,7 +443,7 @@ test('expired uploaded-video grants renew through the authorized video read and 
   await expect.poll(() => player.evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.55);
   await page.getByRole('button', { name: 'Close video viewer' }).click();
   await page.getByRole('button', { name: 'Watch Delivery reel 2' }).click();
-  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=renewed`);
+  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', /^blob:/);
   expect(authorizedReads).toBe(1);
 });
 
@@ -481,11 +479,9 @@ test('denied or unchanged delivery renewals stop automatically and allow a bound
   const failure = page.getByRole('alert').filter({ hasText: 'Video could not load' });
   await expect(failure).toBeVisible();
   expect(reads).toEqual([1, 0]);
-  // Repeated actual media failures must not recursively call the read endpoint.
+  // Repeated playback resets without an authorized source must not call the read endpoint.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const denial = page.waitForResponse(response => response.url().includes(`${assetIds[0]}/content?token=expired`) && response.status() === 403);
     await page.locator('.operator-reel-video').nth(0).evaluate(video => (video as HTMLVideoElement).load());
-    await denial;
   }
   expect(reads).toEqual([1, 0]);
   await page.getByRole('button', { name: 'Retry video', exact: true }).click();
@@ -502,7 +498,7 @@ test('denied or unchanged delivery renewals stop automatically and allow a bound
   await expect(page.locator('.operator-reels-progress strong')).toHaveText('01');
   releaseLateRead();
   await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('aria-busy', 'false');
-  await expect(page.locator('.operator-reel-video').nth(1)).toHaveAttribute('src', `/api/media/${assetIds[1]}/content?token=expired`);
+  await expect(page.locator('.operator-reel-video').nth(1)).not.toHaveAttribute('src');
   expect(reads).toEqual([2, 2]);
 });
 
@@ -1098,6 +1094,8 @@ test('expired bearer logout revokes refresh session before a reload can restore 
         : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Invalid refresh token' }) });
     }
     if (path === '/users/me') return json(route, user);
+    if (path === '/users/me/eligibility') return json(route, adultEligibility);
+    if (path === '/users/me/guardian-authorizations') return json(route, []);
     if (path === '/auth/logout') {
       logoutAttempts++;
       if (request.headers().authorization) {

@@ -23,10 +23,6 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
   videoRef.current = video;
   const source = delivery?.previous === video.videoUrl ? delivery.videoUrl : video.videoUrl;
   const poster = delivery?.previous === video.videoUrl ? delivery.thumbnailUrl : video.thumbnailUrl;
-  const protectedFailure = useCallback(() => setRecovery('failed'), []);
-  const protectedSource = useProtectedMediaSource(source, protectedFailure);
-  const protectedPoster = useProtectedMediaSource(poster, protectedFailure);
-
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
@@ -70,9 +66,17 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
     }
   }, []);
 
+  const protectedFailure = useCallback(() => { void refreshDelivery(); }, [refreshDelivery]);
+  // Only the selected reel gets a viewer-bound delivery fetch. A neighbouring
+  // reel can become active later and should not consume or renew its grant early.
+  const protectedSource = useProtectedMediaSource(active ? source : undefined, protectedFailure);
+  const protectedPoster = useProtectedMediaSource(active ? poster : undefined, protectedFailure);
+
   const restorePlayback = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
+    // Browsers reset playbackRate when a protected blob source is replaced.
+    player.playbackRate = playbackSpeed;
     if (player.readyState >= 1 && !player.error) setRecovery('idle');
     const resume = resumeRef.current;
     if (resume && player.readyState < 2) return;
@@ -84,7 +88,7 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
     if (activeRef.current && playbackIntentRef.current) void player.play().catch(() => {
       // Autoplay remains subject to the browser's usual interaction policy.
     });
-  }, []);
+  }, [playbackSpeed]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -93,7 +97,7 @@ export function ReelVideoPlayer({ video, active, muted, playbackSpeed }: {
     player.playbackRate = playbackSpeed;
     if (active) {
       if (player.error) void refreshDelivery();
-      else restorePlayback();
+      else if (!resumeRef.current) restorePlayback();
     } else {
       player.pause();
       player.currentTime = 0;

@@ -189,7 +189,6 @@ function NewMessageDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       if (conv) setLocation(`/messages/${conv.id}`);
     } catch (err) {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     }
     sendingRef.current = false;
     setSending(false);
@@ -776,7 +775,6 @@ export default function Messages() {
       if (inputRef.current) inputRef.current.style.height = 'auto';
     } catch {
       setSendError('Could not send this message. Your draft is still here.');
-      toast.error('Message not sent. Your draft is still here.');
     } finally {
       sendingRef.current = false;
       setSending(false);

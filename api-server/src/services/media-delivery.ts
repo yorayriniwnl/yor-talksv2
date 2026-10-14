@@ -8,7 +8,7 @@ import { MediaLifecycleError, mediaIdentity, mediaIntent, type MediaAssetRow } f
 import { StorageService } from './storage-service.js';
 import { runMediaProcess } from './media-byte-verification.js';
 import type { MediaProvider } from './media-provider.js';
-import { MediaAuthorizationService, type MediaGrantContext, type MediaRequester } from './media-authorization-service.js';
+import { defaultMediaAuthorizationService, type MediaGrantContext, type MediaRequester, type MediaAuthorizationService } from './media-authorization-service.js';
 
 type Variant = 'original' | 'poster';
 type Grant = MediaGrantContext;
@@ -68,7 +68,7 @@ export class MediaDeliveryService {
   private readonly cache=new Map<string,{expires:number;buffer:Buffer;mime:string}>();
   private readonly loading=new Map<string,Promise<{buffer:Buffer;mime:string}>>();
   constructor(private readonly provider:MediaProvider=new StorageService(),private readonly poster=createVerifiedVideoPoster,
-    private readonly authorization=new MediaAuthorizationService()){}
+    private readonly authorization:MediaAuthorizationService=defaultMediaAuthorizationService){}
   async read(id:string,token:string,requester:MediaRequester={}):Promise<{buffer:Buffer;mime:string}> {
     const grant=verifyGrant(id,token);
     const row=(await pool.query<MediaAssetRow>(`SELECT * FROM media_assets WHERE id=$1 AND status='approved' AND deletion_status='none'

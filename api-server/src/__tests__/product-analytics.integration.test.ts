@@ -6,7 +6,11 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { ProductAnalyticsService, type ProductEvent } from "../services/product-analytics-service.js";
 import { createTestUser } from "./test-helpers.js";
 
-const service = new ProductAnalyticsService();
+// These tests exercise storage and rollup behavior. The capability boundary
+// is verified separately with unknown accounts; this local service instance
+// supplies synthetic authorization so the pipeline can be exercised while
+// production analytics stays closed by policy.
+const service = new ProductAnalyticsService({ requireCapability: async () => ({} as never) } as never);
 const eventIds: string[] = [];
 const testUserIds: string[] = [];
 const paymentOrderIds: string[] = [];

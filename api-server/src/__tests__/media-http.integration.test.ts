@@ -7,7 +7,7 @@ import { pool } from '@workspace/db';
 import { env } from '../config/env.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
-import { createTestUser } from './test-helpers.js';
+import { authorizeTestAdultAccount, createTestUser } from './test-helpers.js';
 import { createMediaRouter } from '../routes/media.js';
 import { MediaService, MediaLifecycleError, type MediaModerator } from '../services/media-service.js';
 import { MediaDeliveryService, mediaDeliveryUrl } from '../services/media-delivery.js';
@@ -18,6 +18,7 @@ import { closeRateLimitRedis } from '../middlewares/rate-limit.js';
 import { errorHandler } from '../middlewares/error-handler.js';
 import type { MediaProvider, MediaUploadIntent } from '../services/media-provider.js';
 import { CommunityService } from '../services/community-service.js';
+import { closeDefaultMediaAuthorizationService } from '../services/media-authorization-service.js';
 import { createTestApprovedMedia } from './media-fixtures.js';
 import businessRouter from '../routes/business.js';
 
@@ -30,10 +31,12 @@ function provider(overrides:Partial<MediaProvider>={}):MediaProvider{
 }
 const redis=new RedisRepository(),users=new UserRepository();
 const allowMediaAuthorization={authorize:async()=>{}} as unknown as MediaAuthorizationService;
+const previousSellerEnabled=env.SELLER_ENABLED;env.SELLER_ENABLED=true;
 async function json(response:Response):Promise<any>{return response.json();}
-after(async()=>{await Promise.all([redis.disconnect(),closeAuthenticationDependencies(),closeRateLimitRedis()]);await pool.end();});
+after(async()=>{env.SELLER_ENABLED=previousSellerEnabled;await Promise.all([redis.disconnect(),closeAuthenticationDependencies(),closeDefaultMediaAuthorizationService(),closeRateLimitRedis()]);await pool.end();});
 async function account(){
   const user=await createTestUser(users,{termsVersion:env.TERMS_VERSION,termsAcceptedAt:new Date().toISOString(),ageConfirmedAt:new Date().toISOString()});
+  await authorizeTestAdultAccount(user.id);
   const deviceId=randomUUID();await redis.setStrict(`session:${user.id}:${deviceId}`,'active',600);
   return {user,token:jwt.sign({sub:user.id,deviceId,type:'access',authVersion:user.authVersion??0},env.JWT_SECRET,{algorithm:'HS256',expiresIn:600})};
 }
@@ -41,10 +44,10 @@ async function serve(t:{after(fn:()=>Promise<void>):void},storage=provider(),mod
   const service=new MediaService(storage,moderator),delivery=new MediaDeliveryService(storage,undefined,authorization);
   const app=express();app.use(express.json());app.use(mediaResponse);app.use('/api',createMediaRouter(service,delivery));app.use('/api/business',businessRouter);app.use(errorHandler);
   const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
-  t.after(()=>new Promise<void>(resolve=>server.close(()=>resolve())));
+  t.after(()=>new Promise<void>(resolve=>{server.closeAllConnections();server.close(()=>resolve());}));
   const address=server.address();if(!address||typeof address==='string')throw new Error();
   const base=`http://127.0.0.1:${address.port}/api`;
-  const request=(path:string,token?:string,body?:unknown,method='POST')=>fetch(base+path,{method,headers:{...(token?{Authorization:`Bearer ${token}`}:{'X-Untrusted':'anonymous'}),...(!(body instanceof FormData)&&body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:body instanceof FormData?body:JSON.stringify(body)});
+  const request=(path:string,token?:string,body?:unknown,method='POST')=>fetch(base+path,{method,headers:{Connection:'close',...(token?{Authorization:`Bearer ${token}`}:{'X-Untrusted':'anonymous'}),...(!(body instanceof FormData)&&body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:body instanceof FormData?body:JSON.stringify(body)});
   return {service,delivery,request};
 }
 function ownerPreviewGrant(assetId:string,ownerId:string,deviceId:string,variant:'original'|'poster'='original'){
@@ -53,7 +56,6 @@ function ownerPreviewGrant(assetId:string,ownerId:string,deviceId:string,variant
 }
 test('production HTTP presign and multipart upload succeed through verified lifecycle; forged fields and cross-owner finalization fail',async t=>{
   const owner=await account(),other=await account();const {request}=await serve(t);
-  const previous=process.env.NODE_ENV;process.env.NODE_ENV='production';t.after(async()=>{process.env.NODE_ENV=previous;});
   const input={filename:'fixture.png',mimeType:'image/png',size:buffer.length,purpose:'post'};
   assert.equal((await request('/media/presign',undefined,input)).status,401);
   for(const extra of [{publicId:'forged/path'},{public_id:'forged'},{url:'https://example.test/x'},{ownerId:other.user.id},{status:'approved'}]){

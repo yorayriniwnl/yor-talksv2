@@ -4,14 +4,18 @@ import { pool } from "@workspace/db";
 import { ProductRepository } from "../repositories/product-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ProductService } from "../services/product-service.js";
-import { createTestUser } from "./test-helpers.js";
+import { env } from "../config/env.js";
+import { authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 
-after(() => pool.end());
+const previousSellerEnabled=env.SELLER_ENABLED;env.SELLER_ENABLED=true;
+after(async () => { env.SELLER_ENABLED=previousSellerEnabled;await pool.end(); });
 
 test("marketplace saves are private, viewer-scoped, and toggleable", async () => {
   const userRepository = new UserRepository();
   const seller = await createTestUser(userRepository);
   const buyer = await createTestUser(userRepository);
+  await authorizeTestAdultAccount(seller.id);
+  await authorizeTestAdultAccount(buyer.id);
   const service = new ProductService(new ProductRepository());
   const product = await service.createProduct({
     sellerId: seller.id,

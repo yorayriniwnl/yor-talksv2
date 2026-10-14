@@ -3,7 +3,8 @@ import { after, test } from "node:test";
 import { randomUUID } from "node:crypto";
 import { db, pool } from "@workspace/db";
 import { postsTable } from "@workspace/db/schema";
-import { allowTestContacts, createTestUser } from "./test-helpers.js";
+import { allowTestContacts, authorizeTestAdultAccount, createTestUser as createRawTestUser } from "./test-helpers.js";
+import { env } from "../config/env.js";
 import { createTestApprovedMedia } from "./media-fixtures.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { PostRepository } from "../repositories/post-repository.js";
@@ -30,6 +31,8 @@ import { MessageService } from "../services/message-service.js";
 import { withApprovedMedia } from "../services/media-publication.js";
 import { MediaLifecycleError } from "../services/media-service.js";
 import { hydrateMediaValue } from "../services/media-response.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
+import { closeDefaultMediaAuthorizationService } from "../services/media-authorization-service.js";
 import { createPostSchema, commentSchema } from "../validators/post.js";
 import { createStorySchema } from "../validators/story.js";
 import { createVideoSchema } from "../validators/video.js";
@@ -43,9 +46,21 @@ import { updateProfileSchema } from "../validators/user.js";
 import { messageSchema } from "../validators/message.js";
 import { parseSocketPayload } from "../socket/policy.js";
 
-after(() => pool.end());
+const previousSellerEnabled = env.SELLER_ENABLED;
+const previousLiveEnabled = env.LIVE_ROOMS_ENABLED;
+env.SELLER_ENABLED = true;
+env.LIVE_ROOMS_ENABLED = true;
+after(async () => { env.SELLER_ENABLED = previousSellerEnabled; env.LIVE_ROOMS_ENABLED = previousLiveEnabled; await closeDefaultMediaAuthorizationService(); await pool.end(); });
 const users = new UserRepository();
 const marker = (id: string) => `media:${id}`;
+async function createAdultUser(overrides: Parameters<typeof createRawTestUser>[1] = {}) {
+  const user = await createRawTestUser(users, {
+    privacy: { profileVisibility: "public", messageRequests: true, allowDmFromStrangers: true },
+    ...overrides,
+  });
+  await authorizeTestAdultAccount(user.id);
+  return user;
+}
 async function references(entityId: string) {
   return (await pool.query("SELECT media_id, entity_type, slot FROM media_references WHERE entity_id=$1 ORDER BY media_id,slot", [entityId])).rows;
 }
@@ -79,8 +94,8 @@ test("all publication validators reject raw URL fields; HTTP/socket accept struc
 });
 
 test("approved ownership, purpose, lifecycle status, and verified type are enforced before a content write", async () => {
-  const owner = await createTestUser(users);
-  const other = await createTestUser(users);
+  const owner = await createAdultUser();
+  const other = await createAdultUser();
   const fixtures = [
     await createTestApprovedMedia(other.id, "post"),
     await createTestApprovedMedia(owner.id, "avatar"),
@@ -102,7 +117,7 @@ test("approved ownership, purpose, lifecycle status, and verified type are enfor
 });
 
 test("media reference and content writes roll back together when publication fails", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const asset = await createTestApprovedMedia(owner.id, "post");
   const id = randomUUID();
   await assert.rejects(() => withApprovedMedia(owner.id, [{ mediaIds: [asset.id], purpose: "post", slot: "images" }], { type: "posts", id }, async media => {
@@ -114,7 +129,7 @@ test("media reference and content writes roll back together when publication fai
 });
 
 test("post, image/audio comments, story, and video publications persist only approved markers and matching uses", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const postService = new PostService(new PostRepository(), users, new NotificationRepository());
   const postAsset = await createTestApprovedMedia(owner.id, "post");
   const post = await postService.createPost(owner.id, "Approved post", [postAsset.id]);
@@ -143,7 +158,7 @@ test("post, image/audio comments, story, and video publications persist only app
 });
 
 test("every cover and marketplace/showcase publication registers its approved asset use", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const productAsset = await createTestApprovedMedia(owner.id, "product");
   const product = await new ProductService(new ProductRepository()).createProduct({ sellerId: owner.id, title: "Approved product", description: "A synthetic product", price: 100, mediaIds: [productAsset.id], category: "art", condition: "new" });
   assert.deepEqual(product.images, [marker(productAsset.id)]);
@@ -171,7 +186,7 @@ test("every cover and marketplace/showcase publication registers its approved as
 });
 
 test("avatar replacement preserves legacy reads, keeps reused media, and releases only the replaced asset", async () => {
-  const owner = await createTestUser(users, { avatarUrl: "https://example.test/legacy.png" });
+  const owner = await createAdultUser({ avatarUrl: "https://example.test/legacy.png" });
   const service = new UserService(users);
   assert.equal((await service.updateProfile(owner.id, { bio: "Text change" }))?.avatarUrl, owner.avatarUrl);
   await assert.rejects(() => service.updateProfile(owner.id, { avatarUrl: "https://example.test/new.png" } as never), MediaLifecycleError);
@@ -186,8 +201,8 @@ test("avatar replacement preserves legacy reads, keeps reused media, and release
 });
 
 test("approved avatars hydrate typed follow, call and story viewer response DTOs", async t => {
-  const owner = await createTestUser(users);
-  const other = await createTestUser(users);
+  const owner = await createAdultUser();
+  const other = await createAdultUser();
   t.after(async () => { await users.deleteById(owner.id); await users.deleteById(other.id); });
   const ownerAvatar = await createTestApprovedMedia(owner.id, "avatar");
   const otherAvatar = await createTestApprovedMedia(other.id, "avatar");
@@ -203,8 +218,10 @@ test("approved avatars hydrate typed follow, call and story viewer response DTOs
     { name: "call invitation", value: { callId: randomUUID(), callType: "audio", offer: { type: "offer", sdp: "synthetic" }, caller: { id: owner.id, username: owner.username, displayName: owner.fullName, avatarUrl: ownerDto.avatarUrl } }, avatars: value => [[value.caller.avatarUrl, ownerAvatar.id]] },
     { name: "story viewer list", value: { data: { viewers: [{ viewerId: owner.id, username: owner.username, displayName: owner.fullName, avatarUrl: ownerDto.avatarUrl, viewedAt: new Date().toISOString() }], nextCursor: null } }, avatars: value => [[value.data.viewers[0].avatarUrl, ownerAvatar.id]] },
   ];
+  t.mock.method(RedisRepository.prototype, "getStrict", async () => "fixture-session");
+  const deviceId = randomUUID();
   for (const fixture of cases) await t.test(fixture.name, async () => {
-    const result = await hydrateMediaValue(fixture.value);
+    const result = await hydrateMediaValue(fixture.value, undefined, { userId: owner.id, deviceId, authVersion: owner.authVersion ?? 0 });
     for (const [avatar, assetId] of fixture.avatars(result)) {
       const delivery = new URL(avatar);
       assert.equal(delivery.pathname, `/api/media/${assetId}/content`);
@@ -214,8 +231,8 @@ test("approved avatars hydrate typed follow, call and story viewer response DTOs
 });
 
 test("typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers in arbitrary metadata", async t => {
-  const owner = await createTestUser(users);
-  const other = await createTestUser(users);
+  const owner = await createAdultUser();
+  const other = await createAdultUser();
   t.after(async () => { await users.deleteById(owner.id); await users.deleteById(other.id); });
   const avatar = await createTestApprovedMedia(owner.id, "avatar");
   const unattached = await createTestApprovedMedia(owner.id, "avatar");
@@ -235,8 +252,8 @@ test("typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers
 });
 
 test("concurrent message retries attach exactly the winning image/audio asset; soft deletion and replay never restore references", async () => {
-  const sender = await createTestUser(users);
-  const recipient = await createTestUser(users);
+  const sender = await createAdultUser();
+  const recipient = await createAdultUser();
   const service = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   const conversation = await service.createConversation(sender.id, recipient.id);
   const image = await createTestApprovedMedia(sender.id, "message");
@@ -264,7 +281,7 @@ test("concurrent message retries attach exactly the winning image/audio asset; s
 test("external video mode rejects off-host, non-HTTPS, credentialed and disguised URLs and requires approved thumbnails", async () => {
   for (const value of ["http://youtube.com/watch?v=a", "https://youtube.com.evil.test/a", "https://user:pass@youtube.com/watch?v=a", "https://youtube.com:8443/a", "data:video/mp4;base64,eA==", "https://example.test/video.mp4", "https://youtube.com/"]) assert.throws(() => normalizeExternalVideoUrl(value), MediaLifecycleError);
   assert.equal(normalizeExternalVideoUrl("https://youtu.be/example"), "https://youtu.be/example");
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const asset = await createTestApprovedMedia(owner.id, "video");
   const service = new VideoService(new VideoRepository());
   const external = await service.createVideo({ authorId: owner.id, title: "External video", externalVideoUrl: "https://youtu.be/example", thumbnailMediaId: asset.id, type: "standard" });
@@ -274,7 +291,7 @@ test("external video mode rejects off-host, non-HTTPS, credentialed and disguise
 });
 
 test("parallel avatar replacements serialize before locking old/new assets and keep the final reference consistent", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const first = await createTestApprovedMedia(owner.id, "avatar");
   const second = await createTestApprovedMedia(owner.id, "avatar");
   const service = new UserService(users);
@@ -292,7 +309,7 @@ test("parallel avatar replacements serialize before locking old/new assets and k
 });
 
 test("account deletion wins against blocked media publication without leaving an orphan use", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const asset = await createTestApprovedMedia(owner.id, "avatar");
   const client = await pool.connect();
   try {
@@ -315,7 +332,7 @@ test("account deletion wins against blocked media publication without leaving an
 });
 
 test("shared media survives deletion of one post and queues cleanup only after its final use", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const asset = await createTestApprovedMedia(owner.id, "post");
   const service = new PostService(new PostRepository(), users, new NotificationRepository());
   const first = await service.createPost(owner.id, "First approved use", [asset.id]);
@@ -329,7 +346,7 @@ test("shared media survives deletion of one post and queues cleanup only after i
 });
 
 test("a last-reference deletion waiting for publication sees the newly committed reference", async () => {
-  const owner = await createTestUser(users);
+  const owner = await createAdultUser();
   const asset = await createTestApprovedMedia(owner.id, "post");
   const service = new PostService(new PostRepository(), users, new NotificationRepository());
   const first = await service.createPost(owner.id, "Original use", [asset.id]);

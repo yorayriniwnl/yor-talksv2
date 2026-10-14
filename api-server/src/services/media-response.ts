@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import { pool } from '@workspace/db';
 import { env } from '../config/env.js';
-import { MediaAuthorizationService, type MediaEntityType, type MediaGrantContext, type MediaRequester, type MediaViewer } from './media-authorization-service.js';
+import { defaultMediaAuthorizationService, type MediaAuthorizationService, type MediaEntityType, type MediaGrantContext, type MediaRequester, type MediaViewer } from './media-authorization-service.js';
 import { mediaIdentity, type MediaAssetRow } from './media-service.js';
 import type { MediaProvider } from './media-provider.js';
 import { EligibilityService } from './eligibility-service.js';
@@ -66,7 +66,7 @@ async function viewerFor(requester?:MediaRequester):Promise<MediaViewer> {
 
 /** Only an exact entity/reference pair, or its authenticated owner's completion DTO, can mint a grant. */
 export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,'signedDeliveryUrl'|'signedPosterUrl'>,
-  requester?:MediaRequester|string,authorization=new MediaAuthorizationService()):Promise<T> {
+  requester?:MediaRequester|string,authorization:MediaAuthorizationService=defaultMediaAuthorizationService):Promise<T> {
   const legacyViewerId=typeof requester==='string'?requester:undefined;
   const requesterContext=typeof requester==='object'&&requester?requester:{};
   // Provider URLs are retained only for legacy test fixtures. Deployed response
@@ -76,8 +76,8 @@ export async function hydrateMediaValue<T>(value:T,provider?:Pick<MediaProvider,
   const wanted=new Set<string>(),candidateKeys=new Set<string>(),previewIds=new Set<string>();
   function context(item:Record<string,unknown>,parent:Context,key:string):Context {
     const scope=nextContext(item,parent,key);
-    if(key==='users'||key==='user'||key==='author'||key==='sender'||key==='recipient'||key==='owner') {
-      const id=uuid(item.id)?item.id:uuid(item.userId)?item.userId:undefined;
+    if(key==='users'||key==='user'||key==='author'||key==='sender'||key==='recipient'||key==='owner'||key==='follower'||key==='target'||key==='requester'||key==='caller'||key==='viewers') {
+      const id=uuid(item.id)?item.id:uuid(item.userId)?item.userId:uuid(item.viewerId)?item.viewerId:undefined;
       return {...scope,entityType:'users',entityId:id??scope.entityId,avatarOwner:id??scope.avatarOwner};
     }
     return scope;
