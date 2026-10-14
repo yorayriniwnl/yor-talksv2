@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
-import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { hasHealthyLifecycleWorker, hasHealthyNotificationWorker } from "../lib/worker-health.js";
 
 const router = Router();
 
@@ -18,6 +18,7 @@ const readinessHandler = async (_req: Request, res: Response) => {
     redis: "down",
     api: "up",
     worker: "down",
+    lifecycleWorker: "down",
   };
 
   const details: Record<string, unknown> = {
@@ -42,6 +43,11 @@ const readinessHandler = async (_req: Request, res: Response) => {
       throw new Error("Required notification worker is not ready");
     }
     services.worker = "up";
+
+    if (!(await hasHealthyLifecycleWorker())) {
+      throw new Error("Required lifecycle worker is not ready");
+    }
+    services.lifecycleWorker = "up";
 
     res.status(200).json({
       status: "healthy",
