@@ -2,6 +2,8 @@
 
 **Decision: not ready for the requested global launch.** Passing development checks do not close the confirmed defects or establish that the real operating service meets its release requirements.
 
+**Historical snapshot:** The verification table and confirmed findings below describe the 7 October 2026 review. The age/privacy foundation has since been implemented in this branch; the current implementation evidence and the limits that remain open are recorded in the update below. The original blockers for data rights, complaint operations, group deletion, OTP revocation, monitoring and lifecycle health remain open unless specifically stated otherwise.
+
 **Scope:** EU-based operator; intended global availability; under-13, 13–17 and 18+ experiences. The actual EU member state and legal entity are unknown. This is a source and validation review, not certification of legal compliance or a deployed-service acceptance.
 
 **Latest verified committed baseline:** `44ca8c44e51c30d36fbc9318c38823b2d275d866`, branch `codex/media-lifecycle-20261006`; product source is unchanged from the initial `c1c10e3` review. The checkout also contained 233 pre-existing modified frontend entries, including 36 files with content changes after Git normalization. Those changes were neither edited nor included in this review's commit. Local checks exercise the working copy; GitHub checks exercise the committed baseline.
@@ -75,13 +77,28 @@ Readiness checks only the notification heartbeat (`api-server/src/routes/health.
 
 Required acceptance: stopped/stalled lifecycle work is visible through readiness or a deliberately separate operational health signal, overdue/dead cleanup jobs trigger actionable alerts, and recovery is demonstrated without losing durable jobs. CI's API-readiness smoke currently misses this failure mode.
 
-### P1 — Three age experiences and global legal operations are not implemented
+### Age and privacy foundation update — 14 October 2026
 
-Current age authority is a confirmation timestamp/checkbox; existing registrations default to public profiles and unrestricted contact. Mature-content preference has no verified-age ceiling. Follow/block rules do not establish approved minor contacts or guardian authorisation. Payment eligibility does not implement the proposed age/territory restrictions. Browser telemetry consent does not establish a server purpose-consent decision.
+The implementation now derives account experience and feature ceilings from trusted, expiring assurance records plus operator/recipient territory policy. Unknown, expired, revoked and otherwise invalid proof stays restricted. Registration uses a provider enrollment journey without a user-supplied age claim; under-13 collection waits for the required guardian step. Server route, content/media, contact/group, feature and socket boundaries enforce the decision. The client provides owner-safe verification and guardian progress, preserves Settings and data-rights access for restricted accounts, applies private defaults, and keeps optional telemetry off without current consent and capability.
 
-The [age and privacy design](superpowers/specs/2026-10-07-global-age-consent-design.md) is a draft awaiting human review. It specifies territory-aware assessment, parental authorisation, private defaults, contact acceptance, restricted identity sessions and enforcement across HTTP/sockets/media. No product implementation is claimed.
+The new acceptance crosswalk and isolated checks are in `api-server/src/__tests__/eligibility-acceptance.integration.test.ts`. Existing API integration suites and `e2e/core-social.spec.ts` own the behavioral cases. The production registry is intentionally empty and the default provider is unavailable; consequently no territory is currently enabled and the implementation does not claim real-world verification or legal acceptance. CI synthetic authority comes only from test injection.
 
-The later workstreams remain outstanding: full data-rights coverage and deadlines; retention/backup deletion and justified holds; enforced moderation decisions, reasons and applicable reviews/appeals; accurate operator/processor/transfer notices; child-readable terms; applicable commerce/AI/accessibility obligations; and country-specific acceptance. The existing fixed grievance deadlines, row-only status updates and newest-200 staff queues do not establish these operations.
+| # | Acceptance path | Authoritative behavioral suites |
+| --- | --- | --- |
+| 1 | Private public receipt and functional moderation | `report-authorization.integration.test.ts`, `eligibility-acceptance.integration.test.ts` |
+| 2 | Deleted/expired export, preview and attachment boundaries | `account-integrity.test.ts`, `message-preview.test.ts` |
+| 3 | Restricted login, owner rights, exact API paths and sockets | `restricted-session.integration.test.ts`, `socket-security.test.ts` |
+| 4 | Trusted age bands, callback binding/replay and provider outage | `assurance-service.test.ts`, `eligibility-enrollment.integration.test.ts` |
+| 5 | Verified guardian purpose, policy prohibitions and withdrawal | `contact-eligibility.integration.test.ts`, `eligibility-repository.integration.test.ts` |
+| 6 | Mature content, anonymous and protected-media ceilings | `eligibility-content.integration.test.ts`, `eligibility-media.integration.test.ts` |
+| 7 | Contact/group invitation and server feature limits under revocation | `contact-eligibility.integration.test.ts`, `group-eligibility.integration.test.ts`, `eligibility-features.integration.test.ts` |
+| 8 | Private evidence and owner-safe eligibility status | `eligibility-http.integration.test.ts`, `user-view.test.ts` |
+| 9 | Legacy unknown status, migration and production fixture rejection | `eligibility-repository.integration.test.ts`, `eligibility-policy.test.ts`, `env-config.test.ts` |
+| 10 | Client and actual HTTP/browser integration checks | `eligibility-http.integration.test.ts`, `e2e/core-social.spec.ts`, `tests/client-session.test.mjs` |
+
+Local verification on 14 October 2026 supersedes the earlier environment note. The complete serial API suite in CI mode against disposable PostgreSQL/Redis finished with 371 passed, 0 failed and 1 skipped; the remaining local skip is the decoder-format test because FFmpeg/FFprobe are unavailable on the Windows host. The production images built successfully and Compose readiness reported `media.decoder=true` and `media.ready=false`. Production-mode Playwright passed 63/63; root unit tests passed 63/63; API and web typechecks, contract/design/config checks and the full workspace build passed. The isolated production Compose API/web smoke passed, including protected eligibility routes, blocked enrollment, migration, provider DNS isolation and Redis rate limits. Alertmanager restarted 17 times because the pinned v0.28.1 binary rejects `--config.expand-env`; monitoring remains an open launch blocker. Hosted run [#386 for `24ce9e25adefee24a70a14f1eded071367ce3575`](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38519319744) failed at the group membership API assertion because the fixture compared unordered database rows without sorting both sides. Follow-up commit `e8b3bae2468283e37b4e960208fc2260e5777947` sorts the returned test values; hosted CI [#387](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38521492655) passed in 11m25s, including browser and production container smoke checks.
+
+The [age and privacy design](superpowers/specs/2026-10-07-global-age-consent-design.md) remains the acceptance basis, not a legal approval. The later workstreams remain outstanding: full data-rights coverage and deadlines; retention/backup deletion and justified holds; enforced moderation decisions, reasons and applicable reviews/appeals; accurate operator/processor/transfer notices; child-readable terms; applicable commerce/AI/accessibility obligations; and country-specific acceptance. The existing fixed grievance deadlines, row-only status updates and newest-200 staff queues do not establish those operations.
 
 The [initial jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) records primary-source research for EU, US, UK, Australia, Canada/Quebec, Brazil and India. It distinguishes active and phased rules and highlights ages that do not match the three product bands. It does not approve availability in those territories or exhaust every jurisdiction.
 
@@ -104,10 +121,10 @@ The following are unknown, not accepted:
 - Real media classification/storage acceptance with `details.media.ready=true`; the synthetic CI gate deliberately cannot establish it.
 - Public deployment DNS/TLS, cookie/session behavior, realtime delivery, reverse-proxy identity, provider callbacks and disabled-feature enforcement.
 - Encrypted off-host backup retrieval and isolated restore, measured against agreed recovery objectives; backup image execution is absent from current CI smoke.
-- Monitoring health, alert delivery, incident ownership, moderation staffing and urgent safety escalation drills.
+- Monitoring health, alert delivery, incident ownership, moderation staffing and urgent safety escalation drills. The 14 October local Compose run specifically confirmed that Alertmanager v0.28.1 exits on the unsupported `--config.expand-env` flag and is restarted by Compose; repair the config and demonstrate alert delivery.
 
 Payments, live rooms, push and RTC retain their existing disabled release gates until separately accepted. HLS remains an explicit unsupported route (501), and phone OTP returns 410; do not advertise either as implemented.
 
 ## Review boundary
 
-This artifact and the updated draft specification record findings. They do not repair product code, approve a country policy, enable a feature, deploy the app or certify it as production ready. The architectural workflow is awaiting approval of the saved specification before implementation planning. Subsequent implementation must use scoped commits and pushes and preserve unrelated changes.
+The findings above preserve the 7 October review snapshot. The age and privacy foundation was implemented and pushed on 14 October in `24ce9e25adefee24a70a14f1eded071367ce3575`; follow-up `e8b3bae2468283e37b4e960208fc2260e5777947` fixes the hosted test-order failure, and CI run [#387](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38521492655) passed. This work does not approve a country policy, enable a territory, deploy the app or certify production readiness. Remaining programme and operational gates stay open until separately implemented and accepted.

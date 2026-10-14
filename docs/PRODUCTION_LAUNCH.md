@@ -2,7 +2,7 @@
 
 This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
 
-**Current release decision: not ready for the requested global, three-age-group launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) records unresolved sign-in, privacy, shared-history deletion, monitoring and age-policy defects. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate those countries. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
+**Current release decision: not ready for the requested global, three-age-group launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) now includes the 14 October age/privacy implementation and verification evidence. Territory, operator, provider, legal, moderation, data-rights, backup and monitoring gates remain open. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate those countries. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
 
 The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
 current media controls, source-specific repository checks and the remaining
@@ -11,9 +11,10 @@ tests, production image builds and the complete container smoke test. Do not
 interpret synthetic provider fixtures, a pushed commit or liveness as live release approval.
 
 The [6 October verification report](MEDIA_LIFECYCLE_VERIFICATION_2026-10-06.md)
-lists all changed files, commands and limitations. Production image builds and
-container startup/smoke have passed in CI for the recorded revisions; this
-Windows host has no Docker Engine. Require a passing run for the revision being
+lists all changed files, commands and limitations for its recorded revisions.
+The earlier note that this Windows host had no Docker Engine is historical: on
+14 October the production images built locally and the isolated API/web
+container smoke passed. Require a passing hosted run for the revision being
 deployed. Legacy URL-only objects are not automatically approved or deleted:
 their retained account-deletion holds require provider ownership review.
 
@@ -50,6 +51,14 @@ Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (includ
 ## 2. Configure the external launch dependencies
 
 New uploaded media uses the implemented [server-owned lifecycle](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Before enabling this core launch path, apply its additive migration, configure three signed/authenticated Cloudinary presets and Gemini media moderation, and verify FFmpeg/FFprobe in the API container. Presign uses a bounded server upload unless authenticated provider account ceilings prove direct-upload limits for every resource endpoint. Playback and posters use expiring API delivery grants with approval/hash checks; set `MEDIA_DELIVERY_ORIGIN=https://<api-host>` for the separate API domain. An OpenAI-only text provider and green core `/readyz` are insufficient: check `details.media.ready` and complete real-provider acceptance. No production upload or provider configuration was performed by the implementation session. Keep the optional payment/live/push/RTC flags disabled.
+
+### Eligibility activation gate
+
+The production assurance adapter is unavailable and the approved territory and operator registries are empty. The app therefore keeps every account unverified and disables enrollment where no approved provider and policy apply. `pnpm smoke` checks that owner eligibility routes require authentication and that an unconfigured territory creates no enrollment. CI's synthetic policies and callbacks are injected directly by isolated tests; they are not production configuration or launch evidence.
+
+Before enabling account activation in any territory, identify the operating entity and applicable territory, approve and load both the operator and recipient policy, select and contract with an assurance provider, and accept the provider's age and parental-responsibility protocols. Validate reassessment, withdrawal, rights, retention, contact and content behavior in the deployed environment. A green fixture-based suite does not close those operational gates.
+
+The 14 October local production Compose smoke found that Alertmanager v0.28.1 exits on the configured `--config.expand-env` flag and is repeatedly restarted. Hosted CI #387 passed its production container smoke, but it does not verify Alertmanager health or real alert delivery. Repair that command/configuration and verify real alert delivery before relying on the monitoring stack.
 
 - Point frontend and API DNS names at a host Caddy/reverse proxy. Start with [ops/Caddyfile.example](../ops/Caddyfile.example): frontend hostname to `127.0.0.1:${WEB_PORT:-8080}`, API hostname to `127.0.0.1:${API_HOST_PORT:-4000}`. Caddy manages HTTPS and forwards WebSocket upgrades automatically. Set `CLIENT_ORIGIN`/`CORS_ORIGINS` to the exact frontend `https://` origin, `VITE_API_BASE_URL=https://<api-host>/api`, and `VITE_REALTIME_URL=https://<api-host>`; allow inbound 80/443 only at the proxy and do not expose API/Postgres/Redis host ports.
 - Verify the Resend sender domain and set `EMAIL_FROM`. Registration is fail-closed when production email delivery is unavailable.
