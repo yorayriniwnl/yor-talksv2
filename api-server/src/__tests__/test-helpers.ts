@@ -8,6 +8,11 @@ export const allowTestContacts = {
   async requireContact() {},
   async requirePairwiseContacts() {},
   async lockCurrentPairwiseContacts() {},
+  async requirePairwiseGroupContacts() {},
+  async lockGroupInvitationPairs() {},
+  async groupInvitationPolicy() { return { policyVersions: { test: "allowed" }, guardianRequiredUserIds: [] }; },
+  async groupGuardianApprovals() { return []; },
+  async authorizeGroupInvitation() { return true; },
 } as unknown as ContactAuthorizationService;
 
 /**

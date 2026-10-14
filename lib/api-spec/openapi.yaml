@@ -27,6 +27,7 @@ tags:
   - name: eligibility
   - name: events
   - name: feed
+  - name: group-invitations
   - name: healthz
   - name: highlights
   - name: invites
@@ -1504,6 +1505,37 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /conversations/{conversationId}/invitations:
+    post:
+      operationId: postConversationsByConversationIdInvitations
+      summary: Post /conversations/{conversationId}/invitations
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /conversations/{conversationId}/messages:
     get:
       operationId: getConversationsByConversationIdMessages
@@ -2046,6 +2078,141 @@ paths:
       tags: [feed]
       security:
         - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /group-invitations:
+    get:
+      operationId: getGroupInvitations
+      summary: Get /group-invitations
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /group-invitations/{invitationId}:
+    delete:
+      operationId: deleteGroupInvitationsByInvitationId
+      summary: Delete /group-invitations/{invitationId}
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /group-invitations/{invitationId}/accept:
+    post:
+      operationId: postGroupInvitationsByInvitationIdAccept
+      summary: Post /group-invitations/{invitationId}/accept
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /group-invitations/{invitationId}/guardian-approval:
+    post:
+      operationId: postGroupInvitationsByInvitationIdGuardianApproval
+      summary: Post /group-invitations/{invitationId}/guardian-approval
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /group-invitations/{invitationId}/reject:
+    post:
+      operationId: postGroupInvitationsByInvitationIdReject
+      summary: Post /group-invitations/{invitationId}/reject
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
           description: Successful response

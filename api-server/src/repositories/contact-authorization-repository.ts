@@ -55,6 +55,13 @@ export class ContactAuthorizationRepository {
       ORDER BY user_a_id,user_b_id`,[ids]);
     return result.rows.map(fromRow);
   }
+  async listLatestForMembers(userIds:string[]):Promise<ContactAuthorizationRecord[]> {
+    const ids=[...new Set(userIds)];if(ids.length<2)return [];
+    const result=await pool.query(`SELECT DISTINCT ON (user_a_id,user_b_id) * FROM contact_authorizations
+      WHERE user_a_id=ANY($1::uuid[]) AND user_b_id=ANY($1::uuid[])
+      ORDER BY user_a_id,user_b_id,created_at DESC,id DESC`,[ids]);
+    return result.rows.map(fromRow);
+  }
   async listForUser(userId: string): Promise<ContactAuthorizationRecord[]> {
     const result=await pool.query('SELECT * FROM contact_authorizations WHERE user_a_id=$1 OR user_b_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200',[userId]);
     return result.rows.map(fromRow);

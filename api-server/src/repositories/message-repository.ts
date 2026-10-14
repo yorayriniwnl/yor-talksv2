@@ -1,5 +1,6 @@
 import { eq, or, and, asc, desc, inArray, gt, lt, sql } from "drizzle-orm";
-import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
+import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable,
+  conversationInvitationsTable, conversationInvitationApprovalsTable } from "@workspace/db/schema";
 import { db, runInDatabaseTransaction } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
@@ -8,11 +9,10 @@ import { visibleMessagePredicate, toMessageTombstone } from "../utils/message-vi
 const currentVisibility = () => visibleMessagePredicate(sql`(clock_timestamp() AT TIME ZONE 'UTC')`);
 const membershipPredicate = (userId: string) => sql`EXISTS (
   SELECT 1 FROM conversations c WHERE c.id = ${messagesTable.conversationId} AND
-  CASE WHEN EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id)
+  CASE WHEN c.is_group
     THEN EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
-    ELSE CASE WHEN jsonb_typeof(c.participant_ids)='array' THEN c.participant_ids ? ${userId}
-      WHEN c.participant_ids IS NULL THEN c.participant_a=${userId}::uuid OR c.participant_b=${userId}::uuid
-      ELSE false END
+    ELSE EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
+      OR c.participant_a=${userId}::uuid OR c.participant_b=${userId}::uuid
   END
 )`;
 const unreadPredicate = (userId: string) => and(
@@ -21,6 +21,9 @@ const unreadPredicate = (userId: string) => and(
   sql`NOT EXISTS (SELECT 1 FROM message_reads mr WHERE mr.message_id=${messagesTable.id} AND mr.user_id=${userId})`,
 )!;
 class PreviewNoLongerVisible extends Error {}
+export class GroupInvitationConflictError extends Error {}
+type LockedGroupInvitation={conversation:typeof conversationsTable.$inferSelect;invitation:typeof conversationInvitationsTable.$inferSelect;
+  currentMembers:string[];approvals:Array<typeof conversationInvitationApprovalsTable.$inferSelect>};
 
 export class MessageRepository {
   async create(message: MessageRecord): Promise<MessageRecord> {
@@ -214,25 +217,166 @@ export class ConversationRepository {
     });
   }
 
-  async createGroupChat(creatorId: string, memberIds: string[], title: string, authorize?: () => Promise<void>): Promise<ConversationRecord> {
+  async createGroupChat(creatorId: string, title: string, authorize?: () => Promise<void>): Promise<ConversationRecord> {
     return runInDatabaseTransaction(async (tx) => {
       await authorize?.();
       const [created] = await tx.insert(conversationsTable).values({
         id: randomUUID(),
         participantA: creatorId, // Legacy column
         participantB: creatorId, // Legacy column
-        participantIds: [creatorId, ...memberIds],
+        participantIds: [creatorId],
         isGroup: true,
         title,
       }).returning();
-
-      const members = [creatorId, ...memberIds].map(id => ({
-        conversationId: created.id,
-        userId: id,
-        role: id === creatorId ? "admin" : "member"
-      }));
-      await tx.insert(conversationMembersTable).values(members);
+      await tx.insert(conversationMembersTable).values({conversationId:created.id,userId:creatorId,role:"admin"});
       return created as ConversationRecord;
+    });
+  }
+
+  async inviteToGroup(conversationId:string,inviterId:string,invitees:Array<{id:string;inviteeId:string;
+    guardianRequiredUserIds:string[];policyVersions:Record<string,string>}>,authorize:(currentMembers:string[])=>Promise<void>) {
+    return runInDatabaseTransaction(async tx=>{
+      const [conversation]=await tx.select().from(conversationsTable).where(eq(conversationsTable.id,conversationId)).for("update");
+      if(!conversation?.isGroup)throw new Error("Group not found");
+      const memberRows=await tx.select({userId:conversationMembersTable.userId}).from(conversationMembersTable)
+        .where(eq(conversationMembersTable.conversationId,conversationId));
+      const currentMembers=memberRows.map(row=>row.userId).sort();
+      if(!currentMembers.includes(inviterId))throw new Error("Only an accepted group member can invite");
+      await authorize(currentMembers);
+      const created=[];
+      for(const invite of invitees){
+        if(currentMembers.includes(invite.inviteeId))throw new Error("User is already a group member");
+        const [row]=await tx.insert(conversationInvitationsTable).values({
+          id:invite.id,conversationId,inviterId,inviteeId:invite.inviteeId,state:"pending",
+          memberIdsAtInvite:currentMembers,guardianRequiredUserIds:invite.guardianRequiredUserIds,
+          policyVersions:invite.policyVersions,updatedAt:new Date().toISOString(),
+        }).returning();
+        created.push(row);
+      }
+      return created;
+    });
+  }
+
+  async listGroupInvitationsForUser(userId:string){
+    return db.select().from(conversationInvitationsTable).where(and(
+      eq(conversationInvitationsTable.inviteeId,userId),eq(conversationInvitationsTable.state,"pending")))
+      .orderBy(desc(conversationInvitationsTable.createdAt));
+  }
+
+  private async lockedGroupInvitation(tx:any,invitationId:string):Promise<LockedGroupInvitation|undefined>{
+    const [seed]=await tx.select().from(conversationInvitationsTable).where(eq(conversationInvitationsTable.id,invitationId));
+    if(!seed)return undefined;
+    const [conversation]=await tx.select().from(conversationsTable).where(eq(conversationsTable.id,seed.conversationId)).for("update");
+    const [invitation]=await tx.select().from(conversationInvitationsTable).where(eq(conversationInvitationsTable.id,invitationId)).for("update");
+    if(!conversation?.isGroup||!invitation)return undefined;
+    const memberRows=await tx.select({userId:conversationMembersTable.userId}).from(conversationMembersTable)
+      .where(eq(conversationMembersTable.conversationId,seed.conversationId));
+    const approvalRows=await tx.select().from(conversationInvitationApprovalsTable)
+      .where(eq(conversationInvitationApprovalsTable.invitationId,invitationId));
+    return {conversation,invitation,currentMembers:memberRows.map((row:{userId:string})=>row.userId).sort(),approvals:approvalRows};
+  }
+
+  private async insertAcceptedGroupMember(tx:any,invitation:any,currentMembers:string[]){
+    const snapshot=[...(invitation.memberIdsAtInvite as string[])].sort();
+    if(JSON.stringify(snapshot)!==JSON.stringify(currentMembers)||currentMembers.includes(invitation.inviteeId))
+      throw new GroupInvitationConflictError("Group membership changed; request a new invitation");
+    await tx.insert(conversationMembersTable).values({conversationId:invitation.conversationId,userId:invitation.inviteeId,role:"member"});
+    const participants=[...currentMembers,invitation.inviteeId];
+    await tx.update(conversationsTable).set({participantIds:participants,updatedAt:new Date().toISOString()})
+      .where(eq(conversationsTable.id,invitation.conversationId));
+  }
+
+  private async refreshPendingGroupInvitations(tx:any,conversationId:string,memberIds:string[],exceptId:string,
+    refresh:(record:any,currentMembers:string[])=>Promise<{guardianRequiredUserIds:string[];policyVersions:Record<string,string>}>) {
+    const pending=await tx.select().from(conversationInvitationsTable).where(and(
+      eq(conversationInvitationsTable.conversationId,conversationId),eq(conversationInvitationsTable.state,"pending")));
+    const refreshed=[];
+    for(const invitation of pending){
+      if(invitation.id===exceptId)continue;
+      const policy=await refresh(invitation,memberIds);
+      const nextUpdatedAt=new Date(Math.max(Date.now(),new Date(invitation.updatedAt).getTime()+1)).toISOString();
+      await tx.delete(conversationInvitationApprovalsTable).where(eq(conversationInvitationApprovalsTable.invitationId,invitation.id));
+      const [updated]=await tx.update(conversationInvitationsTable).set({memberIdsAtInvite:memberIds,
+        guardianRequiredUserIds:policy.guardianRequiredUserIds,policyVersions:policy.policyVersions,
+        recipientAcceptedAt:null,updatedAt:nextUpdatedAt}).where(eq(conversationInvitationsTable.id,invitation.id)).returning();
+      refreshed.push(updated);
+    }
+    return refreshed;
+  }
+
+  async acceptGroupInvitation(invitationId:string,recipientId:string,expectedUpdatedAt:string,
+    authorize:(record:any,approvals:any[],currentMembers:string[])=>Promise<boolean>,
+    refresh:(record:any,currentMembers:string[])=>Promise<{guardianRequiredUserIds:string[];policyVersions:Record<string,string>}>) {
+    return runInDatabaseTransaction(async tx=>{
+      const locked=await this.lockedGroupInvitation(tx,invitationId),invitation=locked?.invitation;
+      if(!locked||!invitation||invitation.state!=="pending"||invitation.inviteeId!==recipientId)throw new GroupInvitationConflictError("Invitation unavailable");
+      if(new Date(invitation.updatedAt).toISOString()!==expectedUpdatedAt)throw new GroupInvitationConflictError("Group invitation changed; review it again");
+      if(invitation.recipientAcceptedAt)throw new GroupInvitationConflictError("Invitation is waiting for guardian approval");
+      const acceptedAt=new Date().toISOString();
+      const approvals=locked.approvals;
+      const candidate={...invitation,state:"accepted",recipientAcceptedAt:acceptedAt};
+      const ready=await authorize(candidate,approvals,locked.currentMembers);
+      if(ready)await this.insertAcceptedGroupMember(tx,candidate,locked.currentMembers);
+      const [updated]=await tx.update(conversationInvitationsTable).set({state:ready?"accepted":"pending",recipientAcceptedAt:acceptedAt,
+        updatedAt:new Date().toISOString()}).where(eq(conversationInvitationsTable.id,invitationId)).returning();
+      const refreshedInvitations=ready?await this.refreshPendingGroupInvitations(tx,invitation.conversationId,
+        [...locked.currentMembers,recipientId].sort(),invitationId,refresh):[];
+      return {invitation:updated,refreshedInvitations};
+    });
+  }
+
+  async approveGroupInvitation(invitationId:string,guardianId:string,expectedUpdatedAt:string,buildApprovals:(record:any,members:string[])=>Promise<Array<{
+    childUserId:string;guardianUserId:string;guardianAuthorizationId:string;policyVersions:Record<string,string>}>>,
+    authorize:(record:any,approvals:any[],members:string[])=>Promise<boolean>,
+    refresh:(record:any,currentMembers:string[])=>Promise<{guardianRequiredUserIds:string[];policyVersions:Record<string,string>}>) {
+    return runInDatabaseTransaction(async tx=>{
+      const locked=await this.lockedGroupInvitation(tx,invitationId),invitation=locked?.invitation;
+      if(!locked||!invitation||invitation.state!=="pending")throw new GroupInvitationConflictError("Invitation unavailable");
+      if(new Date(invitation.updatedAt).toISOString()!==expectedUpdatedAt)throw new GroupInvitationConflictError("Group invitation changed; review it again");
+      const additions=await buildApprovals(invitation,locked.currentMembers);
+      if(!additions.length||additions.some(row=>row.guardianUserId!==guardianId))throw new Error("Verified guardian approval is required");
+      for(const approval of additions)await tx.insert(conversationInvitationApprovalsTable).values({id:randomUUID(),invitationId,
+        childUserId:approval.childUserId,guardianUserId:approval.guardianUserId,guardianAuthorizationId:approval.guardianAuthorizationId,
+        policyVersions:approval.policyVersions});
+      const approvals=await tx.select().from(conversationInvitationApprovalsTable)
+        .where(eq(conversationInvitationApprovalsTable.invitationId,invitationId));
+      if(!invitation.recipientAcceptedAt)return {invitation,refreshedInvitations:[]};
+      const candidate={...invitation,state:"accepted"};
+      const ready=await authorize(candidate,approvals,locked.currentMembers);
+      if(!ready)return {invitation,refreshedInvitations:[]};
+      await this.insertAcceptedGroupMember(tx,candidate,locked.currentMembers);
+      const [updated]=await tx.update(conversationInvitationsTable).set({state:"accepted",updatedAt:new Date().toISOString()})
+        .where(eq(conversationInvitationsTable.id,invitationId)).returning();
+      const refreshedInvitations=await this.refreshPendingGroupInvitations(tx,invitation.conversationId,
+        [...locked.currentMembers,invitation.inviteeId].sort(),invitationId,refresh);
+      return {invitation:updated,refreshedInvitations};
+    });
+  }
+
+  async rejectGroupInvitation(invitationId:string,recipientId:string){
+    return runInDatabaseTransaction(async tx=>{
+      const locked=await this.lockedGroupInvitation(tx,invitationId),invitation=locked?.invitation;
+      if(!invitation||invitation.state!=="pending"||invitation.inviteeId!==recipientId)return undefined;
+      const [updated]=await tx.update(conversationInvitationsTable).set({state:"rejected",rejectedAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString()}).where(eq(conversationInvitationsTable.id,invitationId)).returning();
+      return updated;
+    });
+  }
+
+  async revokeGroupInvitation(invitationId:string,actorId:string){
+    return runInDatabaseTransaction(async tx=>{
+      const locked=await this.lockedGroupInvitation(tx,invitationId),invitation=locked?.invitation;
+      if(!locked||!invitation||!locked.currentMembers.includes(actorId))return undefined;
+      const [membership]=await tx.select({role:conversationMembersTable.role}).from(conversationMembersTable).where(and(
+        eq(conversationMembersTable.conversationId,invitation.conversationId),eq(conversationMembersTable.userId,actorId)));
+      if(actorId!==invitation.inviterId&&membership?.role!=="admin")return undefined;
+      if(invitation.state==="accepted")await tx.delete(conversationMembersTable).where(and(
+        eq(conversationMembersTable.conversationId,invitation.conversationId),eq(conversationMembersTable.userId,invitation.inviteeId)));
+      if(invitation.state==="accepted")await tx.update(conversationsTable).set({participantIds:locked.currentMembers
+        .filter(id=>id!==invitation.inviteeId),updatedAt:new Date().toISOString()}).where(eq(conversationsTable.id,invitation.conversationId));
+      const [updated]=await tx.update(conversationInvitationsTable).set({state:"revoked",revokedAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString()}).where(eq(conversationInvitationsTable.id,invitationId)).returning();
+      return updated;
     });
   }
 
@@ -261,17 +405,13 @@ export class ConversationRepository {
   }
 
   async getMembers(conversationId: string): Promise<string[]> {
+    const conversation=await this.findById(conversationId);
+    if(!conversation)return [];
     const members = await db.select({ userId: conversationMembersTable.userId })
       .from(conversationMembersTable)
       .where(eq(conversationMembersTable.conversationId, conversationId));
-    
-    if (members.length > 0) {
-      return members.map(m => m.userId);
-    }
-    
-    // Fallback to legacy array if members table is empty
-    const conv = await this.findById(conversationId);
-    return conv?.participantIds || (conv ? [conv.participantA, conv.participantB] : []);
+    if(members.length>0||conversation.isGroup)return members.map(member=>member.userId);
+    return [conversation.participantA,conversation.participantB].filter((id):id is string=>Boolean(id));
   }
 
   async listForUser(userId: string): Promise<ConversationRecord[]> {
@@ -282,25 +422,10 @@ export class ConversationRepository {
     
     const convIds = memberRows.map(r => r.conversationId);
     
-    // 2. Query conversations matching those IDs, OR the legacy participantA/B
-    if (convIds.length > 0) {
-      return (await db
-        .select()
-        .from(conversationsTable)
-        .where(or(
-          eq(conversationsTable.participantA, userId),
-          eq(conversationsTable.participantB, userId),
-          inArray(conversationsTable.id, convIds)
-        ))
-        .orderBy(desc(conversationsTable.updatedAt))
-        .limit(100)) as ConversationRecord[];
-    } else {
-      return (await db
-        .select()
-        .from(conversationsTable)
-        .where(or(eq(conversationsTable.participantA, userId), eq(conversationsTable.participantB, userId)))
-        .orderBy(desc(conversationsTable.updatedAt))
-        .limit(100)) as ConversationRecord[];
-    }
+    const directMembership=and(eq(conversationsTable.isGroup,false),or(
+      eq(conversationsTable.participantA,userId),eq(conversationsTable.participantB,userId)));
+    return (await db.select().from(conversationsTable).where(convIds.length
+      ?or(directMembership,inArray(conversationsTable.id,convIds))
+      :directMembership).orderBy(desc(conversationsTable.updatedAt)).limit(100)) as ConversationRecord[];
   }
 }

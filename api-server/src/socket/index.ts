@@ -541,7 +541,12 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         const conversations = await conversationRepository.listForUser(userId);
         for (const conversation of conversations) {
           const members = await conversationRepository.getMembers(conversation.id);
-          await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), "presence:update", { online: false, userId }, "presence:deliver", socket.id);
+          await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), "presence:update",
+            async(requester:SocketRequester)=>{
+              await messageService.authorizeConversationDelivery(conversation.id,requester.userId);
+              return {online:false,userId};
+            },"presence:deliver",socket.id,
+            requester=>messageService.authorizeConversationDelivery(conversation.id,requester.userId));
         }
       })().catch((error) => logger.warn({ error, userId }, "Could not broadcast offline presence"));
       logger.info({ userId }, "socket disconnected");
@@ -558,7 +563,12 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           if (!members.includes(userId)) return;
           await messageService.authorizeConversationDelivery(conv.id,userId);
           await socket.join(`conversation:${conv.id}`);
-          await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), "presence:update", { online: true, userId }, "presence:deliver", socket.id);
+          await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), "presence:update",
+            async(requester:SocketRequester)=>{
+              await messageService.authorizeConversationDelivery(conv.id,requester.userId);
+              return {online:true,userId};
+            },"presence:deliver",socket.id,
+            requester=>messageService.authorizeConversationDelivery(conv.id,requester.userId));
         })().catch((error) => logger.warn({ error, userId, conversationId: conv.id }, "Could not broadcast online presence"));
       }
     }).catch((err) => logger.error({ err, userId }, "Failed to join conversation rooms"));

@@ -1,6 +1,6 @@
 import { bigint, check, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { usersTable } from './index';
+import { conversationsTable, usersTable } from './index';
 
 const instant = (name: string) => timestamp(name, { withTimezone: true, mode: 'string' });
 // Private authority. The release migration installs additional invariant checks
@@ -93,6 +93,43 @@ export const contactAuthorizationApprovalsTable = pgTable('contact_authorization
   uniqueIndex('contact_authorization_approvals_authority_idx').on(table.contactAuthorizationId, table.guardianAuthorizationId),
   index('contact_authorization_approvals_child_idx').on(table.contactAuthorizationId, table.childUserId),
   index('contact_authorization_approvals_guardian_idx').on(table.guardianUserId, table.approvedAt),
+]);
+
+/** A pending group invite never grants membership or message visibility. */
+export const conversationInvitationsTable = pgTable('conversation_invitations', {
+  id: uuid('id').primaryKey(),
+  conversationId: uuid('conversation_id').references(() => conversationsTable.id, { onDelete: 'cascade' }).notNull(),
+  inviterId: uuid('inviter_id').references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  inviteeId: uuid('invitee_id').references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  state: text('state').notNull().default('pending'),
+  memberIdsAtInvite: jsonb('member_ids_at_invite').notNull(),
+  guardianRequiredUserIds: jsonb('guardian_required_user_ids').notNull().default([]),
+  policyVersions: jsonb('policy_versions').notNull(),
+  recipientAcceptedAt: instant('recipient_accepted_at'), rejectedAt: instant('rejected_at'), revokedAt: instant('revoked_at'),
+  createdAt: instant('created_at').notNull().defaultNow(), updatedAt: instant('updated_at').notNull().defaultNow(),
+}, table => [
+  check('conversation_invitations_valid', sql`state IN ('pending','accepted','rejected','revoked')
+    AND inviter_id <> invitee_id AND jsonb_typeof(member_ids_at_invite)='array'
+    AND jsonb_typeof(guardian_required_user_ids)='array' AND jsonb_typeof(policy_versions)='object'
+    AND (state <> 'accepted' OR recipient_accepted_at IS NOT NULL)
+    AND (state <> 'rejected' OR rejected_at IS NOT NULL)
+    AND (state <> 'revoked' OR revoked_at IS NOT NULL)`),
+  index('conversation_invitations_recipient_idx').on(table.inviteeId, table.state, table.createdAt),
+  index('conversation_invitations_conversation_idx').on(table.conversationId, table.state, table.createdAt),
+  uniqueIndex('conversation_invitations_pending_idx').on(table.conversationId, table.inviteeId).where(sql`state='pending'`),
+]);
+
+/** Exact current guardian authority used to approve a group contact introduction. */
+export const conversationInvitationApprovalsTable = pgTable('conversation_invitation_approvals', {
+  id: uuid('id').primaryKey(),
+  invitationId: uuid('invitation_id').references(() => conversationInvitationsTable.id, { onDelete: 'cascade' }).notNull(),
+  childUserId: uuid('child_user_id').references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  guardianUserId: uuid('guardian_user_id').references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  guardianAuthorizationId: uuid('guardian_authorization_id').references(() => guardianAuthorizationsTable.id, { onDelete: 'cascade' }).notNull(),
+  approvedAt: instant('approved_at').notNull().defaultNow(), policyVersions: jsonb('policy_versions').notNull(),
+}, table => [
+  uniqueIndex('conversation_invitation_approvals_authority_idx').on(table.invitationId, table.guardianAuthorizationId),
+  index('conversation_invitation_approvals_child_idx').on(table.invitationId, table.childUserId),
 ]);
 
 /** Exact, private evidence that a content revision received an approved age rating. */

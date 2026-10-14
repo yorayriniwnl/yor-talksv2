@@ -35,3 +35,7 @@ export const createGroupChatSchema = z.object({
   memberIds: z.array(z.string().uuid()).min(1).max(99),
   title: z.string().trim().max(120).optional().default("Group Chat"),
 });
+
+export const inviteToGroupSchema = z.object({
+  inviteeIds: z.array(z.string().uuid()).min(1).max(99),
+}).strict();

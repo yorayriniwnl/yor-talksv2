@@ -80,27 +80,105 @@ export class MessageController {
       if (!Array.isArray(memberIds) || memberIds.length === 0) {
         return res.status(400).json(createResponse("Missing memberIds", null, {}, ["Bad Request"]));
       }
-      const group = await this.messageService.createGroupChat(req.user?.id ?? "", memberIds, title);
+      const created = await this.messageService.createGroupChat(req.user?.id ?? "", memberIds, title);
       
       const io = getIo();
       if (io) {
-        const recipients=[req.user?.id,...memberIds].filter((id):id is string=>typeof id==='string');
-        for(const id of recipients){
-          await this.messageService.authorizeConversationDelivery(group.id,id);
-          io.in(id).socketsJoin(`conversation:${group.id}`);
-        }
-        await dispatchSocketToUsers(io,recipients,"conversation:created",async(requester:SocketRequester)=>{
-          await this.messageService.authorizeConversationDelivery(group.id,requester.userId);
-          return group;
-        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(group.id,requester.userId));
+        const creatorId=req.user?.id??"";
+        await this.messageService.authorizeConversationDelivery(created.id,creatorId);
+        io.in(creatorId).socketsJoin(`conversation:${created.id}`);
+        await dispatchSocketToUsers(io,[creatorId],"conversation:created",async(requester:SocketRequester)=>{
+          await this.messageService.authorizeConversationDelivery(created.id,requester.userId);
+          return created;
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(created.id,requester.userId));
+        for(const invitation of created.invitations)await dispatchSocketToUsers(io,[invitation.recipientId],"group:invitation",invitation,'message:deliver');
       }
       
-      return res.status(201).json(createResponse("Group chat created", group));
+      return res.status(201).json(createResponse("Group created; invitations are pending", created));
     } catch (error) {
       if (error instanceof MessageBlockedError || error instanceof UnauthorizedError) {
         return res.status(403).json(createResponse("Cannot create group", null, {}, [error.message]));
       }
       return res.status(500).json(createResponse("Failed to create group", null, {}, ["Internal server error"]));
+    }
+  };
+
+  listGroupInvitations = async (req:Request,res:Response)=>{
+    const invitations=await this.messageService.listGroupInvitations(req.user?.id??"");
+    return res.status(200).json(createResponse("Group invitations loaded",invitations));
+  };
+
+  inviteToGroup = async (req:Request,res:Response)=>{
+    try{
+      const conversationId=typeof req.params.conversationId==='string'?req.params.conversationId:"";
+      const invitations=await this.messageService.inviteToGroup(conversationId,req.user?.id??"",req.body.inviteeIds);
+      const io=getIo();if(io)for(const invitation of invitations)
+        await dispatchSocketToUsers(io,[invitation.recipientId],"group:invitation",invitation,'message:deliver');
+      return res.status(201).json(createResponse("Group invitations created",invitations));
+    }catch(error){
+      if(error instanceof MessageBlockedError||error instanceof UnauthorizedError)return res.status(403).json(createResponse("Cannot invite to group",null,{},[error.message]));
+      return res.status(400).json(createResponse("Cannot invite to group",null,{},[error instanceof Error?error.message:"Invalid invitation"]));
+    }
+  };
+
+  private async notifyGroupMemberAdded(invitation:Awaited<ReturnType<MessageService['acceptGroupInvitation']>>['invitation']){
+    const io=getIo();if(!io)return;
+    const memberIds=await this.messageService.getConversationMemberIds(invitation.conversationId,invitation.recipientId);
+    io.in(invitation.recipientId).socketsJoin(`conversation:${invitation.conversationId}`);
+    await dispatchSocketToUsers(io,memberIds,"conversation:member-added",async(requester:SocketRequester)=>{
+      await this.messageService.authorizeConversationDelivery(invitation.conversationId,requester.userId);
+      return {conversationId:invitation.conversationId,userId:invitation.recipientId};
+    },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(invitation.conversationId,requester.userId));
+  }
+
+  private async notifyRefreshedGroupInvitations(invitations:Awaited<ReturnType<MessageService['acceptGroupInvitation']>>['refreshedInvitations']){
+    const io=getIo();if(io)for(const invitation of invitations)
+      await dispatchSocketToUsers(io,[invitation.recipientId],"group:invitation:updated",invitation,'message:deliver');
+  }
+
+  acceptGroupInvitation = async (req:Request,res:Response)=>{
+    try{
+      const invitationId=typeof req.params.invitationId==='string'?req.params.invitationId:"";
+      const result=await this.messageService.acceptGroupInvitation(invitationId,req.user?.id??"",req.body.updatedAt);
+      if(result.invitation.status==='accepted')await this.notifyGroupMemberAdded(result.invitation);
+      await this.notifyRefreshedGroupInvitations(result.refreshedInvitations);
+      return res.status(200).json(createResponse(result.invitation.status==='accepted'?"Group invitation accepted":"Guardian approval is still required",result));
+    }catch(error){
+      if(error instanceof UnauthorizedError)return res.status(403).json(createResponse("Cannot accept invitation",null,{},[error.message]));
+      return res.status(400).json(createResponse("Cannot accept invitation",null,{},[error instanceof Error?error.message:"Invalid invitation"]));
+    }
+  };
+
+  approveGroupInvitation = async (req:Request,res:Response)=>{
+    try{
+      const invitationId=typeof req.params.invitationId==='string'?req.params.invitationId:"";
+      const result=await this.messageService.approveGroupInvitation(invitationId,req.user?.id??"",req.body.updatedAt);
+      if(result.invitation.status==='accepted')await this.notifyGroupMemberAdded(result.invitation);
+      await this.notifyRefreshedGroupInvitations(result.refreshedInvitations);
+      return res.status(200).json(createResponse("Guardian approval recorded",result));
+    }catch(error){
+      if(error instanceof UnauthorizedError)return res.status(403).json(createResponse("Cannot approve invitation",null,{},[error.message]));
+      return res.status(400).json(createResponse("Cannot approve invitation",null,{},[error instanceof Error?error.message:"Invalid approval"]));
+    }
+  };
+
+  rejectGroupInvitation = async (req:Request,res:Response)=>{
+    try{
+      await this.messageService.rejectGroupInvitation(typeof req.params.invitationId==='string'?req.params.invitationId:"",req.user?.id??"");
+      return res.status(200).json(createResponse("Group invitation declined",null));
+    }catch(error){
+      if(error instanceof UnauthorizedError)return res.status(403).json(createResponse("Cannot decline invitation",null,{},[error.message]));
+      throw error;
+    }
+  };
+
+  revokeGroupInvitation = async (req:Request,res:Response)=>{
+    try{
+      await this.messageService.revokeGroupInvitation(typeof req.params.invitationId==='string'?req.params.invitationId:"",req.user?.id??"");
+      return res.status(200).json(createResponse("Group invitation revoked",null));
+    }catch(error){
+      if(error instanceof UnauthorizedError)return res.status(403).json(createResponse("Cannot revoke invitation",null,{},[error.message]));
+      throw error;
     }
   };
 

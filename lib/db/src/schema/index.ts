@@ -4,7 +4,8 @@ import { createInsertSchema } from "drizzle-zod";
 export { mediaAssetsTable, mediaReferencesTable } from "./media";
 export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnrollmentsTable,
   guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable,
-  contactAuthorizationsTable, contactAuthorizationApprovalsTable } from './eligibility';
+  contactAuthorizationsTable, contactAuthorizationApprovalsTable,
+  conversationInvitationsTable, conversationInvitationApprovalsTable } from './eligibility';
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),

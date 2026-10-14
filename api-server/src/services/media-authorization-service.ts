@@ -113,7 +113,12 @@ export class MediaAuthorizationService {
       if (!viewerId) return false;
       const members=await this.conversations.getMembers(message.conversation_id);
       if(!members.includes(viewerId))return false;
-      try { await this.contactAuthorization.requirePairwiseContacts(members,'read'); return true; }
+      const conversation=await this.conversations.findById(message.conversation_id);
+      try {
+        if(conversation?.isGroup)await this.contactAuthorization.requirePairwiseGroupContacts(members,message.conversation_id,'read');
+        else await this.contactAuthorization.requirePairwiseContacts(members,'read');
+        return true;
+      }
       catch(error) { if(error instanceof ContactAuthorizationDeniedError)return false; throw error; }
     }
     if (context.entityType === 'comments' || context.entityType === 'video_comments') {

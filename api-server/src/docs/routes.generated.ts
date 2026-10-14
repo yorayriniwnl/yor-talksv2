@@ -560,6 +560,15 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/conversations/{conversationId}/invitations",
+    "operationId": "postConversationsByConversationIdInvitations",
+    "tag": "conversations",
+    "summary": "Post /conversations/{conversationId}/invitations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/conversations/{conversationId}/messages",
     "operationId": "getConversationsByConversationIdMessages",
@@ -774,6 +783,51 @@ export const apiRouteCatalog = [
     "operationId": "getFeedTrending",
     "tag": "feed",
     "summary": "Get /feed/trending",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/group-invitations",
+    "operationId": "getGroupInvitations",
+    "tag": "group-invitations",
+    "summary": "Get /group-invitations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/group-invitations/{invitationId}",
+    "operationId": "deleteGroupInvitationsByInvitationId",
+    "tag": "group-invitations",
+    "summary": "Delete /group-invitations/{invitationId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/accept",
+    "operationId": "postGroupInvitationsByInvitationIdAccept",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/accept",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/guardian-approval",
+    "operationId": "postGroupInvitationsByInvitationIdGuardianApproval",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/guardian-approval",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/reject",
+    "operationId": "postGroupInvitationsByInvitationIdReject",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/reject",
     "authenticated": true,
     "roles": []
   },

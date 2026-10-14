@@ -26,6 +26,7 @@ const tagCapability: Readonly<Record<string, Capability>> = {
   economy: "payments",
   events: "social",
   feed: "social",
+  "group-invitations": "messaging",
   highlights: "social",
   invites: "social",
   media: "social",

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
+import { ConversationRepository, GroupInvitationConflictError, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord, UserRecord } from "../types/index.js";
-import { db } from "@workspace/db";
+import { db, runInDatabaseTransaction } from "@workspace/db";
 import { messageReadsTable, messagesTable } from "@workspace/db/schema";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
@@ -12,6 +12,7 @@ import { isPremiumMessageStyle } from "../features/premium-profile.js";
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
 import { isMessageVisible, toMessageTombstone } from "../utils/message-visibility.js";
 import { ContactAuthorizationDeniedError, ContactAuthorizationService } from "./contact-authorization-service.js";
+import type { GroupInvitationAuthorityRecord, GroupInvitationApproval } from "./contact-authorization-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -19,6 +20,9 @@ export class InvalidMessageContentError extends Error {}
 export class InvalidMessageStyleError extends Error {}
 export class UnauthorizedError extends Error {}
 export class PremiumFeatureUnavailableError extends Error {}
+export type SafeGroupInvite={id:string;conversationId:string;inviterId:string;recipientId:string;status:"pending"|"accepted"|"rejected"|"revoked";
+  memberIds:string[];createdAt:string;updatedAt:string;requiresYourAcceptance:boolean;guardianApprovalRequired:boolean};
+export type SafeGroupAcceptanceResult={invitation:SafeGroupInvite;refreshedInvitations:SafeGroupInvite[]};
 
 type MessageSendOptions = Pick<Partial<MessageRecord>, "replyToId" | "textStyleId"> & { idempotencyKey?: string; mediaId?: string };
 
@@ -52,20 +56,27 @@ export class MessageService {
     catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
   }
 
-  private async requireConversationContacts(memberIds:string[],action:'read'|'send'|'deliver'){
-    try { await this.contactAuthorization.requirePairwiseContacts(memberIds,action); }
+  private async requireConversationContacts(memberIds:string[],action:'read'|'send'|'deliver',conversationId?:string){
+    try {
+      const conversation=conversationId?await this.conversationRepository.findById(conversationId):undefined;
+      if(conversation?.isGroup)await this.contactAuthorization.requirePairwiseGroupContacts(memberIds,conversationId!,action);
+      else await this.contactAuthorization.requirePairwiseContacts(memberIds,action);
+    }
     catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
   }
 
-  private async lockConversationContacts(memberIds:string[],action:'read'|'send'|'deliver'){
-    try { await this.contactAuthorization.lockCurrentPairwiseContacts(memberIds,action); }
+  private async lockConversationContacts(memberIds:string[],action:'read'|'send'|'deliver',conversationId?:string){
+    try {
+      const conversation=conversationId?await this.conversationRepository.findById(conversationId):undefined;
+      await this.contactAuthorization.lockCurrentPairwiseContacts(memberIds,action,conversation?.isGroup?conversationId:undefined);
+    }
     catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
   }
 
   async authorizeConversationDelivery(conversationId:string,recipientId:string):Promise<void>{
     const members=await this.conversationRepository.getMembers(conversationId);
     if(!members.includes(recipientId))throw new UnauthorizedError('You are not a member of this conversation');
-    await this.requireConversationContacts(members,'deliver');
+    await this.requireConversationContacts(members,'deliver',conversationId);
   }
 
   private async assertContactAllowed(senderId: string, recipient: UserRecord): Promise<void> {
@@ -75,7 +86,20 @@ export class MessageService {
     }
   }
 
-  async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
+  private toSafeGroupInvite(record:any,actorId:string):SafeGroupInvite{
+    return {id:record.id,conversationId:record.conversationId,inviterId:record.inviterId,recipientId:record.inviteeId,status:record.state,
+      memberIds:[...(record.memberIdsAtInvite as string[])],
+      createdAt:new Date(record.createdAt).toISOString(),updatedAt:new Date(record.updatedAt).toISOString(),
+      requiresYourAcceptance:record.state==='pending'&&record.inviteeId===actorId&&!record.recipientAcceptedAt,
+      guardianApprovalRequired:record.state==='pending'&&record.guardianRequiredUserIds.length>0};
+  }
+
+  private async invitationPolicy(inviterId:string,memberIds:string[],inviteeId:string){
+    try{return await this.contactAuthorization.groupInvitationPolicy(inviterId,memberIds,inviteeId);}
+    catch(error){if(error instanceof ContactAuthorizationDeniedError)throw new UnauthorizedError(error.message);throw error;}
+  }
+
+  async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord&{invitations:SafeGroupInvite[]}> {
     const uniqueMemberIds = [...new Set(memberIds.filter((id) => id && id !== creatorId))];
     if (uniqueMemberIds.length === 0 || uniqueMemberIds.length > 99) {
       throw new Error("A group must contain between 2 and 100 people");
@@ -89,17 +113,105 @@ export class MessageService {
       }
       await Promise.all(members.slice(1).map((member) => this.assertContactAllowed(creatorId, member!)));
     }
-    await this.requireConversationContacts([creatorId,...uniqueMemberIds],'send');
-    return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat",
-      ()=>this.lockConversationContacts([creatorId,...uniqueMemberIds],'send'));
+    for(const memberId of uniqueMemberIds)await this.invitationPolicy(creatorId,[creatorId],memberId);
+    return runInDatabaseTransaction(async()=>{
+      const conversation=await this.conversationRepository.createGroupChat(creatorId,title.trim().slice(0,120)||"Group Chat",
+        async()=>{if(!uniqueMemberIds.length)throw new UnauthorizedError("A group needs at least one invitee");
+          for(const memberId of uniqueMemberIds)await this.invitationPolicy(creatorId,[creatorId],memberId);});
+      const invitations=await this.inviteToGroup(conversation.id,creatorId,uniqueMemberIds);
+      return {...conversation,invitations};
+    });
+  }
+
+  async inviteToGroup(conversationId:string,inviterId:string,inviteeIds:string[]):Promise<SafeGroupInvite[]>{
+    const members=await this.conversationRepository.getMembers(conversationId);
+    if(!members.includes(inviterId))throw new UnauthorizedError("Only an accepted group member can invite");
+    const uniqueInvitees=[...new Set(inviteeIds.filter(id=>id&&id!==inviterId))];
+    if(!uniqueInvitees.length||uniqueInvitees.length+members.length>100)throw new Error("Group size must stay between 2 and 100 people");
+    if(this.userRepository){
+      const [inviter,...invitees]=await Promise.all([inviterId,...uniqueInvitees].map(id=>this.userRepository!.findById(id)));
+      if(!inviter||invitees.some(user=>!user))throw new Error("One or more group members do not exist");
+      if(invitees.some(user=>user!.blockedUsers?.includes(inviterId)||inviter.blockedUsers?.includes(user!.id)))
+        throw new MessageBlockedError("A group member has blocked this account");
+      await Promise.all(invitees.map(user=>this.assertContactAllowed(inviterId,user!)));
+    }
+    const policies=new Map<string,Awaited<ReturnType<MessageService['invitationPolicy']>>>();
+    for(const inviteeId of uniqueInvitees)policies.set(inviteeId,await this.invitationPolicy(inviterId,members,inviteeId));
+    try{
+      const created=await this.conversationRepository.inviteToGroup(conversationId,inviterId,uniqueInvitees.map(inviteeId=>({
+        id:randomUUID(),inviteeId,guardianRequiredUserIds:policies.get(inviteeId)!.guardianRequiredUserIds,
+        policyVersions:policies.get(inviteeId)!.policyVersions,
+      })),async currentMembers=>{
+        if(JSON.stringify([...currentMembers].sort())!==JSON.stringify([...members].sort()))throw new UnauthorizedError("Group membership changed; invite again");
+        for(const inviteeId of uniqueInvitees){
+          await this.contactAuthorization.lockGroupInvitationPairs(currentMembers,inviteeId,conversationId);
+          const current=await this.invitationPolicy(inviterId,currentMembers,inviteeId),snapshot=policies.get(inviteeId)!;
+          if(JSON.stringify(current)!==JSON.stringify(snapshot))throw new UnauthorizedError("Group policy changed; invite again");
+        }
+      });
+      return created.map(row=>this.toSafeGroupInvite(row,inviterId));
+    }catch(error){if(error instanceof ContactAuthorizationDeniedError||error instanceof GroupInvitationConflictError)throw new UnauthorizedError(error.message);throw error;}
+  }
+
+  async listGroupInvitations(userId:string):Promise<SafeGroupInvite[]>{
+    return (await this.conversationRepository.listGroupInvitationsForUser(userId)).map(row=>this.toSafeGroupInvite(row,userId));
+  }
+
+  async acceptGroupInvitation(invitationId:string,recipientId:string,expectedUpdatedAt:string):Promise<SafeGroupAcceptanceResult>{
+    try{
+      const accepted=await this.conversationRepository.acceptGroupInvitation(invitationId,recipientId,expectedUpdatedAt,async(record,approvals,members)=>{
+        if(JSON.stringify([...members].sort())!==JSON.stringify([...(record.memberIdsAtInvite as string[])].sort()))
+          throw new UnauthorizedError("Group membership changed; request a new invitation");
+        if(members.length>1)await this.lockConversationContacts(members,'read',record.conversationId);
+        await this.contactAuthorization.lockGroupInvitationPairs(members,record.inviteeId,record.conversationId);
+        return this.contactAuthorization.authorizeGroupInvitation(record as GroupInvitationAuthorityRecord,approvals as GroupInvitationApproval[]);
+      },async(record,currentMembers)=>{
+        await this.contactAuthorization.lockGroupInvitationPairs(currentMembers,record.inviteeId,record.conversationId);
+        return this.invitationPolicy(record.inviterId,currentMembers,record.inviteeId);
+      });
+      return {invitation:this.toSafeGroupInvite(accepted.invitation,recipientId),
+        refreshedInvitations:accepted.refreshedInvitations.map((row:any)=>this.toSafeGroupInvite(row,row.inviteeId))};
+    }catch(error){if(error instanceof ContactAuthorizationDeniedError||error instanceof GroupInvitationConflictError)throw new UnauthorizedError(error.message);throw error;}
+  }
+
+  async approveGroupInvitation(invitationId:string,guardianId:string,expectedUpdatedAt:string):Promise<SafeGroupAcceptanceResult>{
+    try{
+      const updated=await this.conversationRepository.approveGroupInvitation(invitationId,guardianId,expectedUpdatedAt,async(record,members)=>{
+        if(JSON.stringify([...members].sort())!==JSON.stringify([...(record.memberIdsAtInvite as string[])].sort()))
+          throw new UnauthorizedError("Group membership changed; request a new invitation");
+        if(members.length>1)await this.lockConversationContacts(members,'read',record.conversationId);
+        await this.contactAuthorization.lockGroupInvitationPairs(members,record.inviteeId,record.conversationId);
+        return this.contactAuthorization.groupGuardianApprovals(invitationId,record.inviterId,record.memberIdsAtInvite as string[],record.inviteeId,guardianId);
+      },async(record,approvals,members)=>{
+        if(JSON.stringify([...members].sort())!==JSON.stringify([...(record.memberIdsAtInvite as string[])].sort()))
+          throw new UnauthorizedError("Group membership changed; request a new invitation");
+        if(members.length>1)await this.lockConversationContacts(members,'read',record.conversationId);
+        await this.contactAuthorization.lockGroupInvitationPairs(members,record.inviteeId,record.conversationId);
+        return this.contactAuthorization.authorizeGroupInvitation(record as GroupInvitationAuthorityRecord,approvals as GroupInvitationApproval[]);
+      },async(record,currentMembers)=>{
+        await this.contactAuthorization.lockGroupInvitationPairs(currentMembers,record.inviteeId,record.conversationId);
+        return this.invitationPolicy(record.inviterId,currentMembers,record.inviteeId);
+      });
+      if(!updated)throw new UnauthorizedError("Invitation unavailable");
+      return {invitation:this.toSafeGroupInvite(updated.invitation,guardianId),
+        refreshedInvitations:updated.refreshedInvitations.map((row:any)=>this.toSafeGroupInvite(row,row.inviteeId))};
+    }catch(error){if(error instanceof ContactAuthorizationDeniedError||error instanceof GroupInvitationConflictError)throw new UnauthorizedError(error.message);throw error;}
+  }
+
+  async rejectGroupInvitation(invitationId:string,recipientId:string):Promise<void>{
+    if(!await this.conversationRepository.rejectGroupInvitation(invitationId,recipientId))throw new UnauthorizedError("Invitation unavailable");
+  }
+
+  async revokeGroupInvitation(invitationId:string,actorId:string):Promise<void>{
+    if(!await this.conversationRepository.revokeGroupInvitation(invitationId,actorId))throw new UnauthorizedError("Invitation unavailable");
   }
 
   async setVanishMode(conversationId: string, userId: string, enabled: boolean): Promise<ConversationRecord | undefined> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
-    await this.requireConversationContacts(members,'send');
+    await this.requireConversationContacts(members,'send',conversationId);
     return this.conversationRepository.setVanishMode(conversationId, enabled,
-      () => this.lockConversationContacts(members,'send'));
+      () => this.lockConversationContacts(members,'send',conversationId));
   }
 
   // Legacy support for 1-to-1
@@ -130,7 +242,7 @@ export class MessageService {
     if (!members.includes(senderId)) {
       throw new UnauthorizedError("You are not a member of this conversation");
     }
-    await this.requireConversationContacts(members,'send');
+    await this.requireConversationContacts(members,'send',conversationId);
 
     let senderProfile: UserRecord | undefined;
     // A request can time out after the database committed. Reusing the same
@@ -164,7 +276,7 @@ export class MessageService {
     // moderation provider. This prevents unauthorized requests from spending
     // moderation quota on arbitrary conversations.
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
-    await this.requireConversationContacts(members,'send');
+    await this.requireConversationContacts(members,'send',conversationId);
 
     let textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
     if (!isPremiumMessageStyle(textStyleId)) {
@@ -203,10 +315,10 @@ export class MessageService {
     let persisted: MessageRecord | undefined;
     await withApprovedMedia(senderId, mediaBinding(options?.mediaId, "message", "mediaUrl"), { type: "messages", id: message.id }, async media => {
       const attachment = media.mediaUrl?.[0];
-      await this.requireConversationContacts(members,'send');
+      await this.requireConversationContacts(members,'send',conversationId);
       const result = await this.messageRepository.createWithResult(
         { ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null },
-        () => this.lockConversationContacts(members,'send'),
+        () => this.lockConversationContacts(members,'send',conversationId),
       );
       persisted = result.message;
       // Conflict losers return the winning row without creating or replacing
@@ -234,13 +346,13 @@ export class MessageService {
     if (!members.includes(userId)) {
       return [];
     }
-    try { await this.requireConversationContacts(members,'read'); }
+    try { await this.requireConversationContacts(members,'read',conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return []; throw error; }
     try {
-      const authorize=()=>this.lockConversationContacts(members,'read');
+      const authorize=()=>this.lockConversationContacts(members,'read',conversationId);
       const messages = await this.messageRepository.listConversation(conversationId, options,authorize);
       const visible=await this.withReadReceipts(messages.filter((message: MessageRecord) => isMessageVisible(message, new Date())), userId);
-      await this.requireConversationContacts(members,'read');
+      await this.requireConversationContacts(members,'read',conversationId);
       return visible;
     } catch(error) { if(error instanceof UnauthorizedError)return []; throw error; }
   }
@@ -250,7 +362,7 @@ export class MessageService {
     if (!message || !isMessageVisible(message, new Date())) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
-    try { await this.requireConversationContacts(members,'read'); }
+    try { await this.requireConversationContacts(members,'read',message.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     if (message.senderId === userId) return undefined;
     if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
@@ -265,7 +377,7 @@ export class MessageService {
     const boundary = new Date();
     try {
       const previewed = await this.messageRepository.recordVisiblePreview(messageId, userId, boundary,
-        ()=>this.lockConversationContacts(members,'read'));
+        ()=>this.lockConversationContacts(members,'read',message.conversationId));
       return previewed && isMessageVisible(previewed, new Date())
         ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt: previewed.previewedAt ?? boundary.toISOString() }
         : undefined;
@@ -275,7 +387,7 @@ export class MessageService {
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
-    await this.requireConversationContacts(members,'deliver');
+    await this.requireConversationContacts(members,'deliver',conversationId);
     return members;
   }
 
@@ -285,10 +397,10 @@ export class MessageService {
       conversations.map(async (conversation) => {
         const members=await this.conversationRepository.getMembers(conversation.id);
         if(!members.includes(userId))return undefined;
-        try{await this.requireConversationContacts(members,'read');}
+        try{await this.requireConversationContacts(members,'read',conversation.id);}
         catch(error){if(error instanceof UnauthorizedError)return undefined;throw error;}
         try {
-          const lastMessage=await this.messageRepository.lastMessageForConversation(conversation.id,()=>this.lockConversationContacts(members,'read'));
+          const lastMessage=await this.messageRepository.lastMessageForConversation(conversation.id,()=>this.lockConversationContacts(members,'read',conversation.id));
           return {conversation,lastMessage};
         } catch(error) { if(error instanceof UnauthorizedError)return undefined;throw error; }
       }),
@@ -298,7 +410,7 @@ export class MessageService {
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
     const currentResults=await Promise.all(visibleResults.map(async result=>{
       const members=await this.conversationRepository.getMembers(result.conversation.id);
-      try{await this.requireConversationContacts(members,'read');return result;}
+      try{await this.requireConversationContacts(members,'read',result.conversation.id);return result;}
       catch(error){if(error instanceof UnauthorizedError)return undefined;throw error;}
     }));
     return currentResults.filter((result):result is NonNullable<typeof result>=>Boolean(result))
@@ -325,11 +437,11 @@ export class MessageService {
     if(!candidate||!isMessageVisible(candidate,new Date()))return undefined;
     const members=await this.conversationRepository.getMembers(candidate.conversationId);
     if(!members.includes(userId))return undefined;
-    try { await this.requireConversationContacts(members,'read'); }
+    try { await this.requireConversationContacts(members,'read',candidate.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     let message:MessageRecord|undefined;
     try { message = await this.messageRepository.recordVisibleRead(messageId, userId,
-      ()=>this.lockConversationContacts(members,'read')); }
+      ()=>this.lockConversationContacts(members,'read',candidate.conversationId)); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     if (!message || message.deletedAt) return message;
     return isMessageVisible(message, new Date()) ? message : undefined;
@@ -343,7 +455,7 @@ export class MessageService {
     }
     const members=await this.conversationRepository.getMembers(message.conversationId);
     if(!members.includes(userId))return undefined;
-    try { await this.requireConversationContacts(members,'send'); }
+    try { await this.requireConversationContacts(members,'send',message.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
     message.content = normalizedContent;
@@ -352,7 +464,7 @@ export class MessageService {
     // new publication and cannot mint an attachment from an arbitrary text URL.
     try {
       return await this.messageRepository.updateVisible(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false },
-        ()=>this.lockConversationContacts(members,'send'));
+        ()=>this.lockConversationContacts(members,'send',message.conversationId));
     } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
 
@@ -363,12 +475,12 @@ export class MessageService {
     }
     const members=await this.conversationRepository.getMembers(message.conversationId);
     if(!members.includes(userId))return undefined;
-    try { await this.requireConversationContacts(members,'send'); }
+    try { await this.requireConversationContacts(members,'send',message.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     message.deletedAt = new Date().toISOString();
     try {
       const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt },
-        ()=>this.lockConversationContacts(members,'send'));
+        ()=>this.lockConversationContacts(members,'send',message.conversationId));
       return deleted ? toMessageTombstone(deleted) : undefined;
     } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
@@ -382,7 +494,7 @@ export class MessageService {
     if (!members.includes(userId)) {
       throw new Error("Not a participant in this conversation");
     }
-    await this.requireConversationContacts(members,'read');
+    await this.requireConversationContacts(members,'read',message.conversationId);
     return message;
   }
 
@@ -397,7 +509,7 @@ export class MessageService {
     }
     return this.messageRepository.updateVisible(messageId, { reactions: message.reactions },async()=>{
       const members=await this.conversationRepository.getMembers(message.conversationId);
-      await this.lockConversationContacts(members,'send');
+      await this.lockConversationContacts(members,'send',message.conversationId);
     });
   }
 
@@ -405,6 +517,6 @@ export class MessageService {
     const message=await this.assertParticipant(messageId, userId);
     const members=await this.conversationRepository.getMembers(message.conversationId);
     return this.messageRepository.updateVisible(messageId, { pinned: true },
-      ()=>this.lockConversationContacts(members,'send'));
+      ()=>this.lockConversationContacts(members,'send',message.conversationId));
   }
 }

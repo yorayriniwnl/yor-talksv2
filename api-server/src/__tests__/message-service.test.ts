@@ -72,7 +72,11 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   const first = await createTestUser(users);
   const second = await createTestUser(users);
   const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
-  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
+  const created = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
+  const group=created;
+  await service.acceptGroupInvitation(created.invitations[0]!.id,first.id,created.invitations[0]!.updatedAt);
+  const refreshedSecond=(await service.listGroupInvitations(second.id))[0]!;
+  await service.acceptGroupInvitation(refreshedSecond.id,second.id,refreshedSecond.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "A shared conversation");
   assert.equal((await service.markSeen(message.id, sender.id))?.seenAt, null);
   await service.markSeen(message.id, first.id);
@@ -123,7 +127,9 @@ for (const disabledSetting of ['allowDmFromStrangers', 'messageRequests'] as con
     await assert.rejects(() => service.sendMessageToConversation(sender.id, direct.id, 'Existing thread bypass'), MessageBlockedError);
     await assert.rejects(() => service.createGroupChat(sender.id, [recipient.id], 'Group bypass'), MessageBlockedError);
     await users.followUser(sender.id, recipient.id);
-    const group = await service.createGroupChat(sender.id, [recipient.id], 'Known followers');
+    const created = await service.createGroupChat(sender.id, [recipient.id], 'Known followers');
+    const group=created;
+    await service.acceptGroupInvitation(created.invitations[0]!.id,recipient.id,created.invitations[0]!.updatedAt);
     await service.sendMessageToConversation(sender.id, group.id, 'Allowed contact');
     await users.unfollowUser(sender.id, recipient.id);
     await assert.rejects(() => service.sendMessageToConversation(sender.id, group.id, 'Stale group bypass'), MessageBlockedError);
