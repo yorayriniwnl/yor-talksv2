@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostUsersByUserIdShowcasesBody = { [key: string]: unknown };
+export type PostUsersByUserIdShowcasesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  customImageMediaId?: string;
+  [key: string]: unknown;
+ };

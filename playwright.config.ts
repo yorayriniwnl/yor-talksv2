@@ -51,7 +51,14 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // API/provider fixtures are fulfilled by routes. Prevent an omitted
+        // external fixture from reaching Google, storage, or stock-image hosts.
+        launchOptions: {
+          args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+        },
+      },
     },
   ],
 });

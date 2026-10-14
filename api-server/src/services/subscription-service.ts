@@ -12,6 +12,7 @@ import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
 import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 import { CheckoutIntentService, checkoutHash, lockPaymentParties, paymentTransaction } from './checkout-intent-service.js';
+import { EligibilityService } from './eligibility-service.js';
 
 export const SUBSCRIPTION_TIERS = [
   {
@@ -54,15 +55,22 @@ function tierFor(id: string) {
 }
 
 export class SubscriptionService {
-  constructor(private readonly razorpay = new RazorpayService()) {}
+  constructor(
+    private readonly razorpay = new RazorpayService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
+  ) {}
 
   getTiers() {
     return SUBSCRIPTION_TIERS.map((tier) => ({ ...tier, currency: "INR" as const }));
   }
 
   async createOrder(input: { subscriberId: string; creatorId: string; tier: string; idempotencyKey?: string }) {
-    // A previously-created checkout is unavailable too when payments pause.
+    // Disabled payments fail before account facts or product data are read.
     this.razorpay.assertConfigured();
+    await this.eligibilityService.requireCapability(input.subscriberId, "memberships");
+    await this.eligibilityService.requireCapability(input.subscriberId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
+    // A previously-created checkout is unavailable too when payments pause.
     if (input.subscriberId === input.creatorId) {
       throw new SubscriptionRequestError("You cannot subscribe to your own creator membership");
     }
@@ -94,7 +102,13 @@ export class SubscriptionService {
         VALUES($1,$2,$3,$4,$5,$6,'provider_pending')`, [id,subscriptionId,input.subscriberId,input.creatorId,`pending_${id.replaceAll('-','')}`,tier.priceMinor]);
       return { intent: await intents.reserve(client, { id, product: 'membership', ownerId: input.subscriberId, key, hash, amountMinor: tier.priceMinor }), created: true };
     });
+    await this.eligibilityService.requireCapability(input.subscriberId, "memberships");
+    await this.eligibilityService.requireCapability(input.subscriberId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
     const intent = reserved.created ? await intents.createRemote(reserved.intent) : reserved.intent;
+    await this.eligibilityService.requireCapability(input.subscriberId, "memberships");
+    await this.eligibilityService.requireCapability(input.subscriberId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
     const order = (await pool.query('SELECT subscription_id FROM subscription_orders WHERE id=$1', [intent.id])).rows[0];
     return { ...await intents.publicState(intent), subscriptionId: order.subscription_id as string, orderId: intent.provider_order_id, tier: tier.id };
   }

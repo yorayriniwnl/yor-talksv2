@@ -11,6 +11,8 @@ import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
 import { apiRateLimiter } from "./middlewares/rate-limit.js";
 import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
+import { mediaResponse } from "./services/media-response.js";
+import { skipAssuranceCallbackParser } from './middlewares/assurance-body.js';
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -41,6 +43,7 @@ app.disable("x-powered-by");
 app.use(requestContext);
 app.use(requestLogger);
 app.use(recordOperationalMetrics);
+app.use(mediaResponse);
 app.use(createHelmetMiddleware());
 app.use(compression());
 app.use(
@@ -56,13 +59,13 @@ app.use(
 // stricter limiters in their own routers.
 app.use(apiRateLimiter);
 
-app.use(express.json({
+app.use(skipAssuranceCallbackParser(express.json({
   limit: "1mb",
   verify(req, _res, buffer) {
     (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
   },
-}));
-app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 }));
+})));
+app.use(skipAssuranceCallbackParser(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 })));
 app.use(cookieParser());
 
 app.use("/api", router);

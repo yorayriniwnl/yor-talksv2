@@ -6,4 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostUsersMeAvatarBody = { [key: string]: unknown };
+export type PostUsersMeAvatarBody = {
+  avatar: Blob;
+};

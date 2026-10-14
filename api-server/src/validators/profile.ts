@@ -9,8 +9,8 @@ export const profileShowcaseSchema = z.object({
   title: z.string().trim().min(1).max(120),
   contentId: z.string().uuid().optional(),
   customText: z.string().trim().max(500).optional(),
-  customImageUrl: z.string().url().max(2000).optional(),
-});
+  customImageMediaId: z.string().uuid().optional(),
+}).strict();
 
 export const profileCommentIdParamSchema = z.object({
   userId: z.string().uuid(),

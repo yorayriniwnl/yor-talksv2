@@ -12,6 +12,7 @@ import { UpiTipJarModal } from '@/components/monetization/UpiTipJarModal';
 import { toast } from 'sonner';
 import { storyTextStyleToCss } from '@/lib/story-text-style';
 import { storyBackgroundToCss } from '@/lib/story-background';
+import { useProtectedMediaSource } from '@/lib/protected-media';
 
 interface StoryViewerProps {
   initialAuthorId: string;
@@ -57,6 +58,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const currentAuthorId = authors[authorIndex];
   const currentStories = groupedStories[currentAuthorId] || [];
   const currentStory = currentStories[storyIndex];
+  const currentStoryMedia = useProtectedMediaSource(currentStory?.mediaUrl);
 
   // Auto-advance logic
   useEffect(() => {
@@ -366,7 +368,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             onClick={handleTap}
           >
             {currentStory.type === 'image' || currentStory.type === 'video' ? (
-              <img src={currentStory.mediaUrl} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
+              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
             ) : null}
             
             {currentStory.type === 'text' && (
@@ -391,7 +393,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                   <audio
                     controls
                     autoFocus={false}
-                    src={currentStory.mediaUrl}
+                    src={currentStoryMedia}
                     className="story-controls w-full"
                     onPlay={() => setIsPaused(true)}
                     onPause={() => setIsPaused(true)}

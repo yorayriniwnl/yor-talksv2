@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostPostsBody = { [key: string]: unknown };
+export type PostPostsBody = {
+  /** @maxItems 10 */
+  mediaIds?: string[];
+  [key: string]: unknown;
+ };

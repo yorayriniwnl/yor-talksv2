@@ -11,6 +11,7 @@ export interface UserRecord {
   authVersion?: number;
   termsVersion?: string | null;
   termsAcceptedAt?: string | null;
+  /** Historical self-attestation only. Private eligibility authority lives separately. */
   ageConfirmedAt?: string | null;
   fullName: string;
   bio: string;
@@ -54,6 +55,11 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   privateAccount: boolean;
   allowMentions?: boolean;
+  /** Optional engagement and privacy controls are clamped for non-adult accounts. */
+  autoplayEnabled?: boolean;
+  readReceiptsEnabled?: boolean;
+  streaksEnabled?: boolean;
+  sharePreciseLocation?: boolean;
   /** Whether story views should be aggregate-only for the viewer. */
   storyViewMode?: "identified" | "private";
   /** Highest content rating this viewer wants to see. */
@@ -167,6 +173,11 @@ export interface MessageRecord {
   senderId: string;
   recipientId: string;
   content: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "audio" | null;
+  mediaDuration?: number | null;
+  mediaLegacy?: boolean;
   textStyleId?: string;
   createdAt: string;
   seenAt: string | null;
@@ -249,6 +260,7 @@ export interface CommunityRecord {
   name: string;
   slug: string;
   description: string;
+  coverUrl?: string | null;
   ownerId: string;
   moderators: string[];
   memberIds: string[];

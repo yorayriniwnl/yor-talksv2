@@ -14,10 +14,13 @@ import { cn } from '@/lib/utils';
 import { SteamTradeModal, USER_INVENTORY } from '@/components/steam/SteamTradeModal';
 import { sounds } from '@/lib/sound';
 import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { toast } from 'sonner';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 const PRODUCT_CATEGORIES = [
   'Hardware & Silicon',
@@ -42,6 +45,7 @@ function CreateListingDialog() {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
   const [condition, setCondition] = useState<typeof PRODUCT_CONDITIONS[number]>('used');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,13 +61,14 @@ function CreateListingDialog() {
         // Keep the client and API contract in sync with the two-decimal
         // currency column used by the marketplace.
         price: Math.round(Number(price) * 100) / 100,
-        images: [`https://picsum.photos/seed/${encodeURIComponent(title)}/500/500`],
+        mediaIds: (await Promise.all(imageFiles.map(file => uploadApprovedMedia(file, 'product')))).map(media => media.mediaId),
         category,
         condition,
         contentRating,
       });
       setOpen(false);
       setTitle(''); setDescription(''); setPrice(''); setContentRating(DEFAULT_CONTENT_RATING);
+      setImageFiles([]);
     } catch (err: any) {
       setError(err.message || 'Failed to create listing');
     }
@@ -108,8 +113,9 @@ function CreateListingDialog() {
             </select>
           </div>
           <ContentRatingSelect id="product-content-rating" value={contentRating} onChange={setContentRating} />
+          <MediaImageField id="product-images" label="Product photos" files={imageFiles} onChange={setImageFiles} multiple disabled={loading} />
           <DialogFooter>
-            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price} className="rounded-xl font-bold text-xs px-6 bg-primary">
+            <Button type="submit" disabled={loading || title.trim().length < 2 || !description.trim() || !price || !imageFiles.length} className="rounded-xl font-bold text-xs px-6 bg-primary">
               {loading ? 'Listing…' : 'Post Listing'}
             </Button>
           </DialogFooter>
@@ -301,7 +307,7 @@ export default function Marketplace() {
                   className="surface-1 rounded-3xl overflow-hidden border border-border/40 hover:border-emerald-500/50 transition-all duration-300 flex flex-col shadow-sm group p-4"
                 >
                   <div className="aspect-video relative rounded-2xl bg-black/60 overflow-hidden mb-4">
-                    <img src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.name} />
+                    <ProtectedMediaImage src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={item.name} />
                     {item.floatVal && (
                       <span className="absolute bottom-2 left-2 text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-black/70 text-zinc-300 border border-white/10">
                         Float: {item.floatVal}
@@ -387,7 +393,7 @@ export default function Marketplace() {
                     className="surface-1 rounded-3xl overflow-hidden group cursor-pointer border border-border/40 hover:border-primary/40 transition-all duration-300 flex flex-col shadow-sm"
                   >
                     <div className="aspect-square relative bg-muted overflow-hidden">
-                      <img src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
+                      <ProtectedMediaImage src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
                       <button 
                         onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }} 
                         className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors z-10"

@@ -19,6 +19,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -78,6 +79,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const [recordedPreviewUrl, setRecordedPreviewUrl] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [cameraActive, setCameraActive] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
   // Publishing form
@@ -89,6 +91,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const capturePendingRef = useRef(false);
 
   useEffect(() => () => {
     if (recordedPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(recordedPreviewUrl);
@@ -157,9 +160,11 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isRecording]);
 
   const handleStartRecording = () => {
+    if (publishing || capturing || isRecording || mode === 'post') return;
     sounds.playPop();
     setRecordedChunks([]);
     setRecordedPreviewUrl(null);
+    setRecordedFile(null);
     setRecordingSeconds(0);
 
     if (!streamRef.current || typeof MediaRecorder === 'undefined') {
@@ -168,7 +173,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     }
 
     try {
-      const recorder = new MediaRecorder(streamRef.current);
+      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(value => MediaRecorder.isTypeSupported(value));
+      if (!mimeType) { toast.error('This browser cannot record a supported MP4 or WebM video.'); return; }
+      const recorder = new MediaRecorder(streamRef.current, { mimeType });
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => {
@@ -191,6 +198,56 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     }
 
     setIsRecording(true);
+  };
+
+  const handleCapturePhoto = async () => {
+    if (publishing || isRecording || capturePendingRef.current || mode !== 'post') return;
+    const video = videoRef.current;
+    if (!cameraActive || !video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+      toast.error('Wait for a live camera frame before taking a photo.');
+      return;
+    }
+    capturePendingRef.current = true;
+    setCapturing(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('This browser cannot capture a camera photo.');
+      // Draw the sensor frame, bounded by the same image dimensions and byte
+      // limits checked by the server. UI stickers and placeholder art are not
+      // substituted for camera pixels.
+      const scale = Math.min(1, 4096 / video.videoWidth, 4096 / video.videoHeight, Math.sqrt(12_000_000 / (video.videoWidth * video.videoHeight)));
+      canvas.width = Math.max(1, Math.floor(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.floor(video.videoHeight * scale));
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let photo: Blob | null = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        photo = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+        if (photo?.type === 'image/jpeg' && photo.size > 0 && photo.size <= 5 * 1024 * 1024) break;
+        if (!photo || photo.type !== 'image/jpeg') throw new Error('This browser cannot encode a JPEG camera photo.');
+        // Resize the captured pixels, so every encoding attempt depicts the
+        // same frame even if the live camera moves while JPEG encoding runs.
+        const smaller = document.createElement('canvas');
+        smaller.width = Math.max(1, Math.floor(canvas.width * 0.75));
+        smaller.height = Math.max(1, Math.floor(canvas.height * 0.75));
+        const smallerContext = smaller.getContext('2d');
+        if (!smallerContext) throw new Error('This browser cannot resize a camera photo.');
+        smallerContext.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+        canvas.width = smaller.width;
+        canvas.height = smaller.height;
+        context.drawImage(smaller, 0, 0);
+      }
+      if (!photo || photo.size === 0 || photo.size > 5 * 1024 * 1024) throw new Error('The camera photo exceeds 5 MB. Try a lower-resolution camera.');
+      const file = new File([photo], `yor-studio-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setRecordedFile(file);
+      setRecordedPreviewUrl(URL.createObjectURL(file));
+      sounds.playPop();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not capture this camera frame.');
+    } finally {
+      capturePendingRef.current = false;
+      setCapturing(false);
+    }
   };
 
   const handleStopRecording = () => {
@@ -219,26 +276,24 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   };
 
   const handlePublish = async () => {
+    if (publishing || capturing || isRecording) return;
     if (!contentCategory) {
       toast.error('Choose a category before publishing.');
       return;
     }
     setPublishing(true);
     sounds.playChime();
-    triggerConfetti();
 
     try {
-      if ((mode === 'reel' || mode === 'story') && !recordedFile) {
-        throw new Error('Record a clip before publishing this format.');
+      if (!recordedFile || (mode === 'post' ? recordedFile.type !== 'image/jpeg' : !['video/webm', 'video/mp4'].includes(recordedFile.type.split(';')[0]))) {
+        throw new Error(mode === 'post' ? 'Take a camera photo before publishing a Post.' : 'Record a video clip before publishing this format.');
       }
-      const uploaded = recordedFile ? await api.uploadMedia(recordedFile) : null;
-      const mediaUrl = uploaded?.url;
+      const uploaded = await uploadApprovedMedia(recordedFile, mode === 'reel' ? 'video' : mode === 'story' ? 'story' : 'post');
 
       if (mode === 'reel') {
         await createVideo({
           title: caption.trim() || 'New Cinematic Reel ✨',
-          videoUrl: mediaUrl!,
-          thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
+          mediaId: uploaded!.mediaId,
           type: 'short',
           contentCategory,
           contentRating,
@@ -247,7 +302,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       } else if (mode === 'story') {
         await addStory({
           type: 'video',
-          mediaUrl: mediaUrl!,
+          mediaId: uploaded!.mediaId,
           textContent: caption.trim() || undefined,
           backgroundGradient: 'from-purple-900 via-indigo-900 to-black',
           contentCategory,
@@ -255,11 +310,12 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         });
         toast.success('✨ Story added to your 24h highlights!');
       } else {
-        await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', mediaUrl ? [mediaUrl] : undefined, undefined, contentRating, contentCategory);
+        await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [uploaded.mediaId], undefined, contentRating, contentCategory);
         toast.success('🚀 Published to the global feed!');
       }
 
       onOpenChange(false);
+      triggerConfetti();
       // Reset
       setRecordedPreviewUrl(null);
       setRecordedFile(null);
@@ -267,8 +323,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       setContentCategory('');
       setContentRating(DEFAULT_CONTENT_RATING);
       setActiveStickers([]);
-    } catch {
-      toast.error('Failed to publish. Please try again.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to publish. Your capture is still here.');
     } finally {
       setPublishing(false);
     }
@@ -295,7 +351,14 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             {(['reel', 'story', 'post'] as const).map((m) => (
               <button
                 key={m}
+                disabled={publishing || capturing || isRecording}
+                aria-label={`${m === 'post' ? 'Photo Post' : m === 'story' ? 'Video Story' : 'Video Reel'} mode`}
                 onClick={() => {
+                  if (publishing || capturing || isRecording) return;
+                  if ((m === 'post') !== (mode === 'post')) {
+                    setRecordedFile(null);
+                    setRecordedPreviewUrl(null);
+                  }
                   setMode(m);
                   sounds.playPop();
                 }}
@@ -311,6 +374,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
           <button
             onClick={() => onOpenChange(false)}
+            disabled={publishing || capturing || isRecording}
+            aria-label="Close Studio Camera"
             className="w-8 h-8 rounded-full hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -336,6 +401,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                 )}
                 style={{ filter: selectedFilter.css }}
               />
+
+              {mode === 'post' && recordedPreviewUrl && recordedFile?.type === 'image/jpeg' && <img src={recordedPreviewUrl} alt="Captured Post photo" className="absolute inset-0 h-full w-full object-contain bg-black" />}
 
               {!cameraActive && (
                 <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-purple-950/40 to-black">
@@ -416,6 +483,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             <div className="absolute bottom-6 inset-x-0 flex items-center justify-center gap-6 z-20">
               <button
                 onClick={() => setFacingMode((f) => (f === 'user' ? 'environment' : 'user'))}
+                disabled={publishing || capturing || isRecording}
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"
                 title="Flip Camera"
               >
@@ -424,7 +492,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
               {/* Shutter Button */}
               <button
-                onClick={isRecording ? handleStopRecording : handleStartRecording}
+                onClick={mode === 'post' ? () => void handleCapturePhoto() : handleStartRecording}
+                disabled={publishing || capturing || isRecording || !cameraActive}
+                aria-label={mode === 'post' ? 'Capture photo' : 'Record video'}
                 className={cn(
                   "w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer",
                   isRecording 
@@ -438,6 +508,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                   <span className="w-12 h-12 rounded-full bg-white shadow-inner block" />
                 )}
               </button>
+
+              {isRecording && <button type="button" onClick={handleStopRecording} aria-label="Stop recording" className="rounded-full bg-red-600 p-3 text-white"><Square className="h-6 w-6" /></button>}
 
               <button
                 onClick={() => setStickersDrawerOpen(true)}
@@ -533,11 +605,11 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             <div className="pt-4 border-t border-border/30">
               <Button
                 onClick={handlePublish}
-                disabled={publishing || !contentCategory}
+                disabled={publishing || capturing || isRecording || !contentCategory || !recordedFile || (mode === 'post' ? recordedFile.type !== 'image/jpeg' : !['video/webm', 'video/mp4'].includes(recordedFile.type.split(';')[0]))}
             className="w-full rounded-2xl font-display font-extrabold text-xs h-12 bg-gradient-to-r from-primary via-red-900 to-accent text-white glow-neon-primary shadow-xl cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-1.5" />
-                {publishing ? 'Rendering 4K…' : `Publish ${mode.toUpperCase()} 🚀`}
+                {publishing ? 'Publishing…' : `Publish ${mode.toUpperCase()} 🚀`}
               </Button>
             </div>
           </div>

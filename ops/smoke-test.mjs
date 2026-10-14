@@ -91,6 +91,25 @@ try {
   );
   await log("API-ROUTES", "✓ Grievance endpoints are accessible");
 
+  // The production image must keep owner eligibility routes behind auth and
+  // must not activate a user when no approved territory registry is present.
+  await check("/api/users/me/eligibility", undefined, 401);
+  await check("/api/users/me/eligibility/challenges", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ purpose: "age_assessment", territory: "ZZ" }),
+  }, 401);
+  const prescreen = await check("/api/eligibility/enrollments/prescreen", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestedExperience: "adult_18_plus", territory: "ZZ" }),
+  }, 200);
+  const prescreenBody = await prescreen.json();
+  if (prescreenBody.data?.status !== "unavailable" || prescreenBody.data?.enrollment) {
+    throw new Error("Production prescreen must not create an enrollment without an approved provider and territory policy");
+  }
+  await log("ELIGIBILITY", "✓ Owner routes are protected and the empty production registry enables no enrollment");
+
   // Uptime check
   const uptimeMatch = readinessBody.uptime ? `${Math.round(readinessBody.uptime)}s` : "unknown";
   await log("UPTIME", `API has been running for ${uptimeMatch}`);

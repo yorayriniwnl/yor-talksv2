@@ -1,3 +1,5 @@
+import { withApprovedMedia, mediaBinding } from "../services/media-publication.js";
+import { MediaLifecycleError } from "../services/media-service.js";
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
@@ -13,10 +15,10 @@ const router = Router();
 // Create a Business Profile
 router.post("/", authenticate, validateBody(createBusinessSchema), async (req, res) => {
   try {
-    const { name, industry, website, contactEmail } = req.body;
+    const { name, industry, website, contactEmail, logoMediaId } = req.body;
     const businessId = randomUUID();
     
-    await db.transaction(async (tx) => {
+    await withApprovedMedia(req.user!.id, mediaBinding(logoMediaId, "business", "logoUrl", "image"), { type: "business_profiles", id: businessId }, media => db.transaction(async (tx) => {
       await tx.insert(businessProfilesTable).values({
         id: businessId,
         ownerId: req.user!.id,
@@ -24,6 +26,7 @@ router.post("/", authenticate, validateBody(createBusinessSchema), async (req, r
         industry: industry || "General",
         website,
         contactEmail,
+        logoUrl: media.logoUrl?.[0]?.url,
         isVerified: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -39,10 +42,12 @@ router.post("/", authenticate, validateBody(createBusinessSchema), async (req, r
       await tx.update(usersTable)
         .set({ accountTypes: [...new Set([...accountTypes.map(String), "business"])] })
         .where(eq(usersTable.id, req.user!.id));
-    });
+      return businessId;
+    }));
 
     res.status(201).json(createResponse("Business profile created", { businessId }));
   } catch (err) {
+    if (err instanceof MediaLifecycleError) return res.status(err.status).json(createResponse(err.message, null, {}, [err.code]));
     res.status(500).json(createResponse("Failed to create business profile", null, {}, ["Internal server error"]));
   }
 });

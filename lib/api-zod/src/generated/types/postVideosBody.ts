@@ -6,4 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostVideosBody = { [key: string]: unknown };
+export type PostVideosBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  thumbnailMediaId?: string;
+  /** Separate allowlisted external embed; requires an approved video-purpose image thumbnail. */
+  externalVideoUrl?: string;
+  [key: string]: unknown;
+ };

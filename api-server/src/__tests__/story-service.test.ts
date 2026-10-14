@@ -4,6 +4,7 @@ import { pool } from "@workspace/db";
 import { StoryRepository } from "../repositories/story-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { StoryService } from "../services/story-service.js";
+import { createTestApprovedMedia } from "./media-fixtures.js";
 import { createTestUser } from "./test-helpers.js";
 
 after(() => pool.end());
@@ -16,7 +17,7 @@ test("story views and reactions are persisted but scoped to the viewer", async (
   const service = new StoryService(new StoryRepository(), undefined, undefined, userRepository);
   const story = await service.createStory({
     authorId: author.id,
-    mediaUrl: "https://example.test/story.jpg",
+    mediaId: (await createTestApprovedMedia(author.id, "story")).id,
     type: "image",
     textContent: "A public story",
     isHighlight: false,

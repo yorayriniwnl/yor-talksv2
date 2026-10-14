@@ -1,9 +1,13 @@
 import { and, eq, like, or, sql } from "drizzle-orm";
 import { ledgerTransactionsTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class EconomyService {
+  constructor(private readonly eligibilityService: EligibilityService = new EligibilityService()) {}
+
   async getCreatorWallet(userId: string) {
+    await this.eligibilityService.requireCapability(userId, "seller");
     const credits = await db
       .select({ total: sql<number>`sum(amount_minor)` })
       .from(ledgerTransactionsTable)

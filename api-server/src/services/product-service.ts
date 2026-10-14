@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { randomUUID } from "node:crypto";
 import { ProductRepository } from "../repositories/product-repository.js";
 import type { ProductRecord } from "../types/index.js";
@@ -5,12 +6,14 @@ import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class ProductService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly aiService: AIService = new AIService(),
     private readonly contentSafetyService: ContentSafetyService = new ContentSafetyService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
   ) {}
 
   async createProduct(input: {
@@ -18,21 +21,28 @@ export class ProductService {
     title: string;
     description: string;
     price: number;
-    images: string[];
+    mediaIds?: string[];
     category: string;
     condition: string;
     contentRating?: ProductRecord["contentRating"];
   }): Promise<ProductRecord> {
+    await this.eligibilityService.requireCapability(input.sellerId, "seller");
     await enforceTextContentPolicy(`${input.title}\n${input.description}`, this.aiService, "marketplace listing");
+    await this.eligibilityService.requireCapability(input.sellerId, "seller");
+    rejectRawMedia(input, ["images"]);
     const product: ProductRecord = {
       id: randomUUID(),
       ...input,
+      images: [],
       savedBy: [],
       availability: "active",
       createdAt: new Date().toISOString(),
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.productRepository.create(product);
+    return withApprovedMedia(input.sellerId, [{ mediaIds: input.mediaIds ?? [], purpose: "product", slot: "images", kind: "image" }], { type: "products", id: product.id }, async media => {
+      await this.eligibilityService.requireCapability(input.sellerId, "seller");
+      return this.productRepository.create({ ...product, images: media.images.map(asset => asset.url) });
+    });
   }
 
   async toggleSave(productId: string, userId: string): Promise<ProductRecord | undefined> {

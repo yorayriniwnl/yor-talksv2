@@ -10,6 +10,16 @@ import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { ContactShieldService } from "./contact-shield-service.js";
+import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
+import { MediaLifecycleError } from "./media-service.js";
+
+const externalHosts = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
+export function normalizeExternalVideoUrl(value: string): string {
+  let url: URL;
+  try { url = new URL(value); } catch { throw new MediaLifecycleError("Invalid external video URL", 400, "invalid_external_video"); }
+  if (url.protocol !== "https:" || url.username || url.password || url.port || !externalHosts.has(url.hostname) || url.pathname === "/") throw new MediaLifecycleError("External video host is not allowed", 400, "invalid_external_video");
+  return url.href;
+}
 
 export class VideoService {
   constructor(
@@ -24,24 +34,37 @@ export class VideoService {
 
   async createVideo(input: {
     authorId: string;
-    videoUrl: string;
-    thumbnailUrl: string;
+    mediaId?: string;
+    externalVideoUrl?: string;
+    thumbnailMediaId?: string;
     title: string;
     type: string;
     contentCategory?: VideoRecord["contentCategory"];
     contentRating?: VideoRecord["contentRating"];
   }): Promise<VideoRecord> {
     await enforceTextContentPolicy(input.title, this.aiService, "video");
+    rejectRawMedia(input, ["videoUrl", "thumbnailUrl"]);
+    if (Boolean(input.mediaId) === Boolean(input.externalVideoUrl) || (input.externalVideoUrl && !input.thumbnailMediaId)) throw new MediaLifecycleError("Choose approved video media or an external video with an approved thumbnail", 400, "invalid_video_media");
+    const externalVideoUrl = input.externalVideoUrl ? normalizeExternalVideoUrl(input.externalVideoUrl) : "";
     const video: VideoRecord = {
       id: randomUUID(),
       ...input,
+      videoUrl: externalVideoUrl,
+      thumbnailUrl: "",
       views: 0,
       likedBy: [],
       createdAt: new Date().toISOString(),
       contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
       contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
     };
-    return this.videoRepository.create(video);
+    return withApprovedMedia(input.authorId, [
+      ...mediaBinding(input.mediaId, "video", "videoUrl", "video"),
+      ...mediaBinding(input.thumbnailMediaId, "video", "thumbnailUrl", "image"),
+    ], { type: "videos", id: video.id }, media => {
+      const thumbnailUrl = media.thumbnailUrl?.[0]?.url ?? media.videoUrl?.[0]?.thumbnailUrl;
+      if (!thumbnailUrl) throw new MediaLifecycleError("Video poster is unavailable", 422, "media_poster_unavailable");
+      return this.videoRepository.create({ ...video, videoUrl: media.videoUrl?.[0]?.url ?? externalVideoUrl, thumbnailUrl });
+    });
   }
 
   async listVideos(viewerId?: string): Promise<VideoRecord[]> {
@@ -91,21 +114,22 @@ export class VideoService {
     }));
   }
 
-  async commentOnVideo(videoId: string, authorId: string, content: string, media?: Pick<VideoCommentRecord, "mediaUrl" | "mediaType" | "mediaDuration">): Promise<{ video: VideoRecord; comment: VideoCommentRecord } | undefined> {
+  async commentOnVideo(videoId: string, authorId: string, content: string, attachment?: { mediaId?: string; mediaType?: string; mediaDuration?: number }): Promise<{ video: VideoRecord; comment: VideoCommentRecord } | undefined> {
     const video = await this.getVideo(videoId, authorId, false);
     if (!video) return undefined;
+    if (!content.trim() && attachment?.mediaId === undefined) throw new MediaLifecycleError("Comment text or approved media is required", 400, "invalid_comment");
     await enforceTextContentPolicy(content, this.aiService, "video comment");
-    const comment = await this.videoCommentRepository.create({
-      id: randomUUID(),
+    rejectRawMedia(attachment ?? {}, ["mediaUrl"]);
+    const id = randomUUID();
+    const comment = await withApprovedMedia(authorId, mediaBinding(attachment?.mediaId, "video_comment", "mediaUrl"), { type: "video_comments", id }, media => this.videoCommentRepository.create({
+      id,
       videoId,
       authorId,
       content,
-      mediaUrl: media?.mediaUrl,
-      mediaType: media?.mediaType,
-      mediaDuration: media?.mediaDuration,
+      ...attachmentFields(media.mediaUrl?.[0]),
       createdAt: new Date().toISOString(),
       likedBy: [],
-    });
+    }));
     return { video, comment: await this.presentComment(comment, authorId) };
   }
 

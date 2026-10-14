@@ -10,5 +10,6 @@ export const createCommunitySchema = z.object({
     .max(50)
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Slug must be lowercase letters, numbers, and hyphens only"),
   description: z.string().trim().max(500).default(""),
+  coverMediaId: z.string().uuid().optional(),
   contentRating: contentRatingSchema,
-});
+}).strict();

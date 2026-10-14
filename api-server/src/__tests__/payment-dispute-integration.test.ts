@@ -20,9 +20,10 @@ import { UserRepository } from '../repositories/user-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { closeAuthDependencies } from '../middlewares/auth.js';
 import operationsRoutes from '../routes/payment-operations.js';
+import { authorizeTestAdultAccount } from './test-helpers.js';
 
 // Real isolated PostgreSQL/Redis; simulated provider, never a real chargeback.
-const original={...env};Object.assign(env,{PAYMENTS_ENABLED:true,YOR_PREMIUM_ENABLED:true,YOR_PREMIUM_PRICE_MINOR:500,
+const original={...env};Object.assign(env,{PAYMENTS_ENABLED:true,SELLER_ENABLED:true,MEMBERSHIPS_ENABLED:true,YOR_PREMIUM_ENABLED:true,YOR_PREMIUM_PRICE_MINOR:500,
   YOR_PREMIUM_DURATION_DAYS:30,YOR_PREMIUM_TERMS_VERSION:`dispute-test-${randomUUID()}`,YOR_PREMIUM_REFUND_POLICY:'Synthetic policy only',
   RAZORPAY_KEY_ID:'rzp_test_synthetic',RAZORPAY_KEY_SECRET:'synthetic-key',RAZORPAY_WEBHOOK_SECRET:'synthetic-hook',RAZORPAY_ACCOUNT_ID:'acc_synthetic'});
 type Order=Awaited<ReturnType<RazorpayService['getOrder']>>;type Payment=Awaited<ReturnType<RazorpayService['getPayment']>>;
@@ -45,7 +46,7 @@ const wallet=new EconomyService(),features=new FeatureEntitlementService(),redis
 const ids:string[]=[],orders:string[]=[],products:string[]=[],jobs:string[]=[];
 async function person(role='user'){
   const id=randomUUID();ids.push(id);await pool.query(`INSERT INTO users(id,username,email,password_hash,full_name,role,terms_version,terms_accepted_at,age_confirmed_at)
-    VALUES($1,$2,$3,$4,'Synthetic dispute',$5,$6,now(),now())`,[id,`dsp-${id.slice(0,8)}`,`${id}@example.test`,await bcrypt.hash('synthetic-password',4),role,env.TERMS_VERSION]);return id;
+    VALUES($1,$2,$3,$4,'Synthetic dispute',$5,$6,now(),now())`,[id,`dsp-${id.slice(0,8)}`,`${id}@example.test`,await bcrypt.hash('synthetic-password',4),role,env.TERMS_VERSION]);await authorizeTestAdultAccount(id);return id;
 }
 async function purchase(product:keyof typeof handlers){
   const owner=await person(),creator=await person();let id:string,providerId:string,subscriptionId:string|undefined;

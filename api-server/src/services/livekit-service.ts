@@ -1,5 +1,6 @@
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { env } from "../config/env.js";
+import { EligibilityService } from "./eligibility-service.js";
 
 export class LiveKitNotConfiguredError extends Error {
   constructor() {
@@ -9,6 +10,8 @@ export class LiveKitNotConfiguredError extends Error {
 }
 
 export class LiveKitService {
+  constructor(private readonly eligibilityService: EligibilityService = new EligibilityService()) {}
+
   isConfigured(): boolean {
     return env.LIVE_ROOMS_ENABLED && Boolean(env.LIVEKIT_URL && env.LIVEKIT_API_KEY && env.LIVEKIT_API_SECRET);
   }
@@ -22,6 +25,8 @@ export class LiveKitService {
     if (!this.isConfigured()) {
       throw new LiveKitNotConfiguredError();
     }
+    await this.eligibilityService.requireCapability(input.userId, "live");
+    await this.eligibilityService.requireCapability(input.userId, "rtc");
 
     const roomName = `yor-talks-${input.streamId}`;
     const accessToken = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
@@ -37,8 +42,13 @@ export class LiveKitService {
       canPublishData: input.canPublish,
     });
 
+    const token = await accessToken.toJwt();
+    // Eligibility can change while token signing is awaited. Credentials are
+    // returned only if RTC access remains current at issuance time.
+    await this.eligibilityService.requireCapability(input.userId, "live");
+    await this.eligibilityService.requireCapability(input.userId, "rtc");
     return {
-      token: await accessToken.toJwt(),
+      token,
       wsUrl: env.LIVEKIT_URL,
       roomName,
     };

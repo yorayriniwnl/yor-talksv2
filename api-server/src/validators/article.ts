@@ -7,12 +7,12 @@ export const createArticleSchema = z.object({
   title: z.string().trim().min(2).max(200),
   excerpt: z.string().trim().min(1).max(500),
   content: z.string().trim().min(1),
-  coverUrl: z.string().url(),
+  coverMediaId: z.string().uuid().optional(),
   readTime: z.number().int().min(0).default(0),
   collection: z.string().max(100).optional(),
   contentCategory: contentCategorySchema,
   contentRating: contentRatingSchema,
-});
+}).strict();
 
 export const clapSchema = z.object({
   count: z.number().int().min(1).max(50).default(1),

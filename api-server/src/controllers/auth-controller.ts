@@ -1,10 +1,11 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError } from "../services/auth-service.js";
+import { AuthService, EligibilityDecisionUnavailableError, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError, type AuthenticatedSession } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
-import { toOwnUser } from "../utils/user-view.js";
+import { toOwnUser, toRestrictedOwnUser } from "../utils/user-view.js";
 import { isDatabaseUnavailableError } from "../utils/database-error.js";
+import { EnrollmentUnavailableError } from "../services/eligibility-enrollment-service.js";
 
 export class AuthController {
   private readonly refreshCookieSameSite = env.AUTH_COOKIE_SAME_SITE;
@@ -33,6 +34,12 @@ export class AuthController {
     return { requiresTwoFactor: true as const, ...(error.challenge ?? {}) };
   }
 
+  private sessionUser(result: AuthenticatedSession) {
+    return result.eligibility.activated
+      ? toOwnUser(result.user)
+      : toRestrictedOwnUser(result.user, result.eligibility);
+  }
+
   private challengeId(req: Request): string {
     return Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
   }
@@ -59,6 +66,9 @@ export class AuthController {
       if (error instanceof UserAlreadyExistsError) {
         return res.status(409).json(createResponse("An account already exists for that email or username", null, {}, [error.message]));
       }
+      if (error instanceof EnrollmentUnavailableError) {
+        return res.status(503).json(createResponse("The approved registration journey is unavailable",null,{},["enrollment_unavailable"]));
+      }
       return res.status(503).json(createResponse("Registration is temporarily unavailable", null, {}, ["Please try again shortly"]));
     }
   };
@@ -82,7 +92,7 @@ export class AuthController {
     try {
       const result = await this.authService.login(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: this.sessionUser(result), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TooManyAttemptsError) {
         return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
@@ -92,6 +102,9 @@ export class AuthController {
       }
       if (error instanceof EmailVerificationRequiredError) {
         return res.status(403).json(createResponse("Email verification required", null, { emailVerificationRequired: true }, [error.message]));
+      }
+      if (error instanceof EligibilityDecisionUnavailableError) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["eligibility_unavailable"]));
       }
       if (isDatabaseUnavailableError(error)) {
         return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["auth_service_unavailable"]));
@@ -104,10 +117,13 @@ export class AuthController {
     try {
       const result = await this.authService.loginWithGoogle(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: this.sessionUser(result), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof GoogleSignInNotConfiguredError) {
         return res.status(503).json(createResponse("Google sign-in is unavailable", null, {}, [error.message]));
+      }
+      if (error instanceof EligibilityDecisionUnavailableError) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["eligibility_unavailable"]));
       }
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
@@ -141,13 +157,16 @@ export class AuthController {
     try {
       const result = await this.authService.loginWithEmailOtp(req.body);
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: this.sessionUser(result), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
       }
       if (error instanceof EmailOtpInvalidError) {
         return res.status(401).json(createResponse("Email sign-in failed", null, {}, [error.message]));
+      }
+      if (error instanceof EligibilityDecisionUnavailableError) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["eligibility_unavailable"]));
       }
       return res.status(500).json(createResponse("Email sign-in failed", null, {}, ["Email sign-in failed"]));
     }
@@ -253,8 +272,11 @@ export class AuthController {
         return res.status(401).json(createResponse("Sign-in approval is missing or expired", null, {}, ["Approval required"]));
       }
       this.setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
+      return res.status(200).json(createResponse("Login successful", { user: this.sessionUser(result), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
+      if (error instanceof EligibilityDecisionUnavailableError) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["eligibility_unavailable"]));
+      }
       return res.status(500).json(createResponse("Could not complete sign-in", null, {}, ["Sign-in completion is temporarily unavailable"]));
     }
   };

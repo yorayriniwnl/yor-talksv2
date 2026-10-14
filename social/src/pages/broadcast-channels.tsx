@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bell, BellOff, Check, ChevronRight, LogIn, LogOut, Megaphone, Plus, RefreshCw, Send, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { api, type BackendBroadcastChannel, type BackendBroadcastChannelMessage } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -29,6 +31,7 @@ export default function BroadcastChannels() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [channelCategory, setChannelCategory] = useState<ContentCategory>('other');
   const [channelRating, setChannelRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [messageContent, setMessageContent] = useState('');
@@ -121,6 +124,7 @@ export default function BroadcastChannels() {
       const created = await api.createBroadcastChannel({
         name: channelName.trim(),
         description: channelDescription.trim(),
+        coverMediaId: coverFiles[0] ? (await uploadApprovedMedia(coverFiles[0], 'broadcast_channel')).mediaId : undefined,
         contentCategory: channelCategory,
         contentRating: channelRating,
       });
@@ -128,6 +132,7 @@ export default function BroadcastChannels() {
       setSelectedChannelId(created.id);
       setChannelName('');
       setChannelDescription('');
+      setCoverFiles([]);
       setChannelCategory('other');
       setChannelRating(DEFAULT_CONTENT_RATING);
       setIsCreateOpen(false);
@@ -245,6 +250,7 @@ export default function BroadcastChannels() {
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="rounded-3xl sm:max-w-[500px]">
+          <MediaImageField id="broadcast-channel-cover" label="Channel cover (optional)" files={coverFiles} onChange={setCoverFiles} disabled={saving} />
           <DialogHeader><DialogTitle className="font-display text-xl font-black">Start a Broadcast Channel</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2"><div><label htmlFor="broadcast-channel-name" className="mb-1.5 block text-xs font-bold">Channel name</label><Input id="broadcast-channel-name" value={channelName} onChange={(event) => setChannelName(event.target.value)} placeholder="The signal room" maxLength={80} className="rounded-xl" /></div><div><label htmlFor="broadcast-channel-description" className="mb-1.5 block text-xs font-bold">Description</label><Textarea id="broadcast-channel-description" value={channelDescription} onChange={(event) => setChannelDescription(event.target.value)} placeholder="What will subscribers hear from you?" maxLength={500} rows={3} className="resize-none rounded-xl" /></div><div className="grid gap-3 sm:grid-cols-2"><ContentCategorySelect id="broadcast-channel-category" value={channelCategory} onChange={(value) => { if (value) setChannelCategory(value); }} /><ContentRatingSelect id="broadcast-channel-rating" value={channelRating} onChange={setChannelRating} /></div><p className="text-[0.68rem] leading-relaxed text-muted-foreground">You are the only publisher. Subscribers can read the archive and receive future updates without adding another conversation to their inbox.</p></div>
           <DialogFooter><Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)} className="rounded-xl">Cancel</Button><Button type="button" onClick={() => void handleCreate()} disabled={saving || channelName.trim().length < 2} className="rounded-xl font-bold"><Megaphone className="mr-1.5 h-4 w-4" /> {saving ? 'Creating…' : 'Create channel'}</Button></DialogFooter>

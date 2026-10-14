@@ -21,6 +21,7 @@ import {
 import { useAppStore, type Post } from '@/lib/store';
 import StoriesRow from '@/components/feed/StoriesRow';
 import NotesTray from '@/components/feed/NotesTray';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 import { CreatePost, PostCardMemo as PostCard } from '@/components/feed/Post';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -397,7 +398,7 @@ export default function Home() {
                 <div className="orbit-live-list">
                   {activeLiveStreams.map((stream) => (
                     <Link href="/live" key={stream.id}>
-                      <span className="orbit-live-list__cover">{stream.coverUrl ? <img src={stream.coverUrl} alt="" /> : <Radio className="h-4 w-4" />}</span>
+                      <span className="orbit-live-list__cover">{stream.coverUrl ? <ProtectedMediaImage src={stream.coverUrl} alt="" /> : <Radio className="h-4 w-4" />}</span>
                       <div><strong>{stream.title}</strong><small><span className="home-live-link__dot" /> {stream.viewers.toLocaleString()} watching</small></div>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
@@ -439,7 +440,7 @@ export default function Home() {
               <div className="orbit-world-list">
                 {activeWorlds.map((world) => (
                   <Link href={`/communities/${world.id}`} key={world.id}>
-                    <span>{world.coverUrl ? <img src={world.coverUrl} alt="" /> : world.name.charAt(0)}</span>
+                    <span>{world.coverUrl ? <ProtectedMediaImage src={world.coverUrl} alt="" /> : world.name.charAt(0)}</span>
                     <div><strong>{world.name}</strong><small>{world.members.toLocaleString()} people · {world.category}</small></div>
                   </Link>
                 ))}

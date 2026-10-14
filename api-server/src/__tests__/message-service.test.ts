@@ -6,7 +6,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { AccountService } from "../services/account-service.js";
 import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { createTestUser } from "./test-helpers.js";
+import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
 
 after(() => pool.end());
@@ -15,7 +15,7 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   const userRepository = new UserRepository();
   const sender = await createTestUser(userRepository);
   const recipient = await createTestUser(userRepository);
-  const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
+  const messageService = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   const sent = await messageService.sendMessage(sender.id, recipient.id, "hello");
   const reply = await messageService.sendMessage(recipient.id, sender.id, "replying", { replyToId: sent.id });
   const edited = await messageService.editMessage(sent.id, sender.id, "hello there");
@@ -45,7 +45,7 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
 });
 
 test("message content length is bounded before transport-specific persistence", async () => {
-  const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
+  const messageService = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
 
   await assert.rejects(
     () => messageService.sendMessage("sender", "recipient", "x".repeat(4001)),
@@ -58,7 +58,7 @@ test("blocks deny new and existing messages in both blocking directions", async 
   const users = new UserRepository();
   const blocker = await createTestUser(users);
   const blocked = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
   const conversation = await service.createConversation(blocker.id, blocked.id);
 
   await users.update(blocker.id, { blockedUsers: [blocked.id] });
@@ -74,8 +74,15 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   const sender = await createTestUser(users);
   const first = await createTestUser(users);
   const second = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
-  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(first.id);
+  await authorizeTestAdultAccount(second.id);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
+  const created = await service.createGroupChat(sender.id, [first.id, second.id], "Read receipt audit");
+  const group=created;
+  await service.acceptGroupInvitation(created.invitations[0]!.id,first.id,created.invitations[0]!.updatedAt);
+  const refreshedSecond=(await service.listGroupInvitations(second.id))[0]!;
+  await service.acceptGroupInvitation(refreshedSecond.id,second.id,refreshedSecond.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "A shared conversation");
   assert.equal((await service.markSeen(message.id, sender.id))?.seenAt, null);
   await service.markSeen(message.id, first.id);
@@ -90,7 +97,7 @@ test("concurrent first messages share one direct conversation in either directio
   const users = new UserRepository();
   const first = await createTestUser(users);
   const second = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository());
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   const conversations = await Promise.all(Array.from({ length: 12 }, (_, index) =>
     index % 2 === 0
       ? service.createConversation(first.id, second.id)
@@ -106,7 +113,7 @@ test("new messages move old conversations to the top of the inbox", async () => 
   const recipient = await createTestUser(users);
   const other = await createTestUser(users);
   const repository = new ConversationRepository();
-  const service = new MessageService(repository, new MessageRepository());
+  const service = new MessageService(repository, new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   const older = await service.createConversation(sender.id, recipient.id);
   await pool.query('update conversations set updated_at = $1 where id = $2', ['2020-01-01T00:00:00Z', older.id]);
   await service.createConversation(sender.id, other.id);
@@ -120,13 +127,15 @@ for (const disabledSetting of ['allowDmFromStrangers', 'messageRequests'] as con
     const users = new UserRepository();
     const sender = await createTestUser(users);
     const recipient = await createTestUser(users, { privacy: { profileVisibility: 'public', allowDmFromStrangers: true, messageRequests: true, [disabledSetting]: false } });
-    const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+    const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
     await assert.rejects(() => service.sendMessage(sender.id, recipient.id, 'Unwanted contact'), MessageBlockedError);
     const direct = await service.createConversation(sender.id, recipient.id);
     await assert.rejects(() => service.sendMessageToConversation(sender.id, direct.id, 'Existing thread bypass'), MessageBlockedError);
     await assert.rejects(() => service.createGroupChat(sender.id, [recipient.id], 'Group bypass'), MessageBlockedError);
     await users.followUser(sender.id, recipient.id);
-    const group = await service.createGroupChat(sender.id, [recipient.id], 'Known followers');
+    const created = await service.createGroupChat(sender.id, [recipient.id], 'Known followers');
+    const group=created;
+    await service.acceptGroupInvitation(created.invitations[0]!.id,recipient.id,created.invitations[0]!.updatedAt);
     await service.sendMessageToConversation(sender.id, group.id, 'Allowed contact');
     await users.unfollowUser(sender.id, recipient.id);
     await assert.rejects(() => service.sendMessageToConversation(sender.id, group.id, 'Stale group bypass'), MessageBlockedError);

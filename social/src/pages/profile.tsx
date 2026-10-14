@@ -26,9 +26,12 @@ import { staggerItem, springGentle } from '@/lib/motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api, type BackendUser } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
+import { MediaImageField } from '@/components/media/MediaImageField';
 import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 import { toast } from 'sonner';
 import { computeLevel } from '@/lib/achievement-progress';
+import { ProtectedMediaImage } from '@/lib/protected-media';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -82,7 +85,7 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
   const [type, setType] = useState<'achievement' | 'custom'>('custom');
   const [title, setTitle] = useState('');
   const [customText, setCustomText] = useState('');
-  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,8 +93,9 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
     if (!title.trim() || saving) return;
     setSaving(true);
     try {
-      await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageUrl: customImageUrl.trim() || undefined });
-      setOpen(false); setTitle(''); setCustomText(''); setCustomImageUrl('');
+      const customImageMediaId = type === 'custom' && imageFiles[0] ? (await uploadApprovedMedia(imageFiles[0], 'showcase')).mediaId : undefined;
+      await addShowcase({ userId, type, title: title.trim(), customText: customText.trim() || undefined, customImageMediaId });
+      setOpen(false); setTitle(''); setCustomText(''); setImageFiles([]);
     } catch {
       // The store reports the error; leave all fields intact for a retry.
     } finally { setSaving(false); }
@@ -134,8 +138,7 @@ function AddShowcaseDialog({ userId }: { userId: string }) {
                 <Textarea id="sc-desc" value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Tell people about this..." className="rounded-xl resize-none min-h-[90px]" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sc-img" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Image URL</Label>
-                <Input id="sc-img" type="url" value={customImageUrl} onChange={e => setCustomImageUrl(e.target.value)} placeholder="https://..." className="rounded-xl h-11" />
+                <MediaImageField id="sc-img" label="Showcase image (optional)" files={imageFiles} onChange={setImageFiles} disabled={saving} />
               </div>
             </>
           )}
@@ -177,7 +180,7 @@ function ShowcaseCard({ showcase, canRemove, onRemove }: { showcase: Showcase; c
             <h4 className="font-display font-bold text-[0.95rem] text-foreground leading-tight">{showcase.title}</h4>
             {showcase.customImageUrl && (
               <div className="w-full h-40 rounded-xl overflow-hidden mt-1 -mb-1">
-                <img src={showcase.customImageUrl} alt={showcase.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                <ProtectedMediaImage src={showcase.customImageUrl} alt={showcase.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
               </div>
             )}
             {showcase.customText && (
@@ -241,7 +244,7 @@ function PostGridItem({ post, onClick, canPin = false, onTogglePin, pinBusy = fa
     <div className="relative aspect-square overflow-hidden bg-muted group hover-lift">
       <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="h-full w-full cursor-pointer text-left" onClick={onClick}>
       {firstMedia ? (
-        <img src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+        <ProtectedMediaImage src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 to-accent/5">
           <p className="text-xs text-muted-foreground line-clamp-4 text-center font-serif leading-relaxed">{post.content}</p>
@@ -503,7 +506,7 @@ export default function Profile() {
          CINEMATIC COVER — 3D Parallax Tilt with gradient dissolve
          ══════════════════════════════════════════════════════════════════ */}
       <section className="operator-profile-cover" aria-label={`${profile.displayName}'s cover`}>
-        {profile.coverUrl ? <img src={profile.coverUrl} alt="" /> : <div className="operator-profile-cover__fallback"><span>YOR // IDENTITY NODE</span></div>}
+        {profile.coverUrl ? <ProtectedMediaImage src={profile.coverUrl} alt="" /> : <div className="operator-profile-cover__fallback"><span>YOR // IDENTITY NODE</span></div>}
         <div className="operator-profile-cover__shade" />
         <SignalLabel className="operator-profile-cover__label">Profile signal</SignalLabel>
       </section>
@@ -699,7 +702,7 @@ export default function Profile() {
             return <button type="button" key={group.title} onClick={() => setHighlightViewerOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group" aria-label={`Open ${group.title} highlights`}>
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-muted-foreground/20 to-muted-foreground/10">
                 <div className={cn("relative w-[58px] h-[58px] overflow-hidden rounded-full bg-gradient-to-br flex items-center justify-center text-xl border-[3px] border-background", gradients[index % gradients.length])}>
-                  {cover.type === 'image' && cover.mediaUrl ? <img src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
+                  {cover.type === 'image' && cover.mediaUrl ? <ProtectedMediaImage src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
                 </div>
               </div>
               <span className="text-[0.62rem] font-semibold text-foreground/80 truncate w-full text-center">{group.title}</span>

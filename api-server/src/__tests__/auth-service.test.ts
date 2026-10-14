@@ -7,15 +7,24 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
 import { authenticator } from "otplib";
 import { TwoFactorRequiredError } from "../services/auth-service.js";
+import { randomUUID } from "node:crypto";
+import { EligibilityEnrollmentService } from "../services/eligibility-enrollment-service.js";
 
 const redisRepository = new RedisRepository();
+const approvedEnrollment = {
+  consumeAuthorizedEnrollment: async (enrollmentId: string) => ({ enrollmentId,experience: 'adult_18_plus' as const,territory: 'US',
+    assessment: {} as never,guardianAuthorizations: [],policyVersions: {} }),
+  bindAuthorizedEnrollment: async () => undefined,
+} as unknown as EligibilityEnrollmentService;
+const makeAuthService = () => new AuthService(new UserRepository(),redisRepository,undefined,undefined,approvedEnrollment);
+const registrationCredentials = () => ({ enrollmentId: randomUUID(),registrationNonce: randomUUID()+randomUUID() });
 after(async () => {
   await redisRepository.disconnect();
   await pool.end();
 });
 
 test("registration requires email verification before password login", async () => {
-  const authService = new AuthService(new UserRepository(), redisRepository);
+  const authService = makeAuthService();
   const unique = Date.now();
   const email = `${String(unique).slice(-7)}@kiit.ac.in`;
 
@@ -25,7 +34,7 @@ test("registration requires email verification before password login", async () 
     password: "supersecret",
     fullName: "Alice Example",
     acceptedTerms: true,
-    confirmedAge: true,
+    ...registrationCredentials(),
   });
 
   assert.equal(registered.user.emailVerified, false);
@@ -46,7 +55,7 @@ test("registration requires email verification before password login", async () 
 });
 
 test("two-factor authentication blocks password login until the authenticator code is valid", async () => {
-  const authService = new AuthService(new UserRepository(), redisRepository);
+  const authService = makeAuthService();
   const unique = Date.now() + 1;
   const email = `${String(unique).slice(-7)}@kiit.ac.in`;
   const registered = await authService.register({
@@ -55,7 +64,7 @@ test("two-factor authentication blocks password login until the authenticator co
     password: "supersecret",
     fullName: "Two Factor Example",
     acceptedTerms: true,
-    confirmedAge: true,
+    ...registrationCredentials(),
   });
 
   await authService.confirmEmailVerification(registered.verificationToken!);

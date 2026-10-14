@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
 import { ProductService } from "../services/product-service.js";
 import { createResponse } from "../utils/response.js";

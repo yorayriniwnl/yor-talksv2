@@ -21,11 +21,13 @@ import { sounds } from '@/lib/sound';
 import { RippleEffect } from '@/components/ui/RippleEffect';
 import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 import { RichCommentComposer, type RichCommentData } from '@/components/comments/RichCommentComposer';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
 import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
+import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -132,9 +134,9 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
-    const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024);
+    const imageFiles = Array.from(files).filter((file) => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) && file.size > 0 && file.size <= 5 * 1024 * 1024);
     if (imageFiles.length !== files.length) {
-      toast({ title: 'Some images were skipped', description: 'Choose image files smaller than 10 MB.' });
+      toast({ title: 'Some images were skipped', description: 'Choose static JPEG, PNG or WebP images up to 5 MB.' });
     }
     const availableSlots = Math.max(0, 4 - media.length);
     const selectedFiles = imageFiles.slice(0, availableSlots);
@@ -163,7 +165,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
     } : undefined;
     try {
       const uploadedMedia = mediaFiles.length
-        ? (await Promise.all(mediaFiles.map((file) => api.uploadPostImage(file)))).map(({ url }) => url)
+        ? (await Promise.all(mediaFiles.map((file) => uploadApprovedMedia(file, 'post')))).map(({ mediaId }) => mediaId)
         : undefined;
       await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory, audience, distributionMode);
     } catch (error) {
@@ -232,7 +234,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
             <div className={cn('mb-3 mt-2 grid gap-2 overflow-hidden rounded-xl', media.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
               {media.map((url) => (
                 <div key={url} className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted">
-                  <img src={url} alt="Selected upload" className="max-h-72 w-full object-cover" />
+                  <ProtectedMediaImage src={url} alt="Selected upload" className="max-h-72 w-full object-cover" />
                   <button 
                     type="button" 
                     onClick={() => removeMedia(url)} 
@@ -301,7 +303,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
 
           <div className="yor-composer__footer mt-2 flex items-center justify-between pt-1">
             <div className="flex items-center gap-1 text-primary">
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addFiles(event.target.files); event.currentTarget.value = ''; }} />
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(event) => { addFiles(event.target.files); event.currentTarget.value = ''; }} />
               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setIsExpanded(true); fileInputRef.current?.click(); }} aria-label="Add an image">
                 <ImagePlus className="h-[18px] w-[18px]" />
               </Button>
@@ -416,13 +418,7 @@ export function PostCard({ post }: { post: PostType }) {
   };
 
   const handleInlineComment = async (data: RichCommentData) => {
-    const media = data.voiceNoteUrl
-      ? { mediaUrl: data.voiceNoteUrl, mediaType: 'audio' as const, mediaDuration: data.voiceDuration }
-      : data.gifUrl
-        ? { mediaUrl: data.gifUrl, mediaType: 'gif' as const }
-        : data.imageUrl
-          ? { mediaUrl: data.imageUrl, mediaType: 'image' as const }
-          : {};
+    const media = data.mediaId ? { mediaId: data.mediaId, mediaType: data.mediaType, mediaDuration: data.voiceDuration } : {};
     const result = await api.commentOnPost(post.id, { content: data.text.trim(), ...media });
     syncPostFromBackend(result.post);
     setShowCommentInput(false);
@@ -455,6 +451,16 @@ export function PostCard({ post }: { post: PostType }) {
     const len = post.media.length;
     
     const authorDisplayName = author.displayName || author.username || 'User';
+    const isVideo = (url: string) => /\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(url);
+    if (post.media.some(isVideo)) {
+      return <div className="yor-post-media mt-3 flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-border/20">
+        {post.media.map((url, index) => <div key={url} className="min-w-full snap-center bg-muted">
+          {isVideo(url)
+            ? <ProtectedMediaVideo src={url} controls playsInline preload="metadata" aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
+            : <button type="button" className="w-full" aria-label={`Open image ${index + 1} of ${len}`} onClick={event => openMediaViewer(event, index)}><ProtectedMediaImage src={url} alt={`${authorDisplayName}'s post`} loading="lazy" className="w-full object-cover max-h-[480px]" /></button>}
+        </div>)}
+      </div>;
+    }
 
     // Single image: keep current behavior
     if (len === 1) {
@@ -477,7 +483,7 @@ export function PostCard({ post }: { post: PostType }) {
             className="relative overflow-hidden bg-muted group/media select-none text-left w-full focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Open image 1 of 1"
           >
-            <img 
+            <ProtectedMediaImage
               src={post.media[0]} 
               alt={`${authorDisplayName}'s post`} 
               className="w-full object-cover transition-transform duration-700 group-hover/media:scale-[1.02] max-h-[480px]" 
@@ -515,7 +521,7 @@ export function PostCard({ post }: { post: PostType }) {
               className="min-w-full snap-center flex-shrink-0 relative bg-muted select-none text-left focus-visible:outline-none"
               aria-label={`Image ${index + 1} of ${len}`}
             >
-              <img 
+              <ProtectedMediaImage
                 src={url} 
                 alt={`${authorDisplayName}'s post`} 
                 className="w-full object-cover max-h-[480px]" 
