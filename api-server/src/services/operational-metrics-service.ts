@@ -1,4 +1,5 @@
 import { apiRouteCatalog } from "../docs/routes.generated.js";
+import { getLifecycleWorkerStatus } from "../lib/worker-health.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
@@ -196,6 +197,16 @@ export class OperationalMetricsService {
         "yor_analytics_rollup_last_run_failed 1",
       );
     }
+
+    const lifecycleStatus = await getLifecycleWorkerStatus();
+    lines.push(
+      "# HELP yor_lifecycle_worker_healthy Whether the required lifecycle worker heartbeats within the allowed grace window.",
+      "# TYPE yor_lifecycle_worker_healthy gauge",
+      `yor_lifecycle_worker_healthy ${lifecycleStatus.healthy ? 1 : 0}`,
+      "# HELP yor_lifecycle_worker_heartbeat_timestamp_seconds Unix timestamp of the latest lifecycle worker heartbeat.",
+      "# TYPE yor_lifecycle_worker_heartbeat_timestamp_seconds gauge",
+      `yor_lifecycle_worker_heartbeat_timestamp_seconds ${lifecycleStatus.lastHeartbeat ? Math.floor(Date.parse(lifecycleStatus.lastHeartbeat) / 1000) : 0}`,
+    );
 
     const memory = process.memoryUsage();
     lines.push(

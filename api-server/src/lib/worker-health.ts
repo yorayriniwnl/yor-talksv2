@@ -1,8 +1,10 @@
+import { pool } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 
 let notificationWorkerHealthy = false;
 const workerHeartbeatKey = "worker:notification:heartbeat";
 const heartbeatTtlSeconds = 45;
+const lifecycleHeartbeatGraceSeconds = 90;
 let redisRepository: RedisRepository | null = null;
 
 function getRedisRepository(): RedisRepository {
@@ -35,4 +37,44 @@ export async function hasHealthyNotificationWorker(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export type LifecycleWorkerStatus = {
+  healthy: boolean;
+  missing: boolean;
+  stale: boolean;
+  workerId?: string;
+  lastHeartbeat?: string;
+  overdueSeconds?: number | null;
+};
+
+export async function getLifecycleWorkerStatus(): Promise<LifecycleWorkerStatus> {
+  try {
+    const result = await pool.query(
+      `SELECT worker_id, heartbeat_at, details FROM runtime_heartbeats WHERE kind = 'lifecycle' ORDER BY heartbeat_at DESC LIMIT 20`,
+    );
+    const rows = result.rows as Array<{ worker_id: string; heartbeat_at: string; details?: Record<string, unknown> }>;
+    if (!rows.length) {
+      return { healthy: false, missing: true, stale: false };
+    }
+    const now = Date.now();
+    const mostRecent = rows[0];
+    const mostRecentTimestamp = Date.parse(mostRecent.heartbeat_at);
+    const overdueSeconds = Number.isFinite(mostRecentTimestamp) ? (now - mostRecentTimestamp) / 1000 : null;
+    const healthy = Number.isFinite(mostRecentTimestamp) && (overdueSeconds ?? Number.POSITIVE_INFINITY) <= lifecycleHeartbeatGraceSeconds;
+    return {
+      healthy,
+      missing: false,
+      stale: !healthy,
+      workerId: mostRecent.worker_id,
+      lastHeartbeat: mostRecent.heartbeat_at,
+      overdueSeconds,
+    };
+  } catch {
+    return { healthy: false, missing: true, stale: false };
+  }
+}
+
+export async function hasHealthyLifecycleWorker(): Promise<boolean> {
+  return (await getLifecycleWorkerStatus()).healthy;
 }

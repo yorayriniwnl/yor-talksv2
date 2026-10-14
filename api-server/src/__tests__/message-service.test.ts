@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import bcrypt from "bcryptjs";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
+import { RedisRepository } from "../repositories/redis-repository.js";
+import { AccountService } from "../services/account-service.js";
 import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
@@ -138,3 +141,40 @@ for (const disabledSetting of ['allowDmFromStrangers', 'messageRequests'] as con
     await assert.rejects(() => service.sendMessageToConversation(sender.id, group.id, 'Stale group bypass'), MessageBlockedError);
   });
 }
+
+test("deleting a group creator or member preserves shared group history and removes the departed account data", async () => {
+  const users = new UserRepository();
+  const redis = new RedisRepository();
+  const accountService = new AccountService(users, redis);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+
+  const creator = await createTestUser(users, { passwordHash: await bcrypt.hash('creator-password', 10) });
+  const memberA = await createTestUser(users, { passwordHash: await bcrypt.hash('member-a-password', 10) });
+  const memberB = await createTestUser(users, { passwordHash: await bcrypt.hash('member-b-password', 10) });
+
+  const creatorGroup = await service.createGroupChat(creator.id, [memberA.id, memberB.id], 'Creator retention');
+  await service.sendMessageToConversation(creator.id, creatorGroup.id, 'Creator message');
+  await service.sendMessageToConversation(memberA.id, creatorGroup.id, 'Survivor message');
+  assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), true);
+  const creatorMembers = await new ConversationRepository().getMembers(creatorGroup.id);
+  assert.deepEqual([...creatorMembers].sort(), [memberA.id, memberB.id].sort());
+  const creatorHistory = await service.listConversation(creatorGroup.id, memberA.id);
+  assert.ok(creatorHistory.some((message) => message.content === 'Survivor message'));
+  assert.equal(creatorHistory.some((message) => message.content === 'Creator message'), false);
+  await assert.rejects(() => service.sendMessageToConversation(creator.id, creatorGroup.id, 'Creator rejoin attempt'), /not a member/);
+
+  const survivor = await createTestUser(users, { passwordHash: await bcrypt.hash('survivor-password', 10) });
+  const target = await createTestUser(users, { passwordHash: await bcrypt.hash('target-password', 10) });
+  const other = await createTestUser(users, { passwordHash: await bcrypt.hash('other-password', 10) });
+  const targetGroup = await service.createGroupChat(survivor.id, [target.id, other.id], 'Member retention');
+  await service.sendMessageToConversation(target.id, targetGroup.id, 'Departing member message');
+  await service.sendMessageToConversation(other.id, targetGroup.id, 'Other member message');
+  assert.equal(await accountService.deleteAccount(target.id, 'target-password'), true);
+  const remainingTargetMembers = await new ConversationRepository().getMembers(targetGroup.id);
+  assert.deepEqual([...remainingTargetMembers].sort(), [survivor.id, other.id].sort());
+  const targetHistory = await service.listConversation(targetGroup.id, survivor.id);
+  assert.ok(targetHistory.some((message) => message.content === 'Other member message'));
+  assert.equal(targetHistory.some((message) => message.content === 'Departing member message'), false);
+
+  await redis.disconnect();
+});

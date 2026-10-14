@@ -183,8 +183,8 @@ export const profilePostPinsTable = pgTable("profile_post_pins", {
 
 export const conversationsTable = pgTable("conversations", {
   id: uuid("id").primaryKey(),
-  participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  participantB: uuid("participant_b").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  participantA: uuid("participant_a").references(() => usersTable.id, { onDelete: 'set null' }),
+  participantB: uuid("participant_b").references(() => usersTable.id, { onDelete: 'set null' }),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
   participantIds: jsonb("participant_ids").default([]),
   isGroup: boolean("is_group").default(false),
@@ -200,7 +200,7 @@ export const messagesTable = pgTable("messages", {
   id: uuid("id").primaryKey(),
   conversationId: uuid("conversation_id").references(() => conversationsTable.id, { onDelete: 'cascade' }).notNull(),
   senderId: uuid("sender_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
-  recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'cascade' }).notNull(),
+  recipientId: uuid("recipient_id").references(() => usersTable.id, { onDelete: 'set null' }),
   content: text("content").notNull(),
   mediaId: uuid("media_id"),
   mediaUrl: text("media_url"),

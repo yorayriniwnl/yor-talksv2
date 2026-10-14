@@ -28,6 +28,24 @@ groups:
           summary: Yor Talks background jobs are failing
           description: A notification or feed worker failure was recorded during the last ten minutes.
 
+      - alert: YorLifecycleWorkerMissing
+        expr: yor_lifecycle_worker_healthy == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Required lifecycle worker is missing or stale
+          description: The lifecycle worker has not generated a fresh heartbeat within the allowed grace window.
+
+      - alert: YorLifecycleWorkerStale
+        expr: yor_lifecycle_worker_heartbeat_timestamp_seconds == 0 or time() - yor_lifecycle_worker_heartbeat_timestamp_seconds > 180
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Required lifecycle worker heartbeat is overdue
+          description: Check the lifecycle worker process, queue lease health, and database heartbeat table.
+
       - alert: YorAnalyticsRollupFailed
         expr: yor_analytics_rollup_last_run_failed == 1
         for: 1m

@@ -46,10 +46,28 @@ Previously documented repository controls (historical; not re-verified in this s
 
 The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
 
+### Staging acceptance checklist
+
+- HTTPS, DNS, cookies, CORS, WebSockets, and external access: PASS only when both public hostnames resolve to the intended edge, certificates validate with no mixed content, HTTP redirects to HTTPS, auth cookies have the configured `Secure`/`HttpOnly`/`SameSite` attributes, allowed origins succeed while an unlisted origin is rejected, authenticated WebSocket connect/reconnect works through the proxy, and direct public access to API/Postgres/Redis/monitoring ports is blocked. Record URLs, response headers, origin probes, and firewall results; otherwise FAIL and keep traffic closed.
+- Google OAuth and email delivery: PASS only after a real staging Google sign-in succeeds, an invalid/disallowed identity is rejected, account linking behavior is verified, and delivered OTP/reset messages arrive from the verified sender with bounce/retry behavior exercised. Confirm logs/artifacts contain no credentials or OTPs. Record provider event IDs and redacted results; otherwise FAIL and keep the affected sign-in path disabled.
+- Storage, moderation, ownership, and deletion: PASS only after authorized uploads are signed and associated with the correct owner, cross-account read/delete attempts are rejected server-side, moderation/report actions block or remove test media as intended, and account/content deletion propagates to stored objects within the documented retention window. Verify unauthorized direct uploads are rejected; otherwise FAIL and keep uploads/HLS disabled.
+- Monitoring delivery and lifecycle worker: PASS only after a synthetic alert reaches the configured authenticated receiver, receiver outage/retry behavior is observed, and stopping the required lifecycle worker causes the readiness check and critical missing/stale alert to fire; restoring the worker must clear readiness/alert state after a fresh heartbeat. Preserve redacted receiver and alert evidence; otherwise FAIL and do not proceed with rollout.
+- Encrypted off-host backup and restore: PASS only when an encrypted backup is uploaded to the independent configured remote, its object/version and retention policy are verified, decryption plus archive integrity checks succeed using the controlled recovery identity, and restoration into an isolated empty database passes schema/constraint and representative-data integrity checks. Record checksum, backup age, restore duration, RPO/RTO result, and operator sign-off; otherwise FAIL and do not claim recoverability.
+- Migration, rollback, and smoke tests: PASS only when clean-install and supported-upgrade migrations complete on disposable databases, migration failure leaves the database/application in the documented recoverable state, the deployed application is compatible with the expanded schema, the prior application image passes against that schema, and post-deployment smoke/readiness checks pass. Roll back application images only after this compatibility check; do not run an unreviewed destructive schema rollback. Record image digests, migration logs, smoke output, and rollback rehearsal; otherwise FAIL.
+- Privacy, reporting, account deletion, support/grievance, and legal review: PASS only when the approved privacy/terms/retention notices and operator contacts are published, reporting/blocking flows reach the reviewed moderation queue, a test account can export and delete its data with retained shared-history behavior verified, support and grievance submissions reach an assigned operator and meet the approved response SLA, and authorized reviewers sign off on applicable legal obligations. Record test IDs and approval references without personal data; otherwise FAIL and keep public access closed.
+- Age assurance: remain disabled until the real age-assurance provider, abuse/failure handling, data minimization/retention, jurisdiction coverage, security review, and legal approval pass documented staging tests. A configuration value or local mock is not acceptance evidence.
+- Payments, RTC/live rooms, and Web Push: remain disabled until each real provider's signed callbacks/credentials, authorization and abuse controls, failure/retry behavior, privacy/security review, operational alerting, and legal/provider acceptance pass in staging. Verify the frontend and server-side gates both reject disabled use; a successful build or test stub is not provider acceptance.
+- Release evidence: every item above must have a named owner, timestamp, environment/commit or image digest, and attached redacted evidence. Any missing, failed, or unverified item is a release FAIL; do not enable the affected feature or describe the deployment as ready for public launch.
+
+### Provider and feature gating
+
+- Age assurance has no enabled production territory or provider until a real provider contract, legal acceptance, and operational controls are complete.
+- Payments, RTC/live rooms, Web Push, and media upload/HLS remain disabled until their real provider flows, security reviews, and production acceptance checks pass.
+
 ### Requires manual acceptance testing
 
 - Google OAuth, Resend, Cloudinary, moderation, and other provider flows.
-- Any later enablement of Razorpay, LiveKit, Web Push, or RTC.
+- Any later enablement of Razorpay, LiveKit, Web Push, RTC, or media upload/HLS.
 - Real-device browser coverage and operational support/abuse drills.
 
 ## Changes in this hardening pass
@@ -67,8 +85,6 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 - Health check responses now include detailed service status and environment context
 
 ### Database Backup & Restore
-
-Use the current encrypted age/rclone workflow in the [production launch runbook](docs/PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 
 Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 ### Documentation

@@ -228,6 +228,45 @@ export class RedisRepository {
     }
   }
 
+  async setIfAbsentStrict(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    await this.ensureReady();
+    return (await this.client.set(key, value, "EX", ttlSeconds, "NX")) === "OK";
+  }
+
+  /** Atomically checks, counts failures, and consumes an email OTP. */
+  async verifyAndConsumeEmailOtpStrict(key: string, codeHash: string, authVersion: number): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return 0 end
+        local ok, state = pcall(cjson.decode, raw)
+        if not ok or type(state) ~= 'table' then redis.call('DEL', KEYS[1]); return 0 end
+        local now = tonumber(ARGV[3])
+        if tonumber(state.expiresAt or 0) <= now or tonumber(state.attempts or 0) >= 5 then
+          redis.call('DEL', KEYS[1]); return 0
+        end
+        if tonumber(state.authVersion or -1) ~= tonumber(ARGV[2]) then
+          redis.call('DEL', KEYS[1]); return 0
+        end
+        if state.codeHash ~= ARGV[1] then
+          state.attempts = tonumber(state.attempts or 0) + 1
+          local ttl = math.max(1, math.ceil((tonumber(state.expiresAt) - now) / 1000))
+          redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ttl)
+          return 0
+        end
+        redis.call('DEL', KEYS[1])
+        return 1
+      `,
+      1,
+      key,
+      codeHash,
+      authVersion,
+      Date.now(),
+    );
+    return result === 1;
+  }
+
   async delStrict(key: string): Promise<void> {
     await this.ensureReady();
     await this.client.del(key);

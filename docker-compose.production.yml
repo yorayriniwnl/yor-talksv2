@@ -229,16 +229,16 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.28.1
-    command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
-      - --config.expand-env
-      - --storage.path=/alertmanager
+    entrypoint: ["/bin/sh", "/usr/local/bin/render-alertmanager-config.sh"]
     environment:
       ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.production}
       ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.production}
     volumes:
-      - ./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template:ro
+      - ./ops/prometheus/render-alertmanager-config.sh:/usr/local/bin/render-alertmanager-config.sh:ro
       - alertmanager_data:/alertmanager
+    tmpfs:
+      - /run/alertmanager:mode=0700,uid=65534,gid=65534
     secrets:
       - source: alertmanager_webhook_password
         target: /run/secrets/alertmanager_webhook_password
