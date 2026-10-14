@@ -12,7 +12,10 @@ export class MessageController {
 
   private async emitMessage(io:NonNullable<ReturnType<typeof getIo>>,message:Awaited<ReturnType<MessageService['sendMessage']>>,actorId:string,event:string) {
     const members=await this.messageService.getConversationMemberIds(message.conversationId,actorId);
-    await dispatchSocketToUsers(io,members,event,(requester:SocketRequester)=>hydrateMediaValue(message,undefined,requester),'message:deliver');
+    await dispatchSocketToUsers(io,members,event,async(requester:SocketRequester)=>{
+      await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+      return hydrateMediaValue(message,undefined,requester);
+    },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
   }
 
   sendMessage = async (req: Request, res: Response) => {
@@ -42,7 +45,10 @@ export class MessageController {
       const io = getIo();
       if (io) {
         const memberIds = await this.messageService.getConversationMemberIds(actualConversationId, message.senderId);
-        await dispatchSocketToUsers(io,memberIds,"message:receive",(requester:SocketRequester)=>hydrateMediaValue(message,undefined,requester),'message:deliver');
+        await dispatchSocketToUsers(io,memberIds,"message:receive",async(requester:SocketRequester)=>{
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          return hydrateMediaValue(message,undefined,requester);
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
       }
       
       return res.status(201).json(createResponse("Message sent", message));
@@ -78,11 +84,15 @@ export class MessageController {
       
       const io = getIo();
       if (io) {
-        // Invite members to room
-        for (const id of [req.user?.id, ...memberIds]) {
-          io.in(id!).socketsJoin(`conversation:${group.id}`);
-          io.to(id!).emit("conversation:created", group);
+        const recipients=[req.user?.id,...memberIds].filter((id):id is string=>typeof id==='string');
+        for(const id of recipients){
+          await this.messageService.authorizeConversationDelivery(group.id,id);
+          io.in(id).socketsJoin(`conversation:${group.id}`);
         }
+        await dispatchSocketToUsers(io,recipients,"conversation:created",async(requester:SocketRequester)=>{
+          await this.messageService.authorizeConversationDelivery(group.id,requester.userId);
+          return group;
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(group.id,requester.userId));
       }
       
       return res.status(201).json(createResponse("Group chat created", group));
@@ -130,7 +140,14 @@ export class MessageController {
     try {
       const conversation = await this.messageService.setVanishMode(conversationId, req.user?.id ?? "", req.body.enabled);
       if (!conversation) return res.status(404).json(createResponse("Conversation not found", null, {}, ["Conversation not found"]));
-      getIo()?.to(`conversation:${conversationId}`).emit("conversation:vanish:update", conversation);
+      const io=getIo();
+      if(io){
+        const memberIds=await this.messageService.getConversationMemberIds(conversationId,req.user?.id??"");
+        await dispatchSocketToUsers(io,memberIds,"conversation:vanish:update",async(requester:SocketRequester)=>{
+          await this.messageService.authorizeConversationDelivery(conversationId,requester.userId);
+          return conversation;
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(conversationId,requester.userId));
+      }
       return res.status(200).json(createResponse("Vanish mode updated", conversation));
     } catch (error) {
       if (error instanceof UnauthorizedError) return res.status(403).json(createResponse("Cannot update vanish mode", null, {}, [error.message]));
@@ -151,11 +168,14 @@ export class MessageController {
         await this.emitMessage(io,message,req.user?.id??"","message:update");
       } else {
         const members=await this.messageService.getConversationMemberIds(message.conversationId,req.user?.id??"");
-        await dispatchSocketToUsers(io,members,"message:seen:update",{
+        await dispatchSocketToUsers(io,members, "message:seen:update", async(requester:SocketRequester)=>{
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          return {
           messageId,
           userId: req.user?.id,
           seenAt: message.seenAt,
-        },'message:deliver');
+          };
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
       }
     }
 

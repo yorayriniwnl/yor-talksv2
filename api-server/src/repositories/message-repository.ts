@@ -1,6 +1,6 @@
 import { eq, or, and, asc, desc, inArray, gt, lt, sql } from "drizzle-orm";
 import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable } from "@workspace/db/schema";
-import { db } from "@workspace/db";
+import { db, runInDatabaseTransaction } from "@workspace/db";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
 import { visibleMessagePredicate, toMessageTombstone } from "../utils/message-visibility.js";
@@ -27,8 +27,9 @@ export class MessageRepository {
     return (await this.createWithResult(message)).message;
   }
 
-  async createWithResult(message: MessageRecord): Promise<{ message: MessageRecord; created: boolean }> {
-    return db.transaction(async (tx) => {
+  async createWithResult(message: MessageRecord, authorize?: () => Promise<void>): Promise<{ message: MessageRecord; created: boolean }> {
+    return runInDatabaseTransaction(async (tx) => {
+      await authorize?.();
       const [created] = await tx.insert(messagesTable).values(message).onConflictDoNothing().returning();
       if (!created) {
         const [existing] = await tx.select().from(messagesTable).where(eq(messagesTable.id, message.id));
@@ -47,7 +48,8 @@ export class MessageRepository {
     cursorAt?: string;
     cursorId?: string;
     limit?: number;
-  } = {}): Promise<MessageRecord[]> {
+  } = {}, authorize?: () => Promise<void>): Promise<MessageRecord[]> {
+    const read=async()=>{
     const direction = options.direction ?? "latest";
     const conditions = [
       eq(messagesTable.conversationId, conversationId),
@@ -75,9 +77,13 @@ export class MessageRepository {
       )
       .limit(Math.max(1, Math.min(200, options.limit ?? 200)));
     return direction === "newer" ? messages as MessageRecord[] : messages.reverse() as MessageRecord[];
+    };
+    if(!authorize)return read();
+    return runInDatabaseTransaction(async()=>{await authorize();return read();});
   }
 
-  async lastMessageForConversation(conversationId: string): Promise<MessageRecord | undefined> {
+  async lastMessageForConversation(conversationId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    const read=async()=>{
     const [message] = await db
       .select()
       .from(messagesTable)
@@ -88,6 +94,9 @@ export class MessageRepository {
       .orderBy(desc(messagesTable.createdAt), desc(messagesTable.id))
       .limit(1);
     return message as MessageRecord | undefined;
+    };
+    if(!authorize)return read();
+    return runInDatabaseTransaction(async()=>{await authorize();return read();});
   }
 
   async findById(messageId: string): Promise<MessageRecord | undefined> {
@@ -100,9 +109,10 @@ export class MessageRepository {
     return message as MessageRecord | undefined;
   }
 
-  async recordVisiblePreview(messageId: string, userId: string, _now: Date): Promise<MessageRecord | undefined> {
+  async recordVisiblePreview(messageId: string, userId: string, _now: Date, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
     try {
-      return await db.transaction(async tx => {
+      return await runInDatabaseTransaction(async tx => {
+        await authorize?.();
         // Serialize previews with deletion and recipient reads. Re-evaluate
         // current facts after waiting; now() would freeze the transaction clock.
         await tx.select({ id: messagesTable.id }).from(messagesTable).where(eq(messagesTable.id, messageId)).for("update");
@@ -116,15 +126,16 @@ export class MessageRepository {
         const [visible] = await tx.select().from(messagesTable).where(allowed());
         if (!visible) throw new PreviewNoLongerVisible(); // Also roll back the event.
         return { ...visible, previewedAt } as MessageRecord;
-      }, { isolationLevel: "read committed" });
+      });
     } catch (error) {
       if (error instanceof PreviewNoLongerVisible) return undefined;
       throw error;
     }
   }
 
-  async recordVisibleRead(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    return db.transaction(async tx => {
+  async recordVisibleRead(messageId: string, userId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx => {
+      await authorize?.();
       await tx.select({ id: messagesTable.id }).from(messagesTable).where(eq(messagesTable.id, messageId)).for("update");
       const [message] = await tx.select().from(messagesTable).where(and(eq(messagesTable.id, messageId), currentVisibility(), membershipPredicate(userId)));
       if (!message) return undefined;
@@ -141,7 +152,7 @@ export class MessageRepository {
       if (conversation?.isGroup) return { ...message, seenAt: readAt } as MessageRecord;
       const [updated] = await tx.update(messagesTable).set({ seenAt: readAt }).where(eq(messagesTable.id, messageId)).returning();
       return updated as MessageRecord;
-    }, { isolationLevel: "read committed" });
+    });
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
@@ -155,18 +166,21 @@ export class MessageRepository {
     return Boolean(receipt);
   }
   
-  async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
-    const [updated] = await db.update(messagesTable)
-      .set({ ...updates })
-      .where(eq(messagesTable.id, messageId))
-      .returning();
-    return updated as MessageRecord | undefined;
+  async update(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx=>{
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable).set({ ...updates }).where(eq(messagesTable.id, messageId)).returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 
-  async updateVisible(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
-    const [updated] = await db.update(messagesTable).set(updates)
-      .where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
-    return updated as MessageRecord | undefined;
+  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx=>{
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable).set(updates)
+        .where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 }
 
@@ -176,9 +190,10 @@ export class ConversationRepository {
     return created as ConversationRecord;
   }
 
-  async findOrCreateDirect(firstId: string, secondId: string): Promise<ConversationRecord> {
+  async findOrCreateDirect(firstId: string, secondId: string, authorize?: () => Promise<void>): Promise<ConversationRecord> {
     const [participantA, participantB] = [firstId, secondId].sort();
-    return db.transaction(async (tx) => {
+    return runInDatabaseTransaction(async (tx) => {
+      await authorize?.();
       // Coordinate across requests AND server replicas, not just this process.
       // The canonical pair makes A->B and B->A acquire the same transaction lock.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`direct:${participantA}:${participantB}`}, 0))`);
@@ -199,8 +214,9 @@ export class ConversationRepository {
     });
   }
 
-  async createGroupChat(creatorId: string, memberIds: string[], title: string): Promise<ConversationRecord> {
-    return db.transaction(async (tx) => {
+  async createGroupChat(creatorId: string, memberIds: string[], title: string, authorize?: () => Promise<void>): Promise<ConversationRecord> {
+    return runInDatabaseTransaction(async (tx) => {
+      await authorize?.();
       const [created] = await tx.insert(conversationsTable).values({
         id: randomUUID(),
         participantA: creatorId, // Legacy column
@@ -236,12 +252,12 @@ export class ConversationRepository {
     return conversation as ConversationRecord | undefined;
   }
 
-  async setVanishMode(conversationId: string, enabled: boolean): Promise<ConversationRecord | undefined> {
-    const [updated] = await db.update(conversationsTable)
-      .set({ vanishMode: enabled })
-      .where(eq(conversationsTable.id, conversationId))
-      .returning();
-    return updated as ConversationRecord | undefined;
+  async setVanishMode(conversationId: string, enabled: boolean, authorize?: () => Promise<void>): Promise<ConversationRecord | undefined> {
+    return runInDatabaseTransaction(async tx=>{
+      await authorize?.();
+      const [updated] = await tx.update(conversationsTable).set({ vanishMode: enabled }).where(eq(conversationsTable.id, conversationId)).returning();
+      return updated as ConversationRecord | undefined;
+    });
   }
 
   async getMembers(conversationId: string): Promise<string[]> {

@@ -8,7 +8,7 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { MessageService } from "../services/message-service.js";
-import { createTestUser } from "./test-helpers.js";
+import { allowTestContacts, createTestUser } from "./test-helpers.js";
 
 const redisRepository = new RedisRepository();
 const userRepository = new UserRepository();
@@ -77,7 +77,7 @@ test("account export excludes authentication secrets and deletion removes the ac
 
   const accountService = new AccountService(userRepository, redisRepository);
   const recipient = await createTestUser(userRepository);
-  const messageService = new MessageService(new ConversationRepository(), new MessageRepository());
+  const messageService = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   await messageService.sendMessage(id, recipient.id, "Exported message content");
   await messageService.sendMessage(recipient.id, id, "Received message content");
   const providerOrderId = `account-export-${randomUUID()}`;

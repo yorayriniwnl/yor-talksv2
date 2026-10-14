@@ -11,6 +11,7 @@ import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, PREMIUM_MESSAGE_STYLES, PREMIUM_STORY_STYLES, requiredPremiumFeatures, type PremiumProfileSelection } from "../features/premium-profile.js";
 import { EligibilityService } from "./eligibility-service.js";
 import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
+import { ContactAuthorizationService } from "./contact-authorization-service.js";
 
 export class PremiumProfileFeatureUnavailableError extends Error {}
 export class PremiumStoryViewFeatureUnavailableError extends Error {}
@@ -24,6 +25,7 @@ export class UserService {
     private readonly creatorAnalyticsService: CreatorAnalyticsService = new CreatorAnalyticsService(),
     private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
     private readonly eligibilityService: EligibilityService = new EligibilityService(),
+    private readonly contactAuthorization: ContactAuthorizationService = new ContactAuthorizationService(),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
@@ -307,7 +309,7 @@ export class UserService {
     }
     const target = await this.userRepository.findById(targetId);
     if (!target) return undefined;
-    return this.userRepository.setSafetyRelationship(userId, targetId, "blockedUsers", true);
+    return this.contactAuthorization.blockPair(userId, targetId);
   }
 
   async unblockUser(userId: string, targetId: string): Promise<UserRecord | undefined> {

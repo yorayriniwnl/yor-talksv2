@@ -18,6 +18,7 @@ tags:
   - name: broadcast-channels
   - name: business
   - name: communities
+  - name: contacts
   - name: conversations
   - name: creator
   - name: diagnostics
@@ -1328,6 +1329,159 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests:
+    get:
+      operationId: getContactsRequests
+      summary: Get /contacts/requests
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/ContactRequestList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    post:
+      operationId: postContactsRequests
+      summary: Post /contacts/requests
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ContactRequestCreate"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}:
+    delete:
+      operationId: deleteContactsRequestsByRequestId
+      summary: Delete /contacts/requests/{requestId}
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/ContactWithdrawalReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/accept:
+    post:
+      operationId: postContactsRequestsByRequestIdAccept
+      summary: Post /contacts/requests/{requestId}/accept
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/guardian-approval:
+    post:
+      operationId: postContactsRequestsByRequestIdGuardianApproval
+      summary: Post /contacts/requests/{requestId}/guardian-approval
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/reject:
+    post:
+      operationId: postContactsRequestsByRequestIdReject
+      summary: Post /contacts/requests/{requestId}/reject
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
         "400":
           description: Invalid request
         "401":
@@ -5957,3 +6111,7 @@ components:
     GuardianAuthorizationList: {"type":"array","maxItems":100,"items":{"$ref":"#/components/schemas/GuardianAuthorizationReceipt"}}
     GuardianWithdrawalReceipt: {"type":"boolean","const":true}
     EligibilityDecision: {"type":"object","additionalProperties":false,"required":["experience","activated","capabilities","maximumContentRating","policyVersions","revision","reason","publicBrowsingAllowed"],"properties":{"experience":{"type":"string","enum":["unknown","under_13","teen_13_17","adult_18_plus"]},"activated":{"type":"boolean"},"capabilities":{"type":"object","additionalProperties":false,"required":["social","publish","messaging","payments","seller","memberships","live","rtc","ai","analytics","profiling"],"properties":{"social":{"type":"boolean"},"publish":{"type":"boolean"},"messaging":{"type":"boolean"},"payments":{"type":"boolean"},"seller":{"type":"boolean"},"memberships":{"type":"boolean"},"live":{"type":"boolean"},"rtc":{"type":"boolean"},"ai":{"type":"boolean"},"analytics":{"type":"boolean"},"profiling":{"type":"boolean"}}},"maximumContentRating":{"type":"string","enum":["child_safe","regular","mature"]},"policyVersions":{"type":"array","items":{"type":"string"}},"revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},"reason":{"type":["string","null"],"enum":[null,"verification_required","territory_unavailable","guardian_required","reassessment_required","account_restricted"]},"publicBrowsingAllowed":{"type":"boolean"}}}
+    ContactRequestCreate: {"type":"object","additionalProperties":false,"required":["recipientId"],"properties":{"recipientId":{"type":"string","format":"uuid"}}}
+    SafeContactRequest: {"type":"object","additionalProperties":false,"required":["id","initiatorId","recipientId","status","createdAt","updatedAt","requiresYourAcceptance","guardianApprovalRequired"],"properties":{"id":{"type":"string","format":"uuid"},"initiatorId":{"type":"string","format":"uuid"},"recipientId":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["pending","accepted","rejected","revoked"]},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"requiresYourAcceptance":{"type":"boolean"},"guardianApprovalRequired":{"type":"boolean"}}}
+    ContactRequestList: {"type":"array","maxItems":200,"items":{"$ref":"#/components/schemas/SafeContactRequest"}}
+    ContactWithdrawalReceipt: {"type":"null"}

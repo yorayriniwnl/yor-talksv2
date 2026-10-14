@@ -10,7 +10,8 @@ import { logger } from "../lib/logger.js";
 import { setIo } from "../lib/realtime.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { InvalidMessageContentError, InvalidMessageStyleError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError } from "../services/message-service.js";
+import { InvalidMessageContentError, InvalidMessageStyleError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
+import { ContactAuthorizationDeniedError } from "../services/contact-authorization-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
@@ -175,6 +176,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       if (typeof conversationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(conversationId)) return;
       const members = await conversationRepository.getMembers(conversationId);
       if (!members.includes(userId)) return;
+      try { await messageService.authorizeConversationDelivery(conversationId,userId); }
+      catch(error) { if(error instanceof ContactAuthorizationDeniedError||error instanceof UnauthorizedError)return; throw error; }
       await authorizeSocketAction(userId, "conversation:join");
       const room = `conversation:${conversationId}`;
       await socket.join(room);
@@ -195,9 +198,14 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       try {
         const members = await conversationRepository.getMembers(conversationId);
         if (!members.includes(userId)) return;
+        await messageService.authorizeConversationDelivery(conversationId,userId);
         await authorizeSocketAction(userId, event);
         await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), event,
-          { userId, conversationId }, "typing:deliver", socket.id);
+          async (requester:SocketRequester) => {
+            await messageService.authorizeConversationDelivery(conversationId,requester.userId);
+            return { userId, conversationId };
+          }, "typing:deliver", socket.id,
+          requester=>messageService.authorizeConversationDelivery(conversationId,requester.userId));
       } catch (err) {
         logger.warn({ err, userId, conversationId }, "Failed to relay typing signal");
       }
@@ -240,7 +248,11 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         // messages: a Redis adapter's remote room join may arrive after this emit.
         const members = await conversationRepository.getMembers(actualConversationId);
         await dispatchSocketToUsers(io, members, "message:receive",
-          (requester:SocketRequester) => hydrateMediaValue(message, undefined, requester), "message:deliver");
+          async (requester:SocketRequester) => {
+            await messageService.authorizeConversationDelivery(actualConversationId,requester.userId);
+            return hydrateMediaValue(message, undefined, requester);
+          }, "message:deliver", undefined,
+          requester=>messageService.authorizeConversationDelivery(actualConversationId,requester.userId));
         await authorizeSocketAction(userId, "message:send");
         const senderDelivery = await hydrateMediaValue(message, undefined, { userId, deviceId, authVersion: socket.data.authVersion as number });
         await authorizeSocketAction(userId, "message:send");
@@ -270,9 +282,17 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           // regular reads only update the receipt.
           if (updated.deletedAt) {
             await dispatchSocketToUsers(io, members, "message:update",
-              (requester:SocketRequester) => hydrateMediaValue(updated, undefined, requester), "message:deliver", socket.id);
+              async (requester:SocketRequester) => {
+                await messageService.authorizeConversationDelivery(updated.conversationId,requester.userId);
+                return hydrateMediaValue(updated, undefined, requester);
+              }, "message:deliver", socket.id,
+              requester=>messageService.authorizeConversationDelivery(updated.conversationId,requester.userId));
           } else {
-            await dispatchSocketToUsers(io, members, "message:seen:update", { messageId, userId, seenAt: updated.seenAt }, "message:deliver", socket.id);
+            await dispatchSocketToUsers(io, members, "message:seen:update", async (requester:SocketRequester) => {
+              await messageService.authorizeConversationDelivery(updated.conversationId,requester.userId);
+              return { messageId, userId, seenAt: updated.seenAt };
+            }, "message:deliver", socket.id,
+            requester=>messageService.authorizeConversationDelivery(updated.conversationId,requester.userId));
           }
         }
       } catch (err) {
@@ -536,6 +556,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
           await authorizeSocketAction(userId, "conversation:join");
           const members = await conversationRepository.getMembers(conv.id);
           if (!members.includes(userId)) return;
+          await messageService.authorizeConversationDelivery(conv.id,userId);
           await socket.join(`conversation:${conv.id}`);
           await dispatchSocketToUsers(io, members.filter(memberId => memberId !== userId), "presence:update", { online: true, userId }, "presence:deliver", socket.id);
         })().catch((error) => logger.warn({ error, userId, conversationId: conv.id }, "Could not broadcast online presence"));

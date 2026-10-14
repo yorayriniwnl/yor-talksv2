@@ -16,13 +16,38 @@ interface EligibilityServiceOptions {
 export class EligibilityService {
   constructor(private readonly repository: EligibilityRepository = new EligibilityRepository(), private readonly options: EligibilityServiceOptions = {}) {}
   private registry() { return (this.options.policies ?? loadApprovedTerritoryPolicies)(); }
-  async decisionFor(userId: string): Promise<EligibilityDecision> {
-    const facts = await this.repository.readFacts(userId);
-    return evaluateEligibility(facts && { ...facts, currentTermsVersion: this.options.currentTermsVersion ?? env.TERMS_VERSION,
+  private withServerContext(facts: Awaited<ReturnType<EligibilityRepository['readFacts']>>) {
+    return facts && { ...facts, currentTermsVersion: this.options.currentTermsVersion ?? env.TERMS_VERSION,
       territoryContext: { ...facts.territoryContext, verifiedTerritory: facts.territoryContext?.verifiedTerritory ?? facts.assessment?.territory,
         operatorPolicyIds: this.options.operatorPolicyIds ?? loadOperatorPolicyIds() },
       releaseFlags: this.options.releaseFlags ?? { payments: env.PAYMENTS_ENABLED, seller: env.SELLER_ENABLED, memberships: env.MEMBERSHIPS_ENABLED,
-        live: env.LIVE_ROOMS_ENABLED, rtc: env.RTC_CALLS_ENABLED, ai: env.AI_COMPANION_ENABLED } }, this.registry(), (this.options.clock ?? (() => new Date()))());
+        live: env.LIVE_ROOMS_ENABLED, rtc: env.RTC_CALLS_ENABLED, ai: env.AI_COMPANION_ENABLED } };
+  }
+  async decisionFor(userId: string): Promise<EligibilityDecision> {
+    const facts = await this.repository.readFacts(userId);
+    return evaluateEligibility(this.withServerContext(facts), this.registry(), (this.options.clock ?? (() => new Date()))());
+  }
+  /** Contact rules come only from the same active, approved territory intersection as activation. */
+  async contactRulesFor(userId: string): Promise<{
+    decision: EligibilityDecision;
+    guardianContactsRequired: boolean;
+    guardianPolicyVersions: Record<string, string>;
+    guardianNoticeVersions: Record<string, string>;
+  }> {
+    const policies = this.registry(), now = (this.options.clock ?? (() => new Date()))();
+    const facts = await this.repository.readFacts(userId);
+    const serverFacts = this.withServerContext(facts);
+    const decision = evaluateEligibility(serverFacts, policies, now);
+    const resolved = serverFacts?.territoryContext;
+    const relevant = applicablePolicies(resolved, policies, now);
+    return {
+      decision,
+      guardianContactsRequired: relevant ? relevant.some(policy => policy.guardianContactsRequired) : true,
+      guardianPolicyVersions: Object.fromEntries((relevant ?? []).map(policy => [policy.id, policy.version])),
+      guardianNoticeVersions: Object.fromEntries((relevant ?? [])
+        .filter(policy => policy.requiredGuardianPurposes.includes('social_contact'))
+        .map(policy => [policy.id, policy.guardianNoticeVersions.social_contact ?? ''])),
+    };
   }
   async publicDecision(context: TerritoryContext): Promise<EligibilityDecision> {
     const registry = this.registry(); const now = (this.options.clock ?? (() => new Date()))();

@@ -112,6 +112,7 @@ export async function dispatchSocketToUsers(
   payload: unknown | ((requester: SocketRequester) => unknown | Promise<unknown>),
   authorityEvent: string,
   excludeSocketId?: string,
+  deliveryGuard?: (requester: SocketRequester) => void | Promise<void>,
 ): Promise<number> {
   const recipients = [...new Set(userIds)];
   let delivered = 0;
@@ -125,6 +126,7 @@ export async function dispatchSocketToUsers(
         const recipientPayload=typeof payload==='function'?await payload(requester):payload;
         // Authority may change while an asynchronous payload is hydrated.
         await authorizeSocketAction(userId, authorityEvent, {}, requester);
+        await deliveryGuard?.(requester);
         io.to(socket.id).emit(event, recipientPayload);
         delivered++;
       } catch {

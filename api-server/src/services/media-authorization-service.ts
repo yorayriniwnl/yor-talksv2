@@ -4,6 +4,7 @@ import { ContentSafetyService } from './content-safety-service.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { ConversationRepository } from '../repositories/message-repository.js';
+import { ContactAuthorizationDeniedError, ContactAuthorizationService } from './contact-authorization-service.js';
 import { loadOperatorPolicyIds } from '../eligibility/territory-policy.js';
 import { MediaLifecycleError, type MediaAssetRow } from './media-service.js';
 
@@ -56,6 +57,7 @@ export class MediaAuthorizationService {
     private readonly users = new UserRepository(),
     private readonly redis = new RedisRepository(),
     private readonly conversations = new ConversationRepository(),
+    private readonly contactAuthorization = new ContactAuthorizationService(),
   ) {}
 
   async authorize(context: MediaGrantContext, asset: MediaAssetRow, requester: MediaRequester = {}): Promise<void> {
@@ -109,7 +111,10 @@ export class MediaAuthorizationService {
       const message = result.rows[0];
       if (!message || message.deleted_at || (message.expires_at && Date.parse(message.expires_at) <= Date.now())) return false;
       if (!viewerId) return false;
-      return (await this.conversations.getMembers(message.conversation_id)).includes(viewerId);
+      const members=await this.conversations.getMembers(message.conversation_id);
+      if(!members.includes(viewerId))return false;
+      try { await this.contactAuthorization.requirePairwiseContacts(members,'read'); return true; }
+      catch(error) { if(error instanceof ContactAuthorizationDeniedError)return false; throw error; }
     }
     if (context.entityType === 'comments' || context.entityType === 'video_comments') {
       const table = context.entityType === 'comments' ? 'comments' : 'video_comments';

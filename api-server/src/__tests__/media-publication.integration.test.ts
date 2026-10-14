@@ -3,7 +3,7 @@ import { after, test } from "node:test";
 import { randomUUID } from "node:crypto";
 import { db, pool } from "@workspace/db";
 import { postsTable } from "@workspace/db/schema";
-import { createTestUser } from "./test-helpers.js";
+import { allowTestContacts, createTestUser } from "./test-helpers.js";
 import { createTestApprovedMedia } from "./media-fixtures.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { PostRepository } from "../repositories/post-repository.js";
@@ -237,7 +237,7 @@ test("typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers
 test("concurrent message retries attach exactly the winning image/audio asset; soft deletion and replay never restore references", async () => {
   const sender = await createTestUser(users);
   const recipient = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository());
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), undefined, undefined, undefined, allowTestContacts);
   const conversation = await service.createConversation(sender.id, recipient.id);
   const image = await createTestApprovedMedia(sender.id, "message");
   const audio = await createTestApprovedMedia(sender.id, "message", "audio/mpeg");

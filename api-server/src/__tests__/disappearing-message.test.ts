@@ -6,7 +6,7 @@ import { ConversationRepository, MessageRepository } from "../repositories/messa
 import { UserRepository } from "../repositories/user-repository.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { AccountService } from "../services/account-service.js";
-import { createTestUser } from "./test-helpers.js";
+import { allowTestContacts, createTestUser } from "./test-helpers.js";
 import { MessageService } from "../services/message-service.js";
 
 test("vanish-mode messages receive a bounded expiry", async () => {
@@ -32,6 +32,8 @@ test("vanish-mode messages receive a bounded expiry", async () => {
     } as never,
     undefined,
     { moderate: async () => ({ spam: false, toxicity: false, nsfw: false }) } as never,
+    undefined,
+    allowTestContacts,
   );
 
   const sent = await service.sendMessageToConversation("sender", "conversation-1", "hello");
@@ -63,7 +65,7 @@ test("expired retained messages cannot leak through send retries, edits, reactio
   fixtureUsers.push(sender.id, recipient.id);
   const conversations = new ConversationRepository();
   const messages = new MessageRepository();
-  const service = new MessageService(conversations, messages);
+  const service = new MessageService(conversations, messages, undefined, undefined, undefined, allowTestContacts);
   const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
   const expired = await messages.create({ id: randomUUID(), conversationId: conversation.id, senderId: sender.id,
     recipientId: recipient.id, content: 'Retained private expiry body', mediaUrl: 'https://example.test/expired-private.jpg',
@@ -92,7 +94,7 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
   fixtureUsers.push(sender.id, recipient.id);
   const conversations = new ConversationRepository();
   const messages = new MessageRepository();
-  const service = new MessageService(conversations, messages, undefined, undefined, { hasFeature: async () => true } as never);
+  const service = new MessageService(conversations, messages, undefined, undefined, { hasFeature: async () => true } as never, allowTestContacts);
   const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
   const previous = await messages.create({ id: randomUUID(), conversationId: conversation.id, senderId: sender.id,
     recipientId: recipient.id, content: 'Still visible', createdAt: '2020-01-01T00:00:00Z', seenAt: null });

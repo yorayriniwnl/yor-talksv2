@@ -11,6 +11,7 @@ import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { isPremiumMessageStyle } from "../features/premium-profile.js";
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
 import { isMessageVisible, toMessageTombstone } from "../utils/message-visibility.js";
+import { ContactAuthorizationDeniedError, ContactAuthorizationService } from "./contact-authorization-service.js";
 
 export class MessageBlockedError extends Error {}
 export class InvalidReplyTargetError extends Error {}
@@ -37,10 +38,34 @@ export class MessageService {
     private readonly userRepository?: UserRepository,
     private readonly aiService: AIService = new AIService(),
     private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
+    private readonly contactAuthorization: ContactAuthorizationService = new ContactAuthorizationService(),
   ) {}
 
   async createConversation(participantA: string, participantB: string): Promise<ConversationRecord> {
-    return this.conversationRepository.findOrCreateDirect(participantA, participantB);
+    await this.requireContact(participantA,participantB,'send');
+    return this.conversationRepository.findOrCreateDirect(participantA, participantB,
+      ()=>this.lockConversationContacts([participantA,participantB],'send'));
+  }
+
+  private async requireContact(userAId:string,userBId:string,action:'read'|'send'|'deliver') {
+    try { await this.contactAuthorization.requireContact(userAId,userBId,action); }
+    catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
+  }
+
+  private async requireConversationContacts(memberIds:string[],action:'read'|'send'|'deliver'){
+    try { await this.contactAuthorization.requirePairwiseContacts(memberIds,action); }
+    catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
+  }
+
+  private async lockConversationContacts(memberIds:string[],action:'read'|'send'|'deliver'){
+    try { await this.contactAuthorization.lockCurrentPairwiseContacts(memberIds,action); }
+    catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
+  }
+
+  async authorizeConversationDelivery(conversationId:string,recipientId:string):Promise<void>{
+    const members=await this.conversationRepository.getMembers(conversationId);
+    if(!members.includes(recipientId))throw new UnauthorizedError('You are not a member of this conversation');
+    await this.requireConversationContacts(members,'deliver');
   }
 
   private async assertContactAllowed(senderId: string, recipient: UserRecord): Promise<void> {
@@ -64,19 +89,24 @@ export class MessageService {
       }
       await Promise.all(members.slice(1).map((member) => this.assertContactAllowed(creatorId, member!)));
     }
-    return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat");
+    await this.requireConversationContacts([creatorId,...uniqueMemberIds],'send');
+    return this.conversationRepository.createGroupChat(creatorId, uniqueMemberIds, title.trim().slice(0, 120) || "Group Chat",
+      ()=>this.lockConversationContacts([creatorId,...uniqueMemberIds],'send'));
   }
 
   async setVanishMode(conversationId: string, userId: string, enabled: boolean): Promise<ConversationRecord | undefined> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
-    return this.conversationRepository.setVanishMode(conversationId, enabled);
+    await this.requireConversationContacts(members,'send');
+    return this.conversationRepository.setVanishMode(conversationId, enabled,
+      () => this.lockConversationContacts(members,'send'));
   }
 
   // Legacy support for 1-to-1
   async sendMessage(senderId: string, recipientId: string, content: string, options?: MessageSendOptions): Promise<MessageRecord> {
     rejectRawMedia(options ?? {}, ["mediaUrl"]);
     const normalizedContent = normalizeMessageContent(content, Boolean(options?.mediaId));
+    await this.requireContact(senderId,recipientId,'send');
     if (this.userRepository) {
       const recipient = await this.userRepository.findById(recipientId);
       const sender = await this.userRepository.findById(senderId);
@@ -100,6 +130,7 @@ export class MessageService {
     if (!members.includes(senderId)) {
       throw new UnauthorizedError("You are not a member of this conversation");
     }
+    await this.requireConversationContacts(members,'send');
 
     let senderProfile: UserRecord | undefined;
     // A request can time out after the database committed. Reusing the same
@@ -133,6 +164,7 @@ export class MessageService {
     // moderation provider. This prevents unauthorized requests from spending
     // moderation quota on arbitrary conversations.
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
+    await this.requireConversationContacts(members,'send');
 
     let textStyleId = options?.textStyleId ?? senderProfile?.messageFontId ?? "default";
     if (!isPremiumMessageStyle(textStyleId)) {
@@ -171,7 +203,11 @@ export class MessageService {
     let persisted: MessageRecord | undefined;
     await withApprovedMedia(senderId, mediaBinding(options?.mediaId, "message", "mediaUrl"), { type: "messages", id: message.id }, async media => {
       const attachment = media.mediaUrl?.[0];
-      const result = await this.messageRepository.createWithResult({ ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null });
+      await this.requireConversationContacts(members,'send');
+      const result = await this.messageRepository.createWithResult(
+        { ...message, ...attachmentFields(attachment), mediaId: attachment?.id ?? null },
+        () => this.lockConversationContacts(members,'send'),
+      );
       persisted = result.message;
       // Conflict losers return the winning row without creating or replacing
       // its attachment references, including a text-only winning message.
@@ -198,8 +234,15 @@ export class MessageService {
     if (!members.includes(userId)) {
       return [];
     }
-    const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => isMessageVisible(message, new Date())), userId);
+    try { await this.requireConversationContacts(members,'read'); }
+    catch(error) { if(error instanceof UnauthorizedError)return []; throw error; }
+    try {
+      const authorize=()=>this.lockConversationContacts(members,'read');
+      const messages = await this.messageRepository.listConversation(conversationId, options,authorize);
+      const visible=await this.withReadReceipts(messages.filter((message: MessageRecord) => isMessageVisible(message, new Date())), userId);
+      await this.requireConversationContacts(members,'read');
+      return visible;
+    } catch(error) { if(error instanceof UnauthorizedError)return []; throw error; }
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -207,6 +250,8 @@ export class MessageService {
     if (!message || !isMessageVisible(message, new Date())) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
+    try { await this.requireConversationContacts(members,'read'); }
+    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     if (message.senderId === userId) return undefined;
     if (!(await this.entitlementService.hasFeature(userId, "MESSAGE_UNREAD_PREVIEW"))) {
       throw new PremiumFeatureUnavailableError("Unread message previews are not enabled for this account");
@@ -218,29 +263,46 @@ export class MessageService {
       return undefined;
     }
     const boundary = new Date();
-    const previewed = await this.messageRepository.recordVisiblePreview(messageId, userId, boundary);
-    return previewed && isMessageVisible(previewed, new Date())
-      ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt: previewed.previewedAt ?? boundary.toISOString() }
-      : undefined;
+    try {
+      const previewed = await this.messageRepository.recordVisiblePreview(messageId, userId, boundary,
+        ()=>this.lockConversationContacts(members,'read'));
+      return previewed && isMessageVisible(previewed, new Date())
+        ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt: previewed.previewedAt ?? boundary.toISOString() }
+        : undefined;
+    } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
     const members = await this.conversationRepository.getMembers(conversationId);
     if (!members.includes(userId)) throw new UnauthorizedError("You are not a member of this conversation");
+    await this.requireConversationContacts(members,'deliver');
     return members;
   }
 
   async getConversationsForUser(userId: string): Promise<{ conversation: ConversationRecord; lastMessage: MessageRecord | undefined }[]> {
     const conversations = await this.conversationRepository.listForUser(userId);
     const results = await Promise.all(
-      conversations.map(async (conversation) => ({
-        conversation,
-        lastMessage: await this.messageRepository.lastMessageForConversation(conversation.id),
-      })),
+      conversations.map(async (conversation) => {
+        const members=await this.conversationRepository.getMembers(conversation.id);
+        if(!members.includes(userId))return undefined;
+        try{await this.requireConversationContacts(members,'read');}
+        catch(error){if(error instanceof UnauthorizedError)return undefined;throw error;}
+        try {
+          const lastMessage=await this.messageRepository.lastMessageForConversation(conversation.id,()=>this.lockConversationContacts(members,'read'));
+          return {conversation,lastMessage};
+        } catch(error) { if(error instanceof UnauthorizedError)return undefined;throw error; }
+      }),
     );
-    const lastMessages = results.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
+    const visibleResults=results.filter((result):result is NonNullable<typeof result>=>Boolean(result));
+    const lastMessages = visibleResults.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
+    const currentResults=await Promise.all(visibleResults.map(async result=>{
+      const members=await this.conversationRepository.getMembers(result.conversation.id);
+      try{await this.requireConversationContacts(members,'read');return result;}
+      catch(error){if(error instanceof UnauthorizedError)return undefined;throw error;}
+    }));
+    return currentResults.filter((result):result is NonNullable<typeof result>=>Boolean(result))
+      .map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
   }
 
   private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
@@ -259,7 +321,16 @@ export class MessageService {
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.recordVisibleRead(messageId, userId);
+    const candidate=await this.messageRepository.findById(messageId);
+    if(!candidate||!isMessageVisible(candidate,new Date()))return undefined;
+    const members=await this.conversationRepository.getMembers(candidate.conversationId);
+    if(!members.includes(userId))return undefined;
+    try { await this.requireConversationContacts(members,'read'); }
+    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
+    let message:MessageRecord|undefined;
+    try { message = await this.messageRepository.recordVisibleRead(messageId, userId,
+      ()=>this.lockConversationContacts(members,'read')); }
+    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     if (!message || message.deletedAt) return message;
     return isMessageVisible(message, new Date()) ? message : undefined;
   }
@@ -270,12 +341,19 @@ export class MessageService {
     if (!message || !isMessageVisible(message, new Date()) || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
+    const members=await this.conversationRepository.getMembers(message.conversationId);
+    if(!members.includes(userId))return undefined;
+    try { await this.requireConversationContacts(members,'send'); }
+    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     await enforceTextContentPolicy(normalizedContent, this.aiService, "message");
     message.content = normalizedContent;
     message.editedAt = new Date().toISOString();
     // Compatibility rendering is bound to the historical body. An edit is a
     // new publication and cannot mint an attachment from an arbitrary text URL.
-    return this.messageRepository.updateVisible(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false });
+    try {
+      return await this.messageRepository.updateVisible(messageId, { content: message.content, editedAt: message.editedAt, mediaLegacy: false },
+        ()=>this.lockConversationContacts(members,'send'));
+    } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
@@ -283,9 +361,16 @@ export class MessageService {
     if (!message || message.senderId !== userId) {
       return undefined; // Only sender can delete for now
     }
+    const members=await this.conversationRepository.getMembers(message.conversationId);
+    if(!members.includes(userId))return undefined;
+    try { await this.requireConversationContacts(members,'send'); }
+    catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
     message.deletedAt = new Date().toISOString();
-    const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt });
-    return deleted ? toMessageTombstone(deleted) : undefined;
+    try {
+      const deleted = await this.messageRepository.update(messageId, { deletedAt: message.deletedAt },
+        ()=>this.lockConversationContacts(members,'send'));
+      return deleted ? toMessageTombstone(deleted) : undefined;
+    } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
@@ -297,6 +382,7 @@ export class MessageService {
     if (!members.includes(userId)) {
       throw new Error("Not a participant in this conversation");
     }
+    await this.requireConversationContacts(members,'read');
     return message;
   }
 
@@ -309,11 +395,16 @@ export class MessageService {
       reactions[reaction] = current;
       message.reactions = reactions;
     }
-    return this.messageRepository.updateVisible(messageId, { reactions: message.reactions });
+    return this.messageRepository.updateVisible(messageId, { reactions: message.reactions },async()=>{
+      const members=await this.conversationRepository.getMembers(message.conversationId);
+      await this.lockConversationContacts(members,'send');
+    });
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    await this.assertParticipant(messageId, userId);
-    return this.messageRepository.updateVisible(messageId, { pinned: true });
+    const message=await this.assertParticipant(messageId, userId);
+    const members=await this.conversationRepository.getMembers(message.conversationId);
+    return this.messageRepository.updateVisible(messageId, { pinned: true },
+      ()=>this.lockConversationContacts(members,'send'));
   }
 }

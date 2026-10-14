@@ -17,6 +17,7 @@ import { RedisRepository } from '../repositories/redis-repository.js';
 import { closeAuthDependencies } from '../middlewares/auth.js';
 import premiumRoutes from '../routes/premium.js';
 import type { AIService } from '../services/ai-service.js';
+import { allowTestContacts } from './test-helpers.js';
 
 // Real PostgreSQL/Redis; only the Razorpay network boundary is simulated.
 const previous = { ...env };
@@ -241,7 +242,7 @@ test('free/expired saved typography continues to send ordinary messages without 
   const sender = await person(), recipient = await person();
   await pool.query(`UPDATE users SET message_font_id='mono' WHERE id=$1`, [sender]);
   const messages = new MessageService(new ConversationRepository(), new MessageRepository(), new UserRepository(),
-    { moderate: async () => ({ spam: false, toxicity: false, nsfw: false }) } as unknown as AIService);
+    { moderate: async () => ({ spam: false, toxicity: false, nsfw: false }) } as unknown as AIService, undefined, allowTestContacts);
   const result = await messages.sendMessage(sender, recipient, 'An ordinary message after expiry');
   assert.equal(result.textStyleId, 'default'); assert.equal(result.content, 'An ordinary message after expiry');
   await assert.rejects(messages.sendMessage(sender, recipient, 'Invalid style', { textStyleId: 'url(evil)' as 'default' }), /not supported/);

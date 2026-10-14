@@ -108,6 +108,18 @@ const eligibilitySchemas = {
     revision: { type: 'string',pattern: '^[a-f0-9]{64}$' },reason: { type: ['string','null'],enum: [null,'verification_required','territory_unavailable','guardian_required','reassessment_required','account_restricted'] },publicBrowsingAllowed: { type: 'boolean' },
   } },
 };
+const contactSchemas = {
+  ContactRequestCreate: { type: 'object',additionalProperties: false,required: ['recipientId'],properties: {
+    recipientId: { type: 'string',format: 'uuid' },
+  } },
+  SafeContactRequest: { type: 'object',additionalProperties: false,required: ['id','initiatorId','recipientId','status','createdAt','updatedAt','requiresYourAcceptance','guardianApprovalRequired'],properties: {
+    id: { type: 'string',format: 'uuid' },initiatorId: { type: 'string',format: 'uuid' },recipientId: { type: 'string',format: 'uuid' },
+    status: { type: 'string',enum: ['pending','accepted','rejected','revoked'] },createdAt: { type: 'string',format: 'date-time' },
+    updatedAt: { type: 'string',format: 'date-time' },requiresYourAcceptance: { type: 'boolean' },guardianApprovalRequired: { type: 'boolean' },
+  } },
+  ContactRequestList: { type: 'array',maxItems: 200,items: { $ref: '#/components/schemas/SafeContactRequest' } },
+  ContactWithdrawalReceipt: { type: 'null' },
+};
 function eligibilityContract(route) {
   const key = `${route.method} ${route.path}`;
   const definitions = {
@@ -123,6 +135,17 @@ function eligibilityContract(route) {
     'post /users/me/guardian-authorizations/{authorizationId}/withdraw': { result: 'GuardianWithdrawalReceipt' },
   };
   return definitions[key];
+}
+function contactContract(route) {
+  const definitions = {
+    'get /contacts/requests': { result: 'ContactRequestList' },
+    'post /contacts/requests': { request: 'ContactRequestCreate',result: 'SafeContactRequest',created: true },
+    'delete /contacts/requests/{requestId}': { result: 'ContactWithdrawalReceipt' },
+    'post /contacts/requests/{requestId}/accept': { result: 'SafeContactRequest' },
+    'post /contacts/requests/{requestId}/guardian-approval': { result: 'SafeContactRequest' },
+    'post /contacts/requests/{requestId}/reject': { result: 'SafeContactRequest' },
+  };
+  return definitions[`${route.method} ${route.path}`];
 }
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
@@ -319,8 +342,8 @@ function renderYaml(routes) {
       }
 
       if (["post", "put", "patch"].includes(route.method)) {
-        const eligibility = eligibilityContract(route);
-        const request = eligibility?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${eligibility.request}` } } } } : mediaRequest(route);
+        const contract = eligibilityContract(route) ?? contactContract(route);
+        const request = contract?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${contract.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
           "requestBody:",
@@ -336,14 +359,15 @@ function renderYaml(routes) {
       const publicGrievance = (route.path === "/reports/grievance" && route.method === "post") ||
         (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
       const eligibility = eligibilityContract(route);
-      const resultSchema = eligibility?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
+      const contract = eligibility ?? contactContract(route);
+      const resultSchema = contract?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
         const binary = { description: 'Approved original bytes or a JPEG poster derived from verified original bytes', content: Object.fromEntries(mediaMimes.map(mime => [mime, { schema: { type: 'string', format: 'binary' } }])) };
         lines.push(`      responses: ${JSON.stringify({ '200': binary, '206': binary, '403': { description: 'Invalid or expired delivery grant' }, '404': { description: 'Media revoked or unavailable' }, '415': { description: 'Provider bytes no longer match the approved hash' }, '416': { description: 'Invalid or unsatisfiable single byte range' }, '502': { description: 'Provider unavailable' }, '503': { description: 'Media delivery busy or unavailable' } })}`);
       } else lines.push(...indent([
         "responses:",
-        eligibility?.created || publicGrievance && route.method === "post" ? '  "201":' : '  "200":',
+        contract?.created || publicGrievance && route.method === "post" ? '  "201":' : '  "200":',
         "    description: Successful response",
         "    content:",
         "      application/json:",
@@ -394,6 +418,7 @@ function renderYaml(routes) {
   for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   lines.push(`    PublicGrievanceReceipt: ${JSON.stringify(publicGrievanceSchema)}`);
   for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  for (const [name,schema] of Object.entries(contactSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }
 

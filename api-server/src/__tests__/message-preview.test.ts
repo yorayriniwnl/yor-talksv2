@@ -8,6 +8,7 @@ import { ConversationRepository, MessageRepository } from "../repositories/messa
 import { UserRepository } from "../repositories/user-repository.js";
 import { createTestUser } from "./test-helpers.js";
 import type { MessageRecord } from "../types/index.js";
+import { allowTestContacts } from "./test-helpers.js";
 
 const message: MessageRecord = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -41,7 +42,7 @@ function createPreviewService(enabled: boolean, alreadyRead = false, row: Messag
     hasFeature: async () => enabled,
   } as unknown as FeatureEntitlementService;
   return {
-    service: new MessageService(conversationRepository, messageRepository, undefined, undefined, entitlementService),
+    service: new MessageService(conversationRepository, messageRepository, undefined, undefined, entitlementService, allowTestContacts),
     getRecordedPreview: () => recordedPreview,
   };
 }
@@ -111,7 +112,7 @@ test("preview return boundary rejects a row that expired or was deleted during t
 
 const fixtureUsers: string[] = [];
 after(async () => {
-  await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [fixtureUsers]);
+  if(fixtureUsers.length)await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [fixtureUsers]);
   await pool.end();
 });
 
@@ -124,7 +125,7 @@ async function createPreviewFixture() {
   const messages = new MessageRepository();
   const service = new MessageService(conversations, messages, undefined, undefined, {
     hasFeature: async () => true,
-  } as unknown as FeatureEntitlementService);
+  } as unknown as FeatureEntitlementService, allowTestContacts);
   const conversation = await conversations.findOrCreateDirect(sender.id, recipient.id);
   const row = await messages.create({ ...message, id: randomUUID(), conversationId: conversation.id,
     senderId: sender.id, recipientId: recipient.id, createdAt: new Date().toISOString() });

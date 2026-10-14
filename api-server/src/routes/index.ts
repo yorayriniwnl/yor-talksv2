@@ -36,6 +36,7 @@ import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
 import eligibilityRouter from './eligibility.js';
 import { rejectUnmappedProtectedRoute } from '../middlewares/eligibility.js';
+import contactRouter from './contacts.js';
 
 const router: IRouter = Router();
 
@@ -59,6 +60,7 @@ router.use(paymentOperationsRouter);
 router.use(profileInteractionRouter);
 router.use(postRouter);
 router.use(messageRouter);
+router.use(contactRouter);
 router.use(notificationRouter);
 router.use(noteRouter);
 router.use(communityRouter);

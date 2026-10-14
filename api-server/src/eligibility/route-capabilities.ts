@@ -19,6 +19,7 @@ const tagCapability: Readonly<Record<string, Capability>> = {
   "broadcast-channels": "messaging",
   business: "seller",
   communities: "social",
+  contacts: "messaging",
   conversations: "messaging",
   creator: "social",
   diagnostics: "social",

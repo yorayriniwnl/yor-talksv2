@@ -219,6 +219,21 @@ export class UserRepository {
     const column = usersTable[field];
     const current = sql`coalesce(${column}, '[]'::jsonb)`;
     const target = JSON.stringify([targetId]);
+    if (field === "blockedUsers" && enabled) {
+      // Blocking and revoking existing contact authority share one transaction,
+      // so a later unblock can never restore a previously accepted contact.
+      return db.transaction(async tx => {
+        const [updated] = await tx.update(usersTable).set({
+          blockedUsers: sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`,
+          updatedAt: new Date().toISOString(),
+        }).where(eq(usersTable.id, id)).returning();
+        if (!updated) return undefined;
+        const [userA, userB] = [id, targetId].sort();
+        await tx.execute(sql`UPDATE contact_authorizations SET state='revoked',revoked_at=clock_timestamp(),updated_at=clock_timestamp()
+          WHERE user_a_id=${userA}::uuid AND user_b_id=${userB}::uuid AND state IN ('pending','accepted')`);
+        return updated as UserRecord;
+      });
+    }
     const [updated] = await db.update(usersTable).set({
       [field]: enabled
         ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`

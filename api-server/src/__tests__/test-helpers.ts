@@ -1,6 +1,14 @@
 import crypto from "node:crypto";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { UserRecord } from "../types/index.js";
+import type { ContactAuthorizationService } from "../services/contact-authorization-service.js";
+
+/** Existing message persistence tests isolate repository behavior; contact policy has dedicated integration coverage. */
+export const allowTestContacts = {
+  async requireContact() {},
+  async requirePairwiseContacts() {},
+  async lockCurrentPairwiseContacts() {},
+} as unknown as ContactAuthorizationService;
 
 /**
  * Inserts a real, FK-satisfying user row for tests that need one to exist

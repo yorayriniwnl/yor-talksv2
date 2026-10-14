@@ -3,7 +3,8 @@ import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 export { mediaAssetsTable, mediaReferencesTable } from "./media";
 export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnrollmentsTable,
-  guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable } from './eligibility';
+  guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable,
+  contactAuthorizationsTable, contactAuthorizationApprovalsTable } from './eligibility';
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),

@@ -498,6 +498,60 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/contacts/requests",
+    "operationId": "getContactsRequests",
+    "tag": "contacts",
+    "summary": "Get /contacts/requests",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests",
+    "operationId": "postContactsRequests",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/contacts/requests/{requestId}",
+    "operationId": "deleteContactsRequestsByRequestId",
+    "tag": "contacts",
+    "summary": "Delete /contacts/requests/{requestId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/accept",
+    "operationId": "postContactsRequestsByRequestIdAccept",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/accept",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/guardian-approval",
+    "operationId": "postContactsRequestsByRequestIdGuardianApproval",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/guardian-approval",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/reject",
+    "operationId": "postContactsRequestsByRequestIdReject",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/conversations",
     "operationId": "getConversations",
     "tag": "conversations",
