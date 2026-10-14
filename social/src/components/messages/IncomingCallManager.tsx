@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WebRtcCallModal } from './WebRtcCallModal';
 import { connectSocket } from '@/lib/socket-client';
+import { useAppStore } from '@/lib/store';
 
 interface IncomingCallState {
   callId: string;
@@ -16,9 +17,11 @@ interface IncomingCallState {
 
 /** Keeps incoming calls visible even when the user is browsing another route. */
 export function IncomingCallManager() {
+  const eligibility = useAppStore((state) => state.eligibility);
   const [incomingCall, setIncomingCall] = useState<IncomingCallState | null>(null);
 
   useEffect(() => {
+    if (!eligibility?.activated || !eligibility.capabilities.rtc) return;
     const socket = connectSocket();
     if (!socket) return;
 
@@ -36,7 +39,7 @@ export function IncomingCallManager() {
       socket.off('call:invite', handleInvite);
       socket.off('call:ended', handleEnded);
     };
-  }, [incomingCall?.callId]);
+  }, [incomingCall?.callId, eligibility?.activated, eligibility?.capabilities.rtc]);
 
   if (!incomingCall) return null;
   return <WebRtcCallModal isOpen peerUser={incomingCall.caller} callType={incomingCall.callType} incomingCall={incomingCall} onClose={() => setIncomingCall(null)} />;

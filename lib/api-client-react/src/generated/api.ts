@@ -22,11 +22,21 @@ import type {
 import type {
   ApiEnvelope,
   AssuranceChallengeRequest,
+  ContactRequestCreate,
+  DeleteContactsRequestsByRequestId200,
+  DeleteGroupInvitationsByInvitationId200,
+  EnrollmentChallengeRequest,
+  EnrollmentCredentialRequest,
+  EnrollmentPrescreenRequest,
+  GetContactsRequests200,
+  GetGroupInvitations200,
   GetReportsGrievanceByTicketId200,
   GetUsersMeEligibility200,
   GetUsersMeEligibilityChallengesByChallengeId200,
   GetUsersMeGuardianAuthorizations200,
+  GroupInvitationDecisionRequest,
   GuardianJourneyRequest,
+  InviteToGroupRequest,
   MediaFinalizeRequest,
   MediaPresignRequest,
   PatchBroadcastChannelsByIdNotificationsBody,
@@ -52,7 +62,6 @@ import type {
   PostAuthOtpSendBody,
   PostAuthOtpVerifyBody,
   PostAuthRefreshBody,
-  PostAuthRegisterBody,
   PostAuthResetPasswordBody,
   PostAuthResetPasswordConfirmBody,
   PostAuthVerifyEmailResendBody,
@@ -69,13 +78,28 @@ import type {
   PostCommunitiesByIdDiscussionsByDiscussionIdLikeBody,
   PostCommunitiesByIdJoinBody,
   PostCommunitiesByIdLeaveBody,
+  PostContactsRequests201,
+  PostContactsRequestsByRequestIdAccept200,
+  PostContactsRequestsByRequestIdAcceptBody,
+  PostContactsRequestsByRequestIdGuardianApproval200,
+  PostContactsRequestsByRequestIdGuardianApprovalBody,
+  PostContactsRequestsByRequestIdReject200,
+  PostContactsRequestsByRequestIdRejectBody,
+  PostConversationsByConversationIdInvitations201,
   PostConversationsGroupBody,
   PostEconomyOrdersBody,
   PostEconomyOrdersByOrderIdVerifyBody,
   PostEconomySuperchatBody,
   PostEconomyWebhooksRazorpayBody,
+  PostEligibilityEnrollmentsByEnrollmentIdChallenges201,
+  PostEligibilityEnrollmentsByEnrollmentIdStatus200,
+  PostEligibilityEnrollmentsPrescreen200,
   PostEventsBody,
   PostEventsByIdRsvpBody,
+  PostGroupInvitationsByInvitationIdAccept200,
+  PostGroupInvitationsByInvitationIdGuardianApproval200,
+  PostGroupInvitationsByInvitationIdReject200,
+  PostGroupInvitationsByInvitationIdRejectBody,
   PostHighlightsBody,
   PostInvitesClaimBody,
   PostInvitesGenerateBody,
@@ -165,7 +189,8 @@ import type {
   PutUsersMeBody,
   PutUsersMePremiumProfileBody,
   PutUsersMePrivacyBody,
-  PutUsersMeSettingsBody
+  PutUsersMeSettingsBody,
+  RegisterRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2167,14 +2192,14 @@ export const getPostAuthRegisterUrl = () => {
 /**
  * @summary Post /auth/register
  */
-export const postAuthRegister = async (postAuthRegisterBody?: PostAuthRegisterBody, options?: RequestInit): Promise<ApiEnvelope> => {
+export const postAuthRegister = async (registerRequest: RegisterRequest, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPostAuthRegisterUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(postAuthRegisterBody)
+    body: JSON.stringify(registerRequest)
   }
 );}
 
@@ -2183,8 +2208,8 @@ export const postAuthRegister = async (postAuthRegisterBody?: PostAuthRegisterBo
 
 
 export const getPostAuthRegisterMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data?: BodyType<PostAuthRegisterBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data?: BodyType<PostAuthRegisterBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: BodyType<RegisterRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: BodyType<RegisterRequest>}, TContext> => {
 
 const mutationKey = ['postAuthRegister'];
 const {mutation: mutationOptions} = options ?
@@ -2196,7 +2221,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRegister>>, {data?: BodyType<PostAuthRegisterBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRegister>>, {data: BodyType<RegisterRequest>}> = (props) => {
           const {data} = props ?? {};
 
           return  postAuthRegister(data,)
@@ -2210,18 +2235,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostAuthRegisterMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthRegister>>>
-    export type PostAuthRegisterMutationBody = BodyType<PostAuthRegisterBody> | undefined
+    export type PostAuthRegisterMutationBody = BodyType<RegisterRequest>
     export type PostAuthRegisterMutationError = ErrorType<void>
 
     /**
  * @summary Post /auth/register
  */
 export const usePostAuthRegister = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data?: BodyType<PostAuthRegisterBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: BodyType<RegisterRequest>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof postAuthRegister>>,
         TError,
-        {data?: BodyType<PostAuthRegisterBody>},
+        {data: BodyType<RegisterRequest>},
         TContext
       > => {
       return useMutation(getPostAuthRegisterMutationOptions(options));
@@ -4135,6 +4160,441 @@ export const usePostCommunitiesByIdLeave = <TError = ErrorType<void>,
       return useMutation(getPostCommunitiesByIdLeaveMutationOptions(options));
     }
 
+export const getGetContactsRequestsUrl = () => {
+
+
+
+
+  return `/api/contacts/requests`
+}
+
+/**
+ * @summary Get /contacts/requests
+ */
+export const getContactsRequests = async ( options?: RequestInit): Promise<GetContactsRequests200> => {
+
+  return customFetch<GetContactsRequests200>(getGetContactsRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetContactsRequestsQueryKey = () => {
+    return [
+    `/api/contacts/requests`
+    ] as const;
+    }
+
+
+export const getGetContactsRequestsQueryOptions = <TData = Awaited<ReturnType<typeof getContactsRequests>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContactsRequests>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetContactsRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContactsRequests>>> = ({ signal }) => getContactsRequests({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getContactsRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetContactsRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof getContactsRequests>>>
+export type GetContactsRequestsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /contacts/requests
+ */
+
+export function useGetContactsRequests<TData = Awaited<ReturnType<typeof getContactsRequests>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getContactsRequests>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetContactsRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostContactsRequestsUrl = () => {
+
+
+
+
+  return `/api/contacts/requests`
+}
+
+/**
+ * @summary Post /contacts/requests
+ */
+export const postContactsRequests = async (contactRequestCreate: ContactRequestCreate, options?: RequestInit): Promise<PostContactsRequests201> => {
+
+  return customFetch<PostContactsRequests201>(getPostContactsRequestsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contactRequestCreate)
+  }
+);}
+
+
+
+
+
+export const getPostContactsRequestsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequests>>, TError,{data: BodyType<ContactRequestCreate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postContactsRequests>>, TError,{data: BodyType<ContactRequestCreate>}, TContext> => {
+
+const mutationKey = ['postContactsRequests'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postContactsRequests>>, {data: BodyType<ContactRequestCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postContactsRequests(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostContactsRequestsMutationResult = NonNullable<Awaited<ReturnType<typeof postContactsRequests>>>
+    export type PostContactsRequestsMutationBody = BodyType<ContactRequestCreate>
+    export type PostContactsRequestsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /contacts/requests
+ */
+export const usePostContactsRequests = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequests>>, TError,{data: BodyType<ContactRequestCreate>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postContactsRequests>>,
+        TError,
+        {data: BodyType<ContactRequestCreate>},
+        TContext
+      > => {
+      return useMutation(getPostContactsRequestsMutationOptions(options));
+    }
+
+export const getDeleteContactsRequestsByRequestIdUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/contacts/requests/${requestId}`
+}
+
+/**
+ * @summary Delete /contacts/requests/{requestId}
+ */
+export const deleteContactsRequestsByRequestId = async (requestId: string, options?: RequestInit): Promise<DeleteContactsRequestsByRequestId200> => {
+
+  return customFetch<DeleteContactsRequestsByRequestId200>(getDeleteContactsRequestsByRequestIdUrl(requestId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteContactsRequestsByRequestIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>, TError,{requestId: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>, TError,{requestId: string}, TContext> => {
+
+const mutationKey = ['deleteContactsRequestsByRequestId'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>, {requestId: string}> = (props) => {
+          const {requestId} = props ?? {};
+
+          return  deleteContactsRequestsByRequestId(requestId,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteContactsRequestsByRequestIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>>
+
+    export type DeleteContactsRequestsByRequestIdMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete /contacts/requests/{requestId}
+ */
+export const useDeleteContactsRequestsByRequestId = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>, TError,{requestId: string}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteContactsRequestsByRequestId>>,
+        TError,
+        {requestId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteContactsRequestsByRequestIdMutationOptions(options));
+    }
+
+export const getPostContactsRequestsByRequestIdAcceptUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/contacts/requests/${requestId}/accept`
+}
+
+/**
+ * @summary Post /contacts/requests/{requestId}/accept
+ */
+export const postContactsRequestsByRequestIdAccept = async (requestId: string,
+    postContactsRequestsByRequestIdAcceptBody?: PostContactsRequestsByRequestIdAcceptBody, options?: RequestInit): Promise<PostContactsRequestsByRequestIdAccept200> => {
+
+  return customFetch<PostContactsRequestsByRequestIdAccept200>(getPostContactsRequestsByRequestIdAcceptUrl(requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postContactsRequestsByRequestIdAcceptBody)
+  }
+);}
+
+
+
+
+
+export const getPostContactsRequestsByRequestIdAcceptMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdAcceptBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdAcceptBody>}, TContext> => {
+
+const mutationKey = ['postContactsRequestsByRequestIdAccept'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>, {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdAcceptBody>}> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  postContactsRequestsByRequestIdAccept(requestId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostContactsRequestsByRequestIdAcceptMutationResult = NonNullable<Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>>
+    export type PostContactsRequestsByRequestIdAcceptMutationBody = BodyType<PostContactsRequestsByRequestIdAcceptBody> | undefined
+    export type PostContactsRequestsByRequestIdAcceptMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /contacts/requests/{requestId}/accept
+ */
+export const usePostContactsRequestsByRequestIdAccept = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdAcceptBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postContactsRequestsByRequestIdAccept>>,
+        TError,
+        {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdAcceptBody>},
+        TContext
+      > => {
+      return useMutation(getPostContactsRequestsByRequestIdAcceptMutationOptions(options));
+    }
+
+export const getPostContactsRequestsByRequestIdGuardianApprovalUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/contacts/requests/${requestId}/guardian-approval`
+}
+
+/**
+ * @summary Post /contacts/requests/{requestId}/guardian-approval
+ */
+export const postContactsRequestsByRequestIdGuardianApproval = async (requestId: string,
+    postContactsRequestsByRequestIdGuardianApprovalBody?: PostContactsRequestsByRequestIdGuardianApprovalBody, options?: RequestInit): Promise<PostContactsRequestsByRequestIdGuardianApproval200> => {
+
+  return customFetch<PostContactsRequestsByRequestIdGuardianApproval200>(getPostContactsRequestsByRequestIdGuardianApprovalUrl(requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postContactsRequestsByRequestIdGuardianApprovalBody)
+  }
+);}
+
+
+
+
+
+export const getPostContactsRequestsByRequestIdGuardianApprovalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody>}, TContext> => {
+
+const mutationKey = ['postContactsRequestsByRequestIdGuardianApproval'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>, {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody>}> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  postContactsRequestsByRequestIdGuardianApproval(requestId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostContactsRequestsByRequestIdGuardianApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>>
+    export type PostContactsRequestsByRequestIdGuardianApprovalMutationBody = BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody> | undefined
+    export type PostContactsRequestsByRequestIdGuardianApprovalMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /contacts/requests/{requestId}/guardian-approval
+ */
+export const usePostContactsRequestsByRequestIdGuardianApproval = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postContactsRequestsByRequestIdGuardianApproval>>,
+        TError,
+        {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdGuardianApprovalBody>},
+        TContext
+      > => {
+      return useMutation(getPostContactsRequestsByRequestIdGuardianApprovalMutationOptions(options));
+    }
+
+export const getPostContactsRequestsByRequestIdRejectUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/contacts/requests/${requestId}/reject`
+}
+
+/**
+ * @summary Post /contacts/requests/{requestId}/reject
+ */
+export const postContactsRequestsByRequestIdReject = async (requestId: string,
+    postContactsRequestsByRequestIdRejectBody?: PostContactsRequestsByRequestIdRejectBody, options?: RequestInit): Promise<PostContactsRequestsByRequestIdReject200> => {
+
+  return customFetch<PostContactsRequestsByRequestIdReject200>(getPostContactsRequestsByRequestIdRejectUrl(requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postContactsRequestsByRequestIdRejectBody)
+  }
+);}
+
+
+
+
+
+export const getPostContactsRequestsByRequestIdRejectMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdRejectBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdRejectBody>}, TContext> => {
+
+const mutationKey = ['postContactsRequestsByRequestIdReject'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>, {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdRejectBody>}> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  postContactsRequestsByRequestIdReject(requestId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostContactsRequestsByRequestIdRejectMutationResult = NonNullable<Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>>
+    export type PostContactsRequestsByRequestIdRejectMutationBody = BodyType<PostContactsRequestsByRequestIdRejectBody> | undefined
+    export type PostContactsRequestsByRequestIdRejectMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /contacts/requests/{requestId}/reject
+ */
+export const usePostContactsRequestsByRequestIdReject = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>, TError,{requestId: string;data?: BodyType<PostContactsRequestsByRequestIdRejectBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postContactsRequestsByRequestIdReject>>,
+        TError,
+        {requestId: string;data?: BodyType<PostContactsRequestsByRequestIdRejectBody>},
+        TContext
+      > => {
+      return useMutation(getPostContactsRequestsByRequestIdRejectMutationOptions(options));
+    }
+
 export const getGetConversationsUrl = () => {
 
 
@@ -4211,6 +4671,78 @@ export function useGetConversations<TData = Awaited<ReturnType<typeof getConvers
 
 
 
+
+export const getPostConversationsByConversationIdInvitationsUrl = (conversationId: string,) => {
+
+
+
+
+  return `/api/conversations/${conversationId}/invitations`
+}
+
+/**
+ * @summary Post /conversations/{conversationId}/invitations
+ */
+export const postConversationsByConversationIdInvitations = async (conversationId: string,
+    inviteToGroupRequest: InviteToGroupRequest, options?: RequestInit): Promise<PostConversationsByConversationIdInvitations201> => {
+
+  return customFetch<PostConversationsByConversationIdInvitations201>(getPostConversationsByConversationIdInvitationsUrl(conversationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inviteToGroupRequest)
+  }
+);}
+
+
+
+
+
+export const getPostConversationsByConversationIdInvitationsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>, TError,{conversationId: string;data: BodyType<InviteToGroupRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>, TError,{conversationId: string;data: BodyType<InviteToGroupRequest>}, TContext> => {
+
+const mutationKey = ['postConversationsByConversationIdInvitations'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>, {conversationId: string;data: BodyType<InviteToGroupRequest>}> = (props) => {
+          const {conversationId,data} = props ?? {};
+
+          return  postConversationsByConversationIdInvitations(conversationId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostConversationsByConversationIdInvitationsMutationResult = NonNullable<Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>>
+    export type PostConversationsByConversationIdInvitationsMutationBody = BodyType<InviteToGroupRequest>
+    export type PostConversationsByConversationIdInvitationsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /conversations/{conversationId}/invitations
+ */
+export const usePostConversationsByConversationIdInvitations = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>, TError,{conversationId: string;data: BodyType<InviteToGroupRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postConversationsByConversationIdInvitations>>,
+        TError,
+        {conversationId: string;data: BodyType<InviteToGroupRequest>},
+        TContext
+      > => {
+      return useMutation(getPostConversationsByConversationIdInvitationsMutationOptions(options));
+    }
 
 export const getGetConversationsByConversationIdMessagesUrl = (conversationId: string,) => {
 
@@ -5246,6 +5778,221 @@ export const usePostEconomyWebhooksRazorpay = <TError = ErrorType<void>,
       return useMutation(getPostEconomyWebhooksRazorpayMutationOptions(options));
     }
 
+export const getPostEligibilityEnrollmentsByEnrollmentIdChallengesUrl = (enrollmentId: string,) => {
+
+
+
+
+  return `/api/eligibility/enrollments/${enrollmentId}/challenges`
+}
+
+/**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/challenges
+ */
+export const postEligibilityEnrollmentsByEnrollmentIdChallenges = async (enrollmentId: string,
+    enrollmentChallengeRequest: EnrollmentChallengeRequest, options?: RequestInit): Promise<PostEligibilityEnrollmentsByEnrollmentIdChallenges201> => {
+
+  return customFetch<PostEligibilityEnrollmentsByEnrollmentIdChallenges201>(getPostEligibilityEnrollmentsByEnrollmentIdChallengesUrl(enrollmentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(enrollmentChallengeRequest)
+  }
+);}
+
+
+
+
+
+export const getPostEligibilityEnrollmentsByEnrollmentIdChallengesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>, TError,{enrollmentId: string;data: BodyType<EnrollmentChallengeRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>, TError,{enrollmentId: string;data: BodyType<EnrollmentChallengeRequest>}, TContext> => {
+
+const mutationKey = ['postEligibilityEnrollmentsByEnrollmentIdChallenges'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>, {enrollmentId: string;data: BodyType<EnrollmentChallengeRequest>}> = (props) => {
+          const {enrollmentId,data} = props ?? {};
+
+          return  postEligibilityEnrollmentsByEnrollmentIdChallenges(enrollmentId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostEligibilityEnrollmentsByEnrollmentIdChallengesMutationResult = NonNullable<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>>
+    export type PostEligibilityEnrollmentsByEnrollmentIdChallengesMutationBody = BodyType<EnrollmentChallengeRequest>
+    export type PostEligibilityEnrollmentsByEnrollmentIdChallengesMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/challenges
+ */
+export const usePostEligibilityEnrollmentsByEnrollmentIdChallenges = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>, TError,{enrollmentId: string;data: BodyType<EnrollmentChallengeRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdChallenges>>,
+        TError,
+        {enrollmentId: string;data: BodyType<EnrollmentChallengeRequest>},
+        TContext
+      > => {
+      return useMutation(getPostEligibilityEnrollmentsByEnrollmentIdChallengesMutationOptions(options));
+    }
+
+export const getPostEligibilityEnrollmentsByEnrollmentIdStatusUrl = (enrollmentId: string,) => {
+
+
+
+
+  return `/api/eligibility/enrollments/${enrollmentId}/status`
+}
+
+/**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/status
+ */
+export const postEligibilityEnrollmentsByEnrollmentIdStatus = async (enrollmentId: string,
+    enrollmentCredentialRequest: EnrollmentCredentialRequest, options?: RequestInit): Promise<PostEligibilityEnrollmentsByEnrollmentIdStatus200> => {
+
+  return customFetch<PostEligibilityEnrollmentsByEnrollmentIdStatus200>(getPostEligibilityEnrollmentsByEnrollmentIdStatusUrl(enrollmentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(enrollmentCredentialRequest)
+  }
+);}
+
+
+
+
+
+export const getPostEligibilityEnrollmentsByEnrollmentIdStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>, TError,{enrollmentId: string;data: BodyType<EnrollmentCredentialRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>, TError,{enrollmentId: string;data: BodyType<EnrollmentCredentialRequest>}, TContext> => {
+
+const mutationKey = ['postEligibilityEnrollmentsByEnrollmentIdStatus'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>, {enrollmentId: string;data: BodyType<EnrollmentCredentialRequest>}> = (props) => {
+          const {enrollmentId,data} = props ?? {};
+
+          return  postEligibilityEnrollmentsByEnrollmentIdStatus(enrollmentId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostEligibilityEnrollmentsByEnrollmentIdStatusMutationResult = NonNullable<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>>
+    export type PostEligibilityEnrollmentsByEnrollmentIdStatusMutationBody = BodyType<EnrollmentCredentialRequest>
+    export type PostEligibilityEnrollmentsByEnrollmentIdStatusMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/status
+ */
+export const usePostEligibilityEnrollmentsByEnrollmentIdStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>, TError,{enrollmentId: string;data: BodyType<EnrollmentCredentialRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postEligibilityEnrollmentsByEnrollmentIdStatus>>,
+        TError,
+        {enrollmentId: string;data: BodyType<EnrollmentCredentialRequest>},
+        TContext
+      > => {
+      return useMutation(getPostEligibilityEnrollmentsByEnrollmentIdStatusMutationOptions(options));
+    }
+
+export const getPostEligibilityEnrollmentsPrescreenUrl = () => {
+
+
+
+
+  return `/api/eligibility/enrollments/prescreen`
+}
+
+/**
+ * @summary Post /eligibility/enrollments/prescreen
+ */
+export const postEligibilityEnrollmentsPrescreen = async (enrollmentPrescreenRequest: EnrollmentPrescreenRequest, options?: RequestInit): Promise<PostEligibilityEnrollmentsPrescreen200> => {
+
+  return customFetch<PostEligibilityEnrollmentsPrescreen200>(getPostEligibilityEnrollmentsPrescreenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(enrollmentPrescreenRequest)
+  }
+);}
+
+
+
+
+
+export const getPostEligibilityEnrollmentsPrescreenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>, TError,{data: BodyType<EnrollmentPrescreenRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>, TError,{data: BodyType<EnrollmentPrescreenRequest>}, TContext> => {
+
+const mutationKey = ['postEligibilityEnrollmentsPrescreen'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>, {data: BodyType<EnrollmentPrescreenRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postEligibilityEnrollmentsPrescreen(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostEligibilityEnrollmentsPrescreenMutationResult = NonNullable<Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>>
+    export type PostEligibilityEnrollmentsPrescreenMutationBody = BodyType<EnrollmentPrescreenRequest>
+    export type PostEligibilityEnrollmentsPrescreenMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /eligibility/enrollments/prescreen
+ */
+export const usePostEligibilityEnrollmentsPrescreen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>, TError,{data: BodyType<EnrollmentPrescreenRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postEligibilityEnrollmentsPrescreen>>,
+        TError,
+        {data: BodyType<EnrollmentPrescreenRequest>},
+        TContext
+      > => {
+      return useMutation(getPostEligibilityEnrollmentsPrescreenMutationOptions(options));
+    }
+
 export const getGetEventsUrl = () => {
 
 
@@ -5767,6 +6514,370 @@ export function useGetFeedTrending<TData = Awaited<ReturnType<typeof getFeedTren
 
 
 
+
+export const getGetGroupInvitationsUrl = () => {
+
+
+
+
+  return `/api/group-invitations`
+}
+
+/**
+ * @summary Get /group-invitations
+ */
+export const getGroupInvitations = async ( options?: RequestInit): Promise<GetGroupInvitations200> => {
+
+  return customFetch<GetGroupInvitations200>(getGetGroupInvitationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGroupInvitationsQueryKey = () => {
+    return [
+    `/api/group-invitations`
+    ] as const;
+    }
+
+
+export const getGetGroupInvitationsQueryOptions = <TData = Awaited<ReturnType<typeof getGroupInvitations>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGroupInvitations>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGroupInvitationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGroupInvitations>>> = ({ signal }) => getGroupInvitations({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGroupInvitations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGroupInvitationsQueryResult = NonNullable<Awaited<ReturnType<typeof getGroupInvitations>>>
+export type GetGroupInvitationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /group-invitations
+ */
+
+export function useGetGroupInvitations<TData = Awaited<ReturnType<typeof getGroupInvitations>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGroupInvitations>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGroupInvitationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteGroupInvitationsByInvitationIdUrl = (invitationId: string,) => {
+
+
+
+
+  return `/api/group-invitations/${invitationId}`
+}
+
+/**
+ * @summary Delete /group-invitations/{invitationId}
+ */
+export const deleteGroupInvitationsByInvitationId = async (invitationId: string, options?: RequestInit): Promise<DeleteGroupInvitationsByInvitationId200> => {
+
+  return customFetch<DeleteGroupInvitationsByInvitationId200>(getDeleteGroupInvitationsByInvitationIdUrl(invitationId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteGroupInvitationsByInvitationIdMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>, TError,{invitationId: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>, TError,{invitationId: string}, TContext> => {
+
+const mutationKey = ['deleteGroupInvitationsByInvitationId'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>, {invitationId: string}> = (props) => {
+          const {invitationId} = props ?? {};
+
+          return  deleteGroupInvitationsByInvitationId(invitationId,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGroupInvitationsByInvitationIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>>
+
+    export type DeleteGroupInvitationsByInvitationIdMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete /group-invitations/{invitationId}
+ */
+export const useDeleteGroupInvitationsByInvitationId = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>, TError,{invitationId: string}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGroupInvitationsByInvitationId>>,
+        TError,
+        {invitationId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteGroupInvitationsByInvitationIdMutationOptions(options));
+    }
+
+export const getPostGroupInvitationsByInvitationIdAcceptUrl = (invitationId: string,) => {
+
+
+
+
+  return `/api/group-invitations/${invitationId}/accept`
+}
+
+/**
+ * @summary Post /group-invitations/{invitationId}/accept
+ */
+export const postGroupInvitationsByInvitationIdAccept = async (invitationId: string,
+    groupInvitationDecisionRequest: GroupInvitationDecisionRequest, options?: RequestInit): Promise<PostGroupInvitationsByInvitationIdAccept200> => {
+
+  return customFetch<PostGroupInvitationsByInvitationIdAccept200>(getPostGroupInvitationsByInvitationIdAcceptUrl(invitationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(groupInvitationDecisionRequest)
+  }
+);}
+
+
+
+
+
+export const getPostGroupInvitationsByInvitationIdAcceptMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext> => {
+
+const mutationKey = ['postGroupInvitationsByInvitationIdAccept'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>, {invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}> = (props) => {
+          const {invitationId,data} = props ?? {};
+
+          return  postGroupInvitationsByInvitationIdAccept(invitationId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostGroupInvitationsByInvitationIdAcceptMutationResult = NonNullable<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>>
+    export type PostGroupInvitationsByInvitationIdAcceptMutationBody = BodyType<GroupInvitationDecisionRequest>
+    export type PostGroupInvitationsByInvitationIdAcceptMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /group-invitations/{invitationId}/accept
+ */
+export const usePostGroupInvitationsByInvitationIdAccept = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdAccept>>,
+        TError,
+        {invitationId: string;data: BodyType<GroupInvitationDecisionRequest>},
+        TContext
+      > => {
+      return useMutation(getPostGroupInvitationsByInvitationIdAcceptMutationOptions(options));
+    }
+
+export const getPostGroupInvitationsByInvitationIdGuardianApprovalUrl = (invitationId: string,) => {
+
+
+
+
+  return `/api/group-invitations/${invitationId}/guardian-approval`
+}
+
+/**
+ * @summary Post /group-invitations/{invitationId}/guardian-approval
+ */
+export const postGroupInvitationsByInvitationIdGuardianApproval = async (invitationId: string,
+    groupInvitationDecisionRequest: GroupInvitationDecisionRequest, options?: RequestInit): Promise<PostGroupInvitationsByInvitationIdGuardianApproval200> => {
+
+  return customFetch<PostGroupInvitationsByInvitationIdGuardianApproval200>(getPostGroupInvitationsByInvitationIdGuardianApprovalUrl(invitationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(groupInvitationDecisionRequest)
+  }
+);}
+
+
+
+
+
+export const getPostGroupInvitationsByInvitationIdGuardianApprovalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext> => {
+
+const mutationKey = ['postGroupInvitationsByInvitationIdGuardianApproval'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>, {invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}> = (props) => {
+          const {invitationId,data} = props ?? {};
+
+          return  postGroupInvitationsByInvitationIdGuardianApproval(invitationId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostGroupInvitationsByInvitationIdGuardianApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>>
+    export type PostGroupInvitationsByInvitationIdGuardianApprovalMutationBody = BodyType<GroupInvitationDecisionRequest>
+    export type PostGroupInvitationsByInvitationIdGuardianApprovalMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /group-invitations/{invitationId}/guardian-approval
+ */
+export const usePostGroupInvitationsByInvitationIdGuardianApproval = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>, TError,{invitationId: string;data: BodyType<GroupInvitationDecisionRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdGuardianApproval>>,
+        TError,
+        {invitationId: string;data: BodyType<GroupInvitationDecisionRequest>},
+        TContext
+      > => {
+      return useMutation(getPostGroupInvitationsByInvitationIdGuardianApprovalMutationOptions(options));
+    }
+
+export const getPostGroupInvitationsByInvitationIdRejectUrl = (invitationId: string,) => {
+
+
+
+
+  return `/api/group-invitations/${invitationId}/reject`
+}
+
+/**
+ * @summary Post /group-invitations/{invitationId}/reject
+ */
+export const postGroupInvitationsByInvitationIdReject = async (invitationId: string,
+    postGroupInvitationsByInvitationIdRejectBody?: PostGroupInvitationsByInvitationIdRejectBody, options?: RequestInit): Promise<PostGroupInvitationsByInvitationIdReject200> => {
+
+  return customFetch<PostGroupInvitationsByInvitationIdReject200>(getPostGroupInvitationsByInvitationIdRejectUrl(invitationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postGroupInvitationsByInvitationIdRejectBody)
+  }
+);}
+
+
+
+
+
+export const getPostGroupInvitationsByInvitationIdRejectMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>, TError,{invitationId: string;data?: BodyType<PostGroupInvitationsByInvitationIdRejectBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>, TError,{invitationId: string;data?: BodyType<PostGroupInvitationsByInvitationIdRejectBody>}, TContext> => {
+
+const mutationKey = ['postGroupInvitationsByInvitationIdReject'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>, {invitationId: string;data?: BodyType<PostGroupInvitationsByInvitationIdRejectBody>}> = (props) => {
+          const {invitationId,data} = props ?? {};
+
+          return  postGroupInvitationsByInvitationIdReject(invitationId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostGroupInvitationsByInvitationIdRejectMutationResult = NonNullable<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>>
+    export type PostGroupInvitationsByInvitationIdRejectMutationBody = BodyType<PostGroupInvitationsByInvitationIdRejectBody> | undefined
+    export type PostGroupInvitationsByInvitationIdRejectMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /group-invitations/{invitationId}/reject
+ */
+export const usePostGroupInvitationsByInvitationIdReject = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>, TError,{invitationId: string;data?: BodyType<PostGroupInvitationsByInvitationIdRejectBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postGroupInvitationsByInvitationIdReject>>,
+        TError,
+        {invitationId: string;data?: BodyType<PostGroupInvitationsByInvitationIdRejectBody>},
+        TContext
+      > => {
+      return useMutation(getPostGroupInvitationsByInvitationIdRejectMutationOptions(options));
+    }
 
 export const getGetHealthzUrl = () => {
 

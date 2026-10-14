@@ -222,6 +222,135 @@ export interface PublicGrievanceReceipt {
   slaDeadline?: string;
 }
 
+export interface RegisterRequest {
+  enrollmentId: string;
+  /**
+     * Short-lived opaque one-time registration credential. Never place it in a URL or log.
+     * @minLength 32
+     * @maxLength 128
+     */
+  registrationNonce: string;
+  /** @pattern ^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$ */
+  username: string;
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  /** @minLength 2 */
+  fullName: string;
+  acceptedTerms: true;
+}
+
+export type EnrollmentPrescreenRequestRequestedExperience = typeof EnrollmentPrescreenRequestRequestedExperience[keyof typeof EnrollmentPrescreenRequestRequestedExperience];
+
+
+export const EnrollmentPrescreenRequestRequestedExperience = {
+  under_13: 'under_13',
+  teen_13_17: 'teen_13_17',
+  adult_18_plus: 'adult_18_plus',
+} as const;
+
+export interface EnrollmentPrescreenRequest {
+  requestedExperience: EnrollmentPrescreenRequestRequestedExperience;
+  /** @pattern ^[A-Z]{2}$ */
+  territory: string;
+}
+
+export interface EnrollmentCredentialRequest {
+  /**
+     * @minLength 32
+     * @maxLength 128
+     */
+  registrationNonce: string;
+}
+
+export type EnrollmentChallengeRequestPurpose = typeof EnrollmentChallengeRequestPurpose[keyof typeof EnrollmentChallengeRequestPurpose];
+
+
+export const EnrollmentChallengeRequestPurpose = {
+  guardian_authorization: 'guardian_authorization',
+  age_assessment: 'age_assessment',
+} as const;
+
+export interface EnrollmentChallengeRequest {
+  /**
+     * @minLength 32
+     * @maxLength 128
+     */
+  registrationNonce: string;
+  purpose: EnrollmentChallengeRequestPurpose;
+}
+
+export type SafeEnrollmentStatusStatus = typeof SafeEnrollmentStatusStatus[keyof typeof SafeEnrollmentStatusStatus];
+
+
+export const SafeEnrollmentStatusStatus = {
+  unavailable: 'unavailable',
+  verification_required: 'verification_required',
+  authorized: 'authorized',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SafeEnrollmentStatusNextStep = typeof SafeEnrollmentStatusNextStep[keyof typeof SafeEnrollmentStatusNextStep] | null;
+
+
+export const SafeEnrollmentStatusNextStep = {
+  guardian_authorization: 'guardian_authorization',
+  age_assessment: 'age_assessment',
+  complete_registration: 'complete_registration',
+} as const;
+
+export type SafeEnrollmentStatusEnrollment = {
+  id: string;
+  /**
+     * @minLength 32
+     * @maxLength 128
+     */
+  registrationNonce: string;
+  expiresAt: string;
+};
+
+export interface SafeEnrollmentStatus {
+  status: SafeEnrollmentStatusStatus;
+  /** @nullable */
+  nextStep: SafeEnrollmentStatusNextStep;
+  enrollment?: SafeEnrollmentStatusEnrollment;
+}
+
+export type SafeEnrollmentProgressStatus = typeof SafeEnrollmentProgressStatus[keyof typeof SafeEnrollmentProgressStatus];
+
+
+export const SafeEnrollmentProgressStatus = {
+  unavailable: 'unavailable',
+  verification_required: 'verification_required',
+  authorized: 'authorized',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SafeEnrollmentProgressNextStep = typeof SafeEnrollmentProgressNextStep[keyof typeof SafeEnrollmentProgressNextStep] | null;
+
+
+export const SafeEnrollmentProgressNextStep = {
+  guardian_authorization: 'guardian_authorization',
+  age_assessment: 'age_assessment',
+  complete_registration: 'complete_registration',
+} as const;
+
+export type SafeEnrollmentProgressEnrollment = {
+  id: string;
+  expiresAt: string;
+};
+
+export interface SafeEnrollmentProgress {
+  status: SafeEnrollmentProgressStatus;
+  /** @nullable */
+  nextStep: SafeEnrollmentProgressNextStep;
+  enrollment?: SafeEnrollmentProgressEnrollment;
+}
+
 export type AssuranceChallengeRequest = {
   purpose: 'age_assessment';
   /** @pattern ^[A-Z]{2}$ */
@@ -384,6 +513,103 @@ export interface EligibilityDecision {
   publicBrowsingAllowed: boolean;
 }
 
+export interface InviteToGroupRequest {
+  /**
+     * @minItems 1
+     * @maxItems 99
+     */
+  inviteeIds: string[];
+}
+
+export interface ContactRequestCreate {
+  recipientId: string;
+}
+
+export type SafeContactRequestStatus = typeof SafeContactRequestStatus[keyof typeof SafeContactRequestStatus];
+
+
+export const SafeContactRequestStatus = {
+  pending: 'pending',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  revoked: 'revoked',
+} as const;
+
+export interface SafeContactRequest {
+  id: string;
+  initiatorId: string;
+  recipientId: string;
+  status: SafeContactRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  requiresYourAcceptance: boolean;
+  guardianApprovalRequired: boolean;
+}
+
+/**
+ * @maxItems 200
+ */
+export type ContactRequestList = SafeContactRequest[];
+
+export type ContactRulesGuardianPolicyVersions = {[key: string]: string};
+
+export type ContactRulesGuardianNoticeVersions = {[key: string]: string};
+
+export interface ContactRules {
+  decision: EligibilityDecision;
+  guardianContactsRequired: boolean;
+  guardianPolicyVersions: ContactRulesGuardianPolicyVersions;
+  guardianNoticeVersions: ContactRulesGuardianNoticeVersions;
+}
+
+export interface GroupInvitationDecisionRequest {
+  updatedAt: string;
+}
+
+export type SafeGroupInvitationStatus = typeof SafeGroupInvitationStatus[keyof typeof SafeGroupInvitationStatus];
+
+
+export const SafeGroupInvitationStatus = {
+  pending: 'pending',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  revoked: 'revoked',
+} as const;
+
+export interface SafeGroupInvitation {
+  id: string;
+  conversationId: string;
+  inviterId: string;
+  recipientId: string;
+  status: SafeGroupInvitationStatus;
+  /** @maxItems 100 */
+  memberIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  requiresYourAcceptance: boolean;
+  guardianApprovalRequired: boolean;
+}
+
+/**
+ * @maxItems 200
+ */
+export type SafeGroupInvitationList = SafeGroupInvitation[];
+
+export interface SafeGroupAcceptanceResult {
+  invitation: SafeGroupInvitation;
+  refreshedInvitations: SafeGroupInvitationList;
+}
+
+/**
+ * @nullable
+ */
+export type NullReceipt = null;
+
+/**
+ * @nullable
+ */
+export type ContactWithdrawalReceipt = null;
+
 export type PostAiChatBody = { [key: string]: unknown };
 
 export type PostAiModerateBody = { [key: string]: unknown };
@@ -425,8 +651,6 @@ export type PostAuthOtpSendBody = { [key: string]: unknown };
 export type PostAuthOtpVerifyBody = { [key: string]: unknown };
 
 export type PostAuthRefreshBody = { [key: string]: unknown };
-
-export type PostAuthRegisterBody = { [key: string]: unknown };
 
 export type PostAuthResetPasswordBody = { [key: string]: unknown };
 
@@ -474,6 +698,40 @@ export type PostCommunitiesByIdJoinBody = { [key: string]: unknown };
 
 export type PostCommunitiesByIdLeaveBody = { [key: string]: unknown };
 
+export type GetContactsRequests200 = ApiEnvelope & {
+  data?: ContactRequestList;
+};
+
+export type PostContactsRequests201 = ApiEnvelope & {
+  data?: SafeContactRequest;
+};
+
+export type DeleteContactsRequestsByRequestId200 = ApiEnvelope & {
+  data?: ContactWithdrawalReceipt;
+};
+
+export type PostContactsRequestsByRequestIdAcceptBody = { [key: string]: unknown };
+
+export type PostContactsRequestsByRequestIdAccept200 = ApiEnvelope & {
+  data?: SafeContactRequest;
+};
+
+export type PostContactsRequestsByRequestIdGuardianApprovalBody = { [key: string]: unknown };
+
+export type PostContactsRequestsByRequestIdGuardianApproval200 = ApiEnvelope & {
+  data?: SafeContactRequest;
+};
+
+export type PostContactsRequestsByRequestIdRejectBody = { [key: string]: unknown };
+
+export type PostContactsRequestsByRequestIdReject200 = ApiEnvelope & {
+  data?: SafeContactRequest;
+};
+
+export type PostConversationsByConversationIdInvitations201 = ApiEnvelope & {
+  data?: SafeGroupInvitationList;
+};
+
 export type PutConversationsByConversationIdVanishBody = { [key: string]: unknown };
 
 export type PostConversationsGroupBody = { [key: string]: unknown };
@@ -488,6 +746,18 @@ export type PostEconomySuperchatBody = { [key: string]: unknown };
 
 export type PostEconomyWebhooksRazorpayBody = { [key: string]: unknown };
 
+export type PostEligibilityEnrollmentsByEnrollmentIdChallenges201 = ApiEnvelope & {
+  data?: AssuranceChallengeReceipt;
+};
+
+export type PostEligibilityEnrollmentsByEnrollmentIdStatus200 = ApiEnvelope & {
+  data?: SafeEnrollmentProgress;
+};
+
+export type PostEligibilityEnrollmentsPrescreen200 = ApiEnvelope & {
+  data?: SafeEnrollmentStatus;
+};
+
 export type PostEventsBody = {
   /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
   coverMediaId?: string;
@@ -495,6 +765,28 @@ export type PostEventsBody = {
  };
 
 export type PostEventsByIdRsvpBody = { [key: string]: unknown };
+
+export type GetGroupInvitations200 = ApiEnvelope & {
+  data?: SafeGroupInvitationList;
+};
+
+export type DeleteGroupInvitationsByInvitationId200 = ApiEnvelope & {
+  data?: NullReceipt;
+};
+
+export type PostGroupInvitationsByInvitationIdAccept200 = ApiEnvelope & {
+  data?: SafeGroupAcceptanceResult;
+};
+
+export type PostGroupInvitationsByInvitationIdGuardianApproval200 = ApiEnvelope & {
+  data?: SafeGroupAcceptanceResult;
+};
+
+export type PostGroupInvitationsByInvitationIdRejectBody = { [key: string]: unknown };
+
+export type PostGroupInvitationsByInvitationIdReject200 = ApiEnvelope & {
+  data?: NullReceipt;
+};
 
 export type PostHighlightsBody = {
   /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */

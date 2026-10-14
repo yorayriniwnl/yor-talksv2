@@ -1518,24 +1518,26 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/InviteToGroupRequest"}}}}
       responses:
-        "200":
+        "201":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /conversations/{conversationId}/messages:
     get:
       operationId: getConversationsByConversationIdMessages
@@ -2102,11 +2104,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /group-invitations/{invitationId}:
     delete:
       operationId: deleteGroupInvitationsByInvitationId
@@ -2126,11 +2136,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/NullReceipt"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /group-invitations/{invitationId}/accept:
     post:
       operationId: postGroupInvitationsByInvitationIdAccept
@@ -2144,24 +2162,26 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GroupInvitationDecisionRequest"}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupAcceptanceResult"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /group-invitations/{invitationId}/guardian-approval:
     post:
       operationId: postGroupInvitationsByInvitationIdGuardianApproval
@@ -2175,24 +2195,26 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GroupInvitationDecisionRequest"}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupAcceptanceResult"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /group-invitations/{invitationId}/reject:
     post:
       operationId: postGroupInvitationsByInvitationIdReject
@@ -2219,11 +2241,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/NullReceipt"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /healthz:
     get:
       operationId: getHealthz
@@ -6278,7 +6308,14 @@ components:
     GuardianAuthorizationList: {"type":"array","maxItems":100,"items":{"$ref":"#/components/schemas/GuardianAuthorizationReceipt"}}
     GuardianWithdrawalReceipt: {"type":"boolean","const":true}
     EligibilityDecision: {"type":"object","additionalProperties":false,"required":["experience","activated","capabilities","maximumContentRating","policyVersions","revision","reason","publicBrowsingAllowed"],"properties":{"experience":{"type":"string","enum":["unknown","under_13","teen_13_17","adult_18_plus"]},"activated":{"type":"boolean"},"capabilities":{"type":"object","additionalProperties":false,"required":["social","publish","messaging","payments","seller","memberships","live","rtc","ai","analytics","profiling"],"properties":{"social":{"type":"boolean"},"publish":{"type":"boolean"},"messaging":{"type":"boolean"},"payments":{"type":"boolean"},"seller":{"type":"boolean"},"memberships":{"type":"boolean"},"live":{"type":"boolean"},"rtc":{"type":"boolean"},"ai":{"type":"boolean"},"analytics":{"type":"boolean"},"profiling":{"type":"boolean"}}},"maximumContentRating":{"type":"string","enum":["child_safe","regular","mature"]},"policyVersions":{"type":"array","items":{"type":"string"}},"revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},"reason":{"type":["string","null"],"enum":[null,"verification_required","territory_unavailable","guardian_required","reassessment_required","account_restricted"]},"publicBrowsingAllowed":{"type":"boolean"}}}
+    InviteToGroupRequest: {"type":"object","additionalProperties":false,"required":["inviteeIds"],"properties":{"inviteeIds":{"type":"array","minItems":1,"maxItems":99,"uniqueItems":true,"items":{"type":"string","format":"uuid"}}}}
     ContactRequestCreate: {"type":"object","additionalProperties":false,"required":["recipientId"],"properties":{"recipientId":{"type":"string","format":"uuid"}}}
     SafeContactRequest: {"type":"object","additionalProperties":false,"required":["id","initiatorId","recipientId","status","createdAt","updatedAt","requiresYourAcceptance","guardianApprovalRequired"],"properties":{"id":{"type":"string","format":"uuid"},"initiatorId":{"type":"string","format":"uuid"},"recipientId":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["pending","accepted","rejected","revoked"]},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"requiresYourAcceptance":{"type":"boolean"},"guardianApprovalRequired":{"type":"boolean"}}}
     ContactRequestList: {"type":"array","maxItems":200,"items":{"$ref":"#/components/schemas/SafeContactRequest"}}
+    ContactRules: {"type":"object","additionalProperties":false,"required":["decision","guardianContactsRequired","guardianPolicyVersions","guardianNoticeVersions"],"properties":{"decision":{"$ref":"#/components/schemas/EligibilityDecision"},"guardianContactsRequired":{"type":"boolean"},"guardianPolicyVersions":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","minLength":1,"maxLength":128}},"guardianNoticeVersions":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","minLength":1,"maxLength":128}}}}
+    GroupInvitationDecisionRequest: {"type":"object","additionalProperties":false,"required":["updatedAt"],"properties":{"updatedAt":{"type":"string","format":"date-time"}}}
+    SafeGroupInvitation: {"type":"object","additionalProperties":false,"required":["id","conversationId","inviterId","recipientId","status","memberIds","createdAt","updatedAt","requiresYourAcceptance","guardianApprovalRequired"],"properties":{"id":{"type":"string","format":"uuid"},"conversationId":{"type":"string","format":"uuid"},"inviterId":{"type":"string","format":"uuid"},"recipientId":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["pending","accepted","rejected","revoked"]},"memberIds":{"type":"array","maxItems":100,"items":{"type":"string","format":"uuid"}},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"requiresYourAcceptance":{"type":"boolean"},"guardianApprovalRequired":{"type":"boolean"}}}
+    SafeGroupInvitationList: {"type":"array","maxItems":200,"items":{"$ref":"#/components/schemas/SafeGroupInvitation"}}
+    SafeGroupAcceptanceResult: {"type":"object","additionalProperties":false,"required":["invitation","refreshedInvitations"],"properties":{"invitation":{"$ref":"#/components/schemas/SafeGroupInvitation"},"refreshedInvitations":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}
+    NullReceipt: {"type":"null"}
     ContactWithdrawalReceipt: {"type":"null"}

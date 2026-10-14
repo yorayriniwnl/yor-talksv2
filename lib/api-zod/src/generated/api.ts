@@ -403,7 +403,25 @@ export const PostAuthRefreshResponse = zod.object({
 /**
  * @summary Post /auth/register
  */
-export const PostAuthRegisterBody = zod.record(zod.string(), zod.unknown())
+export const postAuthRegisterBodyRegistrationNonceMin = 32;
+export const postAuthRegisterBodyRegistrationNonceMax = 128;
+
+export const postAuthRegisterBodyUsernameRegExp = new RegExp('^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$');
+export const postAuthRegisterBodyPasswordMin = 8;
+
+export const postAuthRegisterBodyFullNameMin = 2;
+
+
+
+export const PostAuthRegisterBody = zod.object({
+  "enrollmentId": zod.string().uuid(),
+  "registrationNonce": zod.string().min(postAuthRegisterBodyRegistrationNonceMin).max(postAuthRegisterBodyRegistrationNonceMax).describe('Short-lived opaque one-time registration credential. Never place it in a URL or log.'),
+  "username": zod.string().regex(postAuthRegisterBodyUsernameRegExp),
+  "email": zod.string().email(),
+  "password": zod.string().min(postAuthRegisterBodyPasswordMin),
+  "fullName": zod.string().min(postAuthRegisterBodyFullNameMin),
+  "acceptedTerms": zod.unknown()
+})
 
 export const PostAuthRegisterResponse = zod.object({
   "success": zod.boolean(),
@@ -829,6 +847,165 @@ export const PostCommunitiesByIdLeaveResponse = zod.object({
 
 
 /**
+ * @summary Get /contacts/requests
+ */
+export const getContactsRequestsResponseTwoDataMax = 200;
+
+
+
+export const GetContactsRequestsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "initiatorId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})).max(getContactsRequestsResponseTwoDataMax)
+}))
+
+
+/**
+ * @summary Post /contacts/requests
+ */
+export const PostContactsRequestsBody = zod.object({
+  "recipientId": zod.string().uuid()
+})
+
+export const PostContactsRequestsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "id": zod.string().uuid(),
+  "initiatorId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})
+}))
+
+
+/**
+ * @summary Delete /contacts/requests/{requestId}
+ */
+export const DeleteContactsRequestsByRequestIdParams = zod.object({
+  "requestId": zod.coerce.string()
+})
+
+export const DeleteContactsRequestsByRequestIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.null()
+}))
+
+
+/**
+ * @summary Post /contacts/requests/{requestId}/accept
+ */
+export const PostContactsRequestsByRequestIdAcceptParams = zod.object({
+  "requestId": zod.coerce.string()
+})
+
+export const PostContactsRequestsByRequestIdAcceptBody = zod.record(zod.string(), zod.unknown())
+
+export const PostContactsRequestsByRequestIdAcceptResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "id": zod.string().uuid(),
+  "initiatorId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})
+}))
+
+
+/**
+ * @summary Post /contacts/requests/{requestId}/guardian-approval
+ */
+export const PostContactsRequestsByRequestIdGuardianApprovalParams = zod.object({
+  "requestId": zod.coerce.string()
+})
+
+export const PostContactsRequestsByRequestIdGuardianApprovalBody = zod.record(zod.string(), zod.unknown())
+
+export const PostContactsRequestsByRequestIdGuardianApprovalResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "id": zod.string().uuid(),
+  "initiatorId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})
+}))
+
+
+/**
+ * @summary Post /contacts/requests/{requestId}/reject
+ */
+export const PostContactsRequestsByRequestIdRejectParams = zod.object({
+  "requestId": zod.coerce.string()
+})
+
+export const PostContactsRequestsByRequestIdRejectBody = zod.record(zod.string(), zod.unknown())
+
+export const PostContactsRequestsByRequestIdRejectResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "id": zod.string().uuid(),
+  "initiatorId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})
+}))
+
+
+/**
  * @summary Get /conversations
  */
 export const GetConversationsResponse = zod.object({
@@ -838,6 +1015,49 @@ export const GetConversationsResponse = zod.object({
   "errors": zod.array(zod.string()),
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Post /conversations/{conversationId}/invitations
+ */
+export const PostConversationsByConversationIdInvitationsParams = zod.object({
+  "conversationId": zod.coerce.string()
+})
+
+export const postConversationsByConversationIdInvitationsBodyInviteeIdsMax = 99;
+
+
+
+export const PostConversationsByConversationIdInvitationsBody = zod.object({
+  "inviteeIds": zod.array(zod.string().uuid()).min(1).max(postConversationsByConversationIdInvitationsBodyInviteeIdsMax)
+})
+
+export const postConversationsByConversationIdInvitationsResponseTwoDataItemMemberIdsMax = 100;
+
+export const postConversationsByConversationIdInvitationsResponseTwoDataMax = 200;
+
+
+
+export const PostConversationsByConversationIdInvitationsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(postConversationsByConversationIdInvitationsResponseTwoDataItemMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})).max(postConversationsByConversationIdInvitationsResponseTwoDataMax)
+}))
 
 
 /**
@@ -1040,6 +1260,108 @@ export const PostEconomyWebhooksRazorpayResponse = zod.object({
 
 
 /**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/challenges
+ */
+export const PostEligibilityEnrollmentsByEnrollmentIdChallengesParams = zod.object({
+  "enrollmentId": zod.coerce.string()
+})
+
+export const postEligibilityEnrollmentsByEnrollmentIdChallengesBodyRegistrationNonceMin = 32;
+export const postEligibilityEnrollmentsByEnrollmentIdChallengesBodyRegistrationNonceMax = 128;
+
+
+
+export const PostEligibilityEnrollmentsByEnrollmentIdChallengesBody = zod.object({
+  "registrationNonce": zod.string().min(postEligibilityEnrollmentsByEnrollmentIdChallengesBodyRegistrationNonceMin).max(postEligibilityEnrollmentsByEnrollmentIdChallengesBodyRegistrationNonceMax),
+  "purpose": zod.enum(['guardian_authorization', 'age_assessment'])
+})
+
+export const PostEligibilityEnrollmentsByEnrollmentIdChallengesResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "challengeId": zod.string().uuid(),
+  "nextStep": zod.unknown(),
+  "redirectUrl": zod.string().url(),
+  "expiresAt": zod.coerce.date()
+})
+}))
+
+
+/**
+ * @summary Post /eligibility/enrollments/{enrollmentId}/status
+ */
+export const PostEligibilityEnrollmentsByEnrollmentIdStatusParams = zod.object({
+  "enrollmentId": zod.coerce.string()
+})
+
+export const postEligibilityEnrollmentsByEnrollmentIdStatusBodyRegistrationNonceMin = 32;
+export const postEligibilityEnrollmentsByEnrollmentIdStatusBodyRegistrationNonceMax = 128;
+
+
+
+export const PostEligibilityEnrollmentsByEnrollmentIdStatusBody = zod.object({
+  "registrationNonce": zod.string().min(postEligibilityEnrollmentsByEnrollmentIdStatusBodyRegistrationNonceMin).max(postEligibilityEnrollmentsByEnrollmentIdStatusBodyRegistrationNonceMax)
+})
+
+export const PostEligibilityEnrollmentsByEnrollmentIdStatusResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "status": zod.enum(['unavailable', 'verification_required', 'authorized']),
+  "nextStep": zod.union([zod.literal(null),zod.literal('guardian_authorization'),zod.literal('age_assessment'),zod.literal('complete_registration')]).nullable(),
+  "enrollment": zod.object({
+  "id": zod.string().uuid(),
+  "expiresAt": zod.coerce.date()
+}).optional()
+})
+}))
+
+
+/**
+ * @summary Post /eligibility/enrollments/prescreen
+ */
+export const postEligibilityEnrollmentsPrescreenBodyTerritoryRegExp = new RegExp('^[A-Z]{2}$');
+
+
+export const PostEligibilityEnrollmentsPrescreenBody = zod.object({
+  "requestedExperience": zod.enum(['under_13', 'teen_13_17', 'adult_18_plus']),
+  "territory": zod.string().regex(postEligibilityEnrollmentsPrescreenBodyTerritoryRegExp)
+})
+
+export const postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMin = 32;
+export const postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMax = 128;
+
+
+
+export const PostEligibilityEnrollmentsPrescreenResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "status": zod.enum(['unavailable', 'verification_required', 'authorized']),
+  "nextStep": zod.union([zod.literal(null),zod.literal('guardian_authorization'),zod.literal('age_assessment'),zod.literal('complete_registration')]).nullable(),
+  "enrollment": zod.object({
+  "id": zod.string().uuid(),
+  "registrationNonce": zod.string().min(postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMin).max(postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMax),
+  "expiresAt": zod.coerce.date()
+}).optional()
+})
+}))
+
+
+/**
  * @summary Get /events
  */
 export const GetEventsResponse = zod.object({
@@ -1139,6 +1461,185 @@ export const GetFeedTrendingResponse = zod.object({
   "errors": zod.array(zod.string()),
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Get /group-invitations
+ */
+export const getGroupInvitationsResponseTwoDataItemMemberIdsMax = 100;
+
+export const getGroupInvitationsResponseTwoDataMax = 200;
+
+
+
+export const GetGroupInvitationsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(getGroupInvitationsResponseTwoDataItemMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})).max(getGroupInvitationsResponseTwoDataMax)
+}))
+
+
+/**
+ * @summary Delete /group-invitations/{invitationId}
+ */
+export const DeleteGroupInvitationsByInvitationIdParams = zod.object({
+  "invitationId": zod.coerce.string()
+})
+
+export const DeleteGroupInvitationsByInvitationIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.null()
+}))
+
+
+/**
+ * @summary Post /group-invitations/{invitationId}/accept
+ */
+export const PostGroupInvitationsByInvitationIdAcceptParams = zod.object({
+  "invitationId": zod.coerce.string()
+})
+
+export const PostGroupInvitationsByInvitationIdAcceptBody = zod.object({
+  "updatedAt": zod.coerce.date()
+})
+
+export const postGroupInvitationsByInvitationIdAcceptResponseTwoDataInvitationMemberIdsMax = 100;
+
+export const postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsItemMemberIdsMax = 100;
+
+export const postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsMax = 200;
+
+
+
+export const PostGroupInvitationsByInvitationIdAcceptResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "invitation": zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataInvitationMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+}),
+  "refreshedInvitations": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsMax)
+})
+}))
+
+
+/**
+ * @summary Post /group-invitations/{invitationId}/guardian-approval
+ */
+export const PostGroupInvitationsByInvitationIdGuardianApprovalParams = zod.object({
+  "invitationId": zod.coerce.string()
+})
+
+export const PostGroupInvitationsByInvitationIdGuardianApprovalBody = zod.object({
+  "updatedAt": zod.coerce.date()
+})
+
+export const postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataInvitationMemberIdsMax = 100;
+
+export const postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsItemMemberIdsMax = 100;
+
+export const postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsMax = 200;
+
+
+
+export const PostGroupInvitationsByInvitationIdGuardianApprovalResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "invitation": zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataInvitationMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+}),
+  "refreshedInvitations": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "conversationId": zod.string().uuid(),
+  "inviterId": zod.string().uuid(),
+  "recipientId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
+  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "requiresYourAcceptance": zod.boolean(),
+  "guardianApprovalRequired": zod.boolean()
+})).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsMax)
+})
+}))
+
+
+/**
+ * @summary Post /group-invitations/{invitationId}/reject
+ */
+export const PostGroupInvitationsByInvitationIdRejectParams = zod.object({
+  "invitationId": zod.coerce.string()
+})
+
+export const PostGroupInvitationsByInvitationIdRejectBody = zod.record(zod.string(), zod.unknown())
+
+export const PostGroupInvitationsByInvitationIdRejectResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.null()
+}))
 
 
 /**

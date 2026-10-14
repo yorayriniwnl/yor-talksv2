@@ -1,4 +1,4 @@
-import { enqueueTelemetry, hasTelemetryConsent, initTelemetryBatcher, setTelemetryConsent } from './telemetryBatcher';
+import { enqueueTelemetry, hasTelemetryConsent, initTelemetryBatcher, setTelemetryConsent, setTelemetryEligibility } from './telemetryBatcher';
 
 type TelemetryEvent = {
   type: string;
@@ -7,13 +7,10 @@ type TelemetryEvent = {
 };
 
 export function sendTelemetry(event: TelemetryEvent) {
+  if (!hasTelemetryConsent()) return;
   try {
     enqueueTelemetry(event as any);
-  } catch (e) {
-    // fallback logging
-    // eslint-disable-next-line no-console
-    console.debug('[telemetry] fallback', event.type, event.payload ?? {});
-  }
+  } catch { /* Optional telemetry must never fall back to local or console logging. */ }
 }
 
 export function initTelemetry() {
@@ -24,6 +21,6 @@ export function initTelemetry() {
   }
 }
 
-export { hasTelemetryConsent, setTelemetryConsent };
+export { hasTelemetryConsent, setTelemetryConsent, setTelemetryEligibility };
 
 export default { sendTelemetry, initTelemetry };

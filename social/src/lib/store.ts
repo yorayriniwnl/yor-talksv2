@@ -39,6 +39,8 @@ import { utcTimestamp } from '@/lib/timestamps';
 import { DEFAULT_WORLD_PREFERENCES, type WorldPreferences } from '@/lib/world-preferences';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { DEFAULT_STORY_TEXT_STYLE, type StoryTextStyle } from '@/lib/story-text-style';
+import { setTelemetryEligibility } from '@/lib/telemetryBatcher';
+import type { EligibilityDecision } from '@/lib/eligibility-contract';
 
 // ── Types ────────────────────────────────────────────────────────────────
 export type User = {
@@ -403,9 +405,37 @@ function mapPrivacy(user: BackendUser): PrivacySettings {
 function needsTermsAcceptance(user: BackendUser | User): boolean {
   return publicBetaConfig.publicBeta && (
     user.termsVersion !== publicBetaConfig.termsVersion ||
-    !user.termsAcceptedAt ||
-    !user.ageConfirmedAt
+    !user.termsAcceptedAt
   );
+}
+
+function hasSocialEligibility(decision: EligibilityDecision | null | undefined): boolean {
+  return decision?.activated === true && decision.capabilities.social === true;
+}
+
+async function loadEligibilityForSession(
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void,
+  get: () => AppState,
+): Promise<EligibilityDecision | null> {
+  const ownerId = get().currentUser?.id;
+  if (!ownerId) {
+    set({ eligibility: null, eligibilityLoaded: false });
+    setTelemetryEligibility(false, null);
+    return null;
+  }
+  set({ eligibility: null, eligibilityLoaded: false });
+  setTelemetryEligibility(false, ownerId);
+  try {
+    const decision = await api.getMyEligibility();
+    if (get().currentUser?.id !== ownerId) return null;
+    set({ eligibility: decision, eligibilityLoaded: true });
+    setTelemetryEligibility(hasSocialEligibility(decision) && decision.experience === 'adult_18_plus' && decision.capabilities.analytics, ownerId);
+    return decision;
+  } catch {
+    if (get().currentUser?.id === ownerId) set({ eligibility: null, eligibilityLoaded: true });
+    setTelemetryEligibility(false, ownerId);
+    return null;
+  }
 }
 
 function mapStory(s: BackendStory, currentUserId?: string): Story {
@@ -710,6 +740,8 @@ export type MessageDraft = {
 
 interface AppState {
   currentUser: User | null;
+  eligibility: EligibilityDecision | null;
+  eligibilityLoaded: boolean;
   worldPreferences: WorldPreferences;
   tokens: AuthTokens | null;
   isInitializing: boolean;
@@ -762,12 +794,13 @@ interface AppState {
   loginWithGoogle: (credential: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   loginWithEmailOtp: (email: string, code: string, totpCode?: string, challengeId?: string) => Promise<TwoFactorChallenge | null>;
   completeTwoFactorLogin: (challengeId: string) => Promise<void>;
-  register: (username: string, email: string, password: string, fullName: string, acceptedTerms: boolean, confirmedAge: boolean) => Promise<void>;
+  register: (username: string, email: string, password: string, fullName: string, acceptedTerms: boolean, enrollmentId: string, registrationNonce: string) => Promise<void>;
   acceptCurrentTerms: () => Promise<void>;
   logout: () => Promise<void>;
   expireSession: () => void;
   requestPasswordReset: (email: string) => Promise<void>;
   initialize: () => Promise<void>;
+  refreshEligibility: () => Promise<void>;
   loadWorldPreferences: () => Promise<void>;
   loadAchievements: () => Promise<void>;
 
@@ -884,8 +917,11 @@ function clearPrivateSessionState(
   notificationReadRequests.clear();
   safetyRelationshipRequests.clear();
   profileRequests.clear();
+  setTelemetryEligibility(false, null);
   set({
     currentUser: null,
+    eligibility: null,
+    eligibilityLoaded: false,
     tokens: null,
     authError: null,
     feedCursor: null,
@@ -1165,6 +1201,8 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      eligibility: null,
+      eligibilityLoaded: false,
       worldPreferences: DEFAULT_WORLD_PREFERENCES,
       tokens: null,
       isInitializing: true,
@@ -1229,7 +1267,8 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
+          const decision = await loadEligibilityForSession(set, get);
+          if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
@@ -1249,7 +1288,8 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
+          const decision = await loadEligibilityForSession(set, get);
+          if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
@@ -1269,7 +1309,8 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
+          const decision = await loadEligibilityForSession(set, get);
+          if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
@@ -1288,7 +1329,8 @@ export const useAppStore = create<AppState>()(
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
-          if (!needsTermsAcceptance(result.user)) {
+          const decision = await loadEligibilityForSession(set, get);
+          if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
@@ -1298,10 +1340,10 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      register: async (username, email, password, fullName, acceptedTerms, confirmedAge) => {
+      register: async (username, email, password, fullName, acceptedTerms, enrollmentId, registrationNonce) => {
         set({ authError: null });
         try {
-          await api.register({ username, email, password, fullName, acceptedTerms, confirmedAge });
+          await api.register({ username, email, password, fullName, acceptedTerms, enrollmentId, registrationNonce });
           // Registration is intentionally not an authenticated session. The
           // account must prove ownership of its email address first.
           setStoredTokens(null);
@@ -1322,8 +1364,11 @@ export const useAppStore = create<AppState>()(
             privacy: mapPrivacy(result.user),
             users: { ...state.users, [mapped.id]: mapped },
           }));
-          setupRealtime(set, get);
-          hydrateSessionData(get);
+          const decision = await loadEligibilityForSession(set, get);
+          if (hasSocialEligibility(decision)) {
+            setupRealtime(set, get);
+            hydrateSessionData(get);
+          }
         } catch (err) {
           set({ authError: err instanceof ApiError ? err.message : 'Could not save terms acceptance' });
           throw err;
@@ -1384,15 +1429,22 @@ export const useAppStore = create<AppState>()(
 
           // Identity restoration must not wait on optional social datasets.
           const currentUser = get().currentUser;
-          if (currentUser && !needsTermsAcceptance(currentUser)) {
-            setupRealtime(set, get);
-            hydrateSessionData(get);
+          if (currentUser) {
+            const decision = await loadEligibilityForSession(set, get);
+            if (!needsTermsAcceptance(currentUser) && hasSocialEligibility(decision)) {
+              setupRealtime(set, get);
+              hydrateSessionData(get);
+            }
           }
         })().finally(() => {
           set({ isInitializing: false });
           sessionInitialization = null;
         });
         return sessionInitialization;
+      },
+
+      refreshEligibility: async () => {
+        await loadEligibilityForSession(set, get);
       },
 
       loadWorldPreferences: async () => {
@@ -1807,6 +1859,8 @@ export const useAppStore = create<AppState>()(
       },
 
       markDirectMessageSeen: async (messageId) => {
+        const eligibility = get().eligibility;
+        if (!hasSocialEligibility(eligibility) || eligibility?.capabilities.messaging !== true) return;
         try {
           const updated = mapMessage(await api.markMessageSeen(messageId));
           set((state) => {

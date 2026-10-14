@@ -6,6 +6,28 @@
 import type { StoryTextStyle } from '@/lib/story-text-style';
 import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
 import { parseCheckoutHistory } from './checkout-contract';
+import {
+  challengeReceiptSchema,
+  challengeStatusSchema,
+  contactRequestListSchema,
+  contactRequestSchema,
+  eligibilityDecisionSchema,
+  enrollmentPrescreenSchema,
+  enrollmentProgressSchema,
+  groupInvitationAcceptanceSchema,
+  groupInvitationListSchema,
+  nullReceiptSchema,
+  guardianAuthorizationSchema,
+  guardianWithdrawalReceiptSchema,
+  type ChallengeReceipt,
+  type ChallengeStatus,
+  type ContactRequestSummary,
+  type EligibilityDecision,
+  type EnrollmentPrescreen,
+  type EnrollmentProgress,
+  type InvitationSummary,
+  type GuardianAuthorizationSummary,
+} from './eligibility-contract';
 
 export interface Tokens {
   accessToken: string;
@@ -688,9 +710,9 @@ export const api = {
       return { ok: false, status: 0 };
     }
   },
-  register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; confirmedAge: boolean }) =>
+  register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; enrollmentId: string; registrationNonce: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
-  acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true, confirmedAge: true }) }),
+  acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true }) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>
     request<AuthLoginResult>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
@@ -738,6 +760,42 @@ export const api = {
 
   // ---- Users ----
   getCurrentUser: () => request<BackendUser>('/users/me'),
+  getMyEligibility: async (): Promise<EligibilityDecision> => eligibilityDecisionSchema.parse(await request<unknown>('/users/me/eligibility')),
+  startOwnerEligibilityChallenge: async (input: { purpose: 'age_assessment'; territory: string } | { purpose: 'guardian_authorization'; territory: string; purposes: Array<'account_collection' | 'account_activation' | 'social_contact'> }): Promise<ChallengeReceipt> =>
+    challengeReceiptSchema.parse(await request<unknown>('/users/me/eligibility/challenges', { method: 'POST', body: JSON.stringify(input) })),
+  getOwnerEligibilityChallenge: async (challengeId: string): Promise<ChallengeStatus> =>
+    challengeStatusSchema.parse(await request<unknown>(`/users/me/eligibility/challenges/${encodeURIComponent(challengeId)}`)),
+  getGuardianAuthorizations: async (): Promise<GuardianAuthorizationSummary[]> => {
+    const value = await request<unknown>('/users/me/guardian-authorizations');
+    if (!Array.isArray(value)) throw new Error('Verification information is unavailable.');
+    return value.map((item) => guardianAuthorizationSchema.parse(item));
+  },
+  withdrawGuardianAuthorization: async (authorizationId: string): Promise<true> =>
+    guardianWithdrawalReceiptSchema.parse(await request<unknown>(`/users/me/guardian-authorizations/${encodeURIComponent(authorizationId)}/withdraw`, { method: 'POST' })),
+  getContactRequests: async (): Promise<ContactRequestSummary[]> =>
+    contactRequestListSchema.parse(await request<unknown>('/contacts/requests')),
+  createContactRequest: async (recipientId: string): Promise<ContactRequestSummary> =>
+    contactRequestSchema.parse(await request<unknown>('/contacts/requests', { method: 'POST', body: JSON.stringify({ recipientId }) })),
+  decideContactRequest: async (requestId: string, decision: 'accept' | 'guardian-approval' | 'reject'): Promise<ContactRequestSummary> =>
+    contactRequestSchema.parse(await request<unknown>(`/contacts/requests/${encodeURIComponent(requestId)}/${decision}`, { method: 'POST' })),
+  withdrawContactRequest: async (requestId: string): Promise<null> =>
+    nullReceiptSchema.parse(await request<unknown>(`/contacts/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' })),
+  getGroupInvitations: async (): Promise<InvitationSummary[]> =>
+    groupInvitationListSchema.parse(await request<unknown>('/group-invitations')),
+  inviteToGroup: async (conversationId: string, inviteeIds: string[]): Promise<InvitationSummary[]> =>
+    groupInvitationListSchema.parse(await request<unknown>(`/conversations/${encodeURIComponent(conversationId)}/invitations`, { method: 'POST', body: JSON.stringify({ inviteeIds }) })),
+  acceptGroupInvitation: async (invitationId: string, updatedAt: string) =>
+    groupInvitationAcceptanceSchema.parse(await request<unknown>(`/group-invitations/${encodeURIComponent(invitationId)}/accept`, { method: 'POST', body: JSON.stringify({ updatedAt }) })),
+  approveGroupInvitation: async (invitationId: string, updatedAt: string) =>
+    groupInvitationAcceptanceSchema.parse(await request<unknown>(`/group-invitations/${encodeURIComponent(invitationId)}/guardian-approval`, { method: 'POST', body: JSON.stringify({ updatedAt }) })),
+  rejectGroupInvitation: async (invitationId: string): Promise<null> => nullReceiptSchema.parse(await request<unknown>(`/group-invitations/${encodeURIComponent(invitationId)}/reject`, { method: 'POST' })),
+  revokeGroupInvitation: async (invitationId: string): Promise<null> => nullReceiptSchema.parse(await request<unknown>(`/group-invitations/${encodeURIComponent(invitationId)}`, { method: 'DELETE' })),
+  prescreenEligibility: async (input: { requestedExperience: 'under_13' | 'teen_13_17' | 'adult_18_plus'; territory: string }): Promise<EnrollmentPrescreen> =>
+    enrollmentPrescreenSchema.parse(await request<unknown>('/eligibility/enrollments/prescreen', { method: 'POST', body: JSON.stringify(input) }, false)),
+  getEnrollmentProgress: async (enrollmentId: string, registrationNonce: string): Promise<EnrollmentProgress> =>
+    enrollmentProgressSchema.parse(await request<unknown>(`/eligibility/enrollments/${encodeURIComponent(enrollmentId)}/status`, { method: 'POST', body: JSON.stringify({ registrationNonce }) }, false)),
+  startEnrollmentChallenge: async (enrollmentId: string, registrationNonce: string, purpose: 'age_assessment' | 'guardian_authorization'): Promise<ChallengeReceipt> =>
+    challengeReceiptSchema.parse(await request<unknown>(`/eligibility/enrollments/${encodeURIComponent(enrollmentId)}/challenges`, { method: 'POST', body: JSON.stringify({ registrationNonce, purpose }) }, false)),
   exportMyData: () => request<Record<string, unknown>>('/users/me/export'),
   deleteAccount: (password: string) => request<null>('/users/me', { method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE', password }) }),
   getProfile: (userId: string) => request<BackendUser>(`/users/${userId}`),

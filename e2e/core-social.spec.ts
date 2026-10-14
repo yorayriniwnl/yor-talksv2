@@ -24,6 +24,8 @@ const user = {
   termsAcceptedAt: "2026-08-30T00:00:00.000Z",
   ageConfirmedAt: "2026-08-30T00:00:00.000Z",
 };
+const allCapabilities = { social: true, publish: true, messaging: true, payments: true, seller: true, memberships: true, live: true, rtc: true, ai: true, analytics: true, profiling: true };
+const adultEligibility = { experience: 'adult_18_plus', activated: true, capabilities: allCapabilities, maximumContentRating: 'mature', policyVersions: ['test-policy-v1'], revision: 'a'.repeat(64), reason: null, publicBrowsingAllowed: true };
 
 function post(content: string, id: string) {
   return {
@@ -55,7 +57,7 @@ async function json(route: Route, data: unknown, meta: Record<string, unknown> =
   });
 }
 
-async function installApiBoundary(page: Page, profile = user) {
+async function installApiBoundary(page: Page, profile = user, eligibility: unknown | (() => unknown) = adultEligibility, guardianAuthorizations: unknown | (() => unknown) = []) {
   const unhandled: string[] = [];
   page.on('close', () => expect(unhandled, 'Every mocked API route must be explicit').toEqual([]));
   await page.route("**/socket.io/**", (route) => route.abort());
@@ -68,6 +70,15 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, { accessToken: "browser-smoke-access-token" });
     }
     if (path === "/users/me" && request.method() === "GET") return json(route, profile);
+    if (path === '/users/me/eligibility' && request.method() === 'GET') {
+      const value = typeof eligibility === 'function' ? eligibility() : eligibility;
+      if (value === null) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Verification is temporarily unavailable' }) });
+      return json(route, value);
+    }
+    if (path === '/users/me/guardian-authorizations' && request.method() === 'GET') {
+      const value = typeof guardianAuthorizations === 'function' ? guardianAuthorizations() : guardianAuthorizations;
+      return json(route, value);
+    }
     if (path === "/users/me/premium-profile" && request.method() === "GET") return json(route, {
       selection: { bioStyleId: 'default', messageFontId: 'default', storyFontId: 'default', appIconId: 'yor-default' },
       options: { bioStyles: [{ id: 'default', label: 'Default' }], messageStyles: [{ id: 'default', label: 'Default' }], storyStyles: [{ id: 'default', label: 'Default' }], appIcons: [{ id: 'yor-default', label: 'Yor', platforms: ['web'] }] },
@@ -89,15 +100,69 @@ async function installApiBoundary(page: Page, profile = user) {
       return json(route, post(payload.content, "292d72b6-6bd1-4693-91e8-b4dc32302c7c"));
     }
 
-    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/communities', '/creator/workspace', '/achievements/me', `/users/${user.id}/following`, `/users/${user.id}/followers`, `/users/${user.id}/feed`, `/users/${user.id}/showcases`, `/users/${user.id}/profile-comments`, `/users/${user.id}/pinned-posts`];
+    const ownerLists = ['/following', '/followers', '/feed', '/showcases', '/profile-comments', '/pinned-posts'].map((suffix) => '/users/' + user.id + suffix);
+    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/communities', '/creator/workspace', '/achievements/me', ...ownerLists];
     if (request.method() === 'GET' && emptyLists.includes(path)) return json(route, []);
     if (request.method() === 'GET' && ['/posts/liked', '/posts/saved'].includes(path)) return json(route, [], { hasMore: false, nextCursor: null });
-    if (request.method() === 'GET' && path === `/users/${user.id}/posts`) return json(route, [], { hasMore: false, nextCursor: null });
+    if (request.method() === 'GET' && path === '/users/' + user.id + '/posts') return json(route, [], { hasMore: false, nextCursor: null });
     unhandled.push(`${request.method()} ${path}`);
     await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });
     throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
 }
+
+test('restricted eligibility states keep social routes closed and leave owner controls reachable', async ({ page }) => {
+  const noCapabilities = Object.fromEntries(Object.keys(allCapabilities).map((key) => [key, false]));
+  const decision = (experience: string, reason: string) => ({ ...adultEligibility, experience, activated: false, capabilities: noCapabilities, reason });
+  let currentEligibility: unknown = decision('unknown', 'verification_required');
+  let currentGuardians: unknown = [];
+  await installApiBoundary(page, user, () => currentEligibility, () => currentGuardians);
+
+  const cases = [
+    { title: 'Verification is needed', value: decision('unknown', 'verification_required'), guardians: [] },
+    { title: 'A new check is needed', value: decision('adult_18_plus', 'reassessment_required'), guardians: [] },
+    { title: 'Verification is not available here yet', value: decision('adult_18_plus', 'territory_unavailable'), guardians: [] },
+    { title: 'Guardian permission is needed', value: decision('teen_13_17', 'guardian_required'), guardians: [], guardianStepPending: true },
+    { title: 'A parent or guardian step is needed', value: decision('under_13', 'guardian_required'), guardians: [{ id: '30000000-0000-4000-8000-000000000002', purposes: ['account_collection'], status: 'withdrawn', expiresAt: '2027-01-01T00:00:00.000Z' }], profileUnavailable: true },
+    { title: 'We could not check right now', value: null, guardians: [] },
+    { title: 'We could not check right now', value: { ...adultEligibility, privateEvidence: 'must be rejected' }, guardians: [] },
+  ];
+
+  for (const item of cases) {
+    currentEligibility = item.value;
+    currentGuardians = item.guardians;
+    await page.goto('/messages/20000000-0000-4000-8000-000000000001');
+    await expect(page).toHaveURL(/\/eligibility$/);
+    await expect(page.getByRole('heading', { name: item.title, exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Settings and safety' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Send message|Create post|Publish/ })).toHaveCount(0);
+    if (item.guardians.length) await expect(page.getByText(item.guardians[0].status, { exact: false })).toBeVisible();
+    if (item.guardianStepPending) await expect(page.getByText('A parent or guardian needs to complete the permission step before this feature can be enabled.', { exact: true })).toBeVisible();
+    if (item.profileUnavailable) {
+      await page.goto('/settings');
+      await expect(page.getByText('Profile image', { exact: true })).toHaveCount(0);
+      await page.goto('/eligibility');
+    }
+  }
+
+  await page.getByRole('link', { name: 'Settings and safety' }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole('button', { name: /Export/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Delete$/ })).toBeVisible();
+});
+
+test('verified eligibility for adult and teen experience uses the server decision without a local age claim', async ({ page }) => {
+  let currentEligibility: unknown = adultEligibility;
+  await installApiBoundary(page, { ...user, ageConfirmedAt: null }, () => currentEligibility);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  currentEligibility = { ...adultEligibility, experience: 'teen_13_17', maximumContentRating: 'regular' };
+  await page.reload();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+});
 
 async function syntheticPosterImage(page: Page): Promise<Buffer> {
   const encoded = await page.evaluate(() => {

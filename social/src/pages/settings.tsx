@@ -21,6 +21,7 @@ import { MediaImageField } from '@/components/media/MediaImageField';
 import { ProtectedMediaImage } from '@/lib/protected-media';
 
 type DeviceContact = { name?: string[]; email?: string[] };
+const contentRatingRank: Record<ContentRating, number> = { child_safe: 0, regular: 1, mature: 2 };
 type ContactPickerNavigator = Navigator & {
   contacts?: {
     select: (properties: string[], options?: { multiple?: boolean }) => Promise<DeviceContact[]>;
@@ -354,6 +355,8 @@ export default function Settings() {
   
   const logout = useAppStore((s) => s.logout);
   const currentUser = useAppStore((s) => s.currentUser);
+  const eligibility = useAppStore((s) => s.eligibility);
+  const eligibilityLoaded = useAppStore((s) => s.eligibilityLoaded);
   const updateProfile = useAppStore((s) => s.updateProfile);
   const [avatarFiles, setAvatarFiles] = useState<File[]>([]);
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -385,13 +388,22 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [telemetryConsent, setTelemetryConsentState] = useState(() => hasTelemetryConsent());
+  const telemetryAllowed = eligibilityLoaded && eligibility?.activated === true && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.analytics === true;
+  const canUseSocial = Boolean(eligibilityLoaded && eligibility?.activated && eligibility.experience !== 'under_13' && eligibility.capabilities.social);
+  const canUseMessaging = canUseSocial && eligibility?.capabilities.messaging === true;
+  const maximumContentRating: ContentRating = canUseSocial ? eligibility!.maximumContentRating : 'child_safe';
 
   useEffect(() => {
     if (!currentUser) return;
-    setContentFilter(currentUser.contentFilter ?? DEFAULT_CONTENT_RATING);
+    const savedFilter = currentUser.contentFilter ?? DEFAULT_CONTENT_RATING;
+    setContentFilter(contentRatingRank[savedFilter] <= contentRatingRank[maximumContentRating] ? savedFilter : maximumContentRating);
     setStoryViewMode(currentUser.storyViewMode ?? 'identified');
     setTwoFactorEnabled(Boolean(currentUser.twoFactorEnabled));
-  }, [currentUser?.id, currentUser?.contentFilter, currentUser?.storyViewMode, currentUser?.twoFactorEnabled]);
+  }, [currentUser?.id, currentUser?.contentFilter, currentUser?.storyViewMode, currentUser?.twoFactorEnabled, maximumContentRating]);
+
+  useEffect(() => {
+    setTelemetryConsentState(telemetryAllowed && hasTelemetryConsent());
+  }, [telemetryAllowed]);
 
   useEffect(() => {
     let active = true;
@@ -428,6 +440,7 @@ export default function Settings() {
   };
 
   const handleContentFilterChange = async (value: ContentRating) => {
+    if (contentRatingRank[value] > contentRatingRank[maximumContentRating]) return;
     if (contentFilterPending.current) return;
     contentFilterPending.current = true;
     setContentFilterSaving(true);
@@ -582,7 +595,7 @@ export default function Settings() {
         animate="animate"
         className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-8"
       >
-        {currentUser && <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
+        {currentUser && canUseSocial && <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-4">
           <h3 className="font-semibold">Profile image</h3>
           {currentUser.avatarUrl && <ProtectedMediaImage src={currentUser.avatarUrl} alt="Current profile image" className="h-20 w-20 rounded-full object-cover" />}
           <MediaImageField id="profile-avatar" label="New profile image" files={avatarFiles} onChange={setAvatarFiles} disabled={avatarSaving} />
@@ -630,11 +643,12 @@ export default function Settings() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Help improve Yor</p>
-              <p className="text-xs leading-5 text-muted-foreground">Allow anonymous navigation and performance events. This is off until you choose to enable it.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Allow anonymous navigation and performance events. This stays off unless current account rules permit adult analytics and you choose to enable it.</p>
             </div>
             <Switch
               aria-label="Allow optional analytics"
               checked={telemetryConsent}
+              disabled={!telemetryAllowed}
               onCheckedChange={(value) => {
                 setTelemetryConsent(value);
                 setTelemetryConsentState(value);
@@ -646,9 +660,11 @@ export default function Settings() {
 
         <CompanionPetSettings />
 
-        <PremiumProfilePanel />
-        <a href="/premium" className="block rounded-2xl border border-primary/25 bg-primary/5 p-4 text-sm font-semibold text-primary">Yor Premium · plans, billing and payment recovery</a>
-        <a href="/billing" className="block rounded-2xl border border-border/50 p-4 text-sm font-semibold">Creator payments · history, cancellation and recovery</a>
+        {canUseSocial && eligibility?.capabilities.payments && <>
+          <PremiumProfilePanel />
+          <a href="/premium" className="block rounded-2xl border border-primary/25 bg-primary/5 p-4 text-sm font-semibold text-primary">Yor Premium · plans, billing and payment recovery</a>
+          <a href="/billing" className="block rounded-2xl border border-border/50 p-4 text-sm font-semibold">Creator payments · history, cancellation and recovery</a>
+        </>}
 
         {/* Privacy & Safety */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">
@@ -657,7 +673,7 @@ export default function Settings() {
             <h3>Privacy & Safety</h3>
           </div>
           
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {canUseSocial && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Profile Visibility</p>
               <p className="text-xs text-muted-foreground">Who can see your profile and posts</p>
@@ -676,9 +692,9 @@ export default function Settings() {
                 <SelectItem value="private">Private</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
-          <div className="flex items-center justify-between gap-4">
+          {canUseMessaging && <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Direct Messages from strangers</p>
               <p className="text-xs text-muted-foreground">Let non-followers initiate chat requests</p>
@@ -689,9 +705,9 @@ export default function Settings() {
               checked={privacySettings.allowDmFromStrangers ?? true} 
               onCheckedChange={(val) => void handlePrivacyChange('allowDmFromStrangers', val)}
             />
-          </div>
+          </div>}
 
-          <div className="flex items-center justify-between gap-4">
+          {canUseMessaging && <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Message requests</p>
               <p className="text-xs text-muted-foreground">Allow non-followers to send message requests</p>
@@ -702,7 +718,7 @@ export default function Settings() {
               checked={privacySettings.messageRequests ?? true} 
               onCheckedChange={(val) => void handlePrivacyChange('messageRequests', val)}
             />
-          </div>
+          </div>}
 
           {privacySaving && <p role="status" className="text-sm text-muted-foreground">Saving privacy preferences…</p>}
           {privacyError && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{privacyError} Your previous preferences are still shown.</p>}
@@ -716,13 +732,13 @@ export default function Settings() {
               <SelectTrigger aria-label="Content filter" className="w-full shrink-0 rounded-xl font-medium sm:w-40"><SelectValue placeholder="Content level" /></SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="child_safe">Child-safe only</SelectItem>
-                <SelectItem value="regular">Child-safe + Regular</SelectItem>
-                <SelectItem value="mature">All content</SelectItem>
+                {maximumContentRating !== 'child_safe' && <SelectItem value="regular">Child-safe + Regular</SelectItem>}
+                {maximumContentRating === 'mature' && <SelectItem value="mature">All content</SelectItem>}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          {canUseSocial && <div className="flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Story viewing privacy</p>
               <p className="text-xs text-muted-foreground">Private viewing requires an active Premium entitlement and still contributes to aggregate analytics. Without that entitlement, new views are identified even if your saved preference is Private. Earlier private views stay private.</p>
@@ -734,7 +750,7 @@ export default function Settings() {
                 <SelectItem value="private">Private · Advanced</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
           <div className="space-y-3 border-t border-border/30 pt-4">
             <div className="flex items-center justify-between gap-4">
@@ -773,8 +789,7 @@ export default function Settings() {
           </div>
         </section>
 
-        <CloseFriendsPanel />
-        <ContactShieldPanel />
+        {canUseMessaging && <><CloseFriendsPanel /><ContactShieldPanel /></>}
 
         {/* Notifications */}
         <section className="surface-1 rounded-2xl p-6 border border-border/40 space-y-6">
@@ -783,7 +798,7 @@ export default function Settings() {
             <h3>Notification Preferences</h3>
           </div>
           
-          {publicBetaConfig.webPushEnabled ? <div className="flex items-center justify-between gap-4">
+          {publicBetaConfig.webPushEnabled && canUseSocial && eligibility?.experience === 'adult_18_plus' ? <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Push notifications</p>
               <p className="text-xs text-muted-foreground">Allow delivery to browsers you have subscribed</p>
@@ -795,8 +810,8 @@ export default function Settings() {
               onCheckedChange={(val) => void handleNotificationChange(val)} 
             />
           </div> : <div className="rounded-xl border border-border/50 bg-background/50 p-4">
-            <p className="text-sm font-semibold">Push notifications are off for this beta</p>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">You can still find your likes, replies, follow requests, and account updates in Activity.</p>
+            <p className="text-sm font-semibold">{publicBetaConfig.webPushEnabled ? 'Push notifications are not available for this account' : 'Push notifications are off for this beta'}</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">You can still find likes, replies, follow requests, and account updates in Activity.</p>
           </div>}
 
           <p className="text-xs leading-5 text-muted-foreground">{publicBetaConfig.webPushEnabled ? 'Browser push also needs a device subscription and browser permission. ' : ''}Email digests are not enabled in this beta.</p>

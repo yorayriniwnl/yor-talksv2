@@ -109,6 +109,7 @@ const eligibilitySchemas = {
   } },
 };
 const contactSchemas = {
+  InviteToGroupRequest: { type: 'object',additionalProperties: false,required: ['inviteeIds'],properties: { inviteeIds: { type: 'array',minItems: 1,maxItems: 99,uniqueItems: true,items: { type: 'string',format: 'uuid' } } } },
   ContactRequestCreate: { type: 'object',additionalProperties: false,required: ['recipientId'],properties: {
     recipientId: { type: 'string',format: 'uuid' },
   } },
@@ -118,6 +119,22 @@ const contactSchemas = {
     updatedAt: { type: 'string',format: 'date-time' },requiresYourAcceptance: { type: 'boolean' },guardianApprovalRequired: { type: 'boolean' },
   } },
   ContactRequestList: { type: 'array',maxItems: 200,items: { $ref: '#/components/schemas/SafeContactRequest' } },
+  ContactRules: { type: 'object',additionalProperties: false,required: ['decision','guardianContactsRequired','guardianPolicyVersions','guardianNoticeVersions'],properties: {
+    decision: { $ref: '#/components/schemas/EligibilityDecision' },guardianContactsRequired: { type: 'boolean' },
+    guardianPolicyVersions: { type: 'object',maxProperties: 32,additionalProperties: { type: 'string',minLength: 1,maxLength: 128 } },
+    guardianNoticeVersions: { type: 'object',maxProperties: 32,additionalProperties: { type: 'string',minLength: 1,maxLength: 128 } },
+  } },
+  GroupInvitationDecisionRequest: { type: 'object',additionalProperties: false,required: ['updatedAt'],properties: { updatedAt: { type: 'string',format: 'date-time' } } },
+  SafeGroupInvitation: { type: 'object',additionalProperties: false,required: ['id','conversationId','inviterId','recipientId','status','memberIds','createdAt','updatedAt','requiresYourAcceptance','guardianApprovalRequired'],properties: {
+    id: { type: 'string',format: 'uuid' },conversationId: { type: 'string',format: 'uuid' },inviterId: { type: 'string',format: 'uuid' },recipientId: { type: 'string',format: 'uuid' },
+    status: { type: 'string',enum: ['pending','accepted','rejected','revoked'] },memberIds: { type: 'array',maxItems: 100,items: { type: 'string',format: 'uuid' } },
+    createdAt: { type: 'string',format: 'date-time' },updatedAt: { type: 'string',format: 'date-time' },requiresYourAcceptance: { type: 'boolean' },guardianApprovalRequired: { type: 'boolean' },
+  } },
+  SafeGroupInvitationList: { type: 'array',maxItems: 200,items: { $ref: '#/components/schemas/SafeGroupInvitation' } },
+  SafeGroupAcceptanceResult: { type: 'object',additionalProperties: false,required: ['invitation','refreshedInvitations'],properties: {
+    invitation: { $ref: '#/components/schemas/SafeGroupInvitation' },refreshedInvitations: { $ref: '#/components/schemas/SafeGroupInvitationList' },
+  } },
+  NullReceipt: { type: 'null' },
   ContactWithdrawalReceipt: { type: 'null' },
 };
 function eligibilityContract(route) {
@@ -133,6 +150,12 @@ function eligibilityContract(route) {
     'get /users/me/guardian-authorizations': { result: 'GuardianAuthorizationList' },
     'post /users/me/guardian-authorizations': { request: 'GuardianJourneyRequest',result: 'AssuranceChallengeReceipt',created: true },
     'post /users/me/guardian-authorizations/{authorizationId}/withdraw': { result: 'GuardianWithdrawalReceipt' },
+    'get /group-invitations': { result: 'SafeGroupInvitationList' },
+    'post /conversations/{conversationId}/invitations': { request: 'InviteToGroupRequest',result: 'SafeGroupInvitationList',created: true },
+    'post /group-invitations/{invitationId}/accept': { request: 'GroupInvitationDecisionRequest',result: 'SafeGroupAcceptanceResult' },
+    'post /group-invitations/{invitationId}/guardian-approval': { request: 'GroupInvitationDecisionRequest',result: 'SafeGroupAcceptanceResult' },
+    'post /group-invitations/{invitationId}/reject': { result: 'NullReceipt' },
+    'delete /group-invitations/{invitationId}': { result: 'NullReceipt' },
   };
   return definitions[key];
 }
