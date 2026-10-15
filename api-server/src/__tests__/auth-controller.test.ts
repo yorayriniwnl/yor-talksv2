@@ -6,6 +6,8 @@ import { AuthService, TwoFactorRequiredError } from "../services/auth-service.js
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
+import { randomUUID } from "node:crypto";
+import { EligibilityEnrollmentService } from "../services/eligibility-enrollment-service.js";
 
 type CapturedResponse = Response & {
   statusCode: number;
@@ -52,21 +54,45 @@ const makeResponse = () => {
       clearedCookie = { name, options };
       return this;
     },
+    cookie() { return this; },
   } as unknown as CapturedResponse;
 
   return res;
 };
 
 test("auth controller returns success on register", async () => {
-  const controller = new AuthController(new AuthService(new UserRepository(), redisRepository));
+  const enrollmentService = {
+    consumeAuthorizedEnrollment: async (enrollmentId: string) => ({ enrollmentId,experience: 'adult_18_plus' as const,territory: 'US',
+      assessment: {} as never,guardianAuthorizations: [],policyVersions: {} }),
+    bindAuthorizedEnrollment: async () => undefined,
+  } as unknown as EligibilityEnrollmentService;
+  const controller = new AuthController(new AuthService(new UserRepository(),redisRepository,undefined,undefined,enrollmentService));
   const unique = Date.now();
-  const req = { body: { username: `bob-${unique}`, email: `${String(unique).slice(-7)}@kiit.ac.in`, password: "supersecret", fullName: "Bob Example", acceptedTerms: true, confirmedAge: true } } as Request;
+  const req = { body: { enrollmentId: randomUUID(),registrationNonce: randomUUID()+randomUUID(),username: `bob-${unique}`,
+    email: `${String(unique).slice(-7)}@kiit.ac.in`,password: "supersecret",fullName: "Bob Example",acceptedTerms: true } } as Request;
   const res = makeResponse();
 
   await controller.register(req, res);
 
   assert.equal(res.statusCode, 201);
   assert.equal((res.body as { success: boolean }).success, true);
+});
+
+test("restricted login response omits ordinary profile fields", async () => {
+  const user = { id: randomUUID(), username: "private-name", email: "private@example.test", passwordHash: "hash",
+    fullName: "Private Name", bio: "Private Bio", avatarUrl: null, role: "user", permissions: [], createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z", totpSecret: null, settings: {} };
+  const eligibility = { experience: "unknown", activated: false, capabilities: { social: false, publish: false, messaging: false,
+    payments: false, seller: false, memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: "child_safe", policyVersions: [], revision: "private", reason: "verification_required", publicBrowsingAllowed: false };
+  const controller = new AuthController({ login: async () => ({ user, eligibility, tokens: { accessToken: "access", refreshToken: "refresh" } }) } as unknown as AuthService);
+  const response = makeResponse();
+  await controller.login({ body: {} } as Request, response);
+  assert.equal(response.statusCode, 200);
+  const body = response.body as { data: { user: Record<string, unknown> } };
+  assert.deepEqual(Object.keys(body.data.user).sort(), ["account", "eligibility", "security"]);
+  assert.equal(JSON.stringify(body.data.user).includes("Private Name"), false);
+  assert.equal(JSON.stringify(body.data.user).includes("private@example.test"), false);
 });
 
 test("auth controller returns a machine-readable two-factor challenge", async () => {

@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import type { Request, Response } from "express";
 import { ContentPolicyViolationError } from "../services/content-policy-service.js";
 import { BroadcastChannelService } from "../services/broadcast-channel-service.js";
@@ -35,6 +36,7 @@ export class BroadcastChannelController {
       const channel = await this.service.createChannel({ ...req.body, ownerId });
       return res.status(201).json(createResponse("Broadcast channel created", channel));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }
@@ -82,6 +84,7 @@ export class BroadcastChannelController {
       if (!message) return res.status(403).json(createResponse("Only the channel owner can publish channel messages", null, {}, ["channel_owner_required"]));
       return res.status(201).json(createResponse("Broadcast message published", viewMessage(message)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof ContentPolicyViolationError) {
         return res.status(422).json(createResponse(error.message, null, {}, Object.entries(error.flags).filter(([, value]) => value).map(([key]) => key)));
       }

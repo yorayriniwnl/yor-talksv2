@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { PremiumFeatureUnavailableError, StoryService } from "../services/story-service.js";
 import { createResponse } from "../utils/response.js";
+import { MediaLifecycleError } from "../services/media-service.js";
 
 function paramId(req: Request): string {
   return Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -29,9 +30,10 @@ export class StoryController {
     const ownerId = req.user?.id;
     if (!ownerId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     try {
-      const highlight = await this.storyService.createHighlight(ownerId, req.body.title, req.body.coverUrl);
+      const highlight = await this.storyService.createHighlight(ownerId, req.body.title, req.body.coverMediaId);
       return res.status(201).json(createResponse("Highlight created", highlight));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       return res.status(400).json(createResponse("Could not create Highlight", null, {}, [error instanceof Error ? error.message : "Bad request"]));
     }
   };
@@ -45,6 +47,7 @@ export class StoryController {
       const story = await this.storyService.createStory({ ...req.body, authorId });
       return res.status(201).json(createResponse("Story created", viewStory(story, authorId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -82,6 +85,7 @@ export class StoryController {
       }
       return res.status(200).json(createResponse("Story reacted", viewStory(story, userId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -97,6 +101,7 @@ export class StoryController {
       if (!analytics) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
       return res.status(200).json(createResponse("Story analytics loaded", analytics));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -119,6 +124,7 @@ export class StoryController {
       if (!viewers) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
       return res.status(200).json(createResponse("Story viewers loaded", viewers, { limit, hasMore: Boolean(viewers.nextCursor), nextCursor: viewers.nextCursor }));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
@@ -134,6 +140,7 @@ export class StoryController {
       if (!story) return res.status(404).json(createResponse("Story not found", null, {}, ["Not found"]));
       return res.status(200).json(createResponse("Story priority updated", viewStory(story, ownerId)));
     } catch (error) {
+      if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
       if (error instanceof PremiumFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }

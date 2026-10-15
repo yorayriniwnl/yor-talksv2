@@ -14,6 +14,7 @@ import {
 } from "@workspace/db/schema";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { EligibilityService } from "./eligibility-service.js";
 
 const navigationEventSchema = z.object({}).strict();
 const profilerEventSchema = z.object({
@@ -61,7 +62,12 @@ class AnalyticsRollupQualityError extends Error {
 }
 
 export class ProductAnalyticsService {
+  constructor(private readonly eligibilityService: EligibilityService = new EligibilityService()) {}
+
   async ingest(actorId: string | null, events: ProductEvent[]): Promise<number> {
+    // Anonymous browser telemetry is optional and provides no security value.
+    if (!actorId) return 0;
+    await this.eligibilityService.requireCapability(actorId, "analytics");
     const rows = events.map((event) => ({
       id: event.eventId,
       schemaVersion: event.schemaVersion,
@@ -70,6 +76,9 @@ export class ProductAnalyticsService {
       occurredAt: event.occurredAt,
       properties: event.properties,
     }));
+    // Keep the decision adjacent to persistence so stale route middleware or
+    // a concurrent withdrawal cannot authorize an analytics write.
+    await this.eligibilityService.requireCapability(actorId, "analytics");
     const inserted = await db.insert(productAnalyticsEventsTable).values(rows)
       .onConflictDoNothing({ target: productAnalyticsEventsTable.id })
       .returning({ id: productAnalyticsEventsTable.id });

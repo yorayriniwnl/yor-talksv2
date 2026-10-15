@@ -498,10 +498,73 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/contacts/requests",
+    "operationId": "getContactsRequests",
+    "tag": "contacts",
+    "summary": "Get /contacts/requests",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests",
+    "operationId": "postContactsRequests",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/contacts/requests/{requestId}",
+    "operationId": "deleteContactsRequestsByRequestId",
+    "tag": "contacts",
+    "summary": "Delete /contacts/requests/{requestId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/accept",
+    "operationId": "postContactsRequestsByRequestIdAccept",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/accept",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/guardian-approval",
+    "operationId": "postContactsRequestsByRequestIdGuardianApproval",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/guardian-approval",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/contacts/requests/{requestId}/reject",
+    "operationId": "postContactsRequestsByRequestIdReject",
+    "tag": "contacts",
+    "summary": "Post /contacts/requests/{requestId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/conversations",
     "operationId": "getConversations",
     "tag": "conversations",
     "summary": "Get /conversations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/conversations/{conversationId}/invitations",
+    "operationId": "postConversationsByConversationIdInvitations",
+    "tag": "conversations",
+    "summary": "Post /conversations/{conversationId}/invitations",
     "authenticated": true,
     "roles": []
   },
@@ -634,6 +697,33 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/eligibility/enrollments/{enrollmentId}/challenges",
+    "operationId": "postEligibilityEnrollmentsByEnrollmentIdChallenges",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/{enrollmentId}/challenges",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/eligibility/enrollments/{enrollmentId}/status",
+    "operationId": "postEligibilityEnrollmentsByEnrollmentIdStatus",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/{enrollmentId}/status",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/eligibility/enrollments/prescreen",
+    "operationId": "postEligibilityEnrollmentsPrescreen",
+    "tag": "eligibility",
+    "summary": "Post /eligibility/enrollments/prescreen",
+    "authenticated": false,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/events",
     "operationId": "getEvents",
@@ -698,6 +788,51 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/group-invitations",
+    "operationId": "getGroupInvitations",
+    "tag": "group-invitations",
+    "summary": "Get /group-invitations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/group-invitations/{invitationId}",
+    "operationId": "deleteGroupInvitationsByInvitationId",
+    "tag": "group-invitations",
+    "summary": "Delete /group-invitations/{invitationId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/accept",
+    "operationId": "postGroupInvitationsByInvitationIdAccept",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/accept",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/guardian-approval",
+    "operationId": "postGroupInvitationsByInvitationIdGuardianApproval",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/guardian-approval",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/group-invitations/{invitationId}/reject",
+    "operationId": "postGroupInvitationsByInvitationIdReject",
+    "tag": "group-invitations",
+    "summary": "Post /group-invitations/{invitationId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/healthz",
     "operationId": "getHealthz",
     "tag": "healthz",
@@ -751,12 +886,48 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "delete",
+    "path": "/media/{id}",
+    "operationId": "deleteMediaById",
+    "tag": "media",
+    "summary": "Delete /media/{id}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/media/{id}/content",
+    "operationId": "getMediaByIdContent",
+    "tag": "media",
+    "summary": "Get /media/{id}/content",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/finalize",
+    "operationId": "postMediaByIdFinalize",
+    "tag": "media",
+    "summary": "Post /media/{id}/finalize",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/media/{id}/hls",
     "operationId": "getMediaByIdHls",
     "tag": "media",
     "summary": "Get /media/{id}/hls",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/media/{id}/upload",
+    "operationId": "postMediaByIdUpload",
+    "tag": "media",
+    "summary": "Post /media/{id}/upload",
+    "authenticated": true,
     "roles": []
   },
   {
@@ -1898,6 +2069,33 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/users/me/eligibility",
+    "operationId": "getUsersMeEligibility",
+    "tag": "users",
+    "summary": "Get /users/me/eligibility",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/eligibility/challenges",
+    "operationId": "postUsersMeEligibilityChallenges",
+    "tag": "users",
+    "summary": "Post /users/me/eligibility/challenges",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/users/me/eligibility/challenges/{challengeId}",
+    "operationId": "getUsersMeEligibilityChallengesByChallengeId",
+    "tag": "users",
+    "summary": "Get /users/me/eligibility/challenges/{challengeId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/users/me/export",
     "operationId": "getUsersMeExport",
     "tag": "users",
@@ -1938,6 +2136,33 @@ export const apiRouteCatalog = [
     "operationId": "postUsersMeFollowRequestsByRequestIdReject",
     "tag": "users",
     "summary": "Post /users/me/follow-requests/{requestId}/reject",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/users/me/guardian-authorizations",
+    "operationId": "getUsersMeGuardianAuthorizations",
+    "tag": "users",
+    "summary": "Get /users/me/guardian-authorizations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/guardian-authorizations",
+    "operationId": "postUsersMeGuardianAuthorizations",
+    "tag": "users",
+    "summary": "Post /users/me/guardian-authorizations",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/guardian-authorizations/{authorizationId}/withdraw",
+    "operationId": "postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw",
+    "tag": "users",
+    "summary": "Post /users/me/guardian-authorizations/{authorizationId}/withdraw",
     "authenticated": true,
     "roles": []
   },

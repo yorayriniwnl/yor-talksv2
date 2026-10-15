@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { OperatorPanel, SectionHeader, SignalLabel } from '@/components/system';
 import '@/styles/operator-discovery.css';
+import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
 
 type SearchResults = { users: BackendUser[]; posts: BackendPost[] };
 
@@ -65,9 +66,9 @@ function ExploreGridItem({ post, isLarge, onClick }: { post: Post; isLarge: bool
     >
       {firstMedia ? (
         isVideo ? (
-          <video src={firstMedia} aria-label="Video post" className="operator-discovery-tile__media" muted playsInline preload="metadata" />
+          <ProtectedMediaVideo src={firstMedia} aria-label="Video post" className="operator-discovery-tile__media" muted playsInline preload="metadata" />
         ) : (
-          <img src={firstMedia} alt="" className="operator-discovery-tile__media" loading="lazy" />
+          <ProtectedMediaImage src={firstMedia} alt="" className="operator-discovery-tile__media" loading="lazy" />
         )
       ) : (
         <div className="operator-discovery-tile__text">

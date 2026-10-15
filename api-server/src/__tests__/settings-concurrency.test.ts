@@ -60,7 +60,9 @@ test("concurrent settings patches preserve independent preferences and existing 
   ];
   await Promise.all(patches.map((patch) => profiles.updateSettings(user.id, patch)));
   assert.deepEqual((await find(user.id))?.settings, {
-    theme: "dark", notificationsEnabled: false, privateAccount: true, onboardingCompleted: true, contentFilter: "regular",
+    theme: "dark", notificationsEnabled: false, allowMentions: false, autoplayEnabled: false,
+    privateAccount: true, onboardingCompleted: true, contentFilter: "child_safe", readReceiptsEnabled: false,
+    sharePreciseLocation: false, streaksEnabled: false,
   });
 });
 
@@ -72,7 +74,7 @@ test("partial privacy updates fill legacy defaults and keep explicit opt-outs", 
   await auth.updatePrivacy(user.id, { messageRequests: false });
   const updated = await auth.updatePrivacy(user.id, { profileVisibility: "followers" });
   assert.deepEqual(updated?.privacy, {
-    profileVisibility: "followers", messageRequests: false, allowDmFromStrangers: true,
+    profileVisibility: "private", messageRequests: false, allowDmFromStrangers: false,
   });
   assert.equal(await auth.updatePrivacy("00000000-0000-4000-8000-000000000000", { messageRequests: false }), undefined);
 });

@@ -1,3 +1,4 @@
+import { withApprovedMedia, mediaBinding, rejectRawMedia } from "./media-publication.js";
 import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
@@ -59,9 +60,13 @@ export class ProfileInteractionService {
     return (await db.select().from(profileShowcasesTable).where(eq(profileShowcasesTable.userId, profileId)).orderBy(asc(profileShowcasesTable.createdAt))) as ProfileShowcaseRecord[];
   }
 
-  async createShowcase(userId: string, input: Omit<ProfileShowcaseRecord, "id" | "userId" | "createdAt" | "updatedAt">) {
-    const [created] = await db.insert(profileShowcasesTable).values({ id: randomUUID(), userId, ...input }).returning();
-    return created as ProfileShowcaseRecord;
+  async createShowcase(userId: string, input: Omit<ProfileShowcaseRecord, "id" | "userId" | "createdAt" | "updatedAt" | "customImageUrl"> & { customImageMediaId?: string }) {
+    rejectRawMedia(input, ["customImageUrl"]);
+    const id = randomUUID();
+    return withApprovedMedia(userId, mediaBinding(input.customImageMediaId, "showcase", "customImageUrl", "image"), { type: "profile_showcases", id }, async media => {
+      const [created] = await db.insert(profileShowcasesTable).values({ id, userId, type: input.type, title: input.title, contentId: input.contentId, customText: input.customText, customImageUrl: media.customImageUrl?.[0]?.url }).returning();
+      return created as ProfileShowcaseRecord;
+    });
   }
 
   async deleteShowcase(userId: string, showcaseId: string) {

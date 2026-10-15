@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { randomUUID } from 'node:crypto';
 import {
   commentsTable,
@@ -34,6 +35,7 @@ import { db } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { toOwnUser } from "../utils/user-view.js";
+import { visibleMessagePredicate } from "../utils/message-visibility.js";
 
 export class InvalidAccountPasswordError extends Error {}
 
@@ -48,6 +50,7 @@ export class AccountService {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
     const messageExportedAt = new Date().toISOString();
+    const exportBoundary = new Date();
 
     const [posts, comments, stories, sentMessages, receivedMessages, storyViews, storyReactions, likes, bookmarks, reposts,
       postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps, communityMemberships,
@@ -66,6 +69,8 @@ export class AccountService {
         isNull(messagesTable.deletedAt),
         or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
       )),
+      db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), visibleMessagePredicate(exportBoundary))),
+      db.select().from(messagesTable).where(and(eq(messagesTable.recipientId, userId), visibleMessagePredicate(exportBoundary))),
       db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
       db.select().from(storyReactionsTable).where(eq(storyReactionsTable.userId, userId)),
       db.select().from(postLikesTable).where(eq(postLikesTable.userId, userId)),
@@ -119,7 +124,7 @@ export class AccountService {
     return {
       format: "yor-talks-account-export",
       version: 1,
-      exportedAt: new Date().toISOString(),
+      exportedAt: exportBoundary.toISOString(),
       account: toOwnUser(user),
       content: { posts, comments, stories, sentMessages: visibleMessages(sentMessages), receivedMessages: visibleMessages(receivedMessages) },
       interactions: { storyViews, storyReactions, likes, bookmarks, reposts, postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps },

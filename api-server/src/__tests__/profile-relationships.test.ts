@@ -8,6 +8,9 @@ import { UserController } from "../controllers/user-controller.js";
 import type { AuthService } from "../services/auth-service.js";
 import type { AccountService } from "../services/account-service.js";
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import type { EligibilityDecision } from "../eligibility/types.js";
 
 after(() => pool.end());
 
@@ -37,6 +40,30 @@ test("own profile restores canonical follow relationships without exposing them 
   await users.removeFollowRequest(owner.id, pending.id);
   assert.deepEqual((await profiles.getProfile(owner.id, owner.id))?.following, []);
   assert.deepEqual((await profiles.getProfile(owner.id, owner.id))?.pendingFollowIds, []);
+});
+
+test('production profile discovery requires current authority and keeps minor profiles private by default', async t => {
+  const originalNodeEnv = env.NODE_ENV;
+  env.NODE_ENV = 'production';
+  t.after(() => { env.NODE_ENV = originalNodeEnv; });
+  const users = new UserRepository(), viewer = await createTestUser(users), target = await createTestUser(users);
+  t.after(async () => { await pool.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [[viewer.id, target.id]]); });
+  const adult: EligibilityDecision = {
+    experience: 'adult_18_plus', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: 'mature', policyVersions: ['fixture:1'], revision: 'adult', reason: null, publicBrowsingAllowed: true,
+  };
+  const teen: EligibilityDecision = { ...adult, experience: 'teen_13_17', maximumContentRating: 'regular', revision: 'teen' };
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async (userId: string) => userId === target.id ? teen : adult);
+  await users.update(target.id, { privacy: { profileVisibility: 'public', messageRequests: true, allowDmFromStrangers: true },
+    settings: { ...target.settings, privateAccount: false } });
+  const profiles = new UserService(users);
+  assert.equal(await profiles.getProfile(target.id, viewer.id), undefined);
+  assert.deepEqual(await profiles.searchUsers(target.username, viewer.id), []);
+  await users.followUser(viewer.id, target.id);
+  assert.equal((await profiles.getProfile(target.id, viewer.id))?.id, target.id,
+    'an existing follower may see the profile while the minor profile remains unavailable to discovery');
 });
 
 test("private follow requests remain pending at the HTTP boundary", async () => {

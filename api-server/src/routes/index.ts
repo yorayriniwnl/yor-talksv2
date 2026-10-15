@@ -34,8 +34,16 @@ import productAnalyticsRouter from "./product-analytics.js";
 import premiumRouter from './premium.js';
 import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
+import eligibilityRouter from './eligibility.js';
+import { rejectUnmappedProtectedRoute } from '../middlewares/eligibility.js';
+import contactRouter from './contacts.js';
 
 const router: IRouter = Router();
+
+// Reject a generated authenticated operation as soon as its reviewed route
+// authority is missing. authenticate repeats the current capability check
+// after loading the account and private eligibility decision.
+router.use(rejectUnmappedProtectedRoute);
 
 router.use(healthRouter);
 router.use(diagnosticsRouter);
@@ -44,6 +52,7 @@ router.use(productAnalyticsRouter);
 router.use(docsRouter);
 router.use(authRouter);
 router.use(mediaRouter);
+router.use(eligibilityRouter);
 router.use(userRouter);
 router.use(premiumRouter);
 router.use(billingRouter);
@@ -51,6 +60,7 @@ router.use(paymentOperationsRouter);
 router.use(profileInteractionRouter);
 router.use(postRouter);
 router.use(messageRouter);
+router.use(contactRouter);
 router.use(notificationRouter);
 router.use(noteRouter);
 router.use(communityRouter);

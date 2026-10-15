@@ -1,3 +1,4 @@
+import { MediaLifecycleError } from "../services/media-service.js";
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
 import { validateBody, validateParams } from "../middlewares/validation.js";
@@ -79,6 +80,7 @@ router.post("/users/:userId/showcases", authenticate, validateParams(userIdParam
     if (userId !== req.user!.id) return res.status(403).json(createResponse("Only the profile owner can add showcases", null, {}, ["owner_only"]));
     return res.status(201).json(createResponse("Profile showcase created", await service.createShowcase(userId, req.body)));
   } catch (error) {
+    if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
     console.error(error);
     return res.status(500).json(createResponse("Profile showcase could not be created", null, {}, ["Internal server error"]));
   }

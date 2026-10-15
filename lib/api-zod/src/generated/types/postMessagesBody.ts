@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostMessagesBody = { [key: string]: unknown };
+export type PostMessagesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  mediaId?: string;
+  [key: string]: unknown;
+ };

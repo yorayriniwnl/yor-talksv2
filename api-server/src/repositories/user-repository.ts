@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
-import { db } from "@workspace/db";
+import { db, type DbTransaction } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
 
 export class UserRepository {
@@ -14,7 +14,7 @@ export class UserRepository {
   async recordLogin(user: UserRecord, updates: Partial<Pick<UserRecord, 'emailVerified'>>): Promise<UserRecord | undefined> {
     const [record] = await db.update(usersTable).set({ ...updates, lastLoginAt: new Date().toISOString() })
       .where(and(eq(usersTable.id, user.id), eq(usersTable.authVersion, user.authVersion ?? 0),
-        sql`coalesce(${usersTable.accountStatus}, 'active') NOT IN ('suspended', 'deactivated', 'deleted')`)).returning();
+        sql`coalesce(${usersTable.accountStatus}, 'active') <> 'deleted'`)).returning();
     return record as UserRecord | undefined;
   }
 
@@ -154,14 +154,18 @@ export class UserRepository {
     ));
   }
 
-  async create(user: UserRecord): Promise<UserRecord> {
+  async create(user: UserRecord, tx?: DbTransaction): Promise<UserRecord> {
     const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUser } = user;
+    if (tx) {
+      const [created] = await tx.insert(usersTable).values(persistedUser).returning();
+      return created as UserRecord;
+    }
     const [created] = await db.insert(usersTable).values(persistedUser).returning();
     return created as UserRecord;
   }
 
-  async findByEmail(email: string): Promise<UserRecord | undefined> {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  async findByEmail(email: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
+    const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.email, email));
     return user as UserRecord | undefined;
   }
 
@@ -170,8 +174,8 @@ export class UserRepository {
     return user as UserRecord | undefined;
   }
 
-  async findByUsername(username: string): Promise<UserRecord | undefined> {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+  async findByUsername(username: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
+    const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.username, username));
     return user as UserRecord | undefined;
   }
 
@@ -215,6 +219,21 @@ export class UserRepository {
     const column = usersTable[field];
     const current = sql`coalesce(${column}, '[]'::jsonb)`;
     const target = JSON.stringify([targetId]);
+    if (field === "blockedUsers" && enabled) {
+      // Blocking and revoking existing contact authority share one transaction,
+      // so a later unblock can never restore a previously accepted contact.
+      return db.transaction(async tx => {
+        const [updated] = await tx.update(usersTable).set({
+          blockedUsers: sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`,
+          updatedAt: new Date().toISOString(),
+        }).where(eq(usersTable.id, id)).returning();
+        if (!updated) return undefined;
+        const [userA, userB] = [id, targetId].sort();
+        await tx.execute(sql`UPDATE contact_authorizations SET state='revoked',revoked_at=clock_timestamp(),updated_at=clock_timestamp()
+          WHERE user_a_id=${userA}::uuid AND user_b_id=${userB}::uuid AND state IN ('pending','accepted')`);
+        return updated as UserRecord;
+      });
+    }
     const [updated] = await db.update(usersTable).set({
       [field]: enabled
         ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`

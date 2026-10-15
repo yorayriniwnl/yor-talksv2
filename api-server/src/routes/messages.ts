@@ -6,7 +6,7 @@ import { validateBody, validateParams, validateQuery } from "../middlewares/vali
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { MessageService } from "../services/message-service.js";
-import { conversationMessagesQuerySchema, createGroupChatSchema, messageSchema } from "../validators/message.js";
+import { conversationMessagesQuerySchema, createGroupChatSchema, inviteToGroupSchema, messageSchema } from "../validators/message.js";
 import { conversationIdParamSchema, messageIdParamSchema } from "../validators/params.js";
 
 const router = Router();
@@ -15,6 +15,12 @@ const messageController = new MessageController(messageService);
 
 router.post("/messages", authenticate, validateBody(messageSchema), messageController.sendMessage);
 router.post("/conversations/group", authenticate, validateBody(createGroupChatSchema), messageController.createGroupChat);
+router.get("/group-invitations", authenticate, messageController.listGroupInvitations);
+router.post("/conversations/:conversationId/invitations", authenticate, validateParams(conversationIdParamSchema), validateBody(inviteToGroupSchema), messageController.inviteToGroup);
+router.post("/group-invitations/:invitationId/accept", authenticate, validateParams(z.object({invitationId:z.string().uuid()})), validateBody(z.object({updatedAt:z.string().datetime()}).strict()), messageController.acceptGroupInvitation);
+router.post("/group-invitations/:invitationId/reject", authenticate, validateParams(z.object({invitationId:z.string().uuid()})), messageController.rejectGroupInvitation);
+router.post("/group-invitations/:invitationId/guardian-approval", authenticate, validateParams(z.object({invitationId:z.string().uuid()})), validateBody(z.object({updatedAt:z.string().datetime()}).strict()), messageController.approveGroupInvitation);
+router.delete("/group-invitations/:invitationId", authenticate, validateParams(z.object({invitationId:z.string().uuid()})), messageController.revokeGroupInvitation);
 router.get("/conversations", authenticate, messageController.listConversations);
 router.put("/conversations/:conversationId/vanish", authenticate, validateParams(conversationIdParamSchema), validateBody(z.object({ enabled: z.boolean() })), messageController.setVanishMode);
 router.get("/conversations/:conversationId/messages", authenticate, validateParams(conversationIdParamSchema), validateQuery(conversationMessagesQuerySchema), messageController.listConversation);

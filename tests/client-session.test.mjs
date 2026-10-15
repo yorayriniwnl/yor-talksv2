@@ -7,6 +7,10 @@ const bundle = await build({
   entryPoints: ['social/src/lib/api-client.ts'], bundle: true, write: false,
   platform: 'browser', format: 'esm', define: { 'import.meta.env': '{}' },
 });
+const eligibilityBundle = await build({
+  entryPoints: ['social/src/lib/eligibility-contract.ts'], bundle: true, write: false,
+  platform: 'browser', format: 'esm', define: { 'import.meta.env': '{}' },
+});
 async function client(t) {
   const storage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   Object.defineProperty(globalThis, 'localStorage', {
@@ -14,6 +18,10 @@ async function client(t) {
   });
   t.after(() => storage ? Object.defineProperty(globalThis, 'localStorage', storage) : Reflect.deleteProperty(globalThis, 'localStorage'));
   const source = `${bundle.outputFiles[0].text}\n// ${randomUUID()}\n//# sourceURL=api-client-test.js`;
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+}
+async function eligibilityContract() {
+  const source = `${eligibilityBundle.outputFiles[0].text}\n// ${randomUUID()}\n//# sourceURL=eligibility-contract-test.js`;
   return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 }
 const ok = (data) => Response.json({ success: true, data, meta: {} });
@@ -187,4 +195,42 @@ test('paginated private data obeys the same session boundary', async (t) => {
   setStoredTokens(null);
   response.resolve(ok([{ id: 'previous-private-post' }]));
   await assert.rejects(request, /session changed/i);
+});
+
+test('eligibility and receipt contracts reject extra or self-asserted authority', async () => {
+  const { eligibilityDecisionSchema, challengeReceiptSchema, contactRulesSchema, groupInvitationSchema } = await eligibilityContract();
+  const decision = {
+    experience: 'adult_18_plus', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: false, seller: false, memberships: false, live: false, rtc: false, ai: false, analytics: true, profiling: true },
+    maximumContentRating: 'regular', policyVersions: ['policy-v1'], revision: 'a'.repeat(64), reason: null, publicBrowsingAllowed: true,
+  };
+  assert.equal(eligibilityDecisionSchema.safeParse(decision).success, true);
+  assert.equal(eligibilityDecisionSchema.safeParse({ ...decision, ageConfirmedAt: new Date().toISOString() }).success, false);
+  assert.equal(eligibilityDecisionSchema.safeParse({ ...decision, experience: 'unknown' }).success, false);
+  assert.equal(challengeReceiptSchema.safeParse({ challengeId: randomUUID(), nextStep: 'verification_required', redirectUrl: 'javascript:alert(1)', expiresAt: new Date(Date.now() + 60_000).toISOString() }).success, false);
+  assert.equal(contactRulesSchema.safeParse({ decision, guardianContactsRequired: false, guardianPolicyVersions: {}, guardianNoticeVersions: {}, privateGuardianReference: 'secret' }).success, false);
+  const invitation = { id: randomUUID(), conversationId: randomUUID(), inviterId: randomUUID(), recipientId: randomUUID(), status: 'pending', memberIds: [randomUUID()], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), requiresYourAcceptance: true, guardianApprovalRequired: false };
+  assert.equal(groupInvitationSchema.safeParse(invitation).success, true);
+  assert.equal(groupInvitationSchema.safeParse({ ...invitation, messageHistory: ['private content'] }).success, false);
+});
+
+test('registration keeps the one-time enrollment credential out of URLs and omits checkbox age claims', async (t) => {
+  const { api } = await client(t);
+  const nonce = 'n'.repeat(43);
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => ok({ user: {}, verificationRequired: true }));
+  await api.register({ username: 'tester', email: 'tester@example.test', password: 'StrongPassword1!', fullName: 'Test User', acceptedTerms: true, enrollmentId: randomUUID(), registrationNonce: nonce });
+  const [url, options] = fetchMock.mock.calls[0].arguments;
+  assert.equal(String(url).includes(nonce), false);
+  assert.equal(JSON.parse(options.body).registrationNonce, nonce);
+  assert.equal('confirmedAge' in JSON.parse(options.body), false);
+});
+
+test('group invitation API accepts owner-safe metadata and rejects any message history', async (t) => {
+  const { api } = await client(t);
+  const invitation = { id: randomUUID(), conversationId: randomUUID(), inviterId: randomUUID(), recipientId: randomUUID(), status: 'pending', memberIds: [randomUUID()], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), requiresYourAcceptance: true, guardianApprovalRequired: false };
+  let response = [invitation];
+  t.mock.method(globalThis, 'fetch', async () => ok(response));
+  assert.deepEqual(await api.getGroupInvitations(), [invitation]);
+  response = [{ ...invitation, messageHistory: [{ content: 'private message' }] }];
+  await assert.rejects(api.getGroupInvitations());
 });

@@ -34,6 +34,9 @@ import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 const USERNAME_PATTERN = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$/;
+const ENROLLMENT_SESSION_KEY = 'yor:eligibility:registration:v1';
+type RegistrationExperience = 'under_13' | 'teen_13_17' | 'adult_18_plus';
+type RegistrationEnrollment = { id: string; registrationNonce: string; expiresAt: string; experience: RegistrationExperience; territory: string };
 
 export default function Auth() {
   const login = useAppStore((state) => state.login);
@@ -64,7 +67,9 @@ export default function Auth() {
   const [verificationPending, setVerificationPending] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [confirmedAge, setConfirmedAge] = useState(false);
+  const [requestedExperience, setRequestedExperience] = useState<RegistrationExperience | ''>('');
+  const [territory, setTerritory] = useState('');
+  const [registrationEnrollment, setRegistrationEnrollment] = useState<RegistrationEnrollment | null>(null);
   const [readiness, setReadiness] = useState<'checking' | 'operational' | 'unavailable'>('checking');
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleCredentialRef = useRef<string | null>(null);
@@ -72,6 +77,57 @@ export default function Auth() {
   const [googleRetry, setGoogleRetry] = useState(0);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
+
+  const runRegistrationVerification = async () => {
+    if (!requestedExperience) throw new Error('Choose the age group that best fits you to see the available verification steps.');
+    const country = territory.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(country)) throw new Error('Enter your two-letter country code, such as IN or US.');
+    let enrollment = registrationEnrollment;
+    if (!enrollment || Date.parse(enrollment.expiresAt) <= Date.now() || enrollment.experience !== requestedExperience || enrollment.territory !== country) {
+      const prescreen = await api.prescreenEligibility({ requestedExperience, territory: country });
+      if (prescreen.status === 'unavailable' || !prescreen.enrollment) {
+        throw new Error('Verification is not available for this country and age group yet. No account has been created.');
+      }
+      const created = prescreen.enrollment!;
+      enrollment = { id: created.id, registrationNonce: created.registrationNonce, expiresAt: created.expiresAt, experience: requestedExperience, territory: country };
+      try { sessionStorage.setItem(ENROLLMENT_SESSION_KEY, JSON.stringify(enrollment)); }
+      catch { throw new Error('This browser cannot save the short-lived verification step. Enable session storage and try again.'); }
+      setRegistrationEnrollment(enrollment);
+    }
+
+    const progress = await api.getEnrollmentProgress(enrollment.id, enrollment.registrationNonce);
+    if (progress.status === 'unavailable' || !progress.nextStep) {
+      setRegistrationEnrollment(null);
+      try { sessionStorage.removeItem(ENROLLMENT_SESSION_KEY); } catch { /* ignore */ }
+      throw new Error('This verification request expired or is unavailable. Start again to continue.');
+    }
+    if (progress.status === 'authorized' && progress.nextStep === 'complete_registration') {
+      await register(username.trim(), email.trim(), password, fullName.trim(), acceptedTerms, enrollment.id, enrollment.registrationNonce);
+      try { sessionStorage.removeItem(ENROLLMENT_SESSION_KEY); } catch { /* ignore */ }
+      setRegistrationEnrollment(null);
+      return 'registered' as const;
+    }
+    if (progress.nextStep !== 'age_assessment' && progress.nextStep !== 'guardian_authorization') throw new Error('Verification is not available for this request. Start again to continue.');
+    const receipt = await api.startEnrollmentChallenge(enrollment.id, enrollment.registrationNonce, progress.nextStep);
+    window.location.assign(receipt.redirectUrl);
+    return 'redirected' as const;
+  };
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(ENROLLMENT_SESSION_KEY);
+      if (!raw) return;
+      const value = JSON.parse(raw) as Partial<RegistrationEnrollment>;
+      if (typeof value.id === 'string' && typeof value.registrationNonce === 'string' && value.registrationNonce.length >= 32
+        && typeof value.expiresAt === 'string' && Date.parse(value.expiresAt) > Date.now()
+        && typeof value.experience === 'string' && ['under_13', 'teen_13_17', 'adult_18_plus'].includes(value.experience)
+        && typeof value.territory === 'string' && /^[A-Z]{2}$/.test(value.territory)) {
+        setRegistrationEnrollment(value as RegistrationEnrollment);
+        setRequestedExperience(value.experience as RegistrationExperience);
+        setTerritory(value.territory);
+      } else sessionStorage.removeItem(ENROLLMENT_SESSION_KEY);
+    } catch { /* The verification journey can be restarted if session storage is unavailable. */ }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -268,7 +324,8 @@ export default function Auth() {
       if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
       if (!isValidPassword(password)) errors.password = PASSWORD_REQUIREMENT_MESSAGE;
       if (!acceptedTerms) errors.acceptedTerms = `Accept the Terms and Privacy Notice to create an account.`;
-      if (!confirmedAge) errors.confirmedAge = `Confirm that you are at least ${publicBetaConfig.minimumAge}.`;
+      if (!requestedExperience) errors.requestedExperience = 'Choose an age group to see the verification steps.';
+      if (!/^[A-Z]{2}$/.test(territory.trim().toUpperCase())) errors.territory = 'Enter your two-letter country code.';
     } else if (googleCredentialRef.current) {
       if (twoFactorFallback && !/^\d{6}$/.test(twoFactorFallbackCode)) {
         errors.twoFactorFallbackCode = 'Enter the six-digit code from your authenticator app.';
@@ -296,7 +353,8 @@ export default function Auth() {
         password: 'password',
         twoFactorFallbackCode: 'twoFactorFallbackCode',
         acceptedTerms: 'acceptedTerms',
-        confirmedAge: 'confirmedAge',
+        requestedExperience: 'requestedExperience',
+        territory: 'territory',
       };
       const firstInvalidId = Object.keys(errors).map((key) => errorFieldIds[key]).find(Boolean);
       if (firstInvalidId) window.requestAnimationFrame(() => document.getElementById(firstInvalidId)?.focus());
@@ -334,7 +392,8 @@ export default function Auth() {
         }
         resetChallenge();
       } else {
-        await register(username.trim(), email.trim(), password, fullName.trim(), acceptedTerms, confirmedAge);
+        const verificationResult = await runRegistrationVerification();
+        if (verificationResult === 'redirected') return;
         setVerificationPending(true);
         setMode('login');
         setLoginMethod('password');
@@ -590,11 +649,23 @@ export default function Auth() {
                   <span>I accept the <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Notice</Link>, and <Link href="/community-guidelines">Community Guidelines</Link>.</span>
                 </label>
                 {fieldErrors.acceptedTerms && <p id="acceptedTerms-error" className="operator-field__error">{fieldErrors.acceptedTerms}</p>}
-                <label>
-                  <input id="confirmedAge" type="checkbox" checked={confirmedAge} onChange={(event) => setConfirmedAge(event.target.checked)} aria-invalid={Boolean(fieldErrors.confirmedAge)} aria-describedby={fieldErrors.confirmedAge ? 'confirmedAge-error' : undefined} />
-                  <span>I confirm I am at least {publicBetaConfig.minimumAge} years old.</span>
-                </label>
-                {fieldErrors.confirmedAge && <p id="confirmedAge-error" className="operator-field__error">{fieldErrors.confirmedAge}</p>}
+                <div className="operator-field">
+                  <Label htmlFor="requestedExperience">Which age group should we check?</Label>
+                  <select id="requestedExperience" value={requestedExperience} onChange={(event) => setRequestedExperience(event.target.value as RegistrationExperience | '')} aria-invalid={Boolean(fieldErrors.requestedExperience)} aria-describedby={fieldErrors.requestedExperience ? 'requestedExperience-error' : undefined}>
+                    <option value="">Choose an age group</option>
+                    <option value="under_13">Under 13 — a parent or guardian step is needed</option>
+                    <option value="teen_13_17">13–17 — age-appropriate account</option>
+                    <option value="adult_18_plus">18 or older — adult account</option>
+                  </select>
+                  {fieldErrors.requestedExperience && <p id="requestedExperience-error" className="operator-field__error">{fieldErrors.requestedExperience}</p>}
+                </div>
+                <div className="operator-field">
+                  <Label htmlFor="territory">Country code</Label>
+                  <Input id="territory" autoComplete="country" maxLength={2} value={territory} onChange={(event) => setTerritory(event.target.value.toUpperCase().slice(0, 2))} placeholder="IN" aria-invalid={Boolean(fieldErrors.territory)} aria-describedby={fieldErrors.territory ? 'territory-error' : undefined} />
+                  {fieldErrors.territory && <p id="territory-error" className="operator-field__error">{fieldErrors.territory}</p>}
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">This choice only selects the verification route. A checkbox or profile date does not prove age. For under-13 accounts, no normal profile details are collected before the required guardian permission.</p>
+                {registrationEnrollment && <p className="text-xs leading-5 text-primary" role="status">A verification request is ready to continue. It expires {new Date(registrationEnrollment.expiresAt).toLocaleString()}.</p>}
               </fieldset>
             )}
 

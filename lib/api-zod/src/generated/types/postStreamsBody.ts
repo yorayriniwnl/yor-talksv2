@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostStreamsBody = { [key: string]: unknown };
+export type PostStreamsBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };

@@ -5,8 +5,8 @@ const contentRatingSchema = z.enum(["child_safe", "regular", "mature"]);
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2).optional(),
   bio: z.string().max(280).optional(),
-  avatarUrl: z.string().url().optional(),
-});
+  avatarMediaId: z.string().uuid().optional(),
+}).strict();
 
 export const searchUsersSchema = z.object({
   q: z.string().optional(),
@@ -16,9 +16,14 @@ export const settingsSchema = z.object({
   theme: z.enum(["light", "dark"]).optional(),
   notificationsEnabled: z.boolean().optional(),
   privateAccount: z.boolean().optional(),
+  allowMentions: z.boolean().optional(),
+  autoplayEnabled: z.boolean().optional(),
+  readReceiptsEnabled: z.boolean().optional(),
+  streaksEnabled: z.boolean().optional(),
+  sharePreciseLocation: z.boolean().optional(),
   contentFilter: contentRatingSchema.optional(),
   storyViewMode: z.enum(["identified", "private"]).optional(),
-});
+}).strict();
 
 export const premiumProfileSchema = z.object({
   bioStyleId: z.string().trim().min(1).max(40).optional(),

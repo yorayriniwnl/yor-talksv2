@@ -6,4 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostArticlesBody = { [key: string]: unknown };
+export type PostArticlesBody = {
+  /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
+  coverMediaId?: string;
+  [key: string]: unknown;
+ };

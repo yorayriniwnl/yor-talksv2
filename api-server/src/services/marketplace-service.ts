@@ -9,6 +9,7 @@ import { ContentSafetyService } from "./content-safety-service.js";
 import { toMinorUnits } from "../lib/money.js";
 import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 import { CheckoutIntentService, checkoutHash, lockPaymentParties, paymentTransaction } from './checkout-intent-service.js';
+import { EligibilityService } from './eligibility-service.js';
 
 export class MarketplaceRequestError extends Error {}
 export class MarketplaceOrderNotFoundError extends Error {}
@@ -18,6 +19,7 @@ export class MarketplaceService {
   constructor(
     private readonly razorpay = new RazorpayService(),
     private readonly contentSafetyService = new ContentSafetyService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
   ) {}
 
   private async releaseExpiredReservations(): Promise<void> {
@@ -52,9 +54,11 @@ export class MarketplaceService {
     idempotencyKey?: string;
   }) {
     this.razorpay.assertConfigured();
-    await this.releaseExpiredReservations();
+    await this.eligibilityService.requireCapability(input.buyerId, "payments");
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, input.productId));
     if (!product) throw new MarketplaceRequestError("Product not found");
+    await this.eligibilityService.requireCapability(product.sellerId, "seller");
+    await this.releaseExpiredReservations();
     if (!(await this.contentSafetyService.isVisible(product, input.buyerId, product.sellerId))) {
       throw new MarketplaceRequestError("This listing is not available for your account");
     }
@@ -63,6 +67,8 @@ export class MarketplaceService {
     const amountMinor = toMinorUnits(Number(product.price));
     if (!amountMinor || amountMinor < 100) throw new MarketplaceRequestError("This listing has an invalid price");
 
+    await this.eligibilityService.requireCapability(input.buyerId, "payments");
+    await this.eligibilityService.requireCapability(product.sellerId, "seller");
     const intents = new CheckoutIntentService(this.razorpay), key = input.idempotencyKey ?? randomUUID();
     const hash = checkoutHash([input.productId,input.shippingName,input.shippingAddress,input.shippingPhone ?? null]);
     const reserved = await paymentTransaction(async client => {
@@ -77,7 +83,11 @@ export class MarketplaceService {
       [id,input.productId,input.buyerId,product.sellerId,`pending_${id.replaceAll('-','')}`,amountMinor,input.shippingName,input.shippingAddress,input.shippingPhone ?? null,{ id: product.id, title: product.title }]);
       return { intent: await intents.reserve(client, { id, product: 'marketplace', ownerId: input.buyerId, key, hash, amountMinor }), created: true };
     });
+    await this.eligibilityService.requireCapability(input.buyerId, "payments");
+    await this.eligibilityService.requireCapability(product.sellerId, "seller");
     const intent = reserved.created ? await intents.createRemote(reserved.intent) : reserved.intent;
+    await this.eligibilityService.requireCapability(input.buyerId, "payments");
+    await this.eligibilityService.requireCapability(product.sellerId, "seller");
     return { ...await intents.publicState(intent), orderId: intent.id };
   }
 

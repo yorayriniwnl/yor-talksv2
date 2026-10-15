@@ -1,4 +1,5 @@
 FROM node:24-alpine
+RUN apk add --no-cache ffmpeg
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Install the pinned CLI as a concrete global binary. A Corepack shim can

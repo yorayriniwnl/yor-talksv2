@@ -63,7 +63,6 @@ test("advanced story text styling is entitlement-gated and persisted after autho
   const locked = createStoryStyleService(false);
   const downgraded = await locked.service.createStory({
     authorId: "11111111-1111-4111-8111-111111111111",
-    mediaUrl: "https://example.test/story.jpg",
     type: "text",
     textContent: "Safe story text",
     isHighlight: false,
@@ -77,7 +76,6 @@ test("advanced story text styling is entitlement-gated and persisted after autho
   const enabled = createStoryStyleService(true);
   await enabled.service.createStory({
     authorId: "11111111-1111-4111-8111-111111111111",
-    mediaUrl: "https://example.test/story.jpg",
     type: "text",
     textContent: "Safe story text",
     isHighlight: false,

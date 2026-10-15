@@ -15,6 +15,8 @@ const FLUSH_INTERVAL = 1000 * 10; // 10s
 const MAX_ATTEMPTS = 3;
 const DEFAULT_SAMPLING = 1; // 100%
 let queue: TelemetryEvent[] = [];
+let eligibilityAllowsTelemetry = false;
+let telemetryOwnerId: string | null = null;
 
 function telemetryUrl(): string {
   return (import.meta.env as any).VITE_TELEMETRY_URL || '/api/telemetry/events';
@@ -45,17 +47,36 @@ function serializeEvents(events: TelemetryEvent[]): string {
 }
 
 export function hasTelemetryConsent(): boolean {
+  if (!eligibilityAllowsTelemetry) return false;
   try {
-    return localStorage.getItem(CONSENT_KEY) === 'granted';
+    return Boolean(telemetryOwnerId && localStorage.getItem(CONSENT_KEY) === telemetryOwnerId);
   } catch (e) {
     return false;
   }
 }
 
+/** Optional telemetry stays off until a current server decision permits adult analytics. */
+export function setTelemetryEligibility(allowed: boolean, ownerId: string | null = telemetryOwnerId): void {
+  eligibilityAllowsTelemetry = allowed;
+  telemetryOwnerId = ownerId;
+  if (!allowed) {
+    queue = [];
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+    return;
+  }
+  queue = loadQueue();
+}
+
 export function setTelemetryConsent(granted: boolean): void {
+  if (granted && !eligibilityAllowsTelemetry) return;
   try {
     if (granted) {
-      localStorage.setItem(CONSENT_KEY, 'granted');
+      if (!telemetryOwnerId) return;
+      localStorage.setItem(CONSENT_KEY, telemetryOwnerId);
       return;
     }
     localStorage.removeItem(CONSENT_KEY);

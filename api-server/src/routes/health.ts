@@ -4,6 +4,8 @@ import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { hasHealthyLifecycleWorker, hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { inspectMediaReadiness } from '../services/media-readiness.js';
 
 const router = Router();
 
@@ -42,6 +44,8 @@ const readinessHandler = async (_req: Request, res: Response) => {
 
   try {
     await withHealthTimeout(db.execute(sql`SELECT 1`), "Database");
+    details.media = await inspectMediaReadiness();
+    await db.execute(sql`SELECT 1`);
     services.database = "up";
 
     const redis = await withHealthTimeout(inspectRedisCompatibility(env.REDIS_URL), "Redis");

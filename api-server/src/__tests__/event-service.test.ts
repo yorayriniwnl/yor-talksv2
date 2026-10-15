@@ -17,7 +17,6 @@ test("event RSVP status is exclusive and can be cleared", async () => {
     hostId: host.id,
     title: "Open systems meetup",
     description: "A practical gathering for systems builders.",
-    coverUrl: "https://example.test/event.jpg",
     category: "technology",
     startsAt: new Date(Date.now() + 86_400_000).toISOString(),
     location: "Online",

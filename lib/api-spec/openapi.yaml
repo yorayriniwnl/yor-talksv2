@@ -18,13 +18,16 @@ tags:
   - name: broadcast-channels
   - name: business
   - name: communities
+  - name: contacts
   - name: conversations
   - name: creator
   - name: diagnostics
   - name: docs
   - name: economy
+  - name: eligibility
   - name: events
   - name: feed
+  - name: group-invitations
   - name: healthz
   - name: highlights
   - name: invites
@@ -173,13 +176,7 @@ paths:
       tags: [articles]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -677,15 +674,9 @@ paths:
       summary: Post /auth/register
       tags: [auth]
       security: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/RegisterRequest"}}}}
       responses:
-        "200":
+        "201":
           description: Successful response
           content:
             application/json:
@@ -693,6 +684,14 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /auth/reset-password:
     post:
       operationId: postAuthResetPassword
@@ -909,13 +908,7 @@ paths:
       tags: [broadcast-channels]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -1126,13 +1119,7 @@ paths:
       tags: [business]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"logoMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -1165,13 +1152,7 @@ paths:
       tags: [communities]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -1353,6 +1334,159 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /contacts/requests:
+    get:
+      operationId: getContactsRequests
+      summary: Get /contacts/requests
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/ContactRequestList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    post:
+      operationId: postContactsRequests
+      summary: Post /contacts/requests
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ContactRequestCreate"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}:
+    delete:
+      operationId: deleteContactsRequestsByRequestId
+      summary: Delete /contacts/requests/{requestId}
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/ContactWithdrawalReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/accept:
+    post:
+      operationId: postContactsRequestsByRequestIdAccept
+      summary: Post /contacts/requests/{requestId}/accept
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/guardian-approval:
+    post:
+      operationId: postContactsRequestsByRequestIdGuardianApproval
+      summary: Post /contacts/requests/{requestId}/guardian-approval
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /contacts/requests/{requestId}/reject:
+    post:
+      operationId: postContactsRequestsByRequestIdReject
+      summary: Post /contacts/requests/{requestId}/reject
+      tags: [contacts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeContactRequest"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /conversations:
     get:
       operationId: getConversations
@@ -1371,6 +1505,39 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /conversations/{conversationId}/invitations:
+    post:
+      operationId: postConversationsByConversationIdInvitations
+      summary: Post /conversations/{conversationId}/invitations
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/InviteToGroupRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /conversations/{conversationId}/messages:
     get:
       operationId: getConversationsByConversationIdMessages
@@ -1696,6 +1863,90 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /eligibility/enrollments/{enrollmentId}/challenges:
+    post:
+      operationId: postEligibilityEnrollmentsByEnrollmentIdChallenges
+      summary: Post /eligibility/enrollments/{enrollmentId}/challenges
+      tags: [eligibility]
+      security: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/EnrollmentChallengeRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /eligibility/enrollments/{enrollmentId}/status:
+    post:
+      operationId: postEligibilityEnrollmentsByEnrollmentIdStatus
+      summary: Post /eligibility/enrollments/{enrollmentId}/status
+      tags: [eligibility]
+      security: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/EnrollmentCredentialRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeEnrollmentProgress"}}}]}
+        "400":
+          description: Invalid request
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /eligibility/enrollments/prescreen:
+    post:
+      operationId: postEligibilityEnrollmentsPrescreen
+      summary: Post /eligibility/enrollments/prescreen
+      tags: [eligibility]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/EnrollmentPrescreenRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeEnrollmentStatus"}}}]}
+        "400":
+          description: Invalid request
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /events:
     get:
       operationId: getEvents
@@ -1717,13 +1968,7 @@ paths:
       tags: [events]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -1846,6 +2091,169 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /group-invitations:
+    get:
+      operationId: getGroupInvitations
+      summary: Get /group-invitations
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /group-invitations/{invitationId}:
+    delete:
+      operationId: deleteGroupInvitationsByInvitationId
+      summary: Delete /group-invitations/{invitationId}
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/NullReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /group-invitations/{invitationId}/accept:
+    post:
+      operationId: postGroupInvitationsByInvitationIdAccept
+      summary: Post /group-invitations/{invitationId}/accept
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GroupInvitationDecisionRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupAcceptanceResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /group-invitations/{invitationId}/guardian-approval:
+    post:
+      operationId: postGroupInvitationsByInvitationIdGuardianApproval
+      summary: Post /group-invitations/{invitationId}/guardian-approval
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GroupInvitationDecisionRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/SafeGroupAcceptanceResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /group-invitations/{invitationId}/reject:
+    post:
+      operationId: postGroupInvitationsByInvitationIdReject
+      summary: Post /group-invitations/{invitationId}/reject
+      tags: [group-invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/NullReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /healthz:
     get:
       operationId: getHealthz
@@ -1885,13 +2293,7 @@ paths:
       tags: [highlights]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -1968,6 +2370,95 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /media/{id}:
+    delete:
+      operationId: deleteMediaById
+      summary: Delete /media/{id}
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
+  /media/{id}/content:
+    get:
+      operationId: getMediaByIdContent
+      summary: Get /media/{id}/content
+      tags: [media]
+      security:
+        - mediaGrant: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses: {"200":{"description":"Approved original bytes or a JPEG poster derived from verified original bytes","content":{"image/jpeg":{"schema":{"type":"string","format":"binary"}},"image/png":{"schema":{"type":"string","format":"binary"}},"image/webp":{"schema":{"type":"string","format":"binary"}},"video/mp4":{"schema":{"type":"string","format":"binary"}},"video/webm":{"schema":{"type":"string","format":"binary"}},"audio/mpeg":{"schema":{"type":"string","format":"binary"}},"audio/wav":{"schema":{"type":"string","format":"binary"}},"audio/webm":{"schema":{"type":"string","format":"binary"}},"audio/ogg":{"schema":{"type":"string","format":"binary"}}}},"206":{"description":"Approved original bytes or a JPEG poster derived from verified original bytes","content":{"image/jpeg":{"schema":{"type":"string","format":"binary"}},"image/png":{"schema":{"type":"string","format":"binary"}},"image/webp":{"schema":{"type":"string","format":"binary"}},"video/mp4":{"schema":{"type":"string","format":"binary"}},"video/webm":{"schema":{"type":"string","format":"binary"}},"audio/mpeg":{"schema":{"type":"string","format":"binary"}},"audio/wav":{"schema":{"type":"string","format":"binary"}},"audio/webm":{"schema":{"type":"string","format":"binary"}},"audio/ogg":{"schema":{"type":"string","format":"binary"}}}},"403":{"description":"Invalid or expired delivery grant"},"404":{"description":"Media revoked or unavailable"},"415":{"description":"Provider bytes no longer match the approved hash"},"416":{"description":"Invalid or unsatisfiable single byte range"},"502":{"description":"Provider unavailable"},"503":{"description":"Media delivery busy or unavailable"}}
+  /media/{id}/finalize:
+    post:
+      operationId: postMediaByIdFinalize
+      summary: Post /media/{id}/finalize
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":false,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MediaFinalizeRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "202":
+          description: Verification already in progress; retry the same media ID
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/{id}/hls:
     get:
       operationId: getMediaByIdHls
@@ -1989,6 +2480,43 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /media/{id}/upload:
+    post:
+      operationId: postMediaByIdUpload
+      summary: Post /media/{id}/upload
+      tags: [media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["file"],"properties":{"file":{"type":"string","format":"binary"}}}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/presign:
     post:
       operationId: postMediaPresign
@@ -1996,24 +2524,30 @@ paths:
       tags: [media]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MediaPresignRequest"}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaReservation"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /media/upload:
     post:
       operationId: postMediaUpload
@@ -2021,24 +2555,32 @@ paths:
       tags: [media]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["file","purpose"],"properties":{"file":{"type":"string","format":"binary"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]}}}}}}
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/MediaResult"}}}]}
         "400":
           description: Invalid request
         "401":
           description: Authentication required
+        "201":
+          description: Media verified and approved
+        "403":
+          description: Media owner mismatch
+        "409":
+          description: Media closed, unapproved or in use
+        "413":
+          description: Purpose-specific byte limit exceeded
+        "415":
+          description: Unsupported type or verified metadata/byte mismatch
+        "502":
+          description: Provider unavailable
+        "503":
+          description: Storage, decoder or moderation unavailable; approval fails closed
   /messages:
     post:
       operationId: postMessages
@@ -2046,13 +2588,7 @@ paths:
       tags: [messages]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -2575,13 +3111,7 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaIds":{"type":"array","maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -2737,13 +3267,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -3102,13 +3626,7 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["image"],"properties":{"image":{"type":"string","format":"binary"}}}}}}
       responses:
         "200":
           description: Successful response
@@ -3316,13 +3834,7 @@ paths:
       tags: [products]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaIds":{"type":"array","maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -3760,12 +4272,12 @@ paths:
               type: object
               additionalProperties: true
       responses:
-        "200":
+        "201":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceReceipt"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}:
@@ -3786,7 +4298,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicGrievanceReceipt"}}}]}
         "400":
           description: Invalid request
   /reports/grievance/{ticketId}/status:
@@ -3901,13 +4413,7 @@ paths:
       tags: [stories]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -4112,13 +4618,7 @@ paths:
       tags: [streams]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"coverMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -4783,13 +5283,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"customImageMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -4971,13 +5465,7 @@ paths:
       tags: [users]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"avatarMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -5013,13 +5501,7 @@ paths:
       tags: [users]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":false,"required":["avatar"],"properties":{"avatar":{"type":"string","format":"binary"}}}}}}
       responses:
         "200":
           description: Successful response
@@ -5140,6 +5622,91 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/eligibility:
+    get:
+      operationId: getUsersMeEligibility
+      summary: Get /users/me/eligibility
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/EligibilityDecision"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/eligibility/challenges:
+    post:
+      operationId: postUsersMeEligibilityChallenges
+      summary: Post /users/me/eligibility/challenges
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssuranceChallengeRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/eligibility/challenges/{challengeId}:
+    get:
+      operationId: getUsersMeEligibilityChallengesByChallengeId
+      summary: Get /users/me/eligibility/challenges/{challengeId}
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeStatus"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /users/me/export:
     get:
       operationId: getUsersMeExport
@@ -5256,6 +5823,97 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/guardian-authorizations:
+    get:
+      operationId: getUsersMeGuardianAuthorizations
+      summary: Get /users/me/guardian-authorizations
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/GuardianAuthorizationList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+    post:
+      operationId: postUsersMeGuardianAuthorizations
+      summary: Post /users/me/guardian-authorizations
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GuardianJourneyRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/AssuranceChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
+  /users/me/guardian-authorizations/{authorizationId}/withdraw:
+    post:
+      operationId: postUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw
+      summary: Post /users/me/guardian-authorizations/{authorizationId}/withdraw
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authorizationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/GuardianWithdrawalReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Current account or territory does not permit verification
+        "404":
+          description: Owner-bound record unavailable
+        "429":
+          description: Verification rate or outstanding challenge limit exceeded
+        "503":
+          description: Verification provider unavailable; no authority granted
   /users/me/premium-profile:
     get:
       operationId: getUsersMePremiumProfile
@@ -5387,13 +6045,7 @@ paths:
       tags: [videos]
       security:
         - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."},"thumbnailMediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."},"externalVideoUrl":{"type":"string","format":"uri","description":"Separate allowlisted external embed; requires an approved video-purpose image thumbnail."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -5516,13 +6168,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"description":"Media fields shown below replace uploaded URLs. Remaining content fields follow the route validator. Raw media URL fields are rejected; ownership, purpose and approved status are checked in the publication transaction.","content":{"application/json":{"schema":{"type":"object","properties":{"mediaId":{"type":"string","format":"uuid","description":"An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose."}},"additionalProperties":true,"not":{"anyOf":[{"required":["images"]},{"required":["mediaUrl"]},{"required":["videoUrl"]},{"required":["thumbnailUrl"]},{"required":["avatarUrl"]},{"required":["coverUrl"]},{"required":["logoUrl"]},{"required":["customImageUrl"]}]}}}}}
       responses:
         "200":
           description: Successful response
@@ -5625,6 +6271,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    mediaGrant:
+      type: apiKey
+      in: query
+      name: token
   schemas:
     ApiEnvelope:
       type: object
@@ -5639,3 +6289,33 @@ components:
         meta:
           type: object
           additionalProperties: true
+    MediaPresignRequest: {"type":"object","additionalProperties":false,"required":["filename","mimeType","size","purpose"],"properties":{"filename":{"type":"string","minLength":1,"maxLength":255},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer","minimum":1,"maximum":10485760,"description":"Declared bytes; purpose-specific limits may be lower. Actual bytes are verified server-side."},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]}}}
+    MediaFinalizeRequest: {"type":"object","additionalProperties":false}
+    MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}
+    MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}},"allOf":[{"if":{"properties":{"status":{"const":"approved"}}},"then":{"required":["purpose","url","mimeType","size"]},"else":{"not":{"anyOf":[{"required":["url"]},{"required":["thumbnailUrl"]}]}}}]}
+    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"},"slaDeadline":{"type":"string","format":"date-time","description":"Operational review target, not a universal statutory deadline."}}}
+    RegisterRequest: {"type":"object","additionalProperties":false,"required":["enrollmentId","registrationNonce","username","email","password","fullName","acceptedTerms"],"properties":{"enrollmentId":{"type":"string","format":"uuid"},"registrationNonce":{"type":"string","minLength":32,"maxLength":128,"description":"Short-lived opaque one-time registration credential. Never place it in a URL or log."},"username":{"type":"string","pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$"},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":8},"fullName":{"type":"string","minLength":2},"acceptedTerms":{"const":true}}}
+    EnrollmentPrescreenRequest: {"type":"object","additionalProperties":false,"required":["requestedExperience","territory"],"properties":{"requestedExperience":{"type":"string","enum":["under_13","teen_13_17","adult_18_plus"]},"territory":{"type":"string","pattern":"^[A-Z]{2}$"}}}
+    EnrollmentCredentialRequest: {"type":"object","additionalProperties":false,"required":["registrationNonce"],"properties":{"registrationNonce":{"type":"string","minLength":32,"maxLength":128}}}
+    EnrollmentChallengeRequest: {"type":"object","additionalProperties":false,"required":["registrationNonce","purpose"],"properties":{"registrationNonce":{"type":"string","minLength":32,"maxLength":128},"purpose":{"type":"string","enum":["guardian_authorization","age_assessment"]}}}
+    SafeEnrollmentStatus: {"type":"object","additionalProperties":false,"required":["status","nextStep"],"properties":{"status":{"type":"string","enum":["unavailable","verification_required","authorized"]},"nextStep":{"type":["string","null"],"enum":[null,"guardian_authorization","age_assessment","complete_registration"]},"enrollment":{"type":"object","additionalProperties":false,"required":["id","registrationNonce","expiresAt"],"properties":{"id":{"type":"string","format":"uuid"},"registrationNonce":{"type":"string","minLength":32,"maxLength":128},"expiresAt":{"type":"string","format":"date-time"}}}}}
+    SafeEnrollmentProgress: {"type":"object","additionalProperties":false,"required":["status","nextStep"],"properties":{"status":{"type":"string","enum":["unavailable","verification_required","authorized"]},"nextStep":{"type":["string","null"],"enum":[null,"guardian_authorization","age_assessment","complete_registration"]},"enrollment":{"type":"object","additionalProperties":false,"required":["id","expiresAt"],"properties":{"id":{"type":"string","format":"uuid"},"expiresAt":{"type":"string","format":"date-time"}}}}}
+    AssuranceChallengeRequest: {"oneOf":[{"type":"object","additionalProperties":false,"required":["purpose","territory"],"properties":{"purpose":{"const":"age_assessment"},"territory":{"type":"string","pattern":"^[A-Z]{2}$"}}},{"type":"object","additionalProperties":false,"required":["purpose","territory","purposes"],"properties":{"purpose":{"const":"guardian_authorization"},"territory":{"type":"string","pattern":"^[A-Z]{2}$"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}}}}]}
+    GuardianJourneyRequest: {"type":"object","additionalProperties":false,"required":["territory","purposes"],"properties":{"territory":{"type":"string","pattern":"^[A-Z]{2}$"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}}}}
+    AssuranceChallengeReceipt: {"type":"object","additionalProperties":false,"required":["challengeId","nextStep","redirectUrl","expiresAt"],"properties":{"challengeId":{"type":"string","format":"uuid"},"nextStep":{"const":"verification_required"},"redirectUrl":{"type":"string","format":"uri"},"expiresAt":{"type":"string","format":"date-time"}}}
+    AssuranceChallengeStatus: {"type":"object","additionalProperties":false,"required":["challengeId","purpose","status","expiresAt"],"properties":{"challengeId":{"type":"string","format":"uuid"},"purpose":{"type":"string","enum":["age_assessment","guardian_authorization"]},"status":{"type":"string","enum":["pending","consumed","revoked","expired"]},"expiresAt":{"type":"string","format":"date-time"}}}
+    GuardianAuthorizationReceipt: {"type":"object","additionalProperties":false,"required":["id","purposes","status","expiresAt"],"properties":{"id":{"type":"string","format":"uuid"},"purposes":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["account_collection","account_activation","social_contact"]}},"status":{"type":"string","enum":["granted","withdrawn","revoked"]},"expiresAt":{"type":"string","format":"date-time"}}}
+    GuardianAuthorizationList: {"type":"array","maxItems":100,"items":{"$ref":"#/components/schemas/GuardianAuthorizationReceipt"}}
+    GuardianWithdrawalReceipt: {"type":"boolean","const":true}
+    EligibilityDecision: {"type":"object","additionalProperties":false,"required":["experience","activated","capabilities","maximumContentRating","policyVersions","revision","reason","publicBrowsingAllowed"],"properties":{"experience":{"type":"string","enum":["unknown","under_13","teen_13_17","adult_18_plus"]},"activated":{"type":"boolean"},"capabilities":{"type":"object","additionalProperties":false,"required":["social","publish","messaging","payments","seller","memberships","live","rtc","ai","analytics","profiling"],"properties":{"social":{"type":"boolean"},"publish":{"type":"boolean"},"messaging":{"type":"boolean"},"payments":{"type":"boolean"},"seller":{"type":"boolean"},"memberships":{"type":"boolean"},"live":{"type":"boolean"},"rtc":{"type":"boolean"},"ai":{"type":"boolean"},"analytics":{"type":"boolean"},"profiling":{"type":"boolean"}}},"maximumContentRating":{"type":"string","enum":["child_safe","regular","mature"]},"policyVersions":{"type":"array","items":{"type":"string"}},"revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},"reason":{"type":["string","null"],"enum":[null,"verification_required","territory_unavailable","guardian_required","reassessment_required","account_restricted"]},"publicBrowsingAllowed":{"type":"boolean"}}}
+    InviteToGroupRequest: {"type":"object","additionalProperties":false,"required":["inviteeIds"],"properties":{"inviteeIds":{"type":"array","minItems":1,"maxItems":99,"uniqueItems":true,"items":{"type":"string","format":"uuid"}}}}
+    ContactRequestCreate: {"type":"object","additionalProperties":false,"required":["recipientId"],"properties":{"recipientId":{"type":"string","format":"uuid"}}}
+    SafeContactRequest: {"type":"object","additionalProperties":false,"required":["id","initiatorId","recipientId","status","createdAt","updatedAt","requiresYourAcceptance","guardianApprovalRequired"],"properties":{"id":{"type":"string","format":"uuid"},"initiatorId":{"type":"string","format":"uuid"},"recipientId":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["pending","accepted","rejected","revoked"]},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"requiresYourAcceptance":{"type":"boolean"},"guardianApprovalRequired":{"type":"boolean"}}}
+    ContactRequestList: {"type":"array","maxItems":200,"items":{"$ref":"#/components/schemas/SafeContactRequest"}}
+    ContactRules: {"type":"object","additionalProperties":false,"required":["decision","guardianContactsRequired","guardianPolicyVersions","guardianNoticeVersions"],"properties":{"decision":{"$ref":"#/components/schemas/EligibilityDecision"},"guardianContactsRequired":{"type":"boolean"},"guardianPolicyVersions":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","minLength":1,"maxLength":128}},"guardianNoticeVersions":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","minLength":1,"maxLength":128}}}}
+    GroupInvitationDecisionRequest: {"type":"object","additionalProperties":false,"required":["updatedAt"],"properties":{"updatedAt":{"type":"string","format":"date-time"}}}
+    SafeGroupInvitation: {"type":"object","additionalProperties":false,"required":["id","conversationId","inviterId","recipientId","status","memberIds","createdAt","updatedAt","requiresYourAcceptance","guardianApprovalRequired"],"properties":{"id":{"type":"string","format":"uuid"},"conversationId":{"type":"string","format":"uuid"},"inviterId":{"type":"string","format":"uuid"},"recipientId":{"type":"string","format":"uuid"},"status":{"type":"string","enum":["pending","accepted","rejected","revoked"]},"memberIds":{"type":"array","maxItems":100,"items":{"type":"string","format":"uuid"}},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"requiresYourAcceptance":{"type":"boolean"},"guardianApprovalRequired":{"type":"boolean"}}}
+    SafeGroupInvitationList: {"type":"array","maxItems":200,"items":{"$ref":"#/components/schemas/SafeGroupInvitation"}}
+    SafeGroupAcceptanceResult: {"type":"object","additionalProperties":false,"required":["invitation","refreshedInvitations"],"properties":{"invitation":{"$ref":"#/components/schemas/SafeGroupInvitation"},"refreshedInvitations":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}
+    NullReceipt: {"type":"null"}
+    ContactWithdrawalReceipt: {"type":"null"}

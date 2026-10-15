@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppStore } from '@/lib/store';
-import { api } from '@/lib/api-client';
+import { uploadApprovedMedia } from '@/lib/media-upload';
 import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
@@ -64,11 +64,10 @@ export default function ClipStudio() {
     setPublishing(true);
     sounds.playChime();
     try {
-      const uploaded = await api.uploadMedia(selectedFile);
+      const uploaded = await uploadApprovedMedia(selectedFile, 'video');
       await createVideo({
         title: captionText.trim() || 'Yor Clip Studio highlight',
-        videoUrl: uploaded.url,
-        thumbnailUrl: uploaded.thumbnailUrl,
+        mediaId: uploaded.mediaId,
         type: 'short',
         contentCategory,
         contentRating,

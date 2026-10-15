@@ -30,6 +30,7 @@ const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
 const Onboarding = lazyWithRetry(() => import('@/pages/onboarding'));
 const Consent = lazyWithRetry(() => import('@/pages/consent'));
+const Eligibility = lazyWithRetry(() => import('@/pages/eligibility'));
 const BusinessDashboard = lazyWithRetry(() => import('@/pages/business-dashboard'));
 const Home = lazyWithRetry(() => import('@/pages/home'));
 const Pulse = lazyWithRetry(() => import('@/pages/pulse'));
@@ -127,6 +128,7 @@ function ProtectedRoutes() {
                 <Route path="/saved" component={Saved} />
                 <Route path="/channels" component={BroadcastChannels} />
                 <Route path="/settings" component={Settings} />
+                <Route path="/eligibility" component={Eligibility} />
                 <Route path="/advanced" component={Advanced} />
                 <Route path="/premium" component={Premium} />
                 <Route path="/billing" component={Billing} />
@@ -206,15 +208,17 @@ function AuthRedirect() {
 
 function Router() {
   const currentUser = useAppStore((s) => s.currentUser);
+  const eligibility = useAppStore((s) => s.eligibility);
+  const eligibilityLoaded = useAppStore((s) => s.eligibilityLoaded);
   const isInitializing = useAppStore((s) => s.isInitializing);
   const initialize = useAppStore((s) => s.initialize);
   const [location] = useLocation();
   const needsOnboarding = currentUser?.onboardingCompleted === false;
   const needsTerms = Boolean(currentUser && publicBetaConfig.publicBeta && (
     currentUser.termsVersion !== publicBetaConfig.termsVersion ||
-    !currentUser.termsAcceptedAt ||
-    !currentUser.ageConfirmedAt
+    !currentUser.termsAcceptedAt
   ));
+  const needsEligibility = Boolean(currentUser && (!eligibilityLoaded || !eligibility?.activated || !eligibility.capabilities.social || eligibility.experience === 'under_13'));
 
   useEffect(() => {
     initialize().catch(console.error);
@@ -252,7 +256,14 @@ function Router() {
             </Route>
           </>
         )}
-        {currentUser && !needsTerms && needsOnboarding && (
+        {currentUser && !needsTerms && needsEligibility && (
+          <>
+            <Route path="/eligibility" component={Eligibility} />
+            <Route path="/settings" component={Settings} />
+            <Route><Redirect to="/eligibility" /></Route>
+          </>
+        )}
+        {currentUser && !needsTerms && !needsEligibility && needsOnboarding && (
           <>
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
@@ -262,7 +273,7 @@ function Router() {
             </Route>
           </>
         )}
-        {currentUser && !needsTerms && !needsOnboarding && (
+        {currentUser && !needsTerms && !needsEligibility && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
             <Route path="/verify-email/:token" component={VerifyEmail} />
@@ -284,6 +295,9 @@ function Router() {
 // ═══════════════════════════════════════════════════════════════
 
 function App() {
+  const currentUser = useAppStore((s) => s.currentUser);
+  const eligibility = useAppStore((s) => s.eligibility);
+  const canUsePush = Boolean(currentUser && currentUser.notificationsEnabled !== false && eligibility?.activated && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.social);
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <MotionConfig reducedMotion="user">
@@ -295,7 +309,7 @@ function App() {
               </Suspense>
             </ErrorBoundary>
           </WouterRouter>
-          <PushNotificationManager />
+          {canUsePush && <PushNotificationManager />}
           <Toaster />
         </TooltipProvider>
       </MotionConfig>

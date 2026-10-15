@@ -11,13 +11,17 @@ import { env } from "../config/env.js";
 import { RazorpayService } from "./razorpay-service.js";
 import type { CapturedPaymentInput, ProcessedRefundInput } from "./payment-webhook-types.js";
 import { CheckoutIntentService, checkoutHash, lockPaymentParties, paymentTransaction } from './checkout-intent-service.js';
+import { EligibilityService } from "./eligibility-service.js";
 
 export class PaymentOrderNotFoundError extends Error {}
 export class PaymentOrderForbiddenError extends Error {}
 export class PaymentRequestError extends Error {}
 
 export class PaymentService {
-  constructor(private readonly razorpay = new RazorpayService()) {}
+  constructor(
+    private readonly razorpay = new RazorpayService(),
+    private readonly eligibilityService: EligibilityService = new EligibilityService(),
+  ) {}
 
   verifyWebhookSignature(payload: Buffer, signature: string): boolean {
     return this.razorpay.verifyWebhookSignature(payload, signature);
@@ -32,6 +36,8 @@ export class PaymentService {
     idempotencyKey?: string;
   }) {
     this.razorpay.assertConfigured();
+    await this.eligibilityService.requireCapability(input.payerId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
     if (input.payerId === input.creatorId) {
       throw new PaymentRequestError("You cannot send a tip to yourself");
     }
@@ -49,7 +55,14 @@ export class PaymentService {
         VALUES($1,$2,$3,$4,$5,$6,'provider_pending',$7)`, [id,input.payerId,input.creatorId,input.streamId ?? null,`pending_${id.replaceAll('-','')}`,input.amountMinor,input.message?.trim() ?? '']);
       return { intent: await intents.reserve(client, { id, product: 'tip', ownerId: input.payerId, key, hash, amountMinor: input.amountMinor }), created: true };
     });
+    // A withdrawal/restriction during reservation must stop the provider POST.
+    await this.eligibilityService.requireCapability(input.payerId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
     const intent = reserved.created ? await intents.createRemote(reserved.intent) : reserved.intent;
+    // The provider call may outlive the actor's authority. Keep reconciliation
+    // available for any created obligation, but do not issue checkout details.
+    await this.eligibilityService.requireCapability(input.payerId, "payments");
+    await this.eligibilityService.requireCapability(input.creatorId, "seller");
     return { ...await intents.publicState(intent), orderId: intent.provider_order_id };
   }
 
