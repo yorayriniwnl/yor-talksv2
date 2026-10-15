@@ -167,6 +167,9 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
+    if (!this.isMessageVisible(persisted)) {
+      throw new UnauthorizedError("This message is no longer available");
+    }
     return persisted;
   }
 
@@ -185,12 +188,20 @@ export class MessageService {
       return [];
     }
     const messages = await this.messageRepository.listConversation(conversationId, options);
-    return this.withReadReceipts(messages.filter((message: MessageRecord) => !message.deletedAt), userId);
+    const withReceipts = await this.withReadReceipts(messages.filter((message: MessageRecord) => this.isMessageVisible(message)), userId);
+    return withReceipts.filter((message) => this.isMessageVisible(message));
+  }
+
+  private isMessageVisible(message: MessageRecord): boolean {
+    if (message.deletedAt) return false;
+    if (message.expiresAt == null) return true;
+    const expiresAt = Date.parse(message.expiresAt);
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
     const message = await this.messageRepository.findById(messageId);
-    if (!message || message.deletedAt) return undefined;
+    if (!message || !this.isMessageVisible(message)) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
     if (message.senderId === userId) return undefined;
@@ -205,7 +216,9 @@ export class MessageService {
     }
     const previewedAt = new Date().toISOString();
     const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
-    return previewed ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt } : undefined;
+    return previewed && this.isMessageVisible(previewed)
+      ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt }
+      : undefined;
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
@@ -224,7 +237,10 @@ export class MessageService {
     );
     const lastMessages = results.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => ({ ...result, lastMessage: result.lastMessage ? receipts.get(result.lastMessage.id) : undefined }));
+    return results.map((result) => {
+      const lastMessage = result.lastMessage ? receipts.get(result.lastMessage.id) : undefined;
+      return { ...result, lastMessage: lastMessage && this.isMessageVisible(lastMessage) ? lastMessage : undefined };
+    });
   }
 
   private async withReadReceipts(messages: MessageRecord[], userId: string): Promise<MessageRecord[]> {
@@ -307,14 +323,7 @@ export class MessageService {
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
     const message = await this.assertParticipant(messageId, userId);
-    const reactions = message.reactions ?? {};
-    const current = reactions[reaction] ?? [];
-    if (!current.includes(userId)) {
-      current.push(userId);
-      reactions[reaction] = current;
-      message.reactions = reactions;
-    }
-    return this.messageRepository.update(messageId, { reactions: message.reactions });
+    return this.messageRepository.addReaction(messageId, userId, reaction);
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {

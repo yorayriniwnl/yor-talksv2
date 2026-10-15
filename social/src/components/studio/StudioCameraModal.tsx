@@ -89,6 +89,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraGenerationRef = useRef(0);
 
   useEffect(() => () => {
     if (recordedPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(recordedPreviewUrl);
@@ -109,12 +110,17 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isOpen, facingMode]);
 
   const startCamera = async () => {
+    const generation = ++cameraGenerationRef.current;
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 1080 }, height: { ideal: 1920 } },
           audio: true,
         });
+        if (generation !== cameraGenerationRef.current) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -129,6 +135,14 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   };
 
   const stopCamera = () => {
+    cameraGenerationRef.current += 1;
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stop();
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -136,6 +150,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setIsRecording(false);
     setCameraActive(false);
   };
 
@@ -157,8 +172,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isRecording]);
 
   const handleStartRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') return;
     sounds.playPop();
     setRecordedChunks([]);
+    setRecordedFile(null);
     setRecordedPreviewUrl(null);
     setRecordingSeconds(0);
 
@@ -175,6 +192,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         if (e.data.size > 0) chunks.push(e.data);
       };
       recorder.onstop = () => {
+        mediaRecorderRef.current = null;
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
         if (chunks.length === 0) {
           toast.error('No recording was captured. Try again.');
           return;
@@ -194,11 +214,11 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   };
 
   const handleStopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') return;
     sounds.playChime();
     setIsRecording(false);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
+    recorder.stop();
   };
 
   const handleAddSticker = (typeId: string) => {
@@ -311,6 +331,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
           <button
             onClick={() => onOpenChange(false)}
+            aria-label="Close studio camera"
             className="w-8 h-8 rounded-full hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -425,6 +446,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               {/* Shutter Button */}
               <button
                 onClick={isRecording ? handleStopRecording : handleStartRecording}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                aria-pressed={isRecording}
                 className={cn(
                   "w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer",
                   isRecording 

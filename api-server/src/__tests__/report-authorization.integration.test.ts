@@ -21,6 +21,7 @@ const address = server.address();
 assert.ok(address && typeof address !== "string");
 const baseUrl = `http://127.0.0.1:${address.port}`;
 const user = await createTestUser(new UserRepository());
+const grievanceTicketIds: string[] = [];
 const deviceId = randomUUID();
 const token = jwt.sign({ sub: user.id, role: "user", permissions: [], deviceId }, env.JWT_SECRET, { expiresIn: "5m" });
 const sessionKey = `session:${user.id}:${deviceId}`;
@@ -28,6 +29,7 @@ await redis.setStrict(sessionKey, "active", 300);
 
 after(async () => {
   await pool.query("DELETE FROM reports WHERE reporter_id = $1", [user.id]);
+  await pool.query("DELETE FROM grievance_tickets WHERE ticket_id = ANY($1::text[])", [grievanceTicketIds]);
   await pool.query("DELETE FROM users WHERE id = $1", [user.id]);
   await redis.del(sessionKey);
   await redis.disconnect();
@@ -41,6 +43,33 @@ test("report routes reject anonymous access and keep moderation queue role-restr
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ entityType: "post", entityId: randomUUID(), reason: "spam" }),
+  });
+
+  test("public grievance intake and status responses expose only the allowlisted fields", async () => {
+    const submitted = await fetch(`${baseUrl}/reports/grievance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: "harassment",
+        reportedUrl: "https://private.example/profile",
+        reporterName: "Private Reporter",
+        reporterEmail: "private-reporter@example.test",
+        description: "Private details that should not be returned.",
+      }),
+    });
+    assert.equal(submitted.status, 201);
+    const created = await submitted.json() as { data: Record<string, unknown> };
+    assert.deepEqual(Object.keys(created.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
+    const ticketId = String(created.data.ticketId);
+    grievanceTicketIds.push(ticketId);
+
+    const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
+    assert.equal(status.status, 200);
+    const loaded = await status.json() as { data: Record<string, unknown> };
+    assert.deepEqual(Object.keys(loaded.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
+    assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
+    assert.equal(JSON.stringify(loaded).includes("Private details"), false);
+    assert.equal(JSON.stringify(loaded).includes("private.example"), false);
   });
   assert.equal(anonymousSubmission.status, 401);
 

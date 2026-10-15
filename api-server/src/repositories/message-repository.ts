@@ -71,16 +71,33 @@ export class MessageRepository {
   }
 
   async findById(messageId: string): Promise<MessageRecord | undefined> {
-    const [message] = await db.select().from(messagesTable).where(eq(messagesTable.id, messageId));
+    const [message] = await db.select().from(messagesTable).where(and(
+      eq(messagesTable.id, messageId),
+      isNull(messagesTable.deletedAt),
+      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+    ));
     return message as MessageRecord | undefined;
   }
 
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    await db.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
-      target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-      set: { previewedAt },
+    return db.transaction(async (tx) => {
+      const [visible] = await tx.select({ id: messagesTable.id }).from(messagesTable).where(and(
+        eq(messagesTable.id, messageId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
+      )).for("update");
+      if (!visible) return undefined;
+      await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+        target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
+        set: { previewedAt },
+      });
+      const [message] = await tx.select().from(messagesTable).where(and(
+        eq(messagesTable.id, messageId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      ));
+      return message as MessageRecord | undefined;
     });
-    return this.findById(messageId);
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
@@ -97,8 +114,28 @@ export class MessageRepository {
   async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
     const [updated] = await db.update(messagesTable)
       .set({ ...updates })
-      .where(eq(messagesTable.id, messageId))
+      .where(and(
+        eq(messagesTable.id, messageId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+      ))
       .returning();
+    return updated as MessageRecord | undefined;
+  }
+
+  async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
+    const currentReactions = sql`COALESCE(${messagesTable.reactions}, '{}'::jsonb)`;
+    const usersForReaction = sql`COALESCE(${messagesTable.reactions} -> ${reaction}, '[]'::jsonb)`;
+    const [updated] = await db.update(messagesTable).set({
+      reactions: sql`CASE
+        WHEN ${usersForReaction} @> jsonb_build_array(${userId}::text) THEN ${currentReactions}
+        ELSE jsonb_set(${currentReactions}, ARRAY[${reaction}]::text[], ${usersForReaction} || jsonb_build_array(${userId}::text), true)
+      END`,
+    }).where(and(
+      eq(messagesTable.id, messageId),
+      isNull(messagesTable.deletedAt),
+      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+    )).returning();
     return updated as MessageRecord | undefined;
   }
 }

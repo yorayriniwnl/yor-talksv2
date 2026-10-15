@@ -21,7 +21,6 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   const edited = await messageService.editMessage(sent.id, sender.id, "hello there");
   const reacted = await messageService.addReaction(sent.id, recipient.id, "thumbs-up");
   const pinned = await messageService.pinMessage(sent.id, sender.id);
-  const deleted = await messageService.deleteMessage(sent.id, sender.id);
 
   const forged = await messageService.sendMessageToConversation(sender.id, sent.conversationId, "forged fields", {
     replyToId: sent.id,
@@ -30,6 +29,7 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
     pinned: true,
     deletedAt: new Date().toISOString(),
   } as never);
+  const deleted = await messageService.deleteMessage(sent.id, sender.id);
 
   assert.ok(edited);
   assert.equal(reply.replyToId, sent.id);
@@ -42,6 +42,23 @@ test("messages support edit, delete, reaction, and pin workflows", async () => {
   assert.equal(forged.pinned, false);
   assert.equal(forged.deletedAt, null);
   assert.equal(forged.replyToId, sent.id);
+});
+
+test("concurrent reactions from different users are preserved and repeated reactions are idempotent", async () => {
+  const users = new UserRepository();
+  const sender = await createTestUser(users);
+  const first = await createTestUser(users);
+  const second = await createTestUser(users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository());
+  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Concurrent reactions");
+  const message = await service.sendMessageToConversation(sender.id, group.id, "Concurrent reactions");
+  await Promise.all([
+    service.addReaction(message.id, first.id, "heart"),
+    service.addReaction(message.id, second.id, "heart"),
+    service.addReaction(message.id, first.id, "heart"),
+  ]);
+  const stored = await new MessageRepository().findById(message.id);
+  assert.deepEqual(stored?.reactions?.heart?.sort(), [first.id, second.id].sort());
 });
 
 test("message content length is bounded before transport-specific persistence", async () => {
@@ -149,6 +166,7 @@ test("deleting a group creator or member preserves shared group history and remo
   assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), true);
   const creatorMembers = await new ConversationRepository().getMembers(creatorGroup.id);
   assert.deepEqual([...creatorMembers].sort(), [memberA.id, memberB.id].sort());
+  assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), false);
   const creatorHistory = await service.listConversation(creatorGroup.id, memberA.id);
   assert.ok(creatorHistory.some((message) => message.content === 'Survivor message'));
   assert.equal(creatorHistory.some((message) => message.content === 'Creator message'), false);
@@ -166,6 +184,8 @@ test("deleting a group creator or member preserves shared group history and remo
   const targetHistory = await service.listConversation(targetGroup.id, survivor.id);
   assert.ok(targetHistory.some((message) => message.content === 'Other member message'));
   assert.equal(targetHistory.some((message) => message.content === 'Departing member message'), false);
+  assert.equal(await accountService.deleteAccount(target.id, 'target-password'), false);
+  assert.ok((await service.listConversation(targetGroup.id, survivor.id)).some((message) => message.content === 'Other member message'));
 
   await redis.disconnect();
 });

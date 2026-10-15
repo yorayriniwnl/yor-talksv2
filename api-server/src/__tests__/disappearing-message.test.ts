@@ -35,3 +35,23 @@ test("vanish-mode messages receive a bounded expiry", async () => {
   const updatedConversation = await service.setVanishMode("conversation-1", "recipient", false);
   assert.equal(updatedConversation?.vanishMode, false);
 });
+
+test("expired and deleted messages are excluded at the conversation response boundary", async () => {
+  const expired = {
+    id: "expired-message",
+    conversationId: "conversation-1",
+    senderId: "sender",
+    recipientId: "recipient",
+    content: "expired secret",
+    createdAt: new Date(Date.now() - 60_000).toISOString(),
+    seenAt: null,
+    deletedAt: null,
+    expiresAt: new Date(Date.now() - 1).toISOString(),
+  };
+  const deleted = { ...expired, id: "deleted-message", expiresAt: null, deletedAt: new Date().toISOString() };
+  const service = new MessageService(
+    { getMembers: async () => ["sender", "recipient"] } as never,
+    { listConversation: async () => [expired, deleted] } as never,
+  );
+  assert.deepEqual(await service.listConversationPage("conversation-1", "recipient", {}), []);
+});

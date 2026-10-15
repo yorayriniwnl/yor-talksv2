@@ -9,8 +9,12 @@ import type { UserRecord } from "../types/index.js";
 
 const redis = new RedisRepository();
 const pendingKeys: string[] = [];
+const pendingUsers: string[] = [];
 after(async () => {
-  await Promise.all(pendingKeys.map((key) => redis.delStrict(key)));
+  for (const key of pendingKeys) await redis.delStrict(key);
+  for (const userId of pendingUsers) {
+    for (const key of await redis.scanStrict(`session:${userId}:*`)) await redis.delStrict(key);
+  }
   await redis.disconnect();
 });
 
@@ -20,13 +24,18 @@ function fixture() {
   const user = {
     id: randomUUID(), email, username: `otp-${randomUUID()}`, passwordHash: "unused",
     authVersion: 0, emailVerified: false, accountStatus: "active", role: "user", permissions: [],
-  } as UserRecord;
+  } as unknown as UserRecord;
+  pendingUsers.push(user.id);
   const users = {
     findByEmail: async () => user,
     findById: async () => user,
     recordLogin: async (_current: UserRecord, updates: Partial<UserRecord>) => Object.assign(user, updates),
     getOwnRelationships: async () => ({ following: [], pendingFollowIds: [], favoriteCreatorIds: [] }),
     revokeAllCredentials: async () => { user.authVersion = (user.authVersion ?? 0) + 1; },
+    redeemPasswordReset: async () => {
+      user.authVersion = (user.authVersion ?? 0) + 1;
+      return user.id;
+    },
   } as unknown as UserRepository;
   const emailService = {
     sendEmailLoginCode: async (_address: string, code: string) => { deliveredCodes.push(code); },
@@ -57,8 +66,9 @@ test("failed OTP attempts are atomically counted and the fifth locks the code", 
   const { auth, email, deliveredCodes } = fixture();
   const key = await otpKey(email);
   await auth.requestEmailOtp(email);
+  const wrongCode = deliveredCodes[0] === "000000" ? "000001" : "000000";
   for (let attempt = 0; attempt < 5; attempt++) {
-    await assert.rejects(auth.loginWithEmailOtp({ email, code: "000000" }), EmailOtpInvalidError);
+    await assert.rejects(auth.loginWithEmailOtp({ email, code: wrongCode }), EmailOtpInvalidError);
   }
   const state = JSON.parse((await redis.getStrict(key))!) as { attempts: number };
   assert.equal(state.attempts, 5);
@@ -71,5 +81,35 @@ test("logout-all revokes an already issued email OTP", async () => {
   await auth.requestEmailOtp(email);
   await auth.logoutAllDevices(user.id);
   await assert.rejects(auth.loginWithEmailOtp({ email, code: deliveredCodes[0]! }), EmailOtpInvalidError);
+  assert.equal((await redis.scanStrict(`session:${user.id}:*`)).length, 0);
+});
+
+test("password reset revokes an already issued email OTP", async () => {
+  const { auth, email, deliveredCodes } = fixture();
+  await otpKey(email);
+  await auth.requestEmailOtp(email);
+  assert.equal(await auth.confirmPasswordReset("synthetic-reset-token", "new-password"), true);
+  await assert.rejects(auth.loginWithEmailOtp({ email, code: deliveredCodes[0]! }), EmailOtpInvalidError);
+});
+
+test("OTP issuance and redemption fail closed when Redis is unavailable", async () => {
+  const { auth, email, user, deliveredCodes } = fixture();
+  const issuanceRedis = Object.create(redis) as RedisRepository;
+  issuanceRedis.setIfAbsentStrict = async () => { throw new Error("injected Redis outage"); };
+  const issuanceService = new AuthService(
+    {
+      findByEmail: async () => user,
+    } as unknown as UserRepository,
+    issuanceRedis,
+    undefined,
+    { sendEmailLoginCode: async (_address: string, code: string) => { deliveredCodes.push(code); } } as unknown as EmailService,
+  );
+  await assert.rejects(issuanceService.requestEmailOtp(email), /injected Redis outage/);
+  assert.equal(deliveredCodes.length, 0);
+
+  const redemptionRedis = Object.create(redis) as RedisRepository;
+  redemptionRedis.getStrict = async () => { throw new Error("injected Redis outage"); };
+  const redemptionService = new AuthService({} as UserRepository, redemptionRedis);
+  await assert.rejects(redemptionService.loginWithEmailOtp({ email, code: "123456" }), /injected Redis outage/);
   assert.equal((await redis.scanStrict(`session:${user.id}:*`)).length, 0);
 });
