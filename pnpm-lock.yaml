@@ -6,6 +6,9 @@ settings:
 
 overrides:
   qs: 6.16.0
+  proxy-addr: 2.0.8
+  engine.io: 6.6.10
+  ip-address: 10.7.1
   engine.io: 6.6.10
   ip-address: 10.7.1
   proxy-addr: 2.0.8
@@ -266,6 +269,11 @@ importers:
   social:
     dependencies:
       '@capacitor/android':
+        specifier: ^8.5.3
+        version: 8.5.3(@capacitor/core@8.5.0)
+      '@capacitor/ios':
+        specifier: ^8.5.3
+        version: 8.5.3(@capacitor/core@8.5.0)
         specifier: ^8.5.1
         version: 8.5.2(@capacitor/core@8.5.0)
       '@capacitor/ios':
@@ -592,6 +600,8 @@ packages:
   '@bufbuild/protobuf@1.10.1':
     resolution: {integrity: sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ==}
 
+  '@capacitor/android@8.5.3':
+    resolution: {integrity: sha512-ilH4gSSz3DrketMkzDVAvY9JsWJ//rCQnECLTdcFRO7xXDogwAbUvQAnIAbiqefwV/D1xfjEL4Gw1MJXEcaA9g==}
   '@capacitor/android@8.5.2':
     resolution: {integrity: sha512-rtiaz78egCcS+vs29wkWCL3C+RhazKMSygXcjutwWP8NmO6r5UBxOvGf3Wjz5+ahobyQ723tn9gCePwRwcNDZQ==}
     peerDependencies:
@@ -605,6 +615,8 @@ packages:
   '@capacitor/core@8.5.0':
     resolution: {integrity: sha512-Ca4krtqH1hothjtBIwf2J2TW7IhYq1ujp8QeItTiJohNsqij8ja2DYYH3DU0l8RmxCWaBAFTGA2TgOgOMCSNsQ==}
 
+  '@capacitor/ios@8.5.3':
+    resolution: {integrity: sha512-HnnV92Jl8+3x0JUloXUMjFcUsQI8wHFVsKwkLn72DfRZXYGZW11tQbmNOWOnRTljaU18FdI1b9ipT09SzzPDNw==}
   '@capacitor/ios@8.5.2':
     resolution: {integrity: sha512-eOT2S67AfTFG7KN0T3oxwAajrJz4rSye+ODfvChiwrk0F/+kWufFM1qU6cDjGJUOfwdAoeuEpZyWHSwZlu4GFg==}
     peerDependencies:
@@ -4448,6 +4460,7 @@ snapshots:
 
   '@bufbuild/protobuf@1.10.1': {}
 
+  '@capacitor/android@8.5.3(@capacitor/core@8.5.0)':
   '@capacitor/android@8.5.2(@capacitor/core@8.5.0)':
     dependencies:
       '@capacitor/core': 8.5.0
@@ -4479,6 +4492,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@capacitor/ios@8.5.3(@capacitor/core@8.5.0)':
   '@capacitor/ios@8.5.2(@capacitor/core@8.5.0)':
     dependencies:
       '@capacitor/core': 8.5.0

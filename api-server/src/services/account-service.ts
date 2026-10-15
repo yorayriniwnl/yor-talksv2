@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { and, eq, or, sql } from "drizzle-orm";
 import { randomUUID } from 'node:crypto';
 import {
@@ -48,6 +49,7 @@ export class AccountService {
   async exportAccount(userId: string): Promise<Record<string, unknown> | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
+    const messageExportedAt = new Date().toISOString();
     const exportBoundary = new Date();
 
     const [posts, comments, stories, sentMessages, receivedMessages, storyViews, storyReactions, likes, bookmarks, reposts,
@@ -57,6 +59,16 @@ export class AccountService {
       db.select().from(postsTable).where(eq(postsTable.authorId, userId)),
       db.select().from(commentsTable).where(eq(commentsTable.authorId, userId)),
       db.select().from(storiesTable).where(eq(storiesTable.authorId, userId)),
+      db.select().from(messagesTable).where(and(
+        eq(messagesTable.senderId, userId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
+      )),
+      db.select().from(messagesTable).where(and(
+        eq(messagesTable.recipientId, userId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
+      )),
       db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), visibleMessagePredicate(exportBoundary))),
       db.select().from(messagesTable).where(and(eq(messagesTable.recipientId, userId), visibleMessagePredicate(exportBoundary))),
       db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
@@ -102,12 +114,19 @@ export class AccountService {
         .from(marketplaceOrdersTable).where(or(eq(marketplaceOrdersTable.buyerId, userId), eq(marketplaceOrdersTable.sellerId, userId))),
     ]);
 
+    const visibleMessages = (messages: typeof sentMessages) => messages.filter((message) => {
+      if (message.deletedAt) return false;
+      if (message.expiresAt == null) return true;
+      const expiresAt = Date.parse(message.expiresAt);
+      return Number.isFinite(expiresAt) && expiresAt > Date.now();
+    });
+
     return {
       format: "yor-talks-account-export",
       version: 1,
       exportedAt: exportBoundary.toISOString(),
       account: toOwnUser(user),
-      content: { posts, comments, stories, sentMessages, receivedMessages },
+      content: { posts, comments, stories, sentMessages: visibleMessages(sentMessages), receivedMessages: visibleMessages(receivedMessages) },
       interactions: { storyViews, storyReactions, likes, bookmarks, reposts, postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps },
       relationships: { following, followers, favorites, closeFriends, communityMemberships, channelMemberships, subscriptions },
       reports,

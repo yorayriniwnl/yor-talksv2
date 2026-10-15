@@ -60,6 +60,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit production dependencies
+        run: |
+          pnpm --dir api-server audit --prod
+          pnpm --dir social audit --prod
+          pnpm --dir lib/db audit --prod
         run: pnpm audit --prod
 
       - name: Verify API contract is synchronized
@@ -129,6 +133,25 @@ jobs:
 
       - name: Verify production configuration wiring
         run: pnpm production-config:check
+
+      - name: Render and validate Alertmanager configuration
+        run: |
+          set -euo pipefail
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          printf '%s' 'ci-only-alertmanager-password' > "$temp_dir/password"
+          chmod 644 "$temp_dir/password"
+          sed 's|^exec /bin/alertmanager .*|exec /bin/amtool check-config /run/alertmanager/alertmanager.yml|' \
+            ops/prometheus/render-alertmanager-config.sh > "$temp_dir/render-check.sh"
+          chmod 755 "$temp_dir/render-check.sh"
+          docker run --rm --entrypoint /bin/sh \
+            -e 'ALERTMANAGER_WEBHOOK_URL=https://alerts.invalid.example/ci' \
+            -e 'ALERTMANAGER_WEBHOOK_USER=ci-only-user' \
+            -v "$PWD/ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template:ro" \
+            -v "$temp_dir/render-check.sh:/usr/local/bin/render-alertmanager-config.sh:ro" \
+            -v "$temp_dir/password:/run/secrets/alertmanager_webhook_password:ro" \
+            --tmpfs /run/alertmanager:rw,size=1m,mode=0700,uid=65534,gid=65534 \
+            prom/alertmanager:v0.28.1 /usr/local/bin/render-alertmanager-config.sh
 
       - name: Validate production Compose file
         run: docker compose --env-file ops/ci-production.env -f docker-compose.production.yml config --quiet

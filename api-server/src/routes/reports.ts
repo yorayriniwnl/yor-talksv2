@@ -11,6 +11,7 @@ import { reportIdParamSchema } from "../validators/params.js";
 import { ModerationService } from "../services/moderation-service.js";
 import { toPublicGrievance } from "../utils/grievance-view.js";
 import { grievanceStatusRateLimiter, grievanceSubmitRateLimiter, reportRateLimiter } from "../middlewares/rate-limit.js";
+import { toPublicGrievance } from "../utils/grievance-view.js";
 
 const router = Router();
 const moderationService = new ModerationService();

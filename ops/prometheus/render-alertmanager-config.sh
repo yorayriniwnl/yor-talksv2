@@ -5,10 +5,10 @@ set -eu
 umask 077
 
 awk '
-function quote_yaml(value, result, index, character, code) {
+function quote_yaml(value, result, i, character, code) {
   result = "\""
-  for (index = 1; index <= length(value); index++) {
-    character = substr(value, index, 1)
+  for (i = 1; i <= length(value); i++) {
+    character = substr(value, i, 1)
     if (character == "\\") result = result "\\\\"
     else if (character == "\"") result = result "\\\""
     else if (character == "\n") result = result "\\n"

@@ -5,6 +5,7 @@ let notificationWorkerHealthy = false;
 const workerHeartbeatKey = "worker:notification:heartbeat";
 const heartbeatTtlSeconds = 45;
 const lifecycleHeartbeatGraceSeconds = 90;
+const lifecycleJobStallSeconds = 300;
 let redisRepository: RedisRepository | null = null;
 
 function getRedisRepository(): RedisRepository {
@@ -46,6 +47,7 @@ export type LifecycleWorkerStatus = {
   workerId?: string;
   lastHeartbeat?: string;
   overdueSeconds?: number | null;
+  stalledJob?: boolean;
 };
 
 export async function getLifecycleWorkerStatus(): Promise<LifecycleWorkerStatus> {
@@ -61,7 +63,16 @@ export async function getLifecycleWorkerStatus(): Promise<LifecycleWorkerStatus>
     const mostRecent = rows[0];
     const mostRecentTimestamp = Date.parse(mostRecent.heartbeat_at);
     const overdueSeconds = Number.isFinite(mostRecentTimestamp) ? (now - mostRecentTimestamp) / 1000 : null;
-    const healthy = Number.isFinite(mostRecentTimestamp) && (overdueSeconds ?? Number.POSITIVE_INFINITY) <= lifecycleHeartbeatGraceSeconds;
+    const stalledJob = rows.some((row) => {
+      if (typeof row.details?.activeJob !== "string") return false;
+      const startedAt = typeof row.details.activeJobStartedAt === "string"
+        ? Date.parse(row.details.activeJobStartedAt)
+        : Number.NaN;
+      return !Number.isFinite(startedAt) || (now - startedAt) / 1000 > lifecycleJobStallSeconds;
+    });
+    const healthy = Number.isFinite(mostRecentTimestamp)
+      && (overdueSeconds ?? Number.POSITIVE_INFINITY) <= lifecycleHeartbeatGraceSeconds
+      && !stalledJob;
     return {
       healthy,
       missing: false,
@@ -69,6 +80,7 @@ export async function getLifecycleWorkerStatus(): Promise<LifecycleWorkerStatus>
       workerId: mostRecent.worker_id,
       lastHeartbeat: mostRecent.heartbeat_at,
       overdueSeconds,
+      stalledJob,
     };
   } catch {
     return { healthy: false, missing: true, stale: false };

@@ -8,6 +8,8 @@ export class QueueService {
   private initialization: Promise<Queue | null> | null = null;
   private nextRetryAt = 0;
   private readonly retryDelayMs = 30_000;
+  private readonly completedRetention = { age: 7 * 24 * 60 * 60, count: 1_000 };
+  private readonly failedRetention = { age: 30 * 24 * 60 * 60, count: 5_000 };
 
   constructor(private readonly redisUrl = env.REDIS_URL) {}
 
@@ -68,8 +70,16 @@ export class QueueService {
     const jobId = typeof payload === "object" && payload !== null && "id" in payload
       ? String((payload as { id: unknown }).id)
       : undefined;
+    const preserveForReview = /(?:moderation|audit|review|operator)/i.test(type);
     const options = {
-      ...(jobId ? { jobId, removeOnComplete: false } : {}),
+      ...(jobId ? { jobId } : {}),
+      ...(!preserveForReview ? {
+        removeOnComplete: this.completedRetention,
+        removeOnFail: this.failedRetention,
+      } : {
+        removeOnComplete: false,
+        removeOnFail: false,
+      }),
       ...(type === "notification:deliver" ? { attempts: 5, backoff: { type: "exponential" as const, delay: 30_000 } } : {}),
     };
     return queue.add(type, payload, options);

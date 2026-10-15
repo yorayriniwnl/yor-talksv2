@@ -2,6 +2,14 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 
+declare global {
+  interface Window {
+    __recordingStarts: number;
+    __recordingStops: number;
+    __cameraTracksStopped: number;
+  }
+}
+
 const user = {
   id: "1cc96a14-2728-46fd-ae3c-cbf15fd9db1a",
   username: "ada",
@@ -797,6 +805,7 @@ test('Payment operations records a reason before retry and retains failures for 
     if(tries===1)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Payment operations are temporarily unavailable'})});
     data.jobs[0].status='pending';return json(route,data);
   });
+
   await page.goto('/payment-operations');
   const retry=page.getByRole('button',{name:'Retry failed job'});
   await expect(retry).toBeDisabled();
@@ -1671,4 +1680,78 @@ test('failed blocking never announces success or hides the post, and retry persi
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   await expect(itemCard).toHaveCount(0);
+});
+
+test('Studio camera supports accessible manual stop, blocks duplicate starts, and cleans up', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    window.__recordingStarts = 0;
+    window.__recordingStops = 0;
+    window.__cameraTracksStopped = 0;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          const stream = new MediaStream();
+          stream.getTracks = () => [{
+            stop: () => { window.__cameraTracksStopped += 1; },
+          }] as unknown as MediaStreamTrack[];
+          return stream;
+        },
+      },
+    });
+    Object.defineProperty(window, 'MediaRecorder', {
+      configurable: true,
+      value: class {
+        state = 'inactive';
+        mimeType = 'video/webm';
+        ondataavailable: ((event: { data: Blob }) => void) | null = null;
+        onstop: (() => void) | null = null;
+        constructor(_stream: MediaStream) {}
+        start() {
+          window.__recordingStarts += 1;
+          this.state = 'recording';
+        }
+        stop() {
+          window.__recordingStops += 1;
+          this.state = 'inactive';
+          this.ondataavailable?.({ data: new Blob(['clip'], { type: 'video/webm' }) });
+          this.onstop?.();
+        }
+      },
+    });
+  });
+  await page.route('**/api/videos', (route) => json(route, [{
+    id: 'browser-studio-clip',
+    authorId: user.id,
+    videoUrl: 'data:video/mp4;base64,',
+    thumbnailUrl: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+    title: 'Synthetic camera clip',
+    views: 0,
+    likes: 0,
+    createdAt: new Date().toISOString(),
+    type: 'short',
+    contentCategory: 'technology',
+    contentRating: 'regular',
+  }]));
+  await page.route('**/api/videos/browser-studio-clip/comments', (route) => json(route, []));
+
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Synthetic camera clip' }).click();
+  await page.getByRole('button', { name: 'Use this sound' }).click();
+  await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start recording' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
+  expect(await page.evaluate(() => window.__recordingStarts)).toBe(1);
+  await page.getByRole('button', { name: 'Stop recording' }).click();
+  await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
+  expect(await page.evaluate(() => window.__recordingStops)).toBe(1);
+  await page.getByRole('button', { name: 'Close studio camera' }).click();
+  await expect(page.getByRole('button', { name: 'Close studio camera' })).toHaveCount(0);
+  expect(await page.evaluate(() => window.__cameraTracksStopped)).toBe(1);
+  await page.waitForTimeout(1_100);
+  expect(await page.evaluate(() => window.__recordingStops)).toBe(1);
 });

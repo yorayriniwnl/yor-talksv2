@@ -1,14 +1,16 @@
 import type { GrievanceTicket } from "../services/moderation-service.js";
 
-export type PublicGrievanceReceipt = Pick<GrievanceTicket, "ticketId" | "status" | "createdAt"> &
-  Partial<Pick<GrievanceTicket, "slaDeadline">>;
+export type PublicGrievance = Pick<
+  GrievanceTicket,
+  "ticketId" | "category" | "status" | "slaDeadline" | "createdAt"
+>;
 
-/** Public ticket possession permits status tracking, never access to case evidence. */
-export function toPublicGrievance(ticket: GrievanceTicket): PublicGrievanceReceipt {
+export function toPublicGrievance(ticket: GrievanceTicket): PublicGrievance {
   return {
     ticketId: ticket.ticketId,
+    category: ticket.category,
     status: ticket.status,
+    slaDeadline: ticket.slaDeadline,
     createdAt: ticket.createdAt,
-    ...(ticket.slaDeadline ? { slaDeadline: ticket.slaDeadline } : {}),
   };
 }

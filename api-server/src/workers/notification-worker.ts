@@ -22,7 +22,8 @@ const RECOVERY_INTERVAL_MS = 30_000;
 const RECOVERY_PAGE_SIZE = 250;
 const notificationJobOptions = (notification: Pick<NotificationRecord, "id">) => ({
   jobId: notification.id,
-  removeOnComplete: false,
+  removeOnComplete: { age: 7 * 24 * 60 * 60, count: 1_000 },
+  removeOnFail: { age: 30 * 24 * 60 * 60, count: 5_000 },
   attempts: 5,
   backoff: { type: "exponential" as const, delay: 30_000 },
 });

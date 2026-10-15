@@ -14,6 +14,20 @@ const liveHandler = (_req: Request, res: Response) => {
   res.status(200).json({ status: "live", timestamp: new Date().toISOString(), uptime: process.uptime() });
 };
 
+async function withHealthTimeout<T>(operation: Promise<T>, dependency: string, timeoutMs = 1_000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`${dependency} readiness check timed out`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 const readinessHandler = async (_req: Request, res: Response) => {
   const services: Record<string, "up" | "down"> = {
     database: "down",
@@ -29,11 +43,12 @@ const readinessHandler = async (_req: Request, res: Response) => {
   };
 
   try {
+    await withHealthTimeout(db.execute(sql`SELECT 1`), "Database");
     details.media = await inspectMediaReadiness();
     await db.execute(sql`SELECT 1`);
     services.database = "up";
 
-    const redis = await inspectRedisCompatibility(env.REDIS_URL);
+    const redis = await withHealthTimeout(inspectRedisCompatibility(env.REDIS_URL), "Redis");
     if (!redis.compatible) {
       throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
     }
@@ -42,12 +57,12 @@ const readinessHandler = async (_req: Request, res: Response) => {
       details.redisVersion = redis.version;
     }
 
-    if (!(await hasHealthyNotificationWorker())) {
+    if (!(await withHealthTimeout(hasHealthyNotificationWorker(), "Notification worker"))) {
       throw new Error("Required notification worker is not ready");
     }
     services.worker = "up";
 
-    if (!(await hasHealthyLifecycleWorker())) {
+    if (!(await withHealthTimeout(hasHealthyLifecycleWorker(), "Lifecycle worker"))) {
       throw new Error("Required lifecycle worker is not ready");
     }
     services.lifecycleWorker = "up";

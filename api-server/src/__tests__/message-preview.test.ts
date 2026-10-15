@@ -87,6 +87,22 @@ test("message preview cannot be used on the sender's own message", async () => {
   assert.equal(getRecordedPreview(), undefined);
 });
 
+test("message preview rejects an expired message", async () => {
+  const expired = { ...message, expiresAt: new Date(Date.now() - 1).toISOString() };
+  let recorded = false;
+  const service = new MessageService(
+    { getMembers: async () => [message.senderId, message.recipientId] } as unknown as ConversationRepository,
+    {
+      findById: async () => expired,
+      hasReadReceipt: async () => false,
+      recordPreview: async () => { recorded = true; return expired; },
+    } as unknown as MessageRepository,
+    undefined,
+    undefined,
+    { hasFeature: async () => true } as unknown as FeatureEntitlementService,
+  );
+  assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
+  assert.equal(recorded, false);
 test("premium cannot reopen expired or deleted messages or preview as a non-member", async () => {
   for (const row of [
     { ...message, expiresAt: new Date(Date.now() - 1).toISOString() },

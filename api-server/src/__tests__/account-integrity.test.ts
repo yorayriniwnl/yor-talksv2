@@ -9,6 +9,7 @@ import { UserRepository } from '../repositories/user-repository.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { BackgroundJobRepository } from '../repositories/background-job-repository.js';
 import { cleanAccountSessions } from '../workers/lifecycle-worker.js';
+import { ConversationRepository } from '../repositories/message-repository.js';
 
 const users = new UserRepository(), redis = new RedisRepository();
 const service = new AccountService(users, redis);
@@ -37,6 +38,25 @@ after(async () => {
   await pool.query('DELETE FROM media_cleanup_holds WHERE deletion_id=ANY($1::uuid[])', [userIds]);
   for (const id of userIds) { await redis.delStrict(`session:${id}:synthetic-device`); await users.deleteById(id); }
   await redis.disconnect(); await pool.end();
+});
+
+test('account export excludes expired and deleted message content while retaining live history', async () => {
+  const owner = await person(), peer = await person();
+  const conversation = await new ConversationRepository().findOrCreateDirect(owner, peer);
+  const live = randomUUID(), expired = randomUUID(), deleted = randomUUID();
+  await pool.query(`INSERT INTO messages(id,conversation_id,sender_id,recipient_id,content,created_at,expires_at,deleted_at)
+    VALUES
+      ($1,$4,$5,$6,'live export message',now(),NULL,NULL),
+      ($2,$4,$5,$6,'expired export secret',now()-interval '2 days',now()-interval '1 day',NULL),
+      ($3,$4,$5,$6,'deleted export secret',now(),NULL,now())`,
+  [live, expired, deleted, conversation.id, owner, peer]);
+
+  const exported = await service.exportAccount(owner);
+  assert.ok(exported);
+  const content = exported.content as { sentMessages: Array<{ id: string; content: string }> };
+  assert.deepEqual(content.sentMessages.map((message) => message.id), [live]);
+  assert.equal(JSON.stringify(exported).includes('expired export secret'), false);
+  assert.equal(JSON.stringify(exported).includes('deleted export secret'), false);
 });
 
 for (const first of ['payer', 'creator'] as const) {

@@ -66,3 +66,34 @@ test("Gemini malformed moderation falls back and production fails closed if both
   assert.deepEqual(await service.moderate("test content"), { spam: false, toxicity: false, nsfw: true });
   assert.equal(fallback.mock.callCount(), 4);
 });
+
+test("Gemini API keys are sent in headers and never included in request URLs", async (t) => {
+  const originalKey = env.GEMINI_API_KEY;
+  env.GEMINI_API_KEY = "synthetic-gemini-api-key";
+  t.after(() => { env.GEMINI_API_KEY = originalKey; });
+
+  const responses = [
+    '{"spam":false,"toxicity":false,"nsfw":false}',
+    '[{"reason":"topic relevance","score":0.9}]',
+    '["synthetic-tag"]',
+  ];
+  const requests: Array<{ url: string; apiKey: string | null }> = [];
+  t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    requests.push({
+      url: String(input),
+      apiKey: new Headers(init?.headers).get("x-goog-api-key"),
+    });
+    return Response.json({ candidates: [{ content: { parts: [{ text: responses.shift() }] } }] });
+  });
+
+  const service = new AIService();
+  assert.deepEqual(await service.moderate("synthetic content"), { spam: false, toxicity: false, nsfw: false });
+  assert.deepEqual(await service.recommend("synthetic content"), [{ reason: "topic relevance", score: 0.9 }]);
+  assert.deepEqual(await service.tag("synthetic content with hashtag"), ["synthetic-tag"]);
+  assert.equal(requests.length, 3);
+  for (const request of requests) {
+    assert.equal(request.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+    assert.equal(request.url.includes("synthetic-gemini-api-key"), false);
+    assert.equal(request.apiKey, "synthetic-gemini-api-key");
+  }
+});

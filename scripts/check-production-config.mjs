@@ -11,6 +11,7 @@ const ciFixture = read("ops/ci-production.env");
 const prometheusConfig = read("ops/prometheus/prometheus.yml");
 const alertRules = read("ops/prometheus/alerts.yml");
 const alertmanagerConfig = read("ops/prometheus/alertmanager.yml");
+const alertmanagerRenderer = read("ops/prometheus/render-alertmanager-config.sh");
 const dockerIgnore = read(".dockerignore").split(/\r?\n/).map((line) => line.trim());
 
 const schemaKeys = [...envSource.matchAll(/^\s{2}([A-Z][A-Z0-9_]*)\s*:\s*z\./gm)].map((match) => match[1]);
@@ -84,6 +85,21 @@ for (const file of ["ops/ci-metrics-bearer-token", "ops/ci-rclone.conf", "ops/ci
 }
 if (!alertmanagerConfig.includes("password_file: /run/secrets/alertmanager_webhook_password")) {
   failures.push("Alertmanager webhook authentication must use the mounted password secret, not credentials in the URL");
+}
+if (composeSource.includes("--config.expand-env")) {
+  failures.push("Pinned Alertmanager does not support --config.expand-env; use the rendered secret-aware configuration");
+}
+if (!composeSource.includes('entrypoint: ["/bin/sh", "/usr/local/bin/render-alertmanager-config.sh"]')) {
+  failures.push("Alertmanager must render its secret-aware configuration before startup");
+}
+if (!alertmanagerRenderer.includes("--config.file=/run/alertmanager/alertmanager.yml")) {
+  failures.push("Alertmanager must start with the rendered configuration file");
+}
+const quoteYamlParameters = alertmanagerRenderer.match(/function quote_yaml\(([^)]*)\)/)?.[1]
+  .split(",")
+  .map((parameter) => parameter.trim());
+if (!quoteYamlParameters || quoteYamlParameters.includes("index")) {
+  failures.push("Alertmanager renderer must not shadow awk's built-in index function");
 }
 
 if (failures.length) {
