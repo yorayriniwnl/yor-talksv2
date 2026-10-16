@@ -218,9 +218,19 @@ export interface PublicGrievanceReceipt {
   ticketId: string;
   status: PublicGrievanceReceiptStatus;
   createdAt: string;
-  /** Operational review target, not a universal statutory deadline. */
-  slaDeadline?: string;
 }
+
+export type ReportStatusUpdateRequest = {
+  status: 'pending' | 'reviewed';
+} | {
+  status: 'resolved' | 'dismissed';
+  /**
+     * Staff-only rationale required for a resolved or dismissed decision.
+     * @minLength 10
+     * @maxLength 2000
+     */
+  decisionReason: string;
+};
 
 export interface RegisterRequest {
   enrollmentId: string;
@@ -907,6 +917,20 @@ export type PostPostsByPostIdShareBody = { [key: string]: unknown };
 
 export type PostPostsByPostIdUnlikeBody = { [key: string]: unknown };
 
+export type GetPostsSavedParams = {
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
 export type PostPostsUploadImageBody = {
   image: Blob;
 };
@@ -943,8 +967,6 @@ export type PostProjectsByProjectIdCollaboratorsRespondBody = { [key: string]: u
 
 export type PostReportsBody = { [key: string]: unknown };
 
-export type PatchReportsByReportIdStatusBody = { [key: string]: unknown };
-
 export type PostReportsGrievanceBody = { [key: string]: unknown };
 
 export type PostReportsGrievance201 = ApiEnvelope & {
@@ -956,6 +978,62 @@ export type GetReportsGrievanceByTicketId200 = ApiEnvelope & {
 };
 
 export type PatchReportsGrievanceByTicketIdStatusBody = { [key: string]: unknown };
+
+export type GetReportsGrievancesParams = {
+/**
+ * Return only records currently in this status.
+ */
+status?: GetReportsGrievancesStatus;
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, status-scoped keyset cursor returned in meta.nextCursor.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
+export type GetReportsGrievancesStatus = typeof GetReportsGrievancesStatus[keyof typeof GetReportsGrievancesStatus];
+
+
+export const GetReportsGrievancesStatus = {
+  received: 'received',
+  under_review: 'under_review',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
+
+export type GetReportsQueueParams = {
+/**
+ * Return only records currently in this status.
+ */
+status?: GetReportsQueueStatus;
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, status-scoped keyset cursor returned in meta.nextCursor.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
+export type GetReportsQueueStatus = typeof GetReportsQueueStatus[keyof typeof GetReportsQueueStatus];
+
+
+export const GetReportsQueueStatus = {
+  pending: 'pending',
+  reviewed: 'reviewed',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
 
 export type PostStoriesBody = {
   /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
@@ -1080,4 +1158,18 @@ export type PostVideosByIdCommentsBody = {
 export type PostVideosByIdCommentsByCommentIdLikeBody = { [key: string]: unknown };
 
 export type PostVideosByIdLikeBody = { [key: string]: unknown };
+
+export type GetVideosSavedParams = {
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
 

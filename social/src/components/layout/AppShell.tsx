@@ -16,12 +16,13 @@ import { GlobalAudioPlayer } from '@/components/player/GlobalAudioPlayer';
 import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 import { AppTopbar } from '@/components/layout/AppTopbar';
-import { CreatePost } from '@/components/feed/Post';
 import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { CompanionPet } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { hasUnreadConversation } from '@/lib/message-state';
 import { applyAppIcon } from '@/lib/app-icon';
+
+const CreatePost = lazy(() => import('@/components/feed/Post').then((module) => ({ default: module.CreatePost })));
 
 const IncomingCallManager = lazy(() => import('@/components/messages/IncomingCallManager').then((module) => ({ default: module.IncomingCallManager })));
 
@@ -379,7 +380,9 @@ export function AppShell({ children }: AppShellProps) {
               <span><strong>Have a bigger idea?</strong><small>Open the Dream Engine</small></span>
             </Link>
           </DialogHeader>
-          <CreatePost onPublished={() => setIsComposing(false)} />
+          <Suspense fallback={<p role="status" className="p-5 text-sm text-muted-foreground">Loading composer…</p>}>
+            <CreatePost onPublished={() => setIsComposing(false)} />
+          </Suspense>
         </DialogContent>
       </Dialog>
 

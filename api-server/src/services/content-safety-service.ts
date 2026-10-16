@@ -79,12 +79,19 @@ export class ContentSafetyService {
     const eligibilityDecision = viewerId && eligibilityEnforced
       ? await this.eligibilityService.decisionFor(viewerId)
       : undefined;
+    const authorDecisions = eligibilityEnforced
+      ? typeof this.eligibilityService.decisionForMany === 'function'
+        ? await this.eligibilityService.decisionForMany(authors)
+        : new Map(await Promise.all(authors.map(async id => [id,await this.eligibilityService.decisionFor(id)] as const)))
+      : new Map();
     const viewerPreference = normalizeContentRating(viewer?.settings?.contentFilter);
     const anonymousMaximum = eligibilityEnforced && !viewerId ? "child_safe" : undefined;
     const classifications = await this.approvedClassifications(contentItems);
     const allows = (item: RatedContent, authorId: string): boolean => {
       const author = byId.get(authorId);
       if (!author || (viewerId && !viewer)) return false;
+      const authorDecision = authorDecisions.get(authorId);
+      if (eligibilityEnforced && (!authorDecision?.activated || !authorDecision.capabilities.social)) return false;
       if (item.deletedAt || ['removed', 'quarantined', 'rejected'].includes(item.moderationStatus ?? '')) return false;
       if (['suspended', 'deactivated', 'deleted'].includes(author.accountStatus ?? 'active')) return false;
       if (viewer && ['suspended', 'deactivated', 'deleted'].includes(viewer.accountStatus ?? 'active')) return false;
@@ -97,7 +104,8 @@ export class ContentSafetyService {
       if (viewerId && (author.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(authorId))) return false;
       if (viewerId === authorId) return true;
       if (options.discovery && viewer?.mutedUsers?.includes(authorId)) return false;
-      const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? 'private' : 'public');
+      const visibility = eligibilityEnforced && authorDecision?.experience !== 'adult_18_plus' ? 'private'
+        : author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? 'private' : 'public');
       if (visibility !== 'public' && !relationships.following.has(authorId)) return false;
       return evaluateAudience({ ownerId: authorId, viewerId, audience: (item.audience ?? 'public') as AudienceKind,
         isFollowing: relationships.following.has(authorId), isCloseFriend: relationships.closeFriends.has(authorId),

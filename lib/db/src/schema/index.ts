@@ -60,6 +60,19 @@ export const usersTable = pgTable("users", {
   lastActiveTimestamp: timestamp("last_active_timestamp", { mode: "string" }),
 });
 
+/** Versioned terms acknowledgements do not grant optional processing consent. */
+export const userTermsAcceptancesTable = pgTable("user_terms_acceptances", {
+  id: uuid("id").primaryKey(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  termsVersion: text("terms_version").notNull(),
+  acceptedAt: timestamp("accepted_at", { mode: "string", withTimezone: true }).notNull(),
+  source: text("source").notNull(),
+}, table => ({
+  versionIdx: uniqueIndex("user_terms_acceptances_version_idx").on(table.userId, table.termsVersion),
+  archiveIdx: index("user_terms_acceptances_archive_idx").on(table.userId, table.id),
+  sourceCheck: check("user_terms_acceptances_source_check", sql`${table.source} IN ('registration','reacceptance','legacy_snapshot')`),
+}));
+
 /** Feature-level access is deliberately separate from subscriptions so rollout,
  * experiments, promotions, and future plans do not leak into product logic. */
 export const featureEntitlementsTable = pgTable("feature_entitlements", {
@@ -561,6 +574,7 @@ export const videoBookmarksTable = pgTable("video_bookmarks", {
 }, (table) => ({
   pk: primaryKey({ columns: [table.videoId, table.userId] }),
   userIdx: index("video_bookmark_user_idx").on(table.userId, table.createdAt),
+  pageIdx: index('video_bookmark_page_idx').on(table.userId, table.createdAt, table.videoId),
   videoIdx: index("video_bookmark_video_idx").on(table.videoId),
 }));
 
@@ -688,7 +702,8 @@ export const postBookmarksTable = pgTable("post_bookmarks", {
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (t) => ({
   pk: primaryKey({ columns: [t.postId, t.userId] }),
-  userIdx: index("post_bookmarks_user_idx").on(t.userId)
+  userIdx: index("post_bookmarks_user_idx").on(t.userId),
+  pageIdx: index('post_bookmark_page_idx').on(t.userId, t.createdAt, t.postId),
 }));
 
 /** A first-class repost is distinct from a link share: it is a durable
@@ -1064,9 +1079,26 @@ export const reportsTable = pgTable("reports", {
   reason: text("reason").notNull(), // 'spam', 'harassment', 'nsfw', 'illegal'
   details: text("details"),
   status: text("status").notNull().default("pending"), // 'pending', 'reviewed', 'resolved', 'dismissed'
+  decisionReason: text("decision_reason"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { mode: "string" }),
-});
+}, (table) => ({
+  queueIdx: index('reports_queue_idx').on(table.createdAt, table.id),
+  statusQueueIdx: index('reports_status_queue_idx').on(table.status, table.createdAt, table.id),
+}));
+
+export const reportModerationEventsTable = pgTable("report_moderation_events", {
+  id: uuid("id").primaryKey(),
+  reportId: uuid("report_id").references(() => reportsTable.id, { onDelete: "cascade" }).notNull(),
+  moderatorId: uuid("moderator_id").references(() => usersTable.id, { onDelete: "set null" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  decisionReason: text("decision_reason"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  reportHistoryIdx: index("report_moderation_events_history_idx").on(table.reportId, table.createdAt, table.id),
+  moderatorIdx: index("report_moderation_events_moderator_idx").on(table.moderatorId, table.createdAt),
+}));
 
 export const grievanceTicketsTable = pgTable("grievance_tickets", {
   id: uuid("id").primaryKey(),
@@ -1077,13 +1109,15 @@ export const grievanceTicketsTable = pgTable("grievance_tickets", {
   reporterEmail: text("reporter_email").notNull(),
   description: text("description").notNull(),
   status: text("status").notNull().default("received"),
-  slaDeadline: timestamp("sla_deadline", { mode: "string" }).notNull(),
+  slaDeadline: timestamp("sla_deadline", { mode: "string" }),
   officerNote: text("officer_note"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   ticketIdx: index("grievance_ticket_idx").on(table.ticketId),
   statusIdx: index("grievance_status_idx").on(table.status, table.createdAt),
+  queueIdx: index('grievance_queue_idx').on(table.createdAt, table.id),
+  statusQueueIdx: index('grievance_status_queue_idx').on(table.status, table.createdAt, table.id),
 }));
 
 /**

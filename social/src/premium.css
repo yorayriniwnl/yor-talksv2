@@ -2558,6 +2558,24 @@ html.yor-accessibility-large-text {
   font-size: 112.5%;
 }
 
+/* Accent choices use theme-specific foreground/background pairs. */
+:root[data-yor-accent]:not(.dark) {
+  --primary-foreground: 0 0% 100%;
+  --accent-foreground: 0 0% 100%;
+  --ring: var(--primary);
+}
+:root.dark[data-yor-accent] {
+  --primary-foreground: 0 0% 0%;
+  --accent-foreground: 0 0% 0%;
+  --ring: var(--primary);
+}
+:root[data-yor-accent='midnight']:not(.dark) { --primary: 0 66% 24%; --accent: 4 70% 36%; }
+:root.dark[data-yor-accent='midnight'] { --primary: 0 70% 70%; --accent: 4 100% 75%; }
+:root[data-yor-accent='lilac']:not(.dark) { --primary: 4 70% 36%; --accent: 0 66% 32%; }
+:root.dark[data-yor-accent='lilac'] { --primary: 4 100% 75%; --accent: 0 77% 66%; }
+:root[data-yor-accent='amber']:not(.dark) { --primary: 12 78% 34%; --accent: 0 66% 32%; }
+:root.dark[data-yor-accent='amber'] { --primary: 0 77% 64%; --accent: 4 100% 75%; }
+
 html.yor-accessibility-high-contrast {
   --muted-foreground: 240 6% 28%;
   --border: 240 8% 70%;

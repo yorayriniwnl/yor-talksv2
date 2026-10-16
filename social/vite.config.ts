@@ -1,12 +1,52 @@
 import path from 'path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { renderBrowserContentSecurityPolicy } from './scripts/render-nginx-config.mjs';
 
 const currentDir = import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
 const envDir = path.resolve(currentDir, '..');
 type BuildEnvironment = Record<string, string | undefined>;
+
+function requireProductionBuild(): Plugin {
+  return {
+    name: 'require-production-build',
+    apply: 'build',
+    configResolved(config) {
+      if (!config.isProduction) {
+        throw new Error('[Vite Config Error] Production builds require NODE_ENV=production. Run pnpm --filter @workspace/social build.');
+      }
+    },
+  };
+}
+
+function publicSiteOriginPlugin(publicOrigin: string): Plugin {
+  return {
+    name: 'public-site-origin',
+    transformIndexHtml(html) {
+      return html.replaceAll('__PUBLIC_SITE_ORIGIN__', publicOrigin);
+    },
+  };
+}
+
+function productionContentSecurityPolicyPlugin(environment: BuildEnvironment): Plugin {
+  return {
+    name: 'production-content-security-policy',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler() {
+        const template = readFileSync(path.join(currentDir, 'security-headers.conf'), 'utf8');
+        return [{ tag: 'meta', attrs: {
+          'http-equiv': 'Content-Security-Policy',
+          content: renderBrowserContentSecurityPolicy(template, environment),
+        }, injectTo: 'head-prepend' }];
+      },
+    },
+  };
+}
 
 function readBooleanEnv(environment: BuildEnvironment, name: string, fallback = false): boolean {
   const raw = environment[name];
@@ -19,8 +59,13 @@ function readBooleanEnv(environment: BuildEnvironment, name: string, fallback = 
 
 function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void {
   if (!readBooleanEnv(environment, 'VITE_PUBLIC_BETA')) return;
+  if (!readBooleanEnv(environment, 'VITE_LEGAL_CONTENT_REVIEWED')) {
+    throw new Error('[Vite Config Error] VITE_PUBLIC_BETA requires reviewed and approved legal, eligibility, privacy, and grievance content');
+  }
   const required = [
+    'VITE_PUBLIC_ORIGIN',
     'VITE_TERMS_VERSION',
+    'VITE_LEGAL_CONTENT_REVIEWED',
     'VITE_LEGAL_OPERATOR_NAME',
     'VITE_LEGAL_OPERATOR_ADDRESS',
     'VITE_LEGAL_EFFECTIVE_DATE',
@@ -39,6 +84,17 @@ function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void
   if (missing.length) {
     throw new Error(`[Vite Config Error] VITE_PUBLIC_BETA requires: ${missing.join(', ')}`);
   }
+  const configuredOrigin = environment.VITE_PUBLIC_ORIGIN?.trim().replace(/\/$/, '') ?? '';
+  let parsedOrigin: URL;
+  try {
+    parsedOrigin = new URL(configuredOrigin);
+  } catch {
+    throw new Error('[Vite Config Error] VITE_PUBLIC_ORIGIN must be an HTTPS origin');
+  }
+  if (parsedOrigin.protocol !== 'https:' || parsedOrigin.origin !== configuredOrigin
+    || parsedOrigin.username || parsedOrigin.password || parsedOrigin.pathname !== '/' || parsedOrigin.search || parsedOrigin.hash) {
+    throw new Error('[Vite Config Error] VITE_PUBLIC_ORIGIN must be an HTTPS origin with no path, query, credentials, or fragment');
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(environment.VITE_LEGAL_EFFECTIVE_DATE || '') || Number.isNaN(Date.parse(environment.VITE_LEGAL_EFFECTIVE_DATE || ''))) {
     throw new Error('[Vite Config Error] VITE_LEGAL_EFFECTIVE_DATE must be an ISO date (YYYY-MM-DD)');
   }
@@ -54,18 +110,22 @@ export default defineConfig(async ({ mode }) => {
   // Merge those values with the real process environment so a beta build from
   // .env.production receives the same fail-closed checks as Docker/CI builds.
   const environment = { ...loadEnv(mode, envDir, ''), ...process.env };
-  const rawPort = environment.PORT || '5173';
+  const rawPort = environment.WEB_PORT || environment.VITE_PORT || (environment.PORT !== '4000' ? environment.PORT : '5173') || '5173';
   const parsedPort = parseInt(rawPort, 10);
   const port = !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 5173;
   const basePath = environment.BASE_PATH || '/';
+  const publicOrigin = environment.VITE_PUBLIC_ORIGIN?.trim().replace(/\/$/, '') ?? '';
 
   assertPublicBetaBuildConfiguration(environment);
 
   return {
     base: basePath,
     plugins: [
+      requireProductionBuild(),
       react(),
       tailwindcss(),
+      publicSiteOriginPlugin(publicOrigin),
+      productionContentSecurityPolicyPlugin(environment),
 
       ...(environment.ANALYZE === 'true'
         ? [

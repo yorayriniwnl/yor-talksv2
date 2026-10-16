@@ -3,6 +3,7 @@ import { after, test } from "node:test";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
 
@@ -82,12 +83,68 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   await service.acceptGroupInvitation(refreshedSecond.id,second.id,refreshedSecond.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "A shared conversation");
   assert.equal((await service.markSeen(message.id, sender.id))?.seenAt, null);
+  const firstDecision = await new EligibilityService().decisionFor(first.id);
+  assert.equal(firstDecision.activated,true);
   await service.markSeen(message.id, first.id);
   assert.ok((await service.listConversation(group.id, first.id))[0].seenAt);
   assert.equal((await service.listConversation(group.id, second.id))[0].seenAt, null);
   assert.ok((await service.listConversation(group.id, sender.id))[0].seenAt);
   assert.ok((await service.getConversationsForUser(first.id))[0].lastMessage?.seenAt);
   assert.equal((await service.getConversationsForUser(second.id))[0].lastMessage?.seenAt, null);
+});
+
+test("sender history and inbox suppress retained direct receipts after reader withdrawal", async () => {
+  const users = new UserRepository();
+  const sender = await createTestUser(users);
+  const reader = await createTestUser(users);
+  await authorizeTestAdultAccount(sender.id);
+  await authorizeTestAdultAccount(reader.id);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
+  const sent = await service.sendMessage(sender.id, reader.id, 'Retained receipt privacy');
+  await service.markSeen(sent.id, reader.id);
+  assert.ok((await service.listConversation(sent.conversationId, sender.id))[0].seenAt);
+  await users.update(reader.id, { settings: { ...reader.settings, readReceiptsEnabled: false } });
+  assert.equal((await service.listConversation(sent.conversationId, sender.id))[0].seenAt, null);
+  assert.equal((await service.getConversationsForUser(sender.id))[0].lastMessage?.seenAt, null);
+  const stored = await pool.query('SELECT seen_at FROM messages WHERE id=$1', [sent.id]);
+  assert.ok(stored.rows[0].seen_at, 'withdrawing publication does not erase the retained direct receipt');
+  // A legacy row has only messages.seen_at. Its fallback must use the same
+  // current reader authority as the normalized message_reads rows.
+  await pool.query('DELETE FROM message_reads WHERE message_id=$1', [sent.id]);
+  assert.equal((await service.listConversation(sent.conversationId, sender.id))[0].seenAt, null);
+  await users.update(reader.id, { settings: { ...reader.settings, readReceiptsEnabled: true } });
+  assert.ok((await service.listConversation(sent.conversationId, sender.id))[0].seenAt);
+});
+
+test("group receipt aggregation includes only currently permitted adult readers", async t => {
+  const users = new UserRepository();
+  const sender = await createTestUser(users);
+  const first = await createTestUser(users);
+  const second = await createTestUser(users);
+  for (const user of [sender, first, second]) await authorizeTestAdultAccount(user.id);
+  const eligibility = new EligibilityService();
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts, eligibility);
+  const group = await service.createGroupChat(sender.id, [first.id, second.id], 'Receipt privacy audit');
+  await service.acceptGroupInvitation(group.invitations[0].id, first.id, group.invitations[0].updatedAt);
+  const secondInvite = (await service.listGroupInvitations(second.id))[0];
+  await service.acceptGroupInvitation(secondInvite.id, second.id, secondInvite.updatedAt);
+  const sent = await service.sendMessageToConversation(sender.id, group.id, 'Group reader privacy');
+  await service.markSeen(sent.id, first.id);
+  await service.markSeen(sent.id, second.id);
+  await pool.query(`UPDATE message_reads SET read_at=CASE WHEN user_id=$2 THEN '2026-01-01'::timestamp
+    ELSE '2026-02-01'::timestamp END WHERE message_id=$1`, [sent.id, first.id]);
+  assert.match((await service.listConversation(group.id, sender.id))[0].seenAt!, /^2026-01-01/);
+  await users.update(first.id, { settings: { ...first.settings, readReceiptsEnabled: false } });
+  assert.match((await service.listConversation(group.id, sender.id))[0].seenAt!, /^2026-02-01/);
+  const decisionsFor = eligibility.decisionForMany.bind(eligibility);
+  t.mock.method(eligibility, 'decisionForMany', async (ids: string[]) => {
+    const decisions = await decisionsFor(ids);
+    const decision = decisions.get(second.id);
+    if (decision) decisions.set(second.id, { ...decision, experience: 'teen_13_17' });
+    return decisions;
+  });
+  assert.equal((await service.listConversation(group.id, sender.id))[0].seenAt, null);
+  assert.equal((await service.getConversationsForUser(sender.id))[0].lastMessage?.seenAt, null);
 });
 
 test("concurrent first messages share one direct conversation in either direction", async () => {

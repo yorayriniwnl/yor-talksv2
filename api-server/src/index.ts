@@ -41,7 +41,10 @@ async function main() {
 
   const httpServer = createServer(app);
   const io = await attachSocketServer(httpServer);
-  const lifecycleWorker = await startLifecycleWorker(createPaymentRuntime().handlers);
+  const lifecycleWorker = await startLifecycleWorker(createPaymentRuntime().handlers).catch((err) => {
+    logger.warn({ err: err?.message || err }, "Lifecycle worker failed to start");
+    return null;
+  });
   const feedWorker = await startFeedWorker().catch((err) => { logger.warn({ err }, "Feed worker failed to start"); return null; });
   const notificationWorker = await startNotificationWorker().catch((err) => {
     logger.warn({ err }, "Notification worker failed to start");
@@ -82,7 +85,7 @@ async function main() {
       await feedWorker?.close();
       await operationalMetrics.close();
       await closeAuthenticationDependencies();
-      await lifecycleWorker.close();
+      await lifecycleWorker?.close();
       await closeRateLimitRedis();
       await pool.end();
       logger.info("Shutdown complete");

@@ -39,7 +39,7 @@ services:
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-totp-development-encryption-key-change-me}
       PUBLIC_BETA: ${PUBLIC_BETA:-false}
       TERMS_VERSION: ${TERMS_VERSION:-development}
-      MINIMUM_AGE: ${MINIMUM_AGE:-18}
+      LEGAL_CONTENT_REVIEWED: ${LEGAL_CONTENT_REVIEWED:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
@@ -85,9 +85,11 @@ services:
       context: .
       dockerfile: social/Dockerfile
       args:
+        VITE_PUBLIC_ORIGIN: ${VITE_PUBLIC_ORIGIN:-http://localhost:8080}
         VITE_PUBLIC_BETA: ${PUBLIC_BETA:-false}
         VITE_TERMS_VERSION: ${TERMS_VERSION:-development}
-        VITE_MINIMUM_AGE: ${MINIMUM_AGE:-18}
+        VITE_LEGAL_CONTENT_REVIEWED: ${LEGAL_CONTENT_REVIEWED:-false}
+        CSP_LIVEKIT_URL: ${LIVEKIT_URL:-}
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
         VITE_LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
         VITE_LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}

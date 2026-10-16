@@ -91,6 +91,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraGenerationRef = useRef(0);
   const capturePendingRef = useRef(false);
 
   useEffect(() => () => {
@@ -112,26 +113,41 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isOpen, facingMode]);
 
   const startCamera = async () => {
+    const generation = ++cameraGenerationRef.current;
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 1080 }, height: { ideal: 1920 } },
           audio: true,
         });
+        if (generation !== cameraGenerationRef.current) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play();
+          void videoRef.current.play().catch(() => { /* Camera state is still usable for capture. */ });
         }
         setCameraActive(true);
       }
     } catch {
       // Camera permission denied or unsupported. Publishing remains disabled until a real recording exists.
-      setCameraActive(false);
+      if (generation === cameraGenerationRef.current) setCameraActive(false);
     }
   };
 
   const stopCamera = () => {
+    cameraGenerationRef.current++;
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      if (recorder.state !== 'inactive') {
+        try { recorder.stop(); } catch { /* Track cleanup must still run if the recorder already stopped. */ }
+      }
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -139,6 +155,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setIsRecording(false);
     setCameraActive(false);
   };
 
@@ -160,6 +177,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isRecording]);
 
   const handleStartRecording = () => {
+    // The ref also covers clicks within one render and a recorder whose final
+    // stop event has not arrived yet.
+    if (mediaRecorderRef.current) return;
     if (publishing || capturing || isRecording || mode === 'post') return;
     sounds.playPop();
     setRecordedChunks([]);
@@ -182,6 +202,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         if (e.data.size > 0) chunks.push(e.data);
       };
       recorder.onstop = () => {
+        if (mediaRecorderRef.current !== recorder) return;
+        mediaRecorderRef.current = null;
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
         if (chunks.length === 0) {
           toast.error('No recording was captured. Try again.');
           return;
@@ -193,6 +217,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       };
       recorder.start();
     } catch {
+      const recorder = mediaRecorderRef.current;
+      mediaRecorderRef.current = null;
+      if (recorder) { recorder.ondataavailable = null; recorder.onstop = null; }
       toast.error('This browser cannot record video in the selected format.');
       return;
     }
@@ -251,11 +278,11 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   };
 
   const handleStopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') return;
     sounds.playChime();
     setIsRecording(false);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
+    recorder.stop();
   };
 
   const handleAddSticker = (typeId: string) => {

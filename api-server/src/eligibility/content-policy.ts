@@ -42,8 +42,7 @@ export function contentHashFor(item: Record<string, unknown>): string {
 }
 
 export function contentRevisionFor(item: Record<string, unknown>, contentHash = contentHashFor(item)): string {
-  const updatedAt = item.updatedAt;
-  return typeof updatedAt === "string" && updatedAt.length > 0 && updatedAt.length <= 256 ? updatedAt : `sha256:${contentHash}`;
+  return `sha256:${contentHash}`;
 }
 
 /** Infer only known persisted content entities. Unknown records cannot borrow another entity's approval. */

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ShieldCheck, AlertTriangle, FileText, CheckCircle2, Clock, 
-  Search, Mail, Building, Scale, ArrowRight, Loader2 
+  AlertTriangle, FileText, CheckCircle2,
+  Search, Building, Scale, ArrowRight, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,7 @@ export default function GrievancePortal() {
     e.preventDefault();
     const nextErrors: GrievanceErrors = {};
     if (!reporterName.trim()) nextErrors.reporterName = 'Enter the name a reviewer can use to contact you.';
-    if (!reporterEmail.trim()) nextErrors.reporterEmail = 'Add an email address for ticket updates.';
+    if (!reporterEmail.trim()) nextErrors.reporterEmail = 'Add an email address a reviewer can use to contact you.';
     else if (!/^\S+@\S+\.\S+$/.test(reporterEmail.trim())) nextErrors.reporterEmail = 'Check the email format and try again.';
     if (!reportedUrl.trim()) nextErrors.reportedUrl = 'Add the post, Reel, profile, or username you are reporting.';
     if (!description.trim()) nextErrors.description = 'Add a short explanation and any useful evidence.';
@@ -124,7 +124,7 @@ export default function GrievancePortal() {
           <span id="grievance-title">Trust & Safety Report Portal</span>
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
-          Submit a report to the Yor Talks trust queue. You will receive a ticket ID, status updates, and a human-review path.
+          Submit a report to the Yor Talks trust queue. Keep the ticket ID to check its recorded status; email updates are not sent automatically.
         </p>
 
         {/* Tab Switcher */}
@@ -173,10 +173,6 @@ export default function GrievancePortal() {
                 <span className="text-muted-foreground">Status:</span>
                 <span className="font-bold text-emerald-400 uppercase">{submittedTicket.status}</span>
               </div>
-              {submittedTicket.slaDeadline && <div className="flex justify-between">
-                <span className="text-muted-foreground">Operational review target:</span>
-                <span className="text-foreground">{new Date(submittedTicket.slaDeadline).toLocaleDateString()}</span>
-              </div>}
             </div>
 
             <Button
@@ -206,7 +202,7 @@ export default function GrievancePortal() {
                   aria-invalid={Boolean(formErrors.reporterName)}
                   aria-describedby={formErrors.reporterName ? 'reporterName-error' : undefined}
                   maxLength={120}
-                  placeholder="e.g. Ayush Roy"
+                  placeholder="Your name"
                   className="rounded-xl surface-2 border-border/40 text-xs h-10"
                 />
                 {formErrors.reporterName && <p id="reporterName-error" className="operator-grievance-field__error">{formErrors.reporterName}</p>}
@@ -244,7 +240,7 @@ export default function GrievancePortal() {
                 <option value="impersonation">Identity Impersonation / Fake Profile</option>
                 <option value="copyright">Copyright & Intellectual Property Infringement</option>
                 <option value="privacy_violation">Privacy Violation / Non-Consensual Media</option>
-                <option value="other">Other Statutory Violation</option>
+                <option value="other">Other concern</option>
               </select>
             </div>
 
@@ -281,13 +277,14 @@ export default function GrievancePortal() {
               <div className="operator-grievance-field__meta"><span>{formErrors.description ? <span id="description-error" className="operator-grievance-field__error">{formErrors.description}</span> : 'Include context, timestamps, and evidence where possible.'}</span><span>{description.length}/5000</span></div>
             </div>
 
+            <p className="text-xs leading-5 text-muted-foreground">Your contact details and report are used to investigate this request and contact you if needed. This portal does not send automatic email updates. Read the <a href="/privacy" className="font-semibold text-primary underline">Privacy Notice</a> for details.</p>
             <Button
               type="submit"
               disabled={submitting}
               aria-busy={submitting}
               className="w-full rounded-2xl font-display font-extrabold text-xs h-11 bg-primary text-primary-foreground glow-neon-primary cursor-pointer"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Grievance to Redressal Officer <ArrowRight className="w-4 h-4 ml-1.5" /></>}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit report <ArrowRight className="w-4 h-4 ml-1.5" /></>}
             </Button>
           </form>
         )
@@ -334,7 +331,6 @@ export default function GrievancePortal() {
               <p className="text-xs text-muted-foreground">Use this receipt to follow your ticket status. Case evidence and reviewer notes remain private.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
-                {trackedTicket.slaDeadline && <span>Operational review target: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>}
               </div>
             </motion.div>
           )}
@@ -346,10 +342,10 @@ export default function GrievancePortal() {
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
           <Building className="w-4 h-4 text-primary" /> Trust & Safety Contact
         </h4>
-        <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
-        <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>
-        <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured in this development build.'}</p>
-        <p><strong>Handling:</strong> Tickets are stored for review and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
+        <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Not designated'}</p>
+        <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Not configured'}</p>
+        <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured'}</p>
+        <p><strong>Handling:</strong> Tickets are stored in the review queue and can be tracked with the ticket ID. This portal does not send email updates. Do not submit emergencies through Yor.</p>
       </div>
     </div>
   );

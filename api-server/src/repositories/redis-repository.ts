@@ -228,6 +228,100 @@ export class RedisRepository {
     }
   }
 
+  async setIfAbsentStrict(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    await this.ensureReady();
+    return (await this.client.set(key, value, "EX", ttlSeconds, "NX")) === "OK";
+  }
+
+  async deleteIfValueStrict(key: string, expectedValue: string): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
+       return 0`,
+      1,
+      key,
+      expectedValue,
+    );
+    return result === 1;
+  }
+
+  async deleteEmailOtpIfReservationStrict(key: string, reservationId: string): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return 0 end
+        local decoded, state = pcall(cjson.decode, raw)
+        if decoded and type(state) == 'table' and state.reservationId == ARGV[1] then
+          return redis.call('DEL', KEYS[1])
+        end
+        return 0
+      `,
+      1,
+      key,
+      reservationId,
+    );
+    return result === 1;
+  }
+
+  async deleteEmailOtpIfAuthVersionChangedStrict(key: string, authVersion: number): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return 0 end
+        local decoded, state = pcall(cjson.decode, raw)
+        if not decoded or type(state) ~= 'table' or tonumber(state.authVersion) ~= tonumber(ARGV[1]) then
+          return redis.call('DEL', KEYS[1])
+        end
+        return 0
+      `,
+      1,
+      key,
+      authVersion,
+    );
+    return result === 1;
+  }
+
+  /** Checks one email login code and updates its attempt/claim state atomically across API replicas. */
+  async claimEmailOtpStrict(key: string, codeHash: string, nowMs: number, maxAttempts: number): Promise<string | null> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return false end
+        local decoded, state = pcall(cjson.decode, raw)
+        if not decoded or type(state) ~= 'table' then
+          redis.call('DEL', KEYS[1])
+          return false
+        end
+        local ttl = redis.call('PTTL', KEYS[1])
+        local expiresAt = tonumber(state.expiresAt)
+        local attempts = tonumber(state.attempts)
+        if ttl <= 0 or not expiresAt or expiresAt <= tonumber(ARGV[2]) or not attempts or attempts < 0
+          or attempts >= tonumber(ARGV[3]) or type(state.codeHash) ~= 'string' or state.claimed == true then
+          redis.call('DEL', KEYS[1])
+          return false
+        end
+        if state.codeHash ~= ARGV[1] then
+          state.attempts = attempts + 1
+          redis.call('SET', KEYS[1], cjson.encode(state), 'PX', ttl)
+          return false
+        end
+        state.claimed = true
+        local claimed = cjson.encode(state)
+        redis.call('SET', KEYS[1], claimed, 'PX', ttl)
+        return claimed
+      `,
+      1,
+      key,
+      codeHash,
+      nowMs,
+      maxAttempts,
+    );
+    return typeof result === "string" ? result : null;
+  }
+
   async delStrict(key: string): Promise<void> {
     await this.ensureReady();
     await this.client.del(key);
@@ -293,8 +387,14 @@ export class RedisRepository {
 
   // --- Sorted-set operations used by SecurityService for audit/abuse detection ---
 
-  async zadd(key: string, score: number, member: string): Promise<void> {
+  async zadd(key: string, score: number, member: string, ttlSeconds?: number): Promise<void> {
     await this.ensureReady();
+    if (ttlSeconds !== undefined) {
+      // A single transaction prevents a successful index write without its
+      // retention deadline if the connection drops between the commands.
+      await this.client.multi().zadd(key, score, member).expire(key, ttlSeconds).exec();
+      return;
+    }
     await this.client.zadd(key, score, member);
   }
 

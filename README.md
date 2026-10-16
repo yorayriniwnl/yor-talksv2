@@ -83,14 +83,18 @@ The launch path supports a global deployment or a closed beta:
 
 ## Quick start with Docker (local development only)
 
-Use Node.js 24 LTS, pnpm 9.15.4, and a working Docker Engine. From the repository root:
+Use Node.js 24 LTS, pnpm 11.28.5, and a working Docker Engine. Set
+`CONTACT_SHIELD_SECRET` in `.env` to a unique value of at least 32 characters
+before migrating; the API and migration must use the same value. From the repository root:
 
 ```bash
 cp .env.example .env
-pnpm install
-docker compose up --build -d
-docker compose exec api pnpm --filter @workspace/db push
-docker compose exec api pnpm --filter @workspace/api-server seed
+pnpm install --frozen-lockfile
+docker compose up -d postgres redis
+docker compose build api web
+docker compose run --rm --no-deps api pnpm --filter @workspace/db migrate:beta
+docker compose run --rm --no-deps api pnpm --filter @workspace/api-server seed
+docker compose up -d api web
 ```
 
 Open [http://localhost:8080](http://localhost:8080). The API health endpoint is
@@ -98,6 +102,12 @@ Open [http://localhost:8080](http://localhost:8080). The API health endpoint is
 direct API is available on port 4000. The generated OpenAPI document is exposed
 at `/api/docs`; it is built from the mounted Express routes and checked for
 drift in CI.
+
+After changing API routes or schemas, run `pnpm contract:generate` followed by
+`pnpm contract:clients:generate`. CI verifies the route document with
+`pnpm contract:check` and the generated React/Zod clients with
+`pnpm contract:clients:check`. The client check generates an isolated copy and
+compares file contents and inventory without rewriting the working tree.
 
 The seeded demo accounts use fully synthetic identities:
 

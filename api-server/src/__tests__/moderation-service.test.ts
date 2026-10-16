@@ -22,6 +22,7 @@ test("grievance tickets survive service recreation", async () => {
   const reloaded = await new ModerationService().getGrievanceStatus(created.ticketId);
   assert.equal(reloaded?.ticketId, created.ticketId);
   assert.equal(reloaded?.status, "received");
+  assert.equal(reloaded?.slaDeadline, null);
 
   await db.delete(grievanceTicketsTable).where(eq(grievanceTicketsTable.ticketId, created.ticketId));
 });

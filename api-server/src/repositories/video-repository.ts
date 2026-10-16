@@ -2,6 +2,7 @@ import { eq, desc, sql, inArray } from "drizzle-orm";
 import { videosTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { VideoRecord } from "../types/index.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 
 export class VideoRepository {
   async create(video: VideoRecord): Promise<VideoRecord> {
@@ -38,14 +39,17 @@ export class VideoRepository {
   }
 
   async toggleLike(id: string, userId: string): Promise<VideoRecord | undefined> {
-    const [updated] = await db.update(videosTable).set({
-      likedBy: sql`CASE
-        WHEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) ? ${userId}
-          THEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) - ${userId}
-        ELSE COALESCE(${videosTable.likedBy}, '[]'::jsonb) || jsonb_build_array(${userId})
-      END`,
-    }).where(eq(videosTable.id, id)).returning();
-    return updated as VideoRecord | undefined;
+    return db.transaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      const [updated] = await tx.update(videosTable).set({
+        likedBy: sql`CASE
+          WHEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) ? ${userId}
+            THEN COALESCE(${videosTable.likedBy}, '[]'::jsonb) - ${userId}
+          ELSE COALESCE(${videosTable.likedBy}, '[]'::jsonb) || jsonb_build_array(${userId}::text)
+        END`,
+      }).where(eq(videosTable.id, id)).returning();
+      return updated as VideoRecord | undefined;
+    });
   }
 
   async delete(id: string): Promise<boolean> {

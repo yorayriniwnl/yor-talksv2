@@ -1,5 +1,5 @@
 import { Suspense, useEffect } from 'react';
-import { MotionConfig } from 'framer-motion';
+import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { ThemeProvider } from 'next-themes';
@@ -9,9 +9,6 @@ import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { safeInternalRedirect } from '@/lib/safe-redirect';
-
-// Shell & Layout
-import { AppShell } from '@/components/layout/AppShell';
 
 // Helpers
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
@@ -96,6 +93,7 @@ const SquadComms = lazyWithRetry(() => import('@/pages/squad-comms'));
 const CustomRoom = lazyWithRetry(() => import('@/pages/custom-room'));
 const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
 const Grievance = lazyWithRetry(() => import('@/pages/grievance'));
+const AppShell = lazyWithRetry(() => import('@/components/layout/AppShell').then(({ AppShell }) => ({ default: AppShell })));
 
 import { PushNotificationManager } from '@/components/notifications/PushNotificationManager';
 
@@ -232,6 +230,7 @@ function Router() {
   return (
       <Switch>
         <Route path="/privacy" component={LegalPage} />
+        <Route path="/cookies" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
         <Route path="/grievance" component={Grievance} />
@@ -248,6 +247,7 @@ function Router() {
         {currentUser && needsTerms && (
           <>
             <Route path="/consent" component={Consent} />
+            <Route path="/settings" component={Settings} />
             <Route path="/privacy" component={LegalPage} />
             <Route path="/terms" component={LegalPage} />
             <Route path="/community-guidelines" component={LegalPage} />
@@ -298,9 +298,10 @@ function App() {
   const currentUser = useAppStore((s) => s.currentUser);
   const eligibility = useAppStore((s) => s.eligibility);
   const canUsePush = Boolean(currentUser && currentUser.notificationsEnabled !== false && eligibility?.activated && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.social);
+  const canLoadPreferences = Boolean(currentUser && eligibility?.activated && eligibility.capabilities.social && (!publicBetaConfig.publicBeta || currentUser.termsVersion === publicBetaConfig.termsVersion && currentUser.termsAcceptedAt));
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <MotionConfig reducedMotion="user">
+      <AccessibilityProvider userId={currentUser?.id ?? null} enabled={canLoadPreferences}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <ErrorBoundary>
@@ -312,7 +313,7 @@ function App() {
           {canUsePush && <PushNotificationManager />}
           <Toaster />
         </TooltipProvider>
-      </MotionConfig>
+      </AccessibilityProvider>
     </ThemeProvider>
   );
 }

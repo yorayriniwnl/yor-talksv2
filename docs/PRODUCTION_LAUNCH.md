@@ -1,8 +1,10 @@
 # Yor Talks production launch runbook
 
-This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. Do not use the development `docker-compose.yml` for public traffic.
+This repository now has a production Compose profile, but a public launch still needs the provider accounts, domain and legal approval listed below. The stated intended launch region is the EU; its member state and legal operating entity have not been selected, and the production domain and hosting provider are not yet chosen. Do not use the development `docker-compose.yml` for public traffic.
 
-**Current release decision: not ready for the requested global, three-age-group launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) now includes the 14 October age/privacy implementation and verification evidence. Territory, operator, provider, legal, moderation, data-rights, backup and monitoring gates remain open. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate those countries. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
+**Current release decision: not ready for an EU launch.** The [7 October readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) now includes the 14 October age/privacy implementation and verification evidence, the EU launch intent, and the latest synthetic backup CI coverage. The member state, operator, provider, legal, moderation, data-rights, real backup and monitoring gates remain open. The [jurisdiction intake](GLOBAL_REGULATORY_INTAKE_2026-10-07.md) is dated research, not approval to activate any country. Complete the applicable repairs and operating acceptance before using this runbook to launch publicly.
+
+The [16 October completion audit](PROGRAMME_COMPLETION_AUDIT_2026-10-16.md) records confirmed implementation gaps: report closure does not enforce a restriction, decision-linked notices/review are absent, and broader rights/retention workflows remain incomplete. The local [asset register](ASSET_PROVENANCE_REGISTER.md) records source evidence and pending permissions. Deployment steps below do not close those requirements.
 
 The [media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md) records
 current media controls, source-specific repository checks and the remaining
@@ -20,7 +22,17 @@ their retained account-deletion holds require provider ownership review.
 
 ## 1. Prepare the host and secrets
 
-Use a supported Linux host with Docker Engine and Compose v2. Copy `ops/.env.production.example` to `/etc/yor-talks/.env.production`, replace every `CHANGE_ME` value, and keep it outside Git with mode `0640`, owned by `root:docker` (the scheduler account is in the Docker group). Generate independent URL-safe secrets, for example with `openssl rand -hex 32`; never reuse JWT, contact-shield, TOTP, or metrics secrets. The example and `ops/ci-production.env` are fixtures, not deployment values.
+Use a supported Linux host with Docker Engine and Compose v2. Create the protected directory before installing the environment template. These commands preserve an existing configuration:
+
+```bash
+sudo install -d -o root -g docker -m 0750 /etc/yor-talks
+if ! sudo test -e /etc/yor-talks/.env.production; then
+  sudo install -o root -g docker -m 0640 ops/.env.production.example /etc/yor-talks/.env.production
+fi
+sudoedit /etc/yor-talks/.env.production
+```
+
+Replace every `CHANGE_ME` value, and keep the file outside Git with mode `0640`, owned by `root:docker` (the scheduler account is in the Docker group). Generate independent URL-safe secrets, for example with `openssl rand -hex 32`; never reuse JWT, contact-shield, TOTP, or metrics secrets. The example and `ops/ci-production.env` are fixtures, not deployment values.
 
 Use Node.js 24 LTS for local and CI builds (the container also uses Node 24).
 Rebuild with `--pull` for current patched Node 24 / Nginx 1.30 base images.
@@ -28,25 +40,34 @@ Node 20 is end-of-life; do not deploy an old cached Node 20 image.
 All `.env*` files and private-key files are excluded from Docker build contexts:
 provide production secrets at runtime, never through `COPY` or frontend build arguments.
 
-`DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; the production Compose file only publishes the web edge. The included Postgres container is not TLS-enabled, so keep `DB_SSL=false`; set it to `true` only when using a TLS-enabled managed database.
+The account-export release migration adds ordered subject/key and legacy-actor JSON indexes inside its transaction. On a populated database, rehearse it against an isolated restored copy, measure index space and migration duration, and schedule a maintenance window before starting the new API. See [account export](ACCOUNT_EXPORT.md) for its inventory and verification boundary.
+
+`DATABASE_URL` must use the same database/user/password values as the Postgres service. Keep the database and Redis ports unpublished; production Compose binds the API and web host ports to loopback so only the host TLS proxy can reach them. Postgres and Redis use `restart: unless-stopped` so they return with the application after a host or Docker restart. The API and migration containers run as the unprivileged `node` user with read-only roots and bounded scratch space. Nginx also has a read-only root and only disposable cache/runtime tmpfs mounts; its capability set is limited to startup, worker privilege drop and port binding. Keep persistent data in Postgres, Redis, or the configured encrypted backup remote. The included Postgres container is not TLS-enabled, so keep `DB_SSL=false`; set it to `true` only when using a TLS-enabled managed database.
 
 ### Required runtime values
 
-`docker-compose.production.yml config --quiet` requires database/Redis passwords, `DATABASE_URL`, independent JWT/contact/TOTP secrets, explicit `CLIENT_ORIGIN` and `CORS_ORIGINS`, legal/support/grievance values, `TERMS_VERSION`, `METRICS_BEARER_TOKEN_FILE`, `RCLONE_CONFIG_FILE`, `BACKUP_AGE_RECIPIENT`, `BACKUP_REMOTE`, `ALERTMANAGER_WEBHOOK_URL`, `ALERTMANAGER_WEBHOOK_USER`, and `ALERTMANAGER_WEBHOOK_PASSWORD_FILE`. Production API startup also requires deployed Cloudinary and Resend values and at least one text moderation provider key. `GOOGLE_CLIENT_ID` is required when `PUBLIC_BETA=true`. `METRICS_BEARER_TOKEN_FILE` must point to a single-line, 32+ character random token; Compose mounts it read-only into API and Prometheus. Create it outside the repository:
+`docker-compose.production.yml config --quiet` requires database/Redis passwords, `DATABASE_URL`, independent JWT/contact/TOTP secrets, explicit `CLIENT_ORIGIN` and `CORS_ORIGINS`, legal/support/grievance values, `TERMS_VERSION`, `LEGAL_CONTENT_REVIEWED`, `SECRET_READER_GID`, `METRICS_BEARER_TOKEN_FILE`, `RCLONE_CONFIG_FILE`, `BACKUP_AGE_RECIPIENT`, `BACKUP_REMOTE`, `ALERTMANAGER_WEBHOOK_URL`, `ALERTMANAGER_WEBHOOK_USER`, and `ALERTMANAGER_WEBHOOK_PASSWORD_FILE`. Production API startup also requires deployed Cloudinary and Resend values and at least one text moderation provider key. `GOOGLE_CLIENT_ID` is required when `PUBLIC_BETA=true`. Public-beta API startup and web image builds fail while `LEGAL_CONTENT_REVIEWED=false`; set it to `true` only after the operator approves the exact terms, privacy and grievance content, territory/eligibility policy, provider disclosures, retention and rights procedures. The production example intentionally keeps this gate false and policy version/effective date as placeholders. The CI fixture sets the gate true only to exercise synthetic browser and container paths; that value is not legal approval. `METRICS_BEARER_TOKEN_FILE` must point to a single-line, 32+ character random token; Compose mounts it read-only into API and Prometheus. Create the dedicated host group and initial secrets outside the repository after preparing `/etc/yor-talks/.env.production`:
 
 ```bash
 sudo install -d -o root -g docker -m 0750 /etc/yor-talks
+getent group yor-talks-secrets >/dev/null || sudo groupadd --system yor-talks-secrets
+secret_reader_gid=$(getent group yor-talks-secrets | cut -d: -f3)
+sudo sed -i "s/^SECRET_READER_GID=.*/SECRET_READER_GID=${secret_reader_gid}/" /etc/yor-talks/.env.production
+sudo install -o root -g yor-talks-secrets -m 0640 /dev/null /etc/yor-talks/metrics.token
 openssl rand -hex 32 | sudo tee /etc/yor-talks/metrics.token >/dev/null
-sudo chown root:docker /etc/yor-talks/metrics.token
-sudo chmod 0640 /etc/yor-talks/metrics.token
+sudo install -o root -g yor-talks-secrets -m 0640 /dev/null /etc/yor-talks/alertmanager-webhook-password
 openssl rand -hex 32 | sudo tee /etc/yor-talks/alertmanager-webhook-password >/dev/null
-sudo chown root:docker /etc/yor-talks/alertmanager-webhook-password
-sudo chmod 0640 /etc/yor-talks/alertmanager-webhook-password
 ```
+
+Use the generated webhook password when configuring the receiver's credentials. These creation commands replace existing secrets; for an existing deployment, use the permission repair below without regenerating the values. `SECRET_READER_GID` must be the numeric GID of `yor-talks-secrets`, never `0` or the host Docker group. Compose adds this supplementary group only to the API, Prometheus and Alertmanager; their primary unprivileged users stay unchanged. No Docker socket is mounted. File-backed Compose secrets retain host file ownership and permissions, so declaring `uid`, `gid` or `mode` in Compose does not repair an unreadable host file. See [Docker's secret mount rules](https://docs.docker.com/reference/compose-file/services/#secrets). The backup container alone consumes `rclone.conf` as UID 0; keep that file `root:root` with mode `0600`.
+
+The one-shot Alertmanager renderer runs as UID 0 with only `DAC_OVERRIDE`, so it can initialize a fresh root-owned config volume and update an existing volume owned by UID 65534. It has no network or secret mounts, a read-only root and read-only script/template mounts; only its generated config volume and disposable `/tmp` are writable. It writes a mode `0644` config containing the receiver URL, username and password-file reference. The long-running Alertmanager remains UID 65534 and reads that volume without write access.
+
+For a pre-existing deployment, update the two shared files with `sudo chown root:yor-talks-secrets /etc/yor-talks/metrics.token /etc/yor-talks/alertmanager-webhook-password` and `sudo chmod 0640 /etc/yor-talks/metrics.token /etc/yor-talks/alertmanager-webhook-password`, then recreate the consuming containers so their supplementary groups are refreshed. Before starting the stack, verify real mounts without printing their contents: `docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml run --rm --no-deps --entrypoint node api -e 'require("node:fs").accessSync("/run/secrets/metrics_bearer_token", 4)'`, then run the equivalent `--entrypoint /bin/sh prometheus -c 'test -r /run/secrets/metrics_bearer_token'` and `--entrypoint /bin/sh alertmanager -c 'test -r /run/secrets/alertmanager_webhook_password'`. These one-shot checks use each service's configured identity and mounts. `node scripts/check-production-secret-permissions.mjs` exercises the Linux ownership model separately with disposable synthetic files, requiring denial without the reader group and successful reads with it. It also checks repeated config rendering on fresh root-owned and existing UID 65534-owned volumes. CI runs this fixture before its production container smoke test. Run this on the deployment Docker daemon too, especially when using rootless Docker or user namespace remapping.
 
 The frontend provider switches are build-time `VITE_*` values wired from the corresponding backend flags; `pnpm production-config:check` guards this mapping. Keep payments, live rooms, RTC and Web Push disabled until provider acceptance is complete. Web Push additionally needs VAPID keys and obtains the public key from the authenticated API; the frontend does not embed the private key. RTC calls require an authenticated TURN service and short-lived TURN credentials; do not enable them with only the public STUN example.
 
-Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. Production Nginx serves the frontend and provides same-origin API/WebSocket proxy routes; public TLS is terminated at the external proxy. The recommended separate API hostname below reaches the API directly through one proxy. The alternative Caddy → Nginx → API route has two hops and currently aggregates client IP limits at the proxy; resolve that topology's trusted-client identity and verify distinct clients before selecting it for public traffic.
+Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. The [Caddy example](../ops/Caddyfile.example) sends `/api` and `/socket.io` directly to the API and sends frontend assets to Nginx, keeping both public routes at one trusted proxy hop. Do not forward public API traffic through both Caddy and Nginx with the current one-hop API setting: that would attribute rate limits to the proxy instead of each client.
 
 ## 2. Configure the external launch dependencies
 
@@ -58,9 +79,10 @@ The production assurance adapter is unavailable and the approved territory and o
 
 Before enabling account activation in any territory, identify the operating entity and applicable territory, approve and load both the operator and recipient policy, select and contract with an assurance provider, and accept the provider's age and parental-responsibility protocols. Validate reassessment, withdrawal, rights, retention, contact and content behavior in the deployed environment. A green fixture-based suite does not close those operational gates.
 
-The 14 October local production Compose smoke found that Alertmanager v0.28.1 exits on the configured `--config.expand-env` flag and is repeatedly restarted. Hosted CI #387 passed its production container smoke, but it does not verify Alertmanager health or real alert delivery. Repair that command/configuration and verify real alert delivery before relying on the monitoring stack.
+The 14 October local production Compose smoke found that Alertmanager v0.28.1 exits on the configured `--config.expand-env` flag. The configuration now renders webhook values before startup because this pinned version does not support environment expansion. The one-shot renderer uses UID/GID 0 with only `DAC_OVERRIDE` to support both fresh root-owned volumes and older volumes owned by Alertmanager. It has no network, a read-only root filesystem and only the generated-config volume as writable persistent storage; Alertmanager itself runs as UID/GID 65534. Verify container health, `amtool check-config` and real alert delivery to the configured receiver before relying on the monitoring stack; hosted CI #387 did not cover the current renderer setup.
 
-- Point frontend and API DNS names at a host Caddy/reverse proxy. Start with [ops/Caddyfile.example](../ops/Caddyfile.example): frontend hostname to `127.0.0.1:${WEB_PORT:-8080}`, API hostname to `127.0.0.1:${API_HOST_PORT:-4000}`. Caddy manages HTTPS and forwards WebSocket upgrades automatically. Set `CLIENT_ORIGIN`/`CORS_ORIGINS` to the exact frontend `https://` origin, `VITE_API_BASE_URL=https://<api-host>/api`, and `VITE_REALTIME_URL=https://<api-host>`; allow inbound 80/443 only at the proxy and do not expose API/Postgres/Redis host ports.
+- Point frontend and API DNS names at a host Caddy/reverse proxy. Start with [ops/Caddyfile.example](../ops/Caddyfile.example): frontend assets go to Nginx at `127.0.0.1:8080`; API/WebSocket paths and the optional API hostname go directly to the API at `127.0.0.1:4000`. These are loopback-only Compose defaults; if you change either host port, update the Caddy upstream too. Caddy manages HTTPS and forwards WebSocket upgrades automatically. Set `CLIENT_ORIGIN`/`CORS_ORIGINS` to the exact frontend `https://` origin. For a separate API hostname, set `VITE_API_BASE_URL=https://<api-host>/api` and `VITE_REALTIME_URL=https://<api-host>`; for same-origin API access, retain `/api`. Allow inbound 80/443 only at the proxy and do not expose API/Postgres/Redis host ports.
+- The Caddy example assumes Caddy receives public traffic directly. If a CDN or load balancer sits in front of it, configure Caddy with that provider's exact trusted proxy source ranges and verify client-IP spoofing is rejected; otherwise rate limits may group users under the upstream proxy address.
 - Verify the Resend sender domain and set `EMAIL_FROM`. Registration is fail-closed when production email delivery is unavailable.
 - In Google Cloud, configure a Web OAuth client with the deployed frontend's exact HTTPS JavaScript origin and copy the same client ID to `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID`. Yor Talks uses the Google Identity credential flow; it does not need an invented callback URL. Exercise allowed/disallowed accounts after configuring the email-domain policy.
 - Publish and verify the Resend sender domain's SPF/DKIM records, enforce DMARC according to organizational policy, and use a sender on that verified domain.
@@ -71,14 +93,16 @@ The 14 October local production Compose smoke found that Alertmanager v0.28.1 ex
 - Keep payments, live rooms, web push and RTC calls disabled in both API and frontend flags for this beta. Enable them only in a separately reviewed rollout after provider, safety and operational acceptance tests; credentials alone do not enable a feature.
 - Decide whether this deployment is open globally or a closed beta. For a closed beta, set `ALLOWED_EMAIL_DOMAINS` and document the approved domains.
 - Publish reviewed Privacy, Terms, Community Guidelines, copyright/takedown process, retention schedule, support address and the appointed grievance officer’s name/contact. The in-app pages intentionally identify the legal fields that are still unconfigured.
+- Grievance receipts provide a ticket ID and recorded status only; email updates are not automatic, and no response deadline is published until the operating territory and applicable policy are approved. Assign and rehearse a staffed review and urgent-safety path before opening public intake.
+- The Bounties route has no verified sponsor feed or application backend. It shows an empty state until each opportunity's sponsor, amount, deadline and terms have been confirmed; do not advertise grant submissions as available.
 
 ## 3. Deploy
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
-docker compose --env-file .env.production -f docker-compose.production.yml build --pull
-docker compose --env-file .env.production -f docker-compose.production.yml up -d
-docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml config --quiet
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml build --pull migrate api web backup
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml up -d
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml ps
 curl -fsS https://your-domain.example/api/healthz
 curl -fsS https://your-domain.example/api/readyz
 BASE_URL=https://your-domain.example pnpm smoke
@@ -93,26 +117,28 @@ configuration edit. Never run an unreviewed schema push against existing data.
 Review migration logs on every deployment:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml logs --no-log-prefix migrate
-docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=200 api
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml logs --no-log-prefix migrate
+docker compose --env-file /etc/yor-talks/.env.production -f docker-compose.production.yml logs --tail=200 api
 ```
 
 ## 4. Scheduled operations and monitoring
 
-Production Compose includes internal-only Prometheus, Alertmanager, and a textfile exporter for backup status. Prometheus scrapes `/api/metrics` using the mounted `metrics_bearer_token` secret. Its alert rules cover API scrape failures, shared Redis metric availability, worker failures, failed/stale analytics rollups, and missing/stale/failed backups. Configure `ALERTMANAGER_WEBHOOK_URL` to a reachable HTTPS receiver restricted to the deployment's egress; `ALERTMANAGER_WEBHOOK_USER` and a mounted password file authenticate the receiver, so do not put credentials in the URL. The monitoring UIs are not published to the internet. Inspect service state/logs with:
+Production Compose includes internal-only Prometheus, Alertmanager, and a textfile exporter for backup status. Prometheus scrapes `/api/metrics` using the mounted `metrics_bearer_token` secret. Its alert rules cover API scrape failures, shared Redis metric availability, notification/feed worker failures, lifecycle worker heartbeat and overdue/dead cleanup jobs, failed/stale analytics rollups, and missing/stale/failed backups. Configure `ALERTMANAGER_WEBHOOK_URL` to a reachable HTTPS receiver restricted to the deployment's egress; `ALERTMANAGER_WEBHOOK_USER` and a mounted password file authenticate the receiver, so do not put credentials in the URL. The monitoring UIs are not published to the internet. Inspect service state/logs with:
 
 ```bash
 docker compose --env-file /etc/yor-talks/.env.production -f /opt/yor-talks/docker-compose.production.yml ps prometheus alertmanager backup-metrics-exporter
 docker compose --env-file /etc/yor-talks/.env.production -f /opt/yor-talks/docker-compose.production.yml logs --tail=200 prometheus alertmanager backup-metrics-exporter
 ```
 
-Install the systemd units on one designated scheduler host. The dedicated `yor-talks` service account needs Docker-socket access (equivalent to root), read access to `/opt/yor-talks`, the mode-0640 production env file, and the mode-0640 rclone config. Do not enable duplicate backup timers on multiple hosts; analytics runs are idempotent across hosts, but designate one scheduler host to simplify operations.
+Install the systemd units on one designated scheduler host. Complete the remote/key configuration and controlled backup verification in section 5 before enabling the timers below. The dedicated `yor-talks` service account needs Docker-socket access (equivalent to root), read access to `/opt/yor-talks` and the mode-0640 production env file. The root backup container mounts the root-owned mode-0600 rclone config through Compose. Do not enable duplicate backup timers on multiple hosts; analytics runs are idempotent across hosts, but designate one scheduler host to simplify operations.
 
 ```bash
 sudo useradd --system --create-home --home-dir /opt/yor-talks --shell /usr/sbin/nologin --groups docker yor-talks
 sudo install -d -o root -g docker -m 0750 /etc/yor-talks
-sudo install -m 0640 -o root -g docker .env.production /etc/yor-talks/.env.production
-sudo install -m 0640 -o root -g docker /secure/rclone.conf /etc/yor-talks/rclone.conf
+sudo chown root:docker /etc/yor-talks/.env.production
+sudo chmod 0640 /etc/yor-talks/.env.production
+sudo -u yor-talks test -r /etc/yor-talks/.env.production
+sudo install -m 0600 -o root -g root /secure/rclone.conf /etc/yor-talks/rclone.conf
 sudo install -m 0644 ops/systemd/yor-talks-analytics.service /etc/systemd/system/
 sudo install -m 0644 ops/systemd/yor-talks-analytics.timer /etc/systemd/system/
 sudo install -m 0644 ops/systemd/yor-talks-backup.service /etc/systemd/system/
@@ -130,7 +156,7 @@ Analytics runs daily at 02:15 UTC and recomputes seven complete days. Backups ru
 ### Incident response
 
 - **API or database unavailable:** preserve logs, inspect `readyz`, Postgres and Redis health, and pause rollout. Do not bypass readiness or expose database/cache ports.
-- **Worker failures:** inspect the notification worker logs, Redis health and Prometheus `yor_worker_failed_jobs_total`; preserve queued/failed jobs while diagnosing provider errors.
+- **Worker failures:** inspect the notification worker logs, Redis health and Prometheus `yor_worker_failed_jobs_total`. For cleanup alerts, check the admin diagnostics `lifecycleCleanup` counts and the `background_jobs` rows for `account_cleanup` or `media_cleanup`; preserve queued/failed jobs while diagnosing provider errors.
 - **Stale analytics:** inspect the systemd timer and `journalctl -u yor-talks-analytics.service`, then query authorized pipeline status. Re-run only after dependencies recover; the last seven days recompute idempotently.
 - **Backup failure or suspected data loss:** stop schema changes, preserve the encrypted local staging file, inspect rclone and remote object/version, verify with the protected age identity, and restore only into a separate empty database. Promote a restore only after operator approval and application validation; never overwrite production during an incident drill.
 - **Credential compromise:** disable the affected provider/feature flag, rotate only the affected secret through the approved secret manager, and review session revocation and provider audit logs. A contact-shield secret rotation requires a reviewed digest migration.
@@ -141,7 +167,7 @@ The repository backup helper requires `age` and `rclone`. Configure an rclone re
 
 ```bash
 sudo -u yor-talks rclone config --config /opt/yor-talks/.config/rclone/rclone.conf
-sudo install -D -o yor-talks -g docker -m 0600 /opt/yor-talks/.config/rclone/rclone.conf /etc/yor-talks/rclone.conf
+sudo install -D -o root -g root -m 0600 /opt/yor-talks/.config/rclone/rclone.conf /etc/yor-talks/rclone.conf
 age-keygen -o /secure/yor-talks-backup.agekey
 chmod 0600 /secure/yor-talks-backup.agekey
 age-keygen -y /secure/yor-talks-backup.agekey
@@ -163,7 +189,6 @@ BACKUP_AGE_IDENTITY="/secure/restore-identity" DATABASE_URL="postgresql://.../re
 
 Schedule backups at least daily and before schema changes. Record remote object/version, encrypted archive verification, restore results, and recovery-time objectives as operational evidence. Merely running this script does not verify remote durability or a successful restore. Redis is operational state and should be recoverable from a clean restart; do not treat it as the source of truth for accounts or reports.
 
-## 6. Launch checks
 ### Restore rehearsal and verification
 
 Use a separate, access-controlled non-production Postgres host with compatible
@@ -210,11 +235,14 @@ tables, 179 indexes, 180 constraints, zero invalid constraints, and matching
 user/post fixtures. Scheduled encrypted off-host production backups, retention,
 permissions and recovery-time objectives still require deployment acceptance.
 
-## 5. Launch checks
+## 6. Launch checks
 
-- Register a real test account from an allowed domain, confirm the email link, sign in, refresh the browser, log out, and verify the refresh cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
+Run these acceptance checks after the approved territory, assurance journey, operator and provider inputs are configured. The repository's empty territory registry and unavailable assurance adapter must continue to deny activation until then.
+
+- Complete the approved prescreen/assurance and any required guardian journey, then register a disposable test account from an allowed domain, confirm its email link, sign in and refresh the browser. Verify the refresh cookie is `HttpOnly`, `Secure` and uses the configured `SameSite` policy (`Lax` by default). Log out and verify that the response expires the cookie, server refresh is denied, and a reload remains signed out even if logout delivery is interrupted.
 - Configure the Google Web OAuth client ID in both `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID`, then test an allowed Google account and a disallowed account when a domain allow-list is enabled.
 - Upload media, create/report/block content, export data, delete a disposable test account, and verify the deleted account cannot be found.
+- Delete a disposable group member and confirm that member's authored messages disappear while the other members' group history remains accessible.
 - Submit and track a grievance from a fresh browser and confirm it survives an API restart.
 - Verify backups, alerting, error logs, rate limits, CORS, TLS renewal, domain ownership and the incident escalation roster.
 - Run a campus Wi-Fi test on mobile and desktop, including WebSocket reconnects and slow-network behavior.

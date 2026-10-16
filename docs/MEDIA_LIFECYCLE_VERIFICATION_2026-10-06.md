@@ -94,7 +94,7 @@ This Windows host has no Docker Engine/named pipe. The local production image bu
 | --- | --- |
 | Isolated CI schema | `pnpm --filter @workspace/db migrate:beta` |
 | Images | `docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml build migrate api web` |
-| Container rehearsal | `WEB_PORT=127.0.0.1:18080 docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml up -d --no-build` |
+| Container rehearsal | `WEB_PORT=18080 docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml up -d --no-build` |
 | Readiness / smoke | `BASE_URL=http://127.0.0.1:18080 pnpm smoke`, healthy `/api/healthz` and `/api/readyz`, `details.media.decoder=true`, synthetic unavailable `details.media.ready=false` |
 | Runtime assertions | Migrator exit 0; API user `node`; external provider DNS blocked; Cloudinary resolves to loopback; Redis rate-limit keys exist; no rate-limit initialization errors |
 

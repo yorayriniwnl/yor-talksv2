@@ -202,8 +202,8 @@ export default function Marketplace() {
   const currentUser = useAppStore((s: any) => s.currentUser);
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersOpen, setOrdersOpen] = useState(false);
-
   const [mode, setMode] = useState<'store' | 'inventory'>('store');
+
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
@@ -241,14 +241,17 @@ export default function Marketplace() {
       {/* Sticky Glass Header */}
       <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold font-display text-foreground">Marketplace & Steam Inventory</h1>
-          <p className="text-[0.68rem] text-muted-foreground font-mono">Buy, sell & peer-to-peer Steam trade</p>
+          <h1 className="text-xl font-bold font-display text-foreground">Marketplace</h1>
+          <p className="text-[0.68rem] text-muted-foreground font-mono">
+            {publicBetaConfig.paymentsEnabled
+              ? 'Buy and sell community listings'
+              : 'Browse community listings. Prices are shown in INR; checkout and selling are disabled for this beta.'}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {currentUser && <Button variant="outline" onClick={() => { refreshOrders(); setOrdersOpen(true); }} className="rounded-2xl font-bold text-xs"><ClipboardList className="w-4 h-4 mr-1.5" /> Orders</Button>}
-          <SteamTradeModal />
-          <CreateListingDialog />
+          {currentUser && publicBetaConfig.paymentsEnabled && <Button variant="outline" onClick={() => { refreshOrders(); setOrdersOpen(true); }} className="rounded-2xl font-bold text-xs"><ClipboardList className="w-4 h-4 mr-1.5" /> Orders</Button>}
+          {publicBetaConfig.paymentsEnabled && <CreateListingDialog />}
         </div>
       </div>
 
@@ -256,7 +259,7 @@ export default function Marketplace() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
         {/* Main Section Mode Tabs */}
-        <div className="flex gap-2 mb-6 p-1.5 rounded-2xl surface-1 border border-border/40 w-fit">
+        {!publicBetaConfig.publicBeta && <div className="flex gap-2 mb-6 p-1.5 rounded-2xl surface-1 border border-border/40 w-fit">
           <button
             onClick={() => setMode('store')}
             className={cn(
@@ -273,22 +276,22 @@ export default function Marketplace() {
               mode === 'inventory' ? "bg-emerald-600 text-white shadow-md" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <ArrowLeftRight className="w-3.5 h-3.5" /> Steam Inventory ({USER_INVENTORY.length})
+            <ArrowLeftRight className="w-3.5 h-3.5" /> Steam inventory preview
           </button>
-        </div>
+        </div>}
 
-        {mode === 'inventory' ? (
-          /* Steam Inventory View */
+        {mode === 'inventory' && !publicBetaConfig.publicBeta ? (
+          /* Development-only inventory mockup */
           <div className="space-y-6">
             <div className="surface-1 p-6 rounded-3xl border border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-                  🎒 Your Steam Inventory
+                  Sample game inventory
                   <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    6 Verified Skins
+                    Development demo
                   </span>
                 </h3>
-                <p className="text-xs text-muted-foreground font-mono mt-1">CS2 & Dota 2 High-Tier Collectibles with Float Metrics</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">Illustrative sample data only. No Steam account, live ownership, or market prices are connected.</p>
               </div>
 
               <SteamTradeModal
@@ -372,7 +375,11 @@ export default function Marketplace() {
               <div className="text-center py-20 rounded-3xl border border-dashed border-border/50 surface-1">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
                 <h3 className="font-display font-bold text-lg mb-1">No listings found</h3>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">Try adjusting your search query or category filter.</p>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  {publicBetaConfig.paymentsEnabled
+                    ? 'Try adjusting your search query or category filter.'
+                    : 'Checkout and seller listings are disabled for this beta.'}
+                </p>
               </div>
             )}
 

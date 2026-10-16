@@ -72,7 +72,7 @@ const envSchema = z.object({
   TOTP_ENCRYPTION_KEY: z.string().default(process.env.TOTP_ENCRYPTION_KEY || "totp-development-encryption-key-change-me"),
   METRICS_BEARER_TOKEN_FILE: z.string().default(process.env.METRICS_BEARER_TOKEN_FILE || "/run/secrets/metrics_bearer_token"),
   TERMS_VERSION: z.string().trim().default(process.env.TERMS_VERSION || "development"),
-  MINIMUM_AGE: z.coerce.number().int().min(13).default(Number(process.env.MINIMUM_AGE || 18)),
+  LEGAL_CONTENT_REVIEWED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   PAYMENTS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   SELLER_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
@@ -113,6 +113,9 @@ if (parsedEnv.NODE_ENV === "production") {
   });
   if (invalidSecretFields.length) {
     throw new Error(`[Config Error] Production requires unique JWT secrets of at least 32 characters: ${invalidSecretFields.join(", ")}`);
+  }
+  if (parsedEnv.JWT_SECRET === parsedEnv.JWT_REFRESH_SECRET) {
+    throw new Error("[Config Error] Production JWT_SECRET and JWT_REFRESH_SECRET must be distinct");
   }
 
   if (parsedEnv.CONTACT_SHIELD_SECRET.length < 32 || insecureSecrets.has(parsedEnv.CONTACT_SHIELD_SECRET)) {
@@ -177,6 +180,9 @@ if (parsedEnv.NODE_ENV === "production") {
 }
 
 if (parsedEnv.PUBLIC_BETA) {
+  if (!parsedEnv.LEGAL_CONTENT_REVIEWED) {
+    throw new Error("[Config Error] PUBLIC_BETA requires the exact public legal and eligibility content to be reviewed and approved");
+  }
   const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example|^development$/i;
   const requiredPublicBetaConfig = [
     ["TERMS_VERSION", parsedEnv.TERMS_VERSION],

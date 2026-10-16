@@ -1,10 +1,10 @@
 # Production Readiness
 
-Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+Archive status: this historical report is superseded by the [current readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](PRODUCTION_LAUNCH.md). The public launch remains unapproved; use those current documents for the release decision and gates.
 
 The October 4 media change implements server-owned reservations, complete byte decoding, strict Gemini decisions, transactional approved-ID publication, retry-safe cleanup and approval/hash-checked API delivery. Its current validation evidence and configuration requirements are in [the media implementation report](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Unconfigured media remains unavailable; production no longer rejects it solely because `NODE_ENV=production`. Historical checks below do not validate the October change or real provider acceptance.
 
-This file and the root [Production Readiness Report](../PRODUCTION_READINESS.md) use the same evidence boundary. Checks below are historical reports, not checks performed by the current implementation session unless its final results say otherwise.
+This file and the root [Production Readiness Report](../PRODUCTION_READINESS.md) preserve earlier evidence snapshots. Checks below are historical and are not current verification unless the current readiness review says otherwise.
 
 Previously documented repository controls (historical; not re-verified in this session):
 - Enhanced production smoke test with detailed service verification
@@ -44,7 +44,7 @@ Previously documented repository controls (historical; not re-verified in this s
 - Redis failover, multi-instance behavior, rolling restart, and sustained load.
 - Live backup/restore drills to verify recovery procedures
 
-The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
+The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. The current production Compose stack provisions Prometheus, Alertmanager, and a backup metrics exporter; the [launch runbook](PRODUCTION_LAUNCH.md) records current alert coverage and the still-unverified live receiver delivery.
 
 ### Requires manual acceptance testing
 
@@ -68,9 +68,8 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 
 ### Database Backup & Restore
 
-Use the current encrypted age/rclone workflow in the [production launch runbook](docs/PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
+Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#5-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 
-Use the current encrypted age/rclone workflow in the [production launch runbook](PRODUCTION_LAUNCH.md#4-backups-and-recovery). The legacy plaintext examples below are historical only and must not be run.
 ### Documentation
 - Updated PRODUCTION_READINESS.md with deployment verification procedures
 - Documented smoke test usage and interpretation
@@ -205,7 +204,9 @@ NODE_ENV=test DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/yor_tal
 
 Migration validation completed with `pnpm --filter @workspace/db migrate:beta` and `pnpm --filter @workspace/db migrate:production` against the running Postgres database.
 
-## Remaining blockers
+## Historical remaining blockers
+
+The current blocker list is maintained in the [readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md).
 
 1. Live external-provider acceptance is not verified.
 2. TLS, DNS, production reverse-proxy behavior, and public smoke checks need a real deployed environment.

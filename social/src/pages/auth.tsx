@@ -70,6 +70,7 @@ export default function Auth() {
   const [requestedExperience, setRequestedExperience] = useState<RegistrationExperience | ''>('');
   const [territory, setTerritory] = useState('');
   const [registrationEnrollment, setRegistrationEnrollment] = useState<RegistrationEnrollment | null>(null);
+  const [under13EnrollmentAuthorized, setUnder13EnrollmentAuthorized] = useState(false);
   const [readiness, setReadiness] = useState<'checking' | 'operational' | 'unavailable'>('checking');
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleCredentialRef = useRef<string | null>(null);
@@ -102,6 +103,10 @@ export default function Auth() {
       throw new Error('This verification request expired or is unavailable. Start again to continue.');
     }
     if (progress.status === 'authorized' && progress.nextStep === 'complete_registration') {
+      if (requestedExperience === 'under_13' && !under13EnrollmentAuthorized) {
+        setUnder13EnrollmentAuthorized(true);
+        return 'authorized' as const;
+      }
       await register(username.trim(), email.trim(), password, fullName.trim(), acceptedTerms, enrollment.id, enrollment.registrationNonce);
       try { sessionStorage.removeItem(ENROLLMENT_SESSION_KEY); } catch { /* ignore */ }
       setRegistrationEnrollment(null);
@@ -128,6 +133,15 @@ export default function Auth() {
       } else sessionStorage.removeItem(ENROLLMENT_SESSION_KEY);
     } catch { /* The verification journey can be restarted if session storage is unavailable. */ }
   }, []);
+
+  useEffect(() => {
+    if (!registrationEnrollment || registrationEnrollment.experience !== 'under_13') return;
+    let active = true;
+    void api.getEnrollmentProgress(registrationEnrollment.id,registrationEnrollment.registrationNonce).then(progress => {
+      if (active && progress.status === 'authorized' && progress.nextStep === 'complete_registration') setUnder13EnrollmentAuthorized(true);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [registrationEnrollment]);
 
   useEffect(() => {
     let active = true;
@@ -296,6 +310,25 @@ export default function Auth() {
     resetChallenge();
   };
 
+  const resetEnrollmentForInputChange = () => {
+    setRegistrationEnrollment(null);
+    setUnder13EnrollmentAuthorized(false);
+    try { sessionStorage.removeItem(ENROLLMENT_SESSION_KEY); } catch { /* Session storage may be disabled. */ }
+  };
+
+  const changeRequestedExperience = (value: RegistrationExperience | '') => {
+    if (value !== requestedExperience) {
+      resetEnrollmentForInputChange();
+      if (value === 'under_13') {
+        setFullName('');
+        setUsername('');
+        setEmail('');
+        setPassword('');
+      }
+    }
+    setRequestedExperience(value);
+  };
+
   const selectLoginMethod = (method: 'password' | 'email-code') => {
     setLoginMethod(method);
     setErrorMsg('');
@@ -317,12 +350,13 @@ export default function Auth() {
 
     const errors: Record<string, string> = {};
     if (mode === 'register') {
-      if (fullName.trim().length < 2) errors.fullName = 'Enter at least 2 characters.';
-      if (!USERNAME_PATTERN.test(username.trim())) {
-        errors.username = 'Use 3–24 letters, numbers, underscores, or hyphens.';
+      const deferIdentity = !requestedExperience || requestedExperience === 'under_13' && !under13EnrollmentAuthorized;
+      if (!deferIdentity) {
+        if (fullName.trim().length < 2) errors.fullName = 'Enter at least 2 characters.';
+        if (!USERNAME_PATTERN.test(username.trim())) errors.username = 'Use 3–24 letters, numbers, underscores, or hyphens.';
+        if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
+        if (!isValidPassword(password)) errors.password = PASSWORD_REQUIREMENT_MESSAGE;
       }
-      if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
-      if (!isValidPassword(password)) errors.password = PASSWORD_REQUIREMENT_MESSAGE;
       if (!acceptedTerms) errors.acceptedTerms = `Accept the Terms and Privacy Notice to create an account.`;
       if (!requestedExperience) errors.requestedExperience = 'Choose an age group to see the verification steps.';
       if (!/^[A-Z]{2}$/.test(territory.trim().toUpperCase())) errors.territory = 'Enter your two-letter country code.';
@@ -394,6 +428,10 @@ export default function Auth() {
       } else {
         const verificationResult = await runRegistrationVerification();
         if (verificationResult === 'redirected') return;
+        if (verificationResult === 'authorized') {
+          toast.success('Guardian approval is verified. Add the minimum account details to continue.');
+          return;
+        }
         setVerificationPending(true);
         setMode('login');
         setLoginMethod('password');
@@ -549,7 +587,7 @@ export default function Auth() {
               </div>
             )}
 
-            {mode === 'register' && (
+            {mode === 'register' && Boolean(requestedExperience) && !(requestedExperience === 'under_13' && !under13EnrollmentAuthorized) && (
               <div className="operator-access-grid">
                 <div className="operator-field">
                   <Label htmlFor="fullName">Full name</Label>
@@ -564,7 +602,7 @@ export default function Auth() {
               </div>
             )}
 
-            <div className="operator-field">
+            {(mode === 'login' || Boolean(requestedExperience) && (requestedExperience !== 'under_13' || under13EnrollmentAuthorized)) && <div className="operator-field">
               <Label htmlFor="accountIdentifier">{mode === 'login' && loginMethod === 'password' ? 'Username or email' : 'Email address'}</Label>
               <div className="operator-field__control">
                 {mode === 'login' && loginMethod === 'password' ? <User /> : <Mail />}
@@ -580,7 +618,7 @@ export default function Auth() {
                 />
               </div>
               {fieldErrors.email && <p id="email-error" className="operator-field__error">{fieldErrors.email}</p>}
-            </div>
+            </div>}
 
             {mode === 'login' && (
               <div className="operator-method-switch" role="group" aria-label="Sign in method">
@@ -603,7 +641,7 @@ export default function Auth() {
               </div>
             )}
 
-            {(mode === 'register' || loginMethod === 'password') && (
+            {(mode === 'register' && Boolean(requestedExperience) && (requestedExperience !== 'under_13' || under13EnrollmentAuthorized) || mode === 'login' && loginMethod === 'password') && (
               <div className="operator-field">
                 <div className="operator-field__label-row">
                   <Label htmlFor="password">Password</Label>
@@ -651,7 +689,7 @@ export default function Auth() {
                 {fieldErrors.acceptedTerms && <p id="acceptedTerms-error" className="operator-field__error">{fieldErrors.acceptedTerms}</p>}
                 <div className="operator-field">
                   <Label htmlFor="requestedExperience">Which age group should we check?</Label>
-                  <select id="requestedExperience" value={requestedExperience} onChange={(event) => setRequestedExperience(event.target.value as RegistrationExperience | '')} aria-invalid={Boolean(fieldErrors.requestedExperience)} aria-describedby={fieldErrors.requestedExperience ? 'requestedExperience-error' : undefined}>
+                  <select id="requestedExperience" value={requestedExperience} onChange={(event) => changeRequestedExperience(event.target.value as RegistrationExperience | '')} aria-invalid={Boolean(fieldErrors.requestedExperience)} aria-describedby={fieldErrors.requestedExperience ? 'requestedExperience-error' : undefined}>
                     <option value="">Choose an age group</option>
                     <option value="under_13">Under 13 — a parent or guardian step is needed</option>
                     <option value="teen_13_17">13–17 — age-appropriate account</option>
@@ -661,7 +699,11 @@ export default function Auth() {
                 </div>
                 <div className="operator-field">
                   <Label htmlFor="territory">Country code</Label>
-                  <Input id="territory" autoComplete="country" maxLength={2} value={territory} onChange={(event) => setTerritory(event.target.value.toUpperCase().slice(0, 2))} placeholder="IN" aria-invalid={Boolean(fieldErrors.territory)} aria-describedby={fieldErrors.territory ? 'territory-error' : undefined} />
+                  <Input id="territory" autoComplete="country" maxLength={2} value={territory} onChange={(event) => {
+                    const value=event.target.value.toUpperCase().slice(0,2);
+                    if(value!==territory)resetEnrollmentForInputChange();
+                    setTerritory(value);
+                  }} placeholder="IN" aria-invalid={Boolean(fieldErrors.territory)} aria-describedby={fieldErrors.territory ? 'territory-error' : undefined} />
                   {fieldErrors.territory && <p id="territory-error" className="operator-field__error">{fieldErrors.territory}</p>}
                 </div>
                 <p className="text-xs leading-5 text-muted-foreground">This choice only selects the verification route. A checkbox or profile date does not prove age. For under-13 accounts, no normal profile details are collected before the required guardian permission.</p>
@@ -670,10 +712,10 @@ export default function Auth() {
             )}
 
             <Button type="submit" className="operator-access-submit" disabled={loading || Boolean(twoFactorChallenge && !twoFactorFallback)}>
-              {loading ? <><Loader2 className="animate-spin" /> Working…</> : mode === 'register' ? <>Create account <span>→</span></> : twoFactorChallenge && twoFactorFallback ? <>Verify and sign in <span>→</span></> : twoFactorChallenge ? <>Waiting for approval…</> : loginMethod === 'email-code' ? <>Verify code and sign in <span>→</span></> : <>Sign in <span>→</span></>}
+              {loading ? <><Loader2 className="animate-spin" /> Working…</> : mode === 'register' && requestedExperience === 'under_13' && !under13EnrollmentAuthorized ? <>Continue to verification <span>→</span></> : mode === 'register' ? <>Create account <span>→</span></> : twoFactorChallenge && twoFactorFallback ? <>Verify and sign in <span>→</span></> : twoFactorChallenge ? <>Waiting for approval…</> : loginMethod === 'email-code' ? <>Verify code and sign in <span>→</span></> : <>Sign in <span>→</span></>}
             </Button>
 
-            <p className="operator-access-legal">By continuing, you agree to the <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Policy</Link>, and <Link href="/community-guidelines">Community Guidelines</Link>.</p>
+            <p className="operator-access-legal">Read the <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Notice</Link>, <Link href="/cookies">Cookies and storage notice</Link>, and <Link href="/community-guidelines">Community Guidelines</Link>. Creating an account does not enable optional analytics or marketing.</p>
           </form>
 
           <div className="operator-access-trust"><ShieldCheck /><span><strong>What happens next?</strong> New accounts verify email, choose their world and interests, then enter the feed.</span></div>

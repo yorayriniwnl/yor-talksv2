@@ -244,7 +244,7 @@ export class MessageController {
     if (io) {
       if (message.deletedAt) {
         await this.emitMessage(io,message,req.user?.id??"","message:update");
-      } else {
+      } else if (await this.messageService.canPublishReadReceipt(message, req.user?.id ?? "")) {
         const members=await this.messageService.getConversationMemberIds(message.conversationId,req.user?.id??"");
         await dispatchSocketToUsers(io,members, "message:seen:update", async(requester:SocketRequester)=>{
           await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
@@ -253,7 +253,10 @@ export class MessageController {
           userId: req.user?.id,
           seenAt: message.seenAt,
           };
-        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
+        },'message:deliver',undefined,async requester=>{
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          return this.messageService.canPublishReadReceipt(message,req.user?.id??"");
+        });
       }
     }
 

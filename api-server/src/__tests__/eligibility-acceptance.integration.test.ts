@@ -63,7 +63,7 @@ test('public grievance projection allows only the approved receipt fields', () =
     reportedUrl: 'https://example.test/private', description: 'private complaint details', officerNote: 'internal moderation note',
   } as Parameters<typeof toPublicGrievance>[0];
   const receipt = toPublicGrievance(privateTicket);
-  assert.deepEqual(Object.keys(receipt).sort(), ['createdAt', 'slaDeadline', 'status', 'ticketId']);
+  assert.deepEqual(Object.keys(receipt).sort(), ['createdAt', 'status', 'ticketId']);
   assert.doesNotMatch(JSON.stringify(receipt), /Private Parent|private@example|private complaint|internal moderation/);
 });
 

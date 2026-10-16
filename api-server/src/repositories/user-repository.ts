@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
-import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable } from "@workspace/db/schema";
+import { followRequestsTable, userCloseFriendsTable, userFavoriteCreatorsTable, userFollowsTable, usersTable, userTermsAcceptancesTable } from "@workspace/db/schema";
 import { db, type DbTransaction } from "@workspace/db";
 import type { FollowRequestRecord, PrivacySettings, UserRecord, UserSettings } from "../types/index.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 
 export class UserRepository {
 
@@ -156,10 +157,16 @@ export class UserRepository {
 
   async create(user: UserRecord, tx?: DbTransaction): Promise<UserRecord> {
     const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUser } = user;
-    if (tx) {
-      const [created] = await tx.insert(usersTable).values(persistedUser).returning();
+    const insert = async (connection: DbTransaction) => {
+      const [created] = await connection.insert(usersTable).values(persistedUser).returning();
+      if (user.termsVersion && user.termsAcceptedAt) {
+        await connection.insert(userTermsAcceptancesTable).values({ id: randomUUID(), userId: user.id,
+          termsVersion: user.termsVersion, acceptedAt: user.termsAcceptedAt, source: 'registration' }).onConflictDoNothing();
+      }
       return created as UserRecord;
-    }
+    };
+    if (tx) return insert(tx);
+    if (user.termsVersion && user.termsAcceptedAt) return db.transaction(insert);
     const [created] = await db.insert(usersTable).values(persistedUser).returning();
     return created as UserRecord;
   }
@@ -174,6 +181,19 @@ export class UserRepository {
     return user as UserRecord | undefined;
   }
 
+  async linkGoogleSubjectForLogin(user: UserRecord, googleSubject: string): Promise<UserRecord | undefined> {
+    try {
+      const [linked] = await db.update(usersTable).set({ googleSubject, emailVerified: true, updatedAt: new Date().toISOString() })
+        .where(and(eq(usersTable.id, user.id), eq(usersTable.email, user.email),
+          eq(usersTable.authVersion, user.authVersion ?? 0), sql`${usersTable.googleSubject} IS NULL`,
+          sql`coalesce(${usersTable.accountStatus}, 'active') <> 'deleted'`)).returning();
+      return linked as UserRecord | undefined;
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') return undefined;
+      throw error;
+    }
+  }
+
   async findByUsername(username: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
     const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.username, username));
     return user as UserRecord | undefined;
@@ -186,11 +206,37 @@ export class UserRepository {
 
   async update(id: string, updates: Partial<UserRecord>): Promise<UserRecord | undefined> {
     const { followers: _followers, following: _following, pendingFollowIds: _pending, favoriteCreatorIds: _favorites, ...persistedUpdates } = updates;
+    if (updates.termsVersion && updates.termsAcceptedAt) {
+      return db.transaction(async tx => {
+        const [updated] = await tx.update(usersTable).set({ ...persistedUpdates, updatedAt: new Date().toISOString() })
+          .where(eq(usersTable.id, id)).returning();
+        if (!updated) return undefined;
+        await tx.insert(userTermsAcceptancesTable).values({ id: randomUUID(), userId: id,
+          termsVersion: updates.termsVersion!, acceptedAt: updates.termsAcceptedAt!, source: 'reacceptance' }).onConflictDoNothing();
+        return updated as UserRecord;
+      });
+    }
     const [updated] = await db.update(usersTable)
       .set({ ...persistedUpdates, updatedAt: new Date().toISOString() })
       .where(eq(usersTable.id, id))
       .returning();
     return updated as UserRecord | undefined;
+  }
+
+  async enableTwoFactorIfDisabled(id: string, encryptedSecret: string): Promise<boolean> {
+    const result = await db.update(usersTable)
+      .set({ totpSecret: encryptedSecret, updatedAt: new Date().toISOString() })
+      .where(and(eq(usersTable.id, id), sql`${usersTable.totpSecret} IS NULL`))
+      .returning({ id: usersTable.id });
+    return result.length === 1;
+  }
+
+  async disableTwoFactorIfMatches(id: string, storedSecret: string): Promise<boolean> {
+    const result = await db.update(usersTable)
+      .set({ totpSecret: null, updatedAt: new Date().toISOString() })
+      .where(and(eq(usersTable.id, id), eq(usersTable.totpSecret, storedSecret)))
+      .returning({ id: usersTable.id });
+    return result.length === 1;
   }
 
   async patchSettings(id: string, patch: Partial<UserSettings>): Promise<UserRecord | undefined> {
@@ -219,28 +265,27 @@ export class UserRepository {
     const column = usersTable[field];
     const current = sql`coalesce(${column}, '[]'::jsonb)`;
     const target = JSON.stringify([targetId]);
-    if (field === "blockedUsers" && enabled) {
-      // Blocking and revoking existing contact authority share one transaction,
-      // so a later unblock can never restore a previously accepted contact.
-      return db.transaction(async tx => {
-        const [updated] = await tx.update(usersTable).set({
-          blockedUsers: sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`,
-          updatedAt: new Date().toISOString(),
-        }).where(eq(usersTable.id, id)).returning();
-        if (!updated) return undefined;
+    // References stored in another user's JSON array must serialize against
+    // deletion of the referenced account, which holds FOR UPDATE while it
+    // removes that ID from every surviving array.
+    return db.transaction(async tx => {
+      if (!(await lockActiveUser(tx, targetId))) return undefined;
+      const [updated] = await tx.update(usersTable).set({
+        [field]: enabled
+          ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`
+          : sql`${current} - ${targetId}::text`,
+        updatedAt: new Date().toISOString(),
+      }).where(eq(usersTable.id, id)).returning();
+      if (!updated) return undefined;
+      if (field === "blockedUsers" && enabled) {
+        // Blocking and revoking existing contact authority share a transaction,
+        // so a later unblock can never restore a previously accepted contact.
         const [userA, userB] = [id, targetId].sort();
         await tx.execute(sql`UPDATE contact_authorizations SET state='revoked',revoked_at=clock_timestamp(),updated_at=clock_timestamp()
           WHERE user_a_id=${userA}::uuid AND user_b_id=${userB}::uuid AND state IN ('pending','accepted')`);
-        return updated as UserRecord;
-      });
-    }
-    const [updated] = await db.update(usersTable).set({
-      [field]: enabled
-        ? sql`CASE WHEN ${current} @> ${target}::jsonb THEN ${current} ELSE ${current} || ${target}::jsonb END`
-        : sql`${current} - ${targetId}::text`,
-      updatedAt: new Date().toISOString(),
-    }).where(eq(usersTable.id, id)).returning();
-    return updated as UserRecord | undefined;
+      }
+      return updated as UserRecord;
+    });
   }
 
   async deleteById(id: string): Promise<void> {

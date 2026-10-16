@@ -1,5 +1,5 @@
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useEffect, useRef, useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface AnimatedCounterProps {
@@ -20,7 +20,7 @@ export function AnimatedCounter({ value, duration = 1200, className, formatter =
   const ref = useRef<HTMLSpanElement>(null);
   const currentValue = useRef(0);
   const hasEnteredView = useRef(false);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
 
   useEffect(() => {
     if (!ref.current) return;

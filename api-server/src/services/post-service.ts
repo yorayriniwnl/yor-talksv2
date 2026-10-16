@@ -10,7 +10,7 @@ import { QueueService } from "./queue-service.js";
 import { SecurityService } from "./security-service.js";
 import type { CommentRecord, NotificationRecord, PostRecord, ReplyRecord } from "../types/index.js";
 import { db } from "@workspace/db";
-import { commentsTable, postLikesTable, postBookmarksTable, postRepostsTable } from "@workspace/db/schema";
+import { commentsTable, postsTable, postLikesTable, postBookmarksTable, postRepostsTable } from "@workspace/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { ContactShieldService } from "./contact-shield-service.js";
 import { canViewContent, DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
@@ -21,6 +21,8 @@ import { FeatureEntitlementService } from "./feature-entitlement-service.js";
 import { Redis } from "ioredis";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
+import { visibleCollectionPage } from '../utils/saved-collection-page.js';
 
 export { ContentPolicyViolationError } from "./content-policy-service.js";
 export { ProfilePinLimitError, ProfilePinOrderError } from "../repositories/post-repository.js";
@@ -307,17 +309,22 @@ export class PostService {
       eq(commentsTable.id, commentId),
       eq(commentsTable.postId, postId),
     ));
-    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))) return undefined;
+    if (!comment || !(await this.contactShieldService.canView(userId, comment.authorId))
+      || !(await this.contentSafetyService.isVisible(comment,userId,comment.authorId))) return undefined;
 
     // Toggle the JSONB membership atomically so two devices cannot overwrite
     // each other's likes with a stale client-side array.
-    const [updated] = await db.update(commentsTable).set({
-      likedBy: sql`CASE WHEN ${commentsTable.likedBy} ? ${userId} THEN ${commentsTable.likedBy} - ${userId} ELSE ${commentsTable.likedBy} || jsonb_build_array(${userId}) END`,
-      updatedAt: new Date().toISOString(),
-    }).where(and(
-      eq(commentsTable.id, commentId),
-      eq(commentsTable.postId, postId),
-    )).returning();
+    const updated = await db.transaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      const [row] = await tx.update(commentsTable).set({
+        likedBy: sql`CASE WHEN ${commentsTable.likedBy} ? ${userId} THEN ${commentsTable.likedBy} - ${userId} ELSE ${commentsTable.likedBy} || jsonb_build_array(${userId}::text) END`,
+        updatedAt: new Date().toISOString(),
+      }).where(and(
+        eq(commentsTable.id, commentId),
+        eq(commentsTable.postId, postId),
+      )).returning();
+      return row;
+    });
     if (!updated) return undefined;
 
     const likedBy = Array.isArray(updated.likedBy) ? updated.likedBy.filter((value): value is string => typeof value === "string") : [];
@@ -345,7 +352,10 @@ export class PostService {
     const rows = await db.select().from(commentsTable)
       .where(eq(commentsTable.postId, postId))
       .orderBy(asc(commentsTable.createdAt));
-    const visibleRows = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
+    const candidates = rows.filter((row) => !excludedAuthorIds.has(row.authorId));
+    const safeRows = await this.contentSafetyService.filterVisibleByAuthor(candidates,viewerId,row => row.authorId);
+    const visibleParents = new Set(safeRows.filter(row => !row.parentId).map(row => row.id));
+    const visibleRows = safeRows.filter(row => !row.parentId || visibleParents.has(row.parentId));
     const authors = new Map((await this.userRepository.findByIds(visibleRows.filter(row => !row.parentId).map(row => row.authorId))).map(user => [user.id, user]));
     return visibleRows.filter((row) => !row.parentId).map((row) => {
       const author = authors.get(row.authorId);
@@ -426,14 +436,26 @@ export class PostService {
     if (!post) {
       return undefined;
     }
-    const reactions = post.reactions ?? {};
-    const current = reactions[reaction] ?? [];
-    if (!current.includes(userId)) {
-      current.push(userId);
-      reactions[reaction] = current;
-      post.reactions = reactions;
-      await this.postRepository.update(postId, { reactions: post.reactions });
-    }
+    const updated = await db.transaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return false;
+      const [row] = await tx.update(postsTable).set({
+        reactions: sql`jsonb_set(
+          COALESCE(${postsTable.reactions}, '{}'::jsonb),
+          ARRAY[${reaction}]::text[],
+          CASE
+            WHEN jsonb_typeof(COALESCE(${postsTable.reactions}, '{}'::jsonb)->${reaction})='array'
+              AND (COALESCE(${postsTable.reactions}, '{}'::jsonb)->${reaction}) ? ${userId}
+              THEN COALESCE(${postsTable.reactions}, '{}'::jsonb)->${reaction}
+            ELSE (CASE WHEN jsonb_typeof(COALESCE(${postsTable.reactions}, '{}'::jsonb)->${reaction})='array'
+              THEN COALESCE(${postsTable.reactions}, '{}'::jsonb)->${reaction} ELSE '[]'::jsonb END)
+              || jsonb_build_array(${userId}::text)
+          END,
+          true
+        )`,
+      }).where(eq(postsTable.id, postId)).returning({ id: postsTable.id });
+      return Boolean(row);
+    });
+    if (!updated) return undefined;
     return this.getPost(postId, userId);
   }
 
@@ -617,6 +639,17 @@ export class PostService {
     const contentFilter = await this.contentSafetyService.getViewerFilter(userId);
     const posts = await this.postRepository.listBookmarked(userId, limit, excludedAuthorIds, contentFilter);
     return this.attachInteractions(await this.filterVisiblePosts(posts, userId), userId);
+  }
+
+  async getSavedPostsPage(userId: string, limit = 50, cursor?: string) {
+    const excludedAuthorIds = [...await this.contactShieldService.getShieldedUserIds(userId)];
+    const contentFilter = await this.contentSafetyService.getViewerFilter(userId);
+    const page = await visibleCollectionPage({
+      kind: 'saved_posts', ownerId: userId, limit, cursor,
+      fetch: (position, size) => this.postRepository.listBookmarkedPage(userId, position, size, excludedAuthorIds, contentFilter),
+      filter: items => this.filterVisiblePosts(items, userId),
+    });
+    return { ...page, data: await this.attachInteractions(page.data, userId) };
   }
 
   async getLikedPosts(userId: string, limit = 100): Promise<any[]> {

@@ -11,7 +11,7 @@ import { setIo } from "../lib/realtime.js";
 import { ConversationRepository, MessageRepository } from "../repositories/message-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { InvalidMessageContentError, InvalidMessageStyleError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
-import { ContactAuthorizationDeniedError } from "../services/contact-authorization-service.js";
+import { ContactAuthorizationDeniedError, ContactAuthorizationService } from "../services/contact-authorization-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { LiveStreamRepository } from "../repositories/live-stream-repository.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
@@ -36,7 +36,10 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
   } catch (error) {
     pubClient.disconnect();
     subClient.disconnect();
-    throw new Error("Socket.IO Redis adapter could not be initialized", { cause: error });
+    if (env.NODE_ENV === "production") {
+      throw new Error("Socket.IO Redis adapter could not be initialized", { cause: error });
+    }
+    logger.warn("Socket.IO Redis adapter unavailable; falling back to in-memory adapter for local dev");
   }
   setIo(io);
 
@@ -44,6 +47,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
   const userRepository = new UserRepository();
   const redisRepository = new RedisRepository();
   const messageService = new MessageService(conversationRepository, new MessageRepository(), userRepository);
+  const contactAuthorization = new ContactAuthorizationService();
   const liveStreamRepository = new LiveStreamRepository();
   const contentSafetyService = new ContentSafetyService(userRepository);
   type ActiveCall = { id: string; callerId: string; recipientId: string; createdAt: number; status: "ringing" | "active" };
@@ -182,9 +186,32 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       const room = `conversation:${conversationId}`;
       await socket.join(room);
       const participants = await io.in(room).fetchSockets();
-      const onlineUserIds = new Set(participants.map((participant) => participant.data.userId).filter((id): id is string => typeof id === "string"));
-      for (const participantId of onlineUserIds) {
-        await dispatchSocketToUsers(io, [userId], "presence:update", { online: true, userId: participantId }, "presence:deliver", socket.id);
+      const onlineParticipants = new Map<string, typeof participants>();
+      for (const participant of participants) {
+        const participantId = participant.data.userId;
+        if (typeof participantId !== "string" || participantId === userId) continue;
+        const devices = onlineParticipants.get(participantId) ?? [];
+        devices.push(participant);
+        onlineParticipants.set(participantId, devices);
+      }
+      for (const [participantId, devices] of onlineParticipants) {
+        await dispatchSocketToUsers(io, [userId], "presence:update", { online: true, userId: participantId }, "presence:deliver", socket.id,
+          async requester => {
+            await messageService.authorizeConversationDelivery(conversationId, requester.userId);
+            const currentMembers = await conversationRepository.getMembers(conversationId);
+            if (!currentMembers.includes(participantId)) return false;
+            for (const participant of devices) {
+              if (Date.now() >= Number(participant.data.expiresAt ?? 0)) continue;
+              try {
+                await authorizeSocketAction(participantId, "presence:deliver", {}, {
+                  userId: participantId, deviceId: String(participant.data.deviceId ?? ""),
+                  authVersion: Number(participant.data.authVersion ?? -1),
+                });
+                return true;
+              } catch { /* A stale room or device cannot establish current presence. */ }
+            }
+            return false;
+          });
       }
     });
 
@@ -287,12 +314,14 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
                 return hydrateMediaValue(updated, undefined, requester);
               }, "message:deliver", socket.id,
               requester=>messageService.authorizeConversationDelivery(updated.conversationId,requester.userId));
-          } else {
+          } else if (await messageService.canPublishReadReceipt(updated, userId)) {
             await dispatchSocketToUsers(io, members, "message:seen:update", async (requester:SocketRequester) => {
               await messageService.authorizeConversationDelivery(updated.conversationId,requester.userId);
               return { messageId, userId, seenAt: updated.seenAt };
-            }, "message:deliver", socket.id,
-            requester=>messageService.authorizeConversationDelivery(updated.conversationId,requester.userId));
+            }, "message:deliver", socket.id, async requester => {
+              await messageService.authorizeConversationDelivery(updated.conversationId,requester.userId);
+              return messageService.canPublishReadReceipt(updated,userId);
+            });
           }
         }
       } catch (err) {
@@ -341,41 +370,29 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       }
     });
 
-    on("webrtc:offer", async (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) => {
+    const relayStreamSignal = async (event: string, payload: { targetSocketId?: unknown; streamId?: unknown }, signal: Record<string, unknown>) => {
       if (!env.LIVE_ROOMS_ENABLED) return;
-      const { targetSocketId, offer, streamId } = payload;
-      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && offer && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const [target] = await io.in(targetSocketId).fetchSockets();
-        if (target?.rooms.has(`stream:${streamId}`) && typeof target.data.userId === "string") {
-          await authorizeSocketAction(target.data.userId, "rtc:deliver");
-          io.to(targetSocketId).emit("webrtc:offer", { senderSocketId: socket.id, offer, streamId });
-        }
-      }
-    });
-
-    on("webrtc:answer", async (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) => {
-      if (!env.LIVE_ROOMS_ENABLED) return;
-      const { targetSocketId, answer, streamId } = payload;
-      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && answer && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const [target] = await io.in(targetSocketId).fetchSockets();
-        if (target?.rooms.has(`stream:${streamId}`) && typeof target.data.userId === "string") {
-          await authorizeSocketAction(target.data.userId, "rtc:deliver");
-          io.to(targetSocketId).emit("webrtc:answer", { senderSocketId: socket.id, answer, streamId });
-        }
-      }
-    });
-
-    on("webrtc:ice-candidate", async (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) => {
-      if (!env.LIVE_ROOMS_ENABLED) return;
-      const { targetSocketId, candidate, streamId } = payload;
-      if (typeof targetSocketId === "string" && targetSocketId !== socket.id && candidate && typeof streamId === "string" && joinedStreams.has(streamId)) {
-        const [target] = await io.in(targetSocketId).fetchSockets();
-        if (target?.rooms.has(`stream:${streamId}`) && typeof target.data.userId === "string") {
-          await authorizeSocketAction(target.data.userId, "rtc:deliver");
-          io.to(targetSocketId).emit("webrtc:ice-candidate", { senderSocketId: socket.id, candidate, streamId });
-        }
-      }
-    });
+      const { targetSocketId, streamId } = payload;
+      if (typeof targetSocketId !== "string" || targetSocketId === socket.id || typeof streamId !== "string" || !joinedStreams.has(streamId)) return;
+      const [target] = await io.in(targetSocketId).fetchSockets();
+      if (!target?.rooms.has(`stream:${streamId}`) || typeof target.data.userId !== "string") return;
+      const stream = await liveStreamRepository.findById(streamId);
+      if (!stream || (stream.status !== "live" && stream.hostId !== userId)
+        || !await contentSafetyService.isVisible(stream, userId, stream.hostId)
+        || !await contentSafetyService.isVisible(stream, target.data.userId, stream.hostId)) return;
+      if (Date.now() >= socket.data.expiresAt || Date.now() >= Number(target.data.expiresAt ?? 0)) throw new Error("Session revoked");
+      await authorizeSocketAction(userId, event, {}, { userId, deviceId, authVersion: socket.data.authVersion as number });
+      await authorizeSocketAction(target.data.userId, "rtc:deliver", {}, {
+        userId: target.data.userId, deviceId: String(target.data.deviceId ?? ""), authVersion: Number(target.data.authVersion ?? -1),
+      });
+      io.to(targetSocketId).emit(event, { senderSocketId: socket.id, ...signal, streamId });
+    };
+    on("webrtc:offer", (payload: { targetSocketId?: unknown; offer?: unknown; streamId?: unknown } = {}) =>
+      relayStreamSignal("webrtc:offer", payload, { offer: payload.offer }));
+    on("webrtc:answer", (payload: { targetSocketId?: unknown; answer?: unknown; streamId?: unknown } = {}) =>
+      relayStreamSignal("webrtc:answer", payload, { answer: payload.answer }));
+    on("webrtc:ice-candidate", (payload: { targetSocketId?: unknown; candidate?: unknown; streamId?: unknown } = {}) =>
+      relayStreamSignal("webrtc:ice-candidate", payload, { candidate: payload.candidate }));
 
     const callForParticipant = async (callId: unknown): Promise<ActiveCall | undefined> => {
       if (typeof callId !== "string" || !callId || callId.length > 80) return undefined;
@@ -392,6 +409,19 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
     };
 
     const emitCallError = (error: string) => socket.emit("call:error", { error });
+
+    const requireCurrentCallContact = async (call: ActiveCall): Promise<void> => {
+      try {
+        if (Date.now() >= socket.data.expiresAt) throw new Error("Session revoked");
+        await authorizeSocketAction(userId, "rtc:deliver", {}, { userId, deviceId, authVersion: socket.data.authVersion as number });
+        await authorizeSocketAction(call.callerId === userId ? call.recipientId : call.callerId, "rtc:deliver");
+        await contactAuthorization.requireContact(call.callerId, call.recipientId, "deliver");
+      } catch (error) {
+        clearCallTimeout(call.id);
+        await redisRepository.releaseSocketCallStrict(call.id);
+        throw error;
+      }
+    };
 
     on("call:invite", async (payload: {
       callId?: unknown;
@@ -428,6 +458,7 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         emitCallError("This account does not accept calls from strangers");
         return;
       }
+      await contactAuthorization.requireContact(userId, targetUserId, "send");
       const targetSockets = await io.in(targetUserId).fetchSockets();
       if (targetSockets.length === 0) {
         emitCallError("That account is currently offline");
@@ -453,7 +484,8 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         },
       };
       await dispatchSocketToUsers(io, [targetUserId], "call:invite",
-        (requester:SocketRequester) => hydrateMediaValue(invitation, undefined, requester), "rtc:deliver");
+        (requester:SocketRequester) => hydrateMediaValue(invitation, undefined, requester), "rtc:deliver", undefined,
+        () => requireCurrentCallContact(call));
       const timeout = setTimeout(() => {
         callTimeouts.delete(callId);
         void redisRepository.expireRingingSocketCallStrict(callId).then(async (expired) => {
@@ -472,13 +504,15 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         emitCallError("Call is no longer available");
         return;
       }
+      await requireCurrentCallContact(call);
       const updated = await redisRepository.acceptSocketCallStrict(call.id, userId, 6 * 60 * 60);
       if (!updated) {
         emitCallError("Call is no longer available");
         return;
       }
       clearCallTimeout(payload.callId as string);
-      await dispatchSocketToUsers(io, [call.callerId], "call:accepted", { callId: payload.callId }, "rtc:deliver");
+      await dispatchSocketToUsers(io, [call.callerId], "call:accepted", { callId: payload.callId }, "rtc:deliver", undefined,
+        () => requireCurrentCallContact(call));
     });
 
     on("call:reject", async (payload: { callId?: unknown } = {}) => {
@@ -494,15 +528,19 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
       if (!env.RTC_CALLS_ENABLED) return;
       const call = await callForParticipant(payload.callId);
       if (!call || call.recipientId !== userId || !payload.answer || typeof payload.answer !== "object") return;
-      await dispatchSocketToUsers(io, [call.callerId], "call:answer", { callId: payload.callId, answer: payload.answer }, "rtc:deliver");
+      await requireCurrentCallContact(call);
+      await dispatchSocketToUsers(io, [call.callerId], "call:answer", { callId: payload.callId, answer: payload.answer }, "rtc:deliver", undefined,
+        () => requireCurrentCallContact(call));
     });
 
     on("call:ice", async (payload: { callId?: unknown; candidate?: unknown } = {}) => {
       if (!env.RTC_CALLS_ENABLED) return;
       const call = await callForParticipant(payload.callId);
       if (!call || !payload.candidate || typeof payload.candidate !== "object") return;
+      await requireCurrentCallContact(call);
       const peerId = call.callerId === userId ? call.recipientId : call.callerId;
-      await dispatchSocketToUsers(io, [peerId], "call:ice", { callId: payload.callId, candidate: payload.candidate }, "rtc:deliver");
+      await dispatchSocketToUsers(io, [peerId], "call:ice", { callId: payload.callId, candidate: payload.candidate }, "rtc:deliver", undefined,
+        () => requireCurrentCallContact(call));
     });
 
     on("call:end", async (payload: { callId?: unknown } = {}) => {

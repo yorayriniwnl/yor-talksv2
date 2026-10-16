@@ -2537,6 +2537,17 @@ export const GetPostsLikedResponse = zod.object({
 /**
  * @summary Get /posts/saved
  */
+export const getPostsSavedQueryLimitDefault = 50;
+export const getPostsSavedQueryLimitMax = 100;
+
+export const getPostsSavedQueryCursorRegExp = new RegExp('^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$');
+
+
+export const GetPostsSavedQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getPostsSavedQueryLimitMax).default(getPostsSavedQueryLimitDefault).describe('Page size from 1 to 100.'),
+  "cursor": zod.coerce.string().regex(getPostsSavedQueryCursorRegExp).optional().describe('Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.')
+})
+
 export const GetPostsSavedResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
@@ -2937,13 +2948,39 @@ export const PostReportsResponse = zod.object({
 
 
 /**
+ * @summary Get /reports/{reportId}/history
+ */
+export const GetReportsByReportIdHistoryParams = zod.object({
+  "reportId": zod.coerce.string()
+})
+
+export const GetReportsByReportIdHistoryResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Patch /reports/{reportId}/status
  */
 export const PatchReportsByReportIdStatusParams = zod.object({
   "reportId": zod.coerce.string()
 })
 
-export const PatchReportsByReportIdStatusBody = zod.record(zod.string(), zod.unknown())
+export const patchReportsByReportIdStatusBodyTwoDecisionReasonMin = 10;
+export const patchReportsByReportIdStatusBodyTwoDecisionReasonMax = 2000;
+
+
+
+export const PatchReportsByReportIdStatusBody = zod.union([zod.object({
+  "status": zod.enum(['pending', 'reviewed'])
+}),zod.object({
+  "status": zod.enum(['resolved', 'dismissed']),
+  "decisionReason": zod.string().min(patchReportsByReportIdStatusBodyTwoDecisionReasonMin).max(patchReportsByReportIdStatusBodyTwoDecisionReasonMax).describe('Staff-only rationale required for a resolved or dismissed decision.')
+})])
 
 export const PatchReportsByReportIdStatusResponse = zod.object({
   "success": zod.boolean(),
@@ -2969,8 +3006,7 @@ export const PostReportsGrievanceResponse = zod.object({
   "data": zod.object({
   "ticketId": zod.string(),
   "status": zod.enum(['received', 'under_review', 'resolved', 'dismissed']),
-  "createdAt": zod.coerce.date(),
-  "slaDeadline": zod.coerce.date().optional().describe('Operational review target, not a universal statutory deadline.')
+  "createdAt": zod.coerce.date()
 })
 }))
 
@@ -2992,8 +3028,7 @@ export const GetReportsGrievanceByTicketIdResponse = zod.object({
   "data": zod.object({
   "ticketId": zod.string(),
   "status": zod.enum(['received', 'under_review', 'resolved', 'dismissed']),
-  "createdAt": zod.coerce.date(),
-  "slaDeadline": zod.coerce.date().optional().describe('Operational review target, not a universal statutory deadline.')
+  "createdAt": zod.coerce.date()
 })
 }))
 
@@ -3019,6 +3054,18 @@ export const PatchReportsGrievanceByTicketIdStatusResponse = zod.object({
 /**
  * @summary Get /reports/grievances
  */
+export const getReportsGrievancesQueryLimitDefault = 50;
+export const getReportsGrievancesQueryLimitMax = 100;
+
+export const getReportsGrievancesQueryCursorRegExp = new RegExp('^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$');
+
+
+export const GetReportsGrievancesQueryParams = zod.object({
+  "status": zod.enum(['received', 'under_review', 'resolved', 'dismissed']).optional().describe('Return only records currently in this status.'),
+  "limit": zod.coerce.number().min(1).max(getReportsGrievancesQueryLimitMax).default(getReportsGrievancesQueryLimitDefault).describe('Page size from 1 to 100.'),
+  "cursor": zod.coerce.string().regex(getReportsGrievancesQueryCursorRegExp).optional().describe('Signed, status-scoped keyset cursor returned in meta.nextCursor.')
+})
+
 export const GetReportsGrievancesResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
@@ -3031,6 +3078,18 @@ export const GetReportsGrievancesResponse = zod.object({
 /**
  * @summary Get /reports/queue
  */
+export const getReportsQueueQueryLimitDefault = 50;
+export const getReportsQueueQueryLimitMax = 100;
+
+export const getReportsQueueQueryCursorRegExp = new RegExp('^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$');
+
+
+export const GetReportsQueueQueryParams = zod.object({
+  "status": zod.enum(['pending', 'reviewed', 'resolved', 'dismissed']).optional().describe('Return only records currently in this status.'),
+  "limit": zod.coerce.number().min(1).max(getReportsQueueQueryLimitMax).default(getReportsQueueQueryLimitDefault).describe('Page size from 1 to 100.'),
+  "cursor": zod.coerce.string().regex(getReportsQueueQueryCursorRegExp).optional().describe('Signed, status-scoped keyset cursor returned in meta.nextCursor.')
+})
+
 export const GetReportsQueueResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
@@ -4311,6 +4370,17 @@ export const PostVideosByIdLikeResponse = zod.object({
 /**
  * @summary Get /videos/saved
  */
+export const getVideosSavedQueryLimitDefault = 50;
+export const getVideosSavedQueryLimitMax = 100;
+
+export const getVideosSavedQueryCursorRegExp = new RegExp('^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$');
+
+
+export const GetVideosSavedQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getVideosSavedQueryLimitMax).default(getVideosSavedQueryLimitDefault).describe('Page size from 1 to 100.'),
+  "cursor": zod.coerce.string().regex(getVideosSavedQueryCursorRegExp).optional().describe('Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.')
+})
+
 export const GetVideosSavedResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),

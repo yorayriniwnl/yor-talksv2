@@ -7,6 +7,15 @@ export class EligibilitySubjectUnavailableError extends Error { constructor() { 
 const subjectFields = (row: PrivateRow): EligibilitySubject => row.user_id
   ? { userId: String(row.user_id) } : { enrollmentId: String(row.enrollment_id) };
 const timestamp = (value: unknown): string | null => value == null ? null : new Date(String(value)).toISOString();
+function factsFromRow(row: PrivateRow): EligibilityFacts {
+  const preference = row.content_preference;
+  return { account: { id: String(row.id), status: String(row.account_status ?? 'active'),
+    termsVersion: row.terms_version == null ? null : String(row.terms_version),
+    termsAcceptedAt: row.terms_accepted_at == null ? null : new Date(row.terms_accepted_at as Date).toISOString(),
+    contentPreference: preference === 'regular' || preference === 'mature' ? preference : 'child_safe' },
+    revision: String(row.revision), assessment: row.assessment ? assessmentFromRow(row.assessment as PrivateRow) : undefined,
+    guardianAuthorizations: (row.guardians as PrivateRow[]).map(authorizationFromRow) };
+}
 function assessmentFromRow(row: PrivateRow): EligibilityAssessment {
   return { ...subjectFields(row), id: String(row.id), status: row.status as EligibilityAssessment['status'],
     issuer: String(row.issuer), method: String(row.method), experience: row.experience as EligibilityAssessment['experience'],
@@ -76,6 +85,11 @@ export class EligibilityRepository {
   }
 
   async readFacts(userId: string, tx?: DbTransaction): Promise<EligibilityFacts | undefined> {
+    return (await this.readFactsMany([userId],tx)).get(userId);
+  }
+
+  async readFactsMany(userIds: string[], tx?: DbTransaction): Promise<Map<string,EligibilityFacts>> {
+    if (!userIds.length) return new Map();
     // A single statement keeps account, proof, guardian state and revision on
     // one READ COMMITTED snapshot. Select the latest record, never an older
     // permissive proof hidden behind a newer revocation/rejection.
@@ -83,16 +97,8 @@ export class EligibilityRepository {
       u.settings->>'contentFilter' AS content_preference,coalesce(r.revision,0)::text AS revision,
       (SELECT row_to_json(a) FROM eligibility_assessments a WHERE a.user_id=u.id ORDER BY a.subject_revision DESC,a.created_at DESC,a.id DESC LIMIT 1) AS assessment,
       coalesce((SELECT jsonb_agg(g ORDER BY g.created_at,g.id) FROM guardian_authorizations g WHERE g.user_id=u.id),'[]'::jsonb) AS guardians
-      FROM users u LEFT JOIN eligibility_revisions r ON r.user_id=u.id WHERE u.id=${userId}`);
-    const row = result.rows[0];
-    if (!row) return undefined;
-    const preference = row.content_preference;
-    return { account: { id: String(row.id), status: String(row.account_status ?? 'active'),
-      termsVersion: row.terms_version == null ? null : String(row.terms_version),
-      termsAcceptedAt: row.terms_accepted_at == null ? null : new Date(row.terms_accepted_at as Date).toISOString(),
-      contentPreference: preference === 'regular' || preference === 'mature' ? preference : 'child_safe' },
-      revision: String(row.revision), assessment: row.assessment ? assessmentFromRow(row.assessment as PrivateRow) : undefined,
-      guardianAuthorizations: (row.guardians as PrivateRow[]).map(authorizationFromRow) };
+      FROM users u LEFT JOIN eligibility_revisions r ON r.user_id=u.id WHERE u.id=ANY(${sql.param(userIds)}::uuid[])`);
+    return new Map(result.rows.map(row => [String(row.id),factsFromRow(row)]));
   }
 
   async lockSubject(subject: EligibilitySubject, tx: DbTransaction): Promise<void> {

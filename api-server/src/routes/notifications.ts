@@ -11,6 +11,7 @@ import { PushSubscriptionRepository } from "../repositories/push-subscription-re
 import { env } from "../config/env.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { isAllowedPushEndpoint } from "../utils/push-endpoint.js";
 
 const router = Router();
 const notificationService = new NotificationService(new NotificationRepository());
@@ -19,7 +20,7 @@ const pushSubscriptionRepository = new PushSubscriptionRepository();
 const eligibilityService = new EligibilityService();
 const userRepository = new UserRepository();
 const pushSubscriptionSchema = z.object({
-  endpoint: z.string().url().max(2048),
+  endpoint: z.string().url().max(2048).refine(isAllowedPushEndpoint, "Unsupported push service endpoint"),
   keys: z.object({
     p256dh: z.string().min(16).max(512),
     auth: z.string().min(8).max(512),

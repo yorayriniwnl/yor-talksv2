@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppStore, type PrivacySettings } from '@/lib/store';
@@ -385,6 +386,11 @@ export default function Settings() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteInvalidField, setDeleteInvalidField] = useState<'confirmation' | 'password' | null>(null);
+  const deleteConfirmationInput = useRef<HTMLInputElement>(null);
+  const deletePasswordInput = useRef<HTMLInputElement>(null);
+  const deletePending = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [telemetryConsent, setTelemetryConsentState] = useState(() => hasTelemetryConsent());
@@ -556,22 +562,31 @@ export default function Settings() {
   };
 
   const deleteAccount = async () => {
+    if (deletePending.current) return;
+    setDeleteError('');
+    setDeleteInvalidField(null);
     if (deleteConfirmation !== 'DELETE') {
-      toast.error('Type DELETE to confirm account removal');
+      setDeleteError('Type DELETE to confirm account removal.');
+      setDeleteInvalidField('confirmation');
+      deleteConfirmationInput.current?.focus();
       return;
     }
     if (deletePassword.length < 8) {
-      toast.error('Enter your password to confirm account removal');
+      setDeleteError('Enter your current password to confirm account removal.');
+      setDeleteInvalidField('password');
+      deletePasswordInput.current?.focus();
       return;
     }
+    deletePending.current = true;
     setDeleting(true);
     try {
       await api.deleteAccount(deletePassword);
       await logout();
-      toast.success('Your Yor account and associated data have been deleted');
+      toast.success('Your account has been deleted. External cleanup and retained records follow the Privacy Notice.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not delete your account');
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete your account. Your account remains available; try again.');
     } finally {
+      deletePending.current = false;
       setDeleting(false);
     }
   };
@@ -643,7 +658,7 @@ export default function Settings() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Help improve Yor</p>
-              <p className="text-xs leading-5 text-muted-foreground">Allow anonymous navigation and performance events. This stays off unless current account rules permit adult analytics and you choose to enable it.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Optional navigation and performance events would be linked to your signed-in account. Collection requires current account rules to permit adult analytics, your permission, and a configured service. This release does not currently collect these optional events.</p>
             </div>
             <Switch
               aria-label="Allow optional analytics"
@@ -655,7 +670,8 @@ export default function Settings() {
               }}
             />
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> for details.</p>
+          {!telemetryAllowed && <p className="text-xs leading-5 text-muted-foreground">Optional analytics are unavailable for this account under the current policy.</p>}
+          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookies and storage notice</a> for details.</p>
         </section>
 
         <CompanionPetSettings />
@@ -837,11 +853,24 @@ export default function Settings() {
           <div className="flex items-center justify-between pt-2 border-t border-border/30">
             <div>
               <p className="text-sm font-semibold text-destructive">Delete Account</p>
-              <p className="text-xs text-muted-foreground">Permanently wipe your profile & data</p>
+              <p className="text-xs text-muted-foreground">Remove your account and request data cleanup</p>
             </div>
-            <Button variant="destructive" className="rounded-xl font-bold text-xs" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
-            </Button>
+            <Dialog open={deleteOpen} onOpenChange={(open) => {
+              if (deletePending.current) return;
+              setDeleteOpen(open);
+              if (!open) { setDeleteConfirmation(''); setDeletePassword(''); setDeleteError(''); setDeleteInvalidField(null); }
+            }}>
+              <DialogTrigger asChild><Button variant="destructive" className="rounded-xl font-bold text-xs"><Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete</Button></DialogTrigger>
+              <DialogContent className="space-y-3">
+                <DialogHeader><DialogTitle>Permanently delete this account?</DialogTitle><DialogDescription>This removes your profile, posts, comments, relationships and contact shields. External media cleanup can require retries. Minimized safety or financial records and restricted backups can remain under the retention process described in the Privacy Notice.</DialogDescription></DialogHeader>
+                <form onSubmit={(event) => { event.preventDefault(); void deleteAccount(); }} className="space-y-4" noValidate>
+                  <div className="space-y-1.5"><label htmlFor="delete-account-confirmation" className="text-sm font-semibold">Account deletion confirmation</label><p id="delete-account-confirmation-hint" className="text-xs text-muted-foreground">Type DELETE to confirm.</p><Input id="delete-account-confirmation" ref={deleteConfirmationInput} value={deleteConfirmation} onChange={(event) => { setDeleteConfirmation(event.target.value); setDeleteInvalidField(null); setDeleteError(''); }} disabled={deleting} aria-invalid={deleteInvalidField === 'confirmation'} aria-describedby={`delete-account-confirmation-hint${deleteInvalidField === 'confirmation' ? ' delete-account-error' : ''}`} className="rounded-xl" /></div>
+                  <div className="space-y-1.5"><label htmlFor="delete-account-password" className="text-sm font-semibold">Current password for account deletion</label><Input id="delete-account-password" ref={deletePasswordInput} value={deletePassword} onChange={(event) => { setDeletePassword(event.target.value); setDeleteInvalidField(null); setDeleteError(''); }} disabled={deleting} type="password" autoComplete="current-password" aria-invalid={deleteInvalidField === 'password'} aria-describedby={deleteInvalidField === 'password' ? 'delete-account-error' : undefined} className="rounded-xl" /></div>
+                  {deleteError && <p id="delete-account-error" role="alert" className="text-sm text-destructive">{deleteError}</p>}
+                  <div className="flex justify-end gap-2"><Button type="button" variant="ghost" disabled={deleting} onClick={() => { setDeleteOpen(false); setDeleteConfirmation(''); setDeletePassword(''); setDeleteError(''); setDeleteInvalidField(null); }}>Cancel</Button><Button type="submit" variant="destructive" disabled={deleting}>{deleting ? 'Deleting…' : 'Delete permanently'}</Button></div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-border/30">
@@ -855,17 +884,6 @@ export default function Settings() {
           </div>
         </section>
 
-        {deleteOpen && (
-          <section className="surface-1 rounded-2xl border border-destructive/40 bg-destructive/5 p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"><KeyRound className="h-4 w-4" /></div>
-              <div><h3 className="font-bold text-destructive">Permanently delete this account?</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">This removes your profile, posts, comments, relationships and contact shields. Financial audit records are retained without your identity.</p></div>
-            </div>
-            <Input aria-label="Account deletion confirmation" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE" className="rounded-xl" />
-            <Input aria-label="Current password for account deletion" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Your password" type="password" autoComplete="current-password" className="rounded-xl" />
-            <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)} className="rounded-xl">Cancel</Button><Button type="button" variant="destructive" onClick={() => void deleteAccount()} disabled={deleting} className="rounded-xl">{deleting ? 'Deleting…' : 'Delete permanently'}</Button></div>
-          </section>
-        )}
       </motion.div>
     </div>
   );

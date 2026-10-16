@@ -1,6 +1,6 @@
 # Global compliance: age, consent and privacy foundation
 
-**Status:** User-approved for implementation on 7 October 2026; workstream 1 is in progress. Operator, provider and territory release approvals remain separate requirements.
+**Status:** User-approved for implementation on 7 October 2026. Workstream 1 is implemented in local history; the 16 October audit is repairing additional defects and verifying the current working tree. The [implementation evidence ledger](../plans/2026-10-07-global-age-privacy-foundation.md#current-execution-evidence-16-october-2026) records the current boundary. Operator, provider and territory release approvals remain separate requirements.
 **Date:** 7 October 2026
 **Requested scope:** EU-based operator, global users, three experiences: under 13, ages 13–17, and adults 18+.
 **Repository baseline:** `5185898a8018bbc3d3c9bee09fbdd3cc86301c1d` on `codex/media-lifecycle-20261006`.

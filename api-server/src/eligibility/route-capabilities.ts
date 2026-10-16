@@ -54,7 +54,17 @@ const publishOperations = new Set([
   "postNotes", "deleteNotesById", "postPosts", "putPostsByPostId", "deletePostsByPostId", "postPostsUploadImage",
   "postStories", "patchStoriesByIdPriority", "postVideos", "deleteVideosById",
 ]);
-const analyticsOperations = new Set(["getStoriesByIdAnalytics", "getStoriesByIdViewers", "getTelemetryAnalytics"]);
+const analyticsOperations = new Set(["getEconomyAnalytics", "getStoriesByIdAnalytics", "getStoriesByIdViewers", "getTelemetryAnalytics"]);
+// Marketplace catalog and buyer actions have different authorities from seller
+// operations. Keep the default `products: seller` mapping as a fail-closed
+// fallback for newly added operations, then grant each current operation the
+// capability it actually needs. Service-level checks still enforce the other
+// party's capability (for example, an enabled seller on a buyer checkout).
+const marketplacePaymentsOperations = new Set([
+  "postProductsByIdOrder", "getProductsOrders", "postProductsOrdersByOrderIdCancel", "postProductsOrdersByOrderIdVerify",
+]);
+const marketplaceSocialOperations = new Set(["postProductsByIdSave"]);
+const marketplaceSellerOperations = new Set(["postProducts", "deleteProductsById", "postProductsOrdersByOrderIdFulfill"]);
 const UUID = "3d6f2f91-32bb-45bc-bf1f-7f0e40a3b8a0";
 
 function pathOnly(originalUrl: string): string | undefined {
@@ -86,6 +96,9 @@ function authorityFor(route: ApiRouteDefinition): RouteAuthority | undefined {
   if (route.method === "post" && route.path === "/reports") return { kind: "safety" };
   if (restrictedCatalogRoute(route)) return { kind: "restricted" };
   if (route.tag === "auth" || route.tag === "eligibility") return undefined;
+  if (marketplacePaymentsOperations.has(route.operationId)) return { kind: "capability", capability: "payments" };
+  if (marketplaceSocialOperations.has(route.operationId)) return { kind: "capability", capability: "social" };
+  if (marketplaceSellerOperations.has(route.operationId)) return { kind: "capability", capability: "seller" };
   if (analyticsOperations.has(route.operationId)) return { kind: "capability", capability: "analytics" };
   if (publishOperations.has(route.operationId)) return { kind: "capability", capability: "publish" };
   const capability = tagCapability[route.tag];

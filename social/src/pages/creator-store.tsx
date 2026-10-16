@@ -132,6 +132,24 @@ export default function CreatorStore() {
     return (category === 'All' || product.category === category) && text.includes(query.toLowerCase());
   }), [category, products, query]);
 
+  if (!publicBetaConfig.paymentsEnabled) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background px-4 pb-24 pt-12 font-sans sm:px-6">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-400/30 bg-amber-400/10 p-6">
+            <h1 className="font-display text-2xl font-bold">Creator commerce is paused</h1>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Checkout, seller listings, and settlement are disabled for this beta. You can browse community listings in the marketplace; prices are shown in INR and are not payable.
+            </p>
+            <Button asChild variant="outline" className="mt-5 rounded-xl text-xs font-bold">
+              <a href="/marketplace">Browse community listings</a>
+            </Button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background pb-24 font-sans">

@@ -1,171 +1,123 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Trophy, Award, Shield, Sparkles, Share2, 
-  Flame, Star, Crown, CheckCircle2, Lock 
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, CheckCircle2, Lock, Share2, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
+import { api, type BackendAchievement } from '@/lib/api-client';
 import { toast } from 'sonner';
 
-interface ClanTrophy {
-  id: string;
-  name: string;
-  tournament: string;
-  year: string;
-  icon: string;
-  glowColor: string;
-  unlocked: boolean;
-  prizePool: string;
-  mvp: string;
-}
-
-const CLAN_TROPHIES: ClanTrophy[] = [
-  {
-    id: 'tr-1',
-    name: 'BGIS National Championship Cup 🏆',
-    tournament: 'Battlegrounds Mobile India Series',
-    year: '2026',
-    icon: '🏆',
-    glowColor: 'from-amber-400 to-yellow-600',
-    unlocked: true,
-    prizePool: '₹1,00,00,000 INR',
-    mvp: 'Scout Cyber'
-  },
-  {
-    id: 'tr-2',
-    name: 'Valorant South Asia Masters Cup 🔱',
-    tournament: 'VCT South Asia Stage 2',
-    year: '2026',
-    icon: '🔱',
-    glowColor: 'from-cyan-400 to-blue-600',
-    unlocked: true,
-    prizePool: '₹40,00,000 INR',
-    mvp: 'Vortex Jet'
-  },
-  {
-    id: 'tr-3',
-    name: 'Global Grandmaster Blitz Shield 🛡️',
-    tournament: 'National Cyber Chess Masters',
-    year: '2026',
-    icon: '🛡️',
-    glowColor: 'from-purple-500 to-indigo-600',
-    unlocked: true,
-    prizePool: '₹15,00,000 INR',
-    mvp: 'Grandmaster Shiva'
-  },
-  {
-    id: 'tr-4',
-    name: 'Global Esports World Cup Gold 👑',
-    tournament: 'Riyadh Esports World Cup',
-    year: 'Upcoming 2027',
-    icon: '👑',
-    glowColor: 'from-rose-500 to-pink-600',
-    unlocked: false,
-    prizePool: '$1,000,000 USD',
-    mvp: 'To Be Decided'
-  }
-];
+const achievementIcons = { Sparkles, TrendingUp, Users } as const;
 
 export default function TrophyRoom() {
-  const [selectedTrophy, setSelectedTrophy] = useState(CLAN_TROPHIES[0]);
+  const [achievements, setAchievements] = useState<BackendAchievement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const handleShareTrophy = () => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success('🏆 Trophy Room showcase link copied to clipboard!');
+  const selected = useMemo(() => achievements.find((item) => item.id === selectedId) ?? achievements[0] ?? null,
+    [achievements, selectedId]);
+  const unlocked = achievements.filter((item) => item.unlocked);
+
+  const loadAchievements = async () => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      const result = await api.getAchievements();
+      setAchievements(result);
+      setSelectedId((current) => current && result.some((item) => item.id === current) ? current : result[0]?.id ?? null);
+    } catch {
+      setFailed(true);
+      setAchievements([]);
+      setSelectedId(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadAchievements(); }, []);
+
+  const copySummary = async () => {
+    if (!unlocked.length) return;
+    const summary = `My Yor Talks achievements\n${unlocked.map((item) => `• ${item.title}: ${item.description}`).join('\n')}`;
+    try {
+      await navigator.clipboard.writeText(summary);
+      toast.success('Achievement summary copied');
+    } catch {
+      toast.error('Could not copy the achievement summary on this device');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
-      {/* Sticky Glass Header */}
-      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-600 text-black flex items-center justify-center font-bold shadow-md glow-neon-primary">
-            <Trophy className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Virtual Trophy Room & Hall of Fame</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Official Clan Championship Pedestals & Silverware Showcase</p>
+    <main className="min-h-screen bg-background pb-24 text-foreground">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/90 px-4 py-3 backdrop-blur sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-400"><Trophy className="h-5 w-5" /></div>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold">Achievements</h1>
+            <p className="text-xs text-muted-foreground">Progress from your Yor Talks account</p>
           </div>
         </div>
-
-        <Button
-          onClick={handleShareTrophy}
-          className="rounded-2xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary shadow-lg"
-        >
-          <Share2 className="w-3.5 h-3.5 mr-1" /> Share Trophy Room
+        <Button type="button" size="sm" variant="outline" onClick={() => void copySummary()} disabled={unlocked.length === 0}>
+          <Share2 className="mr-1.5 h-4 w-4" /> Copy unlocked summary
         </Button>
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Main 3D Holographic Trophy Pedestal Column */}
-          <div className="lg:col-span-6 flex justify-center py-6">
-            <div className="relative w-80 h-96 rounded-3xl p-8 bg-zinc-950 border-4 border-amber-500/40 shadow-2xl flex flex-col items-center justify-between overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 via-transparent to-black/80 pointer-events-none" />
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+        {loading && <p role="status" className="rounded-2xl border border-border/40 p-5 text-sm text-muted-foreground">Loading achievements…</p>}
+        {failed && <section role="alert" className="rounded-2xl border border-border/40 p-5">
+          <p className="text-sm text-muted-foreground">Achievements could not be loaded.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadAchievements()}>Try again</Button>
+        </section>}
+        {!loading && !failed && achievements.length === 0 && <section className="rounded-2xl border border-border/40 p-8 text-center">
+          <Trophy aria-hidden="true" className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h2 className="mt-3 font-semibold">No achievements are available yet</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Your account progress will appear here when achievement tracking is available.</p>
+        </section>}
 
-              <span className="relative z-10 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                CHAMPIONSHIP SILVERWARE &middot; {selectedTrophy.year}
-              </span>
-
-              {/* 3D Trophy Hologram */}
-              <div className="text-7xl my-auto animate-bounce filter drop-shadow-[0_0_24px_rgba(251,191,36,0.8)] select-none">
-                {selectedTrophy.icon}
+        {!loading && !failed && selected && <>
+          <section aria-labelledby="selected-achievement" className="surface-1 grid gap-5 rounded-3xl border border-border/40 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-400">
+                <AchievementIcon name={selected.icon} />
               </div>
-
-              {/* Plaque Base */}
-              <div className="relative z-10 w-full p-4 rounded-2xl bg-black/80 border border-white/10 text-center font-sans space-y-1">
-                <h4 className="font-display font-black text-sm text-amber-300 uppercase">{selectedTrophy.name}</h4>
-                <p className="text-[0.68rem] font-mono text-zinc-400">Prize: {selectedTrophy.prizePool} &middot; MVP: {selectedTrophy.mvp}</p>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{selected.unlocked ? 'Unlocked achievement' : 'Achievement progress'}</p>
+                <h2 id="selected-achievement" className="mt-1 text-xl font-bold">{selected.title}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{selected.description}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{selected.unlocked ? 'Completed' : `${Math.max(0, selected.progress)} of ${selected.goal}`}</p>
+                <div className="mt-2 h-2 w-full max-w-md overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`${selected.title} progress`}
+                  aria-valuemin={0} aria-valuemax={Math.max(1, selected.goal)} aria-valuenow={Math.min(Math.max(0, selected.progress), selected.goal)}>
+                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.min(100, Math.max(0, selected.progress / Math.max(1, selected.goal) * 100))}%` }} />
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Trophy Cabinet Grid Column */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="showcase-section-title">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <h3>Championship Trophy Cabinet</h3>
+            <div className="flex items-center gap-2 rounded-xl border border-border/40 px-4 py-3 text-sm">
+              {selected.unlocked ? <CheckCircle2 aria-hidden="true" className="h-5 w-5 text-emerald-500" /> : <Lock aria-hidden="true" className="h-5 w-5 text-muted-foreground" />}
+              <span>{selected.xp} XP</span>
             </div>
+          </section>
 
-            <div className="space-y-3">
-              {CLAN_TROPHIES.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    sounds.playPop();
-                    setSelectedTrophy(t);
-                  }}
-                  className={cn(
-                    "w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between",
-                    selectedTrophy.id === t.id ? "border-amber-400 bg-amber-500/20 shadow-lg glow-neon-primary" : "border-border/40 hover:bg-muted/40",
-                    !t.unlocked && "opacity-60"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{t.icon}</span>
-                    <div>
-                      <h4 className="font-display font-bold text-sm text-foreground">{t.name}</h4>
-                      <span className="text-xs font-mono text-muted-foreground">{t.tournament} ({t.year})</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    {t.unlocked ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <Lock className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </div>
+          <section aria-labelledby="achievement-list-heading" className="space-y-3">
+            <h2 id="achievement-list-heading" className="text-lg font-bold">Your achievements</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {achievements.map((item) => (
+                <button key={item.id} type="button" aria-pressed={selected.id === item.id} onClick={() => setSelectedId(item.id)}
+                  className="surface-1 flex items-center gap-3 rounded-2xl border border-border/40 p-4 text-left transition-colors hover:border-primary/50 aria-pressed:border-primary/60">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary"><AchievementIcon name={item.icon} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{item.title}</span>
+                    <span className="block text-xs text-muted-foreground">{item.unlocked ? 'Unlocked' : `${Math.max(0, item.progress)} / ${item.goal}`}</span>
+                  </span>
+                  {item.unlocked ? <CheckCircle2 aria-label="Unlocked" className="h-4 w-4 shrink-0 text-emerald-500" /> : <Lock aria-label="Locked" className="h-4 w-4 shrink-0 text-muted-foreground" />}
                 </button>
               ))}
             </div>
-          </div>
-        </div>
+          </section>
+        </>}
       </div>
-    </div>
+    </main>
   );
+}
+
+function AchievementIcon({ name }: { name: string }) {
+  const Icon = name in achievementIcons ? achievementIcons[name as keyof typeof achievementIcons] : Award;
+  return <Icon aria-hidden="true" className="h-5 w-5" />;
 }

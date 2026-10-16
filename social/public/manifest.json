@@ -10,9 +10,9 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "180x180",
-      "type": "image/svg+xml",
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

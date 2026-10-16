@@ -19,6 +19,23 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-.backup}"
 COMMAND="${1:-help}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+temporary_files=()
+
+# RETURN traps do not run when set -e or an explicit exit terminates the
+# process. Keep every mktemp path until process exit so failed decryption or
+# archive inspection cannot leave plaintext on a standalone restore host.
+cleanup_temporary_files() {
+  local status=$?
+  trap - EXIT
+  for temporary_file in "${temporary_files[@]}"; do
+    rm -f -- "$temporary_file"
+  done
+  exit "$status"
+}
+trap cleanup_temporary_files EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 record_backup_metrics() {
   local succeeded="$1"
@@ -64,7 +81,7 @@ backup() {
   local backup_file="$BACKUP_DIR/backup_${TIMESTAMP}.dump.age"
   local temporary_file
   temporary_file=$(mktemp "$BACKUP_DIR/.backup.XXXXXX")
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
 
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Creating encrypted PostgreSQL backup..."
   if ! pg_dump --no-password --no-owner --no-privileges --format=custom --compress=9 "$DATABASE_URL" \
@@ -75,7 +92,6 @@ backup() {
   fi
   [[ -s "$temporary_file" ]] || { echo "Error: encrypted backup is empty" >&2; exit 1; }
   mv "$temporary_file" "$backup_file"
-  trap - RETURN
 
   if ! rclone copyto "$backup_file" "${BACKUP_REMOTE%/}/$(basename "$backup_file")"; then
     record_backup_metrics 0
@@ -100,7 +116,7 @@ verify() {
   [[ -f "$backup_file" ]] || { echo "Error: Backup file not found: $backup_file" >&2; exit 1; }
   local temporary_file
   temporary_file=$(mktemp)
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
   age --decrypt --identity "$BACKUP_AGE_IDENTITY" "$backup_file" > "$temporary_file"
   pg_restore --list "$temporary_file" >/dev/null
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Encrypted archive integrity verified: $backup_file"
@@ -117,7 +133,7 @@ restore() {
   [[ -f "$backup_file" ]] || { echo "Error: Backup file not found: $backup_file" >&2; exit 1; }
   local object_count temporary_file
   object_count=$(psql "$DATABASE_URL" --no-psqlrc --no-password -Atqc \
-    "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f')")
+    "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname !~ '^pg_' AND c.relkind IN ('r','p','v','m','S','f')")
   if [[ "$object_count" != "0" ]]; then
     echo "Error: restore target is not empty; use a separate empty database. No restore was attempted." >&2
     exit 1
@@ -125,7 +141,7 @@ restore() {
 
   umask 077
   temporary_file=$(mktemp)
-  trap 'rm -f "$temporary_file"' RETURN
+  temporary_files+=("$temporary_file")
   age --decrypt --identity "$BACKUP_AGE_IDENTITY" "$backup_file" > "$temporary_file"
   pg_restore --list "$temporary_file" >/dev/null
   echo "Restoring into a verified empty database. Type 'restore' to continue:"

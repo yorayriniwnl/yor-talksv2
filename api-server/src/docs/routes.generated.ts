@@ -1540,6 +1540,18 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "get",
+    "path": "/reports/{reportId}/history",
+    "operationId": "getReportsByReportIdHistory",
+    "tag": "reports",
+    "summary": "Get /reports/{reportId}/history",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
     "method": "patch",
     "path": "/reports/{reportId}/status",
     "operationId": "patchReportsByReportIdStatus",

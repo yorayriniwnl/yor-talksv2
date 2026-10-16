@@ -7,14 +7,14 @@ async function createProfiles() {
     {
       username: "demo_founder",
       email: "founder@example.test",
-      password: "demo_founder",
+      password: "DemoFounder123!",
       fullName: "Demo Founder",
       role: "founder"
     },
     {
       username: "demo_cofounder",
       email: "cofounder@example.test",
-      password: "demo_cofounder",
+      password: "DemoUser123!",
       fullName: "Demo Co-Founder",
       role: "co-founder"
     }

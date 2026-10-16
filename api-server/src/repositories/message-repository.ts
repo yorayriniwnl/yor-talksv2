@@ -2,11 +2,12 @@ import { eq, or, and, asc, desc, inArray, gt, lt, sql } from "drizzle-orm";
 import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from "@workspace/db/schema";
 import { db, runInDatabaseTransaction } from "@workspace/db";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
 import { visibleMessagePredicate, toMessageTombstone } from "../utils/message-visibility.js";
 
-const currentVisibility = () => visibleMessagePredicate(sql`(clock_timestamp() AT TIME ZONE 'UTC')`);
+const currentVisibility = () => visibleMessagePredicate(sql`clock_timestamp()`);
 const membershipPredicate = (userId: string) => sql`EXISTS (
   SELECT 1 FROM conversations c WHERE c.id = ${messagesTable.conversationId} AND
   CASE WHEN c.is_group
@@ -182,6 +183,31 @@ export class MessageRepository {
       await authorize?.();
       const [updated] = await tx.update(messagesTable).set(updates)
         .where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async addVisibleReaction(messageId: string, userId: string, reaction: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable).set({
+        reactions: sql`jsonb_set(
+          COALESCE(${messagesTable.reactions}, '{}'::jsonb),
+          ARRAY[${reaction}]::text[],
+          (
+            SELECT COALESCE(jsonb_agg(to_jsonb(users.user_id) ORDER BY users.user_id), '[]'::jsonb)
+            FROM (
+              SELECT DISTINCT user_id
+              FROM (
+                SELECT jsonb_array_elements_text(COALESCE(${messagesTable.reactions}->${reaction}, '[]'::jsonb)) AS user_id
+                UNION ALL SELECT ${userId}::text
+              ) current_users
+            ) users
+          ),
+          true
+        )`,
+      }).where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
       return updated as MessageRecord | undefined;
     });
   }

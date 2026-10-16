@@ -6,15 +6,10 @@ function readBoolean(value: unknown, fallback = false): boolean {
   throw new Error("Invalid boolean value in the public beta build configuration");
 }
 
-function readNumber(value: unknown, fallback: number): number {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 13 ? parsed : fallback;
-}
-
 export const publicBetaConfig = {
   publicBeta: readBoolean(import.meta.env.VITE_PUBLIC_BETA),
   termsVersion: import.meta.env.VITE_TERMS_VERSION || "development",
-  minimumAge: readNumber(import.meta.env.VITE_MINIMUM_AGE, 18),
+  legalContentReviewed: readBoolean(import.meta.env.VITE_LEGAL_CONTENT_REVIEWED),
   operatorName: import.meta.env.VITE_LEGAL_OPERATOR_NAME || "",
   operatorAddress: import.meta.env.VITE_LEGAL_OPERATOR_ADDRESS || "",
   effectiveDate: import.meta.env.VITE_LEGAL_EFFECTIVE_DATE || "",
@@ -30,6 +25,7 @@ export const publicBetaConfig = {
 } as const;
 
 export const legalConfigReady = Boolean(
+  publicBetaConfig.legalContentReviewed &&
   publicBetaConfig.operatorName &&
   publicBetaConfig.operatorAddress &&
   publicBetaConfig.effectiveDate &&

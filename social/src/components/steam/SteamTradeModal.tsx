@@ -169,12 +169,12 @@ export function SteamTradeModal({
             </div>
             <div>
               <DialogTitle className="font-display font-bold text-lg text-white flex items-center gap-2">
-                YOR Gear Vault & Trade
+                Gear trade preview
                 <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <Info className="w-2.5 h-2.5 inline mr-1" /> Trade Preview
+                  <Info className="w-2.5 h-2.5 inline mr-1" /> Local demo
                 </span>
               </DialogTitle>
-              <p className="text-xs text-zinc-400 font-mono">Peer-to-Peer Trading with {partnerName}</p>
+              <p className="text-xs text-zinc-400 font-mono">Sample preview with {partnerName}; no linked game account.</p>
             </div>
           </div>
 

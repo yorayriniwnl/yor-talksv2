@@ -4,6 +4,7 @@ import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { logger } from "../lib/logger.js";
 import { authenticate, requireRole } from "../middlewares/auth.js";
 import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
+import { inspectLifecycleHealth } from "../lib/lifecycle-health.js";
 
 const router = Router();
 
@@ -17,13 +18,15 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     status: "ok" | "degraded" | "error";
     timestamp: string;
     queue?: { redis: "up" | "down"; version?: string; reason?: string };
-    workers: { status: "initialized" | "unavailable" | "unhealthy" };
+    workers: { status: "initialized" | "unavailable" | "unhealthy"; lifecycle: "up" | "down" };
+    lifecycleCleanup: { overdueJobs: number; deadJobs: number };
     uptime: number;
   } = {
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    workers: { status: "unavailable" },
+    workers: { status: "unavailable", lifecycle: "down" },
+    lifecycleCleanup: { overdueJobs: 0, deadJobs: 0 },
   };
 
   try {
@@ -36,8 +39,14 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     };
 
     diagnostics.workers.status = await hasHealthyNotificationWorker() ? "initialized" : "unavailable";
+    const lifecycle = await inspectLifecycleHealth();
+    diagnostics.workers.lifecycle = lifecycle.workerUp ? "up" : "down";
+    diagnostics.lifecycleCleanup = {
+      overdueJobs: lifecycle.overdueCleanupJobs,
+      deadJobs: lifecycle.deadCleanupJobs,
+    };
 
-    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized") {
+    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized" || !lifecycle.workerUp || lifecycle.overdueCleanupJobs > 0 || lifecycle.deadCleanupJobs > 0) {
       diagnostics.status = "degraded";
     }
 

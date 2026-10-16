@@ -30,17 +30,20 @@ import type {
   EnrollmentPrescreenRequest,
   GetContactsRequests200,
   GetGroupInvitations200,
+  GetPostsSavedParams,
   GetReportsGrievanceByTicketId200,
+  GetReportsGrievancesParams,
+  GetReportsQueueParams,
   GetUsersMeEligibility200,
   GetUsersMeEligibilityChallengesByChallengeId200,
   GetUsersMeGuardianAuthorizations200,
+  GetVideosSavedParams,
   GroupInvitationDecisionRequest,
   GuardianJourneyRequest,
   InviteToGroupRequest,
   MediaFinalizeRequest,
   MediaPresignRequest,
   PatchBroadcastChannelsByIdNotificationsBody,
-  PatchReportsByReportIdStatusBody,
   PatchReportsGrievanceByTicketIdStatusBody,
   PatchStoriesByIdPriorityBody,
   PostAiChatBody,
@@ -190,7 +193,8 @@ import type {
   PutUsersMePremiumProfileBody,
   PutUsersMePrivacyBody,
   PutUsersMeSettingsBody,
-  RegisterRequest
+  RegisterRequest,
+  ReportStatusUpdateRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -10679,20 +10683,27 @@ export function useGetPostsLiked<TData = Awaited<ReturnType<typeof getPostsLiked
 
 
 
-export const getGetPostsSavedUrl = () => {
+export const getGetPostsSavedUrl = (params?: GetPostsSavedParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/posts/saved`
+  return stringifiedParams.length > 0 ? `/api/posts/saved?${stringifiedParams}` : `/api/posts/saved`
 }
 
 /**
  * @summary Get /posts/saved
  */
-export const getPostsSaved = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getPostsSaved = async (params?: GetPostsSavedParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetPostsSavedUrl(),
+  return customFetch<ApiEnvelope>(getGetPostsSavedUrl(params),
   {
     ...options,
     method: 'GET'
@@ -10705,23 +10716,23 @@ export const getPostsSaved = async ( options?: RequestInit): Promise<ApiEnvelope
 
 
 
-export const getGetPostsSavedQueryKey = () => {
+export const getGetPostsSavedQueryKey = (params?: GetPostsSavedParams,) => {
     return [
-    `/api/posts/saved`
+    `/api/posts/saved`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetPostsSavedQueryOptions = <TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
+export const getGetPostsSavedQueryOptions = <TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>(params?: GetPostsSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPostsSavedQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetPostsSavedQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostsSaved>>> = ({ signal }) => getPostsSaved({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostsSaved>>> = ({ signal }) => getPostsSaved(params, { signal });
 
 
 
@@ -10739,11 +10750,11 @@ export type GetPostsSavedQueryError = ErrorType<void>
  */
 
 export function useGetPostsSaved<TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
+ params?: GetPostsSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetPostsSavedQueryOptions(options)
+  const queryOptions = getGetPostsSavedQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -12597,6 +12608,83 @@ export const usePostReports = <TError = ErrorType<void>,
       return useMutation(getPostReportsMutationOptions(options));
     }
 
+export const getGetReportsByReportIdHistoryUrl = (reportId: string,) => {
+
+
+
+
+  return `/api/reports/${reportId}/history`
+}
+
+/**
+ * @summary Get /reports/{reportId}/history
+ */
+export const getReportsByReportIdHistory = async (reportId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetReportsByReportIdHistoryUrl(reportId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReportsByReportIdHistoryQueryKey = (reportId: string,) => {
+    return [
+    `/api/reports/${reportId}/history`
+    ] as const;
+    }
+
+
+export const getGetReportsByReportIdHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError = ErrorType<void>>(reportId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsByReportIdHistoryQueryKey(reportId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsByReportIdHistory>>> = ({ signal }) => getReportsByReportIdHistory(reportId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: reportId !== null && reportId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReportsByReportIdHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getReportsByReportIdHistory>>>
+export type GetReportsByReportIdHistoryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /reports/{reportId}/history
+ */
+
+export function useGetReportsByReportIdHistory<TData = Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError = ErrorType<void>>(
+ reportId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReportsByReportIdHistoryQueryOptions(reportId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getPatchReportsByReportIdStatusUrl = (reportId: string,) => {
 
 
@@ -12609,14 +12697,14 @@ export const getPatchReportsByReportIdStatusUrl = (reportId: string,) => {
  * @summary Patch /reports/{reportId}/status
  */
 export const patchReportsByReportIdStatus = async (reportId: string,
-    patchReportsByReportIdStatusBody?: PatchReportsByReportIdStatusBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    reportStatusUpdateRequest: ReportStatusUpdateRequest, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPatchReportsByReportIdStatusUrl(reportId),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(patchReportsByReportIdStatusBody)
+    body: JSON.stringify(reportStatusUpdateRequest)
   }
 );}
 
@@ -12625,8 +12713,8 @@ export const patchReportsByReportIdStatus = async (reportId: string,
 
 
 export const getPatchReportsByReportIdStatusMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext> => {
 
 const mutationKey = ['patchReportsByReportIdStatus'];
 const {mutation: mutationOptions} = options ?
@@ -12638,7 +12726,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, {reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, {reportId: string;data: BodyType<ReportStatusUpdateRequest>}> = (props) => {
           const {reportId,data} = props ?? {};
 
           return  patchReportsByReportIdStatus(reportId,data,)
@@ -12652,18 +12740,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PatchReportsByReportIdStatusMutationResult = NonNullable<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>>
-    export type PatchReportsByReportIdStatusMutationBody = BodyType<PatchReportsByReportIdStatusBody> | undefined
+    export type PatchReportsByReportIdStatusMutationBody = BodyType<ReportStatusUpdateRequest>
     export type PatchReportsByReportIdStatusMutationError = ErrorType<void>
 
     /**
  * @summary Patch /reports/{reportId}/status
  */
 export const usePatchReportsByReportIdStatus = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof patchReportsByReportIdStatus>>,
         TError,
-        {reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>},
+        {reportId: string;data: BodyType<ReportStatusUpdateRequest>},
         TContext
       > => {
       return useMutation(getPatchReportsByReportIdStatusMutationOptions(options));
@@ -12889,20 +12977,27 @@ export const usePatchReportsGrievanceByTicketIdStatus = <TError = ErrorType<void
       return useMutation(getPatchReportsGrievanceByTicketIdStatusMutationOptions(options));
     }
 
-export const getGetReportsGrievancesUrl = () => {
+export const getGetReportsGrievancesUrl = (params?: GetReportsGrievancesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/reports/grievances`
+  return stringifiedParams.length > 0 ? `/api/reports/grievances?${stringifiedParams}` : `/api/reports/grievances`
 }
 
 /**
  * @summary Get /reports/grievances
  */
-export const getReportsGrievances = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getReportsGrievances = async (params?: GetReportsGrievancesParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetReportsGrievancesUrl(),
+  return customFetch<ApiEnvelope>(getGetReportsGrievancesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -12915,23 +13010,23 @@ export const getReportsGrievances = async ( options?: RequestInit): Promise<ApiE
 
 
 
-export const getGetReportsGrievancesQueryKey = () => {
+export const getGetReportsGrievancesQueryKey = (params?: GetReportsGrievancesParams,) => {
     return [
-    `/api/reports/grievances`
+    `/api/reports/grievances`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetReportsGrievancesQueryOptions = <TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
+export const getGetReportsGrievancesQueryOptions = <TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>(params?: GetReportsGrievancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReportsGrievancesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsGrievancesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsGrievances>>> = ({ signal }) => getReportsGrievances({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsGrievances>>> = ({ signal }) => getReportsGrievances(params, { signal });
 
 
 
@@ -12949,11 +13044,11 @@ export type GetReportsGrievancesQueryError = ErrorType<void>
  */
 
 export function useGetReportsGrievances<TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
+ params?: GetReportsGrievancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetReportsGrievancesQueryOptions(options)
+  const queryOptions = getGetReportsGrievancesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -12966,20 +13061,27 @@ export function useGetReportsGrievances<TData = Awaited<ReturnType<typeof getRep
 
 
 
-export const getGetReportsQueueUrl = () => {
+export const getGetReportsQueueUrl = (params?: GetReportsQueueParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/reports/queue`
+  return stringifiedParams.length > 0 ? `/api/reports/queue?${stringifiedParams}` : `/api/reports/queue`
 }
 
 /**
  * @summary Get /reports/queue
  */
-export const getReportsQueue = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getReportsQueue = async (params?: GetReportsQueueParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetReportsQueueUrl(),
+  return customFetch<ApiEnvelope>(getGetReportsQueueUrl(params),
   {
     ...options,
     method: 'GET'
@@ -12992,23 +13094,23 @@ export const getReportsQueue = async ( options?: RequestInit): Promise<ApiEnvelo
 
 
 
-export const getGetReportsQueueQueryKey = () => {
+export const getGetReportsQueueQueryKey = (params?: GetReportsQueueParams,) => {
     return [
-    `/api/reports/queue`
+    `/api/reports/queue`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetReportsQueueQueryOptions = <TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
+export const getGetReportsQueueQueryOptions = <TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>(params?: GetReportsQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueueQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueueQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsQueue>>> = ({ signal }) => getReportsQueue({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsQueue>>> = ({ signal }) => getReportsQueue(params, { signal });
 
 
 
@@ -13026,11 +13128,11 @@ export type GetReportsQueueQueryError = ErrorType<void>
  */
 
 export function useGetReportsQueue<TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
+ params?: GetReportsQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetReportsQueueQueryOptions(options)
+  const queryOptions = getGetReportsQueueQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -18656,20 +18758,27 @@ export const usePostVideosByIdLike = <TError = ErrorType<void>,
       return useMutation(getPostVideosByIdLikeMutationOptions(options));
     }
 
-export const getGetVideosSavedUrl = () => {
+export const getGetVideosSavedUrl = (params?: GetVideosSavedParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/videos/saved`
+  return stringifiedParams.length > 0 ? `/api/videos/saved?${stringifiedParams}` : `/api/videos/saved`
 }
 
 /**
  * @summary Get /videos/saved
  */
-export const getVideosSaved = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getVideosSaved = async (params?: GetVideosSavedParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetVideosSavedUrl(),
+  return customFetch<ApiEnvelope>(getGetVideosSavedUrl(params),
   {
     ...options,
     method: 'GET'
@@ -18682,23 +18791,23 @@ export const getVideosSaved = async ( options?: RequestInit): Promise<ApiEnvelop
 
 
 
-export const getGetVideosSavedQueryKey = () => {
+export const getGetVideosSavedQueryKey = (params?: GetVideosSavedParams,) => {
     return [
-    `/api/videos/saved`
+    `/api/videos/saved`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetVideosSavedQueryOptions = <TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
+export const getGetVideosSavedQueryOptions = <TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>(params?: GetVideosSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetVideosSavedQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetVideosSavedQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideosSaved>>> = ({ signal }) => getVideosSaved({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideosSaved>>> = ({ signal }) => getVideosSaved(params, { signal });
 
 
 
@@ -18716,11 +18825,11 @@ export type GetVideosSavedQueryError = ErrorType<void>
  */
 
 export function useGetVideosSaved<TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
+ params?: GetVideosSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetVideosSavedQueryOptions(options)
+  const queryOptions = getGetVideosSavedQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

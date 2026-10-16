@@ -66,3 +66,36 @@ test("Gemini malformed moderation falls back and production fails closed if both
   assert.deepEqual(await service.moderate("test content"), { spam: false, toxicity: false, nsfw: true });
   assert.equal(fallback.mock.callCount(), 4);
 });
+
+test("Gemini moderation and assistance calls send credentials only in the API key header", async (t) => {
+  const original = { GEMINI_API_KEY: env.GEMINI_API_KEY, NODE_ENV: env.NODE_ENV };
+  env.GEMINI_API_KEY = "unit-test-gemini-key";
+  env.NODE_ENV = "production";
+  t.after(() => Object.assign(env, original));
+
+  const requests: Array<{ url: string; apiKey: string | null }> = [];
+  t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const url = String(input);
+    const body = JSON.parse(String(init?.body)) as { contents?: Array<{ parts?: Array<{ text?: string }> }> };
+    const prompt = body.contents?.[0]?.parts?.[0]?.text ?? "";
+    requests.push({ url, apiKey: new Headers(init?.headers).get("x-goog-api-key") });
+    const text = prompt.includes("Extract 3 relevant topic hashtags")
+      ? '["generated"]'
+      : prompt.includes("return 2 topical recommendation signals")
+        ? '[{"reason":"relevant","score":0.75}]'
+        : '{"spam":false,"toxicity":false,"nsfw":false}';
+    return Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
+  });
+
+  const eligibility = { requireCapability: async () => {} } as unknown as ConstructorParameters<typeof AIService>[0];
+  const service = new AIService(eligibility);
+  assert.deepEqual(await service.moderate("a safe test message"), { spam: false, toxicity: false, nsfw: false });
+  assert.deepEqual(await service.recommend("user-id", "a topic to recommend"), [{ reason: "relevant", score: 0.75 }]);
+  assert.deepEqual(await service.tag("user-id", "A longer test post #raw"), ["raw", "generated"]);
+
+  assert.equal(requests.length, 3);
+  for (const request of requests) {
+    assert.equal(new URL(request.url).search, "");
+    assert.equal(request.apiKey, "unit-test-gemini-key");
+  }
+});

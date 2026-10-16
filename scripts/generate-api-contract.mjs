@@ -50,7 +50,23 @@ const publicGrievanceSchema = {
     ticketId: { type: "string" },
     status: { type: "string", enum: ["received", "under_review", "resolved", "dismissed"] },
     createdAt: { type: "string", format: "date-time" },
-    slaDeadline: { type: "string", format: "date-time", description: "Operational review target, not a universal statutory deadline." },
+  },
+};
+const moderationSchemas = {
+  ReportStatusUpdateRequest: {
+    oneOf: [
+      {
+        type: "object", additionalProperties: false, required: ["status"],
+        properties: { status: { type: "string", enum: ["pending", "reviewed"] } },
+      },
+      {
+        type: "object", additionalProperties: false, required: ["status", "decisionReason"],
+        properties: {
+          status: { type: "string", enum: ["resolved", "dismissed"] },
+          decisionReason: { type: "string", minLength: 10, maxLength: 2000, description: "Staff-only rationale required for a resolved or dismissed decision." },
+        },
+      },
+    ],
   },
 };
 const authorizationPurposes = ['account_collection','account_activation','social_contact'];
@@ -169,6 +185,12 @@ function contactContract(route) {
     'post /contacts/requests/{requestId}/reject': { result: 'SafeContactRequest' },
   };
   return definitions[`${route.method} ${route.path}`];
+}
+function moderationContract(route) {
+  if (route.path === "/reports/{reportId}/status" && route.method === "patch") {
+    return { request: "ReportStatusUpdateRequest" };
+  }
+  return undefined;
 }
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
@@ -364,8 +386,31 @@ function renderYaml(routes) {
         }
       }
 
+      if (route.method === 'get' && ['/reports/queue', '/reports/grievances', '/posts/saved', '/videos/saved'].includes(route.path)) {
+        const statuses = route.path === '/reports/queue'
+          ? ['pending', 'reviewed', 'resolved', 'dismissed']
+          : route.path === '/reports/grievances' ? ['received', 'under_review', 'resolved', 'dismissed'] : undefined;
+        lines.push('      parameters:');
+        for (const parameter of [
+          ...(statuses ? [{ name: 'status', required: false, schema: { type: 'string', enum: statuses }, description: 'Return only records currently in this status.' }] : []),
+          { name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
+          { name: 'cursor', required: false, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$' }, description: statuses ? 'Signed, status-scoped keyset cursor returned in meta.nextCursor.' : 'Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.' },
+        ]) {
+          lines.push(...indent([
+            `- name: ${parameter.name}`, '  in: query', `  required: ${parameter.required}`,
+            `  description: ${parameter.description ?? 'Page size from 1 to 100.'}`, '  schema:',
+            `    type: ${parameter.schema.type}`,
+            ...(parameter.schema.enum ? [`    enum: [${parameter.schema.enum.join(', ')}]`] : []),
+            ...(parameter.schema.minimum !== undefined ? [`    minimum: ${parameter.schema.minimum}`] : []),
+            ...(parameter.schema.maximum !== undefined ? [`    maximum: ${parameter.schema.maximum}`] : []),
+            ...(parameter.schema.default !== undefined ? [`    default: ${parameter.schema.default}`] : []),
+            ...(parameter.schema.pattern ? [`    pattern: '${parameter.schema.pattern}'`] : []),
+          ], 8));
+        }
+      }
+
       if (["post", "put", "patch"].includes(route.method)) {
-        const contract = eligibilityContract(route) ?? contactContract(route);
+        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route);
         const request = contract?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${contract.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
@@ -440,6 +485,7 @@ function renderYaml(routes) {
   );
   for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   lines.push(`    PublicGrievanceReceipt: ${JSON.stringify(publicGrievanceSchema)}`);
+  for (const [name, schema] of Object.entries(moderationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(contactSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;

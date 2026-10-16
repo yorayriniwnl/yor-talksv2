@@ -1,5 +1,6 @@
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +26,7 @@ export function CinematicMediaLightbox({
   authorName,
   caption,
 }: CinematicMediaLightboxProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
   const touchStartX = useRef<number | null>(null);
   const [direction, setDirection] = useState(1);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());

@@ -4,8 +4,10 @@ import {
   broadcastChannelMessagesTable,
   broadcastChannelsTable,
   db,
+  runInDatabaseTransaction,
 } from "@workspace/db";
 import type { BroadcastChannelMessageRecord, BroadcastChannelRecord } from "../types/index.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 
 type ChannelRow = typeof broadcastChannelsTable.$inferSelect;
 
@@ -161,21 +163,36 @@ export class BroadcastChannelRepository {
     } : undefined;
   }
 
-  async reactToMessage(channelId: string, messageId: string, userId: string, reaction: string): Promise<BroadcastChannelMessageRecord | undefined> {
-    if (!(await this.isMember(channelId, userId))) return undefined;
-    const [message] = await db.update(broadcastChannelMessagesTable).set({
-      reactions: sql`jsonb_set(
-        COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb),
-        ARRAY[${reaction}],
-        (
-          CASE
-            WHEN COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction} ? ${userId}
-              THEN (COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction}) - ${userId}
-            ELSE COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction} || jsonb_build_array(${userId})
-          END
-        )
-      )`,
-    }).where(and(eq(broadcastChannelMessagesTable.id, messageId), eq(broadcastChannelMessagesTable.channelId, channelId))).returning();
+  async reactToMessage(channelId: string, messageId: string, userId: string, reaction: string,
+    authorize: (message: BroadcastChannelMessageRecord) => Promise<boolean>): Promise<BroadcastChannelMessageRecord | undefined> {
+    const message = await runInDatabaseTransaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      const [membership] = await tx.select({ userId: broadcastChannelMembersTable.userId })
+        .from(broadcastChannelMembersTable)
+        .where(and(eq(broadcastChannelMembersTable.channelId, channelId), eq(broadcastChannelMembersTable.userId, userId)))
+        .for('share')
+        .limit(1);
+      if (!membership) return undefined;
+      const [current] = await tx.select().from(broadcastChannelMessagesTable)
+        .where(and(eq(broadcastChannelMessagesTable.id, messageId), eq(broadcastChannelMessagesTable.channelId, channelId)))
+        .for('update');
+      if (!current || !(await authorize({ ...current, reactions: (current.reactions ?? {}) as Record<string, string[]>,
+        contentRating: current.contentRating as BroadcastChannelMessageRecord['contentRating'] }))) return undefined;
+      const [updated] = await tx.update(broadcastChannelMessagesTable).set({
+        reactions: sql`jsonb_set(
+          COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb),
+          ARRAY[${reaction}],
+          (
+            CASE
+              WHEN COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction} ? ${userId}
+                THEN (COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction}) - ${userId}
+              ELSE COALESCE(COALESCE(${broadcastChannelMessagesTable.reactions}, '{}'::jsonb)->${reaction}, '[]'::jsonb) || jsonb_build_array(${userId}::text)
+            END
+          )
+        )`,
+      }).where(and(eq(broadcastChannelMessagesTable.id, messageId), eq(broadcastChannelMessagesTable.channelId, channelId))).returning();
+      return updated;
+    });
     return message ? {
       ...message,
       reactions: (message.reactions ?? {}) as Record<string, string[]>,

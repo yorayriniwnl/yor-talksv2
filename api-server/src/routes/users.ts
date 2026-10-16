@@ -14,7 +14,7 @@ import { followRequestIdParamSchema, userIdParamSchema, usernameParamSchema } fr
 import { AccountService } from "../services/account-service.js";
 import { AuthController } from "../controllers/auth-controller.js";
 import { acceptTermsSchema } from "../validators/auth.js";
-import { mediaRateLimiter } from "../middlewares/rate-limit.js";
+import { accountExportRateLimiter, mediaRateLimiter } from "../middlewares/rate-limit.js";
 
 const router = Router();
 const userRepository = new UserRepository();
@@ -28,7 +28,7 @@ router.get("/users/search", authenticate, validateQuery(searchUsersSchema), user
 router.get("/users/me", authenticate, userController.getCurrentUser);
 router.get("/users/me/premium-profile", authenticate, userController.getPremiumProfile);
 router.post("/users/me/consent", authenticate, validateBody(acceptTermsSchema), authController.acceptTerms);
-router.get("/users/me/export", authenticate, userController.exportAccount);
+router.get("/users/me/export", authenticate, accountExportRateLimiter, userController.exportAccount);
 router.delete("/users/me", authenticate, validateBody(deleteAccountSchema), userController.deleteAccount);
 router.get("/users/by-username/:username", authenticate, validateParams(usernameParamSchema), userController.getProfileByUsername);
 router.get("/users/:userId", authenticate, validateParams(userIdParamSchema), userController.getProfile);

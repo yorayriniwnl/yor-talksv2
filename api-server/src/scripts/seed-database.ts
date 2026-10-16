@@ -23,7 +23,7 @@ async function seedDatabase() {
   console.log("🌱 Starting full database seed...");
 
   const defaultPasswordHash = await bcrypt.hash("DemoUser123!", 10);
-  const adminPasswordHash = await bcrypt.hash("demo_founder", 10);
+  const adminPasswordHash = await bcrypt.hash("DemoFounder123!", 10);
 
   const users = [
     {

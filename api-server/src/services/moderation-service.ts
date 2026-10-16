@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { grievanceTicketsTable } from "@workspace/db/schema";
+import { readStaffQueueCursor, staffQueueAfter, staffQueuePage } from '../utils/staff-queue-page.js';
 
 export interface ModerationResult {
   isSafe: boolean;
@@ -18,7 +19,7 @@ export interface GrievanceTicket {
   reporterEmail: string;
   description: string;
   status: "received" | "under_review" | "resolved" | "dismissed";
-  slaDeadline: string;
+  slaDeadline: string | null;
   createdAt: string;
   officerNote?: string | null;
 }
@@ -90,9 +91,6 @@ export class ModerationService {
   }): Promise<GrievanceTicket> {
     const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
-    // 24 hours acknowledgment, 15 days redressal as mandated by Indian IT Rules 2021
-    const slaDeadline = new Date(now.getTime() + 15 * 86400 * 1000).toISOString();
-
     const [ticket] = await db.insert(grievanceTicketsTable).values({
       id: randomUUID(),
       ticketId,
@@ -102,7 +100,6 @@ export class ModerationService {
       reporterEmail: data.reporterEmail,
       description: data.description,
       status: "received",
-      slaDeadline,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     }).returning();
@@ -120,12 +117,14 @@ export class ModerationService {
     return (ticket as GrievanceTicket | undefined) ?? null;
   }
 
-  async listGrievances(status?: GrievanceTicket["status"]): Promise<GrievanceTicket[]> {
+  async listGrievances(status?: GrievanceTicket["status"], cursorValue?: string, limit = 50) {
+    const cursor = readStaffQueueCursor(cursorValue, 'grievances', status);
     const rows = await db.select().from(grievanceTicketsTable)
-      .where(status ? eq(grievanceTicketsTable.status, status) : undefined)
-      .orderBy(desc(grievanceTicketsTable.createdAt))
-      .limit(200);
-    return rows as GrievanceTicket[];
+      .where(and(status ? eq(grievanceTicketsTable.status, status) : undefined,
+        staffQueueAfter(grievanceTicketsTable.createdAt, grievanceTicketsTable.id, cursor)))
+      .orderBy(desc(grievanceTicketsTable.createdAt), desc(grievanceTicketsTable.id))
+      .limit(limit + 1);
+    return staffQueuePage(rows, limit, 'grievances', status);
   }
 
   async updateGrievanceStatus(ticketId: string, status: GrievanceTicket["status"], officerNote?: string): Promise<GrievanceTicket | null> {

@@ -3608,6 +3608,23 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -4225,6 +4242,32 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /reports/{reportId}/history:
+    get:
+      operationId: getReportsByReportIdHistory
+      summary: Get /reports/{reportId}/history
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
   /reports/{reportId}/status:
     patch:
       operationId: patchReportsByReportIdStatus
@@ -4238,13 +4281,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReportStatusUpdateRequest"}}}}
       responses:
         "200":
           description: Successful response
@@ -4341,6 +4378,30 @@ paths:
       tags: [reports]
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Return only records currently in this status.
+          schema:
+            type: string
+            enum: [received, under_review, resolved, dismissed]
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, status-scoped keyset cursor returned in meta.nextCursor.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -4361,6 +4422,30 @@ paths:
       tags: [reports]
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Return only records currently in this status.
+          schema:
+            type: string
+            enum: [pending, reviewed, resolved, dismissed]
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, status-scoped keyset cursor returned in meta.nextCursor.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -6254,6 +6339,23 @@ paths:
       tags: [videos]
       security:
         - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -6293,7 +6395,8 @@ components:
     MediaFinalizeRequest: {"type":"object","additionalProperties":false}
     MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}
     MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}},"allOf":[{"if":{"properties":{"status":{"const":"approved"}}},"then":{"required":["purpose","url","mimeType","size"]},"else":{"not":{"anyOf":[{"required":["url"]},{"required":["thumbnailUrl"]}]}}}]}
-    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"},"slaDeadline":{"type":"string","format":"date-time","description":"Operational review target, not a universal statutory deadline."}}}
+    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"}}}
+    ReportStatusUpdateRequest: {"oneOf":[{"type":"object","additionalProperties":false,"required":["status"],"properties":{"status":{"type":"string","enum":["pending","reviewed"]}}},{"type":"object","additionalProperties":false,"required":["status","decisionReason"],"properties":{"status":{"type":"string","enum":["resolved","dismissed"]},"decisionReason":{"type":"string","minLength":10,"maxLength":2000,"description":"Staff-only rationale required for a resolved or dismissed decision."}}}]}
     RegisterRequest: {"type":"object","additionalProperties":false,"required":["enrollmentId","registrationNonce","username","email","password","fullName","acceptedTerms"],"properties":{"enrollmentId":{"type":"string","format":"uuid"},"registrationNonce":{"type":"string","minLength":32,"maxLength":128,"description":"Short-lived opaque one-time registration credential. Never place it in a URL or log."},"username":{"type":"string","pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$"},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":8},"fullName":{"type":"string","minLength":2},"acceptedTerms":{"const":true}}}
     EnrollmentPrescreenRequest: {"type":"object","additionalProperties":false,"required":["requestedExperience","territory"],"properties":{"requestedExperience":{"type":"string","enum":["under_13","teen_13_17","adult_18_plus"]},"territory":{"type":"string","pattern":"^[A-Z]{2}$"}}}
     EnrollmentCredentialRequest: {"type":"object","additionalProperties":false,"required":["registrationNonce"],"properties":{"registrationNonce":{"type":"string","minLength":32,"maxLength":128}}}

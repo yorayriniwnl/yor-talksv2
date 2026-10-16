@@ -34,7 +34,7 @@ after(async () => {
 });
 
 function enrollmentTestPolicies(): ApprovedTerritoryPolicy[] {
-  return fixturePolicies().map(policy => ({ ...policy,allowedExperiences: ['under_13','teen_13_17'] as ApprovedTerritoryPolicy['allowedExperiences'],
+  return fixturePolicies().map(policy => ({ ...policy,allowedExperiences: ['under_13','teen_13_17','adult_18_plus'] as ApprovedTerritoryPolicy['allowedExperiences'],
     requiredGuardianPurposes: ['account_collection'] as ApprovedTerritoryPolicy['requiredGuardianPurposes'],
     guardianNoticeVersions: { account_collection: 'collection-notice-1' } }));
 }
@@ -183,6 +183,27 @@ test('under-13 enrollment gates profile creation, rechecks guardian withdrawal, 
     assert.equal((await Promise.all([countFor(registrationA.email),countFor(registrationB.email)])).reduce((a,b)=>a+b,0),1);
     const rejection = results.find((result): result is PromiseRejectedResult => result.status==='rejected');
     assert.ok(rejection?.reason instanceof EnrollmentUnavailableError);
+  });
+
+test('adult enrollment completes after age assessment without demanding guardian authorization',
+  { skip: !hasDisposableDatabase },async () => {
+    const repository=new EligibilityRepository(),adapter=new FixtureAssuranceAdapter();
+    const policies=enrollmentTestPolicies();
+    const assurance=new AssuranceService(repository,adapter,{policies:()=>policies,operatorPolicyIds:['fixture-operator']});
+    const enrollments=new EligibilityEnrollmentService(assurance,repository,{policies:()=>policies,operatorPolicyIds:['fixture-operator']});
+    const prescreen=await enrollments.prescreen({requestedExperience:'adult_18_plus',territory:'ZZ'});
+    assert.ok(prescreen.enrollment);
+    cleanupEnrollmentIds.push(prescreen.enrollment.id);
+    assert.equal(prescreen.nextStep,'age_assessment');
+    const challenge=await enrollments.startChallenge(prescreen.enrollment.id,prescreen.enrollment.registrationNonce,'age_assessment');
+    assert.ok(challenge.challengeId);
+    const event=adapter.event();
+    if(event.purpose!=='age_assessment')throw new Error('Expected an age assessment challenge');
+    event.assessment.experience='adult_18_plus';
+    event.assessment.thresholds=[{age:13,atLeast:true},{age:18,atLeast:true}];
+    assert.equal(await assurance.consumeCallback(adapter.callback(event),{}),true);
+    assert.deepEqual(await enrollments.status(prescreen.enrollment.id,prescreen.enrollment.registrationNonce),
+      {status:'authorized',nextStep:'complete_registration',enrollment:{id:prescreen.enrollment.id,expiresAt:prescreen.enrollment.expiresAt}});
   });
 
 test('Google sign-in does not create an account when no authorized Yor account exists', async () => {

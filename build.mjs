@@ -14,8 +14,6 @@ function run(cmd, cwd) {
   });
 }
 
-import fs from "node:fs";
-
 try {
   // 1. Build DB types and declarations
   run("npx tsc -b", "lib/shared");
@@ -25,19 +23,10 @@ try {
   run("node ./build.mjs", "api-server");
 
   // 3. Build Vite Production Client
-  run("npx vite build --config vite.config.ts", "social");
+  run("node ./scripts/build.mjs", "social");
 
   // 4. Mirror static artifacts to both social/dist/public and social/dist for seamless Vercel preset detection
-  const distPublic = path.resolve(rootDir, "social/dist/public");
-  const distRoot = path.resolve(rootDir, "social/dist");
-  if (fs.existsSync(distPublic) && !fs.existsSync(path.resolve(distRoot, "index.html"))) {
-    try {
-      fs.cpSync(distPublic, distRoot, { recursive: true });
-      console.log("📁 [Monorepo Build] Synchronized static assets to social/dist");
-    } catch (e) {
-      // Ignore if symlink/permission prevents redundant copy
-    }
-  }
+  run("node ./scripts/sync-dist.mjs", "social");
 
   console.log("\n✅ [Monorepo Build] All workspaces compiled successfully!\n");
 } catch (err) {

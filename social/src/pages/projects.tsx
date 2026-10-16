@@ -1,212 +1,312 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { Network, Plus, FolderGit2, Search, Briefcase, ChevronRight, UserPlus, FileText, CheckCircle2 } from 'lucide-react';
-import { api } from '@/lib/api-client';
-import { useAppStore } from '@/lib/store';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Briefcase, ChevronRight, FolderGit2, Network, Plus, Search, UserPlus } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { api, type BackendProject, type BackendProjectInvitation, type BackendUser } from '@/lib/api-client';
+import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
 
 export default function Projects() {
   const currentUser = useAppStore((state) => state.currentUser);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<BackendProject[]>([]);
+  const [invitations, setInvitations] = useState<BackendProjectInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
+  const [invitationsFailed, setInvitationsFailed] = useState(false);
+  const [query, setQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-
-  // Form states
+  const [selectedProject, setSelectedProject] = useState<BackendProject | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [looking, setLooking] = useState(false);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [saving, setSaving] = useState(false);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [inviteResults, setInviteResults] = useState<BackendUser[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [searchRevision, setSearchRevision] = useState(0);
+  const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
+  const pendingRequests = useRef(new Map<string, symbol>());
+  const createPending = useRef<symbol | null>(null);
+  const projectRead = useRef(0);
+  const invitationRead = useRef(0);
+  const mounted = useRef(true);
+  const sessionOwner = useRef({ id: currentUser?.id });
+  if (sessionOwner.current.id !== currentUser?.id) sessionOwner.current = { id: currentUser?.id };
+  const owner = sessionOwner.current;
+  const selectedProjectId = useRef(selectedProject?.id);
+  selectedProjectId.current = selectedProject?.id;
 
   useEffect(() => {
-    loadProjects();
+    mounted.current = true;
+    return () => { mounted.current = false; projectRead.current++; invitationRead.current++; };
   }, []);
 
-  const loadProjects = async () => {
+  const filteredProjects = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized) return projects;
+    return projects.filter((project) => `${project.title} ${project.description ?? ''}`.toLocaleLowerCase().includes(normalized));
+  }, [projects, query]);
+
+  const loadProjects = useCallback(async () => {
+    const request = ++projectRead.current;
     setLoading(true);
+    setLoadFailed(false);
+    const isCurrent = () => mounted.current && sessionOwner.current === owner && projectRead.current === request;
     try {
       const result = await api.getProjects();
-      setProjects(result);
-    } catch (e) {
-      toast.error("Failed to load projects");
+      if (isCurrent()) setProjects(result);
+    } catch {
+      if (isCurrent()) setLoadFailed(true);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
+  }, [owner]);
+
+  const loadInvitations = useCallback(async () => {
+    const request = ++invitationRead.current;
+    setInvitationsLoading(true);
+    setInvitationsFailed(false);
+    const isCurrent = () => mounted.current && sessionOwner.current === owner && invitationRead.current === request;
+    try {
+      const result = await api.getProjectInvitations();
+      if (isCurrent()) setInvitations(result);
+    } catch {
+      if (isCurrent()) setInvitationsFailed(true);
+    } finally {
+      if (isCurrent()) setInvitationsLoading(false);
+    }
+  }, [owner]);
+
+  useEffect(() => {
+    setProjects([]);
+    setInvitations([]);
+    setSelectedProject(null);
+    setShowCreate(false);
+    setSaving(false);
+    createPending.current = null;
+    pendingRequests.current.clear();
+    setPendingActions(new Set());
+    void loadProjects();
+    void loadInvitations();
+  }, [loadProjects, loadInvitations]);
+
+  useEffect(() => {
+    let active = true;
+    const normalized = inviteQuery.trim();
+    setInviteResults([]);
+    setSearchFailed(false);
+    if (!selectedProject || selectedProject.ownerId !== currentUser?.id || normalized.length < 2) {
+      setInviteResults([]);
+      setSearchingUsers(false);
+      return () => { active = false; };
+    }
+    setSearchingUsers(true);
+    const timer = window.setTimeout(() => {
+      void api.searchUsers(normalized).then((users) => {
+        if (active) setInviteResults(users.filter((user) => user.id !== currentUser?.id));
+      }).catch(() => {
+        if (active) setSearchFailed(true);
+      }).finally(() => {
+        if (active) setSearchingUsers(false);
+      });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [inviteQuery, selectedProject, currentUser?.id, searchRevision]);
+
+  const startAction = (key: string) => {
+    if (pendingRequests.current.has(key)) return null;
+    const request = Symbol(key);
+    pendingRequests.current.set(key, request);
+    setPendingActions(new Set(pendingRequests.current.keys()));
+    return request;
+  };
+  const finishAction = (key: string, request: symbol) => {
+    if (pendingRequests.current.get(key) !== request) return;
+    pendingRequests.current.delete(key);
+    if (mounted.current) setPendingActions(new Set(pendingRequests.current.keys()));
   };
 
-  const handleCreate = async () => {
-    if (!title) { toast.error("Title is required"); return; }
+  const createProject = async () => {
+    if (createPending.current) return;
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) {
+      toast.error('Add a project title');
+      return;
+    }
+    const request = Symbol('create-project');
+    createPending.current = request;
+    setSaving(true);
     try {
-      await api.createProject({ title, description, visibility: 'public', lookingForCollaborators: looking });
-      toast.success("Project created successfully!");
+      const created = await api.createProject({ title: normalizedTitle, description: description.trim(), visibility });
+      if (!mounted.current || sessionOwner.current !== owner) return;
+      projectRead.current++;
+      setLoading(false);
+      setProjects((existing) => [created, ...existing.filter((project) => project.id !== created.id)]);
       setShowCreate(false);
       setTitle('');
       setDescription('');
-      setLooking(false);
-      loadProjects();
-    } catch (e) {
-      toast.error("Failed to create project");
+      setVisibility('public');
+      toast.success('Project created');
+    } catch {
+      if (mounted.current && sessionOwner.current === owner) toast.error('Project could not be created');
+    } finally {
+      if (createPending.current === request) {
+        createPending.current = null;
+        if (mounted.current && sessionOwner.current === owner) setSaving(false);
+      }
+    }
+  };
+
+  const inviteCollaborator = async (user: BackendUser) => {
+    if (!selectedProject) return;
+    const projectId = selectedProject.id;
+    const actionKey = `invite:${projectId}:${user.id}`;
+    const request = startAction(actionKey);
+    if (!request) return;
+    try {
+      await api.inviteProjectCollaborator(projectId, user.id);
+      if (!mounted.current || sessionOwner.current !== owner) return;
+      if (selectedProjectId.current === projectId) setInviteResults((existing) => existing.filter((candidate) => candidate.id !== user.id));
+      toast.success(`Invitation sent to ${user.fullName || user.username}`);
+    } catch {
+      if (mounted.current && sessionOwner.current === owner) toast.error('Could not send that project invitation');
+    } finally {
+      finishAction(actionKey, request);
+    }
+  };
+
+  const respondToInvitation = async (invitation: BackendProjectInvitation, decision: 'accepted' | 'rejected') => {
+    const actionKey = `respond:${invitation.project.id}`;
+    const request = startAction(actionKey);
+    if (!request) return;
+    try {
+      await api.respondToProjectInvitation(invitation.project.id, decision);
+      if (!mounted.current || sessionOwner.current !== owner) return;
+      invitationRead.current++;
+      setInvitationsLoading(false);
+      setInvitations((existing) => existing.filter((item) => item.project.id !== invitation.project.id));
+      if (decision === 'accepted') {
+        projectRead.current++;
+        setLoading(false);
+        setProjects((existing) => [invitation.project, ...existing.filter((item) => item.id !== invitation.project.id)]);
+      }
+      toast.success(decision === 'accepted' ? 'Project invitation accepted' : 'Project invitation declined');
+    } catch {
+      if (mounted.current && sessionOwner.current === owner) toast.error('Could not update that project invitation');
+    } finally {
+      finishAction(actionKey, request);
     }
   };
 
   return (
-    <div className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-      
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <main className="mx-auto w-full max-w-6xl flex-1 space-y-7 p-4 md:p-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Network className="w-5 h-5 text-primary" />
-            <h1 className="text-3xl font-black font-display tracking-tight text-foreground uppercase">Yor Projects</h1>
-          </div>
-          <p className="text-sm text-muted-foreground font-mono">Build side projects, collaborate, and grow your Creator DNA</p>
+          <div className="mb-1 flex items-center gap-2 text-primary"><Network aria-hidden="true" className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-wider">Workspace</span></div>
+          <h1 className="text-3xl font-black tracking-tight">Projects</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Plan work together and manage project invitations.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="rounded-full shadow-lg shadow-primary/20 glow-neon-primary bg-primary text-black font-bold h-11 px-6">
-          <Plus className="w-5 h-5 mr-2" /> Start Project
-        </Button>
-      </div>
+        <Button type="button" onClick={() => setShowCreate(true)}><Plus className="mr-2 h-4 w-4" />New project</Button>
+      </header>
 
-      {/* DASHBOARD GRIDS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Col: Projects List */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">My Active Projects</h2>
-            <div className="relative w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search projects..." className="pl-9 h-9 text-xs rounded-full bg-zinc-900 border-zinc-800" />
-            </div>
+      {invitationsLoading && <p role="status" className="text-sm text-muted-foreground">Loading project invitations…</p>}
+      {invitationsFailed && <section role="alert" className="space-y-3 rounded-2xl border border-border/40 p-4"><p className="text-sm">Project invitations could not be loaded.</p><Button type="button" size="sm" variant="outline" onClick={() => void loadInvitations()}>Retry project invitations</Button></section>}
+      {invitations.length > 0 && <section aria-labelledby="project-invitations-heading" className="space-y-3">
+        <h2 id="project-invitations-heading" className="text-lg font-bold">Invitations for you</h2>
+        {invitations.map((invitation) => <article key={invitation.project.id} className="surface-1 flex flex-col gap-3 rounded-2xl border border-border/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="truncate font-semibold">{invitation.project.title}</h3>
+            <p className="text-xs text-muted-foreground">Invited as {invitation.role} · from {invitation.project.ownerId === currentUser?.id ? 'you' : 'project owner'}</p>
           </div>
-          
-          {loading ? (
-            <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading projects...</div>
-          ) : projects.length === 0 ? (
-            <div className="surface-1 border border-border/40 p-8 rounded-3xl text-center space-y-4">
-              <FolderGit2 className="w-12 h-12 text-muted-foreground mx-auto" />
-              <div className="space-y-1">
-                <h3 className="font-bold text-lg text-foreground">No Projects Yet</h3>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">Create a workspace to plan your next series, invite collaborators, and build together.</p>
-              </div>
-              <Button onClick={() => setShowCreate(true)} variant="outline" className="rounded-full">Create your first project</Button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {projects.map(p => (
-                <div key={p.id} className="group surface-1 border border-border/40 rounded-3xl p-5 hover:border-primary/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-3 opacity-10">
-                    <Network className="w-24 h-24" />
-                  </div>
-                  <div className="space-y-2 relative z-10">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-[0_0_15px_rgba(var(--primary),0.3)]">
-                        {p.title.charAt(0)}
-                      </div>
-                      <h3 className="font-bold text-lg text-foreground">{p.title}</h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 uppercase tracking-wider">{p.status}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{p.description || "No description provided."}</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="flex -space-x-2">
-                      {/* Mock Avatars */}
-                      <Avatar className="w-7 h-7 border-2 border-background"><AvatarImage src={currentUser?.avatarUrl} /></Avatar>
-                    </div>
-                    <Button variant="ghost" size="icon" className="group-hover:bg-primary/20 group-hover:text-primary rounded-full transition-colors">
-                      <ChevronRight className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex shrink-0 gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={invitationsLoading || pendingActions.has(`respond:${invitation.project.id}`)} onClick={() => void respondToInvitation(invitation, 'rejected')}>Decline</Button>
+            <Button type="button" size="sm" disabled={invitationsLoading || pendingActions.has(`respond:${invitation.project.id}`)} onClick={() => void respondToInvitation(invitation, 'accepted')}>Accept</Button>
+          </div>
+        </article>)}
+      </section>}
+
+      <section aria-labelledby="your-projects-heading" className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="your-projects-heading" className="text-lg font-bold">Your projects</h2>
+          <label className="relative block w-full sm:w-72">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label="Search your projects" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by title or description" className="pl-9" />
+          </label>
         </div>
 
-        {/* Right Col: Matches & DNA */}
-        <div className="space-y-6">
-          <div className="surface-1 border border-border/40 rounded-3xl p-6 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
-            <h2 className="text-sm font-bold font-display uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-purple-400" />
-              Creator DNA Match
-            </h2>
-            <div className="space-y-4">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Yor Talks AI analyzes your content graph to suggest the best collaborators for your projects.
-              </p>
-              
-              <div className="space-y-3">
-                {[
-                  { name: "Sarah J.", role: "Video Editor", match: "98%" },
-                  { name: "DevMaster", role: "Co-host", match: "92%" },
-                ].map(match => (
-                  <div key={match.name} className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-8 h-8"><AvatarImage src={`https://ui-avatars.com/api/?name=${match.name}`} /></Avatar>
-                      <div>
-                        <div className="text-xs font-bold">{match.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{match.role}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-purple-400 font-bold">{match.match}</span>
-                      <Button size="icon" className="w-6 h-6 rounded-full bg-zinc-800 hover:bg-primary hover:text-black"><UserPlus className="w-3 h-3" /></Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {loading && <p role="status" className="rounded-2xl border border-border/40 p-8 text-center text-sm text-muted-foreground">Loading projects…</p>}
+        {loadFailed && <section role="alert" className="rounded-2xl border border-border/40 p-8 text-center">
+          <p className="text-sm text-muted-foreground">Projects could not be loaded.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadProjects()}>Try again</Button>
+        </section>}
+        {!loading && !loadFailed && filteredProjects.length === 0 && <section className="surface-1 space-y-4 rounded-3xl border border-border/40 p-8 text-center">
+          <FolderGit2 aria-hidden="true" className="mx-auto h-10 w-10 text-muted-foreground" />
+          <div><h3 className="font-bold">{query ? 'No matching projects' : 'No projects yet'}</h3><p className="mt-1 text-sm text-muted-foreground">{query ? 'Try another title or description.' : 'Create a project to start planning together.'}</p></div>
+          {!query && <Button type="button" variant="outline" onClick={() => setShowCreate(true)}>Create your first project</Button>}
+        </section>}
+        {!loading && filteredProjects.length > 0 && <div className="grid gap-3">
+          {filteredProjects.map((project) => <button key={project.id} type="button" onClick={() => { setSelectedProject(project); setInviteQuery(''); }}
+            className="surface-1 flex w-full items-center justify-between gap-4 rounded-2xl border border-border/40 p-5 text-left transition-colors hover:border-primary/50">
+            <span className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Briefcase aria-hidden="true" className="h-5 w-5" /></span>
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="truncate font-semibold">{project.title}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">{project.status}</span>
+                  {project.visibility === 'private' && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Private</span>}
+                </span>
+                <span className="mt-1 block line-clamp-2 text-sm text-muted-foreground">{project.description || 'No description'}</span>
+              </span>
+            </span>
+            <ChevronRight aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />
+          </button>)}
+        </div>}
+      </section>
 
-      {/* CREATE DIALOG */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl border-border/40 surface-1">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-display text-xl">
-              <FolderGit2 className="w-5 h-5 text-primary" /> New Project Workspace
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Project Title</label>
-              <Input 
-                value={title} 
-                onChange={(e) => setTitle(e.target.value)} 
-                placeholder="e.g., Summer Series 2026" 
-                className="bg-zinc-950/50 border-border/40 focus-visible:ring-primary rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description</label>
-              <Input 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
-                placeholder="What are we building?" 
-                className="bg-zinc-950/50 border-border/40 focus-visible:ring-primary rounded-xl"
-              />
-            </div>
-            
-            <button type="button" aria-pressed={looking} className="w-full text-left p-3 border border-border/40 rounded-xl bg-zinc-950/50 flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLooking(!looking)}>
-              <div>
-                <div className="text-sm font-bold text-foreground">Looking for Collaborators</div>
-                <div className="text-[10px] text-muted-foreground">Allow others to apply to join via Creator DNA.</div>
-              </div>
-              <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${looking ? 'bg-primary border-primary text-black' : 'border-muted-foreground'}`}>
-                {looking && <CheckCircle2 className="w-4 h-4" />}
-              </div>
-            </button>
+      <section className="surface-1 flex items-start gap-3 rounded-2xl border border-border/40 p-5">
+        <Briefcase aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+        <div><h2 className="font-semibold">Collaborate with invitations</h2><p className="mt-1 text-sm text-muted-foreground">Project owners can invite people from Yor Talks. You can accept or decline invitations above.</p></div>
+      </section>
+
+      <Dialog open={showCreate} onOpenChange={(open) => { if (!createPending.current) setShowCreate(open); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2"><label htmlFor="project-title" className="text-sm font-medium">Title</label><Input id="project-title" maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Project title" /></div>
+            <div className="space-y-2"><label htmlFor="project-description" className="text-sm font-medium">Description</label><textarea id="project-description" maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What are you planning?" className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
+            <div className="space-y-2"><label htmlFor="project-visibility" className="text-sm font-medium">Visibility</label><select id="project-visibility" value={visibility} onChange={(event) => setVisibility(event.target.value as 'public' | 'private')} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="public">Public</option><option value="private">Private</option></select></div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowCreate(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleCreate} className="rounded-xl bg-primary hover:bg-primary/90 text-black font-bold">Initialize</Button>
-          </DialogFooter>
+          <DialogFooter><Button type="button" variant="outline" disabled={saving} onClick={() => setShowCreate(false)}>Cancel</Button><Button type="button" disabled={saving} onClick={() => void createProject()}>{saving ? 'Creating…' : 'Create project'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <Dialog open={Boolean(selectedProject)} onOpenChange={(open) => { if (!open) setSelectedProject(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{selectedProject?.title}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{selectedProject?.description || 'No description provided.'}</p>
+            {selectedProject && <p className="text-xs text-muted-foreground">{selectedProject.status} · {selectedProject.visibility} · {selectedProject.ownerId === currentUser?.id ? 'Project owner' : 'Project member'}</p>}
+            {selectedProject?.ownerId === currentUser?.id && <div className="space-y-3 border-t border-border/40 pt-4">
+              <div><h3 className="font-semibold">Invite a collaborator</h3><p className="text-xs text-muted-foreground">Search for an existing Yor Talks account.</p></div>
+              <label className="relative block"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search people to invite" value={inviteQuery} onChange={(event) => setInviteQuery(event.target.value)} placeholder="Enter a name or username" className="pl-9" /></label>
+              {searchingUsers && <p role="status" className="text-xs text-muted-foreground">Searching…</p>}
+              {searchFailed && <div role="alert" className="space-y-2"><p className="text-xs text-muted-foreground">People could not be searched.</p><Button type="button" size="sm" variant="outline" onClick={() => setSearchRevision((value) => value + 1)}>Retry people search</Button></div>}
+              {!searchingUsers && !searchFailed && inviteQuery.trim().length >= 2 && inviteResults.length === 0 && <p className="text-xs text-muted-foreground">No matching accounts found.</p>}
+              <ul className="max-h-52 space-y-2 overflow-y-auto">
+                {inviteResults.map((user) => <li key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/40 p-2">
+                  <span className="flex min-w-0 items-center gap-2"><Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl ?? undefined} alt="" /><AvatarFallback>{user.fullName?.slice(0, 1) || 'Y'}</AvatarFallback></Avatar><span className="min-w-0"><span className="block truncate text-sm font-medium">{user.fullName || user.username}</span><span className="block truncate text-xs text-muted-foreground">@{user.username}</span></span></span>
+                  <Button type="button" size="sm" variant="outline" disabled={pendingActions.has(`invite:${selectedProject?.id}:${user.id}`)} onClick={() => void inviteCollaborator(user)}><UserPlus aria-hidden="true" className="mr-1 h-4 w-4" />Invite</Button>
+                </li>)}
+              </ul>
+            </div>}
+          </div>
+          <DialogFooter><Button type="button" variant="outline" onClick={() => setSelectedProject(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </main>
   );
 }

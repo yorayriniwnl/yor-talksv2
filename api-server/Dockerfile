@@ -6,7 +6,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # still try to download pnpm when the non-root runtime user starts the
 # migration service, which makes an otherwise self-contained image depend on
 # registry access at runtime.
-RUN npm install --global pnpm@9.15.4 --no-audit --no-fund \
+RUN npm install --global pnpm@11.28.5 --no-audit --no-fund \
     && pnpm fetch
 COPY . .
 RUN pnpm install --frozen-lockfile --offline

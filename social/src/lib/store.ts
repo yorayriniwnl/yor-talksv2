@@ -423,17 +423,23 @@ async function loadEligibilityForSession(
     setTelemetryEligibility(false, null);
     return null;
   }
-  set({ eligibility: null, eligibilityLoaded: false });
+  const isCurrent = latestSessionLoad(get, 'eligibility');
+  // Keep the last server decision while refreshing. Clearing it flips Router
+  // branches and remounts /eligibility, which would otherwise start an endless
+  // refresh/remount loop for already activated accounts.
+  if (!get().eligibility) set({ eligibilityLoaded: false });
   setTelemetryEligibility(false, ownerId);
   try {
     const decision = await api.getMyEligibility();
-    if (get().currentUser?.id !== ownerId) return null;
+    if (!isCurrent()) return null;
     set({ eligibility: decision, eligibilityLoaded: true });
     setTelemetryEligibility(hasSocialEligibility(decision) && decision.experience === 'adult_18_plus' && decision.capabilities.analytics, ownerId);
     return decision;
   } catch {
-    if (get().currentUser?.id === ownerId) set({ eligibility: null, eligibilityLoaded: true });
-    setTelemetryEligibility(false, ownerId);
+    if (isCurrent()) {
+      set({ eligibility: null, eligibilityLoaded: true });
+      setTelemetryEligibility(false, ownerId);
+    }
     return null;
   }
 }
@@ -537,7 +543,7 @@ export function mapBackendPost(p: BackendPost, currentUserId?: string): Post {
   return mapPost(p, currentUserId);
 }
 
-function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
+export function mapCommunity(c: BackendCommunity, currentUserId?: string): Community {
   const memberIds = Array.isArray(c.memberIds) ? c.memberIds : [];
   return {
     id: c.id,
@@ -757,6 +763,14 @@ interface AppState {
   authError: string | null;
   users: Record<string, User>;
   posts: Post[];
+  savedPostsLoaded: boolean;
+  savedPostsLoading: boolean;
+  savedPostsLoadingMore: boolean;
+  savedPostsError: string | null;
+  savedPostsErrorCursor: string | null;
+  savedPostsCursor: string | null;
+  savedPostsHasMore: boolean;
+  savedPostIds: string[];
   stories: Story[];
   notes: Note[];
   communities: Community[];
@@ -812,7 +826,7 @@ interface AppState {
   loadMoreFeed: () => Promise<void>;
   loadFavoriteCreators: () => Promise<void>;
   loadCloseFriends: () => Promise<void>;
-  loadSavedPosts: () => Promise<void>;
+  loadSavedPosts: (cursor?: string) => Promise<void>;
   loadLikedPosts: () => Promise<void>;
   loadUserFeed: (userId: string) => Promise<void>;
   loadPost: (postId: string) => Promise<void>;
@@ -914,14 +928,17 @@ function clearPrivateSessionState(
   followRequestSequence += 1;
   videoRequestSequence += 1;
   activitySessionSequence += 1;
+  conversationMessageRequests.clear();
   notificationReadRequests.clear();
   safetyRelationshipRequests.clear();
   profileRequests.clear();
+  sessionLoadRequests.clear();
   setTelemetryEligibility(false, null);
   set({
     currentUser: null,
     eligibility: null,
     eligibilityLoaded: false,
+    worldPreferences: { ...DEFAULT_WORLD_PREFERENCES },
     tokens: null,
     authError: null,
     feedCursor: null,
@@ -935,6 +952,14 @@ function clearPrivateSessionState(
     closeFriends: [],
     users: {},
     posts: [],
+    savedPostsLoaded: false,
+    savedPostsLoading: false,
+    savedPostsLoadingMore: false,
+    savedPostsError: null,
+    savedPostsErrorCursor: null,
+    savedPostsCursor: null,
+    savedPostsHasMore: false,
+    savedPostIds: [],
     stories: [],
     notes: [],
     communities: [],
@@ -997,11 +1022,27 @@ let notificationRequestSequence = 0;
 let followRequestSequence = 0;
 let videoRequestSequence = 0;
 let activitySessionSequence = 0;
+const conversationMessageRequests = new Map<string, Promise<void>>();
 const notificationReadRequests = new Map<string, Promise<void>>();
 const safetyRelationshipRequests = new Map<string, Promise<boolean>>();
 const storyReactionToastExpirations = new Map<string, number>();
 let sessionInitialization: Promise<void> | null = null;
 const profileRequests = new Map<string, Promise<void>>();
+const sessionLoadRequests = new Map<string, number>();
+
+function currentSession(get: () => AppState): () => boolean {
+  const session = activitySessionSequence;
+  const userId = get().currentUser?.id;
+  return () => session === activitySessionSequence && get().currentUser?.id === userId;
+}
+
+function latestSessionLoad(get: () => AppState, key: string): () => boolean {
+  const isCurrentSession = currentSession(get);
+  const request = (sessionLoadRequests.get(key) ?? 0) + 1;
+  sessionLoadRequests.set(key, request);
+  return () => isCurrentSession()
+    && sessionLoadRequests.get(key) === request;
+}
 
 function shouldShowStoryReactionToast(key: string): boolean {
   const now = Date.now();
@@ -1218,6 +1259,14 @@ export const useAppStore = create<AppState>()(
       closeFriends: [],
       users: {},
       posts: [],
+      savedPostsLoaded: false,
+      savedPostsLoading: false,
+      savedPostsLoadingMore: false,
+      savedPostsError: null,
+      savedPostsErrorCursor: null,
+      savedPostsCursor: null,
+      savedPostsHasMore: false,
+      savedPostIds: [],
       stories: [],
       notes: [],
       communities: [],
@@ -1259,105 +1308,125 @@ export const useAppStore = create<AppState>()(
       showcases: {},
 
       login: async (identifier, password, totpCode, challengeId) => {
+        let isCurrent = latestSessionLoad(get, 'authentication');
         set({ authError: null });
         try {
           const result = await api.login({ identifier, password, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if (!isCurrent()) throw new ApiError('Your sign-in attempt changed. Please try again.', 409);
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
+          isCurrent = currentSession(get);
           const decision = await loadEligibilityForSession(set, get);
+          if (!isCurrent()) return null;
           if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
           return null;
         } catch (err) {
-          set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
+          if (isCurrent()) set({ authError: err instanceof ApiError ? err.message : 'Login failed' });
           throw err;
         }
       },
 
       loginWithGoogle: async (credential, totpCode, challengeId) => {
+        let isCurrent = latestSessionLoad(get, 'authentication');
         set({ authError: null });
         try {
           const result = await api.loginWithGoogle({ credential, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if (!isCurrent()) throw new ApiError('Your sign-in attempt changed. Please try again.', 409);
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
+          isCurrent = currentSession(get);
           const decision = await loadEligibilityForSession(set, get);
+          if (!isCurrent()) return null;
           if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
           return null;
         } catch (err) {
-          set({ authError: err instanceof ApiError ? err.message : 'Google sign-in failed' });
+          if (isCurrent()) set({ authError: err instanceof ApiError ? err.message : 'Google sign-in failed' });
           throw err;
         }
       },
 
       loginWithEmailOtp: async (email, code, totpCode, challengeId) => {
+        let isCurrent = latestSessionLoad(get, 'authentication');
         set({ authError: null });
         try {
           const result = await api.loginWithEmailOtp({ email, code, ...(totpCode ? { totpCode } : {}), ...(challengeId ? { challengeId } : {}) });
+          if (!isCurrent()) throw new ApiError('Your sign-in attempt changed. Please try again.', 409);
           if ('requiresTwoFactor' in result) return result;
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
+          isCurrent = currentSession(get);
           const decision = await loadEligibilityForSession(set, get);
+          if (!isCurrent()) return null;
           if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
           return null;
         } catch (err) {
-          set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
+          if (isCurrent()) set({ authError: err instanceof ApiError ? err.message : 'Email sign-in failed' });
           throw err;
         }
       },
 
       completeTwoFactorLogin: async (challengeId) => {
+        let isCurrent = latestSessionLoad(get, 'authentication');
         set({ authError: null });
         try {
           const result = await api.completeTwoFactorLogin(challengeId);
+          if (!isCurrent()) throw new ApiError('Your sign-in attempt changed. Please try again.', 409);
           setStoredTokens(result.tokens);
           const mapped = mapUser(result.user);
           clearPrivateSessionState(set);
           set({ currentUser: mapped, tokens: result.tokens, privacy: mapPrivacy(result.user), favoriteCreatorIds: mapped.favoriteCreatorIds ?? [], users: { [mapped.id]: mapped } });
+          isCurrent = currentSession(get);
           const decision = await loadEligibilityForSession(set, get);
+          if (!isCurrent()) return;
           if (!needsTermsAcceptance(result.user) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }
         } catch (err) {
-          set({ authError: err instanceof ApiError ? err.message : 'Could not complete sign-in' });
+          if (isCurrent()) set({ authError: err instanceof ApiError ? err.message : 'Could not complete sign-in' });
           throw err;
         }
       },
 
       register: async (username, email, password, fullName, acceptedTerms, enrollmentId, registrationNonce) => {
+        const isCurrent = latestSessionLoad(get, 'authentication');
         set({ authError: null });
         try {
           await api.register({ username, email, password, fullName, acceptedTerms, enrollmentId, registrationNonce });
+          if (!isCurrent()) throw new ApiError('Your sign-in attempt changed. Please try again.', 409);
           // Registration is intentionally not an authenticated session. The
           // account must prove ownership of its email address first.
           setStoredTokens(null);
           clearPrivateSessionState(set);
         } catch (err) {
-          set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
+          if (isCurrent()) set({ authError: err instanceof ApiError ? err.message : 'Registration failed' });
           throw err;
         }
       },
 
       acceptCurrentTerms: async () => {
+        const isCurrent = latestSessionLoad(get, 'ownProfile');
         set({ authError: null });
         try {
           const result = await api.acceptCurrentTerms();
+          if (!isCurrent()) return;
           const mapped = mapOwnProfile(result.user, get().currentUser);
           set((state) => ({
             currentUser: mapped,
@@ -1370,20 +1439,21 @@ export const useAppStore = create<AppState>()(
             hydrateSessionData(get);
           }
         } catch (err) {
+          if (!isCurrent()) return;
           set({ authError: err instanceof ApiError ? err.message : 'Could not save terms acceptance' });
           throw err;
         }
       },
 
       logout: async () => {
+        stopRealtime();
+        setStoredTokens(null);
+        clearPrivateSessionState(set);
         try {
           await api.logout();
         } catch {
           // ignore
         }
-        stopRealtime();
-        setStoredTokens(null);
-        clearPrivateSessionState(set);
       },
 
       expireSession: () => {
@@ -1406,11 +1476,14 @@ export const useAppStore = create<AppState>()(
           set({ isInitializing: true });
           // A persisted profile is never proof of a live authenticated session.
           clearPrivateSessionState(set);
+          const isCurrent = latestSessionLoad(get, 'initialize');
           let tokens = getStoredTokens();
           if (!tokens) tokens = await api.refreshSession();
+          if (!isCurrent()) return;
           if (tokens) {
             try {
               const meResponse = await api.getCurrentUser();
+              if (!isCurrent()) return;
               if (meResponse) {
                 const mapped = mapUser(meResponse);
                 set((state) => ({
@@ -1423,7 +1496,7 @@ export const useAppStore = create<AppState>()(
               }
             } catch {
               // Do not clear a newer login that completed while this read ran.
-              if (!get().currentUser) setStoredTokens(null);
+              if (isCurrent() && !get().currentUser) setStoredTokens(null);
             }
           }
 
@@ -1448,14 +1521,16 @@ export const useAppStore = create<AppState>()(
       },
 
       loadWorldPreferences: async () => {
+        const isCurrent = latestSessionLoad(get, 'worldPreferences');
         try {
           const items = await api.getCreatorWorkspace();
+          if (!isCurrent()) return;
           const item = items.find((entry) => entry.kind === 'preference' && entry.itemKey === 'world');
           if (!item) return;
           const payload = item.payload as Partial<WorldPreferences>;
           set((state) => ({ worldPreferences: { ...state.worldPreferences, ...payload } }));
         } catch {
-          // Local persisted preferences remain the source of truth when offline.
+          // Keep this session's last confirmed preferences when offline.
         }
       },
 
@@ -1511,8 +1586,10 @@ export const useAppStore = create<AppState>()(
       },
 
       loadFavoriteCreators: async () => {
+        const isCurrent = latestSessionLoad(get, 'favoriteCreators');
         try {
           const favoriteCreatorIds = await api.getFavoriteCreatorIds();
+          if (!isCurrent()) return;
           set((state) => ({
             favoriteCreatorIds,
             currentUser: state.currentUser ? { ...state.currentUser, favoriteCreatorIds } : state.currentUser,
@@ -1524,8 +1601,10 @@ export const useAppStore = create<AppState>()(
       },
 
       loadCloseFriends: async () => {
+        const isCurrent = latestSessionLoad(get, 'closeFriends');
         try {
           const friends = await api.getCloseFriends();
+          if (!isCurrent()) return;
           const mapped = friends.map(mapUser);
           set((state) => ({
             closeFriends: mapped,
@@ -1536,21 +1615,35 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      loadSavedPosts: async () => {
+      loadSavedPosts: async (cursor) => {
+        if (cursor && (get().savedPostsLoading || get().savedPostsLoadingMore || get().savedPostsCursor !== cursor)) return;
+        const isCurrent = latestSessionLoad(get, 'savedPosts');
+        set({ savedPostsLoading: !cursor, savedPostsLoadingMore: Boolean(cursor), savedPostsError: null, savedPostsErrorCursor: null });
         try {
-          const result = await api.getSavedPosts();
+          const result = await api.getSavedPosts(50, cursor);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           const savedPosts = result.data.map((post) => mapPost(post, currentUserId));
           const savedIds = new Set(savedPosts.map((post) => post.id));
-          set((state) => ({ posts: [...savedPosts, ...state.posts.filter((post) => !savedIds.has(post.id))] }));
+          set((state) => ({
+            posts: [...savedPosts, ...state.posts.filter((post) => !savedIds.has(post.id)).map((post) => cursor || result.hasMore ? post : { ...post, savedByMe: false })],
+            savedPostIds: cursor ? [...new Set([...state.savedPostIds, ...savedPosts.map((post) => post.id)])] : savedPosts.map((post) => post.id),
+            savedPostsLoaded: true,
+            savedPostsCursor: result.nextCursor ?? null,
+            savedPostsHasMore: Boolean(result.hasMore && result.nextCursor),
+          }));
         } catch {
-          // Keep the existing feed snapshot if saved posts are temporarily unavailable.
+          if (isCurrent()) set({ savedPostsError: cursor ? 'Older saved posts could not load. Check your connection and retry.' : 'Saved posts could not load. Check your connection and retry.', savedPostsErrorCursor: cursor ?? null });
+        } finally {
+          if (isCurrent()) set({ savedPostsLoading: false, savedPostsLoadingMore: false });
         }
       },
 
       loadLikedPosts: async () => {
+        const isCurrent = latestSessionLoad(get, 'likedPosts');
         try {
           const result = await api.getLikedPosts();
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           const likedPosts = result.data.map((post) => mapPost(post, currentUserId));
           const likedIds = new Set(likedPosts.map((post) => post.id));
@@ -1561,8 +1654,10 @@ export const useAppStore = create<AppState>()(
       },
 
       loadUserFeed: async (userId) => {
+        const isCurrent = latestSessionLoad(get, `userFeed:${userId}`);
         try {
           const backendPosts = await api.getUserFeed(userId, 1, 100);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           const profilePosts = backendPosts.map((post) => mapPost(post, currentUserId));
           set((state) => ({
@@ -1578,8 +1673,10 @@ export const useAppStore = create<AppState>()(
 
       loadPost: async (postId) => {
         if (get().posts.some((p) => p.id === postId)) return;
+        const isCurrent = latestSessionLoad(get, `post:${postId}`);
         try {
           const post = await api.getPost(postId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: [...state.posts, mapPost(post, currentUserId)] }));
         } catch {}
@@ -1595,6 +1692,7 @@ export const useAppStore = create<AppState>()(
       },
 
       likePost: async (postId) => {
+        const isCurrent = currentSession(get);
         const post = get().posts.find((p) => p.id === postId);
         if (!post) return;
         set((state) => ({
@@ -1602,9 +1700,11 @@ export const useAppStore = create<AppState>()(
         }));
         try {
           const updated = post.likedByMe ? await api.unlikePost(postId) : await api.likePost(postId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
         } catch (error) {
+          if (!isCurrent()) return;
           set((state) => ({
             posts: state.posts.map((p) => (p.id === postId ? { ...p, likedByMe: post.likedByMe, likes: post.likes } : p)),
           }));
@@ -1613,11 +1713,13 @@ export const useAppStore = create<AppState>()(
       },
 
       updateProfile: async (updates) => {
+        const isCurrent = latestSessionLoad(get, 'ownProfile');
         const updated = await api.updateProfile({
           ...(updates.displayName !== undefined ? { fullName: updates.displayName } : {}),
           ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
           ...(updates.avatarMediaId !== undefined ? { avatarMediaId: updates.avatarMediaId } : {}),
         });
+        if (!isCurrent()) return;
         const mapped = mapOwnProfile(updated, get().currentUser);
         set((state) => ({
           currentUser: mapped,
@@ -1626,7 +1728,9 @@ export const useAppStore = create<AppState>()(
         }));
       },
       updatePremiumProfile: async (updates) => {
+        const isCurrent = latestSessionLoad(get, 'ownProfile');
         const updated = await api.updatePremiumProfile(updates);
+        if (!isCurrent()) return;
         const mapped = mapOwnProfile(updated, get().currentUser);
         set((state) => ({
           currentUser: mapped,
@@ -1634,6 +1738,7 @@ export const useAppStore = create<AppState>()(
         }));
       },
       addPost: async (content, media, poll, contentRating = DEFAULT_CONTENT_RATING, contentCategory = DEFAULT_CONTENT_CATEGORY, audience = 'public', distributionMode = 'feed_and_profile') => {
+        const isCurrent = currentSession(get);
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) {
           toast.error('Verify your email before posting');
@@ -1641,67 +1746,85 @@ export const useAppStore = create<AppState>()(
         }
         try {
           const created = await api.createPost({ content, mediaIds: media, audience, distributionMode, contentCategory, contentRating, ...(poll ? { poll: { question: poll.question, options: poll.options.map(({ text }) => ({ text })) } } : {}) });
+          if (!isCurrent()) return;
           set((state) => ({ posts: [mapPost(created, currentUserId), ...state.posts], feedPostIds: [created.id, ...state.feedPostIds] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not publish the post');
           throw error;
         }
       },
 
       pinPost: async (postId) => {
+        const isCurrent = currentSession(get);
         const updated = await api.pinPost(postId);
+        if (!isCurrent()) return;
         const currentUserId = get().currentUser?.id;
         set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
       },
 
       unpinPost: async (postId) => {
+        const isCurrent = currentSession(get);
         const updated = await api.unpinPost(postId);
+        if (!isCurrent()) return;
         const currentUserId = get().currentUser?.id;
         set((state) => ({ posts: state.posts.map((post) => post.id === postId ? mapPost(updated, currentUserId) : post) }));
       },
 
       toggleSavePost: async (postId) => {
+        const isCurrent = currentSession(get);
         const post = get().posts.find((p) => p.id === postId);
         if (!post) return;
         try {
           const updated = await api.bookmarkPost(postId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not update saved posts');
         }
       },
 
       sharePost: async (postId) => {
+        const isCurrent = currentSession(get);
         try {
           const updated = await api.sharePost(postId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((p) => (p.id === postId ? mapPost(updated, currentUserId) : p)) }));
           if (typeof navigator !== 'undefined' && navigator.clipboard) {
             await navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
           }
+          if (!isCurrent()) return;
           toast.success('Post link copied to clipboard!');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not share this post');
         }
       },
 
       toggleRepost: async (postId) => {
+        const isCurrent = currentSession(get);
         const post = get().posts.find((item) => item.id === postId);
         if (!post) return;
         try {
           const updated = post.repostedByMe ? await api.unrepostPost(postId) : await api.repostPost(postId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((item) => item.id === postId ? mapPost(updated, currentUserId) : item) }));
           toast.success(post.repostedByMe ? 'Repost removed' : 'Post reposted to your profile');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not update repost');
         }
       },
 
       loadCommunities: async () => {
+        const isCurrent = latestSessionLoad(get, 'communities');
         try {
           const backendCommunities = await api.getCommunities();
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set({ communities: backendCommunities.map((c) => mapCommunity(c, currentUserId)) });
           return;
@@ -1711,27 +1834,33 @@ export const useAppStore = create<AppState>()(
       },
 
       createCommunity: async (name, slug, description, contentRating, coverMediaId) => {
+        const isCurrent = currentSession(get);
         const currentUserId = get().currentUser?.id;
         if (!currentUserId) return;
         try {
           const created = await api.createCommunity({ name, slug, description, contentRating, coverMediaId });
+          if (!isCurrent()) return;
           set((state) => ({ communities: [mapCommunity(created, currentUserId), ...state.communities] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not create the community');
           throw error;
         }
       },
 
       toggleCommunityMembership: async (communityId) => {
+        const isCurrent = currentSession(get);
         const community = get().communities.find((c) => c.id === communityId);
         if (!community) return;
         try {
           const updated = community.isMember
             ? await api.leaveCommunity(communityId)
             : await api.joinCommunity(communityId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ communities: state.communities.map((c) => (c.id === communityId ? mapCommunity(updated, currentUserId) : c)) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not update community membership');
         }
       },
@@ -1808,25 +1937,41 @@ export const useAppStore = create<AppState>()(
       },
 
       loadConversationMessages: async (conversationId) => {
+        const currentUserId = get().currentUser?.id ?? null;
+        const session = activitySessionSequence;
+        const requestKey = `${session}:${currentUserId ?? 'anonymous'}:${conversationId}`;
+        const pending = conversationMessageRequests.get(requestKey);
+        if (pending) return pending;
+
         const before = get().messagesByConversation[conversationId] ?? [];
         getSocket()?.emit('conversation:join', { conversationId });
-        const messages = await api.getConversationMessages(conversationId);
-        set((state) => {
-          // Reconcile events received while this snapshot was in flight. Keep
-          // server deletions authoritative for unchanged, previously cached rows.
-          const merged = reconcileMessageSnapshot(before, state.messagesByConversation[conversationId] ?? [], messages.map(mapMessage));
-          return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
+        const request = (async () => {
+          const messages = await api.getConversationMessages(conversationId);
+          if (session !== activitySessionSequence || get().currentUser?.id !== currentUserId) return;
+          set((state) => {
+            if (session !== activitySessionSequence || state.currentUser?.id !== currentUserId) return {};
+            // Reconcile events received while this snapshot was in flight. Keep
+            // server deletions authoritative for unchanged, previously cached rows.
+            const merged = reconcileMessageSnapshot(before, state.messagesByConversation[conversationId] ?? [], messages.map(mapMessage));
+            return { messagesByConversation: { ...state.messagesByConversation, [conversationId]: merged } };
+          });
+        })().finally(() => {
+          if (conversationMessageRequests.get(requestKey) === request) conversationMessageRequests.delete(requestKey);
         });
+        conversationMessageRequests.set(requestKey, request);
+        return request;
       },
 
       previewDirectMessage: async (messageId) => mapMessage(await api.previewMessage(messageId)),
       loadOlderConversationMessages: async (conversationId) => {
+        const isCurrent = latestSessionLoad(get, `olderMessages:${conversationId}`);
         const current = get().messagesByConversation[conversationId] ?? [];
         const first = current[0];
         if (!first) return 0;
         const page = await api.getConversationMessages(conversationId, {
           direction: 'older', cursorAt: first.createdAt, cursorId: first.id, limit: 100,
         });
+        if (!isCurrent()) return 0;
         const mapped = page.map(mapMessage);
         set((state) => {
           const existing = state.messagesByConversation[conversationId] ?? [];
@@ -1837,6 +1982,7 @@ export const useAppStore = create<AppState>()(
       },
 
       syncConversationMessages: async (conversationId) => {
+        const isCurrent = latestSessionLoad(get, `newerMessages:${conversationId}`);
         let latest = (get().messagesByConversation[conversationId] ?? []).at(-1);
         if (!latest) {
           await get().loadConversationMessages(conversationId);
@@ -1846,6 +1992,7 @@ export const useAppStore = create<AppState>()(
           const page = await api.getConversationMessages(conversationId, {
             direction: 'newer', cursorAt: latest.createdAt, cursorId: latest.id, limit: 100,
           });
+          if (!isCurrent()) return;
           if (page.length === 0) return;
           const mapped = page.map(mapMessage);
           set((state) => {
@@ -1859,10 +2006,12 @@ export const useAppStore = create<AppState>()(
       },
 
       markDirectMessageSeen: async (messageId) => {
+        const isCurrent = currentSession(get);
         const eligibility = get().eligibility;
         if (!hasSocialEligibility(eligibility) || eligibility?.capabilities.messaging !== true) return;
         try {
           const updated = mapMessage(await api.markMessageSeen(messageId));
+          if (!isCurrent()) return;
           set((state) => {
             const messages = state.messagesByConversation[updated.conversationId] ?? [];
             return {
@@ -1883,12 +2032,14 @@ export const useAppStore = create<AppState>()(
       },
 
       sendDirectMessage: async (recipientId, content, replyToId, textStyleId, attachment) => {
+        const isCurrent = currentSession(get);
         const userId = get().currentUser?.id ?? '';
         const pending = getPendingMessageKey(userId, `user:${recipientId}`, content, replyToId, attachment?.mediaId);
         try {
           const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
           const created = await api.sendMessage(recipientId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key, attachment);
           pendingMessageIdempotencyKeys.delete(pending.fingerprint);
+          if (!isCurrent()) return;
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1904,12 +2055,14 @@ export const useAppStore = create<AppState>()(
       },
 
       sendMessageToConversation: async (conversationId, content, replyToId, textStyleId, attachment) => {
+        const isCurrent = currentSession(get);
         const userId = get().currentUser?.id ?? '';
         const pending = getPendingMessageKey(userId, `conversation:${conversationId}`, content, replyToId, attachment?.mediaId);
         try {
           const style = textStyleId ?? get().currentUser?.messageFontId ?? 'default';
           const created = await api.sendMessageToConversation(conversationId, content, replyToId, style === 'mono' || style === 'rounded' ? style : 'default', pending.key, attachment);
           pendingMessageIdempotencyKeys.delete(pending.fingerprint);
+          if (!isCurrent()) return;
           const newMsg = mapMessage(created);
           set((state) => {
             const existing = state.messagesByConversation[newMsg.conversationId] ?? [];
@@ -1926,19 +2079,24 @@ export const useAppStore = create<AppState>()(
       },
 
       createGroupChat: async (memberIds, title) => {
+        const isCurrent = currentSession(get);
         const created = await api.createGroupChat({ memberIds, title });
+        if (!isCurrent()) throw new Error('Your session changed before the group could be opened.');
         const conversation = mapConversation(created, null);
         set((state) => ({ conversations: [conversation, ...state.conversations.filter((item) => item.id !== conversation.id)] }));
         return conversation.id;
       },
 
       setConversationVanishMode: async (conversationId, enabled) => {
+        const isCurrent = currentSession(get);
         const previous = get().conversations;
         set((state) => ({ conversations: state.conversations.map((conversation) => conversation.id === conversationId ? { ...conversation, vanishMode: enabled } : conversation) }));
         try {
           const updated = await api.setConversationVanishMode(conversationId, enabled);
+          if (!isCurrent()) return;
           set((state) => ({ conversations: state.conversations.map((conversation) => conversation.id === conversationId ? { ...conversation, vanishMode: Boolean(updated.vanishMode) } : conversation) }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           set({ conversations: previous });
           toast.error(error instanceof Error ? error.message : 'Could not update vanish mode');
           throw error;
@@ -1946,7 +2104,9 @@ export const useAppStore = create<AppState>()(
       },
 
       editDirectMessage: async (messageId, content) => {
+        const isCurrent = currentSession(get);
         const updated = mapMessage(await api.editMessage(messageId, content));
+        if (!isCurrent()) return;
         set((state) => ({
           messagesByConversation: {
             ...state.messagesByConversation,
@@ -1959,7 +2119,9 @@ export const useAppStore = create<AppState>()(
       },
 
       deleteDirectMessage: async (messageId) => {
+        const isCurrent = currentSession(get);
         const deleted = mapMessage(await api.deleteMessage(messageId));
+        if (!isCurrent()) return;
         set((state) => {
           const messages = (state.messagesByConversation[deleted.conversationId] ?? []).filter((message) => message.id !== messageId);
           const lastMessage = messages[messages.length - 1];
@@ -1973,7 +2135,9 @@ export const useAppStore = create<AppState>()(
       },
 
       reactToDirectMessage: async (messageId, reaction) => {
+        const isCurrent = currentSession(get);
         const updated = mapMessage(await api.reactToMessage(messageId, reaction));
+        if (!isCurrent()) return;
         set((state) => ({
           messagesByConversation: {
             ...state.messagesByConversation,
@@ -1983,7 +2147,9 @@ export const useAppStore = create<AppState>()(
       },
 
       pinDirectMessage: async (messageId) => {
+        const isCurrent = currentSession(get);
         const updated = mapMessage(await api.pinMessage(messageId));
+        if (!isCurrent()) return;
         set((state) => ({
           messagesByConversation: {
             ...state.messagesByConversation,
@@ -1997,7 +2163,9 @@ export const useAppStore = create<AppState>()(
       })),
 
       loadAchievements: async () => {
+        const isCurrent = latestSessionLoad(get, 'achievements');
         const achievements = await api.getAchievements();
+        if (!isCurrent()) return;
         set({ achievements });
       },
 
@@ -2005,10 +2173,12 @@ export const useAppStore = create<AppState>()(
         if (get().users[userId]) return Promise.resolve();
         const pending = profileRequests.get(userId);
         if (pending) return pending;
+        const isCurrent = latestSessionLoad(get, `profile:${userId}`);
         const request = (async () => {
           try {
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
             const user = isUuid ? await api.getProfile(userId) : await api.getProfileByUsername(userId.replace(/^@/, ''));
+            if (!isCurrent()) return;
             const mapped = mapUser(user);
             set((state) => ({ users: { ...state.users, [mapped.id]: mapped } }));
           } catch {
@@ -2022,10 +2192,12 @@ export const useAppStore = create<AppState>()(
       },
 
       followUser: async (userId) => {
+        const isCurrent = currentSession(get);
         const user = get().users[userId];
         if (!user) return;
         try {
           const result = await api.followUser(userId);
+          if (!isCurrent()) return;
           const follower = mapUser(result.follower);
           const target = mapUser(result.target);
           set((state) => {
@@ -2043,15 +2215,18 @@ export const useAppStore = create<AppState>()(
           });
           if (result.status === 'pending') toast.info('Follow request sent');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not follow this person');
         }
       },
 
       unfollowUser: async (userId) => {
+        const isCurrent = currentSession(get);
         const user = get().users[userId];
         if (!user) return;
         try {
           const result = await api.unfollowUser(userId);
+          if (!isCurrent()) return;
           const follower = mapUser(result.follower);
           const target = mapUser(result.target);
           set((state) => {
@@ -2065,13 +2240,16 @@ export const useAppStore = create<AppState>()(
             return { users: { ...state.users, [target.id]: target, [updated.id]: updated }, currentUser: updated };
           });
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not unfollow this person');
         }
       },
 
       toggleFavoriteCreator: async (userId) => {
+        const isCurrent = latestSessionLoad(get, `favoriteMutation:${userId}`);
         const currentUser = get().currentUser;
         if (!currentUser || currentUser.id === userId) return;
+        latestSessionLoad(get, 'favoriteCreators');
         const wasFavorite = get().favoriteCreatorIds.includes(userId);
         const nextFavorites = wasFavorite
           ? get().favoriteCreatorIds.filter((id) => id !== userId)
@@ -2087,22 +2265,28 @@ export const useAppStore = create<AppState>()(
           if (wasFavorite) await api.unfavoriteCreator(userId);
           else await api.favoriteCreator(userId);
         } catch (error) {
-          set((state) => ({
-            favoriteCreatorIds: wasFavorite ? [...nextFavorites, userId] : nextFavorites.filter((id) => id !== userId),
-            currentUser: state.currentUser ? {
-              ...state.currentUser,
-              favoriteCreatorIds: wasFavorite ? [...nextFavorites, userId] : nextFavorites.filter((id) => id !== userId),
-            } : state.currentUser,
-          }));
+          if (!isCurrent()) throw error;
+          set((state) => {
+            const favoriteCreatorIds = wasFavorite
+              ? [...new Set([...state.favoriteCreatorIds, userId])]
+              : state.favoriteCreatorIds.filter((id) => id !== userId);
+            return {
+              favoriteCreatorIds,
+              currentUser: state.currentUser ? { ...state.currentUser, favoriteCreatorIds } : state.currentUser,
+              users: state.currentUser ? { ...state.users, [state.currentUser.id]: { ...state.users[state.currentUser.id], favoriteCreatorIds } } : state.users,
+            };
+          });
           toast.error(error instanceof Error ? error.message : 'Could not update Favorites');
           throw error;
         }
       },
 
       toggleCloseFriend: async (userId) => {
+        const isCurrent = latestSessionLoad(get, `closeFriendMutation:${userId}`);
         const currentUser = get().currentUser;
         const friend = get().users[userId] ?? get().closeFriends.find((user) => user.id === userId);
         if (!currentUser || currentUser.id === userId || !friend) return;
+        latestSessionLoad(get, 'closeFriends');
         const wasCloseFriend = get().closeFriends.some((user) => user.id === userId);
         const nextCloseFriends = wasCloseFriend
           ? get().closeFriends.filter((user) => user.id !== userId)
@@ -2112,7 +2296,8 @@ export const useAppStore = create<AppState>()(
           if (wasCloseFriend) await api.removeCloseFriend(userId);
           else await api.addCloseFriend(userId);
         } catch (error) {
-          set({ closeFriends: wasCloseFriend ? [...nextCloseFriends, friend] : nextCloseFriends.filter((user) => user.id !== userId) });
+          if (!isCurrent()) throw error;
+          set((state) => ({ closeFriends: wasCloseFriend ? [...state.closeFriends.filter((user) => user.id !== userId), friend] : state.closeFriends.filter((user) => user.id !== userId) }));
           toast.error(error instanceof Error ? error.message : 'Could not update Close Friends');
           throw error;
         }
@@ -2134,8 +2319,10 @@ export const useAppStore = create<AppState>()(
       },
 
       acceptFollowRequest: async (requestId) => {
+        const isCurrent = currentSession(get);
         try {
           const result = await api.acceptFollowRequest(requestId);
+          if (!isCurrent()) return;
           const follower = mapUser(result.follower);
           const target = mapOwnProfile(result.target, get().currentUser);
           set((state) => ({
@@ -2145,34 +2332,41 @@ export const useAppStore = create<AppState>()(
           }));
           toast.success('Follow request accepted');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not accept follow request');
         }
       },
 
       rejectFollowRequest: async (requestId) => {
+        const isCurrent = currentSession(get);
         try {
           await api.rejectFollowRequest(requestId);
+          if (!isCurrent()) return;
           set((state) => ({ followRequests: state.followRequests.filter((request) => request.id !== requestId) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not decline follow request');
         }
       },
 
       votePoll: async (postId, optionId) => {
+        const isCurrent = currentSession(get);
         try {
           const updated = await api.votePostPoll(postId, optionId);
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           set((state) => ({ posts: state.posts.map((item) => item.id === postId ? mapPost(updated, currentUserId) : item) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not record poll vote');
         }
       },
 
       loadStories: async () => {
-        const session = activitySessionSequence;
+        const isCurrent = latestSessionLoad(get, 'stories');
         try {
           const backendStories = await api.getStories();
-          if (session !== activitySessionSequence) return;
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           if (backendStories && backendStories.length > 0) {
             set({ stories: visibleSocialItems(backendStories, get().currentUser).map((s) => mapStory(s, currentUserId)) });
@@ -2181,12 +2375,14 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        if (session === activitySessionSequence) set({ stories: [] });
+        if (isCurrent()) set({ stories: [] });
       },
 
       loadNotes: async () => {
+        const isCurrent = latestSessionLoad(get, 'notes');
         try {
           const backendNotes = await api.getNotes();
+          if (!isCurrent()) return;
           set({ notes: visibleSocialItems(backendNotes, get().currentUser).map(mapNote) });
         } catch {
           // Keep the last successful snapshot during a transient outage.
@@ -2194,6 +2390,7 @@ export const useAppStore = create<AppState>()(
       },
 
       createNote: async (input) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) return;
         const content = input.content.trim();
@@ -2218,8 +2415,10 @@ export const useAppStore = create<AppState>()(
             contentCategory: input.contentCategory ?? DEFAULT_CONTENT_CATEGORY,
             contentRating: input.contentRating ?? DEFAULT_CONTENT_RATING,
           });
+          if (!isCurrent()) return;
           set((state) => ({ notes: [mapNote(created), ...state.notes.filter((note) => note.id !== optimisticId && note.authorId !== uid)] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           set((state) => ({ notes: state.notes.filter((note) => note.id !== optimisticId) }));
           toast.error(error instanceof Error ? error.message : 'Could not publish your Note');
           throw error;
@@ -2227,17 +2426,20 @@ export const useAppStore = create<AppState>()(
       },
 
       deleteNote: async (noteId) => {
+        const isCurrent = currentSession(get);
         const previous = get().notes;
         set((state) => ({ notes: state.notes.filter((note) => note.id !== noteId) }));
         try {
           await api.deleteNote(noteId);
         } catch (error) {
+          if (!isCurrent()) return;
           set({ notes: previous });
           toast.error(error instanceof Error ? error.message : 'Could not remove your Note');
         }
       },
 
       viewStory: async (storyId) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
@@ -2250,13 +2452,16 @@ export const useAppStore = create<AppState>()(
         }));
         try {
           const updated = await api.viewStory(storyId);
+          if (!isCurrent()) return;
           set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
         } catch {
+          if (!isCurrent()) return;
           if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
         }
       },
 
       reactToStory: async (storyId, emoji, reactionType = 'CUSTOM') => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) return;
         const previous = get().stories.find((story) => story.id === storyId);
@@ -2269,24 +2474,30 @@ export const useAppStore = create<AppState>()(
         }));
         try {
           const updated = await api.reactToStory(storyId, emoji, reactionType);
+          if (!isCurrent()) return;
           set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           if (previous) set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? previous : story) }));
           throw error;
         }
       },
 
       voteStoryPoll: async (storyId, optionId) => {
+        const isCurrent = currentSession(get);
         try {
           const updated = await api.voteStoryPoll(storyId, optionId);
+          if (!isCurrent()) return;
           const uid = get().currentUser?.id;
           set((state) => ({ stories: state.stories.map((story) => story.id === storyId ? mapStory(updated, uid) : story) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not record story poll vote');
         }
       },
 
       addStory: async (story) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) throw new Error('Sign in before publishing a Story.');
         try {
@@ -2294,17 +2505,20 @@ export const useAppStore = create<AppState>()(
             ...story,
             ...(story.poll ? { poll: { question: story.poll.question, options: story.poll.options.map(({ text }) => ({ text })) } } : {}),
           });
-          if (get().currentUser?.id !== uid) return;
+          if (!isCurrent()) return;
           set((state) => ({ stories: [mapStory(created, uid), ...state.stories] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not publish the story');
           throw error;
         }
       },
 
       loadEvents: async () => {
+        const isCurrent = latestSessionLoad(get, 'events');
         try {
           const backendEvents = await api.getEvents();
+          if (!isCurrent()) return;
           const currentUserId = get().currentUser?.id;
           if (backendEvents && backendEvents.length > 0) {
             set({ events: backendEvents.map((e) => mapEvent(e, currentUserId)) });
@@ -2313,22 +2527,26 @@ export const useAppStore = create<AppState>()(
         } catch {
           // fallback
         }
-        set({ events: [] });
+        if (isCurrent()) set({ events: [] });
       },
 
       createEvent: async (input) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) return;
         try {
           const created = await api.createEvent(input);
+          if (!isCurrent()) return;
           set((state) => ({ events: [mapEvent(created, uid), ...state.events] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not create the event');
           throw error;
         }
       },
 
       toggleEventRsvp: async (eventId, status) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) return;
         const event = get().events.find((e) => e.id === eventId);
@@ -2348,16 +2566,20 @@ export const useAppStore = create<AppState>()(
         }));
         try {
           const updated = await api.rsvpEvent(eventId, newStatus);
+          if (!isCurrent()) return;
           set((state) => ({ events: state.events.map((item) => item.id === eventId ? mapEvent(updated, uid) : item) }));
         } catch (error) {
+          if (!isCurrent()) return;
           set((state) => ({ events: state.events.map((item) => item.id === eventId ? event : item) }));
           toast.error(error instanceof Error ? error.message : 'Could not update the RSVP');
         }
       },
 
       loadProducts: async () => {
+        const isCurrent = latestSessionLoad(get, 'products');
         try {
           const backendProducts = await api.getProducts();
+          if (!isCurrent()) return;
           set({ products: backendProducts.map(mapProduct) });
           return;
         } catch {
@@ -2366,18 +2588,23 @@ export const useAppStore = create<AppState>()(
       },
 
       createProduct: async (input) => {
+        const isCurrent = currentSession(get);
         try {
           const created = await api.createProduct(input);
+          if (!isCurrent()) return;
           set((state) => ({ products: [mapProduct(created), ...state.products] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not list the product');
           throw error;
         }
       },
 
       loadArticles: async () => {
+        const isCurrent = latestSessionLoad(get, 'articles');
         try {
           const backendArticles = await api.getArticles();
+          if (!isCurrent()) return;
           set({ articles: backendArticles.map(mapArticle) });
           return;
         } catch {
@@ -2386,27 +2613,32 @@ export const useAppStore = create<AppState>()(
       },
 
       createArticle: async (input) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) throw new Error('Sign in before publishing an article.');
         try {
           const created = await api.createArticle(input);
-          if (get().currentUser?.id !== uid) return;
+          if (!isCurrent()) return;
           set((state) => ({ articles: [mapArticle(created), ...state.articles] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not publish the article');
           throw error;
         }
       },
 
       clapArticle: async (articleId) => {
+        const isCurrent = currentSession(get);
         const previous = get().articles.find((article) => article.id === articleId);
         set((state) => ({
           articles: state.articles.map(a => a.id === articleId ? { ...a, claps: a.claps + 1 } : a)
         }));
         try {
           const updated = await api.clapArticle(articleId);
+          if (!isCurrent()) return;
           set((state) => ({ articles: state.articles.map((article) => article.id === articleId ? mapArticle(updated) : article) }));
         } catch (error) {
+          if (!isCurrent()) return;
           if (previous) set((state) => ({ articles: state.articles.map((article) => article.id === articleId ? previous : article) }));
           toast.error(error instanceof Error ? error.message : 'Could not clap for this article');
         }
@@ -2429,26 +2661,31 @@ export const useAppStore = create<AppState>()(
       },
 
       createVideo: async (input) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) throw new Error('Sign in before publishing a video.');
         try {
           const created = await api.createVideo(input);
-          if (get().currentUser?.id !== uid) return;
+          if (!isCurrent()) return;
           set((state) => ({ videos: [mapVideo(created), ...state.videos], videosLoaded: true, videosError: null }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not publish the video');
           throw error;
         }
       },
 
       likeVideo: async (videoId) => {
+        const isCurrent = currentSession(get);
         const previous = get().videos.find((video) => video.id === videoId);
         if (!previous) return false;
         try {
           const updated = await api.likeVideo(videoId);
+          if (!isCurrent()) return false;
           set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
           return true;
         } catch (error) {
+          if (!isCurrent()) return false;
           if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
           toast.error(error instanceof Error ? error.message : 'Could not update the video like');
           return false;
@@ -2456,13 +2693,16 @@ export const useAppStore = create<AppState>()(
       },
 
       toggleVideoBookmark: async (videoId) => {
+        const isCurrent = currentSession(get);
         const previous = get().videos.find((video) => video.id === videoId);
         if (!previous) return false;
         try {
           const updated = await api.bookmarkVideo(videoId);
+          if (!isCurrent()) return false;
           set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? mapVideo(updated) : video) }));
           return true;
         } catch (error) {
+          if (!isCurrent()) return false;
           if (previous) set((state) => ({ videos: state.videos.map((video) => video.id === videoId ? previous : video) }));
           toast.error(error instanceof Error ? error.message : 'Could not update video bookmarks');
           return false;
@@ -2470,8 +2710,10 @@ export const useAppStore = create<AppState>()(
       },
 
       loadStreams: async () => {
+        const isCurrent = latestSessionLoad(get, 'streams');
         try {
           const backendStreams = await api.getStreams();
+          if (!isCurrent()) return;
           set({ liveStreams: backendStreams.map(mapLiveStream) });
           return;
         } catch {
@@ -2480,34 +2722,41 @@ export const useAppStore = create<AppState>()(
       },
 
       createStream: async (input) => {
+        const isCurrent = currentSession(get);
         const uid = get().currentUser?.id;
         if (!uid) throw new Error('Sign in before scheduling a live room.');
         try {
           const created = await api.createStream(input);
-          if (get().currentUser?.id !== uid) return;
+          if (!isCurrent()) return;
           set((state) => ({ liveStreams: [mapLiveStream(created), ...state.liveStreams] }));
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not schedule the live room');
           throw error;
         }
       },
 
       setStreamStatus: async (streamId, status) => {
+        const isCurrent = currentSession(get);
         const previous = get().liveStreams.find((stream) => stream.id === streamId);
         set((state) => ({
           liveStreams: state.liveStreams.map((s) => (s.id === streamId ? { ...s, status } : s))
         }));
         try {
           const updated = await api.setStreamStatus(streamId, status);
+          if (!isCurrent()) return;
           set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === streamId ? mapLiveStream(updated) : stream) }));
         } catch (error) {
+          if (!isCurrent()) return;
           if (previous) set((state) => ({ liveStreams: state.liveStreams.map((stream) => stream.id === streamId ? previous : stream) }));
           toast.error(error instanceof Error ? error.message : 'Could not update the live room');
         }
       },
 
       updateContentFilter: async (contentFilter) => {
+        const isCurrent = latestSessionLoad(get, 'contentFilter');
         await api.updateSettings({ contentFilter });
+        if (!isCurrent()) return;
         set((state) => ({
           currentUser: state.currentUser ? { ...state.currentUser, contentFilter } : state.currentUser,
         }));
@@ -2521,32 +2770,40 @@ export const useAppStore = create<AppState>()(
       },
 
       updateStoryViewMode: async (storyViewMode) => {
+        const isCurrent = latestSessionLoad(get, 'storyViewMode');
         const settings = await api.updateSettings({ storyViewMode });
+        if (!isCurrent()) return;
         set((state) => ({
           currentUser: state.currentUser ? { ...state.currentUser, storyViewMode: settings.storyViewMode ?? storyViewMode } : state.currentUser,
         }));
       },
 
       updateNotificationPreference: async (enabled) => {
+        const isCurrent = latestSessionLoad(get, 'notificationPreference');
         const settings = await api.updateSettings({ notificationsEnabled: enabled });
+        if (!isCurrent()) return;
         set((state) => ({
           currentUser: state.currentUser ? { ...state.currentUser, notificationsEnabled: settings.notificationsEnabled ?? enabled } : state.currentUser,
         }));
       },
 
       toggleSaveProduct: async (productId) => {
+        const isCurrent = currentSession(get);
         const product = get().products.find((item) => item.id === productId);
         if (!product) return;
         try {
           const updated = await api.saveProduct(productId);
+          if (!isCurrent()) return;
           set((state) => ({ products: state.products.map((item) => item.id === productId ? mapProduct(updated) : item) }));
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not update saved products');
         }
       },
 
       
       sendAIMessage: async (content) => {
+        const isCurrent = currentSession(get);
         const userMsg = { id: `ai_${Date.now()}`, role: 'user', content, createdAt: new Date().toISOString() };
         // Optimistic update
         set((state) => ({ aiMessages: [...state.aiMessages, userMsg as any] }));
@@ -2555,6 +2812,7 @@ export const useAppStore = create<AppState>()(
             method: 'POST',
             body: JSON.stringify({ message: content })
           });
+          if (!isCurrent()) return;
           const reply = {
             id: `ai_${Date.now() + 1}`,
             role: 'assistant',
@@ -2563,10 +2821,13 @@ export const useAppStore = create<AppState>()(
           };
           set((state) => ({ aiMessages: [...state.aiMessages, reply as any] }));
         } catch (e) {
+          if (!isCurrent()) return;
           const errorReply = {
             id: `ai_${Date.now() + 1}`,
             role: 'assistant',
-            content: "Sorry, the Yor Talks AI engine is currently offline.",
+            content: e instanceof ApiError
+              ? e.message
+              : 'Could not generate a reply. Please try again later.',
             createdAt: new Date().toISOString(),
           };
           set((state) => ({ aiMessages: [...state.aiMessages, errorReply as any] }));
@@ -2608,8 +2869,10 @@ export const useAppStore = create<AppState>()(
       },
 
       loadProfileInteractions: async (userId) => {
+        const isCurrent = latestSessionLoad(get, `profileInteractions:${userId}`);
         try {
           const [comments, showcases] = await Promise.all([api.getProfileComments(userId), api.getProfileShowcases(userId)]);
+          if (!isCurrent()) return;
           const authors = comments.reduce<Record<string, User>>((result, comment) => {
             result[comment.author.id] = mapUser(comment.author);
             return result;
@@ -2625,8 +2888,10 @@ export const useAppStore = create<AppState>()(
       },
 
       addProfileComment: async (targetUserId, content) => {
+        const isCurrent = currentSession(get);
         try {
           const created = await api.createProfileComment(targetUserId, content);
+          if (!isCurrent()) return;
           const mapped = mapProfileComment(created);
           set((state) => ({
             profileComments: { ...state.profileComments, [targetUserId]: [...(state.profileComments[targetUserId] ?? []), mapped] },
@@ -2634,39 +2899,49 @@ export const useAppStore = create<AppState>()(
           }));
           toast.success('Comment posted');
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not post the profile comment');
           throw error;
         }
       },
 
       deleteProfileComment: async (commentId, targetUserId) => {
+        const isCurrent = currentSession(get);
         try {
           await api.deleteProfileComment(targetUserId, commentId);
+          if (!isCurrent()) return;
           set((state) => ({ profileComments: { ...state.profileComments, [targetUserId]: (state.profileComments[targetUserId] ?? []).filter((comment) => comment.id !== commentId) } }));
           toast.success('Comment deleted');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not delete the profile comment');
         }
       },
 
       addShowcase: async (showcase) => {
+        const isCurrent = currentSession(get);
         try {
           const created = await api.createProfileShowcase(showcase.userId, showcase);
+          if (!isCurrent()) return;
           const mapped = mapShowcase(created);
           set((state) => ({ showcases: { ...state.showcases, [showcase.userId]: [...(state.showcases[showcase.userId] ?? []), mapped] } }));
           toast.success('Showcase added');
         } catch (error) {
+          if (!isCurrent()) throw error;
           toast.error(error instanceof Error ? error.message : 'Could not add the showcase');
           throw error;
         }
       },
 
       removeShowcase: async (showcaseId, userId) => {
+        const isCurrent = currentSession(get);
         try {
           await api.deleteProfileShowcase(userId, showcaseId);
+          if (!isCurrent()) return;
           set((state) => ({ showcases: { ...state.showcases, [userId]: (state.showcases[userId] ?? []).filter((showcase) => showcase.id !== showcaseId) } }));
           toast.success('Showcase removed');
         } catch (error) {
+          if (!isCurrent()) return;
           toast.error(error instanceof Error ? error.message : 'Could not remove the showcase');
         }
       },

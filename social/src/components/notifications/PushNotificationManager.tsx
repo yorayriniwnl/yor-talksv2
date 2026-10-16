@@ -92,7 +92,7 @@ export function PushNotificationManager() {
         sounds.playChime();
         try {
           await registerPushSubscription();
-          toast.success('🔔 Lockscreen push notifications enabled!');
+          toast.success('🔔 Push subscription saved for this device.');
         } catch (error) {
           toast.info(error instanceof Error ? error.message : 'Device push delivery is not configured yet.');
         }
@@ -119,11 +119,9 @@ export function PushNotificationManager() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h4 className="font-display font-extrabold text-xs text-foreground flex items-center gap-1.5">
-                Enable Instant Push Alerts <span className="text-[0.62rem] font-mono px-1.5 py-0.2 rounded bg-primary/20 text-primary font-bold">LIVE</span>
-              </h4>
+              <h4 className="font-display font-extrabold text-xs text-foreground">Push notifications</h4>
               <p className="text-[0.68rem] text-muted-foreground mt-0.5 leading-snug">
-            Get lockscreen alerts for supported account activity when push delivery is configured on this device.
+                Allow this device to receive supported account alerts. Availability and delivery timing depend on browser and service configuration.
               </p>
 
               <div className="flex items-center gap-2 mt-3">

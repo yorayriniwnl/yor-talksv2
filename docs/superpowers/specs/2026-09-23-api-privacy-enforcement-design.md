@@ -22,7 +22,7 @@ This is the first subproject in the previously reviewed staged scope. Account ex
 ### Grievance status
 
 - Keep anonymous grievance submission and public status lookup.
-- Define one public status projection containing only `ticketId`, `status`, `createdAt`, and `slaDeadline`. Use it for both the submission acknowledgement and public status response.
+- Define one public status projection containing only `ticketId`, `status`, and `createdAt`. Use it for both the submission acknowledgement and public status response. Do not expose a deadline until the operating territory and response policy are approved.
 - Do not return the database UUID, category, reported URL, reporter name, reporter email, description, or `officerNote` from either public response. Preserve full records for the existing authenticated moderator queue.
 - Replace the tracker’s officer-note rendering with neutral progress text based on status. The current contract has no separate reviewer-authored public note field.
 - Generate new ticket IDs with 32 uppercase hexadecimal characters after `YT-GRV-` (UUID-derived randomness). Continue accepting the current 10-character form so existing tickets remain trackable.

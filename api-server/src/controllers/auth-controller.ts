@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { env } from "../config/env.js";
-import { AuthService, EligibilityDecisionUnavailableError, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorRequiredError, UserAlreadyExistsError, type AuthenticatedSession } from "../services/auth-service.js";
+import { AuthService, EligibilityDecisionUnavailableError, EmailOtpInvalidError, EmailVerificationRequiredError, GoogleSignInNotConfiguredError, RegistrationNotAllowedError, TooManyAttemptsError, TwoFactorAlreadyEnabledError, TwoFactorRequiredError, UserAlreadyExistsError, type AuthenticatedSession } from "../services/auth-service.js";
 import { EmailDeliveryNotConfiguredError, EmailDeliveryProviderError } from "../services/email-service.js";
 import { createResponse } from "../utils/response.js";
 import { toOwnUser, toRestrictedOwnUser } from "../utils/user-view.js";
@@ -141,7 +141,7 @@ export class AuthController {
         return res.status(400).json(createResponse("Sign-in code request failed", null, {}, [error.message]));
       }
       if (error instanceof TooManyAttemptsError) {
-        return res.status(429).json(createResponse("Please wait before requesting another code", null, {}, [error.message]));
+        return res.status(202).json(createResponse("If that email is registered, a sign-in code has been sent", null));
       }
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Email sign-in is unavailable", null, {}, [error.message]));
@@ -177,11 +177,18 @@ export class AuthController {
     if (!userId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const result = await this.authService.beginTwoFactorSetup(userId);
-    if (!result) {
-      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    try {
+      const result = await this.authService.beginTwoFactorSetup(userId);
+      if (!result) {
+        return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+      }
+      return res.status(200).json(createResponse("Scan this with an authenticator app", result));
+    } catch (error) {
+      if (error instanceof TwoFactorAlreadyEnabledError) {
+        return res.status(409).json(createResponse(error.message, null, {}, ["two_factor_already_enabled"]));
+      }
+      throw error;
     }
-    return res.status(200).json(createResponse("Scan this with an authenticator app", result));
   };
 
   confirmTwoFactorSetup = async (req: Request, res: Response) => {
@@ -189,11 +196,18 @@ export class AuthController {
     if (!userId) {
       return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
     }
-    const ok = await this.authService.confirmTwoFactorSetup(userId, req.body.code);
-    if (!ok) {
-      return res.status(400).json(createResponse("Invalid or expired code", null, {}, ["Invalid or expired code"]));
+    try {
+      const ok = await this.authService.confirmTwoFactorSetup(userId, req.body.code);
+      if (!ok) {
+        return res.status(400).json(createResponse("Invalid or expired code", null, {}, ["Invalid or expired code"]));
+      }
+      return res.status(200).json(createResponse("Two-factor authentication enabled", null));
+    } catch (error) {
+      if (error instanceof TwoFactorAlreadyEnabledError) {
+        return res.status(409).json(createResponse(error.message, null, {}, ["two_factor_already_enabled"]));
+      }
+      throw error;
     }
-    return res.status(200).json(createResponse("Two-factor authentication enabled", null));
   };
 
   disableTwoFactor = async (req: Request, res: Response) => {
@@ -302,18 +316,17 @@ export class AuthController {
   };
 
   logout = async (req: Request, res: Response) => {
+    const refreshToken = req.cookies?.refreshToken;
+    // Set the expiration header before json() sends the response, including
+    // when the backing revocation service is temporarily unavailable.
+    this.clearRefreshCookie(res);
     try {
-      const refreshToken = req.cookies?.refreshToken;
       if (refreshToken) {
         await this.authService.logoutByToken(refreshToken);
       }
       return res.status(200).json(createResponse("Logged out", null));
     } catch {
       return res.status(500).json(createResponse("Could not fully revoke the session", null, {}, ["Session revocation is temporarily unavailable"]));
-    } finally {
-      // Clear the browser credential even if the backing revocation service is
-      // temporarily unavailable; the client also keeps an explicit logout mark.
-      this.clearRefreshCookie(res);
     }
   };
 
@@ -323,7 +336,7 @@ export class AuthController {
       return res.status(202).json(createResponse("If that account needs verification, an email has been sent", null));
     } catch (error) {
       if (error instanceof TooManyAttemptsError) {
-        return res.status(429).json(createResponse("Please wait before requesting another email", null, {}, [error.message]));
+        return res.status(202).json(createResponse("If that account needs verification, an email has been sent", null));
       }
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Email verification is unavailable", null, {}, [error.message]));
@@ -355,7 +368,7 @@ export class AuthController {
       return res.status(200).json(createResponse("If that email is registered, a reset link has been sent", data));
     } catch (error) {
       if (error instanceof TooManyAttemptsError) {
-        return res.status(429).json(createResponse("Please wait before requesting another reset", null, {}, [error.message]));
+        return res.status(200).json(createResponse("If that email is registered, a reset link has been sent", null));
       }
       if (error instanceof EmailDeliveryNotConfiguredError) {
         return res.status(503).json(createResponse("Password reset is unavailable", null, {}, [error.message]));

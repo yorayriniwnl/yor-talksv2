@@ -15,6 +15,7 @@ import {
 import { PaymentsNotConfiguredError, PaymentProviderError, RazorpayService } from "../services/razorpay-service.js";
 import { createResponse } from "../utils/response.js";
 import { CreatorAnalyticsService } from "../services/creator-analytics-service.js";
+import { EligibilityCapabilityError } from "../services/eligibility-service.js";
 import { MarketplaceOrderNotFoundError, MarketplaceRequestError, MarketplaceService } from "../services/marketplace-service.js";
 import { SubscriptionOrderNotFoundError, SubscriptionRequestError, SubscriptionService } from "../services/subscription-service.js";
 import { PaymentWebhookNotFoundError, PaymentWebhookRequestError, PaymentWebhookService, PaymentWebhookSignatureError } from "../services/payment-webhook-service.js";
@@ -44,6 +45,9 @@ router.get("/analytics", authenticate, async (req, res) => {
     const data = await creatorAnalyticsService.getRecent(req.user!.id);
     res.json(createResponse("Analytics loaded", data));
   } catch (error) {
+    if (error instanceof EligibilityCapabilityError) {
+      return res.status(403).json(createResponse("Creator analytics are unavailable", null, {}, ["capability_unavailable"]));
+    }
     res.status(500).json(createResponse("Failed to fetch analytics", null, {}, ["Internal server error"]));
   }
 });

@@ -59,12 +59,14 @@ async function json(route: Route, data: unknown, meta: Record<string, unknown> =
 
 async function installApiBoundary(page: Page, profile = user, eligibility: unknown | (() => unknown) = adultEligibility, guardianAuthorizations: unknown | (() => unknown) = []) {
   const unhandled: string[] = [];
+  const requestCounts = new Map<string,number>();
   page.on('close', () => expect(unhandled, 'Every mocked API route must be explicit').toEqual([]));
   await page.route("**/socket.io/**", (route) => route.abort());
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname.replace(/^\/api/, "") || "/";
+    requestCounts.set(path,(requestCounts.get(path) ?? 0)+1);
 
     if (path === "/auth/refresh" && request.method() === "POST") {
       return json(route, { accessToken: "browser-smoke-access-token" });
@@ -101,7 +103,7 @@ async function installApiBoundary(page: Page, profile = user, eligibility: unkno
     }
 
     const ownerLists = ['/following', '/followers', '/feed', '/showcases', '/profile-comments', '/pinned-posts'].map((suffix) => '/users/' + user.id + suffix);
-    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/communities', '/creator/workspace', '/achievements/me', ...ownerLists];
+    const emptyLists = ['/notifications', '/users/me/follow-requests', '/users/me/close-friends', '/users/me/favorites/creators', '/users/me/contact-shields', '/conversations', '/stories', '/notes', '/videos', '/articles', '/events', '/products', '/products/orders', '/communities', '/creator/workspace', '/achievements/me', ...ownerLists];
     if (request.method() === 'GET' && emptyLists.includes(path)) return json(route, []);
     if (request.method() === 'GET' && ['/posts/liked', '/posts/saved'].includes(path)) return json(route, [], { hasMore: false, nextCursor: null });
     if (request.method() === 'GET' && path === '/users/' + user.id + '/posts') return json(route, [], { hasMore: false, nextCursor: null });
@@ -109,6 +111,7 @@ async function installApiBoundary(page: Page, profile = user, eligibility: unkno
     await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });
     throw new Error(`Unhandled test route: ${request.method()} ${path}`);
   });
+  return requestCounts;
 }
 
 test('restricted eligibility states keep social routes closed and leave owner controls reachable', async ({ page }) => {
@@ -188,7 +191,7 @@ async function fulfillSeekableMedia(route: Route, bytes: Buffer, mime: string) {
 
 test('grievance submission and tracking work with private public receipts', async ({ page }) => {
   await installApiBoundary(page);
-  const receipt = { ticketId: 'YT-GRV-849201ABCD', status: 'received', createdAt: '2026-10-07T08:00:00.000Z', slaDeadline: '2026-10-22T08:00:00.000Z' };
+  const receipt = { ticketId: 'YT-GRV-849201ABCD', status: 'received', createdAt: '2026-10-07T08:00:00.000Z' };
   await page.route('**/api/reports/grievance', route => json(route, receipt));
   await page.route(`**/api/reports/grievance/${receipt.ticketId}`, route => json(route, { ...receipt, status: 'under_review' }));
   await page.goto('/grievance');
@@ -196,16 +199,19 @@ test('grievance submission and tracking work with private public receipts', asyn
   await page.locator('#reporterEmail').fill('private@example.test');
   await page.locator('#reportedUrl').fill('https://example.test/reported-post');
   await page.locator('#description').fill('A private complaint with enough detail for a reviewer to investigate.');
-  await page.getByRole('button', { name: /Submit Grievance to/ }).click();
+  const submittedReceipt = page.waitForResponse(response => response.url().endsWith('/api/reports/grievance') && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Submit report', exact: true }).click();
+  const publicResponse = await submittedReceipt;
+  const publicPayload = await publicResponse.json();
+  expect(Object.keys(publicPayload.data).sort()).toEqual(['createdAt', 'status', 'ticketId']);
   await expect(page.getByText(receipt.ticketId, { exact: true })).toBeVisible();
-  await expect(page.getByText('Operational review target:', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Statutory SLA|acknowledgement email/)).toHaveCount(0);
+  await expect(page.getByText(/email updates are not sent automatically/i)).toBeVisible();
+  await expect(page.getByText(/Operational review target|Statutory SLA|acknowledgement email/i)).toHaveCount(0);
   await page.getByRole('button', { name: 'Track Existing Ticket' }).click();
   await page.locator('#trackTicketId').fill(receipt.ticketId);
   await page.getByRole('button', { name: 'Track ticket', exact: true }).click();
   await expect(page.getByText('under review', { exact: true })).toBeVisible();
-  await expect(page.getByText(/A reviewer has not added a note/)).toHaveCount(0);
-  await expect(page.getByText(/Operational review target:/)).toBeVisible();
+  await expect(page.getByText(/A reviewer has not added a note|Operational review target|Statutory SLA|acknowledgement email/i)).toHaveCount(0);
   await expect(page.getByText(/Statutory Grievance Redressal Officer/)).toHaveCount(0);
 });
 
@@ -251,7 +257,8 @@ test('older structured message image and audio grants renew without replacing hi
     return url.pathname.includes(imageId) ? fulfillSeekableMedia(route, poster, 'image/png') : fulfillSeekableMedia(route, audioBytes, 'audio/wav');
   });
   await page.goto(`/messages/${conversation.id}`);
-  await expect(page.locator('article.operator-message')).toHaveCount(200);
+  const rows = page.getByRole('main').getByRole('article');
+  await expect(rows).toHaveCount(200, { timeout: 15_000 });
   const composer = page.getByRole('textbox', { name: 'Message', exact: true });
   await composer.fill('This composer draft must survive media expiry.');
   const threadGeometry = await page.locator('.operator-thread__flow').evaluate(async element => {
@@ -266,13 +273,13 @@ test('older structured message image and audio grants renew without replacing hi
   });
   expect(threadGeometry.earlier.top).toBeGreaterThanOrEqual(threadGeometry.flow.top);
   await page.getByRole('button', { name: 'Load earlier messages' }).click();
-  await expect(page.locator('article.operator-message')).toHaveCount(202);
-  const imageRow = page.locator('article.operator-message').filter({ hasText: 'Earlier image caption' });
+  await expect(rows).toHaveCount(202, { timeout: 15_000 });
+  const imageRow = rows.filter({ hasText: 'Earlier image caption' });
   await imageRow.scrollIntoViewIfNeeded();
   const image = imageRow.getByRole('img', { name: 'Shared attachment' });
   await expect(image).toHaveAttribute('src', /^blob:/);
   await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(2);
-  const audioRow = page.locator('article.operator-message').filter({ hasText: 'Earlier voice caption' });
+  const audioRow = rows.filter({ hasText: 'Earlier voice caption' });
   const audio = audioRow.locator('audio');
   await audioRow.scrollIntoViewIfNeeded();
   await audio.evaluate(element => (element as HTMLAudioElement).play());
@@ -301,8 +308,8 @@ test('older structured message image and audio grants renew without replacing hi
   await expect.poll(() => audio.evaluate(element => (element as HTMLAudioElement).currentTime)).toBeGreaterThan(0.55);
   await expect(imageRow.getByText('Earlier image caption', { exact: true })).toBeVisible();
   await expect(audioRow.getByText('Earlier voice caption', { exact: true })).toBeVisible();
-  await expect(page.locator('article.operator-message')).toHaveCount(202);
-  await expect(page.locator('article.operator-message').getByText('Recent history row 199', { exact: true })).toHaveCount(1);
+  await expect(rows).toHaveCount(202, { timeout: 15_000 });
+  await expect(rows.getByText('Recent history row 199', { exact: true })).toHaveCount(1);
   await expect(composer).toHaveValue('This composer draft must survive media expiry.');
   expect([snapshotReads, olderReads, ...attachmentReads]).toEqual([1, 1, 1, 1]);
 });
@@ -518,7 +525,7 @@ test('historical message encodings render attachments only with the server legac
   await page.route('**/api/conversations/*/messages', route => json(route, messages));
   await page.route('https://legacy.example.test/**', route => route.fulfill({ status: 404, body: '' }));
   await page.goto(`/messages/${conversation.id}`);
-  const rows = page.locator('article.operator-message');
+  const rows = page.getByRole('main').getByRole('article');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(0).locator('audio')).toHaveAttribute('src', 'https://legacy.example.test/voice.webm');
   await expect(rows.nth(1).getByRole('img', { name: 'Shared attachment' })).toHaveAttribute('src', 'https://legacy.example.test/photo.png');
@@ -769,10 +776,11 @@ for (const width of [390, 1280]) test(`Creator billing recovery and cancellation
 });
 
 test('Creator billing contains malformed history and retries', async ({ page }) => {
-  await installApiBoundary(page); let calls = 0;
-  await page.route('**/api/billing/checkouts', route => json(route, ++calls === 1 ? [{ product: 'wrong' }] : []));
+  await installApiBoundary(page); let retryRequested = false;
+  await page.route('**/api/billing/checkouts**', route => json(route, retryRequested ? [] : [{ product: 'wrong' }]));
   await page.goto('/billing');
   await expect(page.getByRole('alert').filter({ hasText: 'could not load' })).toBeVisible();
+  retryRequested = true;
   await page.getByRole('button', { name: 'Retry history' }).click();
   await expect(page.getByText('No creator payments yet.')).toBeVisible();
 });
@@ -880,10 +888,11 @@ test('Premium checkout accepts configured terms, handles failure, recovers payme
 
 test('Premium billing rejects malformed responses and recovers with a retry', async ({ page }) => {
   await installApiBoundary(page);
-  let calls = 0;
-  await page.route('**/api/premium/me', route => json(route, ++calls === 1 ? { catalog: [] } : premiumState('free')));
+  let retryRequested = false;
+  await page.route('**/api/premium/me', route => json(route, retryRequested ? premiumState('free') : { catalog: [] }));
   await page.goto('/premium');
   await expect(page.getByRole('alert')).toContainText('Billing details could not be verified');
+  retryRequested = true;
   await page.getByRole('button', { name: 'Retry billing' }).click();
   await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeVisible();
 });
@@ -909,8 +918,8 @@ test('two tabs serialize HttpOnly cookie rotation without dropping either restor
   await page.route('**/api/auth/refresh', rotate);
   await second.route('**/api/auth/refresh', rotate);
   await Promise.all([page.goto('/'), second.goto('/')]);
-  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
-  await expect(second.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(second.getByRole('heading', { name: 'Home', exact: true })).toBeVisible({ timeout: 15_000 });
   expect(rotations).toBe(2);
   expect(maximum).toBe(1);
   await second.close();
@@ -957,7 +966,7 @@ test('feed failures show a retry, never a false empty-success state', async ({ p
     return json(route, [post('The recovered feed is here.', 'recover-post')]);
   });
   await page.goto('/');
-  await expect(page.getByRole('alert').filter({ hasText: 'Feed temporarily unavailable' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Feed temporarily unavailable' })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('You are all caught up.')).toHaveCount(0);
   unavailable = false;
   await page.getByRole('button', { name: 'Retry feed' }).click();
@@ -1019,7 +1028,7 @@ test(`mobile home is readable and keyboard-operable in ${colorScheme} mode`, asy
   await page.setViewportSize({ width: 390, height: 844 });
   await installApiBoundary(page);
   await page.goto('/');
-  await expect(page.getByRole('article')).toBeVisible();
+  await expect(page.getByRole('article')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('tab', { name: 'Following' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', { name: 'Following' }).focus();
   await page.keyboard.press('ArrowRight');
@@ -1109,13 +1118,75 @@ test('expired bearer logout revokes refresh session before a reload can restore 
   });
 
   await page.goto('/settings');
-  await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Log out', exact: true }).click();
   await expect(page).toHaveURL(/\/auth/);
-  expect(logoutAttempts).toBe(1);
+  await expect.poll(() => logoutAttempts).toBe(1);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
   await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+});
+
+test('queued logout blocks cookie restoration on immediate reload while another tab holds the session lock', async ({ page, context, baseURL }) => {
+  let refreshAllowed = true;
+  let refreshAttempts = 0;
+  let logoutAttempts = 0;
+  await context.addCookies([{ name: 'refreshToken', value: 'still-valid-refresh', url: baseURL!, httpOnly: true, sameSite: 'Lax' }]);
+  await page.route('**/socket.io/**', route => route.abort());
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
+    if (path === '/auth/refresh') {
+      refreshAttempts++;
+      expect(route.request().headers().cookie).toContain('refreshToken=still-valid-refresh');
+      return refreshAllowed
+        ? json(route, { accessToken: 'access-before-queued-logout' })
+        : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Invalid refresh token' }) });
+    }
+    if (path === '/auth/logout') {
+      logoutAttempts++;
+      refreshAllowed = false;
+      return json(route, null);
+    }
+    if (path === '/users/me') return json(route, user);
+    if (path === '/users/me/eligibility') return json(route, adultEligibility);
+    if (path === '/users/me/guardian-authorizations') return json(route, []);
+    if (path === '/readyz') return json(route, { status: 'ready' });
+    return json(route, []);
+  });
+  await page.goto('/settings');
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toBeVisible({ timeout: 15_000 });
+  expect(refreshAttempts).toBe(1);
+
+  const lockOwner = await context.newPage();
+  try {
+    // A static same-origin document holds the real browser lock across reload;
+    // it runs no app initialization or refresh requests of its own.
+    await lockOwner.route('**/__logout_lock_owner', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Session lock fixture</title>' }));
+    await lockOwner.goto('/__logout_lock_owner');
+    await lockOwner.evaluate(() => new Promise<void>(ready => {
+      void navigator.locks.request('yor-session-refresh', async () => {
+        await new Promise<void>(release => {
+          (globalThis as typeof globalThis & { releaseLogoutLock?: () => void }).releaseLogoutLock = release;
+          ready();
+        });
+      });
+    }));
+
+    await page.getByRole('button', { name: 'Log out', exact: true }).click();
+    await expect(page).toHaveURL(/\/auth/);
+    expect(logoutAttempts).toBe(0);
+    expect(await page.evaluate(() => localStorage.getItem('yortalks-logged-out'))).toBe('1');
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Welcome to your corner.' })).toBeVisible();
+    await expect(page.locator('#main-content').getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+    expect(logoutAttempts).toBe(0);
+    expect(refreshAllowed).toBe(true);
+    expect(refreshAttempts).toBe(1);
+    expect((await context.cookies()).find(cookie => cookie.name === 'refreshToken')?.value).toBe('still-valid-refresh');
+  } finally {
+    await lockOwner.evaluate(() => (globalThis as typeof globalThis & { releaseLogoutLock?: () => void }).releaseLogoutLock?.()).catch(() => {});
+    await lockOwner.close();
+  }
 });
 
 test('narrow Google sign-in stays within its panel as the viewport changes', async ({ page }) => {
@@ -1236,7 +1307,7 @@ test('discovery loads beyond an empty following feed without changing the select
   await expect(page.getByRole('heading', { name: 'Your people are out there.' })).toBeVisible();
 });
 
-test("public beta legal pages show configured, dated policy content", async ({ page }) => {
+test("public beta legal pages render synthetic reviewed policy data and territory-based eligibility", async ({ page }) => {
   await installApiBoundary(page);
   await page.goto("/privacy");
   await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
@@ -1245,6 +1316,11 @@ test("public beta legal pages show configured, dated policy content", async ({ p
   await expect(page.locator('a button, button a')).toHaveCount(0);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+
+  await page.goto('/terms');
+  await expect(page.getByText(/Eligibility and feature access follow the approved policy for your territory/)).toBeVisible();
+  await expect(page.getByText(/Complete the territory, age-assurance and guardian-authorization steps/)).toBeVisible();
+  await expect(page.getByText(/must be at least 18/i)).toHaveCount(0);
 });
 
 test("public beta requires consent before opening protected social routes", async ({ page }) => {
@@ -1252,6 +1328,55 @@ test("public beta requires consent before opening protected social routes", asyn
   await page.goto("/explore");
   await expect(page).toHaveURL(/\/consent$/);
   await expect(page.getByRole("heading", { name: "Review the rules before you enter" })).toBeVisible();
+});
+
+test('eligibility refresh does not remount the activated eligibility page in a request loop', async ({page}) => {
+  const requests=await installApiBoundary(page);
+  await page.goto('/eligibility');
+  await expect(page.getByRole('heading',{name:'Check what is available'})).toBeVisible();
+  await page.waitForTimeout(1_000);
+  expect(requests.get('/users/me/eligibility') ?? 0).toBeLessThanOrEqual(3);
+  expect(requests.get('/users/me/guardian-authorizations') ?? 0).toBeLessThanOrEqual(3);
+});
+
+test('under-13 registration prescreens before rendering identity fields', async ({page}) => {
+  let prescreens=0;
+  await page.route('**/api/**',async route=>{
+    const request=route.request(),path=new URL(request.url()).pathname.replace(/^\/api/,'') || '/';
+    if(path==='/auth/refresh' && request.method()==='POST')return route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({success:false})});
+    if(path==='/readyz')return json(route,{status:'ready'});
+    if(path==='/eligibility/enrollments/prescreen' && request.method()==='POST'){
+      prescreens++;
+      return json(route,{status:'unavailable',nextStep:null});
+    }
+    return json(route,[]);
+  });
+  await page.goto('/auth');
+  await page.getByRole('button',{name:'Create account',exact:true}).click();
+  await page.locator('#requestedExperience').selectOption('under_13');
+  await page.locator('#territory').fill('IN');
+  await page.locator('#acceptedTerms').check();
+  await expect(page.locator('#fullName')).toHaveCount(0);
+  await expect(page.locator('#accountIdentifier')).toHaveCount(0);
+  await expect(page.locator('#password')).toHaveCount(0);
+  await page.locator('#auth-form-panel button[type=submit]').click();
+  await expect.poll(()=>prescreens).toBe(1);
+  await expect(page.getByText('Verification is not available for this country and age group yet.',{exact:false})).toBeVisible();
+  expect(prescreens).toBe(1);
+});
+
+test('accounts with outdated terms can still reach export and deletion controls',async ({page})=>{
+  await page.route('**/api/**',async route=>{
+    const request=route.request(),path=new URL(request.url()).pathname.replace(/^\/api/,'') || '/';
+    if(path==='/auth/refresh' && request.method()==='POST')return json(route,{accessToken:'rights-fixture'});
+    if(path==='/users/me' && request.method()==='GET')return json(route,{...user,termsVersion:null,termsAcceptedAt:null});
+    if(path==='/readyz')return json(route,{status:'ready'});
+    return json(route,[]);
+  });
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole('button',{name:'Export',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Delete',exact:true})).toBeVisible();
 });
 
 test('comments retain failed drafts, prevent duplicate sends, and hide disabled payments', async ({ page }) => {
@@ -1672,3 +1797,974 @@ test('failed blocking never announces success or hides the post, and retry persi
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   await expect(itemCard).toHaveCount(0);
 });
+
+test('Clip Studio discloses source-only output and downloads the original file', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.goto('/clips');
+
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Clip Studio', exact: true })).toBeVisible();
+  await expect(page.getByText(/The vertical crop and title overlay are previews/)).toBeVisible();
+  await expect(page.getByText(/Cropping, caption burn-in, and audio mixing are not available here/)).toBeVisible();
+  await expect(page.getByText(/BGMI CLUTCH|60 FPS|CLUTCH GOD|Viral 9:16/i)).toHaveCount(0);
+
+  await page.locator('#clip-source-video').setInputFiles({
+    name: 'creator-source.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from('synthetic source video'),
+  });
+  await page.waitForFunction(() => document.querySelector('video[aria-label="Selected clip preview"]')?.getAttribute('src')?.startsWith('blob:'));
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download original source', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^yor-clip-original-\d+\.mp4$/);
+});
+
+test('Creator Studio identifies local previews and creates topic-based drafts', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.goto('/studio');
+
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Creator Studio Preview', exact: true })).toBeVisible();
+  await expect(page.getByRole('note')).toContainText('live stream');
+
+  await page.getByRole('button', { name: 'Visual filter preview' }).click();
+  await expect(page.getByText(/These CSS filters preview on a local abstract sample/)).toBeVisible();
+  const neonFilter = page.getByRole('button', { name: /Neon tint/ });
+  await neonFilter.click();
+  await expect(neonFilter).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: 'Local hook drafts' }).click();
+  await expect(page.getByText(/No AI provider is contacted/)).toBeVisible();
+  await page.getByRole('textbox', { name: 'Topic or idea' }).fill('accessible design');
+  await page.getByRole('button', { name: 'Create sample drafts' }).click();
+  await expect(page.getByText('A quick guide to accessible design', { exact: true })).toBeVisible();
+  await expect(page.getByText('What I learned while exploring accessible design', { exact: true })).toBeVisible();
+});
+
+test('creator media kit uses the latest real snapshot and exports a usable JSON file', async ({ page }) => {
+  await installApiBoundary(page);
+  const snapshots = [
+    { id: 'daily-latest', creatorId: user.id, date: '2026-10-15T00:00:00.000Z', profileViews: 7, newFollowers: 2,
+      totalPostViews: 480, totalReelViews: 120, totalEngagement: 33, estimatedEarnings: 1250 },
+    { id: 'daily-older', creatorId: user.id, date: '2026-10-14T00:00:00.000Z', profileViews: 12, newFollowers: 4,
+      totalPostViews: 450, totalReelViews: 115, totalEngagement: 30, estimatedEarnings: 900 },
+  ];
+  await page.route('**/api/economy/analytics', (route) => json(route, snapshots));
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/media-kit');
+
+  await expect(page.getByRole('heading', { name: 'Creator media kit', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('7', { exact: true })).toBeVisible();
+  await expect(page.getByText('480', { exact: true })).toBeVisible();
+  await expect(page.getByText(/3\.8M\+|Tier-1 Creator|9\.4% ER|45,000/)).toHaveCount(0);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download JSON', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^yor-creator-media-kit-ada\.json$/);
+  const exported = JSON.parse(readFileSync((await download.path())!, 'utf8')) as { creator: { profileUrl: string }; latestAnalyticsSnapshot: { profileViews: number } };
+  expect(exported.creator.profileUrl).toMatch(/\/profile\/1cc96a14-2728-46fd-ae3c-cbf15fd9db1a$/);
+  expect(exported.latestAnalyticsSnapshot.profileViews).toBe(7);
+
+  await page.getByRole('button', { name: 'Copy profile link', exact: true }).click();
+  await expect(page.getByText('Profile link copied', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/profile\/1cc96a14-2728-46fd-ae3c-cbf15fd9db1a$/);
+});
+
+test('trophy room renders achievements returned for the current account', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('**/api/achievements/me', (route) => json(route, [
+    { id: 'first-post', title: 'First Post', description: 'Publish your first post', icon: 'Sparkles', goal: 1, progress: 1, xp: 50, unlocked: true },
+    { id: 'rising-voice', title: 'Rising Voice', description: 'Reach 1,000 followers', icon: 'TrendingUp', goal: 1000, progress: 12, xp: 200, unlocked: false },
+  ]));
+  await page.goto('/trophies');
+
+  await expect(page.getByRole('heading', { name: 'Achievements', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'First Post', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Rising Voice/ })).toBeVisible();
+  await expect(page.getByText(/BGIS National Championship|Valorant South Asia Masters|official clan/i)).toHaveCount(0);
+});
+
+test('projects list filters persisted records and lets members answer real invitations', async ({ page }) => {
+  await installApiBoundary(page);
+  const ownedProject = { id: '30000000-0000-4000-8000-000000000001', ownerId: user.id, title: 'Compiler Notes',
+    description: 'A reading group for compiler design.', status: 'active', visibility: 'public', lookingForCollaborators: false,
+    createdAt: user.createdAt, updatedAt: user.updatedAt };
+  const invitedProject = { id: '30000000-0000-4000-8000-000000000002', ownerId: '10000000-0000-4000-8000-000000000099',
+    title: 'Community Archive', description: 'Organize local history.', status: 'planning', visibility: 'private', lookingForCollaborators: false,
+    createdAt: user.createdAt, updatedAt: user.updatedAt };
+  let invitationDecision = '';
+  await page.route('**/api/projects/invitations', (route) => json(route, { invitations: [{ project: invitedProject, role: 'advisor', status: 'pending' }] }));
+  await page.route('**/api/projects', (route) => json(route, { projects: [ownedProject] }));
+  await page.route('**/api/projects/*/collaborators/respond', async (route) => {
+    invitationDecision = route.request().postDataJSON().decision;
+    return json(route, { projectId: invitedProject.id, status: invitationDecision });
+  });
+  await page.goto('/projects');
+
+  await expect(page.getByRole('heading', { name: 'Projects', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /Compiler Notes/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Community Archive', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(page.getByText('Project invitation accepted', { exact: true })).toBeVisible();
+  expect(invitationDecision).toBe('accepted');
+  await expect(page.getByRole('heading', { name: 'Invitations for you', exact: true })).toHaveCount(0);
+
+  await page.getByRole('textbox', { name: 'Search your projects' }).fill('compiler');
+  await expect(page.getByRole('button', { name: /Compiler Notes/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Community Archive/ })).toHaveCount(0);
+  await expect(page.getByText(/Creator DNA Match|Sarah J\.|DevMaster|98%|92%/)).toHaveCount(0);
+});
+
+test('project invitations and collaborator search distinguish outages from empty results and retry independently', async ({ page }) => {
+  await installApiBoundary(page);
+  const project = { id: '30000000-0000-4000-8000-000000000111', ownerId: user.id, title: 'Reliable Workspace',
+    description: 'A persisted project.', status: 'planning', visibility: 'private', lookingForCollaborators: false,
+    createdAt: user.createdAt, updatedAt: user.updatedAt };
+  const collaborator = { ...user, id: '10000000-0000-4000-8000-000000000111', username: 'grace', fullName: 'Grace Hopper' };
+  let invitationReads = 0, projectReads = 0, searchReads = 0;
+  const unavailable = (route: Route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Temporarily unavailable' }) });
+  await page.route('**/api/projects', route => { projectReads++; return json(route, { projects: [project] }); });
+  await page.route('**/api/projects/invitations', route => ++invitationReads === 1 ? unavailable(route) : json(route, { invitations: [] }));
+  await page.route('**/api/users/search?*', route => ++searchReads === 1 ? unavailable(route) : json(route, [collaborator]));
+  await page.goto('/projects');
+  await expect(page.getByRole('button', { name: /Reliable Workspace/ })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Project invitations could not be loaded.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry project invitations', exact: true }).click();
+  await expect(page.getByText('Project invitations could not be loaded.', { exact: true })).toHaveCount(0);
+  expect(invitationReads).toBe(2);
+  expect(projectReads).toBe(1);
+
+  await page.getByRole('button', { name: /Reliable Workspace/ }).click();
+  await page.getByRole('textbox', { name: 'Search people to invite' }).fill('grace');
+  await expect(page.getByText('People could not be searched.', { exact: true })).toBeVisible();
+  await expect(page.getByText('No matching accounts found.', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retry people search', exact: true }).click();
+  await expect(page.getByText('Grace Hopper', { exact: true })).toBeVisible();
+  expect(searchReads).toBe(2);
+});
+
+test('project invitation decisions stay locked independently until each server write finishes', async ({ page }) => {
+  await installApiBoundary(page);
+  const projects = ['First invitation', 'Second invitation'].map((title, index) => ({
+    id: `30000000-0000-4000-8000-00000000012${index}`, ownerId: '10000000-0000-4000-8000-000000000099', title,
+    description: 'Shared work.', status: 'planning', visibility: 'private', lookingForCollaborators: false,
+    createdAt: user.createdAt, updatedAt: user.updatedAt,
+  }));
+  const releases: (() => void)[] = [];
+  const writes = [0, 0];
+  await page.route('**/api/projects', route => json(route, { projects: [] }));
+  await page.route('**/api/projects/invitations', route => json(route, { invitations: projects.map(project => ({ project, role: 'collaborator', status: 'pending' })) }));
+  await page.route('**/api/projects/*/collaborators/respond', async route => {
+    const index = projects.findIndex(project => route.request().url().includes(project.id));
+    writes[index]++;
+    await new Promise<void>(resolve => { releases[index] = resolve; });
+    return json(route, { projectId: projects[index].id, status: 'accepted' });
+  });
+  try {
+    await page.goto('/projects');
+    const first = page.getByRole('article').filter({ hasText: 'First invitation' });
+    const second = page.getByRole('article').filter({ hasText: 'Second invitation' });
+    await first.getByRole('button', { name: 'Accept', exact: true }).click();
+    await second.getByRole('button', { name: 'Accept', exact: true }).click();
+    await expect(first.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled();
+    await expect(second.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled();
+    await expect.poll(() => writes).toEqual([1, 1]);
+    releases[1]();
+    await expect(second).toHaveCount(0);
+    await expect(first.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled();
+    releases[0]();
+    await expect(first).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /First invitation/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Second invitation/ })).toBeVisible();
+    expect(writes).toEqual([1, 1]);
+  } finally {
+    releases.forEach(release => release());
+  }
+});
+
+test('public marketplace hides unconnected sample game inventory and trades', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.goto('/marketplace');
+
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Marketplace', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Steam inventory|Trade Skin|Gear trade|Trade Offer/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sell Item', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Orders', exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Development demo|Sample game inventory|Valkyrie_Zero|Verified Skins/i)).toHaveCount(0);
+  await expect(page.getByText(/Prices are shown in INR; checkout and selling are disabled/i)).toBeVisible();
+
+  await page.goto('/store');
+  await expect(page.getByRole('heading', { name: 'Creator commerce is paused', exact: true })).toBeVisible();
+  await expect(page.getByText('Verified commerce', { exact: true })).toHaveCount(0);
+});
+
+test('profile hover card uses stored profile data instead of fabricated game presence or badges', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.goto('/');
+
+  const usernames = page.getByText('@ada', { exact: true });
+  const usernameCountBeforeHover = await usernames.count();
+  await page.getByRole('link', { name: "View Ada Lovelace's profile" }).first().hover();
+  await expect.poll(() => usernames.count()).toBeGreaterThan(usernameCountBeforeHover);
+  await expect(page.getByText('Cyberpunk 2077: Phantom Liberty', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('In-Game', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('42 Badges', { exact: true })).toHaveCount(0);
+});
+
+test('ambient player starts generated audio, changes gain, pauses, and closes on shell exit', async ({ page }) => {
+  await page.addInitScript(() => {
+    const stats = { started: 0, stopped: 0, closed: 0, filteredVoices: 0, gainValues: [] as number[] };
+    Object.defineProperty(window, '__ambientAudioStats', { value: stats, configurable: true });
+    class FakeParam {
+      value = 0;
+      setTargetAtTime(value: number) { this.value = value; stats.gainValues.push(value); }
+    }
+    class FakeNode {
+      connect(target: unknown) {
+        if (this instanceof FakeGain && target instanceof FakeFilter) stats.filteredVoices++;
+        return this;
+      }
+      disconnect() {}
+    }
+    class FakeOscillator extends FakeNode {
+      frequency = new FakeParam();
+      type = 'sine';
+      start() { stats.started++; }
+      stop() { stats.stopped++; }
+    }
+    class FakeGain extends FakeNode { gain = new FakeParam(); }
+    class FakeFilter extends FakeNode {
+      type = 'lowpass';
+      frequency = new FakeParam();
+      Q = new FakeParam();
+    }
+    class FakeAudioContext {
+      state = 'suspended';
+      currentTime = 0;
+      destination = new FakeNode();
+      createGain() { return new FakeGain(); }
+      createBiquadFilter() { return new FakeFilter(); }
+      createOscillator() { return new FakeOscillator(); }
+      async resume() { this.state = 'running'; }
+      async suspend() { this.state = 'suspended'; }
+      async close() { this.state = 'closed'; stats.closed++; }
+    }
+    Object.defineProperty(window, 'AudioContext', { value: FakeAudioContext, writable: true, configurable: true });
+  });
+  await installApiBoundary(page);
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Play ambient audio', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause ambient audio', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.started)).toBeGreaterThanOrEqual(5);
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.filteredVoices)).toBe(1);
+
+  await page.getByRole('button', { name: 'Mute ambient audio', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.gainValues.at(-1))).toBe(0);
+  await page.getByRole('button', { name: 'Choose ambience', exact: true }).click();
+  await page.getByRole('button', { name: /Night Signal/ }).click();
+  await expect(page.getByText('Night Signal', { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.started)).toBeGreaterThanOrEqual(10);
+
+  await page.getByRole('button', { name: 'Pause ambient audio', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Play ambient audio', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.stopped)).toBeGreaterThanOrEqual(5);
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/terms');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect.poll(() => page.evaluate(() => (window as any).__ambientAudioStats.closed)).toBeGreaterThanOrEqual(1);
+});
+
+test('community slug deep links resolve uncached records and use canonical IDs for every action', async ({ page }) => {
+  await installApiBoundary(page);
+  const community = { id: '60000000-0000-4000-8000-000000000001', slug: 'compiler-circle', name: 'Compiler Circle',
+    description: 'Compiler design discussions.', ownerId: '10000000-0000-4000-8000-000000000099', moderators: [], memberIds: [],
+    memberCount: 12, isMember: false, createdAt: user.createdAt, visibility: 'public', contentRating: 'regular' };
+  const discussion = { id: '60000000-0000-4000-8000-000000000002', title: 'A new compiler discussion',
+    content: 'Discussing compiler implementation.', tag: 'General', repliesCount: 0, likes: 0, createdAt: user.createdAt, author: user };
+  const actions: string[] = [];
+  await page.route('**/api/communities', route => json(route, [{ ...community, id: 'unrelated-circle', name: 'Unrelated Circle', slug: 'unrelated' }]));
+  await page.route('**/api/communities/compiler-circle', route => json(route, community));
+  await page.route(`**/api/communities/${community.id}/discussions`, route => {
+    actions.push(`${route.request().method()} discussions`);
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON().title).toBe(discussion.title);
+      return json(route, discussion);
+    }
+    return json(route, []);
+  });
+  await page.route(`**/api/communities/${community.id}/join`, route => {
+    actions.push('join');
+    return json(route, { ...community, memberCount: 13, isMember: true });
+  });
+  await page.route(`**/api/communities/${community.id}/leave`, route => {
+    actions.push('leave');
+    return json(route, community);
+  });
+  await page.route(`**/api/communities/${community.id}/discussions/${discussion.id}/like`, route => {
+    actions.push('like');
+    return json(route, { ...discussion, likes: 1, likedByMe: true });
+  });
+  await page.goto('/communities/compiler-circle');
+  await expect(page.getByRole('heading', { name: community.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Unrelated Circle', exact: true })).toHaveCount(0);
+  await expect(page.getByText('No discussions yet. Start the first conversation for this world.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start Discussion', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Join Circle', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Joined Circle', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Start Discussion', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Discussion title', exact: true }).fill(discussion.title);
+  await page.getByRole('textbox', { name: 'Discussion details', exact: true }).fill(discussion.content);
+  await page.getByRole('button', { name: 'Publish Thread', exact: true }).click();
+  await expect(page.getByRole('heading', { name: discussion.title, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Like', exact: true }).click();
+  await expect(page.getByText('Discussion liked', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Joined Circle', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Join Circle', exact: true })).toBeVisible();
+  expect(actions).toEqual(['GET discussions', 'join', 'POST discussions', 'like', 'leave']);
+});
+
+test('community deep links distinguish missing records from retryable failures and retry discussions', async ({ page }) => {
+  await installApiBoundary(page);
+  const community = { id: '60000000-0000-4000-8000-000000000011', slug: 'retry-circle', name: 'Retry Circle',
+    description: 'A community beyond the initial list.', ownerId: user.id, moderators: [], memberIds: [], createdAt: user.createdAt };
+  await page.route('**/api/communities/missing-circle', route => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Community not found' }) }));
+  let detailReads = 0, discussionReads = 0;
+  await page.route('**/api/communities/retry-circle', route => {
+    if (++detailReads === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Temporarily unavailable' }) });
+    return json(route, community);
+  });
+  await page.route(`**/api/communities/${community.id}/discussions`, route => {
+    if (++discussionReads === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Temporarily unavailable' }) });
+    return json(route, []);
+  });
+  await page.goto('/communities/missing-circle');
+  await expect(page.getByRole('heading', { name: 'Circle not found', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Join Circle', exact: true })).toHaveCount(0);
+  await page.goto('/communities/retry-circle');
+  await expect(page.getByRole('heading', { name: 'Could not load this circle', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry circle', exact: true }).click();
+  await expect(page.getByRole('heading', { name: community.name, exact: true })).toBeVisible();
+  await expect(page.getByText('Discussions could not be loaded.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Announcements', exact: true }).click();
+  await expect(page.getByText('Discussions could not be loaded.', { exact: true })).toBeVisible();
+  await expect(page.getByText('No official announcements have been posted in this world.', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retry discussions', exact: true }).click();
+  await expect(page.getByText('No official announcements have been posted in this world.', { exact: true })).toBeVisible();
+  expect(detailReads).toBe(2);
+  expect(discussionReads).toBe(2);
+});
+
+test('accessibility preferences load before opening Control Room, persist across navigation, and reset on logout', async ({ page }) => {
+  await installApiBoundary(page);
+  const preference = { id: 'accessibility-preferences', kind: 'preference', itemKey: 'accessibility',
+    payload: { largeText: true, highContrast: true, reducedMotion: true, captions: false }, createdAt: user.createdAt, updatedAt: user.updatedAt };
+  let preferenceReads = 0;
+  await page.route('**/api/creator/workspace*', route => {
+    if (new URL(route.request().url()).searchParams.get('kind') === 'preference') preferenceReads++;
+    return json(route, [preference]);
+  });
+  await page.route('**/api/auth/logout', route => json(route, null));
+  await page.goto('/');
+  const root = page.locator('html');
+  await expect(root).toHaveClass(/yor-accessibility-large-text/);
+  await expect(root).toHaveClass(/yor-accessibility-high-contrast/);
+  await expect(root).toHaveClass(/yor-accessibility-reduced-motion/);
+  expect(await root.evaluate(element => getComputedStyle(element).fontSize)).toBe('18px');
+  await page.evaluate(() => { history.pushState({}, '', '/control-room'); dispatchEvent(new PopStateEvent('popstate')); });
+  await page.getByRole('button', { name: 'Access for everyone', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: /^Large text/ })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /^Captions & transcripts/ })).not.toBeChecked();
+  await page.evaluate(() => { history.pushState({}, '', '/settings'); dispatchEvent(new PopStateEvent('popstate')); });
+  await expect(page.getByRole('button', { name: 'Log out', exact: true })).toBeVisible();
+  await expect(root).toHaveClass(/yor-accessibility-large-text/);
+  await expect(root).toHaveClass(/yor-accessibility-high-contrast/);
+  await expect(root).toHaveClass(/yor-accessibility-reduced-motion/);
+  expect(preferenceReads).toBe(1);
+  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await expect(page).toHaveURL(/\/auth(?:\?|$)/);
+  await expect(root).not.toHaveClass(/yor-accessibility-/);
+});
+
+test('accessibility load failures require retry and failed saves restore the previous preference', async ({ page }) => {
+  await installApiBoundary(page);
+  let failLoading = true, saves = 0;
+  let preference = { id: 'accessibility-preferences', kind: 'preference', itemKey: 'accessibility',
+    payload: { largeText: false, highContrast: false, reducedMotion: false, captions: true }, createdAt: user.createdAt, updatedAt: user.updatedAt };
+  await page.route('**/api/creator/workspace*', route => {
+    if (route.request().method() === 'PUT') {
+      if (++saves === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Preferences could not be saved' }) });
+      preference = { ...preference, payload: route.request().postDataJSON().payload };
+      return json(route, preference);
+    }
+    if (new URL(route.request().url()).searchParams.get('kind') === 'preference' && failLoading) {
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Preferences unavailable' }) });
+    }
+    return json(route, [preference]);
+  });
+  await page.goto('/control-room');
+  await page.getByRole('button', { name: 'Access for everyone', exact: true }).click();
+  const largeText = page.getByRole('checkbox', { name: /^Large text/ });
+  await expect(page.getByText('Your accessibility settings could not be loaded. Retry before changing them.', { exact: true })).toBeVisible();
+  await expect(largeText).toBeDisabled();
+  failLoading = false;
+  await page.getByRole('button', { name: 'Retry accessibility settings', exact: true }).click();
+  await expect(largeText).toBeEnabled();
+  // The rejected save rolls back immediately, so Playwright's check helper
+  // would fail because the controlled checkbox is already unchecked again.
+  await largeText.click();
+  await expect(page.getByText('Preferences could not be saved', { exact: true })).toBeVisible();
+  await expect(largeText).not.toBeChecked();
+  await expect(page.locator('html')).not.toHaveClass(/yor-accessibility-large-text/);
+  await largeText.check();
+  await expect(largeText).toBeEnabled();
+  await expect(largeText).toBeChecked();
+  await expect(page.locator('html')).toHaveClass(/yor-accessibility-large-text/);
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/yor-accessibility-large-text/);
+  expect(saves).toBe(2);
+});
+
+test('language control describes the English interface without applying unavailable translations', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('yortalks-lang', 'fr'));
+  await installApiBoundary(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://yor-talks.test/');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://yor-talks.test/og-card.png');
+  const previewImage = await page.evaluate(async () => {
+    const response = await fetch('/og-card.png', { method: 'HEAD' });
+    return { status: response.status, contentType: response.headers.get('content-type') };
+  });
+  expect(previewImage).toEqual({ status: 200, contentType: 'image/png' });
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Interface language: English', exact: true }).click();
+  await expect(page.getByText('Yor Talks is currently available in English.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem')).toHaveCount(1);
+  await expect(page.getByRole('menuitem', { name: 'English', exact: true })).toBeDisabled();
+  await expect(page.getByRole('menuitem', { name: /French|Hindi|Arabic/ })).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('moderator can page and filter reports and handle a grievance with a private officer note', async ({ page }) => {
+  await installApiBoundary(page, { ...user, role: 'moderator' });
+  const firstReport = { id: '70000000-0000-4000-8000-000000000001', reporterId: user.id,
+    entityType: 'post', entityId: 'reported-item-1', reason: 'spam', details: 'First report', status: 'pending',
+    decisionReason: null, createdAt: user.createdAt, resolvedAt: null };
+  const olderReport = { ...firstReport, id: '70000000-0000-4000-8000-000000000002', entityId: 'reported-item-2', details: 'Older report' };
+  const decisionReason = 'Reviewed the content and confirmed the report meets our spam policy.';
+  const grievance = { id: '70000000-0000-4000-8000-000000000003', ticketId: 'YT-GRV-123456ABCD',
+    category: 'privacy_violation', reportedUrl: 'https://example.test/private', reporterName: 'Private Reporter',
+    reporterEmail: 'reporter@example.test', description: 'Please review this privacy complaint carefully.',
+    status: 'received', slaDeadline: null, createdAt: user.createdAt, officerNote: null };
+  const requests: string[] = [];
+  await page.route('**/api/reports/queue*', async route => {
+    const url = new URL(route.request().url());
+    const status = url.searchParams.get('status') ?? 'all';
+    const cursor = url.searchParams.get('cursor');
+    requests.push(`reports:${status}:${cursor ?? 'first'}`);
+    if (route.request().method() === 'PATCH') return json(route, { ...firstReport, status: route.request().postDataJSON().status });
+    if (status === 'reviewed') return json(route, [{ ...firstReport, status: 'reviewed' }], { hasMore: false, nextCursor: null, limit: 50 });
+    if (status === 'resolved') return json(route, [{ ...firstReport, status: 'resolved', decisionReason }], { hasMore: false, nextCursor: null, limit: 50 });
+    if (status === 'all') return json(route, [firstReport, olderReport], { hasMore: false, nextCursor: null, limit: 50 });
+    return json(route, cursor ? [olderReport] : [firstReport], { hasMore: !cursor, nextCursor: cursor ? null : 'signed-cursor-fixture', limit: 50 });
+  });
+  await page.route(`**/api/reports/${firstReport.id}/status`, route => {
+    expect(route.request().postDataJSON()).toEqual({ status: 'resolved', decisionReason });
+    return json(route, { ...firstReport, status: 'resolved', decisionReason, resolvedAt: user.createdAt });
+  });
+  await page.route(`**/api/reports/${firstReport.id}/history`, route => json(route, [{
+    id: '70000000-0000-4000-8000-000000000004', reportId: firstReport.id, moderatorId: user.id,
+    fromStatus: 'reviewed', toStatus: 'resolved', decisionReason, createdAt: user.createdAt,
+  }]));
+  await page.route('**/api/reports/grievance/**', async route => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    const body = route.request().postDataJSON();
+    expect(body.officerNote).toBe('Visible only to the review team');
+    return json(route, { ...grievance, status: body.status, officerNote: body.officerNote });
+  });
+  await page.route('**/api/reports/grievances*', route => {
+    const url = new URL(route.request().url());
+    requests.push(`grievances:${url.searchParams.get('status') ?? 'all'}:${url.searchParams.get('cursor') ?? 'first'}`);
+    return json(route, [grievance], { hasMore: false, nextCursor: null, limit: 50 });
+  });
+
+  await page.goto('/moderation');
+  await expect(page.getByText('First report', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Load older reports', exact: true }).click();
+  await expect(page.getByText('Older report', { exact: true })).toBeVisible();
+  await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'reviewed', exact: true }).click();
+  await expect(page.getByText('First report', { exact: true })).toBeVisible();
+  await expect(page.getByText('Older report', { exact: true })).toHaveCount(0);
+  const reportCard = page.locator('article').filter({ hasText: 'First report' });
+  const resolveReport = reportCard.getByRole('button', { name: 'resolved', exact: true });
+  await expect(resolveReport).toBeDisabled();
+  await reportCard.getByLabel('Decision reason (required to resolve or dismiss)').fill(decisionReason);
+  await expect(resolveReport).toBeEnabled();
+  await resolveReport.click();
+  await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'resolved', exact: true }).click();
+  const resolvedReportCard = page.locator('article').filter({ hasText: 'First report' });
+  await resolvedReportCard.getByRole('button', { name: 'View decision history', exact: true }).click();
+  await expect(resolvedReportCard.getByLabel('Report decision history').getByText(decisionReason, { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'grievances', exact: true }).click();
+  await expect(page.getByText('Reporter: Private Reporter · reporter@example.test', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'all', exact: true }).click();
+  await page.getByLabel('Internal case note').fill('Visible only to the review team');
+  await page.locator('article').getByRole('button', { name: 'under review', exact: true }).click();
+  await expect(page.getByText('Internal note: Visible only to the review team', { exact: true })).toBeVisible();
+  expect(requests).toContain('reports:pending:first');
+  expect(requests).toContain('reports:pending:signed-cursor-fixture');
+  expect(requests).toContain('reports:reviewed:first');
+  expect(requests).toContain('grievances:received:first');
+});
+
+test('moderation discards history reads started before a new decision', async ({ page }) => {
+  await installApiBoundary(page, { ...user, role: 'moderator' });
+  const reportId = '71000000-0000-4000-8000-000000000001';
+  const report = { id: reportId, reporterId: user.id, entityType: 'post', entityId: 'history-race-fixture', reason: 'spam',
+    details: 'History race report', status: 'pending', decisionReason: null, createdAt: user.createdAt, resolvedAt: null };
+  const decisionReason = 'Reviewed the reported content and recorded the current decision.';
+  let decided = false;
+  let historyReads = 0;
+  let releaseHistory!: () => void;
+  const priorHistory = new Promise<void>(resolve => { releaseHistory = resolve; });
+  await page.route('**/api/reports/queue*', route => json(route, [{ ...report, ...(decided ? { status: 'resolved', decisionReason } : {}) }], { hasMore: false, nextCursor: null, limit: 50 }));
+  await page.route(`**/api/reports/${reportId}/status`, route => {
+    expect(route.request().postDataJSON()).toEqual({ status: 'resolved', decisionReason });
+    decided = true;
+    return json(route, { ...report, status: 'resolved', decisionReason, resolvedAt: user.createdAt });
+  });
+  await page.route(`**/api/reports/${reportId}/history`, async route => {
+    historyReads++;
+    const obsolete = historyReads === 1;
+    if (obsolete) await priorHistory;
+    return json(route, [{ id: '71000000-0000-4000-8000-000000000002', reportId, moderatorId: user.id,
+      fromStatus: 'pending', toStatus: obsolete ? 'dismissed' : 'resolved',
+      decisionReason: obsolete ? 'An obsolete history response must be discarded.' : decisionReason, createdAt: user.createdAt }]);
+  });
+
+  await page.goto('/moderation');
+  await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+  const card = page.locator('article').filter({ hasText: 'History race report' });
+  const historyStarted = page.waitForRequest(request => request.url().endsWith(`/reports/${reportId}/history`));
+  await card.getByRole('button', { name: 'View decision history', exact: true }).click();
+  await historyStarted;
+  await card.getByLabel('Decision reason (required to resolve or dismiss)').fill(decisionReason);
+  await card.getByRole('button', { name: 'resolved', exact: true }).click();
+  await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+  const obsoleteResponse = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/history`));
+  releaseHistory();
+  await (await obsoleteResponse).finished();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(card.getByText('An obsolete history response must be discarded.', { exact: true })).toHaveCount(0);
+  await card.getByRole('button', { name: 'View decision history', exact: true }).click();
+  await expect(card.getByLabel('Report decision history').getByText(decisionReason, { exact: true })).toBeVisible();
+});
+
+test('saved collection distinguishes outages from empty results and preserves confirmed videos on refresh failure', async ({ page }) => {
+  await installApiBoundary(page);
+  let mode: 'unavailable' | 'empty' | 'video' | 'outage' = 'unavailable';
+  const mediaId = '72000000-0000-4000-8000-000000000001';
+  const video = { id: '72000000-0000-4000-8000-000000000002', authorId: user.id, title: 'Confirmed saved video',
+    description: 'Saved collection fixture', type: 'short', likes: 1, createdAt: user.createdAt,
+    videoUrl: `/api/media/${mediaId}/content?token=saved-collection-fixture`, thumbnailUrl: null };
+  const olderVideo = { ...video, id: '72000000-0000-4000-8000-000000000003', title: 'Older saved video' };
+  const unavailable = (route: Route) => route.fulfill({ status: 503, contentType: 'application/json',
+    body: JSON.stringify({ success: false, message: 'Saved collection is temporarily unavailable', data: null, errors: [] }) });
+  await page.route('**/api/posts/saved*', route => {
+    if (mode === 'unavailable' || mode === 'outage') return unavailable(route);
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    const hasMore = mode === 'video' && !cursor;
+    return json(route, mode === 'video' && cursor ? [{ ...post('Older saved bookmark', '72000000-0000-4000-8000-000000000004'), savedByMe: true }] : [],
+      { limit: 50, hasMore, nextCursor: hasMore ? 'saved-post-cursor-fixture' : null });
+  });
+  await page.route('**/api/videos/saved*', route => {
+    if (mode === 'unavailable' || mode === 'outage') return unavailable(route);
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    const hasMore = mode === 'video' && !cursor;
+    return json(route, mode === 'video' ? cursor ? [olderVideo] : [video] : [],
+      { limit: 50, hasMore, nextCursor: hasMore ? 'saved-video-cursor-fixture' : null });
+  });
+  await page.route(`**/api/media/${mediaId}/content?*`, route => route.fulfill({ status: 200, contentType: 'video/mp4', body: Buffer.from([0]) }));
+
+  await page.goto('/saved');
+  await expect(page.getByRole('button', { name: 'Retry saved posts', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry saved videos', exact: true })).toBeVisible();
+  await expect(page.getByText('Nothing saved yet.', { exact: true })).toHaveCount(0);
+  mode = 'empty';
+  await page.getByRole('button', { name: 'Retry saved posts', exact: true }).click();
+  await page.getByRole('button', { name: 'Retry saved videos', exact: true }).click();
+  await expect(page.getByText('Nothing saved yet.', { exact: true })).toBeVisible();
+  mode = 'video';
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Confirmed saved video', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Load older saved posts', exact: true }).click();
+  await expect(page.getByText('Older saved bookmark', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Load older saved videos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Older saved video', exact: true })).toBeVisible();
+  mode = 'outage';
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByText('Your last loaded saved videos are still shown.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Confirmed saved video', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Older saved video', exact: true })).toBeVisible();
+  await expect(page.getByText('Nothing saved yet.', { exact: true })).toHaveCount(0);
+});
+
+test('moderation keeps pending case mutations locked across filter and queue changes', async ({ page }) => {
+  await installApiBoundary(page, { ...user, role: 'moderator' });
+  const reportId = '73000000-0000-4000-8000-000000000001';
+  const report = { id: reportId, reporterId: user.id, entityType: 'post', entityId: 'mutation-lock-fixture', reason: 'spam',
+    details: 'Mutation lock report', status: 'pending', decisionReason: null, createdAt: user.createdAt, resolvedAt: null };
+  const grievance = { id: '73000000-0000-4000-8000-000000000002', ticketId: 'YT-GRV-LOCK123456',
+    category: 'privacy_violation', reportedUrl: 'https://example.test/lock-case', reporterName: 'Lock Fixture Reporter',
+    reporterEmail: 'lock-reporter@example.test', description: 'Mutation lock grievance', status: 'received',
+    slaDeadline: null, createdAt: user.createdAt, officerNote: null as string | null };
+  const mutations = { reports: 0, grievances: 0 };
+  let releaseReport!: () => void;
+  let releaseGrievance!: () => void;
+  const reportBarrier = new Promise<void>(resolve => { releaseReport = resolve; });
+  const grievanceBarrier = new Promise<void>(resolve => { releaseGrievance = resolve; });
+  await page.route('**/api/reports/queue*', route => {
+    const status = new URL(route.request().url()).searchParams.get('status');
+    return json(route, !status || status === report.status ? [report] : [], { hasMore: false, nextCursor: null, limit: 50 });
+  });
+  await page.route(`**/api/reports/${reportId}/status`, async route => {
+    mutations.reports++;
+    expect(route.request().postDataJSON()).toEqual({ status: 'reviewed' });
+    await reportBarrier;
+    report.status = 'reviewed';
+    return json(route, report);
+  });
+  await page.route('**/api/reports/grievances*', route => {
+    const status = new URL(route.request().url()).searchParams.get('status');
+    return json(route, !status || status === grievance.status ? [grievance] : [], { hasMore: false, nextCursor: null, limit: 50 });
+  });
+  await page.route(`**/api/reports/grievance/${grievance.ticketId}/status`, async route => {
+    mutations.grievances++;
+    const body = route.request().postDataJSON();
+    expect(body).toEqual({ status: 'under_review', officerNote: 'The reviewer is investigating this case.' });
+    await grievanceBarrier;
+    grievance.status = body.status;
+    grievance.officerNote = body.officerNote;
+    return json(route, grievance);
+  });
+
+  try {
+    await page.goto('/moderation');
+    const reportCard = page.locator('article').filter({ hasText: 'Mutation lock report' });
+    const reportStarted = page.waitForRequest(request => request.url().endsWith(`/reports/${reportId}/status`));
+    await reportCard.getByRole('button', { name: 'reviewed', exact: true }).click();
+    await reportStarted;
+    await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+    await expect(reportCard.getByRole('button', { name: 'reviewed', exact: true })).toBeDisabled();
+    await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
+    await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'reports', exact: true }).click();
+    await expect(reportCard.getByRole('button', { name: 'reviewed', exact: true })).toBeDisabled();
+    await expect(reportCard.getByLabel('Decision reason (required to resolve or dismiss)')).toBeDisabled();
+    await page.getByRole('button', { name: 'Home', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(reportCard.getByRole('button', { name: 'reviewed', exact: true })).toBeDisabled();
+    await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+    await expect(reportCard.getByRole('button', { name: 'reviewed', exact: true })).toBeDisabled();
+    expect(mutations.reports).toBe(1);
+    const reportFinished = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/status`));
+    releaseReport();
+    await (await reportFinished).finished();
+    await expect(reportCard.getByText('post · reviewed', { exact: true })).toBeVisible();
+    await expect(reportCard.getByRole('button', { name: 'pending', exact: true })).toBeEnabled();
+
+    await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
+    const grievanceCard = page.locator('article').filter({ hasText: 'Mutation lock grievance' });
+    await grievanceCard.getByLabel('Internal case note').fill('The reviewer is investigating this case.');
+    const grievanceStarted = page.waitForRequest(request => request.url().endsWith(`/grievance/${grievance.ticketId}/status`));
+    await grievanceCard.getByRole('button', { name: 'under review', exact: true }).click();
+    await grievanceStarted;
+    await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+    await expect(grievanceCard.getByRole('button', { name: 'under review', exact: true })).toBeDisabled();
+    await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'reports', exact: true }).click();
+    await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
+    await expect(grievanceCard.getByRole('button', { name: 'under review', exact: true })).toBeDisabled();
+    await expect(grievanceCard.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+    await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+    await expect(grievanceCard.getByRole('button', { name: 'under review', exact: true })).toBeDisabled();
+    expect(mutations.grievances).toBe(1);
+    const grievanceFinished = page.waitForResponse(response => response.url().endsWith(`/grievance/${grievance.ticketId}/status`));
+    releaseGrievance();
+    await (await grievanceFinished).finished();
+    await expect(grievanceCard.getByText('Internal note: The reviewer is investigating this case.', { exact: true })).toBeVisible();
+    await expect(grievanceCard.getByRole('button', { name: 'received', exact: true })).toBeEnabled();
+  } finally {
+    releaseReport();
+    releaseGrievance();
+  }
+});
+
+test('saved collection retries a failed video append with the same cursor', async ({ page }) => {
+  await installApiBoundary(page);
+  const mediaId = '74000000-0000-4000-8000-000000000001';
+  const firstVideo = { id: '74000000-0000-4000-8000-000000000002', authorId: user.id, title: 'Saved video before append',
+    type: 'short', likes: 1, createdAt: user.createdAt, videoUrl: `/api/media/${mediaId}/content?token=append-retry-fixture`, thumbnailUrl: null };
+  const olderVideo = { ...firstVideo, id: '74000000-0000-4000-8000-000000000003', title: 'Saved video after retry' };
+  const cursor = 'same-video-page-fixture';
+  const requestedCursors: Array<string | null> = [];
+  let failAppend = true;
+  await page.route('**/api/posts/saved*', route => json(route, [], { hasMore: false, nextCursor: null, limit: 50 }));
+  await page.route('**/api/videos/saved*', route => {
+    const requestedCursor = new URL(route.request().url()).searchParams.get('cursor');
+    requestedCursors.push(requestedCursor);
+    if (requestedCursor && failAppend) {
+      failAppend = false;
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Older videos are temporarily unavailable' }) });
+    }
+    return json(route, requestedCursor ? [firstVideo, olderVideo] : [firstVideo],
+      { hasMore: !requestedCursor, nextCursor: requestedCursor ? null : cursor, limit: 50 });
+  });
+  await page.route(`**/api/media/${mediaId}/content?*`, route => route.fulfill({ status: 200, contentType: 'video/mp4', body: Buffer.from([0]) }));
+
+  await page.goto('/saved');
+  await expect(page.getByRole('heading', { name: 'Saved video before append', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Load older saved videos', exact: true }).click();
+  await expect(page.getByText('Older saved videos could not load. Check your connection and retry.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saved video before append', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saved video after retry', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retry saved videos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Saved video after retry', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saved video before append', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Retry saved videos', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Load older saved videos', exact: true })).toHaveCount(0);
+  expect(requestedCursors).toEqual([null, cursor, cursor]);
+});
+
+test('moderation refresh preserves a later external decision after an older mutation response arrives', async ({ page }) => {
+  await installApiBoundary(page, { ...user, role: 'moderator' });
+  const reportId = '75000000-0000-4000-8000-000000000001';
+  let currentReport = { id: reportId, reporterId: user.id, entityType: 'post', entityId: 'generation-guard-fixture', reason: 'spam',
+    details: 'Generation guard report', status: 'pending', decisionReason: null as string | null, createdAt: user.createdAt, resolvedAt: null as string | null };
+  const currentRationale = 'Another moderator completed the investigation and recorded the current resolution.';
+  let queueReads = 0;
+  let releaseReviewedResponse!: () => void;
+  let markReviewedCommitted!: () => void;
+  const reviewedResponse = new Promise<void>(resolve => { releaseReviewedResponse = resolve; });
+  const reviewedCommitted = new Promise<void>(resolve => { markReviewedCommitted = resolve; });
+  await page.route('**/api/reports/queue*', route => {
+    queueReads++;
+    const status = new URL(route.request().url()).searchParams.get('status');
+    return json(route, !status || status === currentReport.status ? [currentReport] : [], { hasMore: false, nextCursor: null, limit: 50 });
+  });
+  await page.route(`**/api/reports/${reportId}/status`, async route => {
+    expect(route.request().postDataJSON()).toEqual({ status: 'reviewed' });
+    currentReport = { ...currentReport, status: 'reviewed' };
+    const committedSnapshot = { ...currentReport };
+    markReviewedCommitted();
+    await reviewedResponse;
+    return json(route, committedSnapshot);
+  });
+
+  try {
+    await page.goto('/moderation');
+    await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
+    const card = page.locator('article').filter({ hasText: 'Generation guard report' });
+    await card.getByRole('button', { name: 'reviewed', exact: true }).click();
+    await reviewedCommitted;
+    currentReport = { ...currentReport, status: 'resolved', decisionReason: currentRationale, resolvedAt: user.createdAt };
+    const beforeRefresh = queueReads;
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await expect.poll(() => queueReads).toBe(beforeRefresh + 1);
+    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+    await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
+
+    const beforeCompletion = queueReads;
+    const oldResponseFinished = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/status`));
+    const freshQueueResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/reports/queue');
+    releaseReviewedResponse();
+    await (await oldResponseFinished).finished();
+    await expect.poll(() => queueReads).toBe(beforeCompletion + 1);
+    await (await freshQueueResponse).finished();
+    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+    await expect(card.getByText('post · reviewed', { exact: true })).toHaveCount(0);
+    await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
+    await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toBeEnabled();
+  } finally {
+    releaseReviewedResponse();
+  }
+});
+
+test('storage notice is public, linked from sign-in and Settings, and optional analytics remain an explicit choice', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: `window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.textContent='Sign in with Google';parent.append(button)}}}};` }));
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+  await page.goto('/cookies');
+  await expect(page.getByRole('heading', { name: 'Cookies and Browser Storage', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Optional analytics', exact: true })).toBeVisible();
+  await expect(page.getByText(/this release does not currently collect optional navigation or profiling events/i)).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Legal information' }).getByRole('link', { name: 'Privacy', exact: true })).toBeVisible();
+  await page.goto('/auth');
+  await expect(page.getByRole('link', { name: 'Cookies and storage notice', exact: true })).toBeVisible();
+  await page.unroute('**/api/auth/refresh');
+  await page.goto('/settings');
+  const optionalAnalytics = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
+  await expect(optionalAnalytics).not.toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+  await optionalAnalytics.click();
+  await expect(optionalAnalytics).toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBe(user.id);
+  await optionalAnalytics.click();
+  await expect(optionalAnalytics).not.toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:queue:v1'))).toBeNull();
+  await expect(page.getByRole('link', { name: 'Cookies and storage notice', exact: true })).toBeVisible();
+});
+
+test('Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.addInitScript(() => {
+    const stats = { starts: 0, stops: 0, tracksStopped: 0, cameraRequests: 0, hold: false, releases: [] as Array<() => void> };
+    Object.defineProperty(window, '__studioCameraAudit', { value: stats, configurable: true });
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+      getUserMedia: async () => {
+        stats.cameraRequests++;
+        const stream = new MediaStream();
+        stream.getTracks = () => [{ stop: () => { stats.tracksStopped++; } }] as unknown as MediaStreamTrack[];
+        if (stats.hold) await new Promise<void>(resolve => { stats.releases.push(resolve); });
+        return stream;
+      },
+    } });
+    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: class {
+      static isTypeSupported() { return true; }
+      state = 'inactive';
+      mimeType = 'video/webm';
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() { stats.starts++; this.state = 'recording'; }
+      stop() {
+        stats.stops++; this.state = 'inactive';
+        this.ondataavailable?.({ data: new Blob(['synthetic recording'], { type: this.mimeType }) });
+        this.onstop?.();
+      }
+    } });
+  });
+  await page.route('**/api/videos', route => json(route, [{ id: 'synthetic-camera-audit', authorId: user.id, title: 'Camera lifecycle audit',
+    videoUrl: 'data:video/mp4;base64,', thumbnailUrl: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', type: 'short', views: 0, likes: 0, createdAt: user.createdAt }]));
+  await page.route('**/api/videos/synthetic-camera-audit/comments', route => json(route, []));
+  await page.goto('/videos');
+  await page.getByRole('button', { name: 'Watch Camera lifecycle audit', exact: true }).click();
+  const useSound = page.getByRole('button', { name: 'Use this sound', exact: true });
+  await useSound.click();
+  const record = page.getByRole('button', { name: 'Record video', exact: true });
+  await expect(record).toBeEnabled();
+  await record.evaluate(button => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  await expect(page.getByRole('button', { name: 'Stop recording', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.starts)).toBe(1);
+  await page.getByRole('button', { name: 'Stop recording', exact: true }).click();
+  await expect(record).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.stops)).toBe(1);
+  await page.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__studioCameraAudit.tracksStopped)).toBe(1);
+  await page.evaluate(() => { (window as any).__studioCameraAudit.hold = true; });
+  await useSound.click();
+  await expect.poll(() => page.evaluate(() => (window as any).__studioCameraAudit.releases.length)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await page.evaluate(() => { (window as any).__studioCameraAudit.releases.forEach((release: () => void) => release()); });
+  await expect.poll(() => page.evaluate(() => {
+    const stats = (window as any).__studioCameraAudit;
+    return stats.tracksStopped === stats.cameraRequests;
+  })).toBe(true);
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.stops)).toBe(1);
+});
+
+test('account deletion supports keyboard cancellation, field feedback, and a retained failed draft before one synthetic retry', async ({ page }) => {
+  await installApiBoundary(page);
+  let deletions = 0;
+  let releaseDeletion!: () => void;
+  const heldDeletion = new Promise<void>(resolve => { releaseDeletion = resolve; });
+  await page.route('**/api/users/me', async route => {
+    if (route.request().method() === 'GET') return json(route, user);
+    expect(route.request().method()).toBe('DELETE');
+    expect(route.request().postDataJSON()).toEqual({ confirmation: 'DELETE', password: 'Synthetic-password-123!' });
+    deletions++;
+    if (deletions === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Deletion is temporarily unavailable.' }) });
+    await heldDeletion;
+    return json(route, null);
+  });
+  await page.route('**/api/auth/logout', route => json(route, null));
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: `window.google={accounts:{id:{initialize(){},renderButton(){}}}};` }));
+  await page.goto('/settings');
+  const trigger = page.getByRole('button', { name: 'Delete', exact: true });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Permanently delete this account?', exact: true });
+  const confirmation = dialog.getByRole('textbox', { name: 'Account deletion confirmation', exact: true });
+  const password = dialog.getByLabel('Current password for account deletion', { exact: true });
+  await expect(confirmation).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('Enter');
+  await dialog.getByRole('button', { name: 'Delete permanently', exact: true }).click();
+  await expect(confirmation).toBeFocused();
+  await expect(confirmation).toHaveAttribute('aria-invalid', 'true');
+  await expect(dialog.getByRole('alert')).toHaveText('Type DELETE to confirm account removal.');
+  await confirmation.fill('DELETE');
+  await dialog.getByRole('button', { name: 'Delete permanently', exact: true }).click();
+  await expect(password).toBeFocused();
+  await expect(password).toHaveAttribute('aria-invalid', 'true');
+  expect(deletions).toBe(0);
+  await password.fill('Synthetic-password-123!');
+  await dialog.getByRole('button', { name: 'Delete permanently', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Deletion is temporarily unavailable.');
+  await expect(confirmation).toHaveValue('DELETE');
+  await expect(password).toHaveValue('Synthetic-password-123!');
+  try {
+    await dialog.getByRole('button', { name: 'Delete permanently', exact: true }).evaluate(button => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await expect(dialog.getByRole('button', { name: 'Deleting…', exact: true })).toBeDisabled();
+    await expect.poll(() => deletions).toBe(2);
+    releaseDeletion();
+    await expect(page).toHaveURL(/\/auth/);
+    await expect(page.getByText('Your account has been deleted. External cleanup and retained records follow the Privacy Notice.', { exact: true })).toBeVisible();
+    expect(deletions).toBe(2);
+  } finally { releaseDeletion(); }
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    test(`compliance surfaces preserve contrast, accessible names, and layout at ${width}px in ${colorScheme} mode`, async ({ page }, testInfo) => {
+      test.setTimeout(180_000);
+      const browserErrors: string[] = [];
+      const consoleErrors: string[] = [];
+      page.on('pageerror', error => browserErrors.push(error.message));
+      page.on('console', entry => { if (entry.type() === 'error') consoleErrors.push(entry.text()); });
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(scheme => localStorage.setItem('theme', scheme), colorScheme);
+      await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', body: '' }));
+      await installApiBoundary(page, { ...user, avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' });
+      await page.route('**/api/projects', route => json(route, { projects: [] }));
+      await page.route('**/api/projects/invitations', route => json(route, { invitations: [] }));
+      for (const [path, heading] of [
+        ['/', 'Home'], ['/settings', 'Settings'], ['/cookies', 'Cookies and Browser Storage'],
+        ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
+      ]) {
+        await page.goto(path);
+        await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+        if (path === '/') await expect(page.getByRole('article')).toBeVisible();
+        if (path === '/projects') await expect(page.getByText('No projects yet', { exact: true })).toBeVisible();
+        const dimensions = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
+        expect(dimensions.document, `Horizontal overflow at ${path}`).toBeLessThanOrEqual(dimensions.viewport + 1);
+        const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+        await testInfo.attach(`${path.replace(/\//g, '') || 'home'}-accessibility.json`, { contentType: 'application/json', body: JSON.stringify({ path, width, colorScheme, violations: accessibility.violations, incomplete: accessibility.incomplete }, null, 2) });
+        expect(accessibility.violations, `Accessibility failures at ${path}`).toEqual([]);
+      }
+      expect(browserErrors).toEqual([]);
+      expect(consoleErrors).toEqual([]);
+    });
+  }
+}

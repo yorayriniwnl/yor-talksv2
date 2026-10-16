@@ -50,6 +50,7 @@ export {
   conversationsTable,
   messagesTable,
   messagePreviewEventsTable,
+  reportModerationEventsTable,
   notificationsTable,
   profileCommentsTable,
   profileShowcasesTable,

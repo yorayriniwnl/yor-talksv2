@@ -103,8 +103,12 @@ test('current teen ceiling filters story and note candidates before the SQL page
     maximumContentRating: 'regular', policyVersions: ['fixture:1'], revision: 'ceiling-test', reason: null,
     publicBrowsingAllowed: true,
   };
-  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => currentDecision);
+  const adultAuthorDecision: EligibilityDecision = { ...currentDecision, experience: 'adult_18_plus', maximumContentRating: 'mature' };
+  let viewerId: string | undefined;
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async (id: string) => id===viewerId ? currentDecision : adultAuthorDecision);
+  t.mock.method(EligibilityService.prototype, 'decisionForMany', async (ids: string[]) => new Map(ids.map(id => [id,adultAuthorDecision])));
   const f = await fixture(t, 0);
+  viewerId = f.viewer.id;
   await users.update(f.viewer.id, { settings: { ...f.viewer.settings, contentFilter: 'mature' } });
   const now = Date.now(), expiresAt = new Date(now + 3_600_000).toISOString();
   const storiesToInsert: typeof storiesTable.$inferInsert[] = [];
