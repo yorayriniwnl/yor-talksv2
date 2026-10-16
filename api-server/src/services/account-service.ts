@@ -98,6 +98,12 @@ export class AccountService {
         VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
+      // Nullable legacy foreign keys retain the other author's direct history.
+      // Its unnormalized participant snapshot must also lose the deleted ID.
+      await tx.execute(sql`UPDATE conversations SET participant_ids=participant_ids-${userId},updated_at=clock_timestamp()
+        WHERE NOT COALESCE(is_group,false) AND jsonb_typeof(participant_ids)='array'
+          AND participant_ids ? ${userId}`);
+
       // Group conversations still carry two legacy user foreign keys. Repoint
       // those references before deleting a member so they cannot cascade the
       // entire conversation and its surviving members' history.

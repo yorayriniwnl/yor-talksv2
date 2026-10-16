@@ -19,8 +19,10 @@ export const pool = new Pool({
     : undefined,
 });
 
-pool.on("error", (err) => {
-  console.warn("[Database Pool Notice]:", err.message);
+pool.on("error", () => {
+  // Driver messages can include connection identities or query details. The
+  // application health signal records availability without copying that data.
+  console.warn("[Database Pool Notice]: An idle PostgreSQL connection failed");
 });
 
 const database = drizzle(pool, { schema });

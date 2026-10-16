@@ -708,7 +708,7 @@ test('Studio Post captures camera pixels as a bounded approved JPEG and rejects 
   await page.goto('/videos');
   await page.getByRole('button', { name: 'Watch Synthetic camera entry', exact: true }).click();
   await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
-  const studio = page.getByRole('dialog').filter({ hasText: 'Ultra Studio Camera' });
+  const studio = page.getByRole('dialog', { name: 'Studio Camera', exact: true });
   await studio.locator('#studio-content-category').selectOption('technology');
   await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
   await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
@@ -1998,6 +1998,16 @@ test('public marketplace hides unconnected sample game inventory and trades', as
   await expect(page.getByText('Verified commerce', { exact: true })).toHaveCount(0);
 });
 
+test('Bazaar distinguishes illustrative game offers and removes fabricated reviews and verification', async ({ page }) => {
+  await installApiBoundary(page);
+  await page.route('https://images.unsplash.com/**', route => route.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', 'base64') }));
+  await page.goto('/bazaar');
+  await expect(page.getByRole('heading', { name: 'Indie Game Hub', exact: true })).toBeVisible();
+  await expect(page.getByText('Illustrative games, studios and prices. No customer reviews or digital purchases are connected.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Illustrative price', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Verified Creator Studios|4\.9|4\.8|4\.7|1420|890|3200/)).toHaveCount(0);
+});
+
 test('profile hover card uses stored profile data instead of fabricated game presence or badges', async ({ page }) => {
   await installApiBoundary(page);
   await page.goto('/');
@@ -2654,6 +2664,17 @@ test('Studio camera blocks duplicate recording starts, stops access on close, an
   const useSound = page.getByRole('button', { name: 'Use this sound', exact: true });
   await useSound.click();
   const record = page.getByRole('button', { name: 'Record video', exact: true });
+  const studio = page.getByRole('dialog', { name: 'Studio Camera', exact: true });
+  await expect(studio.getByRole('textbox', { name: 'Caption & #Tags', exact: true })).toBeVisible();
+  await expect(studio.getByText('Filters and stickers are local previews and are not included in published media. Videos record microphone audio only; reference audio is not mixed into the recording.', { exact: true })).toBeVisible();
+  await expect(studio.getByText(/PRO 4K|WebGL shaders|128 BPM|Cyberpunk Anthem/)).toHaveCount(0);
+  const stickerTrigger = studio.getByRole('button', { name: 'Preview stickers', exact: true });
+  await stickerTrigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(studio.getByRole('button', { name: 'Close sticker previews', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(stickerTrigger).toBeFocused();
+  await expect(studio).toBeVisible();
   await expect(record).toBeEnabled();
   await record.evaluate(button => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -2740,6 +2761,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
       test.setTimeout(180_000);
       const browserErrors: string[] = [];
       const consoleErrors: string[] = [];
+      const externalFontRequests: string[] = [];
+      page.on('request', request => {
+        if (['fonts.googleapis.com', 'fonts.gstatic.com'].includes(new URL(request.url()).hostname)) externalFontRequests.push(request.url());
+      });
       page.on('pageerror', error => browserErrors.push(error.message));
       page.on('console', entry => { if (entry.type() === 'error') consoleErrors.push(entry.text()); });
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -2755,7 +2780,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       ]) {
         await page.goto(path);
         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-        if (path === '/') await expect(page.getByRole('article')).toBeVisible();
+        if (path === '/') {
+          await expect(page.getByRole('article')).toBeVisible();
+          await page.keyboard.press('Tab');
+          await expect(page.getByRole('link', { name: 'Skip to content', exact: true })).toBeFocused();
+          await page.keyboard.press('Enter');
+          await expect(page.locator('#main-content')).toBeFocused();
+          const animationDuration = await page.getByRole('article').evaluate(element => getComputedStyle(element).animationDuration);
+          expect(animationDuration.split(',').every(value => parseFloat(value) <= 0.01)).toBe(true);
+        }
         if (path === '/projects') await expect(page.getByText('No projects yet', { exact: true })).toBeVisible();
         const dimensions = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
         expect(dimensions.document, `Horizontal overflow at ${path}`).toBeLessThanOrEqual(dimensions.viewport + 1);
@@ -2765,6 +2798,33 @@ for (const colorScheme of ['light', 'dark'] as const) {
       }
       expect(browserErrors).toEqual([]);
       expect(consoleErrors).toEqual([]);
+      expect(externalFontRequests).toEqual([]);
     });
   }
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`public registration and legal pages expose accessible forms in ${colorScheme} mode`, async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('console', entry => {
+      // The explicit signed-out refresh fixture is expected to return 401.
+      if (entry.type() === 'error' && !new URL(entry.location().url || 'http://fixture.test').pathname.endsWith('/api/auth/refresh')) errors.push(entry.text());
+    });
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.addInitScript(scheme => localStorage.setItem('theme', scheme), colorScheme);
+    await installApiBoundary(page);
+    await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+    await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: `window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.textContent='Sign in with Google';parent.append(button)}}}};` }));
+    for (const path of ['/auth', '/privacy', '/terms', '/cookies']) {
+      await page.goto(path);
+      await expect(page.locator('main')).toBeVisible();
+      const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+      await testInfo.attach(`${path.slice(1)}-public-accessibility.json`, { contentType: 'application/json', body: JSON.stringify({ path, colorScheme, violations: result.violations, incomplete: result.incomplete }, null, 2) });
+      expect(result.violations, `Accessibility failures at ${path}`).toEqual([]);
+    }
+    expect(errors).toEqual([]);
+  });
 }

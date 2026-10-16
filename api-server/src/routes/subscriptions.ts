@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { requireTrustedOrigin } from '../middlewares/trusted-origin.js';
 import { authRateLimiter } from '../middlewares/rate-limit.js';
 import { CheckoutRequestError } from '../services/checkout-intent-service.js';
@@ -40,7 +41,7 @@ router.post("/subscribe", authenticate, requireTrustedOrigin, authRateLimiter, v
     if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Membership order could not be created", null, {}, [error.message]));
     }
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Membership order could not be created", null, {}, ["Internal server error"]));
   }
 });
@@ -65,7 +66,7 @@ router.post("/:id/verify", authenticate, requireTrustedOrigin, authRateLimiter, 
     if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Membership payment verification failed", null, {}, [error.message]));
     }
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Membership payment verification failed", null, {}, ["Internal server error"]));
   }
 });
@@ -75,7 +76,7 @@ router.get("/my-subscriptions", authenticate, async (req, res) => {
     const subscriptions = await subscriptionService.listForSubscriber(req.user!.id);
     return res.status(200).json(createResponse("Subscriptions loaded", subscriptions));
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Subscriptions could not be loaded", null, {}, ["Internal server error"]));
   }
 });
@@ -88,7 +89,7 @@ router.delete("/:id", authenticate, requireTrustedOrigin, authRateLimiter, valid
     if (error instanceof SubscriptionRequestError || error instanceof CheckoutRequestError) {
       return res.status(404).json(createResponse("Membership could not be cancelled", null, {}, [error.message]));
     }
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Membership could not be cancelled", null, {}, ["Internal server error"]));
   }
 });

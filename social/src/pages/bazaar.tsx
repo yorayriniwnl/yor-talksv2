@@ -16,13 +16,10 @@ interface IndieGame {
   genre: string;
   studio: string;
   location: string;
-  rating: number;
-  reviewsCount: number;
   coverUrl: string;
   priceINR: number;
   tags: string[];
   description: string;
-  verifiedDev: boolean;
 }
 
 const INDIE_GAMES: IndieGame[] = [
@@ -32,13 +29,10 @@ const INDIE_GAMES: IndieGame[] = [
     genre: 'Action RPG / Cyberpunk',
     studio: 'Bengaluru Spatial Studios',
     location: 'Bengaluru, Karnataka',
-    rating: 4.9,
-    reviewsCount: 1420,
     coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
     priceINR: 1499,
     tags: ['Ray Tracing', 'Single Player', 'Unreal Engine 5.4', 'Story Rich'],
     description: 'An open-world neo-cyberpunk adventure set in futuristic 2099 Bengaluru combining ancient Vedic lore with high-octane katana combat and cyberware hacking.',
-    verifiedDev: true
   },
   {
     id: 'game-2',
@@ -46,13 +40,10 @@ const INDIE_GAMES: IndieGame[] = [
     genre: 'Detective Noir / Narrative',
     studio: 'Bandra Pixel Guild',
     location: 'Mumbai, Maharashtra',
-    rating: 4.8,
-    reviewsCount: 890,
     coverUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop',
     priceINR: 799,
     tags: ['Atmospheric', 'Jazz Soundtrack', 'Multiple Endings', 'Indie Gem'],
     description: 'Step into the rain-drenched streets of 1980s Mumbai as a private detective solving high-stakes corporate espionage in the heart of South Bombay.',
-    verifiedDev: true
   },
   {
     id: 'game-3',
@@ -60,13 +51,10 @@ const INDIE_GAMES: IndieGame[] = [
     genre: 'Arcade Sports / Multiplayer',
     studio: 'Delhi Overclock Games',
     location: 'New Delhi',
-    rating: 4.7,
-    reviewsCount: 3200,
     coverUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop',
     priceINR: 499,
     tags: ['Multiplayer', 'Fast-Paced', 'Ranked Matchmaking', 'Soundtrack 10/10'],
     description: 'High adrenaline underground street cricket with trick shots, rooftop pitches in Chandni Chowk, and hyper-stylized superpower abilities.',
-    verifiedDev: true
   }
 ];
 
@@ -95,12 +83,12 @@ export default function Bazaar() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Indie Game Hub</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Showcase preview · digital purchases are not connected yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative games, studios and prices. No customer reviews or digital purchases are connected.</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Creator Studios
+          <Gamepad2 className="w-3.5 h-3.5" /> Showcase preview
         </div>
       </div>
 
@@ -118,9 +106,6 @@ export default function Bazaar() {
                 <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" /> {selectedGame.location}
                 </span>
-                <div className="flex items-center gap-1 text-xs font-mono text-amber-400 font-bold">
-                  <Star className="w-3.5 h-3.5 fill-amber-400" /> {selectedGame.rating} ({selectedGame.reviewsCount})
-                </div>
               </div>
 
               <h2 className="font-display font-extrabold text-2xl text-foreground leading-tight mb-2">
@@ -143,7 +128,7 @@ export default function Bazaar() {
 
             <div className="flex items-center justify-between pt-4 border-t border-border/30">
               <div>
-                <span className="text-[0.62rem] font-mono uppercase text-muted-foreground block">Purchase Price</span>
+                <span className="text-[0.62rem] font-mono uppercase text-muted-foreground block">Illustrative price</span>
                 <span className="font-display font-black text-2xl text-emerald-400">₹{selectedGame.priceINR.toLocaleString()}</span>
               </div>
 
@@ -201,9 +186,6 @@ export default function Bazaar() {
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-border/30 text-xs font-mono">
-                  <span className="text-amber-400 font-bold flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" /> {g.rating}
-                  </span>
                   <span className="text-primary font-bold">{g.genre}</span>
                 </div>
               </div>

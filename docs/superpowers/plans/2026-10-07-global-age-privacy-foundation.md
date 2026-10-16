@@ -57,7 +57,7 @@ The numbered design acceptance requirements map to the owning tasks at the end o
 - Do not store birth dates, identity documents, facial images or verification tokens in profiles, general logs or JWTs. Private evidence references are excluded from owner/public serializers too.
 - Do not invent the EU member state, registered entity, public contact details, business scale, provider acceptance or approved countries. Initially the production approved-territory registry is empty.
 - No production migration, deployment, paid provider activation or public launch is authorised by reviewing this implementation plan alone. Use disposable synthetic test infrastructure for verification.
-- The original execution required scoped commits and pushes. The current audit continuation keeps the working tree uncommitted and does not push or deploy, following the user's session constraint. Historical commit/push checkpoints below are records of the original plan, not instructions to publish this audit's changes.
+- The original execution required scoped commits and pushes. The 17 October master objective now explicitly authorizes reviewed commits, push and one unmerged PR, superseding the earlier no-push session constraint. Production deployment and merging PR #25 remain prohibited. Historical checkpoints below are not proof of current verification; use the current compliance/test/release reports for delivery evidence.
 
 ## Review Focus
 

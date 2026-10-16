@@ -144,6 +144,43 @@ for (const scenario of [
   });
 }
 
+test('migrated legacy history references are nullable and use SET NULL', async () => {
+  const references = await pool.query(`SELECT c.conrelid::regclass::text AS table_name,a.attname,c.confdeltype,a.attnotnull
+    FROM pg_constraint c JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=ANY(c.conkey)
+    WHERE c.contype='f' AND c.confrelid='public.users'::regclass AND (
+      (c.conrelid='public.conversations'::regclass AND a.attname IN ('participant_a','participant_b'))
+      OR (c.conrelid='public.messages'::regclass AND a.attname='recipient_id'))`);
+  assert.deepEqual([...new Set(references.rows.map(row => `${row.table_name}.${row.attname}`))].sort(),
+    ['conversations.participant_a', 'conversations.participant_b', 'messages.recipient_id']);
+  for (const row of references.rows) {
+    assert.equal(row.confdeltype, 'n', `${row.table_name}.${row.attname} must not cascade shared history`);
+    assert.equal(row.attnotnull, false, `${row.table_name}.${row.attname} must permit deleted references`);
+  }
+});
+
+test('nullable direct history retains the surviving author and scrubs the deleted participant snapshot', async () => {
+  const departing = await person(), survivor = await person();
+  const conversation = randomUUID(), erased = randomUUID(), retained = randomUUID();
+  await pool.query(`INSERT INTO conversations(id,participant_a,participant_b,participant_ids,is_group)
+    VALUES($1,$2,$3,$4::jsonb,false)`, [conversation, departing, survivor, JSON.stringify([departing, survivor])]);
+  await pool.query(`INSERT INTO messages(id,conversation_id,sender_id,recipient_id,content)
+    VALUES($1,$2,$3,$4,'Departing content'),($5,$2,$4,$3,'Surviving content')`,
+    [erased, conversation, departing, survivor, retained]);
+  assert.equal(await service.deleteAccount(departing, 'synthetic-password'), true);
+  const row = (await pool.query('SELECT * FROM conversations WHERE id=$1', [conversation])).rows[0];
+  assert.ok(row);
+  assert.equal(row.participant_a, null);
+  assert.equal(row.participant_b, survivor);
+  assert.deepEqual(row.participant_ids, [survivor]);
+  assert.equal((await pool.query('SELECT 1 FROM messages WHERE id=$1', [erased])).rowCount, 0);
+  const message = (await pool.query('SELECT * FROM messages WHERE id=$1', [retained])).rows[0];
+  assert.equal(message.sender_id, survivor);
+  assert.equal(message.recipient_id, null);
+  const archive = await service.exportAccount(survivor);
+  assert.equal(JSON.stringify(archive).includes(departing), false, 'the survivor archive must not restore the deleted identifier');
+  assert.equal((archive?.content as { sentMessages: Array<{ id: string }> }).sentMessages[0]?.id, retained);
+});
+
 test('account deletion erases embedded actors and discussions while preserving unrelated content and queue delivery', async () => {
   const departing = await person(), survivor = await person(), other = await person();
   const post = randomUUID(), comment = randomUUID(), video = randomUUID(), videoComment = randomUUID();

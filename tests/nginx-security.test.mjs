@@ -8,6 +8,12 @@ import { renderNginxSecurityHeaders, renderBrowserContentSecurityPolicy } from '
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const template = fs.readFileSync(path.join(root, 'social/security-headers.conf'), 'utf8');
 
+test('self-hosted font policy allows no remote font or font-stylesheet provider', () => {
+  assert.match(template, /style-src 'self' 'unsafe-inline';/);
+  assert.match(template, /font-src 'self' data:;/);
+  assert.doesNotMatch(template, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+});
+
 test('Nginx CSP allows only configured production API, realtime and LiveKit origins', () => {
   const rendered = renderNginxSecurityHeaders(template, {
     VITE_PUBLIC_BETA: 'true',

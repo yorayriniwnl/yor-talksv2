@@ -71,13 +71,13 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
         details,
         uptime: process.uptime(),
       });
-    } catch (error) {
+    } catch {
       res.status(503).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         services,
         details,
-        error: error instanceof Error ? error.message : "One or more dependencies are unavailable",
+        error: "One or more dependencies are unavailable",
       });
     }
   };

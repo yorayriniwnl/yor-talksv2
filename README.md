@@ -93,7 +93,7 @@ pnpm install --frozen-lockfile
 docker compose up -d postgres redis
 docker compose build api web
 docker compose run --rm --no-deps api pnpm --filter @workspace/db migrate:beta
-docker compose run --rm --no-deps api pnpm --filter @workspace/api-server seed
+docker compose run --rm --no-deps -e NODE_ENV=development -e ALLOW_SYNTHETIC_SEED=true -e SYNTHETIC_SEED_DATABASE=yor_talks api pnpm --filter @workspace/api-server seed
 docker compose up -d api web
 ```
 
@@ -118,6 +118,12 @@ The seeded demo accounts use fully synthetic identities:
 | `cofounder@example.test` | `DemoUser123!` |
 
 These identities are fictional and exist only for isolated local databases. Do not seed a public deployment.
+All five seed/profile entry points refuse production or unspecified modes and require
+`ALLOW_SYNTHETIC_SEED=true` plus `SYNTHETIC_SEED_DATABASE` matching the exact
+disposable database name in `DATABASE_URL`. The command above assumes the local
+default name `yor_talks`; change that confirmation if your disposable database has
+another name. These guards do not authorize putting fabricated accounts, ratings
+or engagement into a public service.
 
 For public traffic, use `.env.production` and `docker-compose.production.yml`
 as described in the production runbook. The development Compose profile is

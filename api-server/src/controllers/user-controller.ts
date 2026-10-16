@@ -80,7 +80,7 @@ export class UserController {
       if (error instanceof PremiumProfileFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
-      return res.status(400).json(createResponse("Invalid premium profile option", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Invalid premium profile option", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -165,7 +165,7 @@ export class UserController {
       return res.status(200).json(createResponse("Close Friend added", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not add Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not add Close Friend", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -177,7 +177,7 @@ export class UserController {
       return res.status(200).json(createResponse("Close Friend removed", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -189,7 +189,7 @@ export class UserController {
       return res.status(200).json(createResponse("Creator added to Favorites", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -201,7 +201,7 @@ export class UserController {
       return res.status(200).json(createResponse("Creator removed from Favorites", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -269,7 +269,7 @@ export class UserController {
       return res.status(200).json(createResponse("User blocked", { blockedUsers: user.blockedUsers }));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Cannot block user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Cannot block user", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -292,7 +292,7 @@ export class UserController {
       return res.status(200).json(createResponse("User muted", { mutedUsers: user.mutedUsers }));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Cannot mute user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Cannot mute user", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -383,7 +383,7 @@ export class UserController {
       return res.status(201).json(createResponse("Contact shields updated", shields));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, [error instanceof Error ? error.message : "Invalid contact list"]));
+      return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, ["Check your contact list and try again"]));
     }
   };
 

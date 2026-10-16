@@ -117,6 +117,9 @@ if (!caddySource.includes("@api path /api /api/* /socket.io /socket.io/*")
   || !/handle\s*\{\s*reverse_proxy 127\.0\.0\.1:8080\s*\}/m.test(caddySource)) {
   failures.push("Caddy must route API and Socket.IO traffic directly to the API and frontend assets to Nginx, preserving one trusted proxy hop");
 }
+if ((caddySource.match(/header Strict-Transport-Security "max-age=31536000"/g) ?? []).length !== 2) {
+  failures.push('Both HTTPS Caddy origins must enforce HSTS without assuming every sibling subdomain is TLS-enabled');
+}
 if (!apiSection || !apiEnvironment) failures.push("Could not locate the production API environment block");
 if (!apiSection?.includes('"127.0.0.1:${API_HOST_PORT:-4000}:4000"')) {
   failures.push("Production API host binding must be fixed to loopback so the TLS proxy is the only public edge");

@@ -55,7 +55,10 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
       const job = await jobs.claim(Object.keys(handlers));
       healthy = true;
       if (!job) return;
-      const lease = setInterval(() => void Promise.all([jobs.extend(job), jobs.heartbeat(workerId, { activeJob: job.id, handlers: Object.keys(handlers) })])
+      const activeJobStartedAt = new Date().toISOString();
+      const lease = setInterval(() => void Promise.all([jobs.extend(job), jobs.heartbeat(workerId, {
+        activeJob: job.id, activeJobStartedAt, handlers: Object.keys(handlers),
+      })])
         .catch(() => { healthy = false; }), 10_000);
       lease.unref();
       try {

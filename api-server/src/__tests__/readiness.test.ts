@@ -57,6 +57,18 @@ test('mandatory dependency failures still fail readiness while media is pending'
   }
 });
 
+test('public readiness failures omit internal dependency error messages', async () => {
+  const privateDetail = 'synthetic database connection failed at private-host:5432 with credential fixture';
+  const response = await runReadiness({
+    ...healthyDependencies(() => readyMedia),
+    database: async () => { throw new Error(privateDetail); },
+  });
+  assert.equal(response.status, 503);
+  assert.equal(response.body.services.database, 'down');
+  assert.equal(response.body.error, 'One or more dependencies are unavailable');
+  assert.ok(!JSON.stringify(response.body).includes(privateDetail));
+});
+
 test('media diagnostics expire from completion and fail closed while refreshing', async () => {
   let now = 0;
   let resolveProbe!: (value: MediaReadiness) => void;

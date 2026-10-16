@@ -1,3 +1,5 @@
+import { assertSyntheticSeedAllowed } from './seed-safety.js';
+assertSyntheticSeedAllowed();
 import { db, usersTable } from "@workspace/db";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
