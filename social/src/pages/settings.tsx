@@ -16,7 +16,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
-import { hasSavedTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
+import { clearSavedTelemetryConsent, hasSavedTelemetryConsent } from '@/lib/telemetry';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { ProtectedMediaImage } from '@/lib/protected-media';
@@ -395,7 +395,7 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false);
   const [telemetryConsent, setTelemetryConsentState] = useState(() => hasSavedTelemetryConsent(currentUser?.id ?? null));
   const [telemetryError, setTelemetryError] = useState('');
-  const telemetryAllowed = eligibilityLoaded && eligibility?.activated === true && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.analytics === true;
+  const [telemetryStatus, setTelemetryStatus] = useState('');
   const canUseSocial = Boolean(eligibilityLoaded && eligibility?.activated && eligibility.experience !== 'under_13' && eligibility.capabilities.social);
   const canUseMessaging = canUseSocial && eligibility?.capabilities.messaging === true;
   const maximumContentRating: ContentRating = canUseSocial ? eligibility!.maximumContentRating : 'child_safe';
@@ -413,7 +413,7 @@ export default function Settings() {
     syncConsent();
     window.addEventListener('storage', syncConsent);
     return () => window.removeEventListener('storage', syncConsent);
-  }, [telemetryAllowed, currentUser?.id]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     let active = true;
@@ -659,24 +659,18 @@ export default function Settings() {
             <Shield className="w-4 h-4 text-primary" />
             <h3>Optional analytics</h3>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold">Help improve Yor</p>
-              <p className="text-xs leading-5 text-muted-foreground">Optional navigation and performance events would be linked to your signed-in account. Collection requires current account rules to permit adult analytics, your permission, and a configured service. This release does not currently collect these optional events.</p>
-            </div>
-            <Switch
-              aria-label="Allow optional analytics"
-              checked={telemetryConsent}
-              disabled={!telemetryAllowed && !telemetryConsent}
-              aria-describedby={telemetryError ? 'optional-analytics-error' : undefined}
-              onCheckedChange={(value) => {
-                const saved = setTelemetryConsent(value);
-                setTelemetryConsentState(saved);
-                setTelemetryError(value && !saved ? 'Your browser could not save this choice. Optional analytics remain off. Check your site storage settings to try again.' : '');
-              }}
-            />
-          </div>
-          {!telemetryAllowed && <p className="text-xs leading-5 text-muted-foreground">Optional analytics cannot be collected for this account under the current policy. You can still withdraw a previously saved choice here.</p>}
+          <p className="text-sm font-semibold">Optional analytics are off in this release</p>
+          <p className="text-xs leading-5 text-muted-foreground">This release does not collect optional navigation or performance events and does not offer a new analytics opt-in.</p>
+          {telemetryConsent ? <div className="space-y-3">
+            <p className="text-xs leading-5 text-muted-foreground">{telemetryError ? 'Removal could not be confirmed. You can retry here or clear this site’s browser data.' : 'A previous analytics choice is saved for this account on this device. It does not enable collection. You can remove that choice and any queued optional events here.'}</p>
+            <Button type="button" variant="outline" className="min-h-11 rounded-xl" aria-describedby={telemetryError ? 'optional-analytics-error' : undefined} onClick={() => {
+              const cleared = clearSavedTelemetryConsent();
+              setTelemetryConsentState(!cleared);
+              setTelemetryStatus(cleared ? 'Saved analytics choice and queued optional events removed from this device.' : '');
+              setTelemetryError(cleared ? '' : 'Optional analytics remain off in this tab, but your browser could not confirm removal of the saved choice. Clear this site’s browser data to remove it.');
+            }}>Clear saved analytics choice</Button>
+          </div> : <p className="text-xs leading-5 text-muted-foreground">No optional analytics permission is saved for this account on this device.</p>}
+          {telemetryStatus && <p role="status" className="text-xs leading-5 text-muted-foreground">{telemetryStatus}</p>}
           {telemetryError && <p id="optional-analytics-error" role="alert" className="text-xs leading-5 text-destructive">{telemetryError}</p>}
           <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookies and storage notice</a> for details.</p>
         </section>

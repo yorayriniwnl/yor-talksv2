@@ -25,17 +25,23 @@ export function GlobalAudioPlayer({ inline = false }: { inline?: boolean }) {
   useLayoutEffect(() => {
     if (inline || !playerRef.current) return;
     const positionCompanion = () => {
-      const top = playerRef.current?.getBoundingClientRect().top;
-      if (top !== undefined) document.documentElement.style.setProperty('--yor-companion-bottom', `${window.innerHeight - top + 12}px`);
+      const player = playerRef.current;
+      if (player) document.documentElement.style.setProperty('--yor-ambient-player-height', `${player.getBoundingClientRect().height}px`);
+    };
+    let frame = 0;
+    const schedulePosition = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(positionCompanion);
     };
     positionCompanion();
-    const observer = new ResizeObserver(positionCompanion);
+    const observer = new ResizeObserver(schedulePosition);
     observer.observe(playerRef.current);
-    window.addEventListener('resize', positionCompanion);
+    window.addEventListener('resize', schedulePosition);
     return () => {
+      window.cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener('resize', positionCompanion);
-      document.documentElement.style.removeProperty('--yor-companion-bottom');
+      window.removeEventListener('resize', schedulePosition);
+      document.documentElement.style.removeProperty('--yor-ambient-player-height');
     };
   }, [inline]);
 

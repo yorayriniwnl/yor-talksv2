@@ -62,7 +62,7 @@ export default function OverlayStudio() {
           <div className="relative w-full aspect-video rounded-2xl bg-zinc-950 overflow-hidden border-2 border-zinc-800 flex items-center justify-center">
             {/* Local preview canvas */}
             <img 
-              src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop" 
+              src="/images/demo-preview-1.svg"
               alt="" 
               className="w-full h-full object-cover opacity-30" 
             />

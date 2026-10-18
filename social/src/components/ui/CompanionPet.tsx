@@ -3,6 +3,7 @@ import { Bird, Bot, Check, ChevronDown, Palette, Sparkles, X } from 'lucide-reac
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const STORAGE_KEY = 'yor-companion-pet';
 const CHANGE_EVENT = 'yor-companion-pet-change';
@@ -196,7 +197,7 @@ export function CompanionPetSettings({ className }: CompanionPetSettingsProps) {
         </div>
       </div>
 
-      <p className="text-[0.68rem] leading-relaxed text-muted-foreground">Your companion is saved on this browser only. It never reads, records, or sends your activity.</p>
+      <p className="text-[0.68rem] leading-relaxed text-muted-foreground">Companion preferences are saved on this browser only.</p>
     </section>
   );
 }
@@ -213,8 +214,8 @@ export function CompanionPet() {
 
   return (
     <aside className="yor-companion" aria-label="On-screen companion">
-      {open && (
-        <div className="yor-companion__panel" role="dialog" aria-label={`${copy.name} companion controls`}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
+        <PopoverContent className="yor-companion__panel" side="top" align="end" sideOffset={10} collisionPadding={16} aria-label={`${copy.name} companion controls`}>
           <div className="flex items-start gap-3">
             <span className={cn('yor-companion__panel-icon', `yor-companion-pet--${preferences.color}`)}><PetIcon kind={preferences.kind} className="h-5 w-5" /></span>
             <div className="min-w-0 flex-1"><p className="text-sm font-bold">{copy.name} is with you</p><p className="mt-0.5 text-[0.68rem] text-muted-foreground">{copy.greeting}</p></div>
@@ -228,16 +229,22 @@ export function CompanionPet() {
             ))}
           </div>
           <button type="button" onClick={() => { setOpen(false); setLocation('/settings'); }} className="mt-3 flex w-full items-center justify-between rounded-xl border border-border/40 px-3 py-2 text-[0.68rem] font-bold text-muted-foreground hover:border-primary/30 hover:text-foreground"><span className="flex items-center gap-2"><Palette className="h-3.5 w-3.5" /> Customize in Settings</span><ChevronDown className="h-3.5 w-3.5 -rotate-90" /></button>
-          <button type="button" onClick={() => { updatePreferences({ enabled: false }); setOpen(false); }} className="mt-2 w-full rounded-xl px-3 py-2 text-left text-[0.68rem] font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive">Hide companion</button>
-        </div>
-      )}
+          <button type="button" onClick={() => {
+            updatePreferences({ enabled: false });
+            setOpen(false);
+            window.requestAnimationFrame(() => document.getElementById('main-content')?.focus({ preventScroll: true }));
+          }} className="mt-2 w-full rounded-xl px-3 py-2 text-left text-[0.68rem] font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive">Hide companion</button>
+        </PopoverContent>
 
-      <button type="button" aria-label={`${copy.name} companion controls`} onClick={() => setOpen((current) => !current)} aria-expanded={open} className={cn('yor-companion__trigger', `yor-companion-pet--${preferences.color}`, `yor-companion__trigger--${preferences.size}`)}>
+      <PopoverTrigger asChild>
+      <button type="button" aria-label={`${copy.name} companion controls`} className={cn('yor-companion__trigger', `yor-companion-pet--${preferences.color}`, `yor-companion__trigger--${preferences.size}`)}>
         <span className="yor-companion__sparkle" aria-hidden="true"><Sparkles className="h-3 w-3" /></span>
         <span className="yor-companion__avatar"><PetIcon kind={preferences.kind} className="h-6 w-6" /></span>
         <span className="yor-companion__label min-w-0 text-left"><strong>{copy.name}</strong><small>{copy.status}</small></span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
+      </PopoverTrigger>
+      </Popover>
     </aside>
   );
 }

@@ -1,0 +1,12 @@
+{
+  "original": "e2e/core-social.spec.ts",
+  "sourceSha256": "214aafa298cf28b410b8e6cb097c56367ca00e54a67a27f6a340c38f4a70211c",
+  "migratedSha256": "ce8dc5b1cdbaf33d7697b8ac983c3956cadf80782e38e8d859e04bf4c69db57a",
+  "transformations": 4,
+  "testDeclarationsRemoved": 0,
+  "temporary": "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-frontend-legacy-qfdwmP",
+  "profiles": [
+    "101 cases with payments disabled",
+    "3 free-plan/checkout cases with synthetic payments enabled"
+  ]
+}

@@ -1,62 +1,69 @@
 # Frontend Test Report
 
-Execution: 18 October 2026. Node 24.19.0 on Windows; installed pnpm 9.15.9 (repository declares 11.28.5), existing dependencies reused without lockfile changes. Browser checks use installed Playwright Chromium against local **production builds**, synthetic account/operator/provider data, and explicit API fixtures. External hosts are blocked by the existing browser launch configuration. No live transaction or production account was used.
+Execution: 18-19 October 2026 (Asia/Calcutta), Node 24.19.0 on Windows. Installed dependencies were reused without root lockfile changes. Browser checks use Chromium against local production builds, synthetic accounts/operator data, intercepted API/provider responses and blocked external networking. No production transaction, account or deployment was used.
 
-**Final new browser cases: 47 passed, 0 failed, 0 skipped. Selected unit tests: 96 passed, 0 failed, 0 skipped.** Preserved legacy-suite failures are separately enumerated below and are not included in that new-suite pass claim.
+**Verified distinct cases after corrections: 96 unit tests, 65 new compliance browser tests and 104 existing browser tests across their declared profiles. Total 265 distinct passing cases.** Repeated attempts are not added to this total. Historical failures, including attempts with incompatible test profiles, remain in the indexed evidence. This does not claim that the untouched default root CI command is green.
 
-## Results and scope
+## Checks
 
-| Check | Before / first attempt | Verified result |
+| Check | Executed outcome | Limit |
 | --- | --- | --- |
-| TypeScript | Baseline passed | Final `tsc -p social/tsconfig.json --noEmit` passed |
-| Production build and output mirror | Baseline passed with existing chunk-size warning | Final production build and `sync-dist.mjs` passed; no production deployment |
-| Frontend unit selection | 93 passed, 1 failed out of 94; font stylesheet byte hash changed under Windows line-ending conversion | 96 passed, 0 failed/skipped: original 94 plus two new real configuration tests |
-| Lint | Attempted `npm run lint`; no configured script or ESLint configuration | UNAVAILABLE; not reported as a pass |
-| Consent/privacy new suite | First combined consent/recovery run: 9 passed, 2 failed; one test clicked a mode tab, one exposed real acceptance navigation defect | 11 consent tests passed, 0 failed/skipped, including mismatch-without-social-hydration and ineligible-account withdrawal |
-| Accessibility/responsive suites | Initial independent scans reproduced contrast/listbox defects. Later attempts exposed duplicate test locators, animation timing and concurrent browser teardown failures | 26 passed, 0 failed/skipped: 16 shared-flow cases plus 10 legal/account matrices |
-| Final functional selection | First final selection: 9 passed, 1 failed, exposing nested Studio Escape closing the camera | All six new commerce/eligibility/recovery cases passed; three other legacy cases passed. Studio lifecycle passed after repair |
-| Enabled-payment synthetic profile | Default disabled build intentionally blocks the two legacy purchase tests | Both tests passed with a separate, locally enabled frontend fixture; no server/provider/payment activation |
-| Push synthetic profile | Initial attempt had ambiguous Settings heading selector and browser teardown errors | 2 passed, 0 failed/skipped after scoping the heading and testing the actual five-second delay |
-| Companion/audio geometry | Screenshot review found companion covering volume/preset controls | 2 passed, 0 failed/skipped; both themes, all five widths, collapsed/expanded audio controls and route navigation; existing ambient playback and camera lifecycle also passed again |
-| Live HTTP routes | Read-only GET only | `/`, `/privacy`, `/terms`, `/cookies`, `/community-guidelines`, `/grievance`: 200 HTML; no live authenticated/browser compliance claim |
+| Frontend TypeScript | Passed | Final source checked with tsc --noEmit |
+| Production build and mirror | Passed | Existing deferred LiveKit chunk 532.18 KB/139.12 KB gzip still emits the Vite size warning |
+| Selected frontend unit tests | 96 passed, 0 failed/skipped | Includes real font integrity and production legal-configuration checks |
+| Isolated audit lint | 250 files, 0 errors, 5 informational warnings; exit 0 | 17 named correctness rules, not a full React/typed recommended ruleset or maintained root CI integration |
+| Design-token contract | Passed | Existing repository checker, unchanged token contract |
+| New compliance browser cases | 65 distinct cases passed, 0 outstanding failed/skipped cases in the verified selections | Raw earlier failed attempts retained |
+| Existing browser cases | 104 distinct cases passed in their correct profiles: 101 disabled-payment and 3 enabled synthetic free-plan/checkout cases | Four explicit assertion migrations run on a temporary copy; original test/config unchanged |
+| Accessibility automation | 165 current axe scans, 0 reported violations | 141 principal/legal scans plus 24 advanced/Story scans; incomplete rules retained for human review |
+| Browser accessibility tree | 20 Chromium AX snapshots | AX semantics do not establish native screen-reader speech acceptance |
+| Native browser zoom | Actual Chromium zoom 2.0 in both themes | Temporary localhost-only extension uses tabs.setZoom/getZoom; no CSS/pinch approximation |
+| Exact asset evidence | 41 font/license byte comparisons matched; 34 native resources verified against official Capacitor templates | Nine remaining web/repository source-owner records still need genuine permission evidence |
 
-Final test outcomes, titles, durations and historical failures are indexed in [test-results-summary.json](evidence/test-results-summary.json). Build/typecheck/unit command exit codes are in [verification.json](evidence/verification.json); complete selected-unit output is [unit-results.txt](evidence/unit-results.txt). Generated raw Playwright JSON, logs and transient per-scan output remain in this local directory but are excluded from Git to avoid duplicating bulky traces. Committed summaries preserve actual outcomes, errors and manual-review items; the test sources reproduce the checks.
+Machine-readable outcomes and titles are in [test-results-summary.json](evidence/test-results-summary.json). Command exit codes are in [verification.json](evidence/verification.json), current unit output in [completion-unit.txt](evidence/completion-unit.txt), and lint rule scope/notices in [frontend-lint-summary.json](evidence/frontend-lint-summary.json). Raw JSON/logs/traces remain reproducible locally and are excluded from Git; compact summaries retain failures and review limits.
 
-## Preserved legacy suite
+## New browser coverage
 
-The complete existing `e2e/core-social.spec.ts` was actually attempted after the initial repairs: **89 passed, 15 failed, 0 skipped**. It was not called a passing baseline.
+The 65 unique cases comprise 51 standard-profile cases, 12 advanced-accessibility/Story cases and 2 explicit push-profile cases. Standard coverage includes consent 11, inactive analytics 4, shared accessibility 16, legal/account matrices 10, commerce 4, eligibility 1, recovery 1, overlay 2 and asset delivery 2. The two overlay cases also ran in the push selection and are counted once.
 
-Six of those failing cases subsequently passed in appropriate reruns: two Premium cases in an enabled synthetic build; profile-follow navigation after preserving the username in the new accessible link name; group attachment retry; Creator Studio; and Studio camera lifecycle after the nested-Escape repair. Existing ambient-player behavior also passed again after the final overlay changes.
+- Legal notices and grievance intake are public. Google requests occur only after provider choice; failure/retry/resizing and other sign-in methods remain usable.
+- Registration/reacceptance starts unchecked, errors focus fields, failed values persist, concurrent submissions are bounded, and mismatched server terms cannot hydrate social data.
+- Inactive analytics offers no new opt-in. Previous device choices can be cleared for eligible/ineligible accounts, across tabs and on reload. Blocked removal is reported honestly. The actual dormant batcher is exercised separately for storage denial, owner changes, aborted delivery and unload withdrawal; no collector was mounted.
+- Payment-disabled behavior, recovery/cancellation, explicit sample claims, genuine no-photo states and server-delivered imagery remain functional. Twelve demo routes request no fixed external media; local preview art decodes.
+- Both themes and 320, 390, 768, 1024, 1440 px are covered. Keyboard checks include skip navigation, Tab/reverse Tab, focus trapping/restoration, Escape, native seeking/volume, menus and hover information. Companion controls are nonmodal and bounded; reduced motion, forced colors and all three saved accents are exercised.
+- Story descriptions use the real existing image/textContent contract. The test uploads once, preserves the author description through a publication failure/retry, reloads the returned Story and verifies its image alt text. No unsupported altText API field or invented description is used.
+- True 200% zoom checks reflow and reachable composer/companion controls. Representative screenshots were reviewed separately; native-zoom geometry and duplicate Story close controls were repaired after failed checks.
 
-Nine legacy assertions remain incompatible with the intended/current UI: two assume Google loads automatically before provider choice, and seven use an ambiguous global `Settings` heading selector (the unchanged baseline has both shell and page headings). Three other matrix cases happened to pass that selector due to loading timing; the replacement test waits for actual page content and scans every case. The new Google regression and ten legal/form matrices cover the intended behavior. These nine old assertions are recorded as failures, not quietly removed or relabelled as passes. The disabled default fixture also needs the two purchase cases separated into an enabled synthetic profile, as demonstrated here.
+## Existing-suite migration and failures
 
-The ownership instruction allows newly named compliance test files, and prohibits changing root configuration or other workstreams. Accordingly, the original test file, root Playwright config and CI workflows remain untouched. The existing-test/CI owner must migrate these assumptions before treating its default command as a green release gate. This is explicitly documented as `TEST-MIGRATION-01`; the PR is not a release approval.
+The untouched core-social suite was actually attempted in the initial phase:89 passed, 15 failed. Six failing cases subsequently passed after a real Studio Escape fix, profile naming correction, appropriate synthetic payment flags, or an isolated rerun. Nine remaining old assertions assumed automatic Google loading or used ambiguous shell/page heading selectors. That initial result was never called green.
 
-## What the browser checks establish
+The completion runner preserves all 104 declarations and creates a temporary copy. Its four reviewable transformations add deliberate Google choice to two tests, replace obsolete analytics opt-in assertions with inactive-status/previous-choice clearing, and scope Settings/Projects page-content selectors. [The generated patch](legacy-test-migration.patch) passes git apply --check. No original e 2e file or root configuration is edited.
 
-- Public access to notices and grievance intake without authentication; no Google SDK request before choice; accessible provider failure/retry and resize.
-- Unchecked registration/reacceptance, retained failed choices, focused invalid fields, persistent and withdrawn analytics preferences, cross-tab/storage-failure behavior, and actual dormant-batcher network checks. No collector was mounted to make a consent banner necessary.
-- Existing server eligibility decisions, guardian history read failures/retry, password recovery feedback/concurrency, and existing privacy/export/deletion protections through relevant legacy cases.
-- Payment-disabled behavior despite an available catalog, genuine photo-empty states, named save controls, recovery/cancellation availability, and explicit local/sample claims.
-- All requested widths (320, 390, 768, 1024, 1440) in both themes. The 26-case accessibility suite performs **141 axe scans**: 60 principal-route, 70 legal/account, six dialog, four populated conversation/dashboard, and one installation scan. Keyboard checks exercise skip navigation, forward/reverse Tab, focus traps/restoration, Escape, Story pause/navigation and native audio seeking.
-- Console/page-error collection and explicit network boundaries for the rendered fixtures. Representative screenshots were separately inspected; this review found the additional companion collision and produced its repair.
+Payment profiles are explicit:101 cases use disabled payments; the free-plan terms-enabling assertion and two checkout/recovery assertions use an enabled synthetic frontend build. All APIs/providers remain intercepted. The first combined enabled attempt was 102 passed/2 failed (disabled-marketplace expectation and obsolete analytics switch). An intermediate 102-case disabled attempt was 100 passed/2 failed: the free-plan test belonged in the enabled profile, and rapid block retry exposed a post-menu close/reopen problem. Those failures remain recorded. Post menus now close without a lingering exit animation; the rapid failure/retry regression passed after repair. The final runner has the correct 101+3 partition.
+
+The root/default legacy CI entry still requires its owner to apply the provided migration and adopt the explicit profiles. That ownership boundary remains TEST-MIGRATION-01; passing a temporary migrated copy is not a claim about the unchanged default command.
+
+Other preserved attempts include the standard completion selection 49 passed/2 failed from incorrect illustration-count and CSP fixture assumptions; advanced runs 4/6, 6/6, 10/4 and 12/2 while real contrast, geometry, duplicate-close and keyboard activation defects were repaired. Corrected media, Story, native zoom and post-menu selections actually passed afterward. Full per-attempt evidence is indexed; no failure is silently relabelled as a pass. Two early temporary-runner startup errors executed no tests.
 
 ## Reproduction
 
-Use the isolated worktree and installed dependencies. Each runner label produces JSON and log files under this report's `evidence/`. Use separate ports for independent runs; builds/output directories are isolated by port.
+Run from the isolated audit worktree with installed repository dependencies. Use different ports for independent builds and keep browser worker counts bounded.
 
-```powershell
-node --test tests/ui-state.test.mjs tests/service-worker.test.mjs tests/media-client.test.mjs tests/frontend-build.test.mjs tests/font-assets.test.mjs tests/client-session.test.mjs tests/arcade-password-game.test.mjs tests/app-store.test.mjs social/tests/frontend-compliance-config.test.mjs
-npm run --prefix social typecheck
-npm run --prefix social build
-node e2e/frontend-compliance-run.mjs consent-final e2e/frontend-compliance-consent.spec.ts --workers 1
-node e2e/frontend-compliance-run.mjs accessibility-verified e2e/frontend-compliance-accessibility.spec.ts e2e/frontend-compliance-legal-accessibility.spec.ts --workers 1
-node e2e/frontend-compliance-run.mjs functional-new e2e/frontend-compliance-commerce.spec.ts e2e/frontend-compliance-eligibility.spec.ts e2e/frontend-compliance-recovery.spec.ts --workers 1
-node e2e/frontend-compliance-run.mjs overlay-verified e2e/frontend-compliance-overlay.spec.ts --workers 1
-```
+    node --test tests/ui-state.test.mjs tests/service-worker.test.mjs tests/media-client.test.mjs tests/frontend-build.test.mjs tests/font-assets.test.mjs tests/client-session.test.mjs tests/arcade-password-game.test.mjs tests/app-store.test.mjs social/tests/frontend-compliance-config.test.mjs
+    npm run --prefix social typecheck
+    npm run --prefix social build
+    node scripts/check-design-tokens.mjs
+    node e 2e/frontend-compliance-run.mjs standard e 2e/frontend-compliance-consent.spec.ts e 2e/frontend-compliance-inactive-analytics.spec.ts e 2e/frontend-compliance-accessibility.spec.ts e 2e/frontend-compliance-legal-accessibility.spec.ts e 2e/frontend-compliance-commerce.spec.ts e 2e/frontend-compliance-eligibility.spec.ts e 2e/frontend-compliance-recovery.spec.ts e 2e/frontend-compliance-overlay.spec.ts e 2e/frontend-compliance-asset-delivery.spec.ts --workers 1
+    node e 2e/frontend-compliance-run.mjs advanced e 2e/frontend-compliance-advanced-accessibility.spec.ts e 2e/frontend-compliance-story-description.spec.ts --workers 1
+    node e 2e/frontend-compliance-legacy-run.mjs legacy --workers 1
 
-For the enabled synthetic payment cases, set `FRONTEND_COMPLIANCE_PAYMENTS=true` only in that test process and select the two Premium cases shown in the summary. For permission tests, set `FRONTEND_COMPLIANCE_PUSH=true` and select `frontend-compliance-permissions.spec.ts`. These flags do not alter tracked application configuration or enable a backend service. Without its explicit profile, the permission spec is deliberately skipped; the reported final permission run used its profile and skipped nothing.
+For the two permission cases, set FRONTEND_COMPLIANCE_PUSH=true in that test process and select frontend-compliance-permissions.spec.ts. The verified run used its profile and skipped nothing. These flags affect local frontend fixtures, not tracked deployment configuration or backend services.
 
-## Verification limits
+Lint tools were installed outside the repository with npm --prefix <temporary-directory> install --no-save --package-lock=false --ignore-scripts eslint@9.39.1 @typescript-eslint/parser@8.46.1 typescript@5.6.3. Set FRONTEND_LINT_TOOL_DIR to that directory and run its eslint/bin/eslint.js with --config docs/audits/frontend-compliance-2026-10-17/frontend-lint.config.mjs over social/src, social/scripts, social/public/sw.js and social/vite.config.ts. Inline suppression comments are deliberately disabled; the five warnings report that existing comments have no effect in this audit configuration. No rule violation was suppressed to obtain the result.
 
-Automated axe results retain `incomplete` findings for human review, including image/gradient contrast. Passing sampled fixtures does not establish universal WCAG conformance. No native screen-reader, physical-device, real provider, live email, real payment, production cookie/security-header, authored media-caption or arbitrary-UGC acceptance is claimed. Legal/operator approval and incomplete license evidence remain launch blockers in their separate reports. A failed early shared-output startup was corrected by isolating build directories; it executed no tests and is not counted as a product failure.
+## Verification boundaries
+
+Axe incomplete findings and screenshot review remain separate from passes. Narrator was present but not launched; NVDA was not installed/running. No native screen-reader speech, physical-device, real provider/email/payment, production-cookie/security-header or arbitrary-UGC acceptance is claimed. Per-image post descriptions, synchronized caption/transcript contracts, genuine operator facts/legal approval, nine remaining asset source-owner records and staging operations remain external requirements. HTTP 200 route delivery checks establish SPA delivery only. No universal WCAG, GDPR or DPDP compliance claim is made.
+
+An additional fresh two-worker full legacy rerun was interrupted at 75/101 disabled cases and emitted no final JSON. Its partial progress is not counted as a pass or used to derive the totals. The 265 distinct passing cases above come from completed reports and the targeted successful correction checks, as enumerated in the result index.

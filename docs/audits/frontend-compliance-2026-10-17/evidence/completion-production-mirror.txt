@@ -1,0 +1,1 @@
+[Postbuild] Synced dist/public to dist for Vercel/Netlify directory detection.

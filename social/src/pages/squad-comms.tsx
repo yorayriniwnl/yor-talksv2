@@ -29,7 +29,7 @@ const INITIAL_MEMBERS: SquadMember[] = [
     isSpeaking: true,
     isMuted: false,
     volume: 100,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
+    avatar: ''
   },
   {
     id: 'sm-2',
@@ -38,7 +38,7 @@ const INITIAL_MEMBERS: SquadMember[] = [
     isSpeaking: false,
     isMuted: false,
     volume: 90,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop'
+    avatar: ''
   },
   {
     id: 'sm-3',
@@ -47,7 +47,7 @@ const INITIAL_MEMBERS: SquadMember[] = [
     isSpeaking: true,
     isMuted: false,
     volume: 85,
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop'
+    avatar: ''
   }
 ];
 

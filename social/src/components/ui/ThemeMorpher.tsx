@@ -26,18 +26,26 @@ function setThemeVariables(theme: ThemePreset) {
   else root.dataset.yorAccent = theme;
 }
 
+function storedTheme(): ThemePreset {
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return THEME_PRESETS.find((theme) => theme.id === value)?.id ?? 'default';
+  } catch {
+    return 'default';
+  }
+}
+
+export function initializeAccentTheme() {
+  setThemeVariables(storedTheme());
+}
+
 export function ThemeMorpher() {
   const [activeTheme, setActiveTheme] = useState<ThemePreset>('default');
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored && THEME_PRESETS.some((theme) => theme.id === stored)) {
-        const theme = stored as ThemePreset;
-        setThemeVariables(theme);
-        setActiveTheme(theme);
-      }
-    } catch { /* Appearance choices still work when browser storage is blocked. */ }
+    const theme = storedTheme();
+    setThemeVariables(theme);
+    setActiveTheme(theme);
   }, []);
 
   const applyTheme = (theme: ThemePreset) => {
@@ -49,7 +57,7 @@ export function ThemeMorpher() {
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 font-sans" aria-label="Choose accent theme">
+    <div role="group" className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 font-sans" aria-label="Choose accent theme">
       {THEME_PRESETS.map((theme) => (
         <button
           key={theme.id}

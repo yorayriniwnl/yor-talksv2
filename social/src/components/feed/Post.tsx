@@ -631,13 +631,13 @@ export function PostCard({ post }: { post: PostType }) {
               )}
             </div>
             
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full opacity-100 text-muted-foreground hover:text-foreground" onClick={(event) => event.stopPropagation()} aria-label="More post options">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl">
+              <DropdownMenuContent align="end" className="rounded-xl data-[state=closed]:animate-none">
                 <DropdownMenuItem onClick={copyPostLink}>Copy link</DropdownMenuItem>
                 <DropdownMenuItem onClick={reportPost}>Report</DropdownMenuItem>
                 {author.id !== currentUser?.id && <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={blockAuthor}>Block user</DropdownMenuItem>}
@@ -742,14 +742,14 @@ export function PostCard({ post }: { post: PostType }) {
                 <TooltipContent>Reply</TooltipContent>
               </Tooltip>
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <motion.button 
-                        {...tapScale}
+                      <button
+                        type="button"
                         aria-label="Share post"
-                        className="group flex items-center gap-1.5 focus-visible:outline-none"
+                        className="group flex items-center gap-1.5 transition-transform active:scale-[0.96] focus-visible:outline-none"
                         onClick={(event) => event.stopPropagation()}
                       >
                         <RippleEffect className="rounded-full">
@@ -758,12 +758,12 @@ export function PostCard({ post }: { post: PostType }) {
                         </div>
                         </RippleEffect>
                         <span className="text-xs font-medium group-hover:text-foreground transition-colors">{post.shares > 0 && post.shares}</span>
-                      </motion.button>
+                      </button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
                   <TooltipContent>Share</TooltipContent>
                 </Tooltip>
-                <DropdownMenuContent align="start" className="rounded-xl">
+                <DropdownMenuContent align="start" className="rounded-xl data-[state=closed]:animate-none">
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void toggleRepost(post.id); }}>
                     {post.repostedByMe ? 'Remove repost' : 'Repost to feed'}
                   </DropdownMenuItem>

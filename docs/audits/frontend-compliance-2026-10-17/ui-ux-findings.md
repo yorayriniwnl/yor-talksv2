@@ -32,3 +32,9 @@ Results, traces and limits belong in the frontend test report. A successful axe 
 - Legal, privacy, consent, payments, licensing and launch configuration findings are documented in their dedicated reports. Test-only operator details never establish production business identity.
 
 P0/P1 issues found within these shared-component repairs: none left knowingly unaddressed. Two integration gaps and the broader manual contrast/assistive-technology review remain P2; dormant component reactivation review is P3. These counts describe this report's scope and must not be substituted for the repository-wide finding counts.
+
+## Completion follow-up, 19 October
+
+Further checks repair the companion popover focus lifecycle and native browser-zoom collision with ambient controls; startup accent persistence; highlighted menu contrast and native share-menu keyboard activation and rapid close/reopen behavior; and the Story builder name, scrollable layout, labels, focus restoration and author-entered photo description. Photo descriptions use the existing persisted textContent field and the existing viewer alt text. No descriptions are invented.
+
+Static demo stock photographs, an unrendered GIF gallery and a dormant music reference were removed or replaced with local geometric preview art. Genuine server-provided media and brand assets remain. Inactive optional analytics no longer solicits a new opt-in; an existing device choice can be removed with confirmed or uncertain-removal feedback. See the final test report for executed results and retained earlier failures.

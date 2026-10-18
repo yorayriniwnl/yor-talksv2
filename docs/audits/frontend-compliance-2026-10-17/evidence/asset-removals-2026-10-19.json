@@ -1,0 +1,37 @@
+{
+  "source_changes": [
+    "social/src/pages/achievements.tsx",
+    "social/src/pages/bazaar.tsx",
+    "social/src/pages/communities.tsx",
+    "social/src/components/steam/SteamGameShowcase.tsx",
+    "social/src/components/steam/SteamTradeModal.tsx",
+    "social/src/pages/esports-calendar.tsx",
+    "social/src/pages/lounge.tsx",
+    "social/src/pages/podcast-studio.tsx",
+    "social/src/pages/overlay-studio.tsx",
+    "social/src/pages/points-shop.tsx",
+    "social/src/pages/power-rankings.tsx",
+    "social/src/pages/predictions.tsx",
+    "social/src/pages/scrims.tsx",
+    "social/src/pages/squad-comms.tsx",
+    "social/src/pages/tournaments.tsx",
+    "social/src/components/ui/TerminalInsanity.tsx"
+  ],
+  "removed_local_assets": [
+    {
+      "path": "social/public/images/yor-discovery-still-life-v1.png",
+      "bytes": 2323561,
+      "sha256": "2c74f0502fccd7d849c339dec79a9e9d58f2c42a20038109303abcb7d705447b",
+      "reason": "No runtime/build/manifest reference; removed from public directory to stop distributing an uncleared unused asset"
+    },
+    {
+      "path": "social/public/images/yor-discovery-still-life-v1.jpg",
+      "bytes": 257167,
+      "sha256": "86bd49b8970c67faad7a324f597df470e3b4253f642df966bc4344bf87d422e4",
+      "reason": "No runtime/build/manifest reference; removed from public directory to stop distributing an uncleared unused asset"
+    }
+  ],
+  "historic_remote_inventory": "asset-license-remote-inventory-2026-10-18.csv",
+  "historic_remote_exact_urls": 40,
+  "replacement": "Six code-native geometric SVGs plus existing avatar initials; UGC sources unchanged"
+}

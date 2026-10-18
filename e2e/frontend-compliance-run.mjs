@@ -13,7 +13,7 @@ const report = path.join(evidence, `${label}.json`);
 const log = openSync(path.join(evidence, `${label}.log`), 'w');
 const cli = path.join(path.dirname(require.resolve('@playwright/test/package.json')), 'cli.js');
 console.log(`Running ${label}; reports: ${report}`);
-const child = spawn(process.execPath, [cli, 'test', '--config', 'e2e/frontend-compliance.config.ts', '--reporter=json', ...selection], {
+const child = spawn(process.execPath, [cli, 'test', '--config', process.env.FRONTEND_COMPLIANCE_CONFIG || 'e2e/frontend-compliance.config.ts', '--reporter=json', ...selection], {
   cwd: root,
   env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: report },
   stdio: ['ignore', log, log],

@@ -1,11 +1,12 @@
 {
+  "generatedAt": "2026-10-18T21:57:23.915Z",
   "scanCount": 71,
   "violationCount": 0,
-  "note": "Incomplete-rule sampleTargets show up to five nodes per rule; full raw results are generated locally by the checked-in tests.",
+  "note": "Current locally executed production-build scans. Incomplete rules require manual review; samples limited to five targets per rule. Raw results regenerate from the specs.",
   "scans": [
     {
       "artifact": "composer-dark-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -59,7 +60,7 @@
     },
     {
       "artifact": "composer-light-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -113,7 +114,7 @@
     },
     {
       "artifact": "dashboard-dark-axe.json",
-      "url": "http://127.0.0.1:4175/dashboard",
+      "url": "http://127.0.0.1:4187/dashboard",
       "violations": [],
       "passedRuleCount": 23,
       "incomplete": [
@@ -144,7 +145,7 @@
     },
     {
       "artifact": "dashboard-light-axe.json",
-      "url": "http://127.0.0.1:4175/dashboard",
+      "url": "http://127.0.0.1:4187/dashboard",
       "violations": [],
       "passedRuleCount": 23,
       "incomplete": [
@@ -175,7 +176,7 @@
     },
     {
       "artifact": "explore-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -206,7 +207,7 @@
     },
     {
       "artifact": "explore-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -237,7 +238,7 @@
     },
     {
       "artifact": "explore-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -268,7 +269,7 @@
     },
     {
       "artifact": "explore-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -299,7 +300,7 @@
     },
     {
       "artifact": "explore-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -330,7 +331,7 @@
     },
     {
       "artifact": "explore-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -361,7 +362,7 @@
     },
     {
       "artifact": "explore-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -392,7 +393,7 @@
     },
     {
       "artifact": "explore-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -423,7 +424,7 @@
     },
     {
       "artifact": "explore-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -454,7 +455,7 @@
     },
     {
       "artifact": "explore-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/explore",
+      "url": "http://127.0.0.1:4187/explore",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -485,7 +486,7 @@
     },
     {
       "artifact": "home-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -504,7 +505,7 @@
           "id": "color-contrast",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
-          "nodeCount": 52,
+          "nodeCount": 50,
           "sampleTargets": [
             [
               ".operator-brand-mark > span"
@@ -527,7 +528,7 @@
     },
     {
       "artifact": "home-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -546,7 +547,7 @@
           "id": "color-contrast",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
-          "nodeCount": 53,
+          "nodeCount": 51,
           "sampleTargets": [
             [
               ".operator-brand-mark > span"
@@ -569,7 +570,7 @@
     },
     {
       "artifact": "home-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -611,7 +612,7 @@
     },
     {
       "artifact": "home-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -653,7 +654,7 @@
     },
     {
       "artifact": "home-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -695,7 +696,7 @@
     },
     {
       "artifact": "home-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -737,7 +738,7 @@
     },
     {
       "artifact": "home-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -779,7 +780,7 @@
     },
     {
       "artifact": "home-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -821,7 +822,7 @@
     },
     {
       "artifact": "home-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -840,7 +841,7 @@
           "id": "color-contrast",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
-          "nodeCount": 42,
+          "nodeCount": 40,
           "sampleTargets": [
             [
               "h1"
@@ -863,7 +864,7 @@
     },
     {
       "artifact": "home-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -882,7 +883,7 @@
           "id": "color-contrast",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
-          "nodeCount": 43,
+          "nodeCount": 41,
           "sampleTargets": [
             [
               "h1"
@@ -905,7 +906,7 @@
     },
     {
       "artifact": "install-prompt-axe.json",
-      "url": "http://127.0.0.1:4175/",
+      "url": "http://127.0.0.1:4187/",
       "violations": [],
       "passedRuleCount": 14,
       "incomplete": [
@@ -930,7 +931,7 @@
     },
     {
       "artifact": "messages-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -961,7 +962,7 @@
     },
     {
       "artifact": "messages-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -992,7 +993,7 @@
     },
     {
       "artifact": "messages-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1023,7 +1024,7 @@
     },
     {
       "artifact": "messages-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1054,7 +1055,7 @@
     },
     {
       "artifact": "messages-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1085,7 +1086,7 @@
     },
     {
       "artifact": "messages-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1116,7 +1117,7 @@
     },
     {
       "artifact": "messages-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1147,7 +1148,7 @@
     },
     {
       "artifact": "messages-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1178,7 +1179,7 @@
     },
     {
       "artifact": "messages-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1209,7 +1210,7 @@
     },
     {
       "artifact": "messages-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages",
+      "url": "http://127.0.0.1:4187/messages",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1240,7 +1241,7 @@
     },
     {
       "artifact": "notifications-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1271,7 +1272,7 @@
     },
     {
       "artifact": "notifications-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1302,7 +1303,7 @@
     },
     {
       "artifact": "notifications-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1333,7 +1334,7 @@
     },
     {
       "artifact": "notifications-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1364,7 +1365,7 @@
     },
     {
       "artifact": "notifications-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1395,7 +1396,7 @@
     },
     {
       "artifact": "notifications-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1426,7 +1427,7 @@
     },
     {
       "artifact": "notifications-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1457,7 +1458,7 @@
     },
     {
       "artifact": "notifications-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1488,7 +1489,7 @@
     },
     {
       "artifact": "notifications-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1519,7 +1520,7 @@
     },
     {
       "artifact": "notifications-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/notifications",
+      "url": "http://127.0.0.1:4187/notifications",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1550,7 +1551,7 @@
     },
     {
       "artifact": "populated-messages-dark-axe.json",
-      "url": "http://127.0.0.1:4175/messages/20000000-0000-4000-8000-000000000999",
+      "url": "http://127.0.0.1:4187/messages/20000000-0000-4000-8000-000000000999",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -1581,7 +1582,7 @@
     },
     {
       "artifact": "populated-messages-light-axe.json",
-      "url": "http://127.0.0.1:4175/messages/20000000-0000-4000-8000-000000000999",
+      "url": "http://127.0.0.1:4187/messages/20000000-0000-4000-8000-000000000999",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -1612,21 +1613,10 @@
     },
     {
       "artifact": "saved-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
-        {
-          "id": "aria-prohibited-attr",
-          "impact": "serious",
-          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 1,
-          "sampleTargets": [
-            [
-              ".gap-1"
-            ]
-          ]
-        },
         {
           "id": "color-contrast",
           "impact": "serious",
@@ -1654,21 +1644,10 @@
     },
     {
       "artifact": "saved-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
-        {
-          "id": "aria-prohibited-attr",
-          "impact": "serious",
-          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 1,
-          "sampleTargets": [
-            [
-              ".gap-1"
-            ]
-          ]
-        },
         {
           "id": "color-contrast",
           "impact": "serious",
@@ -1696,21 +1675,10 @@
     },
     {
       "artifact": "saved-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
-        {
-          "id": "aria-prohibited-attr",
-          "impact": "serious",
-          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 1,
-          "sampleTargets": [
-            [
-              ".gap-1"
-            ]
-          ]
-        },
         {
           "id": "color-contrast",
           "impact": "serious",
@@ -1738,21 +1706,10 @@
     },
     {
       "artifact": "saved-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
-        {
-          "id": "aria-prohibited-attr",
-          "impact": "serious",
-          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 1,
-          "sampleTargets": [
-            [
-              ".gap-1"
-            ]
-          ]
-        },
         {
           "id": "color-contrast",
           "impact": "serious",
@@ -1780,7 +1737,7 @@
     },
     {
       "artifact": "saved-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1811,7 +1768,7 @@
     },
     {
       "artifact": "saved-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1842,7 +1799,7 @@
     },
     {
       "artifact": "saved-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1873,7 +1830,7 @@
     },
     {
       "artifact": "saved-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1904,7 +1861,7 @@
     },
     {
       "artifact": "saved-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1935,7 +1892,7 @@
     },
     {
       "artifact": "saved-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/saved",
+      "url": "http://127.0.0.1:4187/saved",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -1966,7 +1923,7 @@
     },
     {
       "artifact": "search-dark-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -2008,7 +1965,7 @@
     },
     {
       "artifact": "search-light-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 26,
       "incomplete": [
@@ -2050,7 +2007,7 @@
     },
     {
       "artifact": "story-dark-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 23,
       "incomplete": [
@@ -2104,7 +2061,7 @@
     },
     {
       "artifact": "story-light-axe.json",
-      "url": "http://127.0.0.1:4175/#main-content",
+      "url": "http://127.0.0.1:4187/#main-content",
       "violations": [],
       "passedRuleCount": 23,
       "incomplete": [
@@ -2158,19 +2115,16 @@
     },
     {
       "artifact": "worlds-1024-dark-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
         {
           "id": "aria-prohibited-attr",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 2,
+          "nodeCount": 1,
           "sampleTargets": [
-            [
-              ".gap-1"
-            ],
             [
               ".worlds-first-card"
             ]
@@ -2203,19 +2157,16 @@
     },
     {
       "artifact": "worlds-1024-light-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
         {
           "id": "aria-prohibited-attr",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 2,
+          "nodeCount": 1,
           "sampleTargets": [
-            [
-              ".gap-1"
-            ],
             [
               ".worlds-first-card"
             ]
@@ -2248,19 +2199,16 @@
     },
     {
       "artifact": "worlds-1440-dark-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
         {
           "id": "aria-prohibited-attr",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 2,
+          "nodeCount": 1,
           "sampleTargets": [
-            [
-              ".gap-1"
-            ],
             [
               ".worlds-first-card"
             ]
@@ -2293,19 +2241,16 @@
     },
     {
       "artifact": "worlds-1440-light-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
-      "passedRuleCount": 22,
+      "passedRuleCount": 25,
       "incomplete": [
         {
           "id": "aria-prohibited-attr",
           "impact": "serious",
           "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
-          "nodeCount": 2,
+          "nodeCount": 1,
           "sampleTargets": [
-            [
-              ".gap-1"
-            ],
             [
               ".worlds-first-card"
             ]
@@ -2338,7 +2283,7 @@
     },
     {
       "artifact": "worlds-320-dark-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -2380,7 +2325,7 @@
     },
     {
       "artifact": "worlds-320-light-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -2422,7 +2367,7 @@
     },
     {
       "artifact": "worlds-390-dark-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -2464,7 +2409,7 @@
     },
     {
       "artifact": "worlds-390-light-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 22,
       "incomplete": [
@@ -2506,7 +2451,7 @@
     },
     {
       "artifact": "worlds-768-dark-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [
@@ -2548,7 +2493,7 @@
     },
     {
       "artifact": "worlds-768-light-axe.json",
-      "url": "http://127.0.0.1:4175/worlds",
+      "url": "http://127.0.0.1:4187/worlds",
       "violations": [],
       "passedRuleCount": 21,
       "incomplete": [

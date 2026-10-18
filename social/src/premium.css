@@ -157,7 +157,7 @@ body {
 .yor-companion {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: var(--yor-companion-bottom, max(1rem, env(safe-area-inset-bottom)));
+  bottom: calc(1.5rem + var(--yor-ambient-player-height, 0px) + 0.75rem);
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -229,6 +229,9 @@ body {
 
 .yor-companion__panel {
   width: min(19rem, calc(100vw - 2rem));
+  max-height: var(--radix-popover-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
   border: 1px solid hsl(var(--border) / 0.82);
   border-radius: 1.35rem;
@@ -258,12 +261,16 @@ body {
 @keyframes companion-panel-in { from { opacity: 0; transform: translateY(0.5rem) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 767px) {
-  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: var(--yor-companion-bottom, calc(5.5rem + env(safe-area-inset-bottom))); }
+  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); }
   .yor-companion__wake { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__trigger { min-width: 3rem; width: 3rem; height: 3rem; justify-content: center; padding: 0.3rem; border-radius: 1rem; transform: none; }
   .yor-companion__trigger .yor-companion__label,
   .yor-companion__trigger .yor-companion__sparkle,
   .yor-companion__trigger > svg { display: none; }
+}
+
+@media (max-width: 1023px) {
+  .yor-companion { bottom: calc(5.25rem + env(safe-area-inset-bottom) + var(--yor-ambient-player-height, 0px) + 0.75rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

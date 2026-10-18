@@ -1,5 +1,6 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useLayoutEffect } from 'react';
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
+import { initializeAccentTheme } from '@/components/ui/ThemeMorpher';
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { ThemeProvider } from 'next-themes';
@@ -296,6 +297,7 @@ function Router() {
 // ═══════════════════════════════════════════════════════════════
 
 function App() {
+  useLayoutEffect(initializeAccentTheme, []);
   const currentUser = useAppStore((s) => s.currentUser);
   const eligibility = useAppStore((s) => s.eligibility);
   const canUsePush = Boolean(currentUser && currentUser.notificationsEnabled !== false && eligibility?.activated && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.social);

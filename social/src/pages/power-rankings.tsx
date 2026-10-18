@@ -31,7 +31,7 @@ const CLAN_RANKINGS: ClanRank[] = [
     change: '+45 Elo',
     winRate: 84,
     streak: '🔥 8 Win Streak',
-    logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    logo: '',
     tier: 'tier1'
   },
   {
@@ -42,7 +42,7 @@ const CLAN_RANKINGS: ClanRank[] = [
     change: '+30 Elo',
     winRate: 81,
     streak: '🔥 5 Win Streak',
-    logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    logo: '',
     tier: 'tier1'
   },
   {
@@ -53,7 +53,7 @@ const CLAN_RANKINGS: ClanRank[] = [
     change: '+15 Elo',
     winRate: 76,
     streak: '🔥 3 Win Streak',
-    logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+    logo: '',
     tier: 'tier1'
   },
   {
@@ -64,7 +64,7 @@ const CLAN_RANKINGS: ClanRank[] = [
     change: '+10 Elo',
     winRate: 74,
     streak: '🔥 2 Win Streak',
-    logo: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=200&auto=format&fit=crop',
+    logo: '',
     tier: 'tier1'
   },
   {
@@ -75,7 +75,7 @@ const CLAN_RANKINGS: ClanRank[] = [
     change: '-5 Elo',
     winRate: 68,
     streak: '1 Loss',
-    logo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop',
+    logo: '',
     tier: 'tier2'
   }
 ];

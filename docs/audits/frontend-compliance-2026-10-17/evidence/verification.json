@@ -45,5 +45,80 @@
       ],
       "exitCode": 0
     }
-  ]
+  ],
+  "completion": {
+    "executedAt": "2026-10-18T21:59:42.879Z",
+    "outcomes": [
+      {
+        "name": "completion-typecheck",
+        "command": [
+          "node",
+          "node_modules/typescript/bin/tsc",
+          "-p",
+          "social/tsconfig.json",
+          "--noEmit"
+        ],
+        "exitCode": 0
+      },
+      {
+        "name": "completion-production-build",
+        "command": [
+          "node",
+          "social/scripts/build.mjs"
+        ],
+        "exitCode": 0
+      },
+      {
+        "name": "completion-production-mirror",
+        "command": [
+          "node",
+          "social/scripts/sync-dist.mjs"
+        ],
+        "exitCode": 0
+      },
+      {
+        "name": "completion-unit",
+        "command": [
+          "node",
+          "--test",
+          "tests/ui-state.test.mjs",
+          "tests/service-worker.test.mjs",
+          "tests/media-client.test.mjs",
+          "tests/frontend-build.test.mjs",
+          "tests/font-assets.test.mjs",
+          "tests/client-session.test.mjs",
+          "tests/arcade-password-game.test.mjs",
+          "tests/app-store.test.mjs",
+          "social/tests/frontend-compliance-config.test.mjs"
+        ],
+        "exitCode": 0
+      },
+      {
+        "name": "completion-design-tokens",
+        "command": [
+          "node",
+          "scripts/check-design-tokens.mjs"
+        ],
+        "exitCode": 0
+      },
+      {
+        "name": "completion-lint",
+        "command": [
+          "node",
+          "C:\\Users\\yoray\\AppData\\Local\\Temp\\yor-frontend-eslint-20261019\\node_modules\\eslint\\bin\\eslint.js",
+          "--config",
+          "docs/audits/frontend-compliance-2026-10-17/frontend-lint.config.mjs",
+          "social/src",
+          "social/scripts",
+          "social/public/sw.js",
+          "social/vite.config.ts",
+          "--format",
+          "json",
+          "--output-file",
+          "F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\docs\\audits\\frontend-compliance-2026-10-17\\evidence\\frontend-lint.json"
+        ],
+        "exitCode": 0
+      }
+    ]
+  }
 }

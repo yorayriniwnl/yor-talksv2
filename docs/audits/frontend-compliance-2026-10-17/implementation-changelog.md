@@ -13,7 +13,7 @@ Baseline `62920ad`; changes on `audit/frontend-compliance-20261017`. Counts are 
 | FC-07 | Report failures preserve drafts and explain uncertain delivery; intake minimizes unnecessary sensitive disclosures | Grievance page; error guidance | No |
 | FC-08 | Privacy/storage notices accurately qualify deletion, archive exclusions, providers and retained data | Legal review and source contracts | No |
 | FC-09 | Google SDK loads after explicit provider choice, retaining retry and responsive controls | Auth page; actual script-request test | No |
-| FC-10 | Analytics switch reflects cross-tab changes and storage denial | Settings and consent regressions | No |
+| FC-10 | Inactive analytics offers no new opt-in; previous device choices can be cleared with cross-tab updates and honest storage-error feedback | Settings and consent regressions | No |
 | FC-11 | Withdrawal remains effective in memory when browser storage cannot be cleared | Telemetry batcher/source harness | No |
 | FC-12 | Withdrawal/session changes stop queued, concurrent and unload sends; late responses cannot restore another queue | Batcher revision/abort/owner checks; network/source harness | No |
 | FC-13 | Ineligible accounts can withdraw a saved choice without granting new analytics permission | Settings/telemetry helpers; consent regression | No |
@@ -36,13 +36,25 @@ Baseline `62920ad`; changes on `audit/frontend-compliance-20261017`. Counts are 
 | FC-30 | Voice preview/discard controls are named and decorative waveform canvas is hidden | VoiceNoteRecorder | Yes |
 | FC-31 | Install prompt fits narrow screens and exposes named dismissal | PWA prompt and responsive/axe regression | Yes |
 | FC-32 | Ambient audio clears tablet navigation and active-message composer while retaining playback and reachable controls | Audio player, shell and rectangle regression | Yes |
-| FC-33 | Light-theme communication controls use the established primary foreground token | Messages/shared communication styles and dark/light axe | Yes |
+| FC-33 | Light-theme communications and highlighted menus use readable foreground tokens | Messages/shared communication styles and dark/light axe | Yes |
 | FC-34 | Interaction chart provides an equivalent table, accurate loaded-post/publication-day description and no invented rate for zero followers | AnalyticsChart/dashboard populated-data regression | Yes |
 | FC-35 | Escape in Studio's sticker preview closes the nested preview and keeps the camera modal/stream available | StudioCameraModal Radix Escape interception; existing camera lifecycle regression | Yes |
-| FC-36 | Companion no longer covers audio volume and preset controls, including when the player expands | Observed player bounds position companion; light/dark five-width rectangle regressions | Yes |
+| FC-36 | Companion no longer covers audio volume and preset controls, including when the player expands | Measured player height and CSS breakpoint positioning; light/dark five-width and native 200% zoom regressions | Yes |
 
-**36 corrected defect families; 19 accessibility-related families.** The accessibility subset is the rows marked Yes. This is not a count of unique WCAG success criteria or all affected controls.
+Initial delivery: 36 corrected defect families, including 19 accessibility-related families. Completion follow-up adds the five families below. The accessibility subset is the rows marked Yes. This is not a count of unique WCAG success criteria or all affected controls.
 
 All existing server eligibility/guardian gates, password confirmation for deletion, moderation controls and working media APIs remain enforced. Optional tracking was not mounted, payment flags were not enabled for the application, and no application-side fake API response was added. Enabled-payment and push profiles are isolated browser fixtures only.
 
 Validation outcomes, changed-file count and delivery SHA are recorded separately after the final checks, rather than asserted here before execution.
+
+## Completion follow-up, 19 October
+
+| ID | Corrected defect family | Principal evidence | Accessibility family |
+| --- | --- | --- | --- |
+| FC-37 | Companion controls provide initial focus, Escape dismissal, focus restoration, bounded scrolling and a precise local-preference disclosure | Radix nonmodal popover; keyboard/AX/native-zoom regressions | Yes |
+| FC-38 | Saved accent theme applies at startup on public, auth and signed-in routes before opening desktop More | App startup initializer; all three accents/reload in both themes | Yes |
+| FC-39 | Story builder has a name, scrollable controls, retained focus/draft, labelled type/poll/media fields and author-entered photo descriptions through existing textContent | StoryBuilder; upload/retry/viewer description regressions | Yes |
+| FC-40 | Unverified static stock/GIF/music references are removed or replaced with local geometric previews; verified native-template notice ships | Zero static remote-media inventory; exact official native provenance; media delivery regression | No |
+| FC-41 | Post action/share menus retain accessible page context and keyboard opening/navigation/dismissal without duplicate keyboard activation or lingering close animation | Nonmodal post menus and native Share trigger and immediate menu dismissal; menu keyboard/axe tests | Yes |
+
+**41 corrected defect families; 23 accessibility-related families.** Follow-up paths for already-counted families (inactive analytics, menu contrast and native-zoom audio positioning) are retained in their existing family rather than double-counted.

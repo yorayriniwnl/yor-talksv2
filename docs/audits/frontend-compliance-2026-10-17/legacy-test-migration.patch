@@ -1,0 +1,56 @@
+diff --git a/e2e/core-social.spec.ts b/e2e/core-social.spec.ts
+index 5f1c0e1..271d91f 100644
+--- a/e2e/core-social.spec.ts
++++ b/e2e/core-social.spec.ts
+@@ -1066,6 +1066,8 @@ test('Google script failure has an accessible retry without disabling other sign
+     return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
+   });
+   await page.goto('/auth');
++  expect(attempts).toBe(0);
++  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
+   await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
+   await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();
+   await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();
+@@ -1198,6 +1200,7 @@ test('narrow Google sign-in stays within its panel as the viewport changes', asy
+   }));
+   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
+   await page.goto('/auth');
++  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
+   const button = page.locator('.operator-google-access__button button');
+   await expect(button).toBeVisible();
+   const widthAt320 = Number(await button.getAttribute('data-rendered-width'));
+@@ -2615,14 +2618,16 @@ test('storage notice is public, linked from sign-in and Settings, and optional a
+   await expect(page.getByRole('link', { name: 'Cookies and storage notice', exact: true })).toBeVisible();
+   await page.unroute('**/api/auth/refresh');
+   await page.goto('/settings');
+-  const optionalAnalytics = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
+-  await expect(optionalAnalytics).not.toBeChecked();
++  await expect(page.getByText('Optional analytics are off in this release', { exact: true })).toBeVisible();
++  await expect(page.getByRole('switch', { name: 'Allow optional analytics', exact: true })).toHaveCount(0);
+   expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+-  await optionalAnalytics.click();
+-  await expect(optionalAnalytics).toBeChecked();
+-  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBe(user.id);
+-  await optionalAnalytics.click();
+-  await expect(optionalAnalytics).not.toBeChecked();
++  await page.evaluate(owner => {
++    localStorage.setItem('yor:telemetry:consent:v1', owner);
++    localStorage.setItem('yor:telemetry:queue:v1', '[]');
++  }, user.id);
++  await page.reload();
++  await page.getByRole('button', { name: 'Clear saved analytics choice', exact: true }).click();
++  await expect(page.getByRole('status')).toContainText('Saved analytics choice and queued optional events removed');
+   expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+   expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:queue:v1'))).toBeNull();
+   await expect(page.getByRole('link', { name: 'Cookies and storage notice', exact: true })).toBeVisible();
+@@ -2779,7 +2784,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
+         ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
+       ]) {
+         await page.goto(path);
+-        await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
++        const scope = path === '/settings' || path === '/projects' ? page.locator('#main-content') : page;
++        await expect(scope.getByRole('heading', { name: heading, exact: true })).toBeVisible();
++        if (path === '/settings') await expect(scope.getByText('Optional analytics are off in this release', { exact: true })).toBeVisible();
+         if (path === '/') {
+           await expect(page.getByRole('article')).toBeVisible();
+           await page.keyboard.press('Tab');

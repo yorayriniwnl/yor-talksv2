@@ -26,8 +26,8 @@ const PREDICTION_MATCHES: MatchPrediction[] = [
     id: 'pm-1',
     tournament: 'BGMI India Invitational (Grand Finals)',
     game: 'BGMI',
-    teamA: { name: 'GodLike Esports', odds: 1.85, poolShare: 58, logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop' },
-    teamB: { name: 'Team Soul', odds: 2.10, poolShare: 42, logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' },
+    teamA: { name: 'GodLike Esports', odds: 1.85, poolShare: 58, logo: '' },
+    teamB: { name: 'Team Soul', odds: 2.10, poolShare: 42, logo: '' },
     totalPoolKarma: 84200,
     timeStatus: 'Sample match · no lock time scheduled'
   },
@@ -35,8 +35,8 @@ const PREDICTION_MATCHES: MatchPrediction[] = [
     id: 'pm-2',
     tournament: 'Valorant South Asia Masters (Semi-Finals)',
     game: 'Valorant',
-    teamA: { name: 'Reckoning Esports', odds: 1.60, poolShare: 64, logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop' },
-    teamB: { name: 'Global Esports', odds: 2.40, poolShare: 36, logo: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=200&auto=format&fit=crop' },
+    teamA: { name: 'Reckoning Esports', odds: 1.60, poolShare: 64, logo: '' },
+    teamB: { name: 'Global Esports', odds: 2.40, poolShare: 36, logo: '' },
     totalPoolKarma: 52000,
     timeStatus: 'Sample match · no lock time scheduled'
   }

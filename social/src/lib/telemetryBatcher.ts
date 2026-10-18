@@ -105,6 +105,16 @@ export function setTelemetryConsent(granted: boolean): boolean {
   } catch { return false; }
 }
 
+/** Remove a previous device choice without granting permission for inactive collection. */
+export function clearSavedTelemetryConsent(): boolean {
+  setTelemetryConsent(false);
+  try {
+    return localStorage.getItem(CONSENT_KEY) === null && localStorage.getItem(STORAGE_KEY) === null;
+  } catch {
+    return false;
+  }
+}
+
 function loadQueue(): TelemetryEvent[] {
   if (!hasTelemetryConsent()) return [];
   try {

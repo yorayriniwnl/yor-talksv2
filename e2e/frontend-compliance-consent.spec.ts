@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
-import { complianceAdultEligibility, complianceJson, complianceUser, installComplianceApiBoundary } from './frontend-compliance-fixtures';
+import { complianceJson, complianceUser, installComplianceApiBoundary } from './frontend-compliance-fixtures';
 
 const consentKey = 'yor:telemetry:consent:v1';
 const queueKey = 'yor:telemetry:queue:v1';
@@ -108,34 +108,28 @@ test('terms reacceptance focuses missing consent, retains a failed choice, and s
   expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBeNull();
 });
 
-test('optional analytics choice persists, rejects without telemetry, and reflects withdrawal from another tab', async ({ page, context }) => {
+test('inactive analytics reflects removal of a previous saved choice from another tab', async ({ page, context }) => {
   await installComplianceApiBoundary(page);
   const requests: string[] = [];
   page.on('request', request => { if (request.url().includes('/telemetry/events')) requests.push(request.url()); });
+  await page.goto('/cookies');
+  await page.evaluate(({key,owner}) => localStorage.setItem(key,owner), {key:consentKey,owner:complianceUser.id});
   await page.goto('/settings');
-  let toggle = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
-  await expect(toggle).not.toBeChecked();
-  await toggle.click();
-  await expect(toggle).toBeChecked();
-  expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBe(complianceUser.id);
-  await page.reload();
-  toggle = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
-  await expect(toggle).toBeChecked();
+  const clear = page.getByRole('button', { name: 'Clear saved analytics choice', exact: true });
+  await expect(clear).toBeVisible();
   const other = await context.newPage();
-  await signedOut(other);
-  await other.goto('/cookies');
-  await expect(other.getByRole('heading', { name: 'Cookies and Browser Storage', exact: true })).toBeVisible();
-  await other.evaluate(key => localStorage.removeItem(key), consentKey);
-  await expect(toggle).not.toBeChecked();
-  await toggle.click();
-  await expect(toggle).toBeChecked();
-  await toggle.click();
-  await expect(toggle).not.toBeChecked();
-  await page.reload();
-  await expect(toggle).not.toBeChecked();
-  expect(await page.evaluate(([consent, queue]) => [localStorage.getItem(consent), localStorage.getItem(queue)], [consentKey, queueKey])).toEqual([null, null]);
-  expect(requests).toEqual([]);
-  await other.close();
+  try {
+    await signedOut(other);
+    await other.goto('/cookies');
+    await expect(other.getByRole('heading', { name: 'Cookies and Browser Storage', exact: true })).toBeVisible();
+    await other.evaluate(key => localStorage.removeItem(key), consentKey);
+    await expect(clear).toHaveCount(0);
+    await expect(page.getByText('No optional analytics permission is saved for this account on this device.', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(clear).toHaveCount(0);
+    expect(await page.evaluate(([consent, queue]) => [localStorage.getItem(consent), localStorage.getItem(queue)], [consentKey, queueKey])).toEqual([null, null]);
+    expect(requests).toEqual([]);
+  } finally { await other.close(); }
 });
 
 test('a different server terms version produces a visible error and keeps social access restricted', async ({ page }) => {
@@ -155,48 +149,56 @@ test('a different server terms version produces a visible error and keeps social
   expect(requests.get('/feed') ?? 0).toBe(0);
 });
 
-test('blocked storage cannot enable analytics and ineligible accounts cannot grant a new choice', async ({ page }) => {
-  await installComplianceApiBoundary(page);
-  await page.addInitScript(() => {
+test('dormant batcher rejects a new choice with blocked storage or ineligible account', async ({ page }) => {
+  await installTelemetryHarness(page);
+  const result = await page.evaluate(async () => {
+    const telemetry = (window as any).TelemetryCompliance;
+    let sends = 0;
+    window.fetch = async () => { sends++; return new Response('{}', { status: 200 }); };
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
       if (key === 'yor:telemetry:consent:v1') throw new DOMException('Synthetic storage denial', 'SecurityError');
       return original.call(this, key, value);
     };
+    telemetry.setTelemetryEligibility(true, 'synthetic-owner');
+    const blockedGrant = telemetry.setTelemetryConsent(true);
+    telemetry.enqueueTelemetry({ type: 'navigation' });
+    await telemetry.flush();
+    Storage.prototype.setItem = original;
+    telemetry.setTelemetryEligibility(false, 'synthetic-owner');
+    const ineligibleGrant = telemetry.setTelemetryConsent(true);
+    telemetry.enqueueTelemetry({ type: 'navigation' });
+    await telemetry.flush();
+    return { blockedGrant, ineligibleGrant, sends, stored: localStorage.getItem('yor:telemetry:consent:v1') };
   });
-  await page.goto('/settings');
-  const toggle = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
-  await toggle.click();
-  await expect(toggle).not.toBeChecked();
-  await expect(page.getByRole('alert')).toContainText('Optional analytics remain off');
-  await page.route('**/api/users/me/eligibility', route => complianceJson(route, {
-    ...complianceAdultEligibility, experience: 'teen_13_17', capabilities: { ...complianceAdultEligibility.capabilities, analytics: false },
-  }));
-  await page.reload();
-  await expect(toggle).toBeDisabled();
-  await expect(toggle).not.toBeChecked();
+  expect(result).toEqual({ blockedGrant: false, ineligibleGrant: false, sends: 0, stored: null });
 });
 
-test('an ineligible account can withdraw its previously saved analytics choice without enabling collection', async ({ page }) => {
-  await installComplianceApiBoundary(page);
-  const telemetryRequests: string[] = [];
-  page.on('request', request => { if (request.url().includes('/telemetry/events')) telemetryRequests.push(request.url()); });
-  await page.goto('/settings');
-  const toggle = page.getByRole('switch', { name: 'Allow optional analytics', exact: true });
-  await toggle.click();
-  await expect(toggle).toBeChecked();
-  await page.route('**/api/users/me/eligibility', route => complianceJson(route, {
-    ...complianceAdultEligibility, experience: 'teen_13_17', capabilities: { ...complianceAdultEligibility.capabilities, analytics: false },
-  }));
-  await page.reload();
-  await expect(toggle).toBeChecked();
-  await expect(toggle).toBeEnabled();
-  await expect(page.getByText(/Optional analytics cannot be collected for this account/)).toBeVisible();
-  await toggle.click();
-  await expect(toggle).not.toBeChecked();
-  await expect(toggle).toBeDisabled();
-  expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBeNull();
-  expect(telemetryRequests).toEqual([]);
+test('dormant batcher keeps previous-owner events out of a later account session', async ({ page }) => {
+  await installTelemetryHarness(page);
+  const result = await page.evaluate(async () => {
+    const telemetry = (window as any).TelemetryCompliance;
+    let finish: () => void = () => undefined;
+    let sends = 0;
+    let aborted = false;
+    window.fetch = async (_input, init) => {
+      sends++;
+      init?.signal?.addEventListener('abort', () => { aborted = true; });
+      await new Promise<void>(resolve => { finish = resolve; });
+      return new Response('{}', { status: 200 });
+    };
+    telemetry.setTelemetryEligibility(true, 'first-owner');
+    telemetry.setTelemetryConsent(true);
+    telemetry.enqueueTelemetry({ type: 'navigation' });
+    const pending = telemetry.flush();
+    telemetry.setTelemetryEligibility(true, 'second-owner');
+    telemetry.enqueueTelemetry({ type: 'navigation' });
+    finish();
+    await pending;
+    await telemetry.flush();
+    return { sends, aborted, consent: telemetry.hasTelemetryConsent(), savedQueue: localStorage.getItem('yor:telemetry:queue:v1') };
+  });
+  expect(result).toEqual({ sends: 1, aborted: true, consent: false, savedQueue: null });
 });
 
 test('grievance validation matches accepted field limits and tracking errors focus the ticket field', async ({ page }) => {

@@ -47,7 +47,7 @@ The frontend must display those server values before a user commits, then submit
 | 10 Hidden fees | PARTIAL | PARTIAL | Paused prices explicitly not payable; existing server amounts retained; no fabricated client fee total | Authoritative quote and approved tax/fee/shipping/refund disclosures before live checkout |
 | 11 Fake reviews/social proof | PARTIAL | PASS | Local synthetic participants, listener counts, rankings and game/reward states clearly identified; random product imagery removed | This is a frontend-source/sample finding, not verification of every future server-supplied user claim |
 | 12 Unsupported claims | PARTIAL | PARTIAL | Removed unsupported latency, premature verification, reward/urgency and broad settlement claims | Operator/legal approval of remaining legal/business assertions and actual provider operations is separate |
-| 19 Asset licensing | PARTIAL | PARTIAL | Complete local/remote CSV inventories, authentic pinned font notice repair, distributable Lucide ISC/MIT notice | Brand/art/native ownership and individual stock provenance remain unestablished; see asset report |
+| 19 Asset licensing | PARTIAL | PARTIAL | Complete local/remote CSV inventories, authentic pinned font notice repair, distributable Lucide ISC/MIT notice | Seven web brand and two repository illustration source/owner records remain pending. Native templates now match official Capacitor assets with MIT notice; static stock/GIF/MP3 references retired. See asset report |
 
 ## Verification
 
@@ -56,3 +56,7 @@ The frontend must display those server values before a user commits, then submit
 `node --test tests/font-assets.test.mjs` ran successfully after authentic-byte repair: **1 passed / 0 failed / 0 skipped**. Font-license hashes are independently reflected in `asset-license-local-inventory.csv`. Full diff review found and repaired whitespace/import placement issues in the changed commerce files. No production provider, real account, shipping detail, payment or upload was exercised.
 
 Final execution: all four new commerce cases passed in the final-functional production-build run, including the expanded communications/sample claims. The separate enabled-payment regression passed both existing Premium cases against synthetic provider/API fixtures. See the consolidated test report for earlier failures and remaining legacy-test migration.
+
+## Licensing follow-up, 19 October
+
+Current inventory has 85 local records and zero static external media URLs. The original remote inventory recorded 40 URLs and omitted eight dormant GIPHY references; the corrected historical total of 48 and all removals are preserved. All 34 native resources match the official Capacitor 8.5.0 template (XML after documented line-ending normalization); its exact MIT notice ships. Font/license downloads also matched 41 pinned upstream files. Seven web brand files and two repository illustrations still require genuine ownership/permission evidence. New media-delivery regressions exercise 12 demo routes and preserve genuine server-delivered listing images. Actual browser results are in the final test report.
