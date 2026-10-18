@@ -104,7 +104,7 @@ export default function PodcastStudio() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Live Audio Stage & Podcast</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Audio stage preview · live panel transport is not connected yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative speakers and audience counts. Live audio is not connected.</p>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export default function PodcastStudio() {
               )}
             >
               <span>{s.title}</span>
-              <span className="text-[0.65rem] opacity-75 font-mono">🎧 {s.listeners.toLocaleString()} listening · {s.genre}</span>
+              <span className="text-[0.65rem] opacity-75 font-mono">🎧 {s.listeners.toLocaleString()} sample listeners · {s.genre}</span>
             </button>
           ))}
         </div>
@@ -144,9 +144,9 @@ export default function PodcastStudio() {
         <div className="surface-1 rounded-3xl p-8 border border-border/40 space-y-6 shadow-2xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold text-primary flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" /> LIVE STAGE SPEAKERS ({speakers.length} / 6 SLOTS)
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> SAMPLE SPEAKERS ({speakers.length} / 6 SLOTS)
             </span>
-            <span className="text-xs font-mono text-muted-foreground">🎧 {activeStage.listeners.toLocaleString()} Active Listeners</span>
+            <span className="text-xs font-mono text-muted-foreground">🎧 {activeStage.listeners.toLocaleString()} sample listeners</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

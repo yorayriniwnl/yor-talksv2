@@ -1,0 +1,15 @@
+# Full runner output stays available locally; commit the indexed summaries below.
+evidence/*.log
+evidence/*.json
+!evidence/test-results-summary.json
+!evidence/asset-inventory-summary.json
+!evidence/verification.json
+evidence/accessibility/*.json
+!evidence/accessibility/scan-summary.json
+evidence/legal-accessibility/*.json
+!evidence/legal-accessibility/scan-summary.json
+evidence/accessibility/*.png
+!evidence/accessibility/navigation-390-light.png
+!evidence/accessibility/navigation-1440-dark.png
+!evidence/accessibility/message-light.png
+!evidence/accessibility/story-dark.png

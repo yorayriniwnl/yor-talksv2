@@ -29,7 +29,7 @@ const PREDICTION_MATCHES: MatchPrediction[] = [
     teamA: { name: 'GodLike Esports', odds: 1.85, poolShare: 58, logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop' },
     teamB: { name: 'Team Soul', odds: 2.10, poolShare: 42, logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' },
     totalPoolKarma: 84200,
-    timeStatus: 'Locks in 42 Mins'
+    timeStatus: 'Sample match · no lock time scheduled'
   },
   {
     id: 'pm-2',
@@ -38,7 +38,7 @@ const PREDICTION_MATCHES: MatchPrediction[] = [
     teamA: { name: 'Reckoning Esports', odds: 1.60, poolShare: 64, logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop' },
     teamB: { name: 'Global Esports', odds: 2.40, poolShare: 36, logo: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=200&auto=format&fit=crop' },
     totalPoolKarma: 52000,
-    timeStatus: 'Locks in 2 Hours'
+    timeStatus: 'Sample match · no lock time scheduled'
   }
 ];
 
@@ -63,7 +63,7 @@ export default function PredictionsArena() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Esports Pick&apos;em & Predictions Arena</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Prediction preview — Karma staking is not available yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative teams, odds and pools. Staking and rewards are unavailable.</p>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export default function PredictionsArena() {
         <div className="surface-1 p-5 rounded-3xl border border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div>
             <h4 className="font-display font-bold text-sm text-foreground">Select Prediction Stake (Karma)</h4>
-            <p className="text-xs text-muted-foreground font-mono">Current Wager: {stakeAmount} Karma Points</p>
+            <p className="text-xs text-muted-foreground font-mono">Sample stake: {stakeAmount} Karma Points</p>
           </div>
 
           <div className="flex gap-2">
@@ -114,7 +114,7 @@ export default function PredictionsArena() {
                   </div>
 
                   <div className="text-xs font-mono text-amber-400 font-bold flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> {m.timeStatus} &middot; Pool: {m.totalPoolKarma.toLocaleString()} Karma
+                    <Clock className="w-3.5 h-3.5" /> {m.timeStatus} &middot; Sample pool: {m.totalPoolKarma.toLocaleString()} Karma
                   </div>
                 </div>
 

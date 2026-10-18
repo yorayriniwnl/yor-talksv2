@@ -24,7 +24,7 @@ interface SquadMember {
 const INITIAL_MEMBERS: SquadMember[] = [
   {
     id: 'sm-1',
-    name: 'Scout Cyber (You)',
+    name: 'Sample Scout',
     role: 'Assaulter / Scout',
     isSpeaking: true,
     isMuted: false,
@@ -61,13 +61,13 @@ export default function SquadCommsRoom() {
     sounds.playPop();
     setIsSelfMuted(!isSelfMuted);
     setMembers(prev => prev.map((m, idx) => idx === 0 ? { ...m, isMuted: !isSelfMuted } : m));
-    toast.info(!isSelfMuted ? 'Mic Muted 🔇' : 'Mic Live 🎙️');
+    toast.info('Mute preview updated locally. No microphone or live voice connection is active.');
   };
 
   const toggleDeafen = () => {
     sounds.playPop();
     setIsDeafened(!isDeafened);
-    toast.info(!isDeafened ? 'Audio Output Deafen Active' : 'Audio Output Live');
+    toast.info('Deafen preview updated locally. No live audio output is connected.');
   };
 
   return (
@@ -80,12 +80,12 @@ export default function SquadCommsRoom() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Squad Voice Comms & Spatial Matrix</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Ultra-Low Latency Opus Voice Comms for Clan Scrims</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative participants and controls. Live voice and microphone capture are not connected.</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1" /> Ping: 12ms (Mumbai Node)
+          <span className="w-2 h-2 rounded-full bg-amber-400 mr-1" /> Local preview
         </div>
       </div>
 
@@ -96,14 +96,14 @@ export default function SquadCommsRoom() {
             <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-3 shadow-sm font-sans">
               <div className="showcase-section-title">
                 <Users className="w-4 h-4 text-primary" />
-                <h3>Voice Channels</h3>
+                <h3>Sample voice channels</h3>
               </div>
 
               <div className="space-y-2">
                 {[
-                  { id: 'war-room', name: '🔊 #scrim-war-room-1', desc: '5/5 Pro Players' },
-                  { id: 'strat-room', name: '🛡️ #coach-strategy-hq', desc: '2/5 Coaches' },
-                  { id: 'lounge', name: '☕ #desi-chai-lounge', desc: '8 Active Hangout' },
+                  { id: 'war-room', name: '🔊 #scrim-war-room-1', desc: 'Sample player channel' },
+                  { id: 'strat-room', name: '🛡️ #coach-strategy-hq', desc: 'Sample coach channel' },
+                  { id: 'lounge', name: '☕ #desi-chai-lounge', desc: 'Sample hangout channel' },
                 ].map((ch) => (
                   <button
                     key={ch.id}
@@ -131,14 +131,14 @@ export default function SquadCommsRoom() {
                   variant={isSelfMuted ? "destructive" : "outline"}
                   className="w-1/2 rounded-2xl text-xs font-bold h-11"
                 >
-                  {isSelfMuted ? <><MicOff className="w-3.5 h-3.5 mr-1" /> Unmute</> : <><Mic className="w-3.5 h-3.5 mr-1" /> Mute Mic</>}
+                  {isSelfMuted ? <><MicOff className="w-3.5 h-3.5 mr-1" /> Unmute preview</> : <><Mic className="w-3.5 h-3.5 mr-1" /> Mute preview</>}
                 </Button>
                 <Button
                   onClick={toggleDeafen}
                   variant={isDeafened ? "destructive" : "outline"}
                   className="w-1/2 rounded-2xl text-xs font-bold h-11"
                 >
-                  {isDeafened ? <><VolumeX className="w-3.5 h-3.5 mr-1" /> Undeafen</> : <><Volume2 className="w-3.5 h-3.5 mr-1" /> Deafen</>}
+                  {isDeafened ? <><VolumeX className="w-3.5 h-3.5 mr-1" /> Undeafen preview</> : <><Volume2 className="w-3.5 h-3.5 mr-1" /> Deafen preview</>}
                 </Button>
               </div>
             </div>
@@ -148,7 +148,7 @@ export default function SquadCommsRoom() {
           <div className="lg:col-span-8 space-y-4">
             <div className="showcase-section-title">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              <h3>Channel Roster ({channel.toUpperCase()})</h3>
+              <h3>Sample roster ({channel.toUpperCase()})</h3>
             </div>
 
             <div className="space-y-3">
@@ -176,7 +176,7 @@ export default function SquadCommsRoom() {
                         {mem.name}
                         {mem.isSpeaking && !mem.isMuted && (
                           <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                            SPEAKING
+                            SAMPLE SPEAKING STATE
                           </span>
                         )}
                       </h4>

@@ -276,6 +276,7 @@ function Router() {
         {currentUser && !needsTerms && !needsEligibility && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
+            <Route path="/consent"><Redirect to="/" /></Route>
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding">

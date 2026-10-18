@@ -157,7 +157,7 @@ body {
 .yor-companion {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
+  bottom: var(--yor-companion-bottom, max(1rem, env(safe-area-inset-bottom)));
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -258,7 +258,7 @@ body {
 @keyframes companion-panel-in { from { opacity: 0; transform: translateY(0.5rem) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 767px) {
-  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: var(--yor-companion-bottom, calc(5.5rem + env(safe-area-inset-bottom))); }
   .yor-companion__wake { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__trigger { min-width: 3rem; width: 3rem; height: 3rem; justify-content: center; padding: 0.3rem; border-radius: 1rem; transform: none; }
   .yor-companion__trigger .yor-companion__label,

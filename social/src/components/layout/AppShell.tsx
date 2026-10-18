@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, lazy, useEffect, useState } from 'react';
+import { ReactNode, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ThemeMorpher } from '@/components/ui/ThemeMorpher';
 import { GlobalAudioPlayer } from '@/components/player/GlobalAudioPlayer';
@@ -47,6 +47,11 @@ export function AppShell({ children }: AppShellProps) {
     }
   });
   const [isComposing, setIsComposing] = useState(false);
+  const composeTriggerRef = useRef<HTMLElement | null>(null);
+  const openComposer = () => {
+    composeTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setIsComposing(true);
+  };
   const [moreOpen, setMoreOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
 
@@ -190,7 +195,7 @@ export function AppShell({ children }: AppShellProps) {
         {/* Primary create action */}
         <button
           type="button"
-          onClick={() => setIsComposing(true)}
+          onClick={openComposer}
           className={cn(
             "premium-create-button w-full justify-center mb-5",
             sidebarCollapsed && "p-2.5"
@@ -203,7 +208,7 @@ export function AppShell({ children }: AppShellProps) {
         </button>
 
         {/* Navigation List */}
-        <nav className="shell-navigation flex-1">
+        <nav aria-label="Sidebar navigation" className="shell-navigation flex-1">
           <div className="space-y-1.5">
             {!sidebarCollapsed && <p className="shell-nav-label">Your signal</p>}
             {primaryNavItems.map((item) => {
@@ -251,6 +256,7 @@ export function AppShell({ children }: AppShellProps) {
               onClick={() => setMoreOpen((open) => !open)}
               aria-expanded={showSecondaryNavigation}
               aria-controls="shell-more-navigation"
+              aria-label="More"
               title={sidebarCollapsed ? 'More' : undefined}
             >
               <Layers3 className="h-5 w-5" />
@@ -299,10 +305,10 @@ export function AppShell({ children }: AppShellProps) {
         {currentUser && (
           <div className="space-y-2">
             <div className={cn("shell-profile-card flex items-center rounded-2xl border border-border/40 p-2.5", sidebarCollapsed ? "justify-center p-2" : "gap-2.5")}>
-              <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
+              <Link href={`/profile/${currentUser.id}`} aria-label={`Open ${currentDisplayName}'s profile (@${currentUser.username})`} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group">
                 <span className="shell-profile-avatar">
                 <Avatar className="w-9 h-9 border border-border/50 shrink-0 group-hover:ring-2 ring-primary/40 transition-all">
-                  <AvatarImage src={currentUser.avatarUrl} alt={`${currentDisplayName} profile photo`} />
+                  <AvatarImage src={currentUser.avatarUrl} alt="" />
                   <AvatarFallback className="font-display font-bold">{currentDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                   <i aria-label="Online" />
@@ -321,10 +327,11 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── MAIN CONTENT AREA ────────────────────────────────────────────── */}
       <div className="app-shell__content min-h-screen min-w-0 flex-1">
-        <AppTopbar onCompose={() => setIsComposing(true)} />
+        <AppTopbar onCompose={openComposer} />
         <main id="main-content" tabIndex={-1} className="w-full h-full outline-none">
           {children}
         </main>
+        <GlobalAudioPlayer inline={/^\/messages\/[^/]+/.test(location)} />
       </div>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
@@ -351,7 +358,7 @@ export function AppShell({ children }: AppShellProps) {
           <span>Explore</span>
           {location.startsWith('/explore') && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />}
         </button>
-        <button type="button" onClick={() => setIsComposing(true)} aria-label="Create post" className="mobile-nav-item mobile-nav-item--create p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
+        <button type="button" onClick={openComposer} aria-label="Create post" className="mobile-nav-item mobile-nav-item--create p-2.5 rounded-full bg-primary text-primary-foreground -mt-5 shadow-lg relative">
             <PlusSquare className="w-6 h-6" />
             <span>Create</span>
         </button>
@@ -369,11 +376,11 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── CREATE POST MODAL ────────────────────────────────────────────── */}
       <Dialog open={isComposing} onOpenChange={setIsComposing}>
-        <DialogContent className="sm:max-w-[560px] rounded-[1.5rem] p-0 font-sans overflow-hidden">
+        <DialogContent className="sm:max-w-[560px] rounded-[1.5rem] p-0 font-sans overflow-x-hidden" onCloseAutoFocus={(event) => { event.preventDefault(); composeTriggerRef.current?.focus(); }}>
           <DialogHeader className="border-b border-border/70 px-5 py-4 sm:px-6">
             <div className="pr-8">
               <DialogTitle className="font-display font-bold text-lg">Create post</DialogTitle>
-              <p className="text-xs text-muted-foreground">Share a thought, photo, or update with your people.</p>
+              <DialogDescription className="text-xs text-muted-foreground">Share a thought, photo, or update with your people.</DialogDescription>
             </div>
             <Link href="/dream" onClick={() => setIsComposing(false)} className="seed-dialog-dream-link">
               <WandSparkles className="h-4 w-4" />
@@ -386,7 +393,6 @@ export function AppShell({ children }: AppShellProps) {
         </DialogContent>
       </Dialog>
 
-      <GlobalAudioPlayer />
       <PwaInstallPrompt />
       <DeviceApprovalInbox />
       {publicBetaConfig.rtcCallsEnabled && <Suspense fallback={null}><IncomingCallManager /></Suspense>}

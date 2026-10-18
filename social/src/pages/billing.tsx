@@ -25,6 +25,7 @@ export default function Billing() {
     finally { setBusy(''); }
   };
   const resume = async (item: CheckoutState) => {
+    if (!publicBetaConfig.paymentsEnabled) return;
     setBusy(item.checkoutId); setError('');
     try {
       // Recheck before offering payment; recovery also settles any captured payment.
@@ -43,6 +44,7 @@ export default function Billing() {
     <div><h1 className="text-3xl font-display font-bold">Payment history</h1>
       <p className="mt-2 text-sm text-muted-foreground">Your latest 50 creator tips, memberships and marketplace checkouts. Payments are checked again even when you close checkout.</p>
       <Link href="/premium" className="inline-block mt-3 text-primary underline">Yor Premium plans and billing</Link></div>
+    {!publicBetaConfig.paymentsEnabled && <p className="rounded-2xl border border-border/50 p-4 text-sm">Payments are paused for this beta. Existing payments can still be recovered or cancelled here. Continuing a payment is unavailable.</p>}
     <p className="rounded-2xl border border-border/50 p-4 text-sm text-muted-foreground">Creator memberships are prepaid for 30 days, with no automatic renewal. Cancelling an active membership keeps it valid until expiry. Cancelling a pending checkout stops fulfilment; a late payment will require refund review. Refunds and disputes may remove access.</p>
     {error && <div role="alert" className="rounded-xl border border-destructive/40 p-4 text-sm">{error} <Button variant="outline" onClick={() => setAttempt(value => value + 1)}>Retry history</Button></div>}
     {loading ? <p role="status">Loading payment history…</p> : !items.length && !error ? <p>No creator payments yet.</p> : items.map(item => <article key={item.checkoutId} aria-label={`${labels[item.product]} ${item.status.replaceAll('_',' ')}`} className="rounded-2xl surface-1 border border-border/60 p-5 space-y-3">
@@ -53,7 +55,7 @@ export default function Billing() {
       {item.status === 'refund_required' && <p className="text-sm">This payment could not be fulfilled. Keep this reference when contacting support for a refund review.</p>}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" disabled={Boolean(busy)} onClick={() => void run(item.checkoutId, 'recover')}>{busy === item.checkoutId ? 'Checking…' : 'Recover payment status'}</Button>
-        {item.providerOrderId && item.status === 'created' && <Button disabled={Boolean(busy)} onClick={() => void resume(item)}>Continue payment</Button>}
+        {item.providerOrderId && item.status === 'created' && publicBetaConfig.paymentsEnabled && <Button disabled={Boolean(busy)} onClick={() => void resume(item)}>Continue payment</Button>}
         {(pending.has(item.status) || item.product === 'membership' && item.status === 'paid') && <Button variant="outline" disabled={Boolean(busy)} onClick={() => void run(item.checkoutId, 'cancel')}>{item.status === 'paid' ? 'End membership at expiry' : 'Cancel pending checkout'}</Button>}
       </div>
     </article>)}

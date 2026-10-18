@@ -400,9 +400,11 @@ export default function Marketplace() {
                     className="surface-1 rounded-3xl overflow-hidden group cursor-pointer border border-border/40 hover:border-primary/40 transition-all duration-300 flex flex-col shadow-sm"
                   >
                     <div className="aspect-square relative bg-muted overflow-hidden">
-                      <ProtectedMediaImage src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} />
+                      {product.images[0] ? <ProtectedMediaImage src={product.images[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={product.title} /> : <div className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground"><ShoppingBag className="h-5 w-5" aria-hidden="true" />No product photo supplied</div>}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }} 
+                        onClick={(e) => { e.stopPropagation(); toggleSaveProduct && toggleSaveProduct(product.id); }}
+                        aria-label={`${isSaved ? 'Unsave' : 'Save'} ${product.title}`}
+                        aria-pressed={Boolean(isSaved)}
                         className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors z-10"
                       >
                         <Heart className={cn("w-4 h-4", isSaved && "fill-current text-rose-500")} />

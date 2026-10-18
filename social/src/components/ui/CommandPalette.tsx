@@ -244,6 +244,10 @@ export function CommandPalette() {
     : undefined;
 
   useEffect(() => {
+    if (isOpen && activeTargetId) document.getElementById(activeTargetId)?.scrollIntoView({ block: 'nearest' });
+  }, [isOpen, activeTargetId]);
+
+  useEffect(() => {
     setActiveIndex(0);
   }, [isOpen, query, paletteTargets.length]);
 
@@ -283,7 +287,7 @@ export function CommandPalette() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: -10 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="surface-1 max-h-[calc(100dvh-6rem)] w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-border/50 shadow-2xl"
+              className="surface-1 flex max-h-[calc(100dvh-6rem)] w-full max-w-xl flex-col overflow-hidden rounded-[1.5rem] border border-border/50 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Search Bar Input */}
@@ -297,6 +301,7 @@ export function CommandPalette() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handlePaletteKeyDown}
                   role="combobox"
+                  aria-labelledby="yor-command-palette-title"
                   aria-controls="yor-command-palette-results"
                   aria-expanded="true"
                   aria-activedescendant={activeTargetId}
@@ -308,12 +313,12 @@ export function CommandPalette() {
                 </button>
               </div>
 
-              <div id="yor-command-palette-results" role="listbox" aria-label="Search results" className="custom-scrollbar max-h-[min(60vh,32rem)] space-y-5 overflow-y-auto p-3 sm:space-y-6 sm:p-4">
+              <div id="yor-command-palette-results" role="listbox" aria-label="Search results" className="custom-scrollbar min-h-0 max-h-[min(60vh,32rem)] flex-1 space-y-5 overflow-y-auto p-3 sm:space-y-6 sm:p-4">
                 
                   {/* AI Semantic Results Section */}
                   {query.length > 3 && (
-                    <div className="mt-4">
-                      <h4 className="flex items-center gap-2 text-[0.68rem] font-mono font-bold uppercase text-primary tracking-wider mb-2 px-2 glow-neon-primary">
+                    <div className="mt-4" role="group" aria-label="Matching posts">
+                      <h4 aria-hidden="true" className="flex items-center gap-2 text-[0.68rem] font-mono font-bold uppercase text-primary tracking-wider mb-2 px-2 glow-neon-primary">
                         <BrainCircuit className="w-3 h-3" />
                         Smart search {searchingSmart && <span className="animate-pulse">...</span>}
                       </h4>
@@ -347,8 +352,8 @@ export function CommandPalette() {
 
                   {/* Users Section */}
                 {filteredUsers.length > 0 && (
-                  <div>
-                    <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
+                  <div role="group" aria-label={query ? 'Matching profiles' : 'Suggested people'}>
+                    <h4 aria-hidden="true" className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
                       {query ? 'Matching Profiles' : 'Suggested People'}
                     </h4>
                     <div className="space-y-1">
@@ -381,8 +386,8 @@ export function CommandPalette() {
 
                 {/* Navigation Groups Section */}
                 {visibleNavigationGroups.map((group) => (
-                  <div key={group.label}>
-                    <h4 className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
+                  <div key={group.label} role="group" aria-label={group.label}>
+                    <h4 aria-hidden="true" className="text-[0.68rem] font-mono font-bold uppercase text-muted-foreground tracking-wider mb-2 px-2">
                       {group.label}
                     </h4>
                     <div className="grid grid-cols-2 gap-2">

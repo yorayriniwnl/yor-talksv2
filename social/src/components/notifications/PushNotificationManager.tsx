@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, BellRing, Sparkles, X, CheckCircle2 } from 'lucide-react';
+import { BellRing, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
@@ -17,10 +17,17 @@ function decodeVapidKey(value: string): Uint8Array {
 
 export function PushNotificationManager() {
   const currentUser = useAppStore((state) => state.currentUser);
+  const eligibility = useAppStore((state) => state.eligibility);
+  const eligibilityLoaded = useAppStore((state) => state.eligibilityLoaded);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [showPrompt, setShowPrompt] = useState(false);
+  const permissionRequestPending = useRef(false);
+  const requestedFromPrompt = useRef(false);
+  const notificationsAllowed = publicBetaConfig.webPushEnabled && Boolean(currentUser) && currentUser.notificationsEnabled !== false
+    && eligibilityLoaded && eligibility?.activated === true && eligibility.capabilities.social && eligibility.experience === 'adult_18_plus';
 
   useEffect(() => {
+    setShowPrompt(false);
     if (!publicBetaConfig.webPushEnabled) return;
     // Register the worker independently of the permission prompt. The old
     // early return left browsers without an updated worker after a deploy.
@@ -35,22 +42,30 @@ export function PushNotificationManager() {
       setPermission(Notification.permission);
       
       // If default and user has been active for 5s, suggest enabling
-      if (currentUser && Notification.permission === 'default') {
+      if (notificationsAllowed && Notification.permission === 'default') {
         const timer = setTimeout(() => {
           setShowPrompt(true);
         }, 5000);
         return () => clearTimeout(timer);
       }
     }
-  }, [currentUser]);
+  }, [currentUser?.id, notificationsAllowed]);
 
-  const registerPushSubscription = async () => {
+  const registerPushSubscription = async (ownerId: string) => {
+    const isCurrentAccount = () => {
+      const state = useAppStore.getState();
+      return state.currentUser?.id === ownerId && state.currentUser.notificationsEnabled !== false
+        && state.eligibilityLoaded && state.eligibility?.activated === true
+        && state.eligibility.capabilities.social && state.eligibility.experience === 'adult_18_plus';
+    };
     if (!publicBetaConfig.webPushEnabled) throw new Error('Push notifications are not enabled for this beta');
+    if (!isCurrentAccount()) return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       throw new Error('Push notifications are not supported by this browser');
     }
     const { publicKey } = await api.getPushPublicKey();
     const registration = await navigator.serviceWorker.ready;
+    if (!isCurrentAccount()) return;
     const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: decodeVapidKey(publicKey) as unknown as BufferSource,
@@ -59,6 +74,7 @@ export function PushNotificationManager() {
     if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
       throw new Error('The browser returned an incomplete push subscription');
     }
+    if (!isCurrentAccount()) return;
     await api.savePushSubscription({
       endpoint: json.endpoint,
       keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
@@ -67,16 +83,23 @@ export function PushNotificationManager() {
   };
 
   useEffect(() => {
-    if (currentUser && permission === 'granted') {
-      registerPushSubscription().catch(() => {
-        // A provider/configuration outage must not interrupt the signed-in shell.
+    let active = true;
+    if (notificationsAllowed && currentUser && permission === 'granted') {
+      const announce = requestedFromPrompt.current;
+      requestedFromPrompt.current = false;
+      registerPushSubscription(currentUser.id).then(() => {
+        if (active && announce) toast.success('Push subscription saved for this device.');
+      }).catch((error) => {
+        if (active && announce) toast.info(error instanceof Error ? error.message : 'Device push delivery is not configured yet.');
       });
     }
+    return () => { active = false; };
     // The subscription is synchronized once per signed-in user/device.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id, permission]);
+  }, [currentUser?.id, permission, notificationsAllowed]);
 
   const handleRequestPermission = async () => {
+    if (!notificationsAllowed || permissionRequestPending.current) return;
     sounds.playPop();
     if (!('Notification' in window)) {
       toast.error('Browser notifications not supported on this device');
@@ -84,34 +107,34 @@ export function PushNotificationManager() {
     }
 
     try {
+      permissionRequestPending.current = true;
       const perm = await Notification.requestPermission();
+      requestedFromPrompt.current = perm === 'granted';
       setPermission(perm);
       setShowPrompt(false);
 
       if (perm === 'granted') {
         sounds.playChime();
-        try {
-          await registerPushSubscription();
-          toast.success('🔔 Push subscription saved for this device.');
-        } catch (error) {
-          toast.info(error instanceof Error ? error.message : 'Device push delivery is not configured yet.');
-        }
       } else {
         toast.info('Notifications were not enabled.');
       }
     } catch {
       setShowPrompt(false);
+    } finally {
+      permissionRequestPending.current = false;
     }
   };
 
   return (
     <AnimatePresence>
-      {showPrompt && permission === 'default' && (
+      {notificationsAllowed && showPrompt && permission === 'default' && (
         <motion.div
           initial={{ y: 50, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 50, opacity: 0, scale: 0.95 }}
-          className="fixed top-20 right-4 md:right-8 z-50 max-w-sm w-full p-4 rounded-3xl glass-heavy border border-primary/40 shadow-2xl font-sans"
+          role="region"
+          aria-label="Push notification preferences"
+          className="fixed top-20 right-4 md:right-8 z-50 max-w-sm w-[calc(100%-2rem)] p-4 rounded-3xl glass-heavy border border-primary/40 shadow-2xl font-sans"
         >
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
@@ -144,6 +167,8 @@ export function PushNotificationManager() {
             </div>
 
             <button
+              type="button"
+              aria-label="Dismiss push notification prompt"
               onClick={() => setShowPrompt(false)}
               className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/50 cursor-pointer"
             >

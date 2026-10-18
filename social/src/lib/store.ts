@@ -1434,7 +1434,7 @@ export const useAppStore = create<AppState>()(
             users: { ...state.users, [mapped.id]: mapped },
           }));
           const decision = await loadEligibilityForSession(set, get);
-          if (hasSocialEligibility(decision)) {
+          if (!needsTermsAcceptance(mapped) && hasSocialEligibility(decision)) {
             setupRealtime(set, get);
             hydrateSessionData(get);
           }

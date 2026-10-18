@@ -38,6 +38,8 @@ interface CreatePostProps {
 }
 
 export function CreatePost({ onPublished, compact = false }: CreatePostProps = {}) {
+  const instanceId = React.useId();
+  const fieldId = (name: string) => compact ? `${instanceId}-${name}` : name;
   const currentUser = useAppStore((state) => state.currentUser);
   const closeFriends = useAppStore((state) => state.closeFriends);
   const addPost = useAppStore((state) => state.addPost);
@@ -214,7 +216,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
         <div className="min-w-0 flex-1">
           <textarea
             ref={textareaRef}
-            id="post-composer"
+            id={fieldId('post-composer')}
             aria-label="Write a post"
             placeholder={pollOpen ? 'Ask a question…' : "What's on your mind?"}
             value={content}
@@ -261,6 +263,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                       value={option} 
                       onChange={(event) => setPollOptions((options) => options.map((value, optionIndex) => optionIndex === index ? event.target.value : value))} 
                       placeholder={`Option ${index + 1}`} 
+                      aria-label={`Poll option ${index + 1}`}
                       className="h-10 rounded-xl bg-surface-1" 
                     />
                     {pollOptions.length > 2 && (
@@ -280,20 +283,20 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
           )}
 
           <div className="yor-composer__publishing-controls">
-            <ContentCategorySelect id="post-content-category" value={contentCategory} onChange={setContentCategory} />
-            <ContentRatingSelect id="post-content-rating" value={contentRating} onChange={setContentRating} />
-            <label htmlFor="post-audience" className="mt-2 block text-xs font-semibold">
+            <ContentCategorySelect id={fieldId('post-content-category')} value={contentCategory} onChange={setContentCategory} />
+            <ContentRatingSelect id={fieldId('post-content-rating')} value={contentRating} onChange={setContentRating} />
+            <label htmlFor={fieldId('post-audience')} className="mt-2 block text-xs font-semibold">
               <span className="mb-1.5 flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-primary" /> Audience</span>
-              <select id="post-audience" value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+              <select id={fieldId('post-audience')} value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                 <option value="public">Public · Everyone can see this</option>
                 <option value="followers">Followers · Your followers only</option>
                 <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends · {closeFriends.length} people</option>
               </select>
               {audience === 'close_friends' && closeFriends.length === 0 && <span className="mt-1 block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
             </label>
-            <label htmlFor="post-distribution" className="mt-2 block text-xs font-semibold">
+            <label htmlFor={fieldId('post-distribution')} className="mt-2 block text-xs font-semibold">
               <span className="mb-1.5 flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-primary" /> Distribution</span>
-              <select id="post-distribution" value={distributionMode} onChange={(event) => setDistributionMode(event.target.value as typeof distributionMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+              <select id={fieldId('post-distribution')} value={distributionMode} onChange={(event) => setDistributionMode(event.target.value as typeof distributionMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                 <option value="feed_and_profile">Feed + profile · Everyone</option>
                 <option value="profile_only">Profile only · Premium</option>
               </select>

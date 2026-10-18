@@ -84,7 +84,7 @@ export default function PointsShop() {
               <div className={cn("p-1.5 rounded-full bg-gradient-to-tr animate-[spin_5s_linear_infinite] shadow-2xl", previewFrame)}>
                 <div className="p-0.5 bg-background rounded-full">
                   <Avatar className="w-20 h-20 border-2 border-background">
-                    <AvatarImage src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'} />
+                    <AvatarImage src={currentUser?.avatarUrl} />
                     <AvatarFallback className="text-xl font-bold font-display">{currentUser?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                 </div>

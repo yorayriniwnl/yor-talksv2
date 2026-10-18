@@ -1,0 +1,2538 @@
+{
+  "generatedAt": "2026-10-18T16:09:04.954Z",
+  "runs": [
+    {
+      "label": "commerce-results",
+      "stats": {
+        "startTime": "2026-10-18T11:00:57.571Z",
+        "duration": 42116.793,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "disabled payments override an available Premium catalog while recovery and cancellation remain usable",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6157,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "disabled creator payments cannot resume a created provider order and still allow cancellation",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3957,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "marketplace missing product imagery is explicit and save controls are named",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2461,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "illustrative activity and pass progress cannot read as genuine audience or urgency",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5709,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "consent-and-recovery",
+      "stats": {
+        "startTime": "2026-10-18T11:03:24.849Z",
+        "duration": 129067.54999999999,
+        "expected": 9,
+        "skipped": 0,
+        "unexpected": 2,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "all legal notices and grievance intake remain public without loading Google or optional telemetry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 18332,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "Google loads only after a deliberate choice, supports retry, and resizes on narrow screens",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13137,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "registration leaves consent unchecked and keeps privacy acknowledgement distinct from optional tracking",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 28543,
+              "errors": [
+                "Error: expect(locator).toBeFocused() failed\n\nLocator:  getByRole('checkbox')\nExpected: focused\nReceived: inactive\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toBeFocused\" with timeout 5000ms\n  - waiting for getByRole('checkbox')\n    14 × locator resolved to <input type=\"checkbox\" id=\"acceptedTerms\" aria-invalid=\"false\"/>\n       - unexpected value \"inactive\"\n\n\n  67 |   await expect(checkbox).toHaveAccessibleName(/I accept the Terms and Community Guidelines, and acknowledge the Privacy Notice/);\n  68 |   await page.getByRole('button', { name: 'Create account', exact: true }).last().click();\n> 69 |   await expect(checkbox).toBeFocused();\n     |                          ^\n  70 |   await expect(checkbox).toHaveAttribute('aria-invalid', 'true');\n  71 |   await expect(page.getByText(/Accept the Terms and Community Guidelines, and acknowledge the Privacy Notice to continue/)).toBeVisible();\n  72 |   expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBeNull();\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-consent.spec.ts:69:26"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "terms reacceptance focuses missing consent, retains a failed choice, and submits once",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 23374,
+              "errors": [
+                "Error: expect(page).not.toHaveURL(expected) failed\n\nExpected pattern: not /\\/consent$/\nReceived string: \"http://127.0.0.1:4173/consent\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"not toHaveURL\" with timeout 5000ms\n    14 × locator resolved to <html lang=\"en\" class=\"dark\">…</html>\n       - unexpected value \"http://127.0.0.1:4173/consent\"\n\n\n  105 |     await expect.poll(() => submissions).toBe(2);\n  106 |   } finally { release(); }\n> 107 |   await expect(page).not.toHaveURL(/\\/consent$/);\n      |                          ^\n  108 |   expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBeNull();\n  109 | });\n  110 |\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-consent.spec.ts:107:26"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "optional analytics choice persists, rejects without telemetry, and reflects withdrawal from another tab",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7688,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "a different server terms version produces a visible error and keeps social access restricted",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2785,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "blocked storage and ineligible accounts cannot display analytics as enabled",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4386,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "grievance validation matches accepted field limits and tracking errors focus the ticket field",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1847,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "telemetry withdrawal blocks unload delivery and aborts an in-flight batch without restoring its queue",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 916,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "cross-tab analytics rejection clears queued events before the unload send path",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 791,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-recovery.spec.ts",
+          "title": "password reset focuses invalid fields, retains failed values and prevents duplicate requests",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1917,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "consent-rerun",
+      "stats": {
+        "startTime": "2026-10-18T11:06:44.043Z",
+        "duration": 312627.35500000004,
+        "expected": 10,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "all legal notices and grievance intake remain public without loading Google or optional telemetry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 22022,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "Google loads only after a deliberate choice, supports retry, and resizes on narrow screens",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1852,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "registration leaves consent unchecked and keeps privacy acknowledgement distinct from optional tracking",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13274,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "terms reacceptance focuses missing consent, retains a failed choice, and submits once",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2193,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "optional analytics choice persists, rejects without telemetry, and reflects withdrawal from another tab",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9341,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "a different server terms version produces a visible error and keeps social access restricted",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6386,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "blocked storage and ineligible accounts cannot display analytics as enabled",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5588,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "grievance validation matches accepted field limits and tracking errors focus the ticket field",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3211,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "telemetry withdrawal blocks unload delivery and aborts an in-flight batch without restoring its queue",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 926,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "cross-tab analytics rejection clears queued events before the unload send path",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 762,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "consent-final",
+      "stats": {
+        "startTime": "2026-10-18T11:13:20.963Z",
+        "duration": 365414.24000000005,
+        "expected": 11,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "all legal notices and grievance intake remain public without loading Google or optional telemetry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 27238,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "Google loads only after a deliberate choice, supports retry, and resizes on narrow screens",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 18468,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "registration leaves consent unchecked and keeps privacy acknowledgement distinct from optional tracking",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7479,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "terms reacceptance focuses missing consent, retains a failed choice, and submits once",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4468,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "optional analytics choice persists, rejects without telemetry, and reflects withdrawal from another tab",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 18404,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "a different server terms version produces a visible error and keeps social access restricted",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3476,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "blocked storage cannot enable analytics and ineligible accounts cannot grant a new choice",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 14085,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "an ineligible account can withdraw its previously saved analytics choice without enabling collection",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5739,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "grievance validation matches accepted field limits and tracking errors focus the ticket field",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4410,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "telemetry withdrawal blocks unload delivery and aborts an in-flight batch without restoring its queue",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 625,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-consent.spec.ts",
+          "title": "cross-tab analytics rejection clears queued events before the unload send path",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1070,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "existing-beta",
+      "stats": {
+        "startTime": "2026-10-18T11:04:45.626Z",
+        "duration": 956704.306,
+        "expected": 89,
+        "skipped": 0,
+        "unexpected": 15,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "core-social.spec.ts",
+          "title": "restricted eligibility states keep social routes closed and leave owner controls reachable",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6849,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "verified eligibility for adult and teen experience uses the server decision without a local age claim",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2507,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "grievance submission and tracking work with private public receipts",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1998,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "older structured message image and audio grants renew without replacing history or drafts",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6706,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "message attachment renewal denies mismatches, bounds errors, and ignores a late conversation response",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2623,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "expired uploaded-video grants renew through the authorized video read and preserve playback",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6987,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "denied or unchanged delivery renewals stop automatically and allow a bounded explicit retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4418,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "historical message encodings render attachments only with the server legacy flag",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2224,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "image publishing keeps its draft until media is approved: retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4172,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "image publishing keeps its draft until media is approved: rejected",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3872,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "a story retry reuses its created Highlight and approved voice/cover without losing the draft",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3865,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Studio Post captures camera pixels as a bounded approved JPEG and rejects video-mode carryover",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7629,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Creator billing recovery and cancellation at 390px",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3434,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Creator billing recovery and cancellation at 1280px",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3398,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Creator billing contains malformed history and retries",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 12236,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Payment operations requires an administrator in the UI",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10023,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Payment operations records a reason before retry and retains failures for review",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13977,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents free state with free safety controls",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "timedOut",
+              "durationMs": 120013,
+              "errors": [
+                "Test timeout of 60000ms exceeded.",
+                "Test timeout of 60000ms exceeded.",
+                "Fixture \"trace recording\" timeout of 60000ms exceeded during teardown.",
+                "Error: locator.check: Test ended.\nCall log:\n  - waiting for getByRole('checkbox')\n\n\n  844 |     if (status === 'free') {\n  845 |       await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();\n> 846 |       await page.getByRole('checkbox').check();\n      |                                        ^\n  847 |       await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeEnabled();\n  848 |       const violations = await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze();\n  849 |       expect(violations.violations).toEqual([]);\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:846:40",
+                "Test timeout of 60000ms exceeded."
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents active state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3061,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents pending state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2022,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents failed state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 23211,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents expired state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2959,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents cancelled state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1579,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents refunded state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6193,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents disputed state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1877,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents chargeback state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2009,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents overridden state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2012,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium checkout accepts configured terms, handles failure, recovers payment and cancels the paid term",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "timedOut",
+              "durationMs": 120017,
+              "errors": [
+                "Test timeout of 60000ms exceeded.",
+                "Test timeout of 60000ms exceeded.",
+                "Fixture \"trace recording\" timeout of 60000ms exceeded during teardown.",
+                "Error: locator.check: Test ended.\nCall log:\n  - waiting for getByRole('checkbox')\n\n\n  877 |   });\n  878 |   await page.goto('/premium');\n> 879 |   await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Upgrade to Yor Premium' }).click();\n      |                                    ^\n  880 |   await expect(page.getByRole('alert')).toContainText('Payment did not complete');\n  881 |   await page.getByRole('button', { name: 'Recover payment', exact: true }).click();\n  882 |   await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:879:36"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing rejects malformed responses and recovers with a retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1879,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "two tabs serialize HttpOnly cookie rotation without dropping either restored session",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2867,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "malformed optional Premium catalog leaves privacy controls usable and supports retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2267,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "restores the social shell, publishes a post, and navigates discovery",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 14298,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "feed failures show a retry, never a false empty-success state",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1884,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "feed loading is announced while the first response is pending",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2086,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "posts survive unavailable author profiles and recover without hook errors",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5851,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "outgoing messages never increase the unread conversation badge",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3822,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "mobile home is readable and keyboard-operable in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9820,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "mobile home is readable and keyboard-operable in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10713,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "sign-in preserves password and email-code paths with accessible controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4234,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Google script failure has an accessible retry without disabling other sign-in methods",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 6705,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })\n\n\n  1067 |   });\n  1068 |   await page.goto('/auth');\n> 1069 |   await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();\n       |                                                                                              ^\n  1070 |   await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();\n  1071 |   await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();\n  1072 |   await page.getByRole('button', { name: 'Retry Google sign-in' }).click();\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:1069:94"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "sign-in validation focuses and describes the first invalid field",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1122,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "expired bearer logout revokes refresh session before a reload can restore it",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3467,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "queued logout blocks cookie restoration on immediate reload while another tab holds the session lock",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3110,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "narrow Google sign-in stays within its panel as the viewport changes",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 62935,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('.operator-google-access__button button')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for locator('.operator-google-access__button button')\n\n\n  1200 |   await page.goto('/auth');\n  1201 |   const button = page.locator('.operator-google-access__button button');\n> 1202 |   await expect(button).toBeVisible();\n       |                        ^\n  1203 |   const widthAt320 = Number(await button.getAttribute('data-rendered-width'));\n  1204 |   const panelWidthAt320 = await page.locator('.operator-google-access__button').evaluate((element) => element.clientWidth);\n  1205 |   expect(widthAt320).toBeLessThanOrEqual(panelWidthAt320);\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:1202:24"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "video load failures show a retry instead of a false empty queue",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2375,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "direct-message and group-member search failures can retry without claiming no matches",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3958,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "reel comments expose a retry and arrow keys in the comment field do not change reels",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5602,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "discovery loads beyond an empty following feed without changing the selected home feed",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2867,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "public beta legal pages render synthetic reviewed policy data and territory-based eligibility",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1812,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "public beta requires consent before opening protected social routes",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1007,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "eligibility refresh does not remount the activated eligibility page in a request loop",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2214,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "under-13 registration prescreens before rendering identity fields",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1473,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "accounts with outdated terms can still reach export and deletion controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1239,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "comments retain failed drafts, prevent duplicate sends, and hide disabled payments",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3274,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "profile achievements use earned server progress and never invent mutual followers",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3955,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "wall comments preserve failed drafts and unknown profiles offer a retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5607,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "shared post links fetch uncached posts and recover failed replies",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4168,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "pending follows preserve existing relationships and favorites across reloads",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "timedOut",
+              "durationMs": 120013,
+              "errors": [
+                "Test timeout of 60000ms exceeded.",
+                "Tearing down \"context\" exceeded the test timeout of 60000ms.",
+                "Error: locator.click: Test ended.\nCall log:\n  - waiting for getByRole('link', { name: /Ada Lovelace.*@ada/ }).first()\n\n\n  1500 |   await expect(page.getByRole('button', { name: 'Requested', exact: true })).toBeVisible();\n  1501 |   await expect(page.getByRole('button', { name: 'Remove Private Creator from Favorites' })).toBeVisible();\n> 1502 |   await page.getByRole('link', { name: /Ada Lovelace.*@ada/ }).first().click();\n       |                                                                        ^\n  1503 |   await page.getByRole('button', { name: '1 Following', exact: true }).click();\n  1504 |   await expect(page.getByRole('dialog', { name: /^following$/i }).getByRole('button', { name: 'Following', exact: true })).toBeVisible();\n  1505 |   await page.goto(`/profile/${target.id}`);\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:1502:72",
+                "Error: End of central directory record signature not found. Either not a zip file, or file is truncated."
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "inbox failures offer a retry without claiming an empty or live-connected inbox",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4435,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "message image approval and send retries preserve the draft: direct",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4010,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "message image approval and send retries preserve the draft: group",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "timedOut",
+              "durationMs": 63020,
+              "errors": [
+                "Tearing down \"context\" exceeded the test timeout of 60000ms."
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "message drafts stay with their conversation and survive failed duplicate sends",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 19736,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "settings expose only available notifications with accessible mobile controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 23720,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "privacy preferences show confirmed state, prevent duplicate saves, and recover after a failure",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 22615,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "activity failures are retryable and never look caught up",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 29705,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "follow decisions prevent duplicate actions and activity read-all handles failure and retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 26712,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "failed blocking never announces success or hides the post, and retry persists",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 38392,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Clip Studio discloses source-only output and downloads the original file",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 18759,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Creator Studio identifies local previews and creates topic-based drafts",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 16061,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('#main-content').getByRole('heading', { name: 'Creator Studio Preview', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for locator('#main-content').getByRole('heading', { name: 'Creator Studio Preview', exact: true })\n\n\n  1824 |   await page.goto('/studio');\n  1825 |\n> 1826 |   await expect(page.locator('#main-content').getByRole('heading', { name: 'Creator Studio Preview', exact: true })).toBeVisible();\n       |                                                                                                                     ^\n  1827 |   await expect(page.getByRole('note')).toContainText('live stream');\n  1828 |\n  1829 |   await page.getByRole('button', { name: 'Visual filter preview' }).click();\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:1826:117"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "creator media kit uses the latest real snapshot and exports a usable JSON file",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 15604,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "trophy room renders achievements returned for the current account",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13624,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "projects list filters persisted records and lets members answer real invitations",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 22504,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "project invitations and collaborator search distinguish outages from empty results and retry independently",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 20936,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "project invitation decisions stay locked independently until each server write finishes",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5037,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "public marketplace hides unconnected sample game inventory and trades",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5245,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Bazaar distinguishes illustrative game offers and removes fabricated reviews and verification",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4056,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "profile hover card uses stored profile data instead of fabricated game presence or badges",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 16047,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "ambient player starts generated audio, changes gain, pauses, and closes on shell exit",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 16007,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "community slug deep links resolve uncached records and use canonical IDs for every action",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6003,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "community deep links distinguish missing records from retryable failures and retry discussions",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6449,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "accessibility preferences load before opening Control Room, persist across navigation, and reset on logout",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 16077,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "accessibility load failures require retry and failed saves restore the previous preference",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 15135,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "language control describes the English interface without applying unavailable translations",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2775,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "moderator can page and filter reports and handle a grievance with a private officer note",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3237,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "moderation discards history reads started before a new decision",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2169,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "saved collection distinguishes outages from empty results and preserves confirmed videos on refresh failure",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2874,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "moderation keeps pending case mutations locked across filter and queue changes",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 4075,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "saved collection retries a failed video append with the same cursor",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2231,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "moderation refresh preserves a later external decision after an older mutation response arrives",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2382,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "storage notice is public, linked from sign-in and Settings, and optional analytics remain an explicit choice",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3208,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 11209,
+              "errors": [
+                "Error: expect(locator).toBeEnabled() failed\n\nLocator: getByRole('button', { name: 'Record video', exact: true })\nExpected: enabled\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeEnabled\" with timeout 5000ms\n  - waiting for getByRole('button', { name: 'Record video', exact: true })\n    3 × locator resolved to <button disabled aria-label=\"Record video\" class=\"w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer border-white bg-white/20 hover:bg-white/30 backdrop-blur-md hover:scale-105\">…</button>\n      - unexpected value \"disabled\"\n\n\n  2676 |   await expect(stickerTrigger).toBeFocused();\n  2677 |   await expect(studio).toBeVisible();\n> 2678 |   await expect(record).toBeEnabled();\n       |                        ^\n  2679 |   await record.evaluate(button => {\n  2680 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));\n  2681 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2678:24"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "account deletion supports keyboard cancellation, field feedback, and a retained failed draft before one synthetic retry",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3187,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 320px in light mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4526,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 390px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 11338,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 768px in light mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 8397,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 1024px in light mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4557,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 1440px in light mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4636,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 320px in dark mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4309,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 390px in dark mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4561,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 768px in dark mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 5026,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  2780 |       ]) {\n  2781 |         await page.goto(path);\n> 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();\n       |                                                                                 ^\n  2783 |         if (path === '/') {\n  2784 |           await expect(page.getByRole('article')).toBeVisible();\n  2785 |           await page.keyboard.press('Tab');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2782:81"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 1024px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10253,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "compliance surfaces preserve contrast, accessible names, and layout at 1440px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10245,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "public registration and legal pages expose accessible forms in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6781,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "public registration and legal pages expose accessible forms in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6651,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "enabled-payment-regression",
+      "stats": {
+        "startTime": "2026-10-18T11:15:59.455Z",
+        "duration": 185290.042,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium billing presents free state with free safety controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 37631,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Premium checkout accepts configured terms, handles failure, recovers payment and cancels the paid term",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5240,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "push-permissions",
+      "stats": {
+        "startTime": "2026-10-18T11:06:27.673Z",
+        "duration": 278395.965,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 2,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-permissions.spec.ts",
+          "title": "push opt-out and teen eligibility suppress permission prompts and subscription requests",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "timedOut",
+              "durationMs": 63372,
+              "errors": [
+                "Tearing down \"context\" exceeded the test timeout of 60000ms.",
+                "Fixture \"trace recording\" timeout of 60000ms exceeded during teardown.",
+                "Test timeout of 60000ms exceeded."
+              ]
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-permissions.spec.ts",
+          "title": "push permission is requested only by choice and one subscription is saved",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 61749,
+              "errors": [
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Settings', exact: true })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:\n    1) <h1 class=\"premium-topbar__heading\">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })\n    2) <h1 class=\"text-xl font-bold font-display text-foreground\">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Settings', exact: true })\n\n\n  56 |     await page.clock.install();\n  57 |     await page.goto('/settings');\n> 58 |     await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();\n     |                                                                                ^\n  59 |     await page.clock.fastForward(6_000);\n  60 |     const prompt = page.getByRole('region', { name: 'Push notification preferences' });\n  61 |     await expect(prompt).toBeVisible();\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-permissions.spec.ts:58:80",
+                "Tearing down \"context\" exceeded the test timeout of 60000ms.",
+                "Fixture \"trace recording\" timeout of 60000ms exceeded during teardown.",
+                "Test timeout of 60000ms exceeded."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "push-final",
+      "stats": {
+        "startTime": "2026-10-18T11:20:38.701Z",
+        "duration": 44828.333,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-permissions.spec.ts",
+          "title": "push opt-out and teen eligibility suppress permission prompts and subscription requests",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 15273,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-permissions.spec.ts",
+          "title": "push permission is requested only by choice and one subscription is saved",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6709,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "final-functional",
+      "stats": {
+        "startTime": "2026-10-18T15:59:38.395Z",
+        "duration": 82648.682,
+        "expected": 9,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "core-social.spec.ts",
+          "title": "pending follows preserve existing relationships and favorites across reloads",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7060,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "message image approval and send retries preserve the draft: group",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2793,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Creator Studio identifies local previews and creates topic-based drafts",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1997,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 9293,
+              "errors": [
+                "Error: expect(locator).toBeEnabled() failed\n\nLocator: getByRole('button', { name: 'Record video', exact: true })\nExpected: enabled\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeEnabled\" with timeout 5000ms\n  - waiting for getByRole('button', { name: 'Record video', exact: true })\n    4 × locator resolved to <button disabled aria-label=\"Record video\" class=\"w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer border-white bg-white/20 hover:bg-white/30 backdrop-blur-md hover:scale-105\">…</button>\n      - unexpected value \"disabled\"\n\n\n  2676 |   await expect(stickerTrigger).toBeFocused();\n  2677 |   await expect(studio).toBeVisible();\n> 2678 |   await expect(record).toBeEnabled();\n       |                        ^\n  2679 |   await record.evaluate(button => {\n  2680 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));\n  2681 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\core-social.spec.ts:2678:24"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "disabled payments override an available Premium catalog while recovery and cancellation remain usable",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3322,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "disabled creator payments cannot resume a created provider order and still allow cancellation",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1358,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "marketplace missing product imagery is explicit and save controls are named",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1327,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-commerce.spec.ts",
+          "title": "illustrative activity and pass progress cannot read as genuine audience or urgency",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6721,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-eligibility.spec.ts",
+          "title": "guardian permission outages are retryable and preserve last confirmed records",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2743,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-recovery.spec.ts",
+          "title": "password reset focuses invalid fields, retains failed values and prevents duplicate requests",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1549,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "studio-camera-verified",
+      "stats": {
+        "startTime": "2026-10-18T16:01:40.845Z",
+        "duration": 28854.446,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "core-social.spec.ts",
+          "title": "Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6585,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "accessibility-verified",
+      "stats": {
+        "startTime": "2026-10-18T15:59:30.890Z",
+        "duration": 290872.471,
+        "expected": 26,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 320px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 14301,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 390px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10841,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 768px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 12643,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 1024px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10614,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 1440px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9975,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "composer, search, and story support keyboard cancellation and restored focus in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10681,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "populated conversation and chart data expose readable content in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3981,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 320px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9324,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 390px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10497,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 768px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 11513,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 1024px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10723,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "principal navigation and empty states at 1440px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9963,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "composer, search, and story support keyboard cancellation and restored focus in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 11288,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "populated conversation and chart data expose readable content in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3995,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "collapsed sidebar names the profile and additional navigation controls",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1166,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-accessibility.spec.ts",
+          "title": "install prompt remains named and within a narrow viewport",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6868,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 320px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7664,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 390px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7107,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 768px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 8600,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 1024px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9670,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 1440px in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10964,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 320px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 8104,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 390px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6963,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 768px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 11723,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 1024px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9420,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-legal-accessibility.spec.ts",
+          "title": "legal documents and account forms at 1440px in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10570,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "overlay-and-camera-final",
+      "stats": {
+        "startTime": "2026-10-18T16:05:41.418Z",
+        "duration": 39679.818,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 2,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "core-social.spec.ts",
+          "title": "ambient player starts generated audio, changes gain, pauses, and closes on shell exit",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1901,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "core-social.spec.ts",
+          "title": "Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5186,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-overlay.spec.ts",
+          "title": "companion keeps audio controls clear when the player grows in light mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 4798,
+              "errors": [
+                "Error: Unhandled test route: GET /videos/saved\n\n   at frontend-compliance-fixtures.ts:110\n\n  108 |     unhandled.push(`${request.method()} ${path}`);\n  109 |     await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });\n> 110 |     throw new Error(`Unhandled test route: ${request.method()} ${path}`);\n      |           ^\n  111 |   });\n  112 |   return requestCounts;\n  113 | }\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-fixtures.ts:110:11",
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Nothing saved yet.', exact: true })\nExpected: visible\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Nothing saved yet.', exact: true })\n  - Test ended.\n\n\n  31 |       await assertClear();\n  32 |     }\n> 33 |     await page.goto('/saved');\n     |                               ^\n  34 |     await expect(page.getByRole('heading', { name: 'Nothing saved yet.', exact: true })).toBeVisible();\n  35 |     await assertClear();\n  36 |     const evidence = path.resolve('docs/audits/frontend-compliance-2026-10-17/evidence/accessibility');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-overlay.spec.ts:33:90"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-overlay.spec.ts",
+          "title": "companion keeps audio controls clear when the player grows in dark mode",
+          "status": "unexpected",
+          "results": [
+            {
+              "status": "failed",
+              "durationMs": 5635,
+              "errors": [
+                "Error: Unhandled test route: GET /videos/saved\n\n   at frontend-compliance-fixtures.ts:110\n\n  108 |     unhandled.push(`${request.method()} ${path}`);\n  109 |     await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });\n> 110 |     throw new Error(`Unhandled test route: ${request.method()} ${path}`);\n      |           ^\n  111 |   });\n  112 |   return requestCounts;\n  113 | }\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-fixtures.ts:110:11",
+                "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('heading', { name: 'Nothing saved yet.', exact: true })\nExpected: visible\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for getByRole('heading', { name: 'Nothing saved yet.', exact: true })\n  - Test ended.\n\n\n  31 |       await assertClear();\n  32 |     }\n> 33 |     await page.goto('/saved');\n     |                               ^\n  34 |     await expect(page.getByRole('heading', { name: 'Nothing saved yet.', exact: true })).toBeVisible();\n  35 |     await assertClear();\n  36 |     const evidence = path.resolve('docs/audits/frontend-compliance-2026-10-17/evidence/accessibility');\n    at F:\\CHATPGPT\\Projects\\yor-talks-frontend-audit-20261017\\e2e\\frontend-compliance-overlay.spec.ts:33:90"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "overlay-verified",
+      "stats": {
+        "startTime": "2026-10-18T16:06:58.183Z",
+        "duration": 32156.216,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "tests": [
+        {
+          "file": "frontend-compliance-overlay.spec.ts",
+          "title": "companion keeps audio controls clear when the player grows in light mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 5607,
+              "errors": []
+            }
+          ]
+        },
+        {
+          "file": "frontend-compliance-overlay.spec.ts",
+          "title": "companion keeps audio controls clear when the player grows in dark mode",
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6632,
+              "errors": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "latestNewTests": {
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "basis": [
+      "consent-final:11",
+      "accessibility-verified:26",
+      "final-functional:new compliance cases only:6",
+      "push-final:2",
+      "overlay-verified:2"
+    ]
+  },
+  "legacy": {
+    "initial": {
+      "passed": 89,
+      "failed": 15,
+      "skipped": 0
+    },
+    "subsequentlyPassedFailures": 6,
+    "preservedObsoleteAssertionFailures": 9,
+    "note": "Two purchase cases pass in enabled synthetic profile; two Google and seven ambiguous-heading expectations require existing-test migration. No failed case is silently treated as passing."
+  }
+}

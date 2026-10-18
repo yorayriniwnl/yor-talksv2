@@ -1,0 +1,49 @@
+{
+  "executedAt": "2026-10-18T16:07:55.075Z",
+  "outcomes": [
+    {
+      "name": "typecheck",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json",
+        "--noEmit"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "production-build",
+      "command": [
+        "node",
+        "scripts/build.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "production-mirror",
+      "command": [
+        "node",
+        "scripts/sync-dist.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "unit",
+      "command": [
+        "node",
+        "--test",
+        "tests/ui-state.test.mjs",
+        "tests/service-worker.test.mjs",
+        "tests/media-client.test.mjs",
+        "tests/frontend-build.test.mjs",
+        "tests/font-assets.test.mjs",
+        "tests/client-session.test.mjs",
+        "tests/arcade-password-game.test.mjs",
+        "tests/app-store.test.mjs",
+        "social/tests/frontend-compliance-config.test.mjs"
+      ],
+      "exitCode": 0
+    }
+  ]
+}

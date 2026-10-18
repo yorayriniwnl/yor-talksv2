@@ -79,7 +79,7 @@ function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void
   const placeholder = /change[_-]?me|replace-with|your-domain\.example|^development$/i;
   const missing = required.filter((key) => {
     const value = environment[key];
-    return !value || placeholder.test(value);
+    return !value?.trim() || placeholder.test(value.trim());
   });
   if (missing.length) {
     throw new Error(`[Vite Config Error] VITE_PUBLIC_BETA requires: ${missing.join(', ')}`);
@@ -95,7 +95,9 @@ function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void
     || parsedOrigin.username || parsedOrigin.password || parsedOrigin.pathname !== '/' || parsedOrigin.search || parsedOrigin.hash) {
     throw new Error('[Vite Config Error] VITE_PUBLIC_ORIGIN must be an HTTPS origin with no path, query, credentials, or fragment');
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(environment.VITE_LEGAL_EFFECTIVE_DATE || '') || Number.isNaN(Date.parse(environment.VITE_LEGAL_EFFECTIVE_DATE || ''))) {
+  const effectiveDate = environment.VITE_LEGAL_EFFECTIVE_DATE?.trim() || '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate) || Number.isNaN(Date.parse(effectiveDate))
+    || new Date(effectiveDate).toISOString().slice(0, 10) !== effectiveDate) {
     throw new Error('[Vite Config Error] VITE_LEGAL_EFFECTIVE_DATE must be an ISO date (YYYY-MM-DD)');
   }
   for (const key of ['VITE_PRIVACY_CONTACT_EMAIL', 'VITE_SUPPORT_EMAIL', 'VITE_GRIEVANCE_CONTACT_EMAIL']) {

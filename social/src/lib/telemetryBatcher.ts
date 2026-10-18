@@ -17,6 +17,19 @@ const DEFAULT_SAMPLING = 1; // 100%
 let queue: TelemetryEvent[] = [];
 let eligibilityAllowsTelemetry = false;
 let telemetryOwnerId: string | null = null;
+let consentWithdrawn = false;
+let consentRevision = 0;
+let activeRequest: AbortController | null = null;
+
+function discardQueue(removeStored = true): void {
+  consentRevision += 1;
+  activeRequest?.abort();
+  activeRequest = null;
+  queue = [];
+  if (removeStored) {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* Storage may be unavailable. */ }
+  }
+}
 
 function telemetryUrl(): string {
   return (import.meta.env as any).VITE_TELEMETRY_URL || '/api/telemetry/events';
@@ -47,9 +60,14 @@ function serializeEvents(events: TelemetryEvent[]): string {
 }
 
 export function hasTelemetryConsent(): boolean {
-  if (!eligibilityAllowsTelemetry) return false;
+  return eligibilityAllowsTelemetry && hasSavedTelemetryConsent();
+}
+
+/** A saved choice can be withdrawn even while current policy prevents collection. */
+export function hasSavedTelemetryConsent(ownerId: string | null = telemetryOwnerId): boolean {
+  if (consentWithdrawn) return false;
   try {
-    return Boolean(telemetryOwnerId && localStorage.getItem(CONSENT_KEY) === telemetryOwnerId);
+    return Boolean(ownerId && localStorage.getItem(CONSENT_KEY) === ownerId);
   } catch (e) {
     return false;
   }
@@ -57,34 +75,34 @@ export function hasTelemetryConsent(): boolean {
 
 /** Optional telemetry stays off until a current server decision permits adult analytics. */
 export function setTelemetryEligibility(allowed: boolean, ownerId: string | null = telemetryOwnerId): void {
+  const ownerChanged = telemetryOwnerId !== null && telemetryOwnerId !== ownerId;
+  if (ownerChanged) {
+    discardQueue();
+    consentWithdrawn = false;
+  }
   eligibilityAllowsTelemetry = allowed;
   telemetryOwnerId = ownerId;
   if (!allowed) {
-    queue = [];
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Storage can be unavailable in private or restricted browser contexts.
-    }
+    discardQueue();
     return;
   }
   queue = loadQueue();
 }
 
-export function setTelemetryConsent(granted: boolean): void {
-  if (granted && !eligibilityAllowsTelemetry) return;
-  try {
-    if (granted) {
-      if (!telemetryOwnerId) return;
-      localStorage.setItem(CONSENT_KEY, telemetryOwnerId);
-      return;
-    }
-    localStorage.removeItem(CONSENT_KEY);
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (e) {
-    // Storage can be unavailable in private or restricted browser contexts.
+export function setTelemetryConsent(granted: boolean): boolean {
+  if (granted && (!eligibilityAllowsTelemetry || !telemetryOwnerId)) return false;
+  if (!granted) {
+    // Withdrawal takes effect in memory even when browser storage is blocked.
+    consentWithdrawn = true;
+    discardQueue();
+    try { localStorage.removeItem(CONSENT_KEY); } catch { /* Remain off in this page. */ }
+    return false;
   }
-  queue = [];
+  try {
+    localStorage.setItem(CONSENT_KEY, telemetryOwnerId!);
+    consentWithdrawn = false;
+    return hasTelemetryConsent();
+  } catch { return false; }
 }
 
 function loadQueue(): TelemetryEvent[] {
@@ -120,17 +138,10 @@ function getSampling(): number {
   return DEFAULT_SAMPLING;
 }
 
-async function sendBatch(events: TelemetryEvent[]) {
+async function sendBatch(events: TelemetryEvent[], signal: AbortSignal) {
   if (!hasTelemetryConsent()) return true;
   const url = telemetryUrl();
   const body = serializeEvents(events);
-
-  if (!url) {
-    // no endpoint — drop to console in dev
-    // eslint-disable-next-line no-console
-    console.debug('[telemetry-batch] dropping batch (no url):', events.length);
-    return true;
-  }
 
   try {
     const res = await fetch(url, {
@@ -139,9 +150,11 @@ async function sendBatch(events: TelemetryEvent[]) {
       body,
       credentials: 'include',
       keepalive: true,
+      signal,
     });
     return res.ok;
   } catch (err) {
+    if (signal.aborted) return false;
     // eslint-disable-next-line no-console
     console.warn('[telemetry-batch] send failed', err);
     return false;
@@ -171,21 +184,30 @@ export function enqueueTelemetry(e: TelemetryEvent) {
 
 export async function flush() {
   if (!hasTelemetryConsent()) {
-    queue = [];
+    discardQueue();
     return;
   }
-  if (queue.length === 0) return;
+  if (queue.length === 0 || activeRequest) return;
+  const revision = consentRevision;
+  const ownerId = telemetryOwnerId;
+  const controller = new AbortController();
+  activeRequest = controller;
   const batch = queue.slice(0, BATCH_SIZE);
-  const ok = await sendBatch(batch);
-  if (ok) {
-    queue = queue.slice(batch.length);
+  try {
+    const ok = await sendBatch(batch, controller.signal);
+    // A response from an earlier consent/session cannot mutate a newer queue.
+    if (controller.signal.aborted || revision !== consentRevision || ownerId !== telemetryOwnerId || !hasTelemetryConsent()) return;
+    const sentIds = new Set(batch.map((event) => event.eventId));
+    if (ok) {
+      queue = queue.filter((event) => !sentIds.has(event.eventId));
+    } else {
+      queue = queue.map((event) => sentIds.has(event.eventId) ? { ...event, _attempts: (event._attempts ?? 0) + 1 } : event)
+        .filter((event) => (event._attempts ?? 0) < MAX_ATTEMPTS);
+    }
     saveQueue(queue);
-    return;
+  } finally {
+    if (activeRequest === controller) activeRequest = null;
   }
-
-  // failed — increment attempts and drop ones that exceeded attempts
-  queue = queue.map((ev) => ({ ...ev, _attempts: (ev._attempts ?? 0) + 1 })).filter((ev) => (ev._attempts ?? 0) < MAX_ATTEMPTS);
-  saveQueue(queue);
 }
 
 function init() {
@@ -199,25 +221,18 @@ function init() {
   // flush on visibility change
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      // try a last flush via sendBeacon
       void flush();
     }
   });
 
-  // beforeunload — attempt sendBeacon
+  // Use the same consent and eligibility checks for every send path.
   window.addEventListener('beforeunload', () => {
-    if (queue.length === 0) return;
-    const url = telemetryUrl();
-    try {
-      void fetch(url, {
-        method: 'POST',
-        headers: telemetryHeaders(url),
-        body: serializeEvents(queue),
-        credentials: 'include',
-        keepalive: true,
-      });
-    } catch (e) {
-      // ignore
+    void flush();
+  });
+
+  window.addEventListener('storage', (event) => {
+    if ((event.key === CONSENT_KEY || event.key === null) && !hasTelemetryConsent()) {
+      discardQueue();
     }
   });
 

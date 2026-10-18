@@ -62,7 +62,7 @@ export default function SuperPass() {
               disabled
               className="rounded-2xl font-bold text-xs h-10 px-6 bg-gradient-to-r from-amber-400 to-orange-500 text-black glow-neon-primary shadow-lg"
             >
-              <Crown className="w-4 h-4 mr-1.5 fill-black" /> Unlock Elite Pass (₹299 INR)
+              <Crown className="w-4 h-4 mr-1.5 fill-black" /> Elite Pass unavailable
             </Button>
           ) : (
             <div className="level-badge shadow-sm">
@@ -78,17 +78,17 @@ export default function SuperPass() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <span className="text-xs font-mono uppercase text-primary font-bold">Season 1: The Digital Renaissance</span>
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-foreground">Pass Level {currentTier} / 100</h2>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">380 / 500 XP to Tier {currentTier + 1}</p>
+              <h2 className="font-display font-black text-2xl sm:text-3xl text-foreground">Sample pass level {currentTier} / 100</h2>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">Illustrative progress: 380 / 500 XP to Tier {currentTier + 1}</p>
             </div>
 
             <div className="flex items-center gap-3 font-mono text-xs">
               <div className="p-3 rounded-2xl bg-muted/40 border border-border/40 text-center">
-                <span className="text-muted-foreground block text-[0.62rem]">Ends In</span>
-                <span className="font-bold text-amber-400">42 Days</span>
+                <span className="text-muted-foreground block text-[0.62rem]">Season dates</span>
+                <span className="font-bold text-amber-400">Not scheduled</span>
               </div>
               <div className="p-3 rounded-2xl bg-muted/40 border border-border/40 text-center">
-                <span className="text-muted-foreground block text-[0.62rem]">Tiers Claimed</span>
+                <span className="text-muted-foreground block text-[0.62rem]">Sample claims</span>
                 <span className="font-bold text-emerald-400">{tiers.filter(t => t.claimed).length} / {tiers.length}</span>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function SuperPass() {
                   <div className="md:col-span-2 flex justify-end">
                     {tier.claimed ? (
                       <Button disabled className="w-full md:w-auto rounded-xl font-bold text-xs h-9 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Claimed
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Sample claimed state
                       </Button>
                     ) : isUnlocked ? (
                       <Button

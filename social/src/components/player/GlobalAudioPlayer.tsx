@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ListMusic, Music2, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AMBIENT_PRESETS, AmbientAudioEngine } from '@/lib/ambient-audio';
@@ -8,7 +8,8 @@ function formatElapsed(seconds: number): string {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function GlobalAudioPlayer() {
+export function GlobalAudioPlayer({ inline = false }: { inline?: boolean }) {
+  const playerRef = useRef<HTMLElement>(null);
   const engineRef = useRef<AmbientAudioEngine | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const elapsedBeforePlayRef = useRef(0);
@@ -20,6 +21,23 @@ export function GlobalAudioPlayer() {
   const [showPresets, setShowPresets] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentPreset = AMBIENT_PRESETS.find((preset) => preset.id === presetId) ?? AMBIENT_PRESETS[0]!;
+
+  useLayoutEffect(() => {
+    if (inline || !playerRef.current) return;
+    const positionCompanion = () => {
+      const top = playerRef.current?.getBoundingClientRect().top;
+      if (top !== undefined) document.documentElement.style.setProperty('--yor-companion-bottom', `${window.innerHeight - top + 12}px`);
+    };
+    positionCompanion();
+    const observer = new ResizeObserver(positionCompanion);
+    observer.observe(playerRef.current);
+    window.addEventListener('resize', positionCompanion);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', positionCompanion);
+      document.documentElement.style.removeProperty('--yor-companion-bottom');
+    };
+  }, [inline]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -90,7 +108,7 @@ export function GlobalAudioPlayer() {
   };
 
   return (
-    <section aria-label="Ambient audio player" className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-3 right-3 z-40 rounded-2xl border border-border/60 bg-background/95 p-3 text-foreground shadow-xl backdrop-blur-xl sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px]">
+    <section ref={playerRef} aria-label="Ambient audio player" className={`${inline ? 'relative z-20 mx-3 mb-[calc(5.25rem+env(safe-area-inset-bottom))] mt-4 sm:ml-auto sm:mr-6 sm:w-[360px] lg:mb-6' : 'fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-3 right-3 z-40 sm:left-auto sm:right-6 sm:w-[360px] lg:bottom-6'} rounded-2xl border border-border/60 bg-background/95 p-3 text-foreground shadow-xl backdrop-blur-xl`}>
       <div className="flex items-center gap-3">
         <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><Music2 className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">

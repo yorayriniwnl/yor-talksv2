@@ -75,6 +75,7 @@ export default function Auth() {
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleCredentialRef = useRef<string | null>(null);
   const [googleStatus, setGoogleStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [googleRequested, setGoogleRequested] = useState(false);
   const [googleRetry, setGoogleRetry] = useState(0);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
@@ -164,7 +165,7 @@ export default function Auth() {
   }, [otpCooldown]);
 
   useEffect(() => {
-    if (mode !== 'login' || !googleClientId || !googleButtonRef.current) return;
+    if (mode !== 'login' || !googleRequested || !googleClientId || !googleButtonRef.current) return;
 
     let cancelled = false;
     let script: HTMLScriptElement | null = null;
@@ -251,7 +252,7 @@ export default function Auth() {
       resizeObserver?.disconnect();
       googleButtonRef.current?.replaceChildren();
     };
-  }, [googleClientId, googleRetry, loginWithGoogle, mode]);
+  }, [googleClientId, googleRequested, googleRetry, loginWithGoogle, mode]);
 
   useEffect(() => {
     if (!twoFactorChallenge || twoFactorFallback || approvalBusy) return;
@@ -357,7 +358,7 @@ export default function Auth() {
         if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
         if (!isValidPassword(password)) errors.password = PASSWORD_REQUIREMENT_MESSAGE;
       }
-      if (!acceptedTerms) errors.acceptedTerms = `Accept the Terms and Privacy Notice to create an account.`;
+      if (!acceptedTerms) errors.acceptedTerms = 'Accept the Terms and Community Guidelines, and acknowledge the Privacy Notice to continue.';
       if (!requestedExperience) errors.requestedExperience = 'Choose an age group to see the verification steps.';
       if (!/^[A-Z]{2}$/.test(territory.trim().toUpperCase())) errors.territory = 'Enter your two-letter country code.';
     } else if (googleCredentialRef.current) {
@@ -560,9 +561,13 @@ export default function Auth() {
 
           {mode === 'login' && googleClientId && (
             <div className="operator-google-access" role="group" aria-label="Google sign-in">
-              <div ref={googleButtonRef} className="operator-google-access__button" />
-              {googleStatus === 'loading' && <p role="status" className="text-center text-sm text-muted-foreground">Loading Google sign-in…</p>}
-              {googleStatus === 'unavailable' && <div className="rounded-xl border border-border/50 p-3 text-center">
+              {!googleRequested && <div className="space-y-2 text-center">
+                <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => setGoogleRequested(true)}>Continue with Google</Button>
+                <p className="text-xs leading-5 text-muted-foreground">Choosing this loads Google sign-in and contacts Google. Password and email code sign-in are also available.</p>
+              </div>}
+              {googleRequested && <div ref={googleButtonRef} className="operator-google-access__button" />}
+              {googleRequested && googleStatus === 'loading' && <p role="status" className="text-center text-sm text-muted-foreground">Loading Google sign-in…</p>}
+              {googleRequested && googleStatus === 'unavailable' && <div className="rounded-xl border border-border/50 p-3 text-center">
                 <p role="status" className="text-sm leading-6 text-muted-foreground">Google sign-in couldn’t load. Password and email code are still available.</p>
                 <button type="button" className="mt-2 min-h-11 rounded-lg border border-border px-4 text-sm font-semibold text-foreground" onClick={() => setGoogleRetry((attempt) => attempt + 1)}>Retry Google sign-in</button>
               </div>}
@@ -684,7 +689,7 @@ export default function Auth() {
                 <legend>Before you create your account</legend>
                 <label>
                   <input id="acceptedTerms" type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} aria-invalid={Boolean(fieldErrors.acceptedTerms)} aria-describedby={fieldErrors.acceptedTerms ? 'acceptedTerms-error' : undefined} />
-                  <span>I accept the <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Notice</Link>, and <Link href="/community-guidelines">Community Guidelines</Link>.</span>
+                  <span>I accept the <Link href="/terms">Terms</Link> and <Link href="/community-guidelines">Community Guidelines</Link>, and acknowledge the <Link href="/privacy">Privacy Notice</Link>.</span>
                 </label>
                 {fieldErrors.acceptedTerms && <p id="acceptedTerms-error" className="operator-field__error">{fieldErrors.acceptedTerms}</p>}
                 <div className="operator-field">

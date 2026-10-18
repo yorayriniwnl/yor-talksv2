@@ -1,0 +1,2592 @@
+{
+  "scanCount": 71,
+  "violationCount": 0,
+  "note": "Incomplete-rule sampleTargets show up to five nodes per rule; full raw results are generated locally by the checked-in tests.",
+  "scans": [
+    {
+      "artifact": "composer-dark-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "composer-light-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "dashboard-dark-axe.json",
+      "url": "http://127.0.0.1:4175/dashboard",
+      "violations": [],
+      "passedRuleCount": 23,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 6,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".level-badge"
+            ],
+            [
+              "button[aria-label=\"Home\"] > span"
+            ],
+            [
+              "button[aria-label=\"Explore\"] > span"
+            ],
+            [
+              "button[aria-label=\"Reels\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "dashboard-light-axe.json",
+      "url": "http://127.0.0.1:4175/dashboard",
+      "violations": [],
+      "passedRuleCount": 23,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 6,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".level-badge"
+            ],
+            [
+              "button[aria-label=\"Home\"] > span"
+            ],
+            [
+              "button[aria-label=\"Explore\"] > span"
+            ],
+            [
+              "button[aria-label=\"Reels\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 54,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 55,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 55,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 56,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".operator-discovery-hero__copy > .operator-signal-label[data-tone=\"signal\"]"
+            ],
+            [
+              "#discovery-title"
+            ],
+            [
+              "em"
+            ],
+            [
+              ".operator-discovery-hero__copy > p"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".operator-discovery-hero__copy > .operator-signal-label[data-tone=\"signal\"]"
+            ],
+            [
+              "#discovery-title"
+            ],
+            [
+              "em"
+            ],
+            [
+              ".operator-discovery-hero__copy > p"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".operator-discovery-hero__copy > .operator-signal-label[data-tone=\"signal\"]"
+            ],
+            [
+              "#discovery-title"
+            ],
+            [
+              "em"
+            ],
+            [
+              ".operator-discovery-hero__copy > p"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".operator-discovery-hero__copy > .operator-signal-label[data-tone=\"signal\"]"
+            ],
+            [
+              "#discovery-title"
+            ],
+            [
+              "em"
+            ],
+            [
+              ".operator-discovery-hero__copy > p"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 46,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              "h1"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              ".premium-search__shortcut"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "explore-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/explore",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 47,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              "h1"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              ".premium-search__shortcut"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 52,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 53,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 73,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 74,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 28,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 28,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 31,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 31,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 42,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "home-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 43,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ],
+            [
+              ".h-8 > .bg-muted.h-full.justify-center"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "install-prompt-axe.json",
+      "url": "http://127.0.0.1:4175/",
+      "violations": [],
+      "passedRuleCount": 14,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 3,
+          "sampleTargets": [
+            [
+              ".bg-gradient-to-tr"
+            ],
+            [
+              ".font-black"
+            ],
+            [
+              ".mt-0\\.5"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 34,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 36,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 15,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-inbox__summary > span:nth-child(1)"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 15,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-inbox__summary > span:nth-child(1)"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 15,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-inbox__summary > span:nth-child(1)"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 15,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-inbox__summary > span:nth-child(1)"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 21,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "messages-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 22,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 37,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 38,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 39,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4[data-active=\"false\"]:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 23,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-activity-header > div:nth-child(1) > p"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 23,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-activity-header > div:nth-child(1) > p"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 23,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-activity-header > div:nth-child(1) > p"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 23,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "span[data-tone=\"signal\"]"
+            ],
+            [
+              "div:nth-child(1) > h1"
+            ],
+            [
+              ".operator-activity-header > div:nth-child(1) > p"
+            ],
+            [
+              ".operator-status-badge"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 29,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "notifications-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/notifications",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 30,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "populated-messages-dark-axe.json",
+      "url": "http://127.0.0.1:4175/messages/20000000-0000-4000-8000-000000000999",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "h2"
+            ],
+            [
+              ".operator-thread__identity-copy > span"
+            ],
+            [
+              ".operator-message-date > span"
+            ],
+            [
+              "select"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "populated-messages-light-axe.json",
+      "url": "http://127.0.0.1:4175/messages/20000000-0000-4000-8000-000000000999",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              "h2"
+            ],
+            [
+              ".operator-thread__identity-copy > span"
+            ],
+            [
+              ".operator-message-date > span"
+            ],
+            [
+              "select"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.px-3\\.5.py-3:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 36,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.px-3\\.5.py-3:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 36,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.px-3\\.5.py-3:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 37,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.px-3\\.5.py-3:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".tracking-\\[0\\.16em\\]"
+            ],
+            [
+              ".text-3xl"
+            ],
+            [
+              ".max-w-xl"
+            ],
+            [
+              ".\\[border-color\\:var\\(--button-outline\\)\\]"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".tracking-\\[0\\.16em\\]"
+            ],
+            [
+              ".text-3xl"
+            ],
+            [
+              ".max-w-xl"
+            ],
+            [
+              ".\\[border-color\\:var\\(--button-outline\\)\\]"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".tracking-\\[0\\.16em\\]"
+            ],
+            [
+              ".text-3xl"
+            ],
+            [
+              ".max-w-xl"
+            ],
+            [
+              ".\\[border-color\\:var\\(--button-outline\\)\\]"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 5,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".tracking-\\[0\\.16em\\]"
+            ],
+            [
+              ".text-3xl"
+            ],
+            [
+              ".max-w-xl"
+            ],
+            [
+              ".\\[border-color\\:var\\(--button-outline\\)\\]"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "saved-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/saved",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 10,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".world-selector-button__label"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "search-dark-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 45,
+          "sampleTargets": [
+            [
+              ".text-base"
+            ],
+            [
+              "div[aria-label=\"Suggested people\"] > .tracking-wider.mb-2"
+            ],
+            [
+              "h5"
+            ],
+            [
+              "#palette-user-1cc96a14-2728-46fd-ae3c-cbf15fd9db1a > .flex-1.min-w-0 > .font-mono"
+            ],
+            [
+              "div[aria-label=\"Quick jump\"] > .tracking-wider.mb-2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "search-light-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 26,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 45,
+          "sampleTargets": [
+            [
+              ".text-base"
+            ],
+            [
+              "div[aria-label=\"Suggested people\"] > .tracking-wider.mb-2"
+            ],
+            [
+              "h5"
+            ],
+            [
+              "#palette-user-1cc96a14-2728-46fd-ae3c-cbf15fd9db1a > .flex-1.min-w-0 > .font-mono"
+            ],
+            [
+              "div[aria-label=\"Quick jump\"] > .tracking-wider.mb-2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-dark-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 23,
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 40,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.w-full"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-light-axe.json",
+      "url": "http://127.0.0.1:4175/#main-content",
+      "violations": [],
+      "passedRuleCount": 23,
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 40,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.w-full"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-1024-dark-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 2,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ],
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 61,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4.px-3\\.5:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-1024-light-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 2,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ],
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 62,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4.px-3\\.5:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-1440-dark-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 2,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ],
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 62,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4.px-3\\.5:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-1440-light-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 2,
+          "sampleTargets": [
+            [
+              ".gap-1"
+            ],
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 63,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              ".duration-200.gap-4.px-3\\.5:nth-child(2) > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-320-dark-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 33,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".yor-eyebrow"
+            ],
+            [
+              ".worlds-hero__copy > h1"
+            ],
+            [
+              ".worlds-hero__copy > p"
+            ],
+            [
+              ".py-2\\.5 > .world-selector-button__label.truncate"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-320-light-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 33,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".yor-eyebrow"
+            ],
+            [
+              ".worlds-hero__copy > h1"
+            ],
+            [
+              ".worlds-hero__copy > p"
+            ],
+            [
+              ".py-2\\.5 > .world-selector-button__label.truncate"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-390-dark-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 33,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".yor-eyebrow"
+            ],
+            [
+              ".worlds-hero__copy > h1"
+            ],
+            [
+              ".worlds-hero__copy > p"
+            ],
+            [
+              ".py-2\\.5 > .world-selector-button__label.truncate"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-390-light-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 22,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 33,
+          "sampleTargets": [
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".yor-eyebrow"
+            ],
+            [
+              ".worlds-hero__copy > h1"
+            ],
+            [
+              ".worlds-hero__copy > p"
+            ],
+            [
+              ".py-2\\.5 > .world-selector-button__label.truncate"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-768-dark-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 39,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".max-w-20"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "worlds-768-light-axe.json",
+      "url": "http://127.0.0.1:4175/worlds",
+      "violations": [],
+      "passedRuleCount": 21,
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".worlds-first-card"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 40,
+          "sampleTargets": [
+            [
+              ".premium-topbar__kicker"
+            ],
+            [
+              ".premium-topbar__heading"
+            ],
+            [
+              ".premium-search > span"
+            ],
+            [
+              "kbd"
+            ],
+            [
+              ".max-w-20"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

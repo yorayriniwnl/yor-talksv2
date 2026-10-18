@@ -16,7 +16,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
-import { hasTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
+import { hasSavedTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { ProtectedMediaImage } from '@/lib/protected-media';
@@ -393,7 +393,8 @@ export default function Settings() {
   const deletePending = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [telemetryConsent, setTelemetryConsentState] = useState(() => hasTelemetryConsent());
+  const [telemetryConsent, setTelemetryConsentState] = useState(() => hasSavedTelemetryConsent(currentUser?.id ?? null));
+  const [telemetryError, setTelemetryError] = useState('');
   const telemetryAllowed = eligibilityLoaded && eligibility?.activated === true && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.analytics === true;
   const canUseSocial = Boolean(eligibilityLoaded && eligibility?.activated && eligibility.experience !== 'under_13' && eligibility.capabilities.social);
   const canUseMessaging = canUseSocial && eligibility?.capabilities.messaging === true;
@@ -408,8 +409,11 @@ export default function Settings() {
   }, [currentUser?.id, currentUser?.contentFilter, currentUser?.storyViewMode, currentUser?.twoFactorEnabled, maximumContentRating]);
 
   useEffect(() => {
-    setTelemetryConsentState(telemetryAllowed && hasTelemetryConsent());
-  }, [telemetryAllowed]);
+    const syncConsent = () => setTelemetryConsentState(hasSavedTelemetryConsent(currentUser?.id ?? null));
+    syncConsent();
+    window.addEventListener('storage', syncConsent);
+    return () => window.removeEventListener('storage', syncConsent);
+  }, [telemetryAllowed, currentUser?.id]);
 
   useEffect(() => {
     let active = true;
@@ -663,14 +667,17 @@ export default function Settings() {
             <Switch
               aria-label="Allow optional analytics"
               checked={telemetryConsent}
-              disabled={!telemetryAllowed}
+              disabled={!telemetryAllowed && !telemetryConsent}
+              aria-describedby={telemetryError ? 'optional-analytics-error' : undefined}
               onCheckedChange={(value) => {
-                setTelemetryConsent(value);
-                setTelemetryConsentState(value);
+                const saved = setTelemetryConsent(value);
+                setTelemetryConsentState(saved);
+                setTelemetryError(value && !saved ? 'Your browser could not save this choice. Optional analytics remain off. Check your site storage settings to try again.' : '');
               }}
             />
           </div>
-          {!telemetryAllowed && <p className="text-xs leading-5 text-muted-foreground">Optional analytics are unavailable for this account under the current policy.</p>}
+          {!telemetryAllowed && <p className="text-xs leading-5 text-muted-foreground">Optional analytics cannot be collected for this account under the current policy. You can still withdraw a previously saved choice here.</p>}
+          {telemetryError && <p id="optional-analytics-error" role="alert" className="text-xs leading-5 text-destructive">{telemetryError}</p>}
           <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookies and storage notice</a> for details.</p>
         </section>
 

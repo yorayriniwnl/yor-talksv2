@@ -110,12 +110,12 @@ export default function PowerRankings() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">National Clan Elo & Power Rankings</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Rankings snapshot & tier divisions · league voting is not connected yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative teams, rankings and statistics. These are not official results or customer activity.</p>
           </div>
         </div>
 
         <div className="level-badge shadow-sm">
-          <Award className="w-3.5 h-3.5 fill-amber-400" /> Season 1 Snapshot
+          <Award className="w-3.5 h-3.5 fill-amber-400" /> Sample rankings
         </div>
       </div>
 
@@ -174,7 +174,7 @@ export default function PowerRankings() {
                       </span>
                     </h4>
                     <div className="text-xs font-mono text-muted-foreground flex items-center gap-3 mt-0.5">
-                      <span>Win Rate: {c.winRate}%</span>
+                      <span>Sample win rate: {c.winRate}%</span>
                       <span className="text-amber-400 font-bold">{c.streak}</span>
                     </div>
                   </div>
@@ -182,7 +182,7 @@ export default function PowerRankings() {
 
                 <div className="flex items-center justify-between sm:justify-end gap-6 font-mono text-xs">
                   <div className="text-right">
-                    <span className="text-muted-foreground uppercase text-[0.62rem] block">National Elo</span>
+                    <span className="text-muted-foreground uppercase text-[0.62rem] block">Sample Elo</span>
                     <div className="font-display font-black text-lg text-primary">{c.elo}</div>
                     <span className="text-[0.65rem] text-emerald-400 font-bold">{c.change}</span>
                   </div>

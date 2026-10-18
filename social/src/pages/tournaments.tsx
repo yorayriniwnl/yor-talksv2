@@ -190,7 +190,7 @@ export default function Tournaments() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Yor Esports Arena</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Tournament preview — registrations and rewards are not available yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative tournaments, teams and results. Registrations and rewards are unavailable.</p>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function Tournaments() {
                 <div className="flex items-center gap-4 text-xs font-mono text-zinc-300 mt-2">
                   <span className="text-amber-400 font-bold text-sm">Prize details unavailable</span>
                   <span>·</span>
-                  <span>{selectedTournament.teamsCount} Elite Squads</span>
+                  <span>{selectedTournament.teamsCount} sample squads</span>
                   <span>·</span>
                   <span>{selectedTournament.organizer}</span>
                 </div>
@@ -270,7 +270,7 @@ export default function Tournaments() {
             onClick={() => setActiveTab('bracket')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'bracket' && "bg-primary text-primary-foreground shadow-md")}
           >
-            <Swords className="w-3.5 h-3.5 mr-1.5" /> Live Tournament Bracket
+            <Swords className="w-3.5 h-3.5 mr-1.5" /> Sample tournament bracket
           </Button>
           <Button
             size="sm"
@@ -278,12 +278,12 @@ export default function Tournaments() {
             onClick={() => setActiveTab('predictions')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'predictions' && "bg-amber-600 text-white shadow-md")}
           >
-            <Target className="w-3.5 h-3.5 mr-1.5" /> Fan Pick'em Predictions (Win Karma)
+            <Target className="w-3.5 h-3.5 mr-1.5" /> Sample predictions (no rewards)
           </Button>
         </div>
 
         {activeTab === 'bracket' ? (
-          /* Live Tournament Bracket Visualization */
+          /* Sample tournament bracket Visualization */
           <div className="space-y-6">
             <div className="surface-1 p-6 rounded-3xl border border-border/40 shadow-sm">
               <div className="showcase-section-title mb-6">
@@ -350,7 +350,7 @@ export default function Tournaments() {
                 <Target className="w-4 h-4 text-amber-400" />
                 <h3>Match Predictions & Fan Pick'em Game</h3>
               </div>
-              <p className="text-xs text-muted-foreground font-mono mb-6">Pick the winner for upcoming matches. Correct predictions earn +100 Karma & YOR Points!</p>
+              <p className="text-xs text-muted-foreground font-mono mb-6">Illustrative match predictions only. Picks cannot be submitted and no Karma or points are awarded.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {BRACKET_MATCHES.filter(m => m.status !== 'completed').map((match) => {
@@ -360,7 +360,7 @@ export default function Tournaments() {
                     <div key={match.id} className="p-5 rounded-3xl bg-muted/20 border border-border/40 flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-4 text-xs font-mono">
                         <span className="font-bold text-foreground">{match.round}</span>
-                        <span className="text-amber-400 font-bold">+100 Karma Reward</span>
+                        <span className="text-amber-400 font-bold">Rewards unavailable</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 mb-4">
