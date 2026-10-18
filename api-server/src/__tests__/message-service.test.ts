@@ -12,6 +12,19 @@ import { pool } from "@workspace/db";
 
 after(() => pool.end());
 
+async function createAcceptedGroup(service: MessageService, creatorId: string, memberIds: string[], title: string) {
+  const group = await service.createGroupChat(creatorId, memberIds, title);
+  for (const memberId of memberIds) {
+    // Accept current revisions: each accepted member changes the group snapshot
+    // and refreshes the still-pending invitations.
+    const invitation = (await service.listGroupInvitations(memberId)).find(row => row.conversationId === group.id);
+    assert.ok(invitation);
+    await service.acceptGroupInvitation(invitation.id, memberId, invitation.updatedAt);
+  }
+  assert.deepEqual((await new ConversationRepository().getMembers(group.id)).sort(), [creatorId, ...memberIds].sort());
+  return group;
+}
+
 test("messages support edit, delete, reaction, and pin workflows", async () => {
   const userRepository = new UserRepository();
   const sender = await createTestUser(userRepository);
@@ -50,8 +63,9 @@ test("concurrent reactions from different users are preserved and repeated react
   const sender = await createTestUser(users);
   const first = await createTestUser(users);
   const second = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository());
-  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Concurrent reactions");
+  for (const user of [sender, first, second]) await authorizeTestAdultAccount(user.id);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
+  const group = await createAcceptedGroup(service, sender.id, [first.id, second.id], "Concurrent reactions");
   const message = await service.sendMessageToConversation(sender.id, group.id, "Concurrent reactions");
   await Promise.all([
     service.addReaction(message.id, first.id, "heart"),
@@ -220,13 +234,14 @@ test("deleting a group creator or member preserves shared group history and remo
   const users = new UserRepository();
   const redis = new RedisRepository();
   const accountService = new AccountService(users, redis);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
 
   const creator = await createTestUser(users, { passwordHash: await bcrypt.hash('creator-password', 10) });
   const memberA = await createTestUser(users, { passwordHash: await bcrypt.hash('member-a-password', 10) });
   const memberB = await createTestUser(users, { passwordHash: await bcrypt.hash('member-b-password', 10) });
+  for (const user of [creator, memberA, memberB]) await authorizeTestAdultAccount(user.id);
 
-  const creatorGroup = await service.createGroupChat(creator.id, [memberA.id, memberB.id], 'Creator retention');
+  const creatorGroup = await createAcceptedGroup(service, creator.id, [memberA.id, memberB.id], 'Creator retention');
   await service.sendMessageToConversation(creator.id, creatorGroup.id, 'Creator message');
   await service.sendMessageToConversation(memberA.id, creatorGroup.id, 'Survivor message');
   assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), true);
@@ -241,7 +256,8 @@ test("deleting a group creator or member preserves shared group history and remo
   const survivor = await createTestUser(users, { passwordHash: await bcrypt.hash('survivor-password', 10) });
   const target = await createTestUser(users, { passwordHash: await bcrypt.hash('target-password', 10) });
   const other = await createTestUser(users, { passwordHash: await bcrypt.hash('other-password', 10) });
-  const targetGroup = await service.createGroupChat(survivor.id, [target.id, other.id], 'Member retention');
+  for (const user of [survivor, target, other]) await authorizeTestAdultAccount(user.id);
+  const targetGroup = await createAcceptedGroup(service, survivor.id, [target.id, other.id], 'Member retention');
   await service.sendMessageToConversation(target.id, targetGroup.id, 'Departing member message');
   await service.sendMessageToConversation(other.id, targetGroup.id, 'Other member message');
   assert.equal(await accountService.deleteAccount(target.id, 'target-password'), true);

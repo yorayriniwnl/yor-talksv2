@@ -1,0 +1,20 @@
+✔ Alertmanager runtime configuration safely quotes receiver values and leaves the password in its secret file (2.899ms)
+✔ Alertmanager rejects insecure receiver URLs and embedded credentials (1.2392ms)
+✔ repository workflow, lockfile and manifests reject duplicate mapping keys (45.689ms)
+✔ CI pins actions, matches the toolchain and retains all-scope dependency auditing (3.1568ms)
+✔ backend verification runs independently and keeps security and integration checks mandatory (1.283ms)
+✔ runtime database provisioning validates distinct owner/runtime identities and exact target database (3.5683ms)
+✔ schema bootstrap refuses partial schemas and unrelated existing objects (1.5768ms)
+✔ beta bootstrap action identifies an empty database that needs the base schema push (0.1554ms)
+✔ production migration refuses missing or placeholder contact identity secrets (1.3657ms)
+✔ premium story migration runs after the base story interaction tables exist (10.5886ms)
+✔ private eligibility migration shares the release transaction and cannot backfill legacy adults (5.0183ms)
+✔ Multer remains on a release patched against aborted-upload disk writes (1.9621ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 305.8901

@@ -93,7 +93,16 @@ export class ProductAnalyticsService {
 
     await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('yor-product-analytics-rollup'), hashtext(${date}))`);
-      await tx.delete(productAnalyticsDailyTable).where(eq(productAnalyticsDailyTable.date, date));
+      // Fresh schemas store UTC wall timestamps; legacy deployments can use
+      // timestamptz. Keep casts and daily keys in UTC for either representation,
+      // without changing the timezone of a pooled connection after this commit.
+      await tx.execute(sql`SET LOCAL TIME ZONE 'UTC'`);
+      // Rebuild this complete UTC day, including shifted daily keys left by the
+      // previous session-timezone cast. Canonical source events remain intact.
+      await tx.delete(productAnalyticsDailyTable).where(and(
+        gte(productAnalyticsDailyTable.date, date),
+        lt(productAnalyticsDailyTable.date, end.toISOString()),
+      ));
       await tx.execute(sql`
         INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
         SELECT ${date}::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
@@ -126,14 +135,26 @@ export class ProductAnalyticsService {
     try {
       await this.rollupDay(day);
       const quality = await pool.query<{ mismatches: string }>(`
-        WITH expected AS (
-          SELECT event_name, count(*)::integer AS event_count, count(DISTINCT actor_id)::integer AS unique_users
+        WITH events_utc AS (
+          SELECT event_name, actor_id, CASE
+            WHEN pg_typeof(occurred_at) = 'timestamp without time zone'::regtype
+              THEN occurred_at::timestamp AT TIME ZONE 'UTC'
+            ELSE occurred_at::timestamptz END AS occurred_at
           FROM product_analytics_events
+        ), daily_utc AS (
+          SELECT event_name, event_count, unique_users, CASE
+            WHEN pg_typeof(date) = 'timestamp without time zone'::regtype
+              THEN date::timestamp AT TIME ZONE 'UTC'
+            ELSE date::timestamptz END AS date
+          FROM product_analytics_daily
+        ), expected AS (
+          SELECT event_name, count(*)::integer AS event_count, count(DISTINCT actor_id)::integer AS unique_users
+          FROM events_utc
           WHERE occurred_at >= $1::timestamptz AND occurred_at < $2::timestamptz
           GROUP BY event_name
         ), actual AS (
           SELECT event_name, event_count, unique_users
-          FROM product_analytics_daily WHERE date = $1::timestamptz
+          FROM daily_utc WHERE date = $1::timestamptz
         )
         SELECT count(*)::text AS mismatches
         FROM expected

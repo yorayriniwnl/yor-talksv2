@@ -1,0 +1,15 @@
+node :
+At line:2 char:299
++ ... TEXITCODE"; node api-server/build.mjs *> docs/audits/backend-security ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+  api-server\dist\index.cjs          7.6mb
+  api-server\dist\app.cjs            6.9mb
+  api-server\dist\worker.cjs         3.7mb
+  api-server\dist\pino-worker.cjs  152.0kb
+  api-server\dist\pino-file.cjs    141.0kb
+  ...and 9 more output files...
+
+Done in 1165ms

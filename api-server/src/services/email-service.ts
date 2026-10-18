@@ -1,11 +1,6 @@
-import { createHash } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
-
-function recipientHash(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 16);
-}
 
 export class EmailDeliveryNotConfiguredError extends Error {
   constructor() {
@@ -87,7 +82,7 @@ export class EmailService {
       // Development and tests stay usable without an external email account.
       // Do not print the address, subject, HTML, or text: verification links,
       // reset links, and email OTPs are credentials and must not land in logs.
-      logger.info({ recipientHash: recipientHash(to), htmlBytes: Buffer.byteLength(html, "utf8") }, "Email dispatch simulated");
+      logger.info("Email dispatch simulated");
       return true;
     }
 
@@ -112,12 +107,12 @@ export class EmailService {
 
     if (!response.ok) {
       await response.text().catch(() => undefined);
-      logger.error({ status: response.status, recipientHash: recipientHash(to) }, "Resend email delivery failed");
+      logger.error({ status: response.status }, "Resend email delivery failed");
       throw new EmailDeliveryProviderError(`Resend rejected the email (${response.status})`);
     }
 
     // Subjects can contain one-time login codes, so keep provider logs opaque.
-    logger.info({ recipientHash: recipientHash(to) }, "Email delivered through Resend");
+    logger.info("Email delivered through Resend");
     return true;
   }
 

@@ -1,0 +1,82 @@
+✔ deleting payer first preserves the counterparty and immutable financial references (219.9972ms)
+✔ deleting creator first preserves the counterparty and immutable financial references (68.59ms)
+✔ account deletion preserves group creator with two remaining members's shared group history (126.6751ms)
+✔ account deletion preserves legacy second participant with one remaining member's shared group history (40.0094ms)
+✔ migrated legacy history references are nullable and use SET NULL (15.348ms)
+✔ nullable direct history retains the surviving author and scrubs the deleted participant snapshot (82.0429ms)
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+✔ account deletion erases embedded actors and discussions while preserving unrelated content and queue delivery (85.8346ms)
+✔ a queued JSON reaction cannot restore an actor after the deletion scrub commits (197.0816ms)
+✔ an injected database failure rolls back ledger anonymization and cleanup enqueue together (50.0632ms)
+✔ durable jobs deduplicate, recover abandoned leases, fence stale workers and expose exhausted retries (14.0795ms)
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+✔ notification workers report readiness through start, stop, and restart (98.572ms)
+[17:01:17.680] INFO (32556): Notification worker started
+    redisVersion: "5.0.14.1"
+[17:01:17.729] INFO (32556): Notification worker started
+    redisVersion: "5.0.14.1"
+✔ notification queue entries contain only the persisted ID, including legacy caller payloads (2.4271ms)
+✔ queue payloads use bounded retention while notification retries retain stable ids (0.1652ms)
+✔ queue service handles job enqueue and dequeue (8.661ms)
+✖ queue retention is bounded without pruning operator-review jobs (2.4467ms)
+✔ queue service does not retain jobs in memory while Redis is unavailable (3.0655ms)
+[17:01:18.562] WARN (6460): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:01:18.562] WARN (6460): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+[17:01:18.568] WARN (6460): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:01:18.568] WARN (6460): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+✔ public grievance submission returns only the safe receipt fields (72.3628ms)
+✔ public grievance tracking hides identity and officer notes while moderator access retains them (100.0754ms)
+✔ report routes reject anonymous access and keep moderation queue role-restricted (37.9049ms)
+✔ public grievance intake and status responses expose only the allowlisted fields (9.3071ms)
+✔ final report decisions require a reason and keep an immutable staff audit trail (66.625ms)
+✔ staff report pagination reaches older unresolved rows and all timestamp ties without duplicates (284.3051ms)
+✔ staff grievance pagination keeps old cases reachable with status-scoped cursors (131.3642ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 22
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11569.913
+
+✖ failing tests:
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\queue-service.test.ts:1:2365
+✖ queue retention is bounded without pruning operator-review jobs (2.4467ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + {
+  +   age: 604800,
+  +   count: 1000
+  + }
+  - false
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\queue-service.test.ts:71:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { age: 604800, count: 1000 },
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

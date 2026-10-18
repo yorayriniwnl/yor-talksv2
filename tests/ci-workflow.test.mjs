@@ -31,3 +31,31 @@ test('CI pins actions, matches the toolchain and retains all-scope dependency au
   assert.equal(steps.find(step => step.uses?.startsWith('actions/setup-node@')).with['node-version'], 24);
   assert.ok(steps.some(step => step.run?.trim() === 'pnpm audit'), 'all dependency scopes must be audited');
 });
+
+test('backend verification runs independently and keeps security and integration checks mandatory', () => {
+  const { jobs } = yaml.load(read('.github/workflows/ci.yml'));
+  const backend = jobs.backend;
+  assert.ok(backend, 'backend checks need a separate job');
+  assert.equal(backend.needs, undefined, 'frontend failures must not skip backend evidence');
+  assert.equal(backend.if, undefined);
+  assert.equal(backend['continue-on-error'], undefined);
+  assert.equal(backend.services.postgres.image, 'postgres:16-alpine');
+  assert.equal(backend.services.redis.image, 'redis:7-alpine');
+  assert.equal(backend.env.ELIGIBILITY_ASSURANCE_ADAPTER, 'unavailable');
+  assert.equal(backend.env.ELIGIBILITY_POLICY_SOURCE, 'approved_registry');
+  for (const step of backend.steps) {
+    assert.equal(step['continue-on-error'], undefined, step.name);
+    assert.equal(step.if, undefined, step.name);
+    if (step.uses) assert.match(step.uses, /@[a-f0-9]{40}$/, step.name);
+  }
+  for (const command of [
+    'pnpm install --frozen-lockfile', 'pnpm audit', 'pnpm contract:check',
+    'pnpm --filter @workspace/db migrate:beta', 'pnpm --filter @workspace/api-server typecheck',
+    'node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts',
+    'pnpm --filter @workspace/api-server build', 'pnpm production-config:check',
+    'bash ops/backup/backup-script.test.sh', 'node ops/check-database-runtime-role.mjs',
+  ]) assert.ok(backend.steps.some(step => step.run === command), command);
+  assert.equal(backend.steps.find(step => step.name === 'Run API tests serially').env.MEDIA_REQUIRE_DECODER_TESTS, 'true');
+  assert.ok(jobs.verify.steps.some(step => step.run === 'pnpm test:unit'), 'full release checks remain in place');
+  assert.ok(jobs.verify.steps.some(step => step.run === 'pnpm test:e2e'), 'browser checks remain in place');
+});

@@ -14,6 +14,102 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Backend security evidence must still run when an independently owned web
+  # check fails. The existing full release verification remains required.
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: yor_talks
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d yor_talks"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/yor_talks
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_SECRET: ci-access-secret-012345678901234567890123456789
+      JWT_REFRESH_SECRET: ci-refresh-secret-012345678901234567890123456789
+      CONTACT_SHIELD_SECRET: ci-contact-shield-secret-012345678901234567890123
+      ELIGIBILITY_ASSURANCE_ADAPTER: unavailable
+      ELIGIBILITY_POLICY_SOURCE: approved_registry
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.28.5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit runtime and build dependencies
+        run: pnpm audit
+
+      - name: Verify API contract is synchronized
+        run: pnpm contract:check
+
+      - name: Run backend infrastructure regression tests
+        run: node --test tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs
+
+      - name: Build database package
+        run: pnpm --filter @workspace/db build
+
+      - name: Apply schema migration
+        run: pnpm --filter @workspace/db migrate:beta
+
+      - name: Typecheck API
+        run: pnpm --filter @workspace/api-server typecheck
+
+      - name: Install media verification runtime
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
+      - name: Run API tests serially
+        run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
+        working-directory: api-server
+        env:
+          MEDIA_REQUIRE_DECODER_TESTS: 'true'
+
+      - name: Build API
+        run: pnpm --filter @workspace/api-server build
+
+      - name: Verify production configuration wiring
+        run: pnpm production-config:check
+
+      - name: Verify backup and restore failure cleanup
+        run: bash ops/backup/backup-script.test.sh
+
+      - name: Verify restricted database runtime role
+        run: node ops/check-database-runtime-role.mjs
+        env:
+          DATABASE_ROLE_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25

@@ -1,0 +1,25 @@
+✖ font delivery uses local complete WOFF2 assets and ships their pinned source license notices (15.7477ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 153.1939
+
+✖ failing tests:
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\tests\font-assets.test.mjs:7:1
+✖ font delivery uses local complete WOFF2 assets and ships their pinned source license notices (15.7477ms)
+  AssertionError [ERR_ASSERTION]: stylesheet updates must bypass the old service-worker cache key
+      at TestContext.<anonymous> (file:///F:/CHATPGPT/Projects/yor-talks-backend-audit-20261017/tests/font-assets.test.mjs:15:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -102,32 +102,6 @@ test("report routes reject anonymous access and keep moderation queue role-restr
     body: JSON.stringify({ entityType: "post", entityId: randomUUID(), reason: "spam" }),
   });
 
-  test("public grievance intake and status responses expose only the allowlisted fields", async () => {
-    const submitted = await fetch(`${baseUrl}/reports/grievance`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: "harassment",
-        reportedUrl: "https://private.example/profile",
-        reporterName: "Private Reporter",
-        reporterEmail: "private-reporter@example.test",
-        description: "Private details that should not be returned.",
-      }),
-    });
-    assert.equal(submitted.status, 201);
-    const created = await submitted.json() as { data: Record<string, unknown> };
-    assert.deepEqual(Object.keys(created.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
-    const ticketId = String(created.data.ticketId);
-    grievanceTicketIds.push(ticketId);
-
-    const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
-    assert.equal(status.status, 200);
-    const loaded = await status.json() as { data: Record<string, unknown> };
-    assert.deepEqual(Object.keys(loaded.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
-    assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
-    assert.equal(JSON.stringify(loaded).includes("Private details"), false);
-    assert.equal(JSON.stringify(loaded).includes("private.example"), false);
-  });
   assert.equal(anonymousSubmission.status, 401);
 
   const ordinaryUserQueue = await fetch(`${baseUrl}/reports/queue`, {
@@ -144,6 +118,33 @@ test("report routes reject anonymous access and keep moderation queue role-restr
   assert.equal(authenticatedSubmission.status, 201);
   const rows = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM reports WHERE reporter_id = $1", [user.id]);
   assert.equal(Number(rows.rows[0]?.count), 1);
+});
+
+test("public grievance intake and status responses expose only the allowlisted fields", async () => {
+    const submitted = await fetch(`${baseUrl}/reports/grievance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: "harassment",
+        reportedUrl: "https://private.example/profile",
+        reporterName: "Private Reporter",
+        reporterEmail: "private-reporter@example.test",
+        description: "Private details that should not be returned.",
+      }),
+    });
+    assert.equal(submitted.status, 201);
+    const created = await submitted.json() as { data: Record<string, unknown> };
+    const ticketId = String(created.data.ticketId);
+    grievanceTicketIds.push(ticketId);
+    assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "status", "ticketId"]);
+
+    const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
+    assert.equal(status.status, 200);
+    const loaded = await status.json() as { data: Record<string, unknown> };
+    assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "status", "ticketId"]);
+    assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
+    assert.equal(JSON.stringify(loaded).includes("Private details"), false);
+    assert.equal(JSON.stringify(loaded).includes("private.example"), false);
 });
 
 test('final report decisions require a reason and keep an immutable staff audit trail', async () => {
@@ -256,17 +257,25 @@ test('staff grievance pagination keeps old cases reachable with status-scoped cu
   await pool.query(`INSERT INTO grievance_tickets(id,ticket_id,category,reported_url,reporter_name,reporter_email,description,status,created_at)
     SELECT id,ticket,'other','https://example.test/fixture','Fixture','fixture@example.test','Synthetic pagination fixture','received','2099-01-01 00:00:00.123456'::timestamp
     FROM unnest($1::uuid[],$2::text[]) AS fixture(id,ticket)`, [ids,tickets]);
+  // Other suites can retain legitimate synthetic grievances. Verify the entire
+  // queue snapshot, including those rows, without assuming an empty database or
+  // deleting another fixture's records to make pagination pass.
+  const expected = (await pool.query<{ id: string }>(
+    "SELECT id FROM grievance_tickets WHERE status='received' ORDER BY created_at DESC,id DESC",
+  )).rows.map(row => row.id);
   let page = await queuePage('/reports/grievances?status=received&limit=41');
   const seen: string[] = [];
   const firstCursor = page.meta.nextCursor;
   do {
     assert.ok(page.data.every(row => row.status === 'received'));
     seen.push(...page.data.map(row => row.id));
-    assert.ok(seen.length <= ids.length);
+    assert.ok(seen.length <= expected.length);
     if (!page.meta.hasMore) break;
     page = await queuePage(`/reports/grievances?status=received&limit=41&cursor=${page.meta.nextCursor}`);
   } while (true);
-  assert.deepEqual(seen, ids);
+  assert.deepEqual(seen, expected);
+  const ownedIds = new Set<string>(ids);
+  assert.deepEqual(seen.filter(id => ownedIds.has(id)), ids);
   assert.equal(page.meta.nextCursor, null);
   assert.equal((await fetch(`${baseUrl}/reports/grievances?status=resolved&cursor=${firstCursor}`, { headers: staffHeaders })).status, 400);
   assert.equal((await fetch(`${baseUrl}/reports/grievances?status=unknown`, { headers: staffHeaders })).status, 400);

@@ -9,11 +9,19 @@ import { PostRepository } from "../repositories/post-repository.js";
 import { ContactShieldService } from "../services/contact-shield-service.js";
 import { ContentSafetyService } from "../services/content-safety-service.js";
 import { aiRateLimiter } from "../middlewares/rate-limit.js";
+import { EligibilityCapabilityError, EligibilityService } from "../services/eligibility-service.js";
 
 const router = Router();
 const postRepository = new PostRepository();
 const contactShieldService = new ContactShieldService();
 const contentSafetyService = new ContentSafetyService();
+const eligibilityService = new EligibilityService();
+
+function rejectRevokedCapability(error: unknown, res: import("express").Response): boolean {
+  if (!(error instanceof EligibilityCapabilityError)) return false;
+  res.status(403).json(createResponse("This capability is unavailable for the current account", null, {}, ["capability_unavailable"]));
+  return true;
+}
 
 router.use(aiRateLimiter);
 
@@ -35,10 +43,14 @@ router.post("/chat", authenticate, async (req, res) => {
     const topics = userTopics.map(t => t.name);
 
     // Provide context to the AI Gateway
+    await eligibilityService.requireCapability(req.user!.id, "ai");
     const response = await ai.chat(message, { topics });
+    // Provider calls can outlive consent, eligibility or release-flag changes.
+    await eligibilityService.requireCapability(req.user!.id, "ai");
     
     res.json(createResponse("AI response generated", { message: response }));
   } catch (err) {
+    if (rejectRevokedCapability(err, res)) return;
     if (err instanceof AIProviderNotConfiguredError) {
       return res.status(503).json(createResponse("AI Copilot is not configured for this deployment", null, {}, ["ai_not_configured"]));
     }
@@ -66,8 +78,10 @@ router.get("/search", authenticate, async (req, res) => {
     const posts = await contentSafetyService.filterVisibleByAuthor(candidates, req.user!.id, (post) => post.authorId, { discovery: true });
     const results = posts.map((post) => ({ id: post.id, authorId: post.authorId, content: post.content, createdAt: post.createdAt, score: post.score ?? 0 }));
 
+    await eligibilityService.requireCapability(req.user!.id, "ai");
     res.json(createResponse("Search completed", { results, searchMode: "keyword" }));
   } catch (err) {
+    if (rejectRevokedCapability(err, res)) return;
     res.status(500).json(createResponse("Semantic search failed", null, {}, ["Search service unavailable"]));
   }
 });
@@ -79,9 +93,12 @@ router.post("/moderate", authenticate, async (req, res) => {
     if (!text || text.length > 5000) {
       return res.status(400).json(createResponse("Text must be between 1 and 5000 characters", null, {}, ["Invalid text"]));
     }
+    await eligibilityService.requireCapability(req.user!.id, "ai");
     const analysis = await ai.moderateContent(text);
+    await eligibilityService.requireCapability(req.user!.id, "ai");
     res.json(createResponse("Moderation completed", { analysis }));
   } catch (err) {
+    if (rejectRevokedCapability(err, res)) return;
     if (err instanceof AIProviderNotConfiguredError) {
       return res.status(503).json(createResponse("AI moderation is not configured for this deployment", null, {}, ["ai_not_configured"]));
     }

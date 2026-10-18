@@ -1,0 +1,15 @@
+✔ only payment webhook paths retain exact signed bytes; account requests do not duplicate secrets (168.4551ms)
+✔ request parser rejects invalid bodies with safe client errors before handlers run (77.9622ms)
+✔ unexpected errors stay private in every environment and headers already sent delegate (10.8681ms)
+[16:51:27.264] ERROR (42672): Unhandled error
+    err: {
+      "type": "Error"
+    }
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2982.7095
