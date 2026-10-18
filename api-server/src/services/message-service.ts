@@ -412,7 +412,7 @@ export class MessageService {
     const visibleResults=results.filter((result):result is NonNullable<typeof result>=>Boolean(result));
     const lastMessages = visibleResults.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => {
+    return visibleResults.map((result) => {
       const lastMessage = result.lastMessage ? receipts.get(result.lastMessage.id) : undefined;
       return { ...result, lastMessage: lastMessage && this.isMessageVisible(lastMessage) ? lastMessage : undefined };
     });

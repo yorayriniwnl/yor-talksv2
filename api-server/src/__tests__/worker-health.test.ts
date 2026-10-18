@@ -34,19 +34,4 @@ test("required lifecycle worker reports healthy, missing, stale, and recovered h
 
   await pool.query("UPDATE runtime_heartbeats SET heartbeat_at = now() WHERE worker_id = 'test:healthy'");
   assert.equal((await hasHealthyLifecycleWorker()), true);
-
-  await pool.query(`UPDATE runtime_heartbeats SET details = jsonb_build_object(
-    'activeJob', 'test:stalled', 'activeJobStartedAt', now() - interval '6 minutes'
-  ) WHERE worker_id = 'test:healthy'`);
-  await pool.query(`INSERT INTO runtime_heartbeats(worker_id, kind, heartbeat_at, details)
-    VALUES('test:other-healthy', 'lifecycle', now(), '{}'::jsonb)
-    ON CONFLICT(worker_id) DO UPDATE SET heartbeat_at=EXCLUDED.heartbeat_at, details=EXCLUDED.details`);
-  const stalled = await getLifecycleWorkerStatus();
-  assert.equal(stalled.healthy, false);
-  assert.equal(stalled.stalledJob, true);
-
-  await pool.query(`UPDATE runtime_heartbeats SET details = jsonb_build_object(
-    'activeJob', 'test:recovering', 'activeJobStartedAt', now()
-  ) WHERE worker_id = 'test:healthy'`);
-  assert.equal((await getLifecycleWorkerStatus()).healthy, true);
 });

@@ -9,6 +9,8 @@ import { authenticator } from "otplib";
 import { TwoFactorRequiredError } from "../services/auth-service.js";
 import { randomUUID } from "node:crypto";
 import { EligibilityEnrollmentService } from "../services/eligibility-enrollment-service.js";
+import { env } from "../config/env.js";
+import type { UserRecord } from "../types/index.js";
 
 const redisRepository = new RedisRepository();
 const approvedEnrollment = {
@@ -52,6 +54,34 @@ test("registration requires email verification before password login", async () 
   assert.equal(loggedIn.user.id, registered.user.id);
   assert.ok(loggedIn.tokens.accessToken);
   assert.ok(loggedIn.tokens.refreshToken);
+});
+
+test("current terms acceptance requires affirmative input and records the configured version and server time", async (t) => {
+  const repository = new UserRepository();
+  let writtenId: string | undefined;
+  let writtenVersion: string | null | undefined;
+  let writtenAt: string | null | undefined;
+  let writtenAgeConfirmation: string | null | undefined;
+  t.mock.method(repository, "update", async (id: string, updates: Partial<UserRecord>) => {
+    writtenId = id;
+    writtenVersion = updates.termsVersion;
+    writtenAt = updates.termsAcceptedAt;
+    writtenAgeConfirmation = updates.ageConfirmedAt;
+    return undefined;
+  });
+  const service = new AuthService(repository, redisRepository, undefined, undefined, approvedEnrollment);
+  const before = Date.now();
+
+  await assert.rejects(() => service.acceptCurrentTerms("consent-test-user", { acceptedTerms: false }), /must accept/i);
+  assert.equal(writtenId, undefined);
+
+  await service.acceptCurrentTerms("consent-test-user", { acceptedTerms: true });
+  assert.equal(writtenId, "consent-test-user");
+  assert.equal(writtenVersion, env.TERMS_VERSION);
+  assert.ok(writtenAt);
+  assert.ok(Date.parse(writtenAt) >= before);
+  assert.equal(Date.parse(writtenAt), Date.parse(new Date(writtenAt).toISOString()));
+  assert.equal(writtenAgeConfirmation, undefined);
 });
 
 test("two-factor authentication blocks password login until the authenticator code is valid", async () => {

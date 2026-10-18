@@ -1,4 +1,4 @@
-import { eq, or, and, asc, desc, inArray, gt, lt, sql } from "drizzle-orm";
+import { eq, or, and, asc, desc, inArray, gt, lt, isNull, sql } from "drizzle-orm";
 import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from "@workspace/db/schema";
 import { db, runInDatabaseTransaction } from "@workspace/db";
@@ -143,16 +143,47 @@ export class MessageRepository {
     return Boolean(receipt);
   }
   
-  async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
-    const [updated] = await db.update(messagesTable)
-      .set({ ...updates })
-      .where(and(
+  async update(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async (tx) => {
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable)
+        .set({ ...updates })
+        .where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+        ))
+        .returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return this.update(messageId, updates, authorize);
+  }
+
+  async recordVisibleRead(messageId: string, userId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async (tx) => {
+      const readAt = new Date().toISOString();
+      const [message] = await tx.select().from(messagesTable).where(and(
         eq(messagesTable.id, messageId),
         isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-      ))
-      .returning();
-    return updated as MessageRecord | undefined;
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, readAt)),
+      )).for("update");
+      if (!message) return undefined;
+      await authorize?.();
+      await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
+      if (message.recipientId !== userId || message.senderId === userId) return message as MessageRecord;
+      const [updated] = await tx.update(messagesTable)
+        .set({ seenAt: sql`COALESCE(${messagesTable.seenAt}, ${readAt}::timestamp)` })
+        .where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, readAt)),
+        ))
+        .returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {

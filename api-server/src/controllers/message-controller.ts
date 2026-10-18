@@ -302,8 +302,6 @@ export class MessageController {
     const responseMessage = redactDeletedMessage(message);
     getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", responseMessage);
     return res.status(200).json(createResponse("Message deleted", responseMessage));
-    const io=getIo();if(io)await this.emitMessage(io,message,req.user?.id??"","message:update");
-    return res.status(200).json(createResponse("Message deleted", message));
   };
 
   addReaction = async (req: Request, res: Response) => {

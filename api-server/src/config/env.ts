@@ -50,6 +50,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().default(process.env.GOOGLE_CLIENT_ID || ""),
   RESEND_API_KEY: z.string().default(process.env.RESEND_API_KEY || ""),
   EMAIL_FROM: z.string().default(process.env.EMAIL_FROM || ""),
+  MARKETING_EMAIL_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   WEB_PUSH_VAPID_PUBLIC_KEY: z.string().default(process.env.WEB_PUSH_VAPID_PUBLIC_KEY || ""),
   WEB_PUSH_VAPID_PRIVATE_KEY: z.string().default(process.env.WEB_PUSH_VAPID_PRIVATE_KEY || ""),
   WEB_PUSH_VAPID_SUBJECT: z.string().default(process.env.WEB_PUSH_VAPID_SUBJECT || "mailto:security@yortalks.com"),
@@ -94,6 +95,10 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.parse(process.env);
+
+if (parsedEnv.MARKETING_EMAIL_ENABLED) {
+  throw new Error("[Config Error] Marketing email is not implemented and must remain disabled");
+}
 
 if (parsedEnv.NODE_ENV === "production") {
   const insecureSecrets = new Set([

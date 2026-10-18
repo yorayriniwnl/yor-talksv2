@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { and, eq, or, sql } from "drizzle-orm";
 import { randomUUID } from 'node:crypto';
 import {
   commentsTable,

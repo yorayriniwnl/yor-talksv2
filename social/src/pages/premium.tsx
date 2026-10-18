@@ -83,7 +83,7 @@ export default function Premium() {
       <h1 className="font-display text-4xl font-black tracking-tight">Yor Premium</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">An optional plan for more expression and control. Your core social account stays free.</p>
       <p className="mt-3 text-sm">Posting, standard Stories and messages, basic privacy, blocking, reporting, export and account deletion are free.</p>
-      <div className="mt-5 flex flex-wrap gap-4 text-sm"><Link className="underline underline-offset-4" href="/advanced">Explore each perk</Link><Link className="underline underline-offset-4" href="/settings">Privacy and account settings</Link></div>
+      <div className="mt-5 flex flex-wrap gap-4 text-sm"><Link className="underline underline-offset-4" href="/advanced">Explore each perk</Link><Link className="underline underline-offset-4" href="/settings">Privacy and account settings</Link><Link className="underline underline-offset-4" href="/refund-policy">Public refund policy</Link></div>
     </section>
     {error && <div role="alert" className="rounded-2xl border border-destructive/30 p-4 text-sm"><p>{error}</p><Button variant="outline" className="mt-3" disabled={busy} onClick={() => setAttempt(value => value + 1)}>Retry billing</Button></div>}
     {notice && <p role="status" className="rounded-2xl border border-border p-4 text-sm">{notice}</p>}
@@ -112,8 +112,8 @@ export default function Premium() {
           <p className="mt-3 text-2xl font-bold">{money(plan.priceMinor, plan.currency)} <span className="text-sm font-normal text-muted-foreground">for {plan.durationDays} days</span></p>
           <p className="mt-2 text-sm">One prepaid term. No automatic renewal. You can purchase again after expiry.</p>
           <p className="mt-3 whitespace-pre-wrap text-sm">{plan.refundPolicy}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Terms version: {plan.termsVersion}. Cancelling a paid term preserves access until it ends and does not initiate a refund. Contact support for a refund request.</p>
-          {!covered && !disputed && !pending && state.catalog.available && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><Button className="mt-4 min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button></>}
+          <p className="mt-2 text-sm text-muted-foreground">Terms version: {plan.termsVersion}. Cancelling a paid term preserves access until it ends and does not initiate a refund. Contact support for a refund request. <Link className="underline" href="/refund-policy">View public refund policy</Link>.</p>
+          {!covered && !disputed && !pending && state.catalog.available && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><div className="mt-3 flex flex-wrap items-center gap-4"><Button className="min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button><Link className="text-sm underline underline-offset-4" href="/refund-policy">Review refund policy before checkout</Link></div></>}
         </> : <p className="mt-3 text-sm">A purchase price has not been configured. Yor Premium checkout is unavailable.</p>}
         {!state.catalog.available && plan && <p className="mt-3 text-sm">New purchases are currently unavailable. You can still check existing orders.</p>}
         {pending && <p className="mt-3 text-sm">You have a pending checkout. Resume, recover or cancel it in billing history.</p>}

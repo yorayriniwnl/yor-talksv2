@@ -52,7 +52,11 @@ export class TwoFactorRequiredError extends Error {
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
 export class GoogleSignInNotConfiguredError extends Error {}
-export class EligibilityDecisionUnavailableError extends Error { constructor() { super("Current eligibility is unavailable"); } }
+export class EligibilityDecisionUnavailableError extends Error {
+  constructor() {
+    super("Current eligibility is unavailable");
+  }
+}
 export class RegistrationNotAllowedError extends Error {}
 export class UserAlreadyExistsError extends Error {}
 export type AuthenticatedSession = { user: UserRecord; tokens: AuthTokens; eligibility: EligibilityDecision };
@@ -92,20 +96,15 @@ export class AuthService {
     const email = input.email.trim().toLowerCase();
     const userId = randomUUID();
     const user = await this.transactionRunner(async tx => {
-      // Lock and validate the one-time enrollment before querying or storing
-      // ordinary child/profile identifiers. The enrollment is consumed in the
-      // same transaction as account creation, so concurrent attempts cannot
-      // both create a user.
-      const authorization = await this.enrollmentService.consumeAuthorizedEnrollment(input.enrollmentId,input.registrationNonce,tx);
+      const authorization = await this.enrollmentService.consumeAuthorizedEnrollment(input.enrollmentId, input.registrationNonce, tx);
       if (input.acceptedTerms !== true) throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
       if (!isAllowedEmail(email)) throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
-      const existingEmail = await this.userRepository.findByEmail(email,tx);
-      const existingUsername = await this.userRepository.findByUsername(normalizedUsername,tx);
+      const existingEmail = await this.userRepository.findByEmail(email, tx);
+      const existingUsername = await this.userRepository.findByUsername(normalizedUsername, tx);
       if (existingEmail || existingUsername) throw new UserAlreadyExistsError("An account already exists for that email or username");
-
-      const passwordHash = await bcrypt.hash(input.password,10);
+      const passwordHash = await bcrypt.hash(input.password, 10);
       const consentTimestamp = new Date().toISOString();
-      const minor = authorization.experience !== 'adult_18_plus';
+      const minor = authorization.experience !== "adult_18_plus";
       const record: UserRecord = {
         id: userId,
         username: normalizedUsername,
@@ -113,8 +112,6 @@ export class AuthService {
         passwordHash,
         termsVersion: env.TERMS_VERSION,
         termsAcceptedAt: consentTimestamp,
-        // This legacy field remains a self-attestation in old accounts. A
-        // verified enrollment is recorded only in the private eligibility tables.
         ageConfirmedAt: null,
         fullName: input.fullName,
         bio: "",
@@ -136,21 +133,18 @@ export class AuthService {
           onboardingCompleted: false,
         },
         emailVerified: false,
-        contactIdentityDigest: getContactIdentifierDigest("email",email),
+        contactIdentityDigest: getContactIdentifierDigest("email", email),
         passwordResetRequired: false,
         lastLoginAt: null,
         devices: [],
         blockedUsers: [],
         mutedUsers: [],
-        privacy: { profileVisibility: "private",messageRequests: false,allowDmFromStrangers: false },
+        privacy: { profileVisibility: "private", messageRequests: false, allowDmFromStrangers: false },
       };
-      const created = await this.userRepository.create(record,tx);
-      await this.enrollmentService.bindAuthorizedEnrollment(authorization,input.registrationNonce,userId,tx);
+      const created = await this.userRepository.create(record, tx);
+      await this.enrollmentService.bindAuthorizedEnrollment(authorization, input.registrationNonce, userId, tx);
       return created;
     });
-    // Email delivery happens after the atomic account/enrollment commit. If a
-    // provider is temporarily unavailable the unverified account can use the
-    // existing resend path; deleting it would also destroy its consumed proof.
     const verificationToken = await this.requestEmailVerification(user.id);
     return {
       user,
@@ -495,7 +489,7 @@ export class AuthService {
       const nextRefreshToken = this.issueRefreshToken(currentUser, deviceId);
       const nextRefreshTokenHash = await this.redisRepository.hashToken(nextRefreshToken);
       const rotated = await this.redisRepository.rotateValueStrict(
-        `session:${user.id}:${deviceId}`,
+        `session:${currentUser.id}:${deviceId}`,
         refreshTokenHash,
         nextRefreshTokenHash,
         7 * 24 * 60 * 60,
@@ -613,7 +607,7 @@ export class AuthService {
     return this.userRepository.patchPrivacy(userId, effectivePrivacy);
   }
 
-  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge?: boolean }): Promise<UserRecord | undefined> {
+  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean }): Promise<UserRecord | undefined> {
     if (input.acceptedTerms !== true) {
       throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
     }
@@ -763,9 +757,6 @@ export class AuthService {
     }
     const updatedUser = await this.userRepository.recordLogin(current, updates);
     if (!updatedUser) throw new Error('Credentials changed; sign in again');
-    // Resolve current proof, policy, consent and moderation state after all
-    // identity/MFA checks and the login write. A restricted result still gets
-    // an identity session; request middleware applies the route boundary.
     const eligibility = await this.currentEligibilityDecision(updatedUser.id);
     const finalIdentity = await this.userRepository.findById(updatedUser.id);
     if (!finalIdentity || !this.isSessionAvailable(finalIdentity) || (finalIdentity.authVersion ?? 0) !== (updatedUser.authVersion ?? 0)) {

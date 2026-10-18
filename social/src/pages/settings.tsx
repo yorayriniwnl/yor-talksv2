@@ -568,7 +568,7 @@ export default function Settings() {
     try {
       await api.deleteAccount(deletePassword);
       await logout();
-      toast.success('Your Yor account and associated data have been deleted');
+      toast.success('Your account was deleted. Financial, security, and backup records may remain under applicable retention rules.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete your account');
     } finally {
@@ -643,7 +643,7 @@ export default function Settings() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Help improve Yor</p>
-              <p className="text-xs leading-5 text-muted-foreground">Allow anonymous navigation and performance events. This stays off unless current account rules permit adult analytics and you choose to enable it.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Allow optional navigation and performance events. This stays off unless current account rules permit adult analytics and you choose to enable it.</p>
             </div>
             <Switch
               aria-label="Allow optional analytics"
@@ -655,7 +655,7 @@ export default function Settings() {
               }}
             />
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> for details.</p>
+          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookie and Storage Notice</a> for details.</p>
         </section>
 
         <CompanionPetSettings />

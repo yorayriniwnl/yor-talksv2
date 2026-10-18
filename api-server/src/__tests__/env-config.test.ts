@@ -5,11 +5,11 @@ import { test } from "node:test";
 
 test('eligibility defaults stay unavailable and sensitive feature releases fail closed', () => {
   const defaults = spawnSync(process.execPath, ['--import','tsx','--eval',
-    "import {env} from './src/config/env.ts'; console.log(JSON.stringify({adapter:env.ELIGIBILITY_ASSURANCE_ADAPTER,registry:env.ELIGIBILITY_POLICY_SOURCE,seller:env.SELLER_ENABLED,memberships:env.MEMBERSHIPS_ENABLED,ai:env.AI_COMPANION_ENABLED}))"],
+    "import {env} from './src/config/env.ts'; console.log(JSON.stringify({adapter:env.ELIGIBILITY_ASSURANCE_ADAPTER,registry:env.ELIGIBILITY_POLICY_SOURCE,seller:env.SELLER_ENABLED,memberships:env.MEMBERSHIPS_ENABLED,ai:env.AI_COMPANION_ENABLED,marketingEmail:env.MARKETING_EMAIL_ENABLED}))"],
     { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'false', SELLER_ENABLED: '', MEMBERSHIPS_ENABLED: '', AI_COMPANION_ENABLED: '' } });
+      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'false', SELLER_ENABLED: '', MEMBERSHIPS_ENABLED: '', AI_COMPANION_ENABLED: '', MARKETING_EMAIL_ENABLED: 'false' } });
   assert.equal(defaults.status, 0, defaults.stderr);
-  assert.deepEqual(JSON.parse(defaults.stdout.trim()), { adapter: 'unavailable', registry: 'approved_registry', seller: false, memberships: false, ai: false });
+  assert.deepEqual(JSON.parse(defaults.stdout.trim()), { adapter: 'unavailable', registry: 'approved_registry', seller: false, memberships: false, ai: false, marketingEmail: false });
   for (const input of [{ ELIGIBILITY_ASSURANCE_ADAPTER: 'fixture' }, { ELIGIBILITY_POLICY_SOURCE: 'fixture' }, { AI_COMPANION_ENABLED: 'treu' }]) {
     const result = spawnSync(process.execPath, ['--import','tsx','--eval', "import './src/config/env.ts'"],
       { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
@@ -17,6 +17,17 @@ test('eligibility defaults stay unavailable and sensitive feature releases fail 
     assert.notEqual(result.status, 0);
     assert.match(`${result.stdout}\n${result.stderr}`, /ELIGIBILITY_ASSURANCE_ADAPTER|ELIGIBILITY_POLICY_SOURCE|AI_COMPANION_ENABLED/);
   }
+});
+
+test("marketing email cannot be enabled until an unsubscribe and preference path exists", () => {
+  const result = spawnSync(process.execPath, ["--import", "tsx", "--eval", "import './src/config/env.ts'"], {
+    cwd: path.resolve(import.meta.dirname, "../.."),
+    encoding: "utf8",
+    timeout: 10_000,
+    env: { ...process.env, NODE_ENV: "production", PUBLIC_BETA: "false", MARKETING_EMAIL_ENABLED: "true" },
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Marketing email is not implemented and must remain disabled/);
 });
 
 test("invalid boolean environment values fail closed at API startup", () => {

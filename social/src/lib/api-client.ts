@@ -4,7 +4,7 @@
 // VITE_API_BASE_URL without changing application code.
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
-import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
+import { parsePremiumBilling, parsePremiumCatalog, parsePremiumOrder } from './premium-billing-contract';
 import { parseCheckoutHistory } from './checkout-contract';
 import {
   challengeReceiptSchema,
@@ -52,6 +52,7 @@ export interface PremiumBillingState {
   orders: PremiumOrder[];
   enabledFeatures: Record<string, boolean>;
 }
+export type PremiumCatalog = PremiumBillingState['catalog'];
 export type FeedMode = 'for_you' | 'following' | 'favorites';
 
 export interface BackendAchievement {
@@ -803,6 +804,7 @@ export const api = {
   updateProfile: (payload: { fullName?: string; bio?: string; avatarMediaId?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  getPremiumCatalog: () => request<PremiumCatalog>('/premium/catalog').then(parsePremiumCatalog),
   getPremiumBilling: () => request<PremiumBillingState>('/premium/me').then(parsePremiumBilling),
   createPremiumOrder: (payload: { idempotencyKey: string; acceptedTermsVersion: string; acceptedPriceMinor: number }) =>
     request<PremiumOrder>('/premium/orders', { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumOrder),

@@ -709,7 +709,9 @@ test('Studio Post captures camera pixels as a bounded approved JPEG and rejects 
   await page.goto('/videos');
   await page.getByRole('button', { name: 'Watch Synthetic camera entry', exact: true }).click();
   await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
-  const studio = page.getByRole('dialog').filter({ hasText: 'Ultra Studio Camera' });
+  const studio = page.getByRole('dialog', { name: 'Studio Camera' });
+  await expect(studio.getByRole('button', { name: 'Flip camera' })).toBeVisible();
+  await expect(studio.getByRole('button', { name: 'Add interactive stickers' })).toBeVisible();
   await studio.locator('#studio-content-category').selectOption('technology');
   await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
   await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
@@ -877,6 +879,7 @@ test('Premium checkout accepts configured terms, handles failure, recovers payme
     };
   });
   await page.goto('/premium');
+  await expect(page.getByRole('link', { name: 'Review refund policy before checkout' })).toBeVisible();
   await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Upgrade to Yor Premium' }).click();
   await expect(page.getByRole('alert')).toContainText('Payment did not complete');
   await page.getByRole('button', { name: 'Recover payment', exact: true }).click();
@@ -1247,13 +1250,34 @@ test('discovery loads beyond an empty following feed without changing the select
 
 test("public beta legal pages show configured, dated policy content", async ({ page }) => {
   await installApiBoundary(page);
+  let premiumPolicyAvailable = true;
+  await page.route('**/api/premium/catalog', (route) => json(route, {
+    available: premiumPolicyAvailable,
+    plan: premiumPolicyAvailable ? premiumPlan : null,
+    operationalFeatures: {},
+    automaticRenewal: false,
+    billingModel: 'prepaid_fixed_term',
+    testMode: true,
+    supportEmail: 'test-support@example.test',
+  }));
   await page.goto("/privacy");
   await expect(page.getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
   await expect(page.getByText("test-public-beta-1", { exact: false })).toBeVisible();
+  await expect(page.getByText(/no approved comprehensive retention schedule/i)).toBeVisible();
   await expect(page.getByText(/draft|not configured/i)).toHaveCount(0);
   await expect(page.locator('a button, button a')).toHaveCount(0);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([]);
+  await page.goto('/cookies');
+  await expect(page.getByRole('heading', { name: 'Cookie and Storage Notice' })).toBeVisible();
+  await expect(page.getByText(/seven-day maximum age/i)).toBeVisible();
+  await page.goto('/refund-policy');
+  await expect(page.getByRole('heading', { name: 'Premium Refund Policy' })).toBeVisible();
+  await expect(page.getByText(premiumPlan.refundPolicy, { exact: true })).toBeVisible();
+  await expect(page.getByText(/no automatic renewal/i)).toBeVisible();
+  premiumPolicyAvailable = false;
+  await page.goto('/refund-policy');
+  await expect(page.getByText(/purchases are unavailable until the operator publishes and approves/i)).toBeVisible();
 });
 
 test("public beta requires consent before opening protected social routes", async ({ page }) => {
@@ -1261,6 +1285,21 @@ test("public beta requires consent before opening protected social routes", asyn
   await page.goto("/explore");
   await expect(page).toHaveURL(/\/consent$/);
   await expect(page.getByRole("heading", { name: "Review the rules before you enter" })).toBeVisible();
+  await expect(page.getByRole("checkbox")).not.toBeChecked();
+  await expect(page.getByText(/not marketing consent/i)).toBeVisible();
+  await expect(page.getByText(/this checkbox does not verify your age/i)).toBeVisible();
+});
+
+test('skip navigation is keyboard reachable and focus indicators remain visible', async ({ page }) => {
+  await installApiBoundary(page, { ...user, avatarUrl: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/%3E' });
+  await page.goto('/');
+  await expect(page.locator('img[src^="data:image/svg+xml"][alt=""]')).not.toHaveCount(0);
+  await page.keyboard.press('Tab');
+  const skipLink = page.getByRole('link', { name: 'Skip to content' });
+  await expect(skipLink).toBeFocused();
+  await expect.poll(() => skipLink.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main-content')).toBeFocused();
 });
 
 test('comments retain failed drafts, prevent duplicate sends, and hide disabled payments', async ({ page }) => {
@@ -1592,6 +1631,34 @@ test('privacy preferences show confirmed state, prevent duplicate saves, and rec
   await expect(requests).toBeChecked();
 });
 
+test('optional analytics stays off until explicit opt-in and clears local events on withdrawal', async ({ page }) => {
+  await installApiBoundary(page);
+  let telemetryRequests = 0;
+  await page.route('**/api/telemetry/events', async (route) => {
+    telemetryRequests++;
+    return json(route, { accepted: true });
+  });
+  await page.goto('/settings');
+  const analytics = page.getByRole('switch', { name: 'Allow optional analytics' });
+  await expect(analytics).toBeEnabled();
+  await expect(analytics).not.toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+  await page.goto('/privacy');
+  expect(telemetryRequests).toBe(0);
+  await page.goto('/settings');
+  await analytics.click();
+  await expect(analytics).toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBe(user.id);
+  await analytics.click();
+  await expect(analytics).not.toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:consent:v1'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('yor:telemetry:queue:v1'))).toBeNull();
+  const requestsAfterWithdrawal = telemetryRequests;
+  await page.reload();
+  await expect(page.getByRole('switch', { name: 'Allow optional analytics' })).not.toBeChecked();
+  expect(telemetryRequests).toBe(requestsAfterWithdrawal);
+});
+
 test('activity failures are retryable and never look caught up', async ({ page }) => {
   await installApiBoundary(page);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1703,6 +1770,7 @@ test('Studio camera supports accessible manual stop, blocks duplicate starts, an
     Object.defineProperty(window, 'MediaRecorder', {
       configurable: true,
       value: class {
+        static isTypeSupported() { return true; }
         state = 'inactive';
         mimeType = 'video/webm';
         ondataavailable: ((event: { data: Blob }) => void) | null = null;
@@ -1739,15 +1807,15 @@ test('Studio camera supports accessible manual stop, blocks duplicate starts, an
   await page.goto('/videos');
   await page.getByRole('button', { name: 'Watch Synthetic camera clip' }).click();
   await page.getByRole('button', { name: 'Use this sound' }).click();
-  await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start recording' }).evaluate((button) => {
+  await expect(page.getByRole('button', { name: 'Record video' })).toBeVisible();
+  await page.getByRole('button', { name: 'Record video' }).evaluate((button) => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
   await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
   expect(await page.evaluate(() => window.__recordingStarts)).toBe(1);
   await page.getByRole('button', { name: 'Stop recording' }).click();
-  await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Record video' })).toBeVisible();
   expect(await page.evaluate(() => window.__recordingStops)).toBe(1);
   await page.getByRole('button', { name: 'Close studio camera' }).click();
   await expect(page.getByRole('button', { name: 'Close studio camera' })).toHaveCount(0);
