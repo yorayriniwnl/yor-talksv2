@@ -64,7 +64,7 @@ jobs:
           pnpm --dir api-server audit --prod
           pnpm --dir social audit --prod
           pnpm --dir lib/db audit --prod
-        run: pnpm audit --prod
+          pnpm audit --prod
 
       - name: Verify API contract is synchronized
         run: pnpm contract:check

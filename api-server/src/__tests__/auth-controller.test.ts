@@ -8,10 +8,12 @@ import { UserRepository } from "../repositories/user-repository.js";
 import { pool } from "@workspace/db";
 import { randomUUID } from "node:crypto";
 import { EligibilityEnrollmentService } from "../services/eligibility-enrollment-service.js";
+import { env } from "../config/env.js";
 
 type CapturedResponse = Response & {
   statusCode: number;
   body: unknown;
+  setCookie: { name: string; value: string; options: Record<string, unknown> } | null;
   clearedCookie: { name: string; options: Record<string, unknown> } | null;
 };
 
@@ -24,6 +26,7 @@ after(async () => {
 const makeResponse = () => {
   let statusCode = 200;
   let body: unknown;
+  let setCookie: CapturedResponse["setCookie"] = null;
   let clearedCookie: { name: string; options: Record<string, unknown> } | null = null;
 
   const res = {
@@ -35,6 +38,9 @@ const makeResponse = () => {
     },
     get body() {
       return body;
+    },
+    get setCookie() {
+      return setCookie;
     },
     get clearedCookie() {
       return clearedCookie;
@@ -50,11 +56,14 @@ const makeResponse = () => {
       body = payload;
       return this;
     },
+    cookie(name: string, value: string, options: Record<string, unknown>) {
+      setCookie = { name, value, options };
+      return this;
+    },
     clearCookie(name: string, options: Record<string, unknown>) {
       clearedCookie = { name, options };
       return this;
     },
-    cookie() { return this; },
   } as unknown as CapturedResponse;
 
   return res;
@@ -130,6 +139,53 @@ test("auth controller includes the number-matching details", async () => {
     matchingNumber: 42,
     expiresAt: "2099-01-01T00:00:00.000Z",
   });
+});
+
+test("production login keeps the refresh token in a secure HttpOnly cookie", async () => {
+  const previousEnvironment = env.NODE_ENV;
+  const previousSameSite = env.AUTH_COOKIE_SAME_SITE;
+  env.NODE_ENV = "production";
+  env.AUTH_COOKIE_SAME_SITE = "lax";
+  try {
+    const controller = new AuthController({
+      login: async () => ({
+        user: {
+          id: "test-user",
+          username: "test-user",
+          fullName: "Test User",
+          bio: "",
+          bioStyleId: null,
+          avatarUrl: null,
+          role: "user",
+          createdAt: "2026-10-18T00:00:00.000Z",
+          updatedAt: "2026-10-18T00:00:00.000Z",
+          followerCount: 0,
+          followingCount: 0,
+          totpSecret: null,
+        },
+        eligibility: { activated: true },
+        tokens: { accessToken: "test-access-token", refreshToken: "test-refresh-token" },
+      }),
+    } as unknown as AuthService);
+    const res = makeResponse();
+
+    await controller.login({ body: {} } as Request, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.setCookie?.name, "refreshToken");
+    assert.equal(res.setCookie?.value, "test-refresh-token");
+    assert.deepEqual(res.setCookie?.options, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    assert.equal("refreshToken" in (res.body as { data: { tokens: Record<string, unknown> } }).data.tokens, false);
+  } finally {
+    env.NODE_ENV = previousEnvironment;
+    env.AUTH_COOKIE_SAME_SITE = previousSameSite;
+  }
 });
 
 test("auth controller clears the refresh cookie even if server-side revocation fails", async () => {

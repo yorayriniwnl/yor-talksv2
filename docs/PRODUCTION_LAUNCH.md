@@ -72,6 +72,55 @@ The 14 October local production Compose smoke found that Alertmanager v0.28.1 ex
 - Decide whether this deployment is open globally or a closed beta. For a closed beta, set `ALLOWED_EMAIL_DOMAINS` and document the approved domains.
 - Publish reviewed Privacy, Terms, Community Guidelines, copyright/takedown process, retention schedule, support address and the appointed grievance officer’s name/contact. The in-app pages intentionally identify the legal fields that are still unconfigured.
 
+### Staging deployment security checks
+
+Run these checks against the approved staging host after deploying. `curl`
+validates the TLS certificate by default; do not add `--insecure` or `-k`.
+
+```bash
+APP_ORIGIN=https://app.your-domain.example
+API_ORIGIN=https://api.your-domain.example
+
+# HTTP must redirect to HTTPS; HTTPS must validate and serve successfully.
+curl --silent --show-error --output /dev/null --dump-header - "http://${APP_ORIGIN#https://}/"
+curl --fail --silent --show-error --output /dev/null --write-out 'HTTPS %{http_code}\n' "$APP_ORIGIN/"
+
+# Public health must work, and readiness must be healthy before opening traffic.
+curl --fail --silent --show-error "$API_ORIGIN/api/healthz"
+curl --fail --silent --show-error "$API_ORIGIN/api/readyz"
+
+# The allowed origin must receive the exact CORS origin and credentials headers.
+curl --silent --show-error --output /dev/null --dump-header - --request OPTIONS \
+  --header "Origin: $APP_ORIGIN" \
+  --header 'Access-Control-Request-Method: POST' \
+  --header 'Access-Control-Request-Headers: content-type' \
+  "$API_ORIGIN/api/auth/refresh"
+
+# An unlisted origin must receive no Access-Control-Allow-Origin header, and a
+# direct cookie-authenticated refresh attempt from it must be rejected with 403.
+curl --silent --show-error --output /dev/null --dump-header - --request OPTIONS \
+  --header 'Origin: https://untrusted.invalid' \
+  --header 'Access-Control-Request-Method: POST' \
+  --header 'Access-Control-Request-Headers: content-type' \
+  "$API_ORIGIN/api/auth/refresh"
+curl --include --silent --show-error --request POST \
+  --header 'Origin: https://untrusted.invalid' \
+  --header 'Content-Type: application/json' --data '{}' \
+  "$API_ORIGIN/api/auth/refresh"
+```
+
+After a successful staging sign-in, inspect the refresh response's `Set-Cookie`
+in browser developer tools without copying or recording its value. Confirm
+`HttpOnly`, `Secure`, `Path=/`, and the configured `SameSite` value. Exercise
+logout and refresh, then confirm the cookie is cleared with matching attributes.
+Also confirm the browser's trusted frontend can refresh while an unlisted origin
+is rejected. Never use production user credentials for this acceptance check.
+
+The repository tests and production config validator verify fail-closed
+configuration rules, but they do not prove the deployed host has correct DNS,
+TLS, proxy trust, firewall, or session behavior. Keep traffic closed until these
+staging checks and the real provider acceptance checks below have evidence.
+
 ## 3. Deploy
 
 ```bash
@@ -99,7 +148,28 @@ docker compose --env-file .env.production -f docker-compose.production.yml logs 
 
 ## 4. Scheduled operations and monitoring
 
-Production Compose includes internal-only Prometheus, Alertmanager, and a textfile exporter for backup status. Prometheus scrapes `/api/metrics` using the mounted `metrics_bearer_token` secret. Its alert rules cover API scrape failures, shared Redis metric availability, worker failures, failed/stale analytics rollups, and missing/stale/failed backups. Configure `ALERTMANAGER_WEBHOOK_URL` to a reachable HTTPS receiver restricted to the deployment's egress; `ALERTMANAGER_WEBHOOK_USER` and a mounted password file authenticate the receiver, so do not put credentials in the URL. The monitoring UIs are not published to the internet. Inspect service state/logs with:
+Production Compose includes internal-only Prometheus, Alertmanager, and a textfile exporter for backup status. Prometheus scrapes `/api/metrics` using the mounted `metrics_bearer_token` secret. Its alert rules cover API scrape failures, shared Redis metric availability, worker failures, failed/stale analytics rollups, and missing/stale/failed backups. Configure `ALERTMANAGER_WEBHOOK_URL` to a reachable HTTPS receiver restricted to the deployment's egress; `ALERTMANAGER_WEBHOOK_USER` and a mounted password file authenticate the receiver, so do not put credentials in the URL. The monitoring UIs are not published to the internet.
+
+The sample webhook URL is a placeholder. After configuring an approved staging
+receiver and its protected password file, verify actual delivery with a
+short-lived synthetic alert; this can notify recipients, so coordinate with the
+receiver owner first. The Alertmanager route has a 30-second group wait:
+
+```bash
+sudo docker compose --env-file /etc/yor-talks/.env.production \
+  -f /opt/yor-talks/docker-compose.production.yml exec -T alertmanager \
+  /bin/amtool alert add YorTalksDeliveryTest severity=warning \
+  --end="$(date -u -d '+5 minutes' +%Y-%m-%dT%H:%M:%SZ)" \
+  --annotation=summary='Controlled staging notification test' \
+  --annotation=description='Confirm receipt, then allow the test alert to expire'
+```
+
+Confirm receipt in the receiver's delivery log using its timestamp or delivery
+ID, wait for the short test alert to expire, and record only redacted evidence.
+Compose parsing and `amtool check-config` prove configuration syntax, not
+network reachability, credential acceptance, or notification delivery.
+
+Inspect service state and logs with:
 
 ```bash
 docker compose --env-file /etc/yor-talks/.env.production -f /opt/yor-talks/docker-compose.production.yml ps prometheus alertmanager backup-metrics-exporter

@@ -44,7 +44,7 @@ Previously documented repository controls (historical; not re-verified in this s
 - Redis failover, multi-instance behavior, rolling restart, and sustained load.
 - Live backup/restore drills to verify recovery procedures
 
-The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Configure external alerts for `shared_store_up == 0`, sustained worker failure increases, API readiness failures, and stale/failed analytics runs. No alert receiver or scrape service is provisioned by Compose.
+The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by admin/moderator authentication. Redis-backed `yor_cluster_http_requests_total`, `yor_cluster_http_request_duration_seconds_sum`, and `yor_worker_failed_jobs_total` are shared across replicas; configure the scraper to treat each replica's shared snapshot as one value (for example, `max` by label set), not to sum duplicate snapshots. Per-process `yor_http_*` request series are local. `yor_http_metrics_shared_store_up` reports Redis counter availability. Notification job failures are persisted in Redis counters; feed ranking is intentionally disabled. Prometheus scraping and Alertmanager routing are provisioned by Compose; the configured webhook receiver and live alert delivery remain external and unverified.
 
 ### Staging acceptance checklist
 
@@ -81,8 +81,8 @@ The API exposes bounded Prometheus counters in `GET /api/metrics`, protected by 
 
 ### API Diagnostics
 - Added `/api/diagnostics` endpoint to verify queue connectivity and Redis version compatibility
-- Improved `/api/readyz` endpoint to include environment, Node version, and Redis version in response
-- Health check responses now include detailed service status and environment context
+- Production `/api/readyz` responses omit dependency names, versions, and exception details; non-production retains diagnostics
+- Non-production health checks retain detailed service/runtime diagnostics; production health checks omit internals
 
 ### Database Backup & Restore
 
@@ -160,19 +160,13 @@ Expected response:
 {
   "status": "healthy",
   "timestamp": "2024-09-03T...",
-  "services": {
-    "database": "up",
-    "redis": "up",
-    "api": "up"
-  },
-  "details": {
-    "environment": "production",
-    "nodeVersion": "v24.x.x",
-    "redisVersion": "7.x.x"
-  },
   "uptime": 123.45
 }
 ```
+
+Production responses intentionally omit dependency names, runtime versions,
+and internal exception messages. On failure the endpoint returns HTTP 503 with
+`{"status":"unhealthy","timestamp":"...","error":"Readiness checks failed"}`.
 
 ### Database Backup & Restore
 

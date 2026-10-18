@@ -4,7 +4,7 @@ Status: repository hardening is partial; public production launch is blocked pen
 
 ## Executive summary
 
-This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an isolated restore drill remain external launch gates.
+This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an off-host staging restore drill remain external launch gates.
 
 ## Scope and boundary
 
@@ -22,7 +22,7 @@ This report does not claim:
 - live provider acceptance
 - production TLS or DNS validation
 - remote monitoring/alert verification
-- backup/restore drill success
+- production/off-host backup durability or staging restore drill success
 - real end-user traffic validation
 - public deployment safety beyond repo-level checks
 
@@ -136,7 +136,8 @@ The following remain intentionally unverified and must be treated as launch gate
 ### P1 remaining risks
 
 1. Backup and restore drill
-   - database backups and restore procedures need testing in a real environment
+   - This session successfully exercised the encrypted backup, local rclone copy, archive verification, and restore into a separate empty ephemeral PostgreSQL 16 database using synthetic data and a temporary age identity.
+   - The local filesystem remote does not verify the deployment's off-host remote, retention policy, protected recovery identity, or restore environment; complete and record that staging drill before launch.
 
 2. Production smoke deployment
    - only repository-oriented checks are complete; actual public edge availability is not proven

@@ -29,6 +29,7 @@ async function withHealthTimeout<T>(operation: Promise<T>, dependency: string, t
 }
 
 const readinessHandler = async (_req: Request, res: Response) => {
+  const production = env.NODE_ENV === "production";
   const services: Record<string, "up" | "down"> = {
     database: "down",
     redis: "down",
@@ -37,10 +38,9 @@ const readinessHandler = async (_req: Request, res: Response) => {
     lifecycleWorker: "down",
   };
 
-  const details: Record<string, unknown> = {
-    environment: env.NODE_ENV,
-    nodeVersion: process.version,
-  };
+  const details: Record<string, unknown> = production
+    ? {}
+    : { environment: env.NODE_ENV, nodeVersion: process.version };
 
   try {
     await withHealthTimeout(db.execute(sql`SELECT 1`), "Database");
@@ -53,7 +53,7 @@ const readinessHandler = async (_req: Request, res: Response) => {
       throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
     }
     services.redis = "up";
-    if (redis.version) {
+    if (redis.version && !production) {
       details.redisVersion = redis.version;
     }
 
@@ -70,17 +70,17 @@ const readinessHandler = async (_req: Request, res: Response) => {
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
-      services,
-      details,
+      ...(production ? {} : { services, details }),
       uptime: process.uptime(),
     });
   } catch (error) {
     res.status(503).json({
       status: "unhealthy",
       timestamp: new Date().toISOString(),
-      services,
-      details,
-      error: error instanceof Error ? error.message : "One or more dependencies are unavailable",
+      ...(production ? {} : { services, details }),
+      error: production
+        ? "Readiness checks failed"
+        : error instanceof Error ? error.message : "One or more dependencies are unavailable",
     });
   }
 };
