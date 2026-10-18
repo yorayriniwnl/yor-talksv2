@@ -76,7 +76,12 @@ jobs:
         run: pnpm contract:check
 
       - name: Run backend infrastructure regression tests
-        run: node --test tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs
+        run: node --test tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs tests/realtime-smoke.test.mjs tests/restore-deletion-verification.test.mjs
+
+      - name: Verify restored-account detection against disposable PostgreSQL
+        run: node --test ops/backup/restore-deletion-database.test.mjs
+        env:
+          RESTORE_VERIFICATION_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
       - name: Build database package
         run: pnpm --filter @workspace/db build
@@ -143,6 +148,7 @@ jobs:
       - name: Smoke test production container stack
         env:
           WEB_PORT: 18080
+          SMOKE_BROWSER_ORIGIN: https://ci.example
         run: |
           set -euo pipefail
           compose=(docker compose --project-name yor-talks-ci-release --env-file ops/ci-production.env -f docker-compose.production.yml -f ops/ci-provider-isolation.compose.yml)

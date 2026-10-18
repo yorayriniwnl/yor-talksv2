@@ -1,5 +1,7 @@
 # Account Deletion Verification
 
+Continuation on 19 October 2026: a new read-only restored-account checker requires an independently approved deletion journal digest/cutoff and explicit recovery database. It rejects restored account identities listed as erased, without changing rows. Unit and actual PostgreSQL/CLI verification pass **4/4, zero failed/skipped**; [local evidence](evidence/restore-deletion-verification-local.txt). The encrypted CI rehearsal now includes historical identity detection and synthetic reconciliation. It does not replace full `AccountService` deletion replay, external journal completeness, shared-record review or provider erasure. See [recovery operator instructions](../../../ops/backup/README.md). PRIV-04 remains open for these requirements.
+
 Audit date: 2026-10-18 (Asia/Calcutta). Requirement 20. All executable verification uses disposable synthetic identities, local PostgreSQL/Redis and provider mocks. No production account or provider object was deleted.
 
 ## Contract and authorization

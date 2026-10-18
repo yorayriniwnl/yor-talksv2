@@ -1,0 +1,13 @@
+✔ isolated PostgreSQL and the actual CLI refuse a historical erased account until identity reconciliation (1544.5108ms)
+✔ recovery manifest requires an independent digest/checkpoint and minimizes identifiers (11.0169ms)
+✔ restored account detection rolls back and fails until the erased identity is absent (1.1667ms)
+✔ wrong recovery target, invalid count and database errors cannot pass reconciliation (0.7335ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1669.2552
+Native exit code: 0
