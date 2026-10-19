@@ -49,8 +49,11 @@ test("concurrent reactions from different users are preserved and repeated react
   const sender = await createTestUser(users);
   const first = await createTestUser(users);
   const second = await createTestUser(users);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository());
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
   const group = await service.createGroupChat(sender.id, [first.id, second.id], "Concurrent reactions");
+  await service.acceptGroupInvitation(group.invitations[0]!.id, first.id, group.invitations[0]!.updatedAt);
+  const secondInvitation = (await service.listGroupInvitations(second.id))[0]!;
+  await service.acceptGroupInvitation(secondInvitation.id, second.id, secondInvitation.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "Concurrent reactions");
   await Promise.all([
     service.addReaction(message.id, first.id, "heart"),
@@ -163,13 +166,16 @@ test("deleting a group creator or member preserves shared group history and remo
   const users = new UserRepository();
   const redis = new RedisRepository();
   const accountService = new AccountService(users, redis);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users);
+  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
 
   const creator = await createTestUser(users, { passwordHash: await bcrypt.hash('creator-password', 10) });
   const memberA = await createTestUser(users, { passwordHash: await bcrypt.hash('member-a-password', 10) });
   const memberB = await createTestUser(users, { passwordHash: await bcrypt.hash('member-b-password', 10) });
 
   const creatorGroup = await service.createGroupChat(creator.id, [memberA.id, memberB.id], 'Creator retention');
+  await service.acceptGroupInvitation(creatorGroup.invitations[0]!.id, memberA.id, creatorGroup.invitations[0]!.updatedAt);
+  const memberBInvitation = (await service.listGroupInvitations(memberB.id))[0]!;
+  await service.acceptGroupInvitation(memberBInvitation.id, memberB.id, memberBInvitation.updatedAt);
   await service.sendMessageToConversation(creator.id, creatorGroup.id, 'Creator message');
   await service.sendMessageToConversation(memberA.id, creatorGroup.id, 'Survivor message');
   assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), true);
@@ -185,6 +191,9 @@ test("deleting a group creator or member preserves shared group history and remo
   const target = await createTestUser(users, { passwordHash: await bcrypt.hash('target-password', 10) });
   const other = await createTestUser(users, { passwordHash: await bcrypt.hash('other-password', 10) });
   const targetGroup = await service.createGroupChat(survivor.id, [target.id, other.id], 'Member retention');
+  await service.acceptGroupInvitation(targetGroup.invitations[0]!.id, target.id, targetGroup.invitations[0]!.updatedAt);
+  const otherInvitation = (await service.listGroupInvitations(other.id))[0]!;
+  await service.acceptGroupInvitation(otherInvitation.id, other.id, otherInvitation.updatedAt);
   await service.sendMessageToConversation(target.id, targetGroup.id, 'Departing member message');
   await service.sendMessageToConversation(other.id, targetGroup.id, 'Other member message');
   assert.equal(await accountService.deleteAccount(target.id, 'target-password'), true);
