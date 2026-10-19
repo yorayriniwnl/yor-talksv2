@@ -68,8 +68,6 @@ export class AccountService {
         isNull(messagesTable.deletedAt),
         or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
       )),
-      db.select().from(messagesTable).where(and(eq(messagesTable.senderId, userId), visibleMessagePredicate(exportBoundary))),
-      db.select().from(messagesTable).where(and(eq(messagesTable.recipientId, userId), visibleMessagePredicate(exportBoundary))),
       db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
       db.select().from(storyReactionsTable).where(eq(storyReactionsTable.userId, userId)),
       db.select().from(postLikesTable).where(eq(postLikesTable.userId, userId)),
