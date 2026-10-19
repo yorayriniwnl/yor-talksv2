@@ -59,8 +59,9 @@ test("expired and deleted messages are excluded at the conversation response bou
   };
   const deleted = { ...expired, id: "deleted-message", expiresAt: null, deletedAt: new Date().toISOString() };
   const service = new MessageService(
-    { getMembers: async () => ["sender", "recipient"] } as never,
+    { getMembers: async () => ["sender", "recipient"], findById: async () => ({ isGroup: false }) } as never,
     { listConversation: async () => [expired, deleted] } as never,
+    undefined, undefined, undefined, allowTestContacts,
   );
   assert.deepEqual(await service.listConversationPage("conversation-1", "recipient", {}), []);
 });
@@ -98,7 +99,8 @@ test("expired retained messages cannot leak through send retries, edits, reactio
   assert.equal(await service.editMessage(expired.id, sender.id, 'Resurrected'), undefined);
   await assert.rejects(() => service.addReaction(expired.id, recipient.id, 'like'), /Message not found/);
   await assert.rejects(() => service.pinMessage(expired.id, recipient.id), /Message not found/);
-  assert.equal((await messages.findById(expired.id))?.content, expired.content);
+  const retained = await pool.query<{ content: string }>("SELECT content FROM messages WHERE id = $1", [expired.id]);
+  assert.equal(retained.rows[0]?.content, expired.content);
 });
 
 const fixtureUsers: string[] = [];
