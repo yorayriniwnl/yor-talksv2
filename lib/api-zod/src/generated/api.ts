@@ -1711,6 +1711,32 @@ export const PostInvitesGenerateResponse = zod.object({
 
 
 /**
+ * @summary Get /launch/unsubscribe
+ */
+export const GetLaunchUnsubscribeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /launch/unsubscribe
+ */
+export const PostLaunchUnsubscribeBody = zod.record(zod.string(), zod.unknown())
+
+export const PostLaunchUnsubscribeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /livez
  */
 export const GetLivezResponse = zod.object({
@@ -2752,6 +2778,34 @@ export const GetPreregisterStatsResponse = zod.object({
 })).describe('Planned early member benefits; no paid entitlement or handle reservation is granted.')
 })
 }))
+
+
+/**
+ * @summary Post /privacy/challenge
+ */
+export const PostPrivacyChallengeBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivacyChallengeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /privacy/request
+ */
+export const PostPrivacyRequestBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivacyRequestResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
 
 
 /**
@@ -3939,6 +3993,20 @@ export const PostUsersMeConsentResponse = zod.object({
 
 
 /**
+ * @summary Post /users/me/consent-withdrawal
+ */
+export const PostUsersMeConsentWithdrawalBody = zod.record(zod.string(), zod.unknown())
+
+export const PostUsersMeConsentWithdrawalResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /users/me/contact-shields
  */
 export const GetUsersMeContactShieldsResponse = zod.object({
@@ -4253,6 +4321,32 @@ export const PutUsersMePremiumProfileResponse = zod.object({
 export const PutUsersMePrivacyBody = zod.record(zod.string(), zod.unknown())
 
 export const PutUsersMePrivacyResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /users/me/restriction
+ */
+export const PostUsersMeRestrictionBody = zod.record(zod.string(), zod.unknown())
+
+export const PostUsersMeRestrictionResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Delete /users/me/restriction
+ */
+export const DeleteUsersMeRestrictionResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "data": zod.unknown(),

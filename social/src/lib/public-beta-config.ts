@@ -24,14 +24,21 @@ export const publicBetaConfig = {
   rtcCallsEnabled: readBoolean(import.meta.env.VITE_RTC_CALLS_ENABLED),
 } as const;
 
+const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example|^development$/i;
+
+function isNonPlaceholder(val: string | undefined): boolean {
+  return typeof val === 'string' && val.trim().length > 0 && !placeholderPattern.test(val.trim());
+}
+
 export const legalConfigReady = Boolean(
   publicBetaConfig.legalContentReviewed &&
-  publicBetaConfig.operatorName &&
-  publicBetaConfig.operatorAddress &&
-  publicBetaConfig.effectiveDate &&
-  publicBetaConfig.governingLaw &&
-  publicBetaConfig.privacyContactEmail &&
-  publicBetaConfig.supportEmail &&
-  publicBetaConfig.grievanceOfficerName &&
-  publicBetaConfig.grievanceContactEmail,
+  isNonPlaceholder(publicBetaConfig.termsVersion) &&
+  isNonPlaceholder(publicBetaConfig.operatorName) &&
+  isNonPlaceholder(publicBetaConfig.operatorAddress) &&
+  isNonPlaceholder(publicBetaConfig.effectiveDate) &&
+  isNonPlaceholder(publicBetaConfig.governingLaw) &&
+  isNonPlaceholder(publicBetaConfig.privacyContactEmail) &&
+  isNonPlaceholder(publicBetaConfig.supportEmail) &&
+  isNonPlaceholder(publicBetaConfig.grievanceOfficerName) &&
+  isNonPlaceholder(publicBetaConfig.grievanceContactEmail),
 );

@@ -6,6 +6,12 @@ export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnr
   guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable,
   contactAuthorizationsTable, contactAuthorizationApprovalsTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from './eligibility';
+export {
+  moderationDecisionsTable,
+  moderationEnforcementsTable,
+  moderationDecisionNoticesTable,
+  moderationAppealsTable,
+} from './moderation';
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -58,6 +64,9 @@ export const usersTable = pgTable("users", {
   accountStatus: text("account_status").default("active"),
   activityStatus: text("activity_status").default("offline"),
   lastActiveTimestamp: timestamp("last_active_timestamp", { mode: "string" }),
+  processingRestricted: boolean("processing_restricted").default(false).notNull(),
+  restrictionReason: text("restriction_reason"),
+  restrictedAt: timestamp("restricted_at", { mode: "string", withTimezone: true }),
 });
 
 /** Versioned terms acknowledgements do not grant optional processing consent. */
@@ -1417,6 +1426,7 @@ export const preregistrationsTable = pgTable("preregistrations", {
   referralCode: text("referral_code").unique(),
   referredBy: text("referred_by"),
   launchUpdatesConsentedAt: timestamp("launch_updates_consented_at", { mode: "string", withTimezone: true }),
+  unsubscribedAt: timestamp("unsubscribed_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   emailIdx: uniqueIndex("preregistrations_email_casefold_unique_idx").on(sql`lower(${table.email})`),
@@ -1427,3 +1437,78 @@ export const preregistrationsTable = pgTable("preregistrations", {
 export const insertPreregistrationSchema = createInsertSchema(preregistrationsTable);
 export type InsertPreregistration = typeof preregistrationsTable.$inferInsert;
 export type Preregistration = typeof preregistrationsTable.$inferSelect;
+
+export const deletionJournalTable = pgTable("deletion_journal", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: uuid("account_id").notNull(),
+  stableIdentityDigest: text("stable_identity_digest").notNull(),
+  reason: text("reason").notNull().default("user_request"),
+  status: text("status").notNull().default("erased"),
+  erasedAt: timestamp("erased_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  replayedAt: timestamp("replayed_at", { mode: "string", withTimezone: true }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  accountIdx: index("deletion_journal_account_id_idx").on(table.accountId),
+  digestIdx: index("deletion_journal_digest_idx").on(table.stableIdentityDigest),
+  erasedIdx: index("deletion_journal_erased_at_idx").on(table.erasedAt),
+}));
+
+export const insertDeletionJournalSchema = createInsertSchema(deletionJournalTable);
+export type InsertDeletionJournal = typeof deletionJournalTable.$inferInsert;
+export type DeletionJournal = typeof deletionJournalTable.$inferSelect;
+
+export const privacyRightsRequestsTable = pgTable("privacy_rights_requests", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestType: text("request_type").notNull(),
+  subjectId: uuid("subject_id").references(() => usersTable.id, { onDelete: "set null" }),
+  emailHash: text("email_hash").notNull(),
+  status: text("status").notNull().default("pending_verification"),
+  verificationTokenHash: text("verification_token_hash"),
+  verificationExpiresAt: timestamp("verification_expires_at", { mode: "string", withTimezone: true }),
+  verifiedAt: timestamp("verified_at", { mode: "string", withTimezone: true }),
+  completedAt: timestamp("completed_at", { mode: "string", withTimezone: true }),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  emailHashIdx: index("privacy_rights_requests_email_hash_idx").on(table.emailHash),
+  statusIdx: index("privacy_rights_requests_status_idx").on(table.status, table.createdAt),
+}));
+
+export const insertPrivacyRightsRequestSchema = createInsertSchema(privacyRightsRequestsTable);
+export type InsertPrivacyRightsRequest = typeof privacyRightsRequestsTable.$inferInsert;
+export type PrivacyRightsRequest = typeof privacyRightsRequestsTable.$inferSelect;
+
+export const consentRecordsTable = pgTable("consent_records", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  subjectId: uuid("subject_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  subjectDigest: text("subject_digest"),
+  purpose: text("purpose").notNull(),
+  version: text("version").notNull(),
+  granted: boolean("granted").notNull(),
+  grantedAt: timestamp("granted_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  subjectIdx: index("consent_records_subject_idx").on(table.subjectId, table.purpose),
+  digestIdx: index("consent_records_digest_idx").on(table.subjectDigest, table.purpose),
+}));
+
+export const insertConsentRecordSchema = createInsertSchema(consentRecordsTable);
+export type InsertConsentRecord = typeof consentRecordsTable.$inferInsert;
+export type ConsentRecord = typeof consentRecordsTable.$inferSelect;
+
+export const emailSuppressionsTable = pgTable("email_suppressions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  emailHash: text("email_hash").notNull(),
+  purpose: text("purpose").notNull(),
+  reason: text("reason").notNull(),
+  suppressedAt: timestamp("suppressed_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  hashPurposeIdx: uniqueIndex("email_suppressions_hash_purpose_idx").on(table.emailHash, table.purpose),
+}));
+
+export const insertEmailSuppressionSchema = createInsertSchema(emailSuppressionsTable);
+export type InsertEmailSuppression = typeof emailSuppressionsTable.$inferInsert;
+export type EmailSuppression = typeof emailSuppressionsTable.$inferSelect;
+

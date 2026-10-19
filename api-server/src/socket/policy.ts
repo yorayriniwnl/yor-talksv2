@@ -1,3 +1,4 @@
+import { pool } from "@workspace/db";
 import { z } from "zod";
 import type { Server } from "socket.io";
 import type { Capability } from "../eligibility/types.js";
@@ -96,6 +97,13 @@ export async function authorizeSocketAction(userId: string, event: string, depen
   const eligibility = dependencies.eligibilityService ?? defaultEligibilityService;
   const user = await repository.findById(userId);
   if (!user || (user.accountStatus ?? "active") !== "active") throw new SocketActionDeniedError(capability);
+  const enforcement = await pool.query<{ state: string }>(
+    `SELECT state FROM moderation_enforcements WHERE target_type = 'user' AND target_id = $1 AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
+    [userId]
+  );
+  if (enforcement.rowCount && (enforcement.rows[0]?.state === 'removed' || enforcement.rows[0]?.state === 'restricted')) {
+    throw new SocketActionDeniedError(capability);
+  }
   if (requester && (requester.userId !== userId || requester.authVersion !== (user.authVersion ?? 0)
     || !await (dependencies.redisRepository ?? defaultRedisRepository).getStrict(`session:${userId}:${requester.deviceId}`))) {
     throw new SocketActionDeniedError(capability);

@@ -6,6 +6,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { createResponse } from "../utils/response.js";
 import { preregisterSchema } from "../validators/preregister.js";
 
+import { consentService } from "../services/consent-service.js";
+
 export const LAUNCH_DATE_ISO = "2026-12-01T00:00:00+05:30";
 // Planned benefits; registration does not grant a paid entitlement or reserve a handle.
 export const FOUNDER_PERKS = [
@@ -107,6 +109,14 @@ export class PreregisterController {
         if (await this.store.hasEmail(email)) return this.existingRegistration(res);
         return this.usernameConflict(res);
       }
+
+      await consentService.recordConsent({
+        email,
+        purpose: "launch_updates",
+        version: "preregister_v1",
+        granted: true,
+        metadata: { source: "preregistration", preregistrationId: saved.id },
+      }).catch(() => {});
 
       return res.status(201).json(createResponse("You're on the early member list!", {
         ...saved,

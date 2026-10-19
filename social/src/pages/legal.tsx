@@ -21,44 +21,46 @@ const providerSummary = [
 ].join('; ');
 
 function buildDocuments(): Record<string, LegalDocument> {
-  const identity = publicBetaConfig.publicBeta
+  const identity = publicBetaConfig.operatorName && publicBetaConfig.operatorAddress
     ? `${publicBetaConfig.operatorName}, ${publicBetaConfig.operatorAddress}`
-    : 'the Yor Talks development operator';
-  const effective = publicBetaConfig.effectiveDate || 'development build';
-  const support = publicBetaConfig.supportEmail || 'the support contact configured by the operator';
-  const privacyContact = publicBetaConfig.privacyContactEmail || support;
-  const grievanceContact = publicBetaConfig.grievanceContactEmail || support;
-  const betaNotice = publicBetaConfig.publicBeta
-    ? `Effective ${effective}. Operator: ${identity}.`
-    : 'This is a local development build and is not a public beta. Do not rely on it as a final legal notice.';
+    : '[UNRESOLVED: LEGAL_OPERATOR_NAME and LEGAL_OPERATOR_ADDRESS]';
+  const effective = publicBetaConfig.effectiveDate || '[UNRESOLVED: LEGAL_EFFECTIVE_DATE]';
+  const support = publicBetaConfig.supportEmail || '[UNRESOLVED: SUPPORT_EMAIL]';
+  const privacyContact = publicBetaConfig.privacyContactEmail || '[UNRESOLVED: PRIVACY_CONTACT_EMAIL]';
+  const grievanceContact = publicBetaConfig.grievanceContactEmail || '[UNRESOLVED: GRIEVANCE_CONTACT_EMAIL]';
+  const governing = publicBetaConfig.governingLaw || '[UNRESOLVED: LEGAL_GOVERNING_LAW]';
+  const betaNotice = legalConfigReady
+    ? `Effective ${effective}. Operator: ${identity}. Governing law: ${governing}.`
+    : `UNAPPROVED DRAFT (Pending Review). Effective date: ${effective}. Operator: ${identity}. Governing law: ${governing}.`;
 
   return {
     '/privacy': {
       title: 'Privacy Notice',
-      eyebrow: publicBetaConfig.publicBeta ? 'Yor Talks · public beta trust center' : 'Yor Talks · development trust center',
+      eyebrow: legalConfigReady ? 'Yor Talks · approved trust center' : 'Yor Talks · pending review draft',
       intro: `${betaNotice} This notice explains the personal data processed to provide Yor Talks, protect people, and honor account controls.`,
       sections: [
-        { heading: 'Data we process', body: 'We process your verified email, account credentials, profile details, uploaded content and media, follows, messages and their delivery metadata, reports, device/session identifiers, moderation decisions and safety settings. Eligibility checks also process your declared country, requested account experience, assurance results and any required guardian permissions. Security and service infrastructure may process network addresses and browser/device information. Passwords and one-time credentials are stored as one-way hashes; TOTP seeds are encrypted at rest. We do not retain a raw address book for IRL Shield: selected identifiers are normalized into keyed match digests.' },
+        { heading: 'Data we process', body: 'We process your verified email, account credentials, profile details, uploaded content and media, follows, messages and their delivery metadata, reports, device/session identifiers, moderation decisions and safety settings. Eligibility checks also process your declared country, requested account experience, assurance results and any required guardian permissions. Security and service infrastructure may process network addresses and browser/device information. Passwords and one-time credentials are stored as one-way hashes; TOTP seeds are encrypted at rest. We do not retain a raw address book for IRL Shield: selected identifiers are normalized into keyed match digests. We never receive or store raw government identity documents, biometrics or live face scans.' },
         { heading: 'How we use it', body: 'We use data to authenticate you, deliver social and creator features, personalize feeds, prevent abuse, apply audience controls, answer support and grievance requests, maintain security logs, and improve reliability. We do not sell personal data.' },
-        { heading: 'Providers and disclosures', body: `Data may be processed by providers needed to run the service: ${providerSummary}. We disclose data when you ask us to, when needed to provide a feature, or when required to protect people, the service, or comply with a lawful request. Provider availability is controlled by this beta's feature flags.` },
+        { heading: 'Providers and disclosures', body: `Data may be processed by providers needed to run the service: ${providerSummary}. We disclose data when you ask us to, when needed to provide a feature, or when required to protect people, the service, or comply with a lawful request. Provider availability is controlled by this beta's feature flags. Actual data processing agreements (DPAs) and cross-border transfer mechanisms must be reviewed and approved by the operator prior to launch.` },
         { heading: 'Browser storage and optional analytics', body: 'We use a refresh-session cookie, browser memory, local and session storage, and a service-worker cache for the purposes described in our Cookies and Browser Storage notice. This release does not currently collect optional navigation or profiling events. Optional account-linked analytics require configuration, a current server eligibility decision permitting adult analytics, and your permission in Settings. You can withdraw that choice there. Registration and accepting Terms do not enable optional analytics or marketing.' },
         { heading: 'International processing', body: 'Hosting and configured service providers may process information outside your country. The operator must approve the actual providers, processing locations, contractual safeguards and applicable transfer arrangements before public release. This development notice does not certify that a particular transfer arrangement has been approved.' },
-        { heading: 'Your controls', body: 'You can edit profile and privacy settings, block or mute accounts, manage IRL Shield entries, export your account data, and permanently delete your account after password confirmation. Some safety, fraud, accounting or legal records may be retained in a minimized form for a documented period.' },
+        { heading: 'Your controls', body: 'You can edit profile and privacy settings, block or mute accounts, manage IRL Shield entries, export your account data via /api/v1/users/me/export, and permanently delete your account via /api/v1/users/me after password confirmation. Deletion enqueues cleanup of external media assets from Cloudinary. Some safety, fraud, accounting or legal records may be retained in a minimized journal for a documented period.' },
         { heading: 'Retention and security', body: 'Access tokens are short-lived and refresh credentials are held in an HttpOnly cookie; refresh values and TOTP seeds are protected before storage. Account deletion revokes sessions and removes or minimizes account records; external media cleanup can require queued retries. Copies can remain in restricted backups until those backups expire under the operator’s approved retention process. Security, fraud, accounting or legal records can have separate retention requirements. The operator must approve and publish the actual retention periods and backup handling before launch. No storage or transmission method guarantees absolute security.' },
         { heading: 'Contact', body: `Privacy questions: ${privacyContact}. General support: ${support}. Include the account email and enough context for us to locate your request; never send a password or authenticator code.` },
       ],
     },
     '/terms': {
       title: 'Terms of Use',
-      eyebrow: publicBetaConfig.publicBeta ? `Yor Talks · terms ${publicBetaConfig.termsVersion}` : 'Yor Talks · development terms',
-      intro: `${betaNotice} By using the public beta, you agree to these terms and the Community Guidelines. Eligibility and feature access follow the approved policy for your territory, including any required assurance or guardian authorization.`,
+      eyebrow: legalConfigReady ? `Yor Talks · terms ${publicBetaConfig.termsVersion}` : 'Yor Talks · pending review draft',
+      intro: `${betaNotice} By using Yor Talks, you agree to these terms and the Community Guidelines. Eligibility and feature access follow the approved policy for your territory, including any required assurance or guardian authorization.`,
       sections: [
         { heading: 'Eligibility, age and account security', body: 'Complete the territory, age-assurance and guardian-authorization steps shown in the service. The server applies the approved policy for the relevant territory; age declarations or guardian relationships alone do not grant access to restricted features. Access may remain restricted when the required policy or assurance is unavailable. Keep your password, recovery links and authenticator codes private. Do not create accounts for other people, impersonate someone, or evade a safety restriction.' },
         { heading: 'Your content and permission', body: 'You retain rights you hold in content you submit. You grant Yor Talks the limited, non-exclusive permission needed to host, transmit, display, back up and moderate that content for the service. Post only material you created or are authorized to use.' },
         { heading: 'Prohibited conduct', body: 'Do not threaten, harass, stalk, dox, exploit, scam, spam, phish, distribute non-consensual intimate material, sexualize or target minors, infringe copyright, manipulate engagement, disrupt the service, or attempt unauthorized access.' },
         { heading: 'Moderation and appeals', body: 'We may warn, reduce reach, remove content, limit features, preserve evidence, or suspend accounts when needed to protect people or the service. Severe safety risks may be escalated immediately. Use the in-product report controls or grievance portal to request review; include links, timestamps and context.' },
+        { heading: 'Prepaid features, refunds and statutory withdrawal', body: 'Yor Premium and paid features are provided on a one-time prepaid term (defaulting to 30 days) and do not automatically recur or auto-renew. Cancelling a prepaid term stops future purchases while maintaining access to premium features until the existing prepaid period expires. Statutory withdrawal rights (including the 14-day cancellation right under EU Directive 2011/83/EU as amended by Directive (EU) 2023/2673) apply in eligible territories unless performance began with the consumer’s prior express consent and acknowledgement of the loss of withdrawal. Refunds for technical failures, billing errors, or service downtime may be requested through support or the grievance portal.' },
         { heading: 'Beta limits and optional features', body: `The beta may change, pause or remove experimental features. Payments, live rooms, push alerts and RTC calls are ${publicBetaConfig.paymentsEnabled || publicBetaConfig.liveRoomsEnabled || publicBetaConfig.webPushEnabled || publicBetaConfig.rtcCallsEnabled ? 'enabled only where the interface says so' : 'disabled for this beta'}. No feature creates a promise of earnings, availability or uninterrupted service.` },
-        { heading: 'Contact and governing terms', body: `Support: ${support}. Governing law and dispute information: ${publicBetaConfig.governingLaw || 'to be supplied by the operator before public release'}. The operator for this build is ${identity}.` },
+        { heading: 'Contact and governing terms', body: `Support: ${support}. Governing law and dispute information: ${governing}. The operator for this service is ${identity}.` },
       ],
     },
     '/cookies': {
@@ -104,6 +106,14 @@ export default function LegalPage() {
           <Button asChild variant="ghost" className="rounded-xl"><Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Yor</Link></Button>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Trust center</div>
         </div>
+        {!legalConfigReady && (
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Unapproved Legal Draft Notice</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-200/90">
+              This document is a technical and product draft. Operating entity details, statutory contacts, governing jurisdiction, effective dates, and territorial age assurance policies are pending formal qualified legal and executive approval. Do not rely on this draft as binding approval or final public policy.
+            </p>
+          </div>
+        )}
         <article className="rounded-3xl border border-border/60 bg-card/70 p-7 shadow-2xl sm:p-10">
           <div className="mb-8 border-b border-border/50 pb-7">
             <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary"><FileText className="h-4 w-4" /> {document.eyebrow}</p>

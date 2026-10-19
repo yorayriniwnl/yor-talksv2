@@ -185,6 +185,9 @@ export default defineConfig(async ({ mode }) => {
       strictPort: true,
       host: '0.0.0.0',
       allowedHosts: true,
+      watch: {
+        ignored: ['**/dist/**', '**/node_modules/**', '**/.git/**'],
+      },
       fs: {
         strict: true,
       },

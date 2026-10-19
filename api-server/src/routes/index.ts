@@ -36,6 +36,7 @@ import billingRouter from './billing.js';
 import paymentOperationsRouter from './payment-operations.js';
 import eligibilityRouter from './eligibility.js';
 import preregisterRouter from './preregister.js';
+import privacyRouter from './privacy.js';
 import { rejectUnmappedProtectedRoute } from '../middlewares/eligibility.js';
 import contactRouter from './contacts.js';
 
@@ -52,6 +53,7 @@ router.use(metricsRouter);
 router.use(productAnalyticsRouter);
 router.use(docsRouter);
 router.use(preregisterRouter);
+router.use(privacyRouter);
 router.use(authRouter);
 router.use(mediaRouter);
 router.use(eligibilityRouter);

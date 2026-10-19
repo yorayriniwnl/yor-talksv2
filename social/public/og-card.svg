@@ -1,27 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Yor Talks — Your world. Your privacy. Rooted in India.</title>
+  <desc id="description">A premium social experience. Indian data residency is a launch commitment, with privacy inspired by EU principles.</desc>
   <defs>
-    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#09090b"/>
-      <stop offset="1" stop-color="#171013"/>
-    </linearGradient>
     <radialGradient id="glow">
-      <stop offset="0" stop-color="#e84b4b" stop-opacity=".30"/>
-      <stop offset="1" stop-color="#e84b4b" stop-opacity="0"/>
+      <stop offset="0" stop-color="#e4c9a0" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#e4c9a0" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#background)"/>
-  <circle cx="1000" cy="250" r="430" fill="url(#glow)"/>
-  <g fill="none" stroke="#e84b4b" stroke-opacity=".24">
-    <circle cx="1000" cy="250" r="155"/>
-    <circle cx="1000" cy="250" r="235"/>
-    <circle cx="1000" cy="250" r="315"/>
+  <rect width="1200" height="630" fill="#0d1011"/>
+  <circle cx="1010" cy="290" r="360" fill="url(#glow)"/>
+  <rect x="32" y="32" width="1136" height="566" rx="18" fill="none" stroke="#ffffff" stroke-opacity=".12"/>
+  <text x="82" y="109" fill="#f2f0ea" font-family="Arial, Helvetica, sans-serif" font-size="35" letter-spacing="-1.5">yor talks</text>
+  <g stroke="#e4c9a0" stroke-width="2.8" stroke-linecap="round" transform="translate(236 84)">
+    <path d="M0 0v18M-8 4l16 10M-8 14L8 4"/>
   </g>
-  <rect x="42" y="42" width="1116" height="546" rx="30" fill="none" stroke="#ffffff" stroke-opacity=".12"/>
-  <rect x="94" y="108" width="72" height="72" rx="18" fill="#e84b4b"/>
-  <path d="M113 124h11l6 9 7-9h11l-12 17v19h-11v-19z" fill="#fff7f2"/>
-  <text x="190" y="158" fill="#f1e8e9" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="700" letter-spacing="5">YOR TALKS</text>
-  <text x="94" y="314" fill="#fffaf8" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" letter-spacing="-4">Make things happen.</text>
-  <rect x="98" y="354" width="92" height="7" rx="3.5" fill="#e84b4b"/>
-  <text x="94" y="432" fill="#d1c7ca" font-family="Arial, Helvetica, sans-serif" font-size="37" font-weight="400">A place for your people.</text>
-  <text x="94" y="524" fill="#ff8a7f" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" letter-spacing="4">IDEAS · PEOPLE · SHARED WORLDS</text>
+  <text x="82" y="222" fill="#f2f0ea" font-family="Arial, Helvetica, sans-serif" font-size="79" letter-spacing="-4">Your world.</text>
+  <text x="82" y="312" fill="#f2f0ea" font-family="Arial, Helvetica, sans-serif" font-size="79" letter-spacing="-4">Your privacy.</text>
+  <text x="82" y="402" fill="#e4c9a0" font-family="Arial, Helvetica, sans-serif" font-size="79" letter-spacing="-4">Rooted in India.</text>
+  <g fill="none" stroke="#e4c9a0" stroke-opacity=".20">
+    <circle cx="1010" cy="286" r="110"/>
+    <circle cx="1010" cy="286" r="140" stroke-dasharray="2 9"/>
+  </g>
+  <g fill="none" stroke="#e4c9a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1052 269c0 35-42 67-42 67s-42-32-42-67a42 42 0 1 1 84 0Z"/>
+    <circle cx="1010" cy="268" r="13"/>
+  </g>
+  <circle cx="1010" cy="176" r="4" fill="#e4c9a0"/>
+  <g stroke-width="3" stroke-linecap="round">
+    <path d="M983 369h54" stroke="#ce9870"/>
+    <path d="M983 379h54" stroke="#e8e6da"/>
+    <path d="M983 389h54" stroke="#92aa91"/>
+  </g>
+  <path d="M82 464h1036" stroke="#ffffff" stroke-opacity=".14"/>
+  <text x="82" y="506" fill="#d4c2a8" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="1.5">INDIAN DATA RESIDENCY · LAUNCH COMMITMENT</text>
+  <text x="82" y="541" fill="#aaaead" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="1.5">PRIVACY INSPIRED BY EU PRINCIPLES</text>
 </svg>

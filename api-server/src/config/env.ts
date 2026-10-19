@@ -91,6 +91,7 @@ const envSchema = z.object({
   SUPPORT_EMAIL: z.string().default(process.env.SUPPORT_EMAIL || ""),
   GRIEVANCE_OFFICER_NAME: z.string().default(process.env.GRIEVANCE_OFFICER_NAME || ""),
   GRIEVANCE_CONTACT_EMAIL: z.string().default(process.env.GRIEVANCE_CONTACT_EMAIL || ""),
+  PROMOTIONAL_EMAIL_ENABLED: z.preprocess((value) => booleanFromEnv(value, false), z.boolean()).default(false),
 });
 
 const parsedEnv = envSchema.parse(process.env);

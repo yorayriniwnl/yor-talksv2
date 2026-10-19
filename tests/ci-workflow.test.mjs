@@ -61,7 +61,10 @@ test('backend verification runs independently and keeps security and integration
     'bash ops/backup/backup-script.test.sh', 'node ops/check-database-runtime-role.mjs',
   ]) assert.ok(backend.steps.some(step => step.run === command), command);
   assert.equal(backend.steps.find(step => step.name === 'Run API tests serially').env.MEDIA_REQUIRE_DECODER_TESTS, 'true');
-  assert.ok(jobs.verify.steps.some(step => step.run === 'pnpm test:unit'), 'full release checks remain in place');
+  assert.ok(backend.steps.some(step => step.run === 'node --test tests/preregister-migration.test.mjs' && Boolean(step.env?.PREREGISTER_TEST_DATABASE_URL)),
+    'backend job must run preregister migration tests with PREREGISTER_TEST_DATABASE_URL');
+  assert.ok(jobs.verify.steps.some(step => step.run === 'pnpm test:unit' && Boolean(step.env?.PREREGISTER_TEST_DATABASE_URL)),
+    'verify job must run unit tests with PREREGISTER_TEST_DATABASE_URL');
   assert.ok(jobs.verify.steps.some(step => step.run === 'pnpm test:e2e'), 'browser checks remain in place');
 });
 

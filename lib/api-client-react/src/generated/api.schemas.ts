@@ -900,6 +900,8 @@ export type PostInvitesClaimBody = { [key: string]: unknown };
 
 export type PostInvitesGenerateBody = { [key: string]: unknown };
 
+export type PostLaunchUnsubscribeBody = { [key: string]: unknown };
+
 export type PostMediaByIdFinalize200 = ApiEnvelope & {
   data?: MediaResult;
 };
@@ -1046,6 +1048,10 @@ export type PostPreregister201 = ApiEnvelope & {
 export type GetPreregisterStats200 = ApiEnvelope & {
   data?: PreregistrationStats;
 };
+
+export type PostPrivacyChallengeBody = { [key: string]: unknown };
+
+export type PostPrivacyRequestBody = { [key: string]: unknown };
 
 export type PostProductsBody = {
   /** @maxItems 10 */
@@ -1203,6 +1209,8 @@ export type PostUsersMeAvatarBody = {
 
 export type PostUsersMeConsentBody = { [key: string]: unknown };
 
+export type PostUsersMeConsentWithdrawalBody = { [key: string]: unknown };
+
 export type PostUsersMeContactShieldsBody = { [key: string]: unknown };
 
 export type GetUsersMeEligibility200 = ApiEnvelope & {
@@ -1238,6 +1246,8 @@ export type PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200 = ApiE
 export type PutUsersMePremiumProfileBody = { [key: string]: unknown };
 
 export type PutUsersMePrivacyBody = { [key: string]: unknown };
+
+export type PostUsersMeRestrictionBody = { [key: string]: unknown };
 
 export type PutUsersMeSettingsBody = { [key: string]: unknown };
 

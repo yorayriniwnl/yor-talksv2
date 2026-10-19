@@ -346,11 +346,18 @@ function changesSessionCookie(path: string, method?: string): boolean {
 }
 
 async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch, includeAuthorization = true): Promise<ApiEnvelope<T>> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  // These public operations belong to the submitted details, not the account
+  // session. An initial refresh or logout must not discard a saved signup.
+  const isPublicPreregistration = !includeAuthorization && (
+    path === '/preregister' && method === 'POST'
+    || path === '/preregister/stats' && method === 'GET'
+  );
   const assertSession = () => {
-    if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+    if (!isPublicPreregistration && epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
   };
   assertSession();
-  const tokens = getStoredTokens();
+  const tokens = isPublicPreregistration ? null : getStoredTokens();
   if (tokens && hasExplicitLogoutIntent()) {
     setStoredTokens(null);
     notifySessionExpired();

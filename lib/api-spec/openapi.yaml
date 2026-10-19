@@ -31,6 +31,7 @@ tags:
   - name: healthz
   - name: highlights
   - name: invites
+  - name: launch
   - name: livez
   - name: media
   - name: messages
@@ -42,6 +43,7 @@ tags:
   - name: posts
   - name: premium
   - name: preregister
+  - name: privacy
   - name: products
   - name: projects
   - name: readyz
@@ -2356,6 +2358,42 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /launch/unsubscribe:
+    get:
+      operationId: getLaunchUnsubscribe
+      summary: Get /launch/unsubscribe
+      tags: [launch]
+      security: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+    post:
+      operationId: postLaunchUnsubscribe
+      summary: Post /launch/unsubscribe
+      tags: [launch]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
   /livez:
     get:
       operationId: getLivez
@@ -3876,6 +3914,50 @@ paths:
           description: Invalid request
         "503":
           description: Registration storage is unavailable; no fabricated success or count is returned
+  /privacy/challenge:
+    post:
+      operationId: postPrivacyChallenge
+      summary: Post /privacy/challenge
+      tags: [privacy]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+  /privacy/request:
+    post:
+      operationId: postPrivacyRequest
+      summary: Post /privacy/request
+      tags: [privacy]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
   /products:
     get:
       operationId: getProducts
@@ -5687,6 +5769,31 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/consent-withdrawal:
+    post:
+      operationId: postUsersMeConsentWithdrawal
+      summary: Post /users/me/consent-withdrawal
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /users/me/contact-shields:
     get:
       operationId: getUsersMeContactShields
@@ -6101,6 +6208,48 @@ paths:
             schema:
               type: object
               additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /users/me/restriction:
+    post:
+      operationId: postUsersMeRestriction
+      summary: Post /users/me/restriction
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    delete:
+      operationId: deleteUsersMeRestriction
+      summary: Delete /users/me/restriction
+      tags: [users]
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Successful response

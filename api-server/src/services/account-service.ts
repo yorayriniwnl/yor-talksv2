@@ -248,6 +248,31 @@ export class AccountService {
         ) AND NOT EXISTS (SELECT 1 FROM conversation_members cm
           WHERE cm.conversation_id=c.id AND cm.user_id<>${userId})`);
 
+      const stableIdentityDigest = createHash('sha256')
+        .update(locked.email.trim().toLowerCase())
+        .digest('hex');
+
+      // Record durable deletion journal entry
+      await tx.execute(sql`INSERT INTO deletion_journal(id, account_id, stable_identity_digest, reason, status, erased_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${userId}::uuid, ${stableIdentityDigest}, 'user_request', 'erased', clock_timestamp(),
+          jsonb_build_object('username', ${locked.username}))`);
+
+      // Add promotional email suppressions
+      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'all_promotional', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
+        ON CONFLICT(email_hash, purpose) DO NOTHING`);
+      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'launch_updates', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
+        ON CONFLICT(email_hash, purpose) DO NOTHING`);
+
+      // Mark preregistrations unsubscribed
+      await tx.execute(sql`UPDATE preregistrations SET unsubscribed_at=clock_timestamp()
+        WHERE lower(email)=lower(${locked.email}) AND unsubscribed_at IS NULL`);
+
+      // Withdraw all granted consents
+      await tx.execute(sql`UPDATE consent_records SET granted=false, withdrawn_at=clock_timestamp()
+        WHERE (subject_id=${userId} OR subject_digest=${stableIdentityDigest}) AND granted=true`);
+
       // The departing member's own messages are private account content and
       // are removed. Messages from all other members in retained groups stay.
       await tx.delete(messagesTable).where(eq(messagesTable.senderId, userId));

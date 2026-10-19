@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 
 try {
   process.loadEnvFile('.env');
@@ -16,14 +17,15 @@ const apiServerEnv = {
 };
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const rootDir = process.cwd();
 
 const commands = [
-  [npmCommand, ['run', '--prefix', 'api-server', 'dev'], apiServerEnv],
-  [npmCommand, ['run', '--prefix', 'social', 'dev'], process.env],
+  { command: npmCommand, args: ['run', 'dev'], env: apiServerEnv, cwd: path.resolve(rootDir, 'api-server') },
+  { command: npmCommand, args: ['run', 'dev'], env: process.env, cwd: path.resolve(rootDir, 'social') },
 ];
 
-const children = commands.map(([command, args, env]) => {
-  const child = spawn(command, args, { stdio: 'inherit', env, shell: true });
+const children = commands.map(({ command, args, env, cwd }) => {
+  const child = spawn(command, args, { stdio: 'inherit', env, cwd, shell: true });
   child.on('exit', (code, signal) => {
     if (signal || (typeof code === 'number' && code !== 0)) {
       for (const other of children) {
