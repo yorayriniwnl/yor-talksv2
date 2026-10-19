@@ -1,5 +1,9 @@
 import { spawn } from 'node:child_process';
 
+try {
+  process.loadEnvFile('.env');
+} catch {}
+
 const apiServerEnv = {
   ...process.env,
   PORT: process.env.PORT || '4000',

@@ -89,6 +89,7 @@ export interface FounderPerk {
 
 export interface NewPreregisterPass {
   id: string;
+  email?: string;
   username: string;
   referralCode: string | null;
   passNumber: string;
@@ -98,12 +99,26 @@ export interface NewPreregisterPass {
   isExisting: false;
 }
 
-export type PreregisterPass = NewPreregisterPass | { isExisting: true; launchDate: string; perks: FounderPerk[] };
+export interface ExistingPreregisterPass {
+  id?: string;
+  email?: string;
+  username?: string;
+  referralCode?: string | null;
+  passNumber?: string;
+  createdAt?: string;
+  launchDate: string;
+  perks: FounderPerk[];
+  isExisting: true;
+}
+
+export type PreregisterPass = NewPreregisterPass | ExistingPreregisterPass;
 
 export interface PreregisterStats {
   totalRegistered: number;
   launchDate: string;
   perks: FounderPerk[];
+  targetSpots?: number;
+  spotsRemaining?: number;
 }
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
@@ -601,6 +616,9 @@ export interface BackendUser {
     contentFilter?: ContentRating;
     storyViewMode?: 'identified' | 'private';
     onboardingCompleted?: boolean;
+    isFounder?: boolean;
+    founderPassNumber?: string;
+    avatarFrame?: string;
   };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }

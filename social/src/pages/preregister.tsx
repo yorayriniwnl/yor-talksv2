@@ -149,8 +149,8 @@ export default function Preregister() {
         if (active && res) {
           setStats({
             totalRegistered: res.totalRegistered,
-            targetSpots: res.targetSpots,
-            spotsRemaining: res.spotsRemaining,
+            targetSpots: res.targetSpots ?? 50_000,
+            spotsRemaining: res.spotsRemaining ?? Math.max(0, 50_000 - res.totalRegistered),
           });
         }
       } catch {
@@ -178,9 +178,9 @@ export default function Preregister() {
     if (!pass) return;
     const passPayload = JSON.stringify({
       brand: 'Yor Talks',
-      pass: pass.passNumber,
-      handle: pass.username,
-      code: pass.referralCode,
+      pass: pass.passNumber || 'FOUNDER-VIP',
+      handle: pass.username || cleanUsername,
+      code: pass.referralCode || '',
       launch: '2026-12-01',
     });
 
@@ -223,13 +223,22 @@ export default function Preregister() {
       const result = await api.preregister({
         email: email.trim().toLowerCase(),
         username: cleanUsername,
+        launchUpdatesConsent: true,
         referralCode: referralCode.trim() || undefined,
         perks: DEFAULT_PERKS.map((p) => p.id),
       });
 
-      setPass(result);
+      const enrichedPass: PreregisterPass = {
+        ...result,
+        email: email.trim().toLowerCase(),
+        username: result.username || cleanUsername,
+        passNumber: result.passNumber || `FOUNDER-${cleanUsername.toUpperCase()}`,
+        referralCode: result.referralCode || `YOR-${cleanUsername.toUpperCase()}`,
+      };
+
+      setPass(enrichedPass);
       try {
-        localStorage.setItem('yor:founder:pass:v1', JSON.stringify(result));
+        localStorage.setItem('yor:founder:pass:v1', JSON.stringify(enrichedPass));
       } catch {
         // ignore
       }
@@ -237,8 +246,8 @@ export default function Preregister() {
       triggerConfetti();
       toast.success(
         result.isExisting
-          ? `Welcome back, @${result.username}! Here is your Founder Boarding Pass.`
-          : `You're on the list! Founder Pass ${result.passNumber} reserved.`,
+          ? `Welcome back, @${enrichedPass.username}! Here is your Founder Boarding Pass.`
+          : `You're on the list! Founder Pass ${enrichedPass.passNumber} reserved.`,
       );
     } catch (err: any) {
       setErrorMessage(
@@ -251,7 +260,8 @@ export default function Preregister() {
 
   const copyShareLink = () => {
     if (!pass) return;
-    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(pass.referralCode)}`;
+    const refCode = pass.referralCode || 'FOUNDER';
+    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
     navigator.clipboard
       .writeText(shareUrl)
       .then(() => {
@@ -266,8 +276,9 @@ export default function Preregister() {
 
   const shareOnTwitter = () => {
     if (!pass) return;
-    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(pass.referralCode)}`;
-    const tweetText = `I just reserved my Founder Pass on @yortalks for the global launch on 01 Dec 2026! 🚀 Locked in @${pass.username} and unlocked 1-Year SuperPass Free.\n\nClaim your handle before launch:`;
+    const refCode = pass.referralCode || 'FOUNDER';
+    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
+    const tweetText = `I just reserved my Founder Pass on @yortalks for the global launch on 01 Dec 2026! 🚀 Locked in @${pass.username || cleanUsername} and unlocked 1-Year SuperPass Free.\n\nClaim your handle before launch:`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',
@@ -277,7 +288,8 @@ export default function Preregister() {
 
   const shareOnWhatsApp = () => {
     if (!pass) return;
-    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(pass.referralCode)}`;
+    const refCode = pass.referralCode || 'FOUNDER';
+    const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
     const text = `Join me on Yor Talks! Global launch is on 1st December 2026. Pre-register now to lock your @handle and get a 1-Year Free SuperPass:\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
