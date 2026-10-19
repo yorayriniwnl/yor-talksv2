@@ -116,6 +116,12 @@ export class AuthController {
       if (error instanceof TwoFactorRequiredError) {
         return res.status(200).json(createResponse("Approve this sign-in in your Yor app", this.twoFactorChallengeData(error), { requiresTwoFactor: true }));
       }
+      if (error instanceof TooManyAttemptsError) {
+        return res.status(429).json(createResponse("Too many attempts", null, {}, [error.message]));
+      }
+      if (isDatabaseUnavailableError(error) || (error instanceof Error && error.message.includes("Redis"))) {
+        return res.status(503).json(createResponse("Google sign-in is temporarily unavailable", null, {}, ["auth_service_unavailable"]));
+      }
       return res.status(401).json(createResponse("Google sign-in failed", null, {}, ["Google sign-in failed"]));
     }
   };
@@ -259,6 +265,9 @@ export class AuthController {
       this.setRefreshCookie(res, result.tokens.refreshToken);
       return res.status(200).json(createResponse("Login successful", { user: toOwnUser(result.user), tokens: this.clientTokens(result.tokens) }, { authenticated: true }));
     } catch (error) {
+      if (isDatabaseUnavailableError(error) || (error instanceof Error && error.message.includes("Redis"))) {
+        return res.status(503).json(createResponse("Sign-in is temporarily unavailable", null, {}, ["auth_service_unavailable"]));
+      }
       return res.status(500).json(createResponse("Could not complete sign-in", null, {}, ["Sign-in completion is temporarily unavailable"]));
     }
   };
