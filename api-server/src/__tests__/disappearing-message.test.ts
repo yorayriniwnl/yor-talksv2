@@ -63,6 +63,8 @@ test("expired and deleted messages are excluded at the conversation response bou
     { listConversation: async () => [expired, deleted] } as never,
   );
   assert.deepEqual(await service.listConversationPage("conversation-1", "recipient", {}), []);
+});
+
 test("message visibility uses a strict expiry boundary and denies invalid dates", async () => {
   const { isMessageVisible } = await import("../utils/message-visibility.js");
   const now = new Date('2026-10-07T00:00:00.000Z');
