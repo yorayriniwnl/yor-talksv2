@@ -547,6 +547,25 @@ export default function Auth() {
             </div>
           </div>
 
+          <Link href="/preregister" className="mb-5 block">
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#e84b4b]/20 via-[#ff8a7f]/10 to-[#671515]/20 border border-[#e84b4b]/40 flex items-center justify-between hover:border-[#e84b4b] transition-all group shadow-[0_0_20px_rgba(232,75,75,0.15)]">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2 h-2 rounded-full bg-[#e84b4b] animate-ping" />
+                <div className="flex flex-col">
+                  <span className="font-mono text-xs font-bold text-[#ff8a7f] uppercase tracking-wider">
+                    Global Launch • 01 Dec 2026
+                  </span>
+                  <span className="text-[11px] text-[#9298a5]">
+                    Join the launch list and discover early member perks
+                  </span>
+                </div>
+              </div>
+              <span className="font-mono text-xs text-[#ff8a7f] font-bold group-hover:translate-x-1 transition-transform ml-2">
+                Claim Pass →
+              </span>
+            </div>
+          </Link>
+
           <div className="operator-access-mode" role="group" aria-label="Account access">
             <button type="button" aria-pressed={mode === 'login'} className={mode === 'login' ? 'is-active' : ''} onClick={() => switchMode('login')}>Sign in</button>
             <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'is-active' : ''} onClick={() => switchMode('register')}>Create account</button>

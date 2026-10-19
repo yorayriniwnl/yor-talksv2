@@ -35,7 +35,7 @@ const envSchema = z.object({
   MEDIA_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
   MEDIA_DELIVERY_ORIGIN: z.string().url().or(z.literal('')).default(''),
   MEDIA_GEMINI_MODEL: z.enum(["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash", "gemini-3.8-flash"]).default("gemini-2.5-flash"),
-  REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6379"),
+  REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6380"),
   DATABASE_URL: z.string().default(process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/yor_talks"),
   // Comma-separated list of allowed browser origins for CORS. Defaults to the
   // Vite dev server's own origin — in dev, /api is same-origin via Vite's proxy

@@ -1408,3 +1408,22 @@ export type FeatureEntitlement = typeof featureEntitlementsTable.$inferSelect;
 export const insertUserFeatureOverrideSchema = createInsertSchema(userFeatureOverridesTable);
 export type InsertUserFeatureOverride = typeof userFeatureOverridesTable.$inferInsert;
 export type UserFeatureOverride = typeof userFeatureOverridesTable.$inferSelect;
+
+export const preregistrationsTable = pgTable("preregistrations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  username: text("username").notNull().unique(),
+  perks: jsonb("perks").notNull().default([]),
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"),
+  launchUpdatesConsentedAt: timestamp("launch_updates_consented_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  emailIdx: uniqueIndex("preregistrations_email_casefold_unique_idx").on(sql`lower(${table.email})`),
+  usernameIdx: uniqueIndex("preregistrations_username_casefold_unique_idx").on(sql`lower(${table.username})`),
+  createdIdx: index("preregistrations_created_at_idx").on(table.createdAt),
+}));
+
+export const insertPreregistrationSchema = createInsertSchema(preregistrationsTable);
+export type InsertPreregistration = typeof preregistrationsTable.$inferInsert;
+export type Preregistration = typeof preregistrationsTable.$inferSelect;

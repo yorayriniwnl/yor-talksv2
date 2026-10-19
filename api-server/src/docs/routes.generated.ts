@@ -1387,6 +1387,24 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/preregister",
+    "operationId": "postPreregister",
+    "tag": "preregister",
+    "summary": "Post /preregister",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/preregister/stats",
+    "operationId": "getPreregisterStats",
+    "tag": "preregister",
+    "summary": "Get /preregister/stats",
+    "authenticated": false,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/products",
     "operationId": "getProducts",

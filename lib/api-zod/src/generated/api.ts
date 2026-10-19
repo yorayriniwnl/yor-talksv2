@@ -2682,6 +2682,79 @@ export const PostPremiumOrdersByOrderIdVerifyResponse = zod.object({
 
 
 /**
+ * @summary Post /preregister
+ */
+export const postPreregisterBodyEmailMax = 255;
+
+export const postPreregisterBodyUsernameMin = 3;
+export const postPreregisterBodyUsernameMax = 24;
+
+
+export const postPreregisterBodyUsernameRegExp = new RegExp('^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$');
+export const postPreregisterBodyReferralCodeMax = 28;
+
+
+export const postPreregisterBodyReferralCodeRegExp = new RegExp('^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$');
+export const postPreregisterBodyPerksMax = 4;
+
+
+
+export const PostPreregisterBody = zod.object({
+  "email": zod.string().email().max(postPreregisterBodyEmailMax).describe('Trimmed and lowercased before storage.'),
+  "username": zod.string().min(postPreregisterBodyUsernameMin).max(postPreregisterBodyUsernameMax).regex(postPreregisterBodyUsernameRegExp).describe('Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.'),
+  "launchUpdatesConsent": zod.boolean().describe('Explicit agreement to receive launch and early member updates.'),
+  "referralCode": zod.string().max(postPreregisterBodyReferralCodeMax).regex(postPreregisterBodyReferralCodeRegExp).optional(),
+  "perks": zod.array(zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference'])).max(postPreregisterBodyPerksMax).optional()
+})
+
+export const PostPreregisterResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "launchDate": zod.coerce.date().describe('Launch is 1 December 2026 at midnight in Asia\/Kolkata.'),
+  "perks": zod.array(zod.object({
+  "id": zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "icon": zod.string()
+})).describe('Planned early member benefits; no paid entitlement or handle reservation is granted.'),
+  "isExisting": zod.boolean()
+}).describe('Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.')
+}))
+
+
+/**
+ * @summary Get /preregister/stats
+ */
+export const getPreregisterStatsResponseTwoDataTotalRegisteredMin = 0;
+
+
+
+export const GetPreregisterStatsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "totalRegistered": zod.number().min(getPreregisterStatsResponseTwoDataTotalRegisteredMin).describe('Actual stored registrations with no artificial offset.'),
+  "launchDate": zod.coerce.date().describe('Launch is 1 December 2026 at midnight in Asia\/Kolkata.'),
+  "perks": zod.array(zod.object({
+  "id": zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "icon": zod.string()
+})).describe('Planned early member benefits; no paid entitlement or handle reservation is granted.')
+})
+}))
+
+
+/**
  * @summary Get /products
  */
 export const GetProductsResponse = zod.object({

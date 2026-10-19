@@ -129,4 +129,6 @@ export {
   insertCreatorWorkspaceItemSchema,
   insertFeatureEntitlementSchema,
   insertUserFeatureOverrideSchema,
+  preregistrationsTable,
+  insertPreregistrationSchema,
 } from "./schema";

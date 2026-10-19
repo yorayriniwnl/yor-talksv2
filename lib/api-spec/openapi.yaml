@@ -41,6 +41,7 @@ tags:
   - name: operations
   - name: posts
   - name: premium
+  - name: preregister
   - name: products
   - name: projects
   - name: readyz
@@ -3830,6 +3831,51 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /preregister:
+    post:
+      operationId: postPreregister
+      summary: Post /preregister
+      tags: [preregister]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PreregistrationRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "200":
+          description: Generic repeat-submission receipt; saved registration details are not disclosed
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationExistingReceipt"}}}]}
+        "409":
+          description: Choose another preferred username
+        "429":
+          description: Pre-registration request allowance exceeded
+        "503":
+          description: Registration storage is unavailable; no fabricated success or count is returned
+  /preregister/stats:
+    get:
+      operationId: getPreregisterStats
+      summary: Get /preregister/stats
+      tags: [preregister]
+      security: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationStats"}}}]}
+        "400":
+          description: Invalid request
+        "503":
+          description: Registration storage is unavailable; no fabricated success or count is returned
   /products:
     get:
       operationId: getProducts
@@ -6422,3 +6468,8 @@ components:
     SafeGroupAcceptanceResult: {"type":"object","additionalProperties":false,"required":["invitation","refreshedInvitations"],"properties":{"invitation":{"$ref":"#/components/schemas/SafeGroupInvitation"},"refreshedInvitations":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}
     NullReceipt: {"type":"null"}
     ContactWithdrawalReceipt: {"type":"null"}
+    PreregistrationRequest: {"type":"object","additionalProperties":false,"required":["email","username","launchUpdatesConsent"],"properties":{"email":{"type":"string","format":"email","maxLength":255,"description":"Trimmed and lowercased before storage."},"username":{"type":"string","minLength":3,"maxLength":24,"pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$","description":"Preferred username, trimmed and lowercased. Availability is confirmed when an account is created."},"launchUpdatesConsent":{"type":"boolean","const":true,"description":"Explicit agreement to receive launch and early member updates."},"referralCode":{"type":"string","maxLength":28,"pattern":"^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$"},"perks":{"type":"array","maxItems":4,"items":{"type":"string","enum":["founder-badge","priority-access","community-input","username-preference"]}}}}
+    PreregistrationPerk: {"type":"object","additionalProperties":false,"required":["id","title","description","icon"],"properties":{"id":{"type":"string","enum":["founder-badge","priority-access","community-input","username-preference"]},"title":{"type":"string"},"description":{"type":"string"},"icon":{"type":"string"}}}
+    PreregistrationReceipt: {"type":"object","additionalProperties":false,"required":["id","username","referralCode","createdAt","passNumber","launchDate","perks","isExisting"],"properties":{"id":{"type":"string","format":"uuid"},"username":{"type":"string"},"referralCode":{"type":["string","null"]},"createdAt":{"type":"string","format":"date-time"},"passNumber":{"type":"string","pattern":"^FOUNDER-[0-9A-F-]{36}$","description":"Unique registration reference; it is not a queue position or authentication credential."},"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."},"isExisting":{"type":"boolean","const":false}}}
+    PreregistrationExistingReceipt: {"type":"object","additionalProperties":false,"required":["isExisting","launchDate","perks"],"properties":{"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."},"isExisting":{"type":"boolean","const":true}},"description":"Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned."}
+    PreregistrationStats: {"type":"object","additionalProperties":false,"required":["totalRegistered","launchDate","perks"],"properties":{"totalRegistered":{"type":"integer","minimum":0,"description":"Actual stored registrations with no artificial offset."},"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."}}}

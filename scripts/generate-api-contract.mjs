@@ -192,6 +192,56 @@ function moderationContract(route) {
   }
   return undefined;
 }
+const preregistrationPerkIds = ['founder-badge', 'priority-access', 'community-input', 'username-preference'];
+const preregistrationCommonProperties = {
+  launchDate: { type: 'string', format: 'date-time', description: 'Launch is 1 December 2026 at midnight in Asia/Kolkata.' },
+  perks: { type: 'array', items: { $ref: '#/components/schemas/PreregistrationPerk' }, description: 'Planned early member benefits; no paid entitlement or handle reservation is granted.' },
+};
+const preregistrationSchemas = {
+  PreregistrationRequest: {
+    type: 'object', additionalProperties: false, required: ['email', 'username', 'launchUpdatesConsent'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255, description: 'Trimmed and lowercased before storage.' },
+      username: { type: 'string', minLength: 3, maxLength: 24, pattern: '^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$', description: 'Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.' },
+      launchUpdatesConsent: { type: 'boolean', const: true, description: 'Explicit agreement to receive launch and early member updates.' },
+      referralCode: { type: 'string', maxLength: 28, pattern: '^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$' },
+      perks: { type: 'array', maxItems: 4, items: { type: 'string', enum: preregistrationPerkIds } },
+    },
+  },
+  PreregistrationPerk: {
+    type: 'object', additionalProperties: false, required: ['id', 'title', 'description', 'icon'],
+    properties: {
+      id: { type: 'string', enum: preregistrationPerkIds }, title: { type: 'string' },
+      description: { type: 'string' }, icon: { type: 'string' },
+    },
+  },
+  PreregistrationReceipt: {
+    type: 'object', additionalProperties: false,
+    required: ['id', 'username', 'referralCode', 'createdAt', 'passNumber', 'launchDate', 'perks', 'isExisting'],
+    properties: {
+      id: { type: 'string', format: 'uuid' }, username: { type: 'string' },
+      referralCode: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' },
+      passNumber: { type: 'string', pattern: '^FOUNDER-[0-9A-F-]{36}$', description: 'Unique registration reference; it is not a queue position or authentication credential.' },
+      ...preregistrationCommonProperties, isExisting: { type: 'boolean', const: false },
+    },
+  },
+  PreregistrationExistingReceipt: {
+    type: 'object', additionalProperties: false, required: ['isExisting', 'launchDate', 'perks'],
+    properties: { ...preregistrationCommonProperties, isExisting: { type: 'boolean', const: true } },
+    description: 'Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.',
+  },
+  PreregistrationStats: {
+    type: 'object', additionalProperties: false, required: ['totalRegistered', 'launchDate', 'perks'],
+    properties: { totalRegistered: { type: 'integer', minimum: 0, description: 'Actual stored registrations with no artificial offset.' }, ...preregistrationCommonProperties },
+  },
+};
+function preregistrationContract(route) {
+  if (route.path === '/preregister' && route.method === 'post') {
+    return { request: 'PreregistrationRequest', result: 'PreregistrationReceipt', created: true };
+  }
+  if (route.path === '/preregister/stats' && route.method === 'get') return { result: 'PreregistrationStats' };
+  return undefined;
+}
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
   "post /posts/{postId}/comments": { mediaId }, "post /videos/{id}/comments": { mediaId },
@@ -410,7 +460,7 @@ function renderYaml(routes) {
       }
 
       if (["post", "put", "patch"].includes(route.method)) {
-        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route);
+        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route) ?? preregistrationContract(route);
         const request = contract?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${contract.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
@@ -427,7 +477,8 @@ function renderYaml(routes) {
       const publicGrievance = (route.path === "/reports/grievance" && route.method === "post") ||
         (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
       const eligibility = eligibilityContract(route);
-      const contract = eligibility ?? contactContract(route);
+      const preregistration = preregistrationContract(route);
+      const contract = eligibility ?? contactContract(route) ?? preregistration;
       const resultSchema = contract?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
@@ -446,6 +497,18 @@ function renderYaml(routes) {
         ...(route.authenticated ? ['  "401":', "    description: Authentication required"] : []),
         ...(route.roles.length > 0 ? ['  "403":', `    description: "Required role: ${route.roles.join(", ")}"`] : []),
       ], 6));
+      if (preregistration) {
+        if (route.method === 'post') {
+          lines.push(...indent([
+            '  "200":', '    description: Generic repeat-submission receipt; saved registration details are not disclosed',
+            '    content:', '      application/json:', '        schema:',
+            `          ${JSON.stringify({ allOf: [{ $ref: '#/components/schemas/ApiEnvelope' }, { properties: { data: { $ref: '#/components/schemas/PreregistrationExistingReceipt' } } }] })}`,
+            '  "409":', '    description: Choose another preferred username',
+            '  "429":', '    description: Pre-registration request allowance exceeded',
+          ], 6));
+        }
+        lines.push(...indent(['  "503":', '    description: Registration storage is unavailable; no fabricated success or count is returned'], 6));
+      }
       if (eligibility) lines.push(...indent(['  "403":','    description: Current account or territory does not permit verification','  "404":','    description: Owner-bound record unavailable','  "429":','    description: Verification rate or outstanding challenge limit exceeded','  "503":','    description: Verification provider unavailable; no authority granted'],6));
       if (route.path.startsWith("/media/") && route.method !== "get") {
         if (route.path === "/media/{id}/finalize") lines.push('        "202":', '          description: Verification already in progress; retry the same media ID');
@@ -488,6 +551,7 @@ function renderYaml(routes) {
   for (const [name, schema] of Object.entries(moderationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(contactSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  for (const [name,schema] of Object.entries(preregistrationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }
 

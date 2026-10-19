@@ -103,6 +103,8 @@ test("message preview rejects an expired message", async () => {
   );
   assert.equal(await service.previewMessage(message.id, message.recipientId), undefined);
   assert.equal(recorded, false);
+});
+
 test("premium cannot reopen expired or deleted messages or preview as a non-member", async () => {
   for (const row of [
     { ...message, expiresAt: new Date(Date.now() - 1).toISOString() },

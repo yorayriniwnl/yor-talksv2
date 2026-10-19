@@ -79,6 +79,33 @@ export type TwoFactorChallengeStatus = {
 };
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
 
+export interface FounderPerk {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  rarity?: string;
+}
+
+export interface NewPreregisterPass {
+  id: string;
+  username: string;
+  referralCode: string | null;
+  passNumber: string;
+  createdAt: string;
+  launchDate: string;
+  perks: FounderPerk[];
+  isExisting: false;
+}
+
+export type PreregisterPass = NewPreregisterPass | { isExisting: true; launchDate: string; perks: FounderPerk[] };
+
+export interface PreregisterStats {
+  totalRegistered: number;
+  launchDate: string;
+  perks: FounderPerk[];
+}
+
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 const EXPLICIT_LOGOUT_KEY = 'yortalks-logged-out';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
@@ -766,6 +793,10 @@ export const api = {
   },
   register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; enrollmentId: string; registrationNonce: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  preregister: (payload: { email: string; username: string; launchUpdatesConsent: true; referralCode?: string; perks?: string[] }) =>
+    request<PreregisterPass>('/preregister', { method: 'POST', body: JSON.stringify(payload) }, false),
+  getPreregisterStats: () =>
+    request<PreregisterStats>('/preregister/stats', {}, false),
   acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true }) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>

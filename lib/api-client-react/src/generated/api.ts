@@ -31,6 +31,7 @@ import type {
   GetContactsRequests200,
   GetGroupInvitations200,
   GetPostsSavedParams,
+  GetPreregisterStats200,
   GetReportsGrievanceByTicketId200,
   GetReportsGrievancesParams,
   GetReportsQueueParams,
@@ -140,6 +141,8 @@ import type {
   PostPremiumOrdersByOrderIdCancelBody,
   PostPremiumOrdersByOrderIdRecoverBody,
   PostPremiumOrdersByOrderIdVerifyBody,
+  PostPreregister200,
+  PostPreregister201,
   PostProductsBody,
   PostProductsByIdOrderBody,
   PostProductsByIdSaveBody,
@@ -184,6 +187,7 @@ import type {
   PostVideosByIdCommentsBody,
   PostVideosByIdCommentsByCommentIdLikeBody,
   PostVideosByIdLikeBody,
+  PreregistrationRequest,
   PutConversationsByConversationIdVanishBody,
   PutCreatorWorkspaceBody,
   PutMessagesByMessageIdBody,
@@ -11357,6 +11361,154 @@ export const usePostPremiumOrdersByOrderIdVerify = <TError = ErrorType<void>,
       > => {
       return useMutation(getPostPremiumOrdersByOrderIdVerifyMutationOptions(options));
     }
+
+export const getPostPreregisterUrl = () => {
+
+
+
+
+  return `/api/preregister`
+}
+
+/**
+ * @summary Post /preregister
+ */
+export const postPreregister = async (preregistrationRequest: PreregistrationRequest, options?: RequestInit): Promise<PostPreregister200 | PostPreregister201> => {
+
+  return customFetch<PostPreregister200 | PostPreregister201>(getPostPreregisterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(preregistrationRequest)
+  }
+);}
+
+
+
+
+
+export const getPostPreregisterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext> => {
+
+const mutationKey = ['postPreregister'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPreregister>>, {data: BodyType<PreregistrationRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPreregister(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPreregisterMutationResult = NonNullable<Awaited<ReturnType<typeof postPreregister>>>
+    export type PostPreregisterMutationBody = BodyType<PreregistrationRequest>
+    export type PostPreregisterMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /preregister
+ */
+export const usePostPreregister = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPreregister>>,
+        TError,
+        {data: BodyType<PreregistrationRequest>},
+        TContext
+      > => {
+      return useMutation(getPostPreregisterMutationOptions(options));
+    }
+
+export const getGetPreregisterStatsUrl = () => {
+
+
+
+
+  return `/api/preregister/stats`
+}
+
+/**
+ * @summary Get /preregister/stats
+ */
+export const getPreregisterStats = async ( options?: RequestInit): Promise<GetPreregisterStats200> => {
+
+  return customFetch<GetPreregisterStats200>(getGetPreregisterStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPreregisterStatsQueryKey = () => {
+    return [
+    `/api/preregister/stats`
+    ] as const;
+    }
+
+
+export const getGetPreregisterStatsQueryOptions = <TData = Awaited<ReturnType<typeof getPreregisterStats>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPreregisterStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreregisterStats>>> = ({ signal }) => getPreregisterStats({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPreregisterStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getPreregisterStats>>>
+export type GetPreregisterStatsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /preregister/stats
+ */
+
+export function useGetPreregisterStats<TData = Awaited<ReturnType<typeof getPreregisterStats>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPreregisterStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetProductsUrl = () => {
 

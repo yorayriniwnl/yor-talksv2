@@ -620,6 +620,98 @@ export type NullReceipt = null;
  */
 export type ContactWithdrawalReceipt = null;
 
+export type PreregistrationRequestPerksItem = typeof PreregistrationRequestPerksItem[keyof typeof PreregistrationRequestPerksItem];
+
+
+export const PreregistrationRequestPerksItem = {
+  'founder-badge': 'founder-badge',
+  'priority-access': 'priority-access',
+  'community-input': 'community-input',
+  'username-preference': 'username-preference',
+} as const;
+
+export interface PreregistrationRequest {
+  /**
+     * Trimmed and lowercased before storage.
+     * @maxLength 255
+     */
+  email: string;
+  /**
+     * Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.
+     * @minLength 3
+     * @maxLength 24
+     * @pattern ^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$
+     */
+  username: string;
+  /** Explicit agreement to receive launch and early member updates. */
+  launchUpdatesConsent: true;
+  /**
+     * @maxLength 28
+     * @pattern ^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$
+     */
+  referralCode?: string;
+  /** @maxItems 4 */
+  perks?: PreregistrationRequestPerksItem[];
+}
+
+export type PreregistrationPerkId = typeof PreregistrationPerkId[keyof typeof PreregistrationPerkId];
+
+
+export const PreregistrationPerkId = {
+  'founder-badge': 'founder-badge',
+  'priority-access': 'priority-access',
+  'community-input': 'community-input',
+  'username-preference': 'username-preference',
+} as const;
+
+export interface PreregistrationPerk {
+  id: PreregistrationPerkId;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export interface PreregistrationReceipt {
+  id: string;
+  username: string;
+  /** @nullable */
+  referralCode: string | null;
+  createdAt: string;
+  /**
+     * Unique registration reference; it is not a queue position or authentication credential.
+     * @pattern ^FOUNDER-[0-9A-F-]{36}$
+     */
+  passNumber: string;
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+  isExisting: false;
+}
+
+/**
+ * Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.
+ */
+export interface PreregistrationExistingReceipt {
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+  isExisting: true;
+}
+
+export interface PreregistrationStats {
+  /**
+     * Actual stored registrations with no artificial offset.
+     * @minimum 0
+     */
+  totalRegistered: number;
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+}
+
 export type PostAiChatBody = { [key: string]: unknown };
 
 export type PostAiModerateBody = { [key: string]: unknown };
@@ -942,6 +1034,18 @@ export type PostPremiumOrdersByOrderIdCancelBody = { [key: string]: unknown };
 export type PostPremiumOrdersByOrderIdRecoverBody = { [key: string]: unknown };
 
 export type PostPremiumOrdersByOrderIdVerifyBody = { [key: string]: unknown };
+
+export type PostPreregister200 = ApiEnvelope & {
+  data?: PreregistrationExistingReceipt;
+};
+
+export type PostPreregister201 = ApiEnvelope & {
+  data?: PreregistrationReceipt;
+};
+
+export type GetPreregisterStats200 = ApiEnvelope & {
+  data?: PreregistrationStats;
+};
 
 export type PostProductsBody = {
   /** @maxItems 10 */
