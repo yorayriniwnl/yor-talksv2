@@ -112,24 +112,40 @@ export class MessageRepository {
   }
 
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    return db.transaction(async (tx) => {
-      const [visible] = await tx.select({ id: messagesTable.id }).from(messagesTable).where(and(
-        eq(messagesTable.id, messageId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
-      )).for("update");
-      if (!visible) return undefined;
-      await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
-        target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-        set: { previewedAt },
+    class PreviewNoLongerAvailable extends Error {}
+    try {
+      return await db.transaction(async (tx) => {
+        // The row lock serializes previews against reads and deletes.
+        const [visible] = await tx.select().from(messagesTable).where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
+        )).for("update");
+        if (!visible) return undefined;
+        // A recipient read may have committed while the preview waited for the lock.
+        const [read] = await tx.select({ messageId: messageReadsTable.messageId })
+          .from(messageReadsTable)
+          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId)))
+          .limit(1);
+        if (read || (visible.recipientId === userId && visible.seenAt != null)) return undefined;
+        await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+          target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
+          set: { previewedAt },
+        });
+        // Use the database wall clock after the potentially delayed INSERT.
+        // Roll back its event if the message expired during this transaction.
+        const [message] = await tx.select().from(messagesTable).where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, sql`clock_timestamp() AT TIME ZONE 'UTC'`)),
+        ));
+        if (!message) throw new PreviewNoLongerAvailable();
+        return message as MessageRecord;
       });
-      const [message] = await tx.select().from(messagesTable).where(and(
-        eq(messagesTable.id, messageId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-      ));
-      return message as MessageRecord | undefined;
-    });
+    } catch (error) {
+      if (error instanceof PreviewNoLongerAvailable) return undefined;
+      throw error;
+    }
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
