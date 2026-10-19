@@ -142,5 +142,8 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
     assert.doesNotMatch(JSON.stringify(await new AccountService(users, redis).exportAccount(userId)), /Private vanished body|private-vanished/);
   }
   assert.equal(await service.previewMessage(vanished.id, recipient.id), undefined);
-  assert.equal((await messages.findById(vanished.id))?.content, 'Private vanished body');
+  assert.equal(await messages.findById(vanished.id), undefined);
+  // Confirm storage retention without reopening private data via public reads.
+  const retained = await pool.query<{ content: string }>("SELECT content FROM messages WHERE id = $1", [vanished.id]);
+  assert.equal(retained.rows[0]?.content, 'Private vanished body');
 });
