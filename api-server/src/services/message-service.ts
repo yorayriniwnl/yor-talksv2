@@ -332,10 +332,9 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
-    if (!this.isMessageVisible(persisted)) {
-      throw new UnauthorizedError("This message is no longer available");
-    }
-    return persisted;
+    // A replayed idempotency key must never resurrect expired or deleted content,
+    // including after the earlier visible-row lookup misses it.
+    return this.isMessageVisible(persisted) ? persisted : toMessageTombstone(persisted);
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
