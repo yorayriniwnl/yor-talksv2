@@ -352,7 +352,17 @@ export class MessageService {
     if (!members.includes(userId)) {
       return [];
     }
-    const messages = await this.messageRepository.listConversation(conversationId, options);
+    // Deny stale legacy threads and revoked group approvals at both the
+    // service and transactional storage boundaries, including concurrent revocation.
+    try { await this.requireConversationContacts(members, 'read', conversationId); }
+    catch (error) { if (error instanceof UnauthorizedError) return []; throw error; }
+    let messages: MessageRecord[];
+    try {
+      messages = await this.messageRepository.listConversation(
+        conversationId, options,
+        () => this.lockConversationContacts(members, 'read', conversationId),
+      );
+    } catch (error) { if (error instanceof UnauthorizedError) return []; throw error; }
     const withReceipts = await this.withReadReceipts(messages.filter((message: MessageRecord) => this.isMessageVisible(message)), userId);
     return withReceipts.filter((message) => this.isMessageVisible(message));
   }
