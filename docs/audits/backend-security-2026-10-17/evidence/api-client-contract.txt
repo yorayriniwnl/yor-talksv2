@@ -1,0 +1,6 @@
+🍻 orval v8.22.0 - A swagger client generator for typescript
+api-client-react Cleaning output folder
+🎉 api-client-react - Your OpenAPI spec has been converted into ready to use orval!
+zod Cleaning output folder
+🎉 zod - Your OpenAPI spec has been converted into ready to use orval!
+[api clients] Verified 233 generated React and Zod artifacts.

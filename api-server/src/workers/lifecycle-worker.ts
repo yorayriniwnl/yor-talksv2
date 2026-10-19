@@ -19,12 +19,18 @@ export async function ensureMediaCleanupLoop(): Promise<void> {
 
 export async function cleanAccountSessions(job: BackgroundJob, redis: RedisRepository): Promise<void> {
   const userId = job.payload.userId;
-  if (typeof userId !== 'string') throw new Error('invalid_job');
+  if (typeof userId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId)) throw new Error('invalid_job');
+  const emailHash = job.payload.emailHash;
+  if (emailHash !== undefined && (typeof emailHash !== 'string' || !/^[a-f0-9]{64}$/.test(emailHash))) throw new Error('invalid_job');
   const sessions = await redis.scanStrict(`session:${userId}:*`);
   for (const key of sessions) await redis.delStrict(key);
   const index = `login-approvals:user:${userId}`;
   for (const id of await redis.getSetStrict(index)) await redis.delStrict(`login-approval:${id}`);
   await redis.delStrict(index);
+  await redis.delStrict(`totp-setup:${userId}`);
+  // Older jobs lack this optional locator and rely on the OTP's five-minute
+  // TTL. Store only the locator hash, never the email or credential payload.
+  if (typeof emailHash === 'string') await redis.deleteEmailOtpForUserStrict(`email-login-otp:${emailHash}`, userId);
 }
 
 export async function startLifecycleWorker(additionalHandlers: Record<string, LifecycleHandler> = {}) {

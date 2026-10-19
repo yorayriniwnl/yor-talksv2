@@ -361,7 +361,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[92vh] max-h-[850px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans">
+      <DialogContent className="max-w-4xl h-[92vh] max-h-[850px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans" onEscapeKeyDown={(event) => {
+        if (stickersDrawerOpen) { event.preventDefault(); closeStickers(); }
+      }}>
         
         {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
         <DialogDescription className="sr-only">Capture a photo or a video using your camera and microphone. Filters and stickers are local previews and are not included in published media.</DialogDescription>

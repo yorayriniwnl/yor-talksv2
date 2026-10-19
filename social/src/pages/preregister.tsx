@@ -175,11 +175,11 @@ export default function Preregister() {
 
   // Generate QR code when pass is created or loaded
   useEffect(() => {
-    if (!pass) return;
+    if (!pass || pass.isExisting) return;
     const passPayload = JSON.stringify({
       brand: 'Yor Talks',
-      pass: pass.passNumber || 'FOUNDER-VIP',
-      handle: pass.username || cleanUsername,
+      pass: pass.passNumber,
+      handle: pass.username,
       code: pass.referralCode || '',
       launch: '2026-12-01',
     });
@@ -228,26 +228,20 @@ export default function Preregister() {
         perks: DEFAULT_PERKS.map((p) => p.id),
       });
 
-      const enrichedPass: PreregisterPass = {
-        ...result,
-        email: email.trim().toLowerCase(),
-        username: result.username || cleanUsername,
-        passNumber: result.passNumber || `FOUNDER-${cleanUsername.toUpperCase()}`,
-        referralCode: result.referralCode || `YOR-${cleanUsername.toUpperCase()}`,
-      };
-
-      setPass(enrichedPass);
-      try {
-        localStorage.setItem('yor:founder:pass:v1', JSON.stringify(enrichedPass));
-      } catch {
-        // ignore
+      setPass(result);
+      if (!result.isExisting) {
+        try {
+          localStorage.setItem('yor:founder:pass:v1', JSON.stringify(result));
+        } catch {
+          // ignore
+        }
       }
 
       triggerConfetti();
       toast.success(
         result.isExisting
-          ? `Welcome back, @${enrichedPass.username}! Here is your Founder Boarding Pass.`
-          : `You're on the list! Founder Pass ${enrichedPass.passNumber} reserved.`,
+          ? "You're already on the list! We'll notify you on launch day."
+          : `You're on the list! Founder Pass ${result.passNumber} reserved.`,
       );
     } catch (err: any) {
       setErrorMessage(
@@ -259,7 +253,7 @@ export default function Preregister() {
   };
 
   const copyShareLink = () => {
-    if (!pass) return;
+    if (!pass || pass.isExisting) return;
     const refCode = pass.referralCode || 'FOUNDER';
     const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
     navigator.clipboard
@@ -275,10 +269,10 @@ export default function Preregister() {
   };
 
   const shareOnTwitter = () => {
-    if (!pass) return;
+    if (!pass || pass.isExisting) return;
     const refCode = pass.referralCode || 'FOUNDER';
     const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
-    const tweetText = `I just reserved my Founder Pass on @yortalks for the global launch on 01 Dec 2026! 🚀 Locked in @${pass.username || cleanUsername} and unlocked 1-Year SuperPass Free.\n\nClaim your handle before launch:`;
+    const tweetText = `I just reserved my Founder Pass on @yortalks for the global launch on 01 Dec 2026! 🚀 Locked in @${pass.username} and unlocked 1-Year SuperPass Free.\n\nClaim your handle before launch:`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',
@@ -287,7 +281,7 @@ export default function Preregister() {
   };
 
   const shareOnWhatsApp = () => {
-    if (!pass) return;
+    if (!pass || pass.isExisting) return;
     const refCode = pass.referralCode || 'FOUNDER';
     const shareUrl = `${window.location.origin}/preregister?ref=${encodeURIComponent(refCode)}`;
     const text = `Join me on Yor Talks! Global launch is on 1st December 2026. Pre-register now to lock your @handle and get a 1-Year Free SuperPass:\n${shareUrl}`;
@@ -467,6 +461,41 @@ export default function Preregister() {
             FORM OR SUCCESS PASS STATE
            ═══════════════════════════════════════════════════════════ */}
         {pass ? (
+          pass.isExisting ? (
+            <div className="max-w-2xl mx-auto mb-20 animate-in fade-in zoom-in-95 duration-500">
+              <div className="relative rounded-3xl p-[3px] bg-gradient-to-br from-[#4ade80]/60 via-[#252932] to-[#11141b] shadow-[0_0_60px_rgba(74,222,128,0.15)]">
+                <div className="bg-[#0a0c10] rounded-[22px] p-6 sm:p-10 text-center">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4ade80]/10 border border-[#4ade80]/30 text-[#4ade80] text-xs font-mono font-bold mb-4">
+                    <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
+                    REGISTRATION CONFIRMED
+                  </div>
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3">
+                    You're Already On The List!
+                  </h2>
+                  <p className="text-sm text-[#9298a5] max-w-lg mx-auto mb-6 leading-relaxed">
+                    A pre-registration was already recorded for this email address. To safeguard account privacy,
+                    existing handles and pass identifiers are not displayed upon lookup.
+                  </p>
+                  <p className="text-xs text-[#717784] font-mono mb-6">
+                    Global Launch Date: 01 December 2026 • We look forward to welcoming you!
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setPass(null);
+                      setEmail('');
+                      setUsername('');
+                    }}
+                    className="text-xs text-[#8e94a0] hover:text-white"
+                  >
+                    Register another handle
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
           /* SUCCESS BOARDING PASS CARD */
           <div className="max-w-2xl mx-auto mb-20 animate-in fade-in zoom-in-95 duration-500">
             <div className="relative rounded-3xl p-[3px] bg-gradient-to-br from-[#e84b4b] via-[#ff8a7f] to-[#671515] shadow-[0_0_60px_rgba(232,75,75,0.35)]">
@@ -494,7 +523,7 @@ export default function Preregister() {
                   <div className="text-right">
                     <span className="block font-mono text-[11px] text-[#9298a5] uppercase">Pass Identifier</span>
                     <span className="font-mono text-lg sm:text-xl font-black text-[#ff8a7f] tracking-widest">
-                      {pass.passNumber || 'FOUNDER-VIP'}
+                      {pass.passNumber}
                     </span>
                   </div>
                 </div>
@@ -507,7 +536,7 @@ export default function Preregister() {
                     </span>
                     <span className="font-mono text-xl sm:text-2xl font-bold text-white flex items-center gap-1.5">
                       <span className="text-[#e84b4b]">@</span>
-                      {pass.username || cleanUsername}
+                      {pass.username}
                       <CheckCircle2 className="w-5 h-5 text-[#4ade80] inline ml-1" />
                     </span>
                     <span className="text-[11px] text-[#9298a5] mt-1 block">
@@ -520,7 +549,7 @@ export default function Preregister() {
                       Registered Email
                     </span>
                     <span className="font-mono text-sm sm:text-base font-semibold text-white truncate block">
-                      {pass.email || email}
+                      {email}
                     </span>
                     <span className="text-[11px] text-[#9298a5] mt-1 block">
                       Launch access link will be dispatched here

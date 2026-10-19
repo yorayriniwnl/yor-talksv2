@@ -159,3 +159,19 @@ test("account deletion rolls back ledger anonymization when user deletion fails"
   await pool.query("DELETE FROM ledger_transactions WHERE id = $1", [ledgerId]);
   await pool.query("DELETE FROM users WHERE id = $1", [counterparty.id]);
 });
+
+for (const emailVerified of [true, false]) {
+  test(`account deletion ${emailVerified ? 'erases verified' : 'preserves unattributed'} waitlist addresses`, async () => {
+    const owner = await createTestUser(userRepository, { emailVerified, passwordHash: await bcrypt.hash('SyntheticWaitlist1!', 4) });
+    fixtureUsers.push(owner.id);
+    const waitlistId = randomUUID();
+    await pool.query('INSERT INTO waitlist(id,email) VALUES($1,$2)', [waitlistId, owner.email.toUpperCase()]);
+    try {
+      assert.equal(await new AccountService(userRepository, redisRepository).deleteAccount(owner.id, 'SyntheticWaitlist1!'), true);
+      assert.equal((await pool.query('SELECT 1 FROM waitlist WHERE id=$1', [waitlistId])).rowCount, emailVerified ? 0 : 1);
+    } finally {
+      await pool.query('DELETE FROM waitlist WHERE id=$1', [waitlistId]);
+      await pool.query('DELETE FROM background_jobs WHERE dedup_key=$1', [`account:${owner.id}`]);
+    }
+  });
+}

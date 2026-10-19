@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { eq, or, sql } from "drizzle-orm";
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   invitesTable,
   ledgerTransactionsTable,
@@ -51,6 +51,13 @@ export class AccountService {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
 
+      // The archive already attributes a waitlist address only after email
+      // verification. Apply that same ownership rule when erasing the account;
+      // an unverified signup must not remove somebody else's waitlist record.
+      if (locked.emailVerified) {
+        await tx.execute(sql`DELETE FROM waitlist WHERE lower(email)=lower(${locked.email})`);
+      }
+
       // Preserve the latest restrictive guardian decision before account
       // deletion nulls its user reference; older grants must never resurface.
       await tx.execute(sql`WITH affected_subjects AS MATERIALIZED (
@@ -95,7 +102,10 @@ export class AccountService {
       await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
         WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
       await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
-        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
+        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({
+          userId,
+          emailHash: createHash('sha256').update(locked.email.trim().toLowerCase()).digest('hex'),
+        })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
       // Nullable legacy foreign keys retain the other author's direct history.

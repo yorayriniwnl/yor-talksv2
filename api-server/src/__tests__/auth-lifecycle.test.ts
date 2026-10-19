@@ -74,6 +74,9 @@ test('logout-all rejects old refresh and approved challenges even when Redis cle
   assert.equal(await auth.completeTwoFactorLogin(challenge!.challengeId), undefined);
   const unavailable = Object.create(redis) as RedisRepository;
   unavailable.getStrict = async () => { throw new Error('injected Redis command outage'); };
+  // A code consumed before logout-all remains single-use. Advance only the
+  // synthetic authenticator clock to obtain the next valid code.
+  authenticator.options = { epoch: Date.UTC(2026, 9, 6, 0, 0, 45) };
   const fresh = await auth.login({ identifier: f.identifier, password: 'synthetic-password-1', totpCode: authenticator.generate(f.user.totpSecret!) });
   await assert.rejects(new AuthService(users, unavailable).refreshAccessToken(fresh.tokens.refreshToken), /injected Redis/);
 });

@@ -14,6 +14,7 @@ import { apiRateLimiter } from "./middlewares/rate-limit.js";
 import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
 import { mediaResponse } from "./services/media-response.js";
 import { skipAssuranceCallbackParser } from './middlewares/assurance-body.js';
+import { capturePaymentWebhookBody } from './middlewares/payment-webhook-body.js';
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -62,9 +63,7 @@ app.use(apiRateLimiter);
 
 app.use(skipAssuranceCallbackParser(express.json({
   limit: "1mb",
-  verify(req, _res, buffer) {
-    (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
-  },
+  verify: capturePaymentWebhookBody,
 })));
 app.use(skipAssuranceCallbackParser(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 })));
 app.use(cookieParser());

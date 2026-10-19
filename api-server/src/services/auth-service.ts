@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { authenticator } from "otplib";
-import { randomUUID, randomBytes, randomInt } from "node:crypto";
+import { createHash, randomUUID, randomBytes, randomInt } from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
@@ -247,7 +247,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         this.securityService.createAuditEvent("login_failure", "Wrong 2FA code", normalizedIdentifier);
         throw new Error("Invalid two-factor code");
       }
@@ -308,7 +308,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user, undefined, undefined, { subject: googleSubject, email: googleEmail }),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
@@ -394,7 +394,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user, key, state.reservationId),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         await this.deleteClaimedEmailOtp(key, raw, state.reservationId);
         throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
@@ -730,7 +730,7 @@ export class AuthService {
     } catch {
       return false;
     }
-    if (!authenticator.check(code, pendingSecret)) {
+    if (!await this.consumeTotpCode(userId, code, pendingSecret)) {
       return false;
     }
     // The database condition also covers another confirmation winning after
@@ -745,12 +745,22 @@ export class AuthService {
     const storedSecret = user?.totpSecret;
     if (!storedSecret) return false;
     const secret = decryptSecret(storedSecret, env.TOTP_ENCRYPTION_KEY).secret;
-    if (!authenticator.check(code, secret)) {
+    if (!await this.consumeTotpCode(userId, code, secret)) {
       return false;
     }
     // A code for an earlier secret cannot disable a replacement installed
     // while this request was waiting for the database.
     return this.userRepository.disableTwoFactorIfMatches(userId, storedSecret);
+  }
+
+  private async consumeTotpCode(userId: string, code: string, secret: string): Promise<boolean> {
+    if (!authenticator.check(code, secret)) return false;
+    // The verifier uses the default 30-second step with no clock-skew window.
+    // Retain the claim beyond that validity period. One atomic Redis NX claim
+    // is shared across login methods, setup and disable, including concurrent
+    // requests. Neither the authenticator secret nor the short code is stored.
+    const digest = createHash("sha256").update(secret).update("\0").update(code).digest("hex");
+    return this.redisRepository.setIfAbsentStrict(`totp-used:${userId}:${digest}`, "used", 90);
   }
 
   private async readTotpSecret(user: UserRecord): Promise<string | null> {

@@ -67,6 +67,8 @@ for (const first of ['payer', 'creator'] as const) {
     assert.equal(order[first === 'payer' ? 'payer_id' : 'creator_id'], null);
     const job = (await pool.query('SELECT * FROM background_jobs WHERE dedup_key=$1', [`account:${deleted}`])).rows[0];
     assert.ok(job);
+    assert.match(job.payload.emailHash, /^[a-f0-9]{64}$/);
+    assert.deepEqual(Object.keys(job.payload).sort(), ['emailHash', 'userId']);
     await assert.rejects(cleanAccountSessions(job, { scanStrict: async () => { throw new Error('Redis unavailable'); } } as unknown as RedisRepository));
     await cleanAccountSessions(job, redis);
     assert.equal(await redis.getStrict(`session:${deleted}:synthetic-device`), null);

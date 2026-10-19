@@ -1,5 +1,7 @@
 const COMPLETED_JOB_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-const COMPLETED_JOB_MAX_COUNT = 10_000;
+// Canonical notification rows retain delivery/retry history. Completed queue
+// entries need only a small operational window, without duplicating that data.
+const COMPLETED_JOB_MAX_COUNT = 1_000;
 const FAILED_JOB_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 const FAILED_JOB_MAX_COUNT = 5_000;
 

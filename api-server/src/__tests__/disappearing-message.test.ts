@@ -58,11 +58,14 @@ test("expired and deleted messages are excluded at the conversation response bou
     expiresAt: new Date(Date.now() - 1).toISOString(),
   };
   const deleted = { ...expired, id: "deleted-message", expiresAt: null, deletedAt: new Date().toISOString() };
+  let historyReads = 0;
   const service = new MessageService(
-    { getMembers: async () => ["sender", "recipient"] } as never,
-    { listConversation: async () => [expired, deleted] } as never,
+    { getMembers: async () => ["sender", "recipient"], findById: async () => ({ isGroup: false }) } as never,
+    { listConversation: async () => { historyReads++; return [expired, deleted]; } } as never,
+    undefined, undefined, undefined, allowTestContacts,
   );
   assert.deepEqual(await service.listConversationPage("conversation-1", "recipient", {}), []);
+  assert.equal(historyReads, 1, "the authorized history must reach the visibility filter");
 });
 
 test("message visibility uses a strict expiry boundary and denies invalid dates", async () => {

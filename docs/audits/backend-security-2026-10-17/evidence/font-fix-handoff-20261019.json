@@ -1,0 +1,39 @@
+{
+  "finding": "CI-002",
+  "observedDateAsiaCalcutta": "2026-10-19",
+  "scope": "Read-only comparison of already committed frontend fixes, pinned upstream license bytes and the existing font test. No frontend files, branch or PR were modified.",
+  "backendBaseline": "62920ade36e6310f3dc449c8dfc6da07a2585f05",
+  "frontendBranch": "audit/frontend-compliance-20261017",
+  "frontendHead": "328f622487fc8bc4c2d48f2d848a2829566b65c8",
+  "fixCommit": "dafdb974f972040fbc16ee036dac6d5628820ff0",
+  "minimalPaths": [
+    "social/.gitattributes",
+    "social/public/fonts/dmmono-OFL.txt"
+  ],
+  "attributesChange": "Five-line social/.gitattributes pins font CSS and OFL text to LF, then overrides DM Mono with -text to preserve upstream CRLF and intentional trailing space.",
+  "licenseChange": {
+    "description": "Only 93 LF line endings become CRLF; normalized text and the existing manifest/test remain unchanged.",
+    "baselineBytes": 4391,
+    "baselineSha256": "febfd2b42308d5327ade2884aed777da3d2decd2c53d574c43e603443d70c5b2",
+    "correctedBytes": 4484,
+    "correctedSha256": "2bada5ea45c3c63b7f1ea1f88ce9672c9e4f0c42b2c3b7378949084fe55a3066"
+  },
+  "upstreamVerification": {
+    "source": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/dmmono/OFL.txt",
+    "httpStatus": 200,
+    "bytes": 4484,
+    "sha256": "2bada5ea45c3c63b7f1ea1f88ce9672c9e4f0c42b2c3b7378949084fe55a3066",
+    "matchesExistingManifestHash": true,
+    "matchesCommittedFrontendLicenseByteForByte": true,
+    "otherFiveLicenseManifestHashesMatch": true
+  },
+  "readOnlyTest": {
+    "command": "node --test tests/font-assets.test.mjs",
+    "workingTreeBranch": "audit/frontend-compliance-20261017",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "integrationBoundary": "Original task prohibits social/** changes. Obtain the narrow ownership exception before copying these two committed blobs into the backend branch. Do not cherry-pick the entire frontend commit or alter its dirty worktree."
+}

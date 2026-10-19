@@ -78,12 +78,9 @@ test("ingestion deduplicates delivery and rollups respect UTC day boundaries", a
   assert.equal(await service.ingest(user.id, [firstNextDay]), 1);
 
   await service.rollupDay(rollupDay);
-  const result = await pool.query<{ event_count: string; unique_users: string }>(
-    "SELECT event_count, unique_users FROM product_analytics_daily WHERE date = $1::timestamptz AND event_name = 'navigation'",
-    [rollupDay.toISOString()],
-  );
-  assert.equal(Number(result.rows[0]?.event_count), 2);
-  assert.equal(Number(result.rows[0]?.unique_users), 1);
+  const result = (await service.getDaily(rollupDay, dayEnd)).find(row => row.eventName === 'navigation');
+  assert.equal(result?.eventCount, 2);
+  assert.equal(result?.uniqueUsers, 1);
 });
 
 test("concurrent repeated rollups are idempotent and source KPI queries execute", async () => {
@@ -93,12 +90,9 @@ test("concurrent repeated rollups are idempotent and source KPI queries execute"
   assert.equal(await service.ingest(user.id, [event]), 1);
 
   await Promise.all(Array.from({ length: 4 }, () => service.rollupDay(rollupDay)));
-  const result = await pool.query<{ event_count: string; unique_users: string }>(
-    "SELECT event_count, unique_users FROM product_analytics_daily WHERE date = $1::timestamptz AND event_name = 'navigation'",
-    [rollupDay.toISOString()],
-  );
-  assert.equal(Number(result.rows[0]?.event_count), 3);
-  assert.equal(Number(result.rows[0]?.unique_users), 2);
+  const result = (await service.getDaily(rollupDay, dayEnd)).find(row => row.eventName === 'navigation');
+  assert.equal(result?.eventCount, 3);
+  assert.equal(result?.uniqueUsers, 2);
 
   const overview = await service.getOverview();
   assert.ok(Number.isInteger(overview.dau));
@@ -205,11 +199,12 @@ test("source KPIs calculate activation, cohort retention, engagement, and ledger
   assert.equal(after.financialReconciliation.orphanLedgerEntries - before.financialReconciliation.orphanLedgerEntries, 2);
   assert.equal(after.financialReconciliation.missingProviderPaymentIds - before.financialReconciliation.missingProviderPaymentIds, 3);
   const cohort = after.retentionCohorts.find((row) => row.cohortDate === cohortDate.toISOString().slice(0, 10));
+  const previousCohort = before.retentionCohorts.find((row) => row.cohortDate === cohortDate.toISOString().slice(0, 10));
   assert.ok(cohort);
-  assert.equal(cohort!.signups, 1);
-  assert.equal(cohort!.day1Retained, 1);
-  assert.equal(cohort!.day7Retained, 1);
-  assert.equal(cohort!.day30Retained, 1);
+  assert.equal(cohort!.signups - (previousCohort?.signups ?? 0), 1);
+  assert.equal(cohort!.day1Retained - (previousCohort?.day1Retained ?? 0), 1);
+  assert.equal(cohort!.day7Retained - (previousCohort?.day7Retained ?? 0), 1);
+  assert.equal(cohort!.day30Retained - (previousCohort?.day30Retained ?? 0), 1);
 });
 
 test("failed rollup state is durable and a later retry succeeds", async () => {

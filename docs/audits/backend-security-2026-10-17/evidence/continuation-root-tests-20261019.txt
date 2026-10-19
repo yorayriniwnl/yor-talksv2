@@ -1,0 +1,30 @@
+Command: node --test tests/realtime-smoke.test.mjs tests/restore-deletion-verification.test.mjs tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs tests/multer-version.test.mjs
+Native exit code: 0
+✔ Alertmanager runtime configuration safely quotes receiver values and leaves the password in its secret file (2.3314ms)
+✔ Alertmanager rejects insecure receiver URLs and embedded credentials (0.6677ms)
+✔ repository workflow, lockfile and manifests reject duplicate mapping keys (46.3429ms)
+✔ CI pins actions, matches the toolchain and retains all-scope dependency auditing (5.4427ms)
+✔ backend verification runs independently and keeps security and integration checks mandatory (2.694ms)
+✔ production infrastructure and encrypted restore run independently as mandatory checks (1.9535ms)
+✔ runtime database provisioning validates distinct owner/runtime identities and exact target database (7.2085ms)
+✔ schema bootstrap refuses partial schemas and unrelated existing objects (2.1213ms)
+✔ beta bootstrap action identifies an empty database that needs the base schema push (0.5225ms)
+✔ production migration refuses missing or placeholder contact identity secrets (5.2987ms)
+✔ premium story migration runs after the base story interaction tables exist (16.4541ms)
+✔ private eligibility migration shares the release transaction and cannot backfill legacy adults (4.2162ms)
+✔ Multer remains on a release patched against aborted-upload disk writes (2.2251ms)
+✔ realtime smoke exercises actual Engine.IO polling and rejected Socket.IO authentication (98.922ms)
+✔ realtime smoke fails when an endpoint accepts an untrusted browser origin (17.3929ms)
+✔ realtime smoke fails when the namespace allows an unauthenticated connection (59.5363ms)
+✔ realtime smoke rejects an HTML fallback even when it rejects hostile origins (18.597ms)
+✔ recovery manifest requires an independent digest/checkpoint and minimizes identifiers (16.0642ms)
+✔ restored account detection rolls back and fails until the erased identity is absent (2.3296ms)
+✔ wrong recovery target, invalid count and database errors cannot pass reconciliation (2.2174ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 770.6022

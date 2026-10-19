@@ -37,7 +37,7 @@ test('authenticated push registration rejects internal endpoints before persiste
   assert.ok(address && typeof address !== 'string');
   const token = jwt.sign({ sub: userId, deviceId, authVersion: 0, type: 'access' }, env.JWT_SECRET, { expiresIn: '5m' });
   for (const mount of ['/api', '/api/v1']) {
-    const subscribe = (endpoint: string, authenticated = true): Promise<Response> => fetch(`http://127.0.0.1:${address.port}${mount}/notifications/push/subscribe`, {
+    const subscribe = (endpoint: string, authenticated = true): ReturnType<typeof fetch> => fetch(`http://127.0.0.1:${address.port}${mount}/notifications/push/subscribe`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ endpoint, keys: { p256dh: 'synthetic-public-key', auth: 'synthetic-auth-key' } }),
     });
