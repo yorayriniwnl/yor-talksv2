@@ -454,6 +454,22 @@ export class MessageService {
     if(!members.includes(userId))return undefined;
     try { await this.requireConversationContacts(members,'read',candidate.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
+    const conversation = await this.conversationRepository.findById(candidate.conversationId);
+    if (conversation?.vanishMode && candidate.senderId !== userId) {
+      // Vanish mode is an expiry of visible content, not merely a read receipt.
+      // Mark the row deleted atomically after reauthorizing its contacts; keep
+      // the stored bytes for controlled retention, but never return them.
+      try {
+        const vanished = await this.messageRepository.updateVisible(
+          messageId, { deletedAt: new Date().toISOString() },
+          () => this.lockConversationContacts(members, 'read', candidate.conversationId),
+        );
+        return vanished ? toMessageTombstone(vanished) : undefined;
+      } catch (error) {
+        if (error instanceof UnauthorizedError) return undefined;
+        throw error;
+      }
+    }
     // A minor or unverified account may read messages without creating a
     // sender-visible receipt. Keep this decision at the storage boundary.
     if (!(await this.readReceiptsEnabled(userId))) return candidate;
