@@ -149,8 +149,8 @@ export default function Preregister() {
         if (active && res) {
           setStats({
             totalRegistered: res.totalRegistered,
-            targetSpots: res.targetSpots ?? 50_000,
-            spotsRemaining: res.spotsRemaining ?? Math.max(0, 50_000 - res.totalRegistered),
+            targetSpots: 50_000,
+            spotsRemaining: Math.max(0, 50_000 - res.totalRegistered),
           });
         }
       } catch {
@@ -494,7 +494,7 @@ export default function Preregister() {
                   <div className="text-right">
                     <span className="block font-mono text-[11px] text-[#9298a5] uppercase">Pass Identifier</span>
                     <span className="font-mono text-lg sm:text-xl font-black text-[#ff8a7f] tracking-widest">
-                      {pass.passNumber}
+                      {pass.passNumber || 'FOUNDER-VIP'}
                     </span>
                   </div>
                 </div>
@@ -507,7 +507,7 @@ export default function Preregister() {
                     </span>
                     <span className="font-mono text-xl sm:text-2xl font-bold text-white flex items-center gap-1.5">
                       <span className="text-[#e84b4b]">@</span>
-                      {pass.username}
+                      {pass.username || cleanUsername}
                       <CheckCircle2 className="w-5 h-5 text-[#4ade80] inline ml-1" />
                     </span>
                     <span className="text-[11px] text-[#9298a5] mt-1 block">
@@ -520,7 +520,7 @@ export default function Preregister() {
                       Registered Email
                     </span>
                     <span className="font-mono text-sm sm:text-base font-semibold text-white truncate block">
-                      {pass.email}
+                      {pass.email || email}
                     </span>
                     <span className="text-[11px] text-[#9298a5] mt-1 block">
                       Launch access link will be dispatched here
@@ -573,7 +573,7 @@ export default function Preregister() {
                     </span>
                     <div className="flex items-center gap-2 mt-1">
                       <code className="px-3 py-1.5 rounded-lg bg-[#181c26] text-white font-mono text-base font-bold border border-[#343946] flex-1 text-center sm:text-left">
-                        {pass.referralCode}
+                        {pass.referralCode || 'FOUNDER-EXCLUSIVE'}
                       </code>
                       <Button
                         type="button"
