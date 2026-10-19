@@ -173,7 +173,11 @@ export class MessageRepository {
       if (!message) return undefined;
       await authorize?.();
       await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
-      if (message.recipientId !== userId || message.senderId === userId) return message as MessageRecord;
+      // A group member reading must never populate the legacy shared seenAt field.
+      // Per-member group receipts live exclusively in message_reads.
+      const [conversation] = await tx.select({ isGroup: conversationsTable.isGroup })
+        .from(conversationsTable).where(eq(conversationsTable.id, message.conversationId)).limit(1);
+      if (!conversation || conversation.isGroup || message.recipientId !== userId || message.senderId === userId) return message as MessageRecord;
       const [updated] = await tx.update(messagesTable)
         .set({ seenAt: sql`COALESCE(${messagesTable.seenAt}, ${readAt}::timestamp)` })
         .where(and(
