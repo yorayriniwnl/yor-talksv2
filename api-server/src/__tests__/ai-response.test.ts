@@ -81,9 +81,9 @@ test("Gemini moderation and assistance calls send credentials only in the API ke
     const prompt = body.contents?.[0]?.parts?.[0]?.text ?? "";
     requests.push({ url, apiKey: new Headers(init?.headers).get("x-goog-api-key") });
     const text = prompt.includes("Extract 3 relevant topic hashtags")
-      ? '["generated"]'
+      ? '["synthetic-tag"]'
       : prompt.includes("return 2 topical recommendation signals")
-        ? '[{"reason":"relevant","score":0.75}]'
+        ? '[{"reason":"topic relevance","score":0.9}]'
         : '{"spam":false,"toxicity":false,"nsfw":false}';
     return Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
   });
