@@ -6,10 +6,11 @@ export type PublicGrievance = Pick<
 >;
 
 /** Public ticket possession permits status tracking, never access to case evidence. */
-export function toPublicGrievance(ticket: GrievanceTicket): PublicGrievanceReceipt {
+export function toPublicGrievance(ticket: GrievanceTicket): PublicGrievance {
   return {
     ticketId: ticket.ticketId,
     status: ticket.status,
+    slaDeadline: ticket.slaDeadline,
     createdAt: ticket.createdAt,
   };
 }
