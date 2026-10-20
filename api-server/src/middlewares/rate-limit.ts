@@ -104,6 +104,7 @@ function createLimiter(prefix: string, windowMs: number, max: number, keyGenerat
 
 export const apiRateLimiter = createLimiter("yor:rate:api:", 15 * 60 * 1000, 300);
 export const authRateLimiter = createLimiter("yor:rate:auth:", 15 * 60 * 1000, 40);
+export const preregistrationRateLimiter = createLimiter("yor:rate:preregistration:", 15 * 60 * 1000, 40);
 export const scopedAuthRateLimiter: RequestHandler = (req, res, next) => {
   if (!req.path.startsWith('/auth/') || (req.method === 'GET' && /^\/auth\/2fa\/challenges(?:\/|$)/.test(req.path))) return next();
   return authRateLimiter(req, res, next);

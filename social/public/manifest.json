@@ -1,12 +1,12 @@
 {
   "name": "Yor Talks",
   "short_name": "Yor",
-  "description": "A living internet for turning ideas, people, and shared worlds into real momentum.",
+  "description": "A premium social experience with Indian data residency as a launch commitment and privacy inspired by EU principles.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#e84b4b",
+  "theme_color": "#0d1011",
   "orientation": "portrait-primary",
   "icons": [
     {

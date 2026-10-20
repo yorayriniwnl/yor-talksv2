@@ -12,7 +12,7 @@ test('font delivery uses local complete WOFF2 assets and ships their pinned sour
   const manifest = JSON.parse(await fs.readFile(path.join(folder, 'sources.json'), 'utf8'));
   const sha = bytes => createHash('sha256').update(bytes).digest('hex');
   assert.doesNotMatch(html, /https:\/\/fonts\.(?:googleapis|gstatic)\.com/);
-  assert.ok(html.includes(`/fonts/fonts.css?v=${sha(css).slice(0, 16)}`), 'stylesheet updates must bypass the old service-worker cache key');
+  assert.ok(html.includes(`/fonts/fonts.css?v=${sha(css.replace(/\r\n/g, '\n')).slice(0, 16)}`), 'stylesheet updates must bypass the old service-worker cache key');
   assert.doesNotMatch(css, /url\(https?:/);
   const referenced = [...new Set([...css.matchAll(/url\(\/fonts\/([^)]+)\)/g)].map(match => match[1]))].sort();
   assert.deepEqual(referenced, manifest.fonts.map(font => font.file).sort());

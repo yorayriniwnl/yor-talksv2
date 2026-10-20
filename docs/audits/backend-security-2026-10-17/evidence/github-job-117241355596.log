@@ -1,0 +1,636 @@
+2026-10-16T23:20:49.0675110Z Current runner version: '2.337.0'
+2026-10-16T23:20:49.0709779Z ##[group]Runner Image Provisioner
+2026-10-16T23:20:49.0711084Z Hosted Compute Agent
+2026-10-16T23:20:49.0712118Z Version: 20261012.601
+2026-10-16T23:20:49.0713284Z Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+2026-10-16T23:20:49.0714578Z Build Date: 2026-10-12T17:48:21Z
+2026-10-16T23:20:49.0716002Z Worker ID: {28f62b30-c882-4299-9190-daf314a1cd5e}
+2026-10-16T23:20:49.0717378Z Region: eastus
+2026-10-16T23:20:49.0718293Z Cloud: Azure
+2026-10-16T23:20:49.0719124Z ##[endgroup]
+2026-10-16T23:20:49.0721610Z ##[group]Operating System
+2026-10-16T23:20:49.0722633Z Ubuntu
+2026-10-16T23:20:49.0723644Z 24.04.5
+2026-10-16T23:20:49.0724529Z LTS
+2026-10-16T23:20:49.0725651Z ##[endgroup]
+2026-10-16T23:20:49.0726702Z ##[group]Runner Image
+2026-10-16T23:20:49.0727750Z Image: ubuntu-24.04
+2026-10-16T23:20:49.0728802Z Version: 20261012.334.1
+2026-10-16T23:20:49.0730851Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-16T23:20:49.0733636Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-16T23:20:49.0735597Z ##[endgroup]
+2026-10-16T23:20:49.0737627Z ##[group]GITHUB_TOKEN Permissions
+2026-10-16T23:20:49.0740248Z Contents: read
+2026-10-16T23:20:49.0741400Z Metadata: read
+2026-10-16T23:20:49.0742286Z ##[endgroup]
+2026-10-16T23:20:49.0745612Z Secret source: Actions
+2026-10-16T23:20:49.0747193Z Cache mode: write
+2026-10-16T23:20:49.0748351Z Prepare workflow directory
+2026-10-16T23:20:49.1373505Z Prepare all required actions
+2026-10-16T23:20:49.1443745Z Getting action download info
+2026-10-16T23:20:49.3416472Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-16T23:20:49.4564440Z Download action repository 'pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1' (SHA:b906affcce14559ad1aafd4ab0e942779e9f58b1)
+2026-10-16T23:20:49.6579300Z Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-10-16T23:20:49.7523245Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-16T23:20:49.9920529Z Complete job name: verify
+2026-10-16T23:20:50.0732876Z ##[group]Checking docker version
+2026-10-16T23:20:50.0746555Z ##[command]/usr/bin/docker version --format '{{.Server.APIVersion}}'
+2026-10-16T23:20:50.1838155Z '1.48'
+2026-10-16T23:20:50.1855524Z Docker daemon API version: '1.48'
+2026-10-16T23:20:50.1856747Z ##[command]/usr/bin/docker version --format '{{.Client.APIVersion}}'
+2026-10-16T23:20:50.2025315Z '1.48'
+2026-10-16T23:20:50.2040053Z Docker client API version: '1.48'
+2026-10-16T23:20:50.2047411Z ##[endgroup]
+2026-10-16T23:20:50.2051897Z ##[group]Clean up resources from previous jobs
+2026-10-16T23:20:50.2059788Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter "label=cedf09"
+2026-10-16T23:20:50.2209617Z ##[command]/usr/bin/docker network prune --force --filter "label=cedf09"
+2026-10-16T23:20:50.2343389Z ##[endgroup]
+2026-10-16T23:20:50.2344214Z ##[group]Create local container network
+2026-10-16T23:20:50.2355668Z ##[command]/usr/bin/docker network create --label cedf09 github_network_13516737718742ad9cd0cfea29014ee8
+2026-10-16T23:20:50.2869134Z ccbaf508f2a235d149049dfe1ddc86e4d9adba2b11cafbd08bbf423790367f83
+2026-10-16T23:20:50.2890850Z ##[endgroup]
+2026-10-16T23:20:50.2982630Z ##[group]Starting postgres service container
+2026-10-16T23:20:50.3007275Z ##[command]/usr/bin/docker pull postgres:16-alpine
+2026-10-16T23:20:50.5396801Z 16-alpine: Pulling from library/postgres
+2026-10-16T23:20:50.6180625Z e2de96513ba9: Already exists
+2026-10-16T23:20:50.6212852Z 1b7f9cd581ee: Pulling fs layer
+2026-10-16T23:20:50.6234299Z 210b280f9556: Pulling fs layer
+2026-10-16T23:20:50.6236823Z 81717818649a: Pulling fs layer
+2026-10-16T23:20:50.6238424Z 3ae6141cfd99: Pulling fs layer
+2026-10-16T23:20:50.6240177Z 25b77f59fd95: Pulling fs layer
+2026-10-16T23:20:50.6241619Z 6c25da34e03f: Pulling fs layer
+2026-10-16T23:20:50.6243100Z a88782f92806: Pulling fs layer
+2026-10-16T23:20:50.6244553Z d8d21be4bf02: Pulling fs layer
+2026-10-16T23:20:50.6246186Z 6117bd39f23f: Pulling fs layer
+2026-10-16T23:20:50.6247065Z 509688edf37b: Pulling fs layer
+2026-10-16T23:20:50.6247835Z 25b77f59fd95: Waiting
+2026-10-16T23:20:50.6248766Z 6c25da34e03f: Waiting
+2026-10-16T23:20:50.6250027Z a88782f92806: Waiting
+2026-10-16T23:20:50.6251323Z d8d21be4bf02: Waiting
+2026-10-16T23:20:50.6252495Z 6117bd39f23f: Waiting
+2026-10-16T23:20:50.6253645Z 509688edf37b: Waiting
+2026-10-16T23:20:50.6254561Z 3ae6141cfd99: Waiting
+2026-10-16T23:20:50.6706973Z 81717818649a: Verifying Checksum
+2026-10-16T23:20:50.6709479Z 81717818649a: Download complete
+2026-10-16T23:20:50.6825564Z 210b280f9556: Verifying Checksum
+2026-10-16T23:20:50.6827375Z 210b280f9556: Download complete
+2026-10-16T23:20:50.6954429Z 1b7f9cd581ee: Pull complete
+2026-10-16T23:20:50.7047664Z 3ae6141cfd99: Download complete
+2026-10-16T23:20:50.7127630Z 6c25da34e03f: Verifying Checksum
+2026-10-16T23:20:50.7129434Z 6c25da34e03f: Download complete
+2026-10-16T23:20:50.7282120Z a88782f92806: Download complete
+2026-10-16T23:20:50.7421126Z d8d21be4bf02: Verifying Checksum
+2026-10-16T23:20:50.7430862Z d8d21be4bf02: Download complete
+2026-10-16T23:20:50.7448252Z 210b280f9556: Pull complete
+2026-10-16T23:20:50.7591282Z 6117bd39f23f: Verifying Checksum
+2026-10-16T23:20:50.7599573Z 6117bd39f23f: Download complete
+2026-10-16T23:20:50.7662251Z 81717818649a: Pull complete
+2026-10-16T23:20:50.7678247Z 509688edf37b: Verifying Checksum
+2026-10-16T23:20:50.7682678Z 509688edf37b: Download complete
+2026-10-16T23:20:50.7769059Z 3ae6141cfd99: Pull complete
+2026-10-16T23:20:51.0628813Z 25b77f59fd95: Verifying Checksum
+2026-10-16T23:20:51.0632458Z 25b77f59fd95: Download complete
+2026-10-16T23:20:53.5735026Z 25b77f59fd95: Pull complete
+2026-10-16T23:20:53.5857540Z 6c25da34e03f: Pull complete
+2026-10-16T23:20:53.5940518Z a88782f92806: Pull complete
+2026-10-16T23:20:53.6038947Z d8d21be4bf02: Pull complete
+2026-10-16T23:20:53.6129949Z 6117bd39f23f: Pull complete
+2026-10-16T23:20:53.6214532Z 509688edf37b: Pull complete
+2026-10-16T23:20:53.6251242Z Digest: sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+2026-10-16T23:20:53.6262891Z Status: Downloaded newer image for postgres:16-alpine
+2026-10-16T23:20:53.6270711Z docker.io/library/postgres:16-alpine
+2026-10-16T23:20:53.6332992Z ##[command]/usr/bin/docker create --name c8dedd4448e24c20b8d67294095d45c8_postgres16alpine_12c69c --label cedf09 --network github_network_13516737718742ad9cd0cfea29014ee8 --network-alias postgres -p 5432:5432 --health-cmd "pg_isready -U postgres -d yor_talks" --health-interval 5s --health-timeout 5s --health-retries 12 -e "POSTGRES_DB=yor_talks" -e "POSTGRES_USER=postgres" -e "POSTGRES_PASSWORD=postgres" -e GITHUB_ACTIONS=true -e CI=true postgres:16-alpine
+2026-10-16T23:20:53.6617529Z d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:53.6639556Z ##[command]/usr/bin/docker start d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:53.8972138Z d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:53.8992445Z ##[command]/usr/bin/docker ps --all --filter id=d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8 --filter status=running --no-trunc --format "{{.ID}} {{.Status}}"
+2026-10-16T23:20:53.9122644Z d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8 Up Less than a second (health: starting)
+2026-10-16T23:20:53.9143198Z ##[command]/usr/bin/docker port d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:53.9294020Z 5432/tcp -> 0.0.0.0:5432
+2026-10-16T23:20:53.9303909Z 5432/tcp -> [::]:5432
+2026-10-16T23:20:53.9340035Z ##[endgroup]
+2026-10-16T23:20:53.9341328Z ##[group]Starting redis service container
+2026-10-16T23:20:53.9342937Z ##[command]/usr/bin/docker pull redis:7-alpine
+2026-10-16T23:20:54.1529521Z 7-alpine: Pulling from library/redis
+2026-10-16T23:20:54.2222738Z 16333ee0c00f: Pulling fs layer
+2026-10-16T23:20:54.2223997Z 83234986c742: Pulling fs layer
+2026-10-16T23:20:54.2225332Z 7eb50503c2b0: Pulling fs layer
+2026-10-16T23:20:54.2226000Z 1522f9c6f453: Pulling fs layer
+2026-10-16T23:20:54.2226570Z 9928009b15c8: Pulling fs layer
+2026-10-16T23:20:54.2227003Z 4f4fb700ef54: Pulling fs layer
+2026-10-16T23:20:54.2227462Z 4eb14bae0e1d: Pulling fs layer
+2026-10-16T23:20:54.2227918Z 9928009b15c8: Waiting
+2026-10-16T23:20:54.2228366Z 4f4fb700ef54: Waiting
+2026-10-16T23:20:54.2228723Z 4eb14bae0e1d: Waiting
+2026-10-16T23:20:54.2229093Z 1522f9c6f453: Waiting
+2026-10-16T23:20:54.2482159Z 83234986c742: Verifying Checksum
+2026-10-16T23:20:54.2483073Z 83234986c742: Download complete
+2026-10-16T23:20:54.2486659Z 7eb50503c2b0: Verifying Checksum
+2026-10-16T23:20:54.2489205Z 7eb50503c2b0: Download complete
+2026-10-16T23:20:54.2747010Z 16333ee0c00f: Download complete
+2026-10-16T23:20:54.2775358Z 9928009b15c8: Verifying Checksum
+2026-10-16T23:20:54.2776022Z 9928009b15c8: Download complete
+2026-10-16T23:20:54.3057599Z 4f4fb700ef54: Verifying Checksum
+2026-10-16T23:20:54.3058438Z 4f4fb700ef54: Download complete
+2026-10-16T23:20:54.3072412Z 4eb14bae0e1d: Verifying Checksum
+2026-10-16T23:20:54.3073180Z 4eb14bae0e1d: Download complete
+2026-10-16T23:20:54.3548570Z 1522f9c6f453: Verifying Checksum
+2026-10-16T23:20:54.3549106Z 1522f9c6f453: Download complete
+2026-10-16T23:20:54.4241636Z 16333ee0c00f: Pull complete
+2026-10-16T23:20:54.4562441Z 83234986c742: Pull complete
+2026-10-16T23:20:54.6207624Z 7eb50503c2b0: Pull complete
+2026-10-16T23:20:54.8516976Z 1522f9c6f453: Pull complete
+2026-10-16T23:20:54.8610150Z 9928009b15c8: Pull complete
+2026-10-16T23:20:54.8693572Z 4f4fb700ef54: Pull complete
+2026-10-16T23:20:54.8835906Z 4eb14bae0e1d: Pull complete
+2026-10-16T23:20:54.8873195Z Digest: sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+2026-10-16T23:20:54.8884386Z Status: Downloaded newer image for redis:7-alpine
+2026-10-16T23:20:54.8894200Z docker.io/library/redis:7-alpine
+2026-10-16T23:20:54.8915316Z ##[command]/usr/bin/docker create --name 911edf02566840d381cf180e7392d78a_redis7alpine_596166 --label cedf09 --network github_network_13516737718742ad9cd0cfea29014ee8 --network-alias redis -p 6379:6379 --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 12 -e GITHUB_ACTIONS=true -e CI=true redis:7-alpine
+2026-10-16T23:20:54.9206857Z 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:20:54.9227635Z ##[command]/usr/bin/docker start 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:20:55.0899145Z 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:20:55.0918974Z ##[command]/usr/bin/docker ps --all --filter id=5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd --filter status=running --no-trunc --format "{{.ID}} {{.Status}}"
+2026-10-16T23:20:55.1079094Z 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd Up Less than a second (health: starting)
+2026-10-16T23:20:55.1093988Z ##[command]/usr/bin/docker port 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:20:55.1223370Z 6379/tcp -> 0.0.0.0:6379
+2026-10-16T23:20:55.1227376Z 6379/tcp -> [::]:6379
+2026-10-16T23:20:55.1239360Z ##[endgroup]
+2026-10-16T23:20:55.1251243Z ##[group]Waiting for all services to be ready
+2026-10-16T23:20:55.1266185Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:55.1433922Z starting
+2026-10-16T23:20:55.1456264Z postgres service is starting, waiting 2 seconds before checking again.
+2026-10-16T23:20:57.1459173Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:20:57.1581104Z starting
+2026-10-16T23:20:57.1593475Z postgres service is starting, waiting 3 seconds before checking again.
+2026-10-16T23:21:01.0721555Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:21:01.0847149Z healthy
+2026-10-16T23:21:01.0865419Z postgres service is healthy.
+2026-10-16T23:21:01.0866633Z ##[command]/usr/bin/docker inspect --format="{{if .Config.Healthcheck}}{{print .State.Health.Status}}{{end}}" 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:21:01.0982663Z healthy
+2026-10-16T23:21:01.0993998Z redis service is healthy.
+2026-10-16T23:21:01.0994928Z ##[endgroup]
+2026-10-16T23:21:01.1294857Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-16T23:21:01.1295600Z with:
+2026-10-16T23:21:01.1295861Z   repository: yorayriniwnl/yor-talksv2
+2026-10-16T23:21:01.1298574Z   token: ***
+2026-10-16T23:21:01.1298789Z   ssh-strict: true
+2026-10-16T23:21:01.1299016Z   ssh-user: git
+2026-10-16T23:21:01.1299230Z   persist-credentials: true
+2026-10-16T23:21:01.1299468Z   clean: true
+2026-10-16T23:21:01.1299680Z   sparse-checkout-cone-mode: true
+2026-10-16T23:21:01.1299947Z   fetch-depth: 1
+2026-10-16T23:21:01.1300159Z   fetch-tags: false
+2026-10-16T23:21:01.1300372Z   show-progress: true
+2026-10-16T23:21:01.1300580Z   lfs: false
+2026-10-16T23:21:01.1300766Z   submodules: false
+2026-10-16T23:21:01.1300979Z   set-safe-directory: true
+2026-10-16T23:21:01.1301224Z   allow-unsafe-pr-checkout: false
+2026-10-16T23:21:01.1301694Z ##[endgroup]
+2026-10-16T23:21:01.2294324Z Syncing repository: yorayriniwnl/yor-talksv2
+2026-10-16T23:21:01.2296763Z ##[group]Getting Git version info
+2026-10-16T23:21:01.2297488Z Working directory is '/home/runner/work/yor-talksv2/yor-talksv2'
+2026-10-16T23:21:01.2298732Z [command]/usr/bin/git version
+2026-10-16T23:21:01.2424036Z git version 2.55.0
+2026-10-16T23:21:01.2456348Z ##[endgroup]
+2026-10-16T23:21:01.2464889Z Temporarily overriding HOME='/home/runner/work/_temp/b924e97a-7ab1-46ad-ad41-bd5fc9a93183' before making global git config changes
+2026-10-16T23:21:01.2466381Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-16T23:21:01.2470783Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/yor-talksv2/yor-talksv2
+2026-10-16T23:21:01.2527342Z Deleting the contents of '/home/runner/work/yor-talksv2/yor-talksv2'
+2026-10-16T23:21:01.2533044Z ##[group]Initializing the repository
+2026-10-16T23:21:01.2538506Z [command]/usr/bin/git init /home/runner/work/yor-talksv2/yor-talksv2
+2026-10-16T23:21:01.2662635Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-16T23:21:01.2663807Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-16T23:21:01.2664881Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-16T23:21:01.2665578Z hint: call:
+2026-10-16T23:21:01.2666318Z hint:
+2026-10-16T23:21:01.2667243Z hint: 	git config --global init.defaultBranch <name>
+2026-10-16T23:21:01.2668017Z hint:
+2026-10-16T23:21:01.2668847Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-16T23:21:01.2670049Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-16T23:21:01.2671127Z hint:
+2026-10-16T23:21:01.2671781Z hint: 	git branch -m <name>
+2026-10-16T23:21:01.2672436Z hint:
+2026-10-16T23:21:01.2673250Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-16T23:21:01.2675037Z Initialized empty Git repository in /home/runner/work/yor-talksv2/yor-talksv2/.git/
+2026-10-16T23:21:01.2682050Z [command]/usr/bin/git remote add origin https://github.com/yorayriniwnl/yor-talksv2
+2026-10-16T23:21:01.2737773Z ##[endgroup]
+2026-10-16T23:21:01.2738443Z ##[group]Disabling automatic garbage collection
+2026-10-16T23:21:01.2742549Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-16T23:21:01.2775578Z ##[endgroup]
+2026-10-16T23:21:01.2776467Z ##[group]Setting up auth
+2026-10-16T23:21:01.2783830Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-16T23:21:01.2820924Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-16T23:21:01.3265627Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-16T23:21:01.3310672Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-16T23:21:01.3552696Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-16T23:21:01.3590594Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-16T23:21:01.3817507Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-16T23:21:01.3858631Z ##[endgroup]
+2026-10-16T23:21:01.3859209Z ##[group]Fetching the repository
+2026-10-16T23:21:01.3868791Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +62920ade36e6310f3dc449c8dfc6da07a2585f05:refs/remotes/origin/codex/compliance-audit-20261017
+2026-10-16T23:21:01.9670210Z From https://github.com/yorayriniwnl/yor-talksv2
+2026-10-16T23:21:01.9671226Z  * [new ref]         62920ade36e6310f3dc449c8dfc6da07a2585f05 -> origin/codex/compliance-audit-20261017
+2026-10-16T23:21:01.9675058Z ##[endgroup]
+2026-10-16T23:21:01.9675538Z ##[group]Determining the checkout info
+2026-10-16T23:21:01.9678074Z ##[endgroup]
+2026-10-16T23:21:01.9684088Z [command]/usr/bin/git sparse-checkout disable
+2026-10-16T23:21:01.9739813Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-16T23:21:01.9771706Z ##[group]Checking out the ref
+2026-10-16T23:21:01.9776955Z [command]/usr/bin/git checkout --progress --force -B codex/compliance-audit-20261017 refs/remotes/origin/codex/compliance-audit-20261017
+2026-10-16T23:21:02.0742929Z Switched to a new branch 'codex/compliance-audit-20261017'
+2026-10-16T23:21:02.0748915Z branch 'codex/compliance-audit-20261017' set up to track 'origin/codex/compliance-audit-20261017'.
+2026-10-16T23:21:02.0757781Z ##[endgroup]
+2026-10-16T23:21:02.0807760Z [command]/usr/bin/git log -1 --format=%H
+2026-10-16T23:21:02.0835539Z 62920ade36e6310f3dc449c8dfc6da07a2585f05
+2026-10-16T23:21:02.1084325Z ##[group]Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+2026-10-16T23:21:02.1085027Z with:
+2026-10-16T23:21:02.1085223Z   version: 11.28.5
+2026-10-16T23:21:02.1085429Z   dest: ~/setup-pnpm
+2026-10-16T23:21:02.1085640Z   run_install: null
+2026-10-16T23:21:02.1085839Z   cache: false
+2026-10-16T23:21:02.1086058Z   cache_dependency_path: pnpm-lock.yaml
+2026-10-16T23:21:02.1086361Z   package_json_file: package.json
+2026-10-16T23:21:02.1086604Z   standalone: false
+2026-10-16T23:21:02.1086807Z ##[endgroup]
+2026-10-16T23:21:02.2554212Z ##[group]Running self-installer...
+2026-10-16T23:21:02.7005700Z (node:2924) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-16T23:21:02.7008145Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-16T23:21:02.8522338Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-10-16T23:21:02.8621644Z Packages: +1
+2026-10-16T23:21:02.8622372Z +
+2026-10-16T23:21:03.1943953Z Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-10-16T23:21:03.2284736Z
+2026-10-16T23:21:03.2285949Z dependencies:
+2026-10-16T23:21:03.2286449Z + pnpm 11.28.5 (12.14.0 is available)
+2026-10-16T23:21:03.2286820Z
+2026-10-16T23:21:03.2305933Z Done in 761ms
+2026-10-16T23:21:03.4581987Z ##[endgroup]
+2026-10-16T23:21:03.4582457Z Installation Completed!
+2026-10-16T23:21:03.4755737Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+2026-10-16T23:21:03.4756161Z with:
+2026-10-16T23:21:03.4756359Z   node-version: 24
+2026-10-16T23:21:03.4756567Z   cache: pnpm
+2026-10-16T23:21:03.4756767Z   always-auth: false
+2026-10-16T23:21:03.4756989Z   check-latest: false
+2026-10-16T23:21:03.4759538Z   token: ***
+2026-10-16T23:21:03.4759734Z env:
+2026-10-16T23:21:03.4760005Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:03.4760312Z ##[endgroup]
+2026-10-16T23:21:03.6180619Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+2026-10-16T23:21:03.6185761Z (node:2939) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-16T23:21:03.6186872Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-16T23:21:03.6196221Z ##[group]Environment details
+2026-10-16T23:21:04.0497209Z node: v24.21.0
+2026-10-16T23:21:04.0497675Z npm: 11.19.0
+2026-10-16T23:21:04.0498258Z yarn: 1.22.22
+2026-10-16T23:21:04.0499661Z ##[endgroup]
+2026-10-16T23:21:04.0523539Z [command]/home/runner/setup-pnpm/node_modules/.bin/pnpm store path --silent
+2026-10-16T23:21:04.7669591Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-10-16T23:21:04.8463903Z pnpm cache is not found
+2026-10-16T23:21:04.8593181Z ##[group]Run pnpm install --frozen-lockfile
+2026-10-16T23:21:04.8593597Z pnpm install --frozen-lockfile
+2026-10-16T23:21:04.8840071Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:21:04.8840395Z env:
+2026-10-16T23:21:04.8840692Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:04.8841064Z ##[endgroup]
+2026-10-16T23:21:05.4156412Z Scope: all 9 workspace projects
+2026-10-16T23:21:05.5338474Z ? Verifying lockfile against supply-chain policies (713 entries)...
+2026-10-16T23:21:05.5859286Z Lockfile is up to date, resolution step is skipped
+2026-10-16T23:21:05.7361410Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-10-16T23:21:05.7886235Z Packages: +694
+2026-10-16T23:21:05.7887101Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-10-16T23:21:06.7437365Z Progress: resolved 694, reused 0, downloaded 0, added 0
+2026-10-16T23:21:07.9157077Z Progress: resolved 694, reused 0, downloaded 1, added 0
+2026-10-16T23:21:08.8619046Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-10-16T23:21:08.8646116Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-10-16T23:21:08.8655586Z   Virtual store is at:             node_modules/.pnpm
+2026-10-16T23:21:08.9315512Z Progress: resolved 694, reused 0, downloaded 63, added 3
+2026-10-16T23:21:09.9676335Z Progress: resolved 694, reused 0, downloaded 166, added 8
+2026-10-16T23:21:10.9673589Z Progress: resolved 694, reused 0, downloaded 363, added 24
+2026-10-16T23:21:11.1256613Z ✓ Lockfile passes supply-chain policies (713 entries in 5.5s)
+2026-10-16T23:21:11.9719417Z Progress: resolved 694, reused 0, downloaded 693, added 53
+2026-10-16T23:21:12.5524815Z Progress: resolved 694, reused 0, downloaded 694, added 694, done
+2026-10-16T23:21:12.8084010Z .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+2026-10-16T23:21:12.8098324Z .../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+2026-10-16T23:21:12.9051564Z .../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+2026-10-16T23:21:12.9072935Z .../node_modules/msgpackr-extract install: Done
+2026-10-16T23:21:13.3179145Z
+2026-10-16T23:21:13.3179698Z dependencies:
+2026-10-16T23:21:13.3180186Z + esbuild 0.28.1
+2026-10-16T23:21:13.3180426Z
+2026-10-16T23:21:13.3180646Z optionalDependencies:
+2026-10-16T23:21:13.3181125Z + @esbuild/linux-x64 0.28.1
+2026-10-16T23:21:13.3181706Z + @rollup/rollup-linux-x64-gnu 4.62.2
+2026-10-16T23:21:13.3182311Z + lightningcss-linux-x64-gnu 1.32.0
+2026-10-16T23:21:13.3182643Z
+2026-10-16T23:21:13.3182815Z devDependencies:
+2026-10-16T23:21:13.3183743Z + @axe-core/playwright 4.13.0
+2026-10-16T23:21:13.3184279Z + @playwright/test 1.62.1
+2026-10-16T23:21:13.3185100Z + @types/express 5.0.6
+2026-10-16T23:21:13.3185555Z + @types/node 25.9.4
+2026-10-16T23:21:13.3186168Z + express 5.2.1
+2026-10-16T23:21:13.3186583Z + typescript 5.6.3
+2026-10-16T23:21:13.3186831Z
+2026-10-16T23:21:13.5765910Z Done in 8.6s using pnpm v11.28.5
+2026-10-16T23:21:13.6867901Z ##[group]Run pnpm audit
+2026-10-16T23:21:13.6868201Z pnpm audit
+2026-10-16T23:21:13.6931123Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:21:13.6931384Z env:
+2026-10-16T23:21:13.6931635Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:13.6931961Z ##[endgroup]
+2026-10-16T23:21:14.4380434Z No known vulnerabilities found
+2026-10-16T23:21:14.4572178Z ##[group]Run pnpm contract:check
+2026-10-16T23:21:14.4572735Z pnpm contract:check
+2026-10-16T23:21:14.4573207Z pnpm contract:clients:check
+2026-10-16T23:21:14.4657715Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:21:14.4657996Z env:
+2026-10-16T23:21:14.4658256Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:14.4658571Z ##[endgroup]
+2026-10-16T23:21:14.9663445Z $ node ./scripts/generate-api-contract.mjs --check
+2026-10-16T23:21:15.0199412Z [api contract] Verified 253 operations across 215 paths.
+2026-10-16T23:21:15.5821332Z $ pnpm --filter @workspace/api-spec codegen:check
+2026-10-16T23:21:16.2217606Z $ node ./scripts/check-generated.mjs && tsc -b ../api-client-react ../api-zod
+2026-10-16T23:21:16.6025602Z 🍻 orval v8.22.0 - A swagger client generator for typescript
+2026-10-16T23:21:16.7703389Z api-client-react Cleaning output folder
+2026-10-16T23:21:18.2387805Z 🎉 api-client-react - Your OpenAPI spec has been converted into ready to use orval!
+2026-10-16T23:21:18.2418836Z zod Cleaning output folder
+2026-10-16T23:21:18.5541079Z 🎉 zod - Your OpenAPI spec has been converted into ready to use orval!
+2026-10-16T23:21:18.5915516Z [api clients] Verified 233 generated React and Zod artifacts.
+2026-10-16T23:21:24.2198352Z ##[group]Run pnpm design:check
+2026-10-16T23:21:24.2198805Z pnpm design:check
+2026-10-16T23:21:24.2262468Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:21:24.2262916Z env:
+2026-10-16T23:21:24.2263279Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:24.2263679Z ##[endgroup]
+2026-10-16T23:21:24.7289982Z $ node ./scripts/check-design-tokens.mjs
+2026-10-16T23:21:24.7627944Z YOR design tokens valid: /home/runner/work/yor-talksv2/yor-talksv2/design/yor-tokens.json
+2026-10-16T23:21:24.7849942Z ##[group]Run pnpm test:unit
+2026-10-16T23:21:24.7850457Z pnpm test:unit
+2026-10-16T23:21:24.7940389Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:21:24.7940831Z env:
+2026-10-16T23:21:24.7941110Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:24.7941431Z ##[endgroup]
+2026-10-16T23:21:25.3043007Z $ node --test tests/*.test.mjs
+2026-10-16T23:21:25.4168918Z ✔ Alertmanager runtime configuration safely quotes receiver values and leaves the password in its secret file (1.228948ms)
+2026-10-16T23:21:25.4186394Z ✔ Alertmanager rejects insecure receiver URLs and embedded credentials (0.489846ms)
+2026-10-16T23:21:25.4351190Z ✔ generated client comparison accepts equivalent Windows line endings without rewriting sources (7.52772ms)
+2026-10-16T23:21:25.4383948Z ✔ generated client comparison detects schema drift, missing models and removed endpoint artifacts (4.482373ms)
+2026-10-16T23:21:25.4400143Z ✔ a missing generator output fails instead of accepting an empty comparison (3.021391ms)
+2026-10-16T23:21:27.4496439Z ✔ a saved notification preference remains canonical across settings remounts (63.408786ms)
+2026-10-16T23:21:27.4526917Z ✔ failed privacy saves retain confirmed settings and release the save lock (53.549388ms)
+2026-10-16T23:21:27.4528854Z ✔ mark-all leaves newly arriving notifications unread and coalesces duplicate actions (53.47579ms)
+2026-10-16T23:21:27.4530730Z ✔ late notification refreshes cannot restore read badges or cross a logout boundary (47.713693ms)
+2026-10-16T23:21:27.4536361Z ✔ notification failures are distinguishable from empty success and can retry (44.874988ms)
+2026-10-16T23:21:27.4538509Z ✔ failed block actions never claim success or change confirmed preferences (44.704394ms)
+2026-10-16T23:21:27.4540379Z ✔ block updates coalesce duplicates and preserve other targets across reordered responses (46.783774ms)
+2026-10-16T23:21:27.4542187Z ✔ failed mute actions never claim success or change confirmed preferences (54.122335ms)
+2026-10-16T23:21:27.4544106Z ✔ mute updates coalesce duplicates and preserve other targets across reordered responses (49.831905ms)
+2026-10-16T23:21:27.4546504Z ✔ a previous-session block acknowledgement cannot change the next account (44.011218ms)
+2026-10-16T23:21:27.4548163Z ✔ in-flight social snapshots cannot restore a newly blocked creator (53.840844ms)
+2026-10-16T23:21:27.4549780Z ✔ a definitively expired refresh clears private UI state immediately (96.479073ms)
+2026-10-16T23:21:27.4551561Z ✔ video loading distinguishes a failed fetch from an empty library and can retry (54.328064ms)
+2026-10-16T23:21:27.4553239Z ✔ pending private snapshots cannot repopulate state after logout (56.695913ms)
+2026-10-16T23:21:27.4555316Z ✔ pending private snapshots cannot repopulate state after another account (52.729745ms)
+2026-10-16T23:21:27.4557242Z ✔ pending private snapshots cannot repopulate state after same account reauthentication (59.184869ms)
+2026-10-16T23:21:27.4559382Z ✔ reordered snapshot responses keep the most recently requested data (61.251388ms)
+2026-10-16T23:21:27.4560979Z ✔ a failed old event refresh cannot erase a newer successful refresh (79.723789ms)
+2026-10-16T23:21:27.4586177Z ✔ a late updateProfile acknowledgement cannot replace the next account identity (56.024808ms)
+2026-10-16T23:21:27.4606464Z ✔ a late updatePremiumProfile acknowledgement cannot replace the next account identity (53.455112ms)
+2026-10-16T23:21:27.4625410Z ✔ private chat completions and failed rollbacks stay in their original session (next-user) (57.20742ms)
+2026-10-16T23:21:27.4627467Z ✔ private chat completions and failed rollbacks stay in their original session (fixture-user) (57.504826ms)
+2026-10-16T23:21:27.4629536Z ✔ saved-post failures stay retryable and preserve the last confirmed collection (39.696428ms)
+2026-10-16T23:21:27.4631414Z ✔ a successful saved refresh replaces its visible window and clears removed bookmarks (42.527263ms)
+2026-10-16T23:21:27.4633947Z ✔ a failed toggleFavoriteCreator preserves another target's confirmed change and invalidates an older snapshot (47.566908ms)
+2026-10-16T23:21:27.4636549Z ✔ a failed toggleCloseFriend preserves another target's confirmed change and invalidates an older snapshot (66.621237ms)
+2026-10-16T23:21:27.4638646Z ✔ a restored identity from an old initialization cannot replace a newly authenticated account (62.242377ms)
+2026-10-16T23:21:27.4640533Z ✔ old settings acknowledgements cannot overwrite a reauthenticated account (54.703607ms)
+2026-10-16T23:21:27.4645036Z ✔ sign-out clears private data immediately and its late response preserves a new login (55.396473ms)
+2026-10-16T23:21:27.4646714Z ✔ the latest sign-in attempt wins across authentication methods (66.087731ms)
+2026-10-16T23:21:27.4648581Z ✔ saved posts append in cursor order without duplicates and refresh alone clears unloaded bookmarks (43.527513ms)
+2026-10-16T23:21:27.4661378Z ✔ a failed saved append retains its page and cursor for retry (58.632094ms)
+2026-10-16T23:21:27.4668428Z ✔ saved refresh invalidates an older append and duplicate append clicks send one request (65.535647ms)
+2026-10-16T23:21:27.4670314Z ✔ empty saved pages remain pageable until the server exhausts hidden bookmarks (60.498399ms)
+2026-10-16T23:21:27.5075028Z ✔ normalizes guesses into the five-character fake password format (1.568394ms)
+2026-10-16T23:21:27.5076921Z ✔ evaluates exact, present, and absent characters without over-counting duplicates (1.399908ms)
+2026-10-16T23:21:27.5078572Z ✔ keyboard state keeps the strongest result seen for each character (0.431567ms)
+2026-10-16T23:21:27.5080580Z ✔ game status remains playable, wins on the password, and loses after six misses (0.469337ms)
+2026-10-16T23:21:27.5082280Z ✔ repository workflow, lockfile and manifests reject duplicate mapping keys (59.75046ms)
+2026-10-16T23:21:27.5084006Z ✔ CI pins actions, matches the toolchain and retains all-scope dependency auditing (3.014899ms)
+2026-10-16T23:21:27.5085952Z ✔ rate-limit errors display actionable text instead of machine error codes (57.571661ms)
+2026-10-16T23:21:27.5087416Z ✔ a late refresh cannot restore tokens after logout (22.646177ms)
+2026-10-16T23:21:27.5088814Z ✔ a previous account response cannot enter the next account session (28.232933ms)
+2026-10-16T23:21:27.5090266Z ✔ a late unauthorized request does not refresh after logout (24.645656ms)
+2026-10-16T23:21:27.5091769Z ✔ refreshes coalesce without invalidating other reads in the same session (17.53101ms)
+2026-10-16T23:21:27.5093329Z ✔ bad login credentials do not trigger refresh-cookie authentication (17.420403ms)
+2026-10-16T23:21:27.5095322Z ✔ logout still clears memory when browser storage is unavailable (18.291893ms)
+2026-10-16T23:21:27.5096895Z ✔ an expired access token refreshes once and retries with the new bearer (33.809798ms)
+2026-10-16T23:21:27.5098678Z ✔ authenticated auth actions refresh and retry while credential establishment stays isolated (20.473283ms)
+2026-10-16T23:21:27.5100454Z ✔ logout is cookie-backed and prevents refresh from restoring the session (24.713193ms)
+2026-10-16T23:21:27.5102165Z ✔ an explicit logout marker survives client reinitialization until the next login (46.31685ms)
+2026-10-16T23:21:27.5103974Z ✔ a temporary refresh outage preserves the session token and returns a retryable error (28.856797ms)
+2026-10-16T23:21:27.5105911Z ✔ paginated private data obeys the same session boundary (20.370811ms)
+2026-10-16T23:21:27.5107450Z ✔ eligibility and receipt contracts reject extra or self-asserted authority (14.784152ms)
+2026-10-16T23:21:27.5109563Z ✔ registration keeps the one-time enrollment credential out of URLs and omits checkbox age claims (22.706656ms)
+2026-10-16T23:21:27.5111791Z ✔ group invitation API accepts owner-safe metadata and rejects any message history (26.952993ms)
+2026-10-16T23:21:27.5114065Z ✔ password sign-in waits for a pending logout response before installing its cookie (40.923452ms)
+2026-10-16T23:21:27.5116413Z ✔ Google sign-in waits for a pending logout response before installing its cookie (28.898294ms)
+2026-10-16T23:21:27.5118480Z ✔ email OTP sign-in waits for a pending logout response before installing its cookie (23.719405ms)
+2026-10-16T23:21:27.5120430Z ✔ two-factor completion sign-in waits for a pending logout response before installing its cookie (26.769869ms)
+2026-10-16T23:21:27.5122125Z ✔ competing credential responses are ordered across sign-in methods (28.520204ms)
+2026-10-16T23:21:27.5123837Z ✔ an in-flight rotation finishes before logout and the next sign-in exchange (27.212715ms)
+2026-10-16T23:21:27.5125682Z ✔ a failed cookie exchange releases the queue for the next sign-in (24.979702ms)
+2026-10-16T23:21:27.5127354Z ✔ account deletion releases its cookie exchange before refreshing and retrying (17.72371ms)
+2026-10-16T23:21:27.5128926Z ✔ cookie exchanges in separate clients share the same browser lock (32.428267ms)
+2026-10-16T23:21:27.5130767Z ✔ saved collection clients preserve cursor metadata and encode opaque cursors (16.974018ms)
+2026-10-16T23:21:27.5132797Z ✔ runtime database provisioning validates distinct owner/runtime identities and exact target database (2.378389ms)
+2026-10-16T23:21:27.5135083Z ✖ font delivery uses local complete WOFF2 assets and ships their pinned source license notices (29.150773ms)
+2026-10-16T23:21:28.1190152Z ✔ frontend build forces production code despite development shell and shared env (445.468877ms)
+2026-10-16T23:21:28.1196426Z ✔ application config rejects a direct development-flavored release build (424.064344ms)
+2026-10-16T23:21:28.1200639Z ✔ public beta builds require a concrete HTTPS site origin for share previews (1343.669699ms)
+2026-10-16T23:21:28.1206668Z ✔ artifact mirror replaces a previous release and fails when the build is absent (61.057961ms)
+2026-10-16T23:21:28.1286513Z ✔ a finalize outage preserves the reservation and uploaded file; retry never repeats the provider write (94.717879ms)
+2026-10-16T23:21:28.1288361Z ✔ a lost server upload response retries the same reservation and reaches finalization (35.582362ms)
+2026-10-16T23:21:28.1290175Z ✔ direct uploads send every signed field unchanged and discard the provider URL before finalization (36.448563ms)
+2026-10-16T23:21:28.1292157Z ✔ a lost direct upload acknowledgement probes server finalization and never repeats a completed provider write (32.446838ms)
+2026-10-16T23:21:28.1294217Z ✔ an unreceived direct upload retries the same identity only after the server confirms the provider object is missing (34.247065ms)
+2026-10-16T23:21:28.1296535Z ✔ direct upload recovery preserves the file through moderation and generic provider outages without another write (46.759789ms)
+2026-10-16T23:21:28.1298493Z ✔ a session change during direct upload cannot finalize or reuse the old owner reservation (31.132099ms)
+2026-10-16T23:21:28.1300123Z ✔ raw provider URLs and rejection never become publishable client attachments (28.969904ms)
+2026-10-16T23:21:28.1301664Z ✔ unsupported MIME and purpose-specific sizes fail before requesting a grant (31.010992ms)
+2026-10-16T23:21:28.1303451Z ✔ old message delivery renews one exact history tuple, including the zero UUID-tail boundary and microseconds (32.492504ms)
+2026-10-16T23:21:28.1305808Z ✔ message delivery rejects mismatched rows, missing or unchanged grants, external URLs, deletion and expiry (38.199622ms)
+2026-10-16T23:21:28.1307612Z ✔ invalid original message delivery fails before any authorized read or provider request (26.376044ms)
+2026-10-16T23:21:28.1309233Z ✔ protected media fetch uses the current bearer and revokes its object URL on dispose (46.881246ms)
+2026-10-16T23:21:28.1310882Z ✔ protected media refuses foreign and malformed proxy URLs before network access (29.627525ms)
+2026-10-16T23:21:28.1312594Z ✔ message renewal cannot return a grant from an old session, and a denied read stays denied (28.497597ms)
+2026-10-16T23:21:28.1314114Z ✔ schema bootstrap refuses partial schemas and unrelated existing objects (1.442648ms)
+2026-10-16T23:21:28.1315938Z ✔ beta bootstrap action identifies an empty database that needs the base schema push (0.221223ms)
+2026-10-16T23:21:28.1317806Z ✔ production migration refuses missing or placeholder contact identity secrets (0.495126ms)
+2026-10-16T23:21:28.1319366Z ✔ premium story migration runs after the base story interaction tables exist (7.887218ms)
+2026-10-16T23:21:28.1321039Z ✔ private eligibility migration shares the release transaction and cannot backfill legacy adults (3.273703ms)
+2026-10-16T23:21:28.1322650Z ✔ Multer remains on a release patched against aborted-upload disk writes (1.589443ms)
+2026-10-16T23:21:28.1324097Z ✔ self-hosted font policy allows no remote font or font-stylesheet provider (1.337001ms)
+2026-10-16T23:21:28.1325912Z ✔ Nginx CSP allows only configured production API, realtime and LiveKit origins (2.022263ms)
+2026-10-16T23:21:28.1327639Z ✔ public Nginx CSP rejects cleartext and unconfigured live-service origins (0.731258ms)
+2026-10-16T23:21:28.1329275Z ✔ same-origin API paths resolve to the public origin and protocol-relative URLs fail closed (0.426417ms)
+2026-10-16T23:21:28.1330961Z ✔ built HTML CSP shares exact configured origins while Vercel supplies header-only framing controls (0.833459ms)
+2026-10-16T23:21:28.1332326Z ✔ notification targets allow only application pages on this origin (15.040271ms)
+2026-10-16T23:21:28.1333635Z ✔ notifications focus an existing canonical page and dismiss without navigation (1.156022ms)
+2026-10-16T23:21:28.1335235Z ✔ levels reflect earned XP and progress within the current level only (2.153828ms)
+2026-10-16T23:21:28.1336567Z ✔ unread state excludes outgoing, deleted, read, and signed-out messages (0.242073ms)
+2026-10-16T23:21:28.1338255Z ✔ HTTP and socket message acknowledgements reconcile by identity (13.149815ms)
+2026-10-16T23:21:28.1339569Z ✔ a late message snapshot preserves live additions, edits and deletions (0.691974ms)
+2026-10-16T23:21:28.1341112Z ✔ post-login redirects reject external, encoded, control-character and self-loop paths (0.661216ms)
+2026-10-16T23:21:28.1342629Z ✔ database UTC timestamps retain the same instant in every browser timezone (0.510916ms)
+2026-10-16T23:21:28.1344167Z ✔ notification refresh preserves live arrivals and never reverses acknowledged reads (0.628605ms)
+2026-10-16T23:21:28.1347110Z ✔ late follow-request snapshots cannot resurrect accepted or declined requests (0.306984ms)
+2026-10-16T23:21:28.1348635Z ✔ the emitted Vercel .js entry loads as ESM and rejects invalid Express exports (124.841532ms)
+2026-10-16T23:21:28.1349495Z ℹ tests 114
+2026-10-16T23:21:28.1349897Z ℹ suites 0
+2026-10-16T23:21:28.1350287Z ℹ pass 113
+2026-10-16T23:21:28.1350668Z ℹ fail 1
+2026-10-16T23:21:28.1351066Z ℹ cancelled 0
+2026-10-16T23:21:28.1351497Z ℹ skipped 0
+2026-10-16T23:21:28.1351854Z ℹ todo 0
+2026-10-16T23:21:28.1352333Z ℹ duration_ms 2784.79072
+2026-10-16T23:21:28.1352641Z
+2026-10-16T23:21:28.1352891Z ✖ failing tests:
+2026-10-16T23:21:28.1353139Z
+2026-10-16T23:21:28.1353493Z test at tests/font-assets.test.mjs:7:1
+2026-10-16T23:21:28.1355054Z ✖ font delivery uses local complete WOFF2 assets and ships their pinned source license notices (29.150773ms)
+2026-10-16T23:21:28.1356300Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+2026-10-16T23:21:28.1357152Z   + actual - expected
+2026-10-16T23:21:28.1357439Z
+2026-10-16T23:21:28.1357784Z   + 'febfd2b42308d5327ade2884aed777da3d2decd2c53d574c43e603443d70c5b2'
+2026-10-16T23:21:28.1358478Z   - '2bada5ea45c3c63b7f1ea1f88ce9672c9e4f0c42b2c3b7378949084fe55a3066'
+2026-10-16T23:21:28.1359286Z
+2026-10-16T23:21:28.1360259Z       at TestContext.<anonymous> (file:///home/runner/work/yor-talksv2/yor-talksv2/tests/font-assets.test.mjs:29:12)
+2026-10-16T23:21:28.1361269Z       at async Test.run (node:internal/test_runner/test:1409:7)
+2026-10-16T23:21:28.1362130Z       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+2026-10-16T23:21:28.1362851Z     generatedMessage: true,
+2026-10-16T23:21:28.1363269Z     code: 'ERR_ASSERTION',
+2026-10-16T23:21:28.1363892Z     actual: 'febfd2b42308d5327ade2884aed777da3d2decd2c53d574c43e603443d70c5b2',
+2026-10-16T23:21:28.1365108Z     expected: '2bada5ea45c3c63b7f1ea1f88ce9672c9e4f0c42b2c3b7378949084fe55a3066',
+2026-10-16T23:21:28.1366055Z     operator: 'strictEqual',
+2026-10-16T23:21:28.1366458Z     diff: 'simple'
+2026-10-16T23:21:28.1366772Z   }
+2026-10-16T23:21:28.1604366Z [ELIFECYCLE] Command failed with exit code 1.
+2026-10-16T23:21:28.1855644Z ##[error]Process completed with exit code 1.
+2026-10-16T23:21:28.1950777Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-16T23:21:28.1951201Z with:
+2026-10-16T23:21:28.1951414Z   name: browser-failure-evidence
+2026-10-16T23:21:28.1951718Z   path: playwright-report/
+test-results/
+
+2026-10-16T23:21:28.1952009Z   if-no-files-found: ignore
+2026-10-16T23:21:28.1952243Z   retention-days: 7
+2026-10-16T23:21:28.1952450Z   compression-level: 6
+2026-10-16T23:21:28.1952666Z   overwrite: false
+2026-10-16T23:21:28.1952878Z   include-hidden-files: false
+2026-10-16T23:21:28.1953106Z env:
+2026-10-16T23:21:28.1953343Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-16T23:21:28.1953643Z ##[endgroup]
+2026-10-16T23:21:28.3618750Z (node:3746) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-16T23:21:28.3619591Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-16T23:21:28.3659213Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-10-16T23:21:28.3661641Z The least common ancestor is /home/runner/work/yor-talksv2/yor-talksv2. This will be the root directory of the artifact
+2026-10-16T23:21:28.3663346Z No files were found with the provided path: playwright-report/
+2026-10-16T23:21:28.3664112Z test-results/. No artifacts will be uploaded.
+2026-10-16T23:21:28.3888385Z Post job cleanup.
+2026-10-16T23:21:28.5417629Z Pruning is unnecessary.
+2026-10-16T23:21:28.5647613Z Post job cleanup.
+2026-10-16T23:21:28.6719128Z [command]/usr/bin/git version
+2026-10-16T23:21:28.6765847Z git version 2.55.0
+2026-10-16T23:21:28.6810966Z Temporarily overriding HOME='/home/runner/work/_temp/9aa97581-e0a3-4c16-8ac0-752ba87f5078' before making global git config changes
+2026-10-16T23:21:28.6812840Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-16T23:21:28.6818045Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/yor-talksv2/yor-talksv2
+2026-10-16T23:21:28.6863771Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-16T23:21:28.6904871Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-16T23:21:28.7234865Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-16T23:21:28.7270161Z http.https://github.com/.extraheader
+2026-10-16T23:21:28.7283911Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-16T23:21:28.7327454Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-16T23:21:28.7656329Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-16T23:21:28.7686086Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-16T23:21:28.8109005Z Print service container logs: c8dedd4448e24c20b8d67294095d45c8_postgres16alpine_12c69c
+2026-10-16T23:21:28.8114405Z ##[command]/usr/bin/docker logs --details d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:21:28.8262179Z  The files belonging to this database system will be owned by user "postgres".
+2026-10-16T23:21:28.8263085Z  This user must also own the server process.
+2026-10-16T23:21:28.8263576Z
+2026-10-16T23:21:28.8264050Z  The database cluster will be initialized with locale "en_US.utf8".
+2026-10-16T23:21:28.8265054Z  The default database encoding has accordingly been set to "UTF8".
+2026-10-16T23:21:28.8266974Z  sh: locale: not found
+2026-10-16T23:21:28.8267543Z  2026-10-16 23:20:54.476 UTC [35] WARNING:  no usable system locales were found
+2026-10-16T23:21:28.8268060Z  initdb: warning: enabling "trust" authentication for local connections
+2026-10-16T23:21:28.8268842Z  initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+2026-10-16T23:21:28.8269739Z  2026-10-16 23:20:55.483 UTC [1] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-10-16T23:21:28.8270418Z  2026-10-16 23:20:55.483 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-10-16T23:21:28.8270902Z  2026-10-16 23:20:55.483 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-10-16T23:21:28.8271440Z  2026-10-16 23:20:55.484 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-16T23:21:28.8272001Z  2026-10-16 23:20:55.487 UTC [57] LOG:  database system was shut down at 2026-10-16 23:20:55 UTC
+2026-10-16T23:21:28.8272503Z  2026-10-16 23:20:55.492 UTC [1] LOG:  database system is ready to accept connections
+2026-10-16T23:21:28.8272954Z  The default text search configuration will be set to "english".
+2026-10-16T23:21:28.8273286Z
+2026-10-16T23:21:28.8273484Z  Data page checksums are disabled.
+2026-10-16T23:21:28.8273742Z
+2026-10-16T23:21:28.8274034Z  fixing permissions on existing directory /var/lib/postgresql/data ... ok
+2026-10-16T23:21:28.8274973Z  creating subdirectories ... ok
+2026-10-16T23:21:28.8275296Z  selecting dynamic shared memory implementation ... posix
+2026-10-16T23:21:28.8275663Z  selecting default max_connections ... 100
+2026-10-16T23:21:28.8275962Z  selecting default shared_buffers ... 128MB
+2026-10-16T23:21:28.8276255Z  selecting default time zone ... UTC
+2026-10-16T23:21:28.8276523Z  creating configuration files ... ok
+2026-10-16T23:21:28.8276786Z  running bootstrap script ... ok
+2026-10-16T23:21:28.8277079Z  performing post-bootstrap initialization ... ok
+2026-10-16T23:21:28.8277382Z  syncing data to disk ... ok
+2026-10-16T23:21:28.8277603Z
+2026-10-16T23:21:28.8277778Z
+2026-10-16T23:21:28.8278004Z  Success. You can now start the database server using:
+2026-10-16T23:21:28.8278296Z
+2026-10-16T23:21:28.8278525Z      pg_ctl -D /var/lib/postgresql/data -l logfile start
+2026-10-16T23:21:28.8278828Z
+2026-10-16T23:21:28.8279385Z  waiting for server to start....2026-10-16 23:20:55.212 UTC [41] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-10-16T23:21:28.8280210Z  2026-10-16 23:20:55.213 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-16T23:21:28.8280772Z  2026-10-16 23:20:55.215 UTC [44] LOG:  database system was shut down at 2026-10-16 23:20:55 UTC
+2026-10-16T23:21:28.8281271Z  2026-10-16 23:20:55.219 UTC [41] LOG:  database system is ready to accept connections
+2026-10-16T23:21:28.8281678Z   done
+2026-10-16T23:21:28.8281863Z  server started
+2026-10-16T23:21:28.8282060Z  CREATE DATABASE
+2026-10-16T23:21:28.8282253Z
+2026-10-16T23:21:28.8282418Z
+2026-10-16T23:21:28.8282732Z  /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+2026-10-16T23:21:28.8283122Z
+2026-10-16T23:21:28.8283695Z  waiting for server to shut down...2026-10-16 23:20:55.361 UTC [41] LOG:  received fast shutdown request
+2026-10-16T23:21:28.8284242Z  .2026-10-16 23:20:55.362 UTC [41] LOG:  aborting any active transactions
+2026-10-16T23:21:28.8285104Z  2026-10-16 23:20:55.365 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+2026-10-16T23:21:28.8285764Z  2026-10-16 23:20:55.366 UTC [42] LOG:  shutting down
+2026-10-16T23:21:28.8286622Z  2026-10-16 23:20:55.366 UTC [42] LOG:  checkpoint starting: shutdown immediate
+2026-10-16T23:21:28.8287970Z  2026-10-16 23:20:55.382 UTC [42] LOG:  checkpoint complete: wrote 926 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.012 s, sync=0.003 s, total=0.016 s; sync files=301, longest=0.002 s, average=0.001 s; distance=4283 kB, estimate=4283 kB; lsn=0/1925D68, redo lsn=0/1925D68
+2026-10-16T23:21:28.8289028Z  2026-10-16 23:20:55.389 UTC [41] LOG:  database system is shut down
+2026-10-16T23:21:28.8289363Z   done
+2026-10-16T23:21:28.8289545Z  server stopped
+2026-10-16T23:21:28.8289737Z
+2026-10-16T23:21:28.8289976Z  PostgreSQL init process complete; ready for start up.
+2026-10-16T23:21:28.8290278Z
+2026-10-16T23:21:28.8296651Z Stop and remove container: c8dedd4448e24c20b8d67294095d45c8_postgres16alpine_12c69c
+2026-10-16T23:21:28.8301620Z ##[command]/usr/bin/docker rm --force d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:21:29.3242409Z d7c066d62f6215230d625b2db6becec7541e93721ae88379ed248a9f3af5cbc8
+2026-10-16T23:21:29.3263002Z Print service container logs: 911edf02566840d381cf180e7392d78a_redis7alpine_596166
+2026-10-16T23:21:29.3264267Z ##[command]/usr/bin/docker logs --details 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:21:29.3402855Z  1:C 16 Oct 2026 23:20:55.096 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+2026-10-16T23:21:29.3405295Z  1:C 16 Oct 2026 23:20:55.096 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+2026-10-16T23:21:29.3406205Z  1:C 16 Oct 2026 23:20:55.096 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started
+2026-10-16T23:21:29.3407264Z  1:C 16 Oct 2026 23:20:55.096 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+2026-10-16T23:21:29.3407959Z  1:M 16 Oct 2026 23:20:55.097 * monotonic clock: POSIX clock_gettime
+2026-10-16T23:21:29.3408355Z  1:M 16 Oct 2026 23:20:55.097 * Running mode=standalone, port=6379.
+2026-10-16T23:21:29.3408714Z  1:M 16 Oct 2026 23:20:55.098 * Server initialized
+2026-10-16T23:21:29.3409055Z  1:M 16 Oct 2026 23:20:55.098 * Ready to accept connections tcp
+2026-10-16T23:21:29.3410100Z Stop and remove container: 911edf02566840d381cf180e7392d78a_redis7alpine_596166
+2026-10-16T23:21:29.3410831Z ##[command]/usr/bin/docker rm --force 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:21:29.4653967Z 5979d0c9dcd2fc44d600f816f40e5b2f68384e7f5935c03d8f1c48fe4dcff4dd
+2026-10-16T23:21:29.4675697Z Remove container network: github_network_13516737718742ad9cd0cfea29014ee8
+2026-10-16T23:21:29.4680481Z ##[command]/usr/bin/docker network rm github_network_13516737718742ad9cd0cfea29014ee8
+2026-10-16T23:21:29.5668733Z github_network_13516737718742ad9cd0cfea29014ee8
+2026-10-16T23:21:29.5740181Z Cleaning up orphan processes
+2026-10-16T23:21:29.6086074Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02, pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -26,9 +26,14 @@ function fixture(t) {
 }
 
 function node(script, args = [], env = {}) {
+  const nodePath = [
+    path.join(socialDir, 'node_modules'),
+    path.join(root, 'node_modules'),
+    process.env.NODE_PATH,
+  ].filter(Boolean).join(path.delimiter);
   return spawnSync(process.execPath, [script, ...args], {
     cwd: root,
-    env: { ...process.env, ...env },
+    env: { ...process.env, NODE_PATH: nodePath, ...env },
     encoding: 'utf8',
     // Windows antivirus and synced workspaces can spend over a minute loading
     // Vite's dependency tree. Keep the same assertions and a bounded deadline.

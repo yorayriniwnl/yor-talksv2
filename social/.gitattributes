@@ -1,6 +1,5 @@
 # Preserve the byte hashes pinned in fonts/sources.json and index.html on Windows.
 public/fonts/*.css text eol=lf
 public/fonts/*-OFL.txt text eol=lf
-public/third-party-licenses/* text eol=lf
 # Preserve the upstream DM Mono notice's CRLF and intentional trailing space.
 public/fonts/dmmono-OFL.txt -text whitespace=-blank-at-eol,cr-at-eol

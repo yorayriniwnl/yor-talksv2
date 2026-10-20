@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { eq, or, sql } from "drizzle-orm";
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   invitesTable,
   ledgerTransactionsTable,
@@ -51,6 +51,13 @@ export class AccountService {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
 
+      // The archive already attributes a waitlist address only after email
+      // verification. Apply that same ownership rule when erasing the account;
+      // an unverified signup must not remove somebody else's waitlist record.
+      if (locked.emailVerified) {
+        await tx.execute(sql`DELETE FROM waitlist WHERE lower(email)=lower(${locked.email})`);
+      }
+
       // Preserve the latest restrictive guardian decision before account
       // deletion nulls its user reference; older grants must never resurface.
       await tx.execute(sql`WITH affected_subjects AS MATERIALIZED (
@@ -95,7 +102,10 @@ export class AccountService {
       await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
         WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
       await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
-        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
+        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({
+          userId,
+          emailHash: createHash('sha256').update(locked.email.trim().toLowerCase()).digest('hex'),
+        })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
       // Nullable legacy foreign keys retain the other author's direct history.
@@ -237,6 +247,31 @@ export class AccountService {
           OR EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
         ) AND NOT EXISTS (SELECT 1 FROM conversation_members cm
           WHERE cm.conversation_id=c.id AND cm.user_id<>${userId})`);
+
+      const stableIdentityDigest = createHash('sha256')
+        .update(locked.email.trim().toLowerCase())
+        .digest('hex');
+
+      // Record durable deletion journal entry
+      await tx.execute(sql`INSERT INTO deletion_journal(id, account_id, stable_identity_digest, reason, status, erased_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${userId}::uuid, ${stableIdentityDigest}, 'user_request', 'erased', clock_timestamp(),
+          jsonb_build_object('username', ${locked.username}))`);
+
+      // Add promotional email suppressions
+      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'all_promotional', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
+        ON CONFLICT(email_hash, purpose) DO NOTHING`);
+      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
+        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'launch_updates', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
+        ON CONFLICT(email_hash, purpose) DO NOTHING`);
+
+      // Mark preregistrations unsubscribed
+      await tx.execute(sql`UPDATE preregistrations SET unsubscribed_at=clock_timestamp()
+        WHERE lower(email)=lower(${locked.email}) AND unsubscribed_at IS NULL`);
+
+      // Withdraw all granted consents
+      await tx.execute(sql`UPDATE consent_records SET granted=false, withdrawn_at=clock_timestamp()
+        WHERE (subject_id=${userId} OR subject_digest=${stableIdentityDigest}) AND granted=true`);
 
       // The departing member's own messages are private account content and
       // are removed. Messages from all other members in retained groups stay.

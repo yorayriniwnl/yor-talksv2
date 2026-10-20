@@ -264,6 +264,22 @@ export class RedisRepository {
     return result === 1;
   }
 
+  /** A delayed deletion job must not erase a newly registered account's OTP. */
+  async deleteEmailOtpForUserStrict(key: string, userId: string): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.client.eval(
+      `local raw = redis.call('GET', KEYS[1])
+       if not raw then return 0 end
+       local decoded, state = pcall(cjson.decode, raw)
+       if decoded and type(state) == 'table' and state.userId == ARGV[1] then
+         return redis.call('DEL', KEYS[1])
+       end
+       return 0`,
+      1, key, userId,
+    );
+    return result === 1;
+  }
+
   async deleteEmailOtpIfAuthVersionChangedStrict(key: string, authVersion: number): Promise<boolean> {
     await this.ensureReady();
     const result = await this.client.eval(

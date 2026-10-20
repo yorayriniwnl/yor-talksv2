@@ -1,11 +1,14 @@
-import { createHash } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import {
+  emailSuppressionService,
+  PromotionalEmailDisabledError,
+  EmailSuppressedError,
+  ConsentMissingError,
+} from "./email-suppression-service.js";
 
-function recipientHash(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 16);
-}
+export { PromotionalEmailDisabledError, EmailSuppressedError, ConsentMissingError };
 
 export class EmailDeliveryNotConfiguredError extends Error {
   constructor() {
@@ -26,6 +29,7 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  headers?: Record<string, string>;
 }
 
 export class EmailService {
@@ -87,7 +91,7 @@ export class EmailService {
       // Development and tests stay usable without an external email account.
       // Do not print the address, subject, HTML, or text: verification links,
       // reset links, and email OTPs are credentials and must not land in logs.
-      logger.info({ recipientHash: recipientHash(to), htmlBytes: Buffer.byteLength(html, "utf8") }, "Email dispatch simulated");
+      logger.info("Email dispatch simulated");
       return true;
     }
 
@@ -112,12 +116,12 @@ export class EmailService {
 
     if (!response.ok) {
       await response.text().catch(() => undefined);
-      logger.error({ status: response.status, recipientHash: recipientHash(to) }, "Resend email delivery failed");
+      logger.error({ status: response.status }, "Resend email delivery failed");
       throw new EmailDeliveryProviderError(`Resend rejected the email (${response.status})`);
     }
 
     // Subjects can contain one-time login codes, so keep provider logs opaque.
-    logger.info({ recipientHash: recipientHash(to) }, "Email delivered through Resend");
+    logger.info("Email delivered through Resend");
     return true;
   }
 
@@ -170,6 +174,78 @@ export class EmailService {
       subject: `${code} is your Yor Talks sign-in code`,
       html,
       text: `Your Yor Talks sign-in code is ${code}. It expires in 5 minutes.`,
+    });
+  }
+
+  async sendPrivacyChallengeEmail(email: string, token: string, _purpose = "privacy_rights"): Promise<boolean> {
+    const verifyUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/privacy/verify?token=${encodeURIComponent(token)}`;
+    const html = this.renderTemplate({
+      eyebrow: "PRIVACY / VERIFICATION",
+      title: "Verify your request.",
+      body: "A privacy request or account inquiry was initiated for this email address. Use the secure single-use button below to verify your identity.",
+      actionLabel: "Verify privacy request",
+      actionUrl: verifyUrl,
+      footnote: "This single-use link expires in 15 minutes. If you did not make this request, you can safely ignore this message; no account details or records will be modified or disclosed.",
+    });
+    return this.sendEmail({
+      to: email,
+      subject: "Verify your Yor Talks privacy request",
+      html,
+      text: `Verify your Yor Talks privacy request: ${verifyUrl}. This single-use link expires in 15 minutes.`,
+    });
+  }
+
+  async sendLaunchUpdateEmail(options: EmailOptions): Promise<boolean> {
+    const check = await emailSuppressionService.checkCanSend(options.to, "launch_updates");
+    if (!check.allowed) {
+      if (check.reason === "promotional_email_disabled") {
+        throw new PromotionalEmailDisabledError();
+      }
+      if (check.reason === "email_suppressed") {
+        throw new EmailSuppressedError("launch_updates");
+      }
+      throw new ConsentMissingError("launch_updates");
+    }
+
+    const unsubToken = emailSuppressionService.createUnsubscribeToken(options.to, "launch_updates");
+    const unsubUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/launch/unsubscribe?email=${encodeURIComponent(options.to)}&token=${encodeURIComponent(unsubToken)}`;
+
+    const headers = {
+      ...(options.headers ?? {}),
+      "List-Unsubscribe": `<${unsubUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    };
+
+    return this.sendEmail({
+      ...options,
+      headers,
+    });
+  }
+
+  async sendPromotionalEmail(options: EmailOptions, purpose = "all_promotional"): Promise<boolean> {
+    const check = await emailSuppressionService.checkCanSend(options.to, purpose);
+    if (!check.allowed) {
+      if (check.reason === "promotional_email_disabled") {
+        throw new PromotionalEmailDisabledError();
+      }
+      if (check.reason === "email_suppressed") {
+        throw new EmailSuppressedError(purpose);
+      }
+      throw new ConsentMissingError(purpose);
+    }
+
+    const unsubToken = emailSuppressionService.createUnsubscribeToken(options.to, purpose);
+    const unsubUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/launch/unsubscribe?email=${encodeURIComponent(options.to)}&token=${encodeURIComponent(unsubToken)}`;
+
+    const headers = {
+      ...(options.headers ?? {}),
+      "List-Unsubscribe": `<${unsubUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    };
+
+    return this.sendEmail({
+      ...options,
+      headers,
     });
   }
 }

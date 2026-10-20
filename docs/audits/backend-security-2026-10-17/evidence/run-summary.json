@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-18",
+  "branch": "audit/backend-security-20261017",
+  "baseline": "62920ade36e6310f3dc449c8dfc6da07a2585f05",
+  "primaryRequirementsReviewed": [7, 8, 17, 18, 20],
+  "findings": {"P0": 0, "P1": 3, "P2": 13, "P3": 6, "fixed": 13, "openOrBlocked": 9},
+  "filesChanged": 96,
+  "apiTests": {"executed": 593, "passed": 593, "failed": 0, "skipped": 0, "cancelled": 0, "durationMs": 266832.7776},
+  "rootBackendTests": {"executed": 12, "passed": 12, "failed": 0, "skipped": 0},
+  "exitCodes": {"databaseAndContractBuild": 0, "apiTypecheck": 0, "apiBuild": 0, "routeContract": 0, "generatedClients": 0, "productionConfig": 0, "runtimeRoleIntegration": 0, "betaCleanMigration": 0, "betaRepeatMigration": 0, "mediaFunctionUpgrade": 0, "productionCleanMigration": 0, "productionRepeatMigration": 0, "productionFinalUpgrade": 0},
+  "dependencyAudit": {"pnpm": "11.28.5", "dependencies": 713, "advisories": 0},
+  "localInfrastructure": {"postgres": "16.14", "redisFinal": "5.0.14.1", "redisInitialUnsupported": "3.0.504", "syntheticOnly": true},
+  "remoteCurrentHeadCI": "pending-at-commit",
+  "blockedChecks": ["Docker/Compose runtime and container build", "Linux secret file permission runtime", "Bash backup failure and encrypted round-trip runtime", "Approved staging and live provider acceptance"],
+  "release": "NO-GO",
+  "productionModified": false,
+  "notes": "Evidence text is normalized to UTF-8 with terminal formatting and trailing whitespace removed. Original failure outcomes and actual final totals are retained. Targeted test repetitions overlap the final complete suite and are not added to its count."
+}

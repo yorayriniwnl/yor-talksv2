@@ -159,7 +159,8 @@ export const enforceRouteAuthority: RequestHandler = (req, res, next) => {
   if (authority.kind === "safety") return next();
   if (authority.kind === "restricted") {
     const moderationRestricted = ["suspended", "deactivated"].includes(req.user?.accountStatus ?? "active")
-      || req.eligibility?.reason === "account_restricted";
+      || req.eligibility?.reason === "account_restricted"
+      || Boolean((req.user as any)?.processingRestricted);
     const allowed = moderationRestricted
       ? isRestrictedRightsRouteAllowed(req.method, req.originalUrl)
       : isRestrictedRouteAllowed(req.method, req.originalUrl);

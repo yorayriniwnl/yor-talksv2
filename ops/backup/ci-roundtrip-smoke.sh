@@ -38,6 +38,9 @@ rclone_config="$backup_dir/rclone.conf"
 restore_db="yor_backup_restore_$(date +%s)_$$"
 restore_db_created=0
 marker_table_created=0
+fixture_users_created=0
+erased_account_id=""
+surviving_account_id=""
 backup_name=""
 test_marker="ci-encrypted-backup-roundtrip-v1"
 
@@ -58,6 +61,12 @@ cleanup() {
   if [[ "$marker_table_created" == "1" ]]; then
     "${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" -c 'DROP TABLE IF EXISTS public.ci_backup_smoke' >/dev/null 2>&1 || true
   fi
+  if [[ "$fixture_users_created" == "1" ]]; then
+    "${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" \
+      -v ON_ERROR_STOP=1 -v "erased_id=$erased_account_id" -v "surviving_id=$surviving_account_id" >/dev/null 2>&1 <<'SQL' || true
+DELETE FROM public.users WHERE id IN (:'erased_id'::uuid, :'surviving_id'::uuid);
+SQL
+  fi
   # Both cleanup paths are constructed from the validated numeric smoke ID.
   "${compose[@]}" run --rm --no-deps --entrypoint rm backup -rf -- "$backup_dir" "$remote_dir" >/dev/null 2>&1 || true
   exit "$status"
@@ -70,6 +79,21 @@ marker_table_created=1
 CREATE TABLE IF NOT EXISTS public.ci_backup_smoke (id text PRIMARY KEY, marker text NOT NULL);
 INSERT INTO public.ci_backup_smoke VALUES ('ci', 'ci-encrypted-backup-roundtrip-v1')
 ON CONFLICT (id) DO UPDATE SET marker=EXCLUDED.marker;
+SQL
+
+erased_account_id=$("${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" -Atqc 'SELECT gen_random_uuid()')
+surviving_account_id=$("${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" -Atqc 'SELECT gen_random_uuid()')
+for account_id in "$erased_account_id" "$surviving_account_id"; do
+  [[ "$account_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || {
+    echo 'Error: isolated recovery fixture did not generate a canonical account UUID' >&2; exit 1;
+  }
+done
+fixture_users_created=1
+"${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" \
+  -v ON_ERROR_STOP=1 -v "erased_id=$erased_account_id" -v "surviving_id=$surviving_account_id" >/dev/null <<'SQL'
+INSERT INTO public.users(id, username, email, password_hash, full_name) VALUES
+  (:'erased_id'::uuid, 'ci-erased-' || :'erased_id', :'erased_id' || '@example.invalid', 'synthetic-non-login-hash', 'Synthetic Erased Account'),
+  (:'surviving_id'::uuid, 'ci-survivor-' || :'surviving_id', :'surviving_id' || '@example.invalid', 'synthetic-non-login-hash', 'Synthetic Retained Account');
 SQL
 
 recipient=$("${compose[@]}" run --rm --no-deps "${backup_env[@]}" --entrypoint sh backup -ec '
@@ -138,6 +162,19 @@ backup_attempt=$(awk '$1 == "yor_backup_last_attempt_timestamp_seconds" { print 
   exit 1
 }
 
+# Model a deletion that happens after the backup. The journal stays outside
+# the archive, so restoring the historical database cannot erase this evidence.
+# This fixture has no content or relationships: SQL here models identity replay
+# only, not the production AccountService transaction or external erasure.
+"${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$postgres_db" \
+  -v ON_ERROR_STOP=1 -v "erased_id=$erased_account_id" >/dev/null <<'SQL'
+DELETE FROM public.users WHERE id=:'erased_id'::uuid;
+SQL
+journal_through=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+deletion_manifest=$(printf '{"schemaVersion":1,"journalId":"%s","through":"%s","deletedAccountIds":["%s"]}' \
+  "$smoke_id" "$journal_through" "$erased_account_id")
+manifest_sha256=$(printf '%s' "$deletion_manifest" | sha256sum | awk '{ print $1 }')
+
 restore_db_created=1
 "${compose[@]}" exec -T postgres createdb --username "$postgres_user" --maintenance-db postgres "$restore_db"
 restore_url="${database_url%/$postgres_db}/$restore_db"
@@ -166,6 +203,48 @@ restored_marker=$("${compose[@]}" exec -T postgres psql --no-psqlrc --username "
   "SELECT marker FROM public.ci_backup_smoke WHERE id='ci'")
 [[ "$restored_marker" == "$test_marker" ]] || { echo "Error: restored database marker did not match" >&2; exit 1; }
 
+verify_restored_accounts() {
+  printf '%s' "$deletion_manifest" | "${compose[@]}" run --rm --no-deps -i \
+    -e "RESTORE_DATABASE_URL=$restore_url" -e "RESTORE_EXPECTED_DATABASE=$restore_db" \
+    -e "RESTORE_DELETION_MANIFEST_SHA256=$manifest_sha256" -e "RESTORE_DELETION_JOURNAL_THROUGH=$journal_through" \
+    --entrypoint sh api -ec '
+      manifest=$(mktemp /tmp/yor-restore-journal.XXXXXX)
+      trap '\''rm -f -- "$manifest"'\'' EXIT
+      cat > "$manifest"
+      node ops/backup/verify-restored-deletions.mjs "$manifest"
+    '
+}
+
+if verification_output=$(verify_restored_accounts 2>&1); then
+  echo 'Error: historical restore passed while an erased account was resurrected' >&2
+  exit 1
+fi
+[[ "$verification_output" == *"still contains accounts listed as erased"* ]] || {
+  printf '%s\n' "$verification_output" >&2
+  echo 'Error: historical restore did not fail on its outstanding erased account' >&2
+  exit 1
+}
+restored_accounts=$("${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$restore_db" \
+  -v ON_ERROR_STOP=1 -v "erased_id=$erased_account_id" -v "surviving_id=$surviving_account_id" -At <<'SQL'
+SELECT count(*) FROM public.users WHERE id IN (:'erased_id'::uuid, :'surviving_id'::uuid);
+SQL
+)
+[[ "$restored_accounts" == "2" ]] || { echo 'Error: read-only recovery check changed the restored fixture' >&2; exit 1; }
+
+# Simulate the separately reviewed identity replay in this isolated fixture.
+# The verifier itself never deletes data or authorizes connecting live traffic.
+"${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$restore_db" \
+  -v ON_ERROR_STOP=1 -v "erased_id=$erased_account_id" >/dev/null <<'SQL'
+DELETE FROM public.users WHERE id=:'erased_id'::uuid;
+SQL
+verify_restored_accounts
+retained_account=$("${compose[@]}" exec -T postgres psql --no-psqlrc --username "$postgres_user" --dbname "$restore_db" \
+  -v ON_ERROR_STOP=1 -v "surviving_id=$surviving_account_id" -At <<'SQL'
+SELECT count(*) FROM public.users WHERE id=:'surviving_id'::uuid;
+SQL
+)
+[[ "$retained_account" == "1" ]] || { echo 'Error: isolated identity replay affected the retained account' >&2; exit 1; }
+
 if refusal_output=$(printf 'restore\n' | "${compose[@]}" run --rm --no-deps -i "${backup_env[@]}" \
   -e "BACKUP_AGE_IDENTITY=$backup_dir/identity" -e "DATABASE_URL=$restore_url" -e "BACKUP_FILE=$backup_name" \
   backup restore "$backup_dir/retrieved/$backup_name" 2>&1); then
@@ -178,4 +257,4 @@ fi
   exit 1
 }
 
-echo "Encrypted backup, isolated alias upload/retrieval, archive verification, isolated restore, and non-empty-target refusal passed."
+echo "Encrypted backup, isolated alias upload/retrieval, archive verification, isolated restore, erased-account detection/reconciliation, and non-empty-target refusal passed."

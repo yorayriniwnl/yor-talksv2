@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { api, type BackendUser } from '@/lib/api-client';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
-import { LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
+import { FounderBadge, LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 import { toast } from 'sonner';
 import { computeLevel } from '@/lib/achievement-progress';
 import { ProtectedMediaImage } from '@/lib/protected-media';
@@ -309,7 +309,14 @@ export default function Profile() {
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [followerListOpen, setFollowerListOpen] = useState(false);
   const [followerListMode, setFollowerListMode] = useState<'followers' | 'following'>('followers');
-  const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire'>('neon');
+  const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire' | 'holographic' | 'founder'>(() => {
+    try {
+      const hasFounderPass = localStorage.getItem('yor:founder:pass:v1');
+      return hasFounderPass ? 'founder' : 'neon';
+    } catch {
+      return 'neon';
+    }
+  });
   const [frameDialogOpen, setFrameDialogOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [highlightBuilderOpen, setHighlightBuilderOpen] = useState(false);
@@ -544,6 +551,8 @@ export default function Profile() {
                       <p className="text-xs text-muted-foreground font-serif">Choose an avatar frame that matches your profile identity.</p>
                       <div className="grid grid-cols-2 gap-3">
                         {[
+                          { id: 'founder', name: 'VIP Genesis Founder', color: 'from-amber-400 via-rose-500 to-red-600', badge: 'Mythic' },
+                          { id: 'holographic', name: 'Cyber Hologram', color: 'from-pink-500 via-cyan-400 to-indigo-600', badge: 'Epic' },
                           { id: 'neon', name: 'Cyber Neon', color: 'from-cyan-400 to-blue-500' },
                           { id: 'gold', name: 'Golden Dragon', color: 'from-amber-300 to-orange-500' },
                           { id: 'cosmic', name: 'Deep Cosmic', color: 'from-red-500 to-indigo-600' },
@@ -553,10 +562,15 @@ export default function Profile() {
                             key={f.id}
                             onClick={() => setSelectedFrame(f.id as any)}
                             className={cn(
-                              "p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all",
+                              "p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all relative overflow-hidden",
                               selectedFrame === f.id ? "border-primary bg-primary/10 font-bold" : "border-border/60 hover:border-border"
                             )}
                           >
+                            {(f as any).badge && (
+                              <span className="absolute top-1 right-1 text-[8px] font-mono font-bold px-1 py-0.2 rounded bg-primary/20 text-primary uppercase">
+                                {(f as any).badge}
+                              </span>
+                            )}
                             <div className={cn("w-10 h-10 rounded-full bg-gradient-to-tr shadow-md", f.color)} />
                             <span className="text-xs font-mono">{f.name}</span>
                           </button>
@@ -615,13 +629,18 @@ export default function Profile() {
         {/* ── Profile Info ──────────────────────────────────────────── */}
         <div className="mb-5">
           {/* Name + Verified + Level */}
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <h1 className="font-display font-extrabold text-[1.3rem] leading-tight tracking-tight">{profile.displayName}</h1>
             {profile.verified && (
               <Tooltip><TooltipTrigger>
                 <svg className="w-[18px] h-[18px] text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
               </TooltipTrigger><TooltipContent>Verified account</TooltipContent></Tooltip>
             )}
+            <FounderBadge
+              isFounder={Boolean((profile as any).isFounder || (currentUser?.id === profile.id && localStorage.getItem('yor:founder:pass:v1')))}
+              passNumber={(profile as any).founderPassNumber || (currentUser?.id === profile.id ? (() => { try { return JSON.parse(localStorage.getItem('yor:founder:pass:v1') || '{}')?.referralCode; } catch { return undefined; } })() : undefined)}
+              variant="pill"
+            />
           </div>
           <p className="text-[0.82rem] text-muted-foreground font-mono mb-3">@{profile.username}</p>
 

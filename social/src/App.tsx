@@ -23,6 +23,7 @@ import { PageTransition } from '@/components/ui/PageTransition';
 
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
+const Preregister = lazyWithRetry(() => import('@/pages/preregister'));
 const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
 const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
@@ -180,6 +181,8 @@ function ProtectedRoutes() {
                 <Route path="/rooms" component={CustomRoom} />
                 <Route path="/podcasts" component={PodcastStudio} />
                 <Route path="/grievance" component={Grievance} />
+                <Route path="/preregister" component={Preregister} />
+                <Route path="/launch" component={Preregister} />
 
                 {/* 404 */}
                 <Route component={NotFound} />
@@ -224,12 +227,14 @@ function Router() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isInitializing) {
+  if (isInitializing && location !== '/preregister' && location !== '/launch') {
     return <RouteSkeleton />;
   }
 
   return (
       <Switch>
+        <Route path="/preregister" component={Preregister} />
+        <Route path="/launch" component={Preregister} />
         <Route path="/privacy" component={LegalPage} />
         <Route path="/cookies" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />

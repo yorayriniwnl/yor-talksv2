@@ -1,0 +1,1 @@
+[database role] Fresh/upgrade runtime CRUD, sequences/default grants, isolation and DDL/role/database denial pass. Unexpected existing roles, grants and memberships are rejected unchanged.

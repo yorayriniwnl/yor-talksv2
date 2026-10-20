@@ -2,13 +2,14 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { authenticator } from "otplib";
-import { randomUUID, randomBytes, randomInt } from "node:crypto";
+import { createHash, randomUUID, randomBytes, randomInt } from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { db, type DbTransaction } from "@workspace/db";
-import { userFollowsTable } from "@workspace/db/schema";
+import { preregistrationsTable, userFeatureOverridesTable, userFollowsTable } from "@workspace/db/schema";
+import { PREMIUM_FEATURES } from "../features/premium-features.js";
 import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
@@ -109,6 +110,26 @@ export class AuthService {
       const existingUsername = await this.userRepository.findByUsername(normalizedUsername,tx);
       if (existingEmail || existingUsername) throw new UserAlreadyExistsError("An account already exists for that email or username");
 
+      // Check handle reservation for pre-registered VIP founders
+      const [preregByHandle] = await (tx ?? db)
+        .select()
+        .from(preregistrationsTable)
+        .where(eq(preregistrationsTable.username, normalizedUsername))
+        .limit(1);
+      if (preregByHandle && preregByHandle.email.toLowerCase() !== email) {
+        throw new RegistrationNotAllowedError("This username is reserved for a pre-registered VIP founder. Please use the registered email address.");
+      }
+
+      // Check if user is pre-registered by email
+      const [preregByEmail] = await (tx ?? db)
+        .select()
+        .from(preregistrationsTable)
+        .where(eq(preregistrationsTable.email, email))
+        .limit(1);
+
+      const founderRecord = preregByEmail ?? (preregByHandle && preregByHandle.email.toLowerCase() === email ? preregByHandle : null);
+      const isFounder = Boolean(founderRecord);
+
       const passwordHash = await bcrypt.hash(input.password,10);
       const consentTimestamp = new Date().toISOString();
       const minor = authorization.experience !== 'adult_18_plus';
@@ -140,6 +161,9 @@ export class AuthService {
           sharePreciseLocation: !minor,
           contentFilter: minor ? "child_safe" : "regular",
           onboardingCompleted: false,
+          isFounder: isFounder ? true : undefined,
+          founderPassNumber: founderRecord?.referralCode ?? undefined,
+          avatarFrame: isFounder ? "founder" : undefined,
         },
         emailVerified: false,
         contactIdentityDigest: getContactIdentifierDigest("email",email),
@@ -152,6 +176,27 @@ export class AuthService {
       };
       const created = await this.userRepository.create(record,tx);
       await this.enrollmentService.bindAuthorizedEnrollment(authorization,input.registrationNonce,userId,tx);
+
+      if (isFounder) {
+        // Provision 1-Year SuperPass (all premium features granted for 365 days)
+        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        for (const feature of PREMIUM_FEATURES) {
+          await (tx ?? db).insert(userFeatureOverridesTable).values({
+            userId,
+            featureKey: feature,
+            enabled: true,
+            status: "active",
+            grantedAt: consentTimestamp,
+            expiresAt,
+            metadata: {
+              reason: "genesis_2026_founder_perk",
+              referralCode: founderRecord?.referralCode ?? null,
+              launchDate: "2026-12-01T00:00:00.000Z",
+            },
+          }).onConflictDoNothing();
+        }
+      }
+
       return created;
     });
     // Email delivery happens after the atomic account/enrollment commit. If a
@@ -202,7 +247,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         this.securityService.createAuditEvent("login_failure", "Wrong 2FA code", normalizedIdentifier);
         throw new Error("Invalid two-factor code");
       }
@@ -263,7 +308,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user, undefined, undefined, { subject: googleSubject, email: googleEmail }),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
@@ -349,7 +394,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user, key, state.reservationId),
         );
       }
-      if (!authenticator.check(input.totpCode, totpSecret)) {
+      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
         await this.deleteClaimedEmailOtp(key, raw, state.reservationId);
         throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
@@ -685,7 +730,7 @@ export class AuthService {
     } catch {
       return false;
     }
-    if (!authenticator.check(code, pendingSecret)) {
+    if (!await this.consumeTotpCode(userId, code, pendingSecret)) {
       return false;
     }
     // The database condition also covers another confirmation winning after
@@ -700,12 +745,22 @@ export class AuthService {
     const storedSecret = user?.totpSecret;
     if (!storedSecret) return false;
     const secret = decryptSecret(storedSecret, env.TOTP_ENCRYPTION_KEY).secret;
-    if (!authenticator.check(code, secret)) {
+    if (!await this.consumeTotpCode(userId, code, secret)) {
       return false;
     }
     // A code for an earlier secret cannot disable a replacement installed
     // while this request was waiting for the database.
     return this.userRepository.disableTwoFactorIfMatches(userId, storedSecret);
+  }
+
+  private async consumeTotpCode(userId: string, code: string, secret: string): Promise<boolean> {
+    if (!authenticator.check(code, secret)) return false;
+    // The verifier uses the default 30-second step with no clock-skew window.
+    // Retain the claim beyond that validity period. One atomic Redis NX claim
+    // is shared across login methods, setup and disable, including concurrent
+    // requests. Neither the authenticator secret nor the short code is stored.
+    const digest = createHash("sha256").update(secret).update("\0").update(code).digest("hex");
+    return this.redisRepository.setIfAbsentStrict(`totp-used:${userId}:${digest}`, "used", 90);
   }
 
   private async readTotpSecret(user: UserRecord): Promise<string | null> {

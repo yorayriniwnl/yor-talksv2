@@ -20,6 +20,17 @@ const readinessDependencies = {
   redis: () => inspectRedisCompatibility(env.REDIS_URL),
   notificationWorker: hasHealthyNotificationWorker,
   lifecycle: inspectLifecycleHealth,
+  recoveryReplay: async () => {
+    if (process.env.RECOVERY_REPLAY_GATE !== 'true') return;
+    const requiredCutoff = process.env.RESTORE_DELETION_JOURNAL_THROUGH;
+    const query = requiredCutoff
+      ? sql`SELECT 1 FROM recovery_replay_log WHERE through >= ${requiredCutoff} LIMIT 1`
+      : sql`SELECT 1 FROM recovery_replay_log LIMIT 1`;
+    const result = await db.execute(query).catch(() => ({ rows: [] }));
+    if (!result.rows || result.rows.length === 0) {
+      throw new Error("Disaster recovery erasure replay not completed; services must not serve affected data");
+    }
+  },
 };
 
 export function createReadinessHandler(dependencies = readinessDependencies) {
@@ -64,6 +75,12 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
       };
       if (!lifecycle.workerUp) throw new Error("Required lifecycle worker is not ready");
       services.lifecycleWorker = "up";
+
+      if (process.env.RECOVERY_REPLAY_GATE === 'true') {
+        services.recoveryReplay = "down";
+        await dependencies.recoveryReplay();
+        services.recoveryReplay = "up";
+      }
 
       res.status(200).json({
         status: "healthy",

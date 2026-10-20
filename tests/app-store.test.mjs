@@ -3,12 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { build } from 'esbuild';
 
+import path from 'node:path';
+
+const root = path.resolve(import.meta.dirname, '..');
 const bundle = await build({
   stdin: {
     contents: "export { useAppStore } from './social/src/lib/store.ts'; export { api, setStoredTokens } from './social/src/lib/api-client.ts';",
-    resolveDir: process.cwd(),
+    resolveDir: root,
   },
-  tsconfig: 'social/tsconfig.json', bundle: true, write: false,
+  tsconfig: path.join(root, 'social/tsconfig.json'), bundle: true, write: false,
   platform: 'browser', format: 'esm', define: { 'import.meta.env': '{}' },
 });
 

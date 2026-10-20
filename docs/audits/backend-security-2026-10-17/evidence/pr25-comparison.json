@@ -1,0 +1,2219 @@
+{
+    "observedOn":  "2026-10-18",
+    "source":  "GitHub compare main...release/unified-release-20261009",
+    "baseSHA":  "8c5a763893a53bad412946888a3c965deec46598",
+    "mergeBaseSHA":  "f29d74c6c0b7aa81ef1e86bd882de29276e51f89",
+    "headSHA":  "203f6de9a6513ef21361e31edd6f3918ea0b15c8",
+    "status":  "diverged",
+    "aheadBy":  85,
+    "behindBy":  19,
+    "totalCommits":  85,
+    "url":  "https://github.com/yorayriniwnl/yor-talksv2/compare/main...release/unified-release-20261009",
+    "commits":  [
+                    {
+                        "sha":  "55e12429baecde8b3ea07e76b0b7e1f6e824a463",
+                        "message":  "Harden authentication, message integrity and production operations\n\nPreserve the verified frontend changes and add regression evidence for OTP concurrency, message visibility, lifecycle fencing, notification retention, ingress, schema bootstrap, monitoring and backup recovery. Correct isolated fixture guards for PostgreSQL service port publishing; root unit checks63/63 and API typecheck pass. Full pre-publication API323/323 and production Chromium69/69 results remain recorded separately from the guard delta. Production rollout retains documented migration/provider/worker gates.",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/55e12429baecde8b3ea07e76b0b7e1f6e824a463"
+                    },
+                    {
+                        "sha":  "9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb",
+                        "message":  "Fix clean CI builds of shared API validation contracts\n\nBuild referenced api-zod declarations before typechecking in CI and both root build entrypoints. Forced contract declaration rebuild and API/web typechecks pass. Record the initial remote failure and refreshed publication manifest, retaining the full pre-publication regression evidence.",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb"
+                    },
+                    {
+                        "sha":  "8fdd14d7129090fa9375478f0073b4f8526c2ce3",
+                        "message":  "Keep backup drill bind-mount files readable by the CI runner\n\nRun Linux backup utility containers as the host numeric UID/GID while preserving private permissions and all encryption, restore and failure guards. Record the protected frontend preview verification and previous exact-head CI outcomes. Runtime application code remains unchanged.",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/8fdd14d7129090fa9375478f0073b4f8526c2ce3"
+                    },
+                    {
+                        "sha":  "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
+                        "message":  "Read complete archive metadata listings during guarded restores\n\nConsume pg_restore output fully when selecting the first archive database name so pipefail does not turn a successful restore preflight into SIGPIPE141. Large-listing proof now exits0 and injected upstream failure23 remains fatal. Preserve isolated-target, encryption, transactional restore and failure guards; record prior CI outcomes and refreshed implementation manifest.",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/990fc062a7661eb8dafc4a33e8f3f252a6fb0715"
+                    },
+                    {
+                        "sha":  "5b205f7ac953accaf30fe9d8eb3e5aa7fbe987ab",
+                        "message":  "security(auth): add conditional Google account linking after verification",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5b205f7ac953accaf30fe9d8eb3e5aa7fbe987ab"
+                    },
+                    {
+                        "sha":  "b4cd676f54ddb4690f434b7a4e80830a840eef2d",
+                        "message":  "security(auth): defer Google identity linking until MFA and reject untrusted external email auto-link",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b4cd676f54ddb4690f434b7a4e80830a840eef2d"
+                    },
+                    {
+                        "sha":  "616e698ef9ef18c6fbe7e7040d08972c1c4fb142",
+                        "message":  "fix(auth): provide safe user guidance for untrusted Google email linking",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/616e698ef9ef18c6fbe7e7040d08972c1c4fb142"
+                    },
+                    {
+                        "sha":  "beac255fa2f29d3e8d562c8b40c45f44c603b306",
+                        "message":  "test(auth): cover Google email authority, deferred MFA linking, revocation and races",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/beac255fa2f29d3e8d562c8b40c45f44c603b306"
+                    },
+                    {
+                        "sha":  "4358b7aae78c2bf73903356cd03c11b9ad8c0107",
+                        "message":  "test(auth): type Google verifier mock request",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4358b7aae78c2bf73903356cd03c11b9ad8c0107"
+                    },
+                    {
+                        "sha":  "23bfdc7678543d797593a731e5f3caa228bba7d9",
+                        "message":  "Merge Google sign-in security hardening into media lifecycle branch\n\nSecure Google sign-in account linking and MFA completion",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/23bfdc7678543d797593a731e5f3caa228bba7d9"
+                    },
+                    {
+                        "sha":  "ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7",
+                        "message":  "Defer billing validators safely and harden preview packaging",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7"
+                    },
+                    {
+                        "sha":  "e45b10d1734dcd1d59f0eef5c980e8b71f304708",
+                        "message":  "Merge remote-tracking branch \u0027origin/codex/media-lifecycle-20261006\u0027 into codex/media-lifecycle-20261006",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/e45b10d1734dcd1d59f0eef5c980e8b71f304708"
+                    },
+                    {
+                        "sha":  "ced51c642cb3318f1bb41435dbfdfbfce7abe173",
+                        "message":  "Merge PR #20 into main: media lifecycle, hardened Google auth and global privacy integration",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ced51c642cb3318f1bb41435dbfdfbfce7abe173"
+                    },
+                    {
+                        "sha":  "806c0a9b61fd19277557ef29792c37e6768d40de",
+                        "message":  "fix(messaging): remove redundant closing brace in message-repository",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/806c0a9b61fd19277557ef29792c37e6768d40de"
+                    },
+                    {
+                        "sha":  "d5b83bffc0f38dce1dcdbd8c58205e3db5226290",
+                        "message":  "security(auth): harden Google OAuth token validation, origin checks, abuse detection, and error resilience\n\n- Add defense-in-depth verification for Google ID token claims (aud, iss, exp, trimmed sub, email_verified, domain)\n\n- Mount requireTrustedOrigin middleware on POST /auth/google for origin and CSRF safety\n\n- Record structured audit log events for failed and successful Google authentication flows\n\n- Enforce abuse detection and rate limiting (429) on repeated Google login failures\n\n- Safely handle database and Redis transient outages (503) without exposing stack traces\n\n- Gracefully resolve concurrent race conditions (23505) when linking Google subjects\n\n- Add comprehensive unit and integration regression test suites covering token validation, competing links, revoked sessions, abandoned MFA, and outage resilience",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d5b83bffc0f38dce1dcdbd8c58205e3db5226290"
+                    },
+                    {
+                        "sha":  "9be402dca78e3962c1afc5b08a2e282979081874",
+                        "message":  "security(deps): patch vulnerabilities in brace-expansion, source-map-js, fast-uri, markdown-it, and fast-copy",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9be402dca78e3962c1afc5b08a2e282979081874"
+                    },
+                    {
+                        "sha":  "45c072fa02c711eadea2bbc8d62839caa9a371aa",
+                        "message":  "fix(types): harmonize grievance ticket receipt, message preview and tombstone semantics",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/45c072fa02c711eadea2bbc8d62839caa9a371aa"
+                    },
+                    {
+                        "sha":  "bb0eac9cc8d6cd3eb5e962aa8ecf7d93d3e40da5",
+                        "message":  "fix(e2e): align grievance tracker receipt copy with privacy expectation",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/bb0eac9cc8d6cd3eb5e962aa8ecf7d93d3e40da5"
+                    },
+                    {
+                        "sha":  "d404a89458decd66c6a1835897a743ce096673a9",
+                        "message":  "Merge PR #23: finish and independently verify Google authentication hardening",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d404a89458decd66c6a1835897a743ce096673a9"
+                    },
+                    {
+                        "sha":  "5402b56bec5fb06e300c0bfca4076b5d1677926c",
+                        "message":  "fix(messaging): harmonize vanish mode tombstone, preview entitlement and retry invariants",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5402b56bec5fb06e300c0bfca4076b5d1677926c"
+                    },
+                    {
+                        "sha":  "3887cc47aa8d0abb718f44952fbfb33d6233e109",
+                        "message":  "fix(messaging): roll back preview event if message expires or is deleted during preview insert",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109"
+                    },
+                    {
+                        "sha":  "c8ad4481addef4e65b8361d9a16a7f5abc325189",
+                        "message":  "docs: record verified unified release and protected preview",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c8ad4481addef4e65b8361d9a16a7f5abc325189"
+                    },
+                    {
+                        "sha":  "4424fae305f03f67d31e9419c1b15bc6741a4b28",
+                        "message":  "security(eligibility): add narrow restricted-session route allowlist and path normalization",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4424fae305f03f67d31e9419c1b15bc6741a4b28"
+                    },
+                    {
+                        "sha":  "677fc457232c03cad64f3754ac7d9f8f06d503e0",
+                        "message":  "security(eligibility): fail closed for unapproved beta sessions on API and optional reads",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/677fc457232c03cad64f3754ac7d9f8f06d503e0"
+                    },
+                    {
+                        "sha":  "c2f988be750092606ba997b30027276b0f87a050",
+                        "message":  "security(realtime): reject and disconnect restricted beta sessions",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c2f988be750092606ba997b30027276b0f87a050"
+                    },
+                    {
+                        "sha":  "1151c93dd40d299c4d73991cb5f44693d963ffc4",
+                        "message":  "privacy(registration): default unverified accounts to private and child-safe",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/1151c93dd40d299c4d73991cb5f44693d963ffc4"
+                    },
+                    {
+                        "sha":  "f264e72c68350faf505d66213a82d9a3f5d45734",
+                        "message":  "privacy(users): minimize owner profile for restricted eligibility sessions",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f264e72c68350faf505d66213a82d9a3f5d45734"
+                    },
+                    {
+                        "sha":  "4c3ffc84ebbfe84503ba7c2f0e931aebbea447a4",
+                        "message":  "privacy(profile): return minimal account view while eligibility restricted",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4c3ffc84ebbfe84503ba7c2f0e931aebbea447a4"
+                    },
+                    {
+                        "sha":  "435b2922c68574fa2ca82c912da313cde990a758",
+                        "message":  "test(eligibility): cover strict restricted-session allowlist and traversal attempts",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/435b2922c68574fa2ca82c912da313cde990a758"
+                    },
+                    {
+                        "sha":  "5dddc9e6668f29b07fa0468f7747ee61ed66a610",
+                        "message":  "test(eligibility): enforce unverified account HTTP boundary and preserve recovery routes",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5dddc9e6668f29b07fa0468f7747ee61ed66a610"
+                    },
+                    {
+                        "sha":  "a3cea6b817fe46923dace6106c1911669c119810",
+                        "message":  "docs(release): document eligibility enforcement and fail-closed rollout consequences",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/a3cea6b817fe46923dace6106c1911669c119810"
+                    },
+                    {
+                        "sha":  "171c2f9767d4256d1a3e4366850750bd2d85a5fd",
+                        "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/171c2f9767d4256d1a3e4366850750bd2d85a5fd"
+                    },
+                    {
+                        "sha":  "7ddc77c681a44c20fc87ded68d3efbf82b27a040",
+                        "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7ddc77c681a44c20fc87ded68d3efbf82b27a040"
+                    },
+                    {
+                        "sha":  "f2c0629d7358f450e6705876c02f9eb7e3f2a351",
+                        "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f2c0629d7358f450e6705876c02f9eb7e3f2a351"
+                    },
+                    {
+                        "sha":  "6afc47049114488ba5f92a89641c6a7cde691447",
+                        "message":  "Merge restricted-session enforcement into unified release candidate\n\nsecurity(eligibility): enforce restricted accounts across HTTP and realtime",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/6afc47049114488ba5f92a89641c6a7cde691447"
+                    },
+                    {
+                        "sha":  "0ab63aee2fa002317f5c4bd68a606d7a0a1dfd4b",
+                        "message":  "feat(ops): add staging target configuration, validation tooling and infrastructure alert rules",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/0ab63aee2fa002317f5c4bd68a606d7a0a1dfd4b"
+                    },
+                    {
+                        "sha":  "c4806d7c1b444411f04a9b620159ec92cc16185c",
+                        "message":  "fix(ops): align deployment-config validator invocation and package script",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c4806d7c1b444411f04a9b620159ec92cc16185c"
+                    },
+                    {
+                        "sha":  "64f10607f9f4d0c96b0ceb0830635ab6644b520c",
+                        "message":  "test(auth): add comprehensive regression suite for identity, recovery, and session boundaries",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/64f10607f9f4d0c96b0ceb0830635ab6644b520c"
+                    },
+                    {
+                        "sha":  "cc54fcc4d8feefbe6d72c304a05e88457d594eaa",
+                        "message":  "feat(ops): establish hosting target topology, staging isolation and operational preparation",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/cc54fcc4d8feefbe6d72c304a05e88457d594eaa"
+                    },
+                    {
+                        "sha":  "9450914beadea0cc5c8d8704fb16a54581a33ee0",
+                        "message":  "feat(compliance): align release-scope policy decisions, behavioral guards and verification matrix",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9450914beadea0cc5c8d8704fb16a54581a33ee0"
+                    },
+                    {
+                        "sha":  "d1b7eac55268fbfa77832c3b195f4edda8b427d1",
+                        "message":  "feat(ops): complete monitoring acceptance, add infrastructure alerts, and update operator runbook",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d1b7eac55268fbfa77832c3b195f4edda8b427d1"
+                    },
+                    {
+                        "sha":  "eaf86d9eaefa6cc4adc60442bab8865cdc2fd08f",
+                        "message":  "test(routing): add public routing, proxy trust and ingress verification test suite",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/eaf86d9eaefa6cc4adc60442bab8865cdc2fd08f"
+                    },
+                    {
+                        "sha":  "c885e29900f061c7a33b5263d30da370967ddf0d",
+                        "message":  "test(backup): verify actual off-host backup and isolated recovery acceptance",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c885e29900f061c7a33b5263d30da370967ddf0d"
+                    },
+                    {
+                        "sha":  "9ceaf529f4baf8dda876cd0268a46888fda52081",
+                        "message":  "perf(mobile): repair FCP, LCP, and blocking under throttled mobile emulation",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9ceaf529f4baf8dda876cd0268a46888fda52081"
+                    },
+                    {
+                        "sha":  "aca6ccbf916f0393562b5b4a6810dd01911ab9c4",
+                        "message":  "feat(release): integrate staging hosting target preparation and release-scope verification into unified release candidate",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/aca6ccbf916f0393562b5b4a6810dd01911ab9c4"
+                    },
+                    {
+                        "sha":  "3c1e824ee6b32590749d650a359aa1ae81c018a4",
+                        "message":  "docs(release): record unified release candidate aca6ccb acceptance and operational readiness",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/3c1e824ee6b32590749d650a359aa1ae81c018a4"
+                    },
+                    {
+                        "sha":  "da88a7e4076c9a1ab2d2dc1117a29f885206b098",
+                        "message":  "fix(e2e): align video publication contract and guard empty poster image render",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/da88a7e4076c9a1ab2d2dc1117a29f885206b098"
+                    },
+                    {
+                        "sha":  "28cd967736e96f4c196995adad1ef94d246a7257",
+                        "message":  "fix(ci): pass numeric WEB_PORT to production compose stack smoke test",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/28cd967736e96f4c196995adad1ef94d246a7257"
+                    },
+                    {
+                        "sha":  "30fb713cd774d7297de7b8c4f412262675b47f85",
+                        "message":  "docs(release): record verified unified release candidate 28cd967 and green CI run 38086946998",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/30fb713cd774d7297de7b8c4f412262675b47f85"
+                    },
+                    {
+                        "sha":  "7eedeecebeed40cdc1cb276c2fb243f69820b1d5",
+                        "message":  "docs: correct current mobile release evidence",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7eedeecebeed40cdc1cb276c2fb243f69820b1d5"
+                    },
+                    {
+                        "sha":  "f8a0ae7351a65eeb6927478738a12232e2db3d1a",
+                        "message":  "docs: refresh verified release candidate evidence",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f8a0ae7351a65eeb6927478738a12232e2db3d1a"
+                    },
+                    {
+                        "sha":  "5e85e497695b347e7dba2a41e7fb4f54c4599445",
+                        "message":  "fix(privacy): use neutral grievance submission wording",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5e85e497695b347e7dba2a41e7fb4f54c4599445"
+                    },
+                    {
+                        "sha":  "76bd55908ee9f5c063bfb2c38d5865e8076d9509",
+                        "message":  "test(privacy): pin export visibility boundary",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/76bd55908ee9f5c063bfb2c38d5865e8076d9509"
+                    },
+                    {
+                        "sha":  "b641905b395b53b320bd133745589650e6020d20",
+                        "message":  "fix(privacy): apply captured message export boundary",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b641905b395b53b320bd133745589650e6020d20"
+                    },
+                    {
+                        "sha":  "24c056a8e4fe625943807d6a8cf265bff51db235",
+                        "message":  "test(privacy): cover export response boundary",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/24c056a8e4fe625943807d6a8cf265bff51db235"
+                    },
+                    {
+                        "sha":  "f801cb1e65292e366319a087018d639458b7bc25",
+                        "message":  "fix(privacy): carry export boundary through response checks",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f801cb1e65292e366319a087018d639458b7bc25"
+                    },
+                    {
+                        "sha":  "27673d3c334091a3cdd9e61557f635efa81c6c95",
+                        "message":  "docs(release): refresh latest CI and preview evidence",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/27673d3c334091a3cdd9e61557f635efa81c6c95"
+                    },
+                    {
+                        "sha":  "5cc4d1ed4d207a0bd7e2f92b0c6749b0fa72eea0",
+                        "message":  "test(privacy): cover account export coverage and shipping boundary",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5cc4d1ed4d207a0bd7e2f92b0c6749b0fa72eea0"
+                    },
+                    {
+                        "sha":  "83c675fc07c18f870d806053a253f25bde046ee5",
+                        "message":  "fix(privacy): expand account export and redact buyer data",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/83c675fc07c18f870d806053a253f25bde046ee5"
+                    },
+                    {
+                        "sha":  "466370ab70610cbeea213e8db745d0c6ae62c783",
+                        "message":  "test(auth): keep production eligibility fail closed",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/466370ab70610cbeea213e8db745d0c6ae62c783"
+                    },
+                    {
+                        "sha":  "76c6dd9aaf72899ed14a671c74899bd5fe9e21a0",
+                        "message":  "test(auth): cover production socket eligibility gate",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/76c6dd9aaf72899ed14a671c74899bd5fe9e21a0"
+                    },
+                    {
+                        "sha":  "d8087db17ed08f7df07737d5cfdcb6c553be2d78",
+                        "message":  "test(auth): cover stale consent in optional sessions",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d8087db17ed08f7df07737d5cfdcb6c553be2d78"
+                    },
+                    {
+                        "sha":  "6d0e1d3b22d8b2d7853d03fe62ad1ea2623995d0",
+                        "message":  "fix(auth): enforce production consent and eligibility gates",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/6d0e1d3b22d8b2d7853d03fe62ad1ea2623995d0"
+                    },
+                    {
+                        "sha":  "4c827ee3626e55ea6011f839f2d0adcd94ecb1c1",
+                        "message":  "test(auth): restrict login profile before eligibility",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4c827ee3626e55ea6011f839f2d0adcd94ecb1c1"
+                    },
+                    {
+                        "sha":  "7f6c45ae661d109bb9e81e0782631e90b6eebe46",
+                        "message":  "fix(auth): return restricted profile until verification",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7f6c45ae661d109bb9e81e0782631e90b6eebe46"
+                    },
+                    {
+                        "sha":  "b077146637fa97e6cbc3906eb7d0151778c73795",
+                        "message":  "fix(auth): inject eligibility reader into session responses",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b077146637fa97e6cbc3906eb7d0151778c73795"
+                    },
+                    {
+                        "sha":  "080a93ca41c3c7b12e0c70b5963977359f554595",
+                        "message":  "test(eligibility): expose capability bypasses",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/080a93ca41c3c7b12e0c70b5963977359f554595"
+                    },
+                    {
+                        "sha":  "ccdbaa873994261aa514823eb4c634e548bb10f9",
+                        "message":  "test(eligibility): define protected route boundaries",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ccdbaa873994261aa514823eb4c634e548bb10f9"
+                    },
+                    {
+                        "sha":  "4cf8da43f793543538178926cf9b4ee660c5bdae",
+                        "message":  "feat(eligibility): enforce HTTP route capabilities",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4cf8da43f793543538178926cf9b4ee660c5bdae"
+                    },
+                    {
+                        "sha":  "93ef5d17317a329075e24226e2c70d352985e7a9",
+                        "message":  "test(socket): enforce current messaging capability",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/93ef5d17317a329075e24226e2c70d352985e7a9"
+                    },
+                    {
+                        "sha":  "578d9abc2823b66dd95654c47156c7c0cea8eec0",
+                        "message":  "feat(eligibility): enforce socket capabilities",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/578d9abc2823b66dd95654c47156c7c0cea8eec0"
+                    },
+                    {
+                        "sha":  "77dffe979f1ac25d0b5bddb427552613994685b8",
+                        "message":  "test(eligibility): enforce current content ceiling",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/77dffe979f1ac25d0b5bddb427552613994685b8"
+                    },
+                    {
+                        "sha":  "8000dcdb203c635601a82898a141e3a67d76905a",
+                        "message":  "feat(safety): enforce eligibility ceilings in discovery",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/8000dcdb203c635601a82898a141e3a67d76905a"
+                    },
+                    {
+                        "sha":  "fad9782743d2490d1228094c22a138443cbb8ed4",
+                        "message":  "fix(db): repair eligibility content revision constraint",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/fad9782743d2490d1228094c22a138443cbb8ed4"
+                    },
+                    {
+                        "sha":  "27214b2828ec884673786fb6019a07e7ff2d89df",
+                        "message":  "Fix empty discovery integration fixture",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/27214b2828ec884673786fb6019a07e7ff2d89df"
+                    },
+                    {
+                        "sha":  "b936bd07525153ce30f1d95ba658fcd32e60725b",
+                        "message":  "Filter comment content by audience eligibility",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b936bd07525153ce30f1d95ba658fcd32e60725b"
+                    },
+                    {
+                        "sha":  "5fc227a8202124a594a1eccae738718394b6d12a",
+                        "message":  "Use distinct authors in discovery pagination fixture",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5fc227a8202124a594a1eccae738718394b6d12a"
+                    },
+                    {
+                        "sha":  "40d71503915e30c79f5faacfcfb0297d73bf61d2",
+                        "message":  "Make eligibility migration tolerate partial baselines",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/40d71503915e30c79f5faacfcfb0297d73bf61d2"
+                    },
+                    {
+                        "sha":  "bd73a73478fdc862490f8af08a877d4ce0e115bc",
+                        "message":  "Record 11 October hardening acceptance",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/bd73a73478fdc862490f8af08a877d4ce0e115bc"
+                    },
+                    {
+                        "sha":  "32cc49c2feacd2e79f709c1daf9ace9d8ff7d4d6",
+                        "message":  "docs(ops): identify backup drill as loopback test",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/32cc49c2feacd2e79f709c1daf9ace9d8ff7d4d6"
+                    },
+                    {
+                        "sha":  "ca8ad106647a95e3c5f61f93d7958f5dbd72181b",
+                        "message":  "fix(vercel): handle API runtime initialization failures",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ca8ad106647a95e3c5f61f93d7958f5dbd72181b"
+                    },
+                    {
+                        "sha":  "387148960e8ae9763c4cc3d9479574270f0fb022",
+                        "message":  "test(vercel): verify runtime initialization fails closed",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/387148960e8ae9763c4cc3d9479574270f0fb022"
+                    },
+                    {
+                        "sha":  "75f5664780d51b339ac0d45ffbccd559751198ca",
+                        "message":  "fix(ops): enforce Vercel CSP and graceful smoke exits",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/75f5664780d51b339ac0d45ffbccd559751198ca"
+                    },
+                    {
+                        "sha":  "dc77bbd24146bc91e8a14baf25b460f20a36c6b2",
+                        "message":  "fix(smoke): scope HSTS and check API liveness",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/dc77bbd24146bc91e8a14baf25b460f20a36c6b2"
+                    },
+                    {
+                        "sha":  "203f6de9a6513ef21361e31edd6f3918ea0b15c8",
+                        "message":  "docs(release): record verified smoke candidate acceptance",
+                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/203f6de9a6513ef21361e31edd6f3918ea0b15c8"
+                    }
+                ],
+    "files":  [
+                  {
+                      "filename":  ".github/workflows/ci.yml",
+                      "status":  "modified",
+                      "additions":  47,
+                      "deletions":  4,
+                      "changes":  51
+                  },
+                  {
+                      "filename":  ".gitignore",
+                      "status":  "modified",
+                      "additions":  1,
+                      "deletions":  0,
+                      "changes":  1
+                  },
+                  {
+                      "filename":  ".vercelignore",
+                      "status":  "modified",
+                      "additions":  41,
+                      "deletions":  0,
+                      "changes":  41
+                  },
+                  {
+                      "filename":  "PRODUCTION_READINESS.md",
+                      "status":  "modified",
+                      "additions":  89,
+                      "deletions":  21,
+                      "changes":  110
+                  },
+                  {
+                      "filename":  "README.md",
+                      "status":  "modified",
+                      "additions":  31,
+                      "deletions":  14,
+                      "changes":  45
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/account-integrity.test.ts",
+                      "status":  "modified",
+                      "additions":  1,
+                      "deletions":  1,
+                      "changes":  2
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/account-service.test.ts",
+                      "status":  "modified",
+                      "additions":  75,
+                      "deletions":  0,
+                      "changes":  75
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/auth-restricted-response.test.ts",
+                      "status":  "added",
+                      "additions":  47,
+                      "deletions":  0,
+                      "changes":  47
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/bootstrap-schema.integration.test.ts",
+                      "status":  "added",
+                      "additions":  130,
+                      "deletions":  0,
+                      "changes":  130
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/content-safety.test.ts",
+                      "status":  "modified",
+                      "additions":  34,
+                      "deletions":  0,
+                      "changes":  34
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/disappearing-message.test.ts",
+                      "status":  "modified",
+                      "additions":  5,
+                      "deletions":  10,
+                      "changes":  15
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/discovery-batching.test.ts",
+                      "status":  "modified",
+                      "additions":  86,
+                      "deletions":  3,
+                      "changes":  89
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/eligibility-boundaries.integration.test.ts",
+                      "status":  "added",
+                      "additions":  106,
+                      "deletions":  0,
+                      "changes":  106
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/eligibility-content.integration.test.ts",
+                      "status":  "added",
+                      "additions":  160,
+                      "deletions":  0,
+                      "changes":  160
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/email-otp-hardening.integration.test.ts",
+                      "status":  "added",
+                      "additions":  390,
+                      "deletions":  0,
+                      "changes":  390
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/google-auth.test.ts",
+                      "status":  "added",
+                      "additions":  324,
+                      "deletions":  0,
+                      "changes":  324
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/ingress-hardening.integration.test.ts",
+                      "status":  "added",
+                      "additions":  204,
+                      "deletions":  0,
+                      "changes":  204
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/lifecycle-health.integration.test.ts",
+                      "status":  "added",
+                      "additions":  210,
+                      "deletions":  0,
+                      "changes":  210
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/media-cleanup-loop.integration.test.ts",
+                      "status":  "modified",
+                      "additions":  17,
+                      "deletions":  0,
+                      "changes":  17
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/media-publication.integration.test.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  2,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/message-integrity.integration.test.ts",
+                      "status":  "added",
+                      "additions":  285,
+                      "deletions":  0,
+                      "changes":  285
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/message-preview.test.ts",
+                      "status":  "modified",
+                      "additions":  8,
+                      "deletions":  6,
+                      "changes":  14
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/message-service.test.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  2,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/notification-delivery-migration.integration.test.ts",
+                      "status":  "added",
+                      "additions":  42,
+                      "deletions":  0,
+                      "changes":  42
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/notification-delivery-service.test.ts",
+                      "status":  "added",
+                      "additions":  47,
+                      "deletions":  0,
+                      "changes":  47
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/notification-retention.integration.test.ts",
+                      "status":  "added",
+                      "additions":  164,
+                      "deletions":  0,
+                      "changes":  164
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/policy-and-release-scope.test.ts",
+                      "status":  "added",
+                      "additions":  194,
+                      "deletions":  0,
+                      "changes":  194
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/profile-relationships.test.ts",
+                      "status":  "modified",
+                      "additions":  27,
+                      "deletions":  0,
+                      "changes":  27
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/public-routing-verification.test.ts",
+                      "status":  "added",
+                      "additions":  409,
+                      "deletions":  0,
+                      "changes":  409
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/redis-compat.test.ts",
+                      "status":  "modified",
+                      "additions":  5,
+                      "deletions":  2,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/report-authorization.integration.test.ts",
+                      "status":  "modified",
+                      "additions":  21,
+                      "deletions":  1,
+                      "changes":  22
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/restricted-routes.test.ts",
+                      "status":  "added",
+                      "additions":  144,
+                      "deletions":  0,
+                      "changes":  144
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/restricted-session.integration.test.ts",
+                      "status":  "added",
+                      "additions":  259,
+                      "deletions":  0,
+                      "changes":  259
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/socket-policy.test.ts",
+                      "status":  "added",
+                      "additions":  34,
+                      "deletions":  0,
+                      "changes":  34
+                  },
+                  {
+                      "filename":  "api-server/src/__tests__/socket-security.test.ts",
+                      "status":  "modified",
+                      "additions":  68,
+                      "deletions":  3,
+                      "changes":  71
+                  },
+                  {
+                      "filename":  "api-server/src/app.ts",
+                      "status":  "modified",
+                      "additions":  6,
+                      "deletions":  13,
+                      "changes":  19
+                  },
+                  {
+                      "filename":  "api-server/src/config/env.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  0,
+                      "changes":  3
+                  },
+                  {
+                      "filename":  "api-server/src/config/trusted-proxies.ts",
+                      "status":  "added",
+                      "additions":  44,
+                      "deletions":  0,
+                      "changes":  44
+                  },
+                  {
+                      "filename":  "api-server/src/controllers/auth-controller.ts",
+                      "status":  "modified",
+                      "additions":  42,
+                      "deletions":  8,
+                      "changes":  50
+                  },
+                  {
+                      "filename":  "api-server/src/controllers/message-controller.ts",
+                      "status":  "modified",
+                      "additions":  30,
+                      "deletions":  33,
+                      "changes":  63
+                  },
+                  {
+                      "filename":  "api-server/src/controllers/user-controller.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  1,
+                      "changes":  5
+                  },
+                  {
+                      "filename":  "api-server/src/eligibility/content-policy.ts",
+                      "status":  "added",
+                      "additions":  122,
+                      "deletions":  0,
+                      "changes":  122
+                  },
+                  {
+                      "filename":  "api-server/src/eligibility/enforcement.ts",
+                      "status":  "added",
+                      "additions":  6,
+                      "deletions":  0,
+                      "changes":  6
+                  },
+                  {
+                      "filename":  "api-server/src/eligibility/restricted-routes.ts",
+                      "status":  "added",
+                      "additions":  137,
+                      "deletions":  0,
+                      "changes":  137
+                  },
+                  {
+                      "filename":  "api-server/src/eligibility/route-capabilities.ts",
+                      "status":  "added",
+                      "additions":  133,
+                      "deletions":  0,
+                      "changes":  133
+                  },
+                  {
+                      "filename":  "api-server/src/lib/notification-job-policy.ts",
+                      "status":  "added",
+                      "additions":  18,
+                      "deletions":  0,
+                      "changes":  18
+                  },
+                  {
+                      "filename":  "api-server/src/lib/notification-queue-maintenance.ts",
+                      "status":  "added",
+                      "additions":  47,
+                      "deletions":  0,
+                      "changes":  47
+                  },
+                  {
+                      "filename":  "api-server/src/lib/realtime.ts",
+                      "status":  "modified",
+                      "additions":  30,
+                      "deletions":  9,
+                      "changes":  39
+                  },
+                  {
+                      "filename":  "api-server/src/lib/redis-compat.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  3,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/middlewares/auth.ts",
+                      "status":  "modified",
+                      "additions":  29,
+                      "deletions":  5,
+                      "changes":  34
+                  },
+                  {
+                      "filename":  "api-server/src/middlewares/browser-origin.ts",
+                      "status":  "added",
+                      "additions":  7,
+                      "deletions":  0,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/middlewares/eligibility.ts",
+                      "status":  "added",
+                      "additions":  90,
+                      "deletions":  0,
+                      "changes":  90
+                  },
+                  {
+                      "filename":  "api-server/src/middlewares/rate-limit.ts",
+                      "status":  "modified",
+                      "additions":  1,
+                      "deletions":  1,
+                      "changes":  2
+                  },
+                  {
+                      "filename":  "api-server/src/middlewares/trusted-origin.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  1,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/auth-challenge-scripts.ts",
+                      "status":  "added",
+                      "additions":  114,
+                      "deletions":  0,
+                      "changes":  114
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/background-job-repository.ts",
+                      "status":  "modified",
+                      "additions":  35,
+                      "deletions":  10,
+                      "changes":  45
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/content-classification-repository.ts",
+                      "status":  "added",
+                      "additions":  31,
+                      "deletions":  0,
+                      "changes":  31
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/discovery-scope.ts",
+                      "status":  "modified",
+                      "additions":  17,
+                      "deletions":  4,
+                      "changes":  21
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/message-repository.ts",
+                      "status":  "modified",
+                      "additions":  111,
+                      "deletions":  55,
+                      "changes":  166
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/message-visibility.ts",
+                      "status":  "added",
+                      "additions":  50,
+                      "deletions":  0,
+                      "changes":  50
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/note-repository.ts",
+                      "status":  "modified",
+                      "additions":  6,
+                      "deletions":  2,
+                      "changes":  8
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/notification-repository.ts",
+                      "status":  "modified",
+                      "additions":  24,
+                      "deletions":  1,
+                      "changes":  25
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/post-repository.ts",
+                      "status":  "modified",
+                      "additions":  26,
+                      "deletions":  19,
+                      "changes":  45
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/redis-repository.ts",
+                      "status":  "modified",
+                      "additions":  44,
+                      "deletions":  24,
+                      "changes":  68
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/story-repository.ts",
+                      "status":  "modified",
+                      "additions":  5,
+                      "deletions":  2,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/repositories/user-repository.ts",
+                      "status":  "modified",
+                      "additions":  28,
+                      "deletions":  1,
+                      "changes":  29
+                  },
+                  {
+                      "filename":  "api-server/src/routes/auth.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  2,
+                      "changes":  6
+                  },
+                  {
+                      "filename":  "api-server/src/routes/diagnostics.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  1,
+                      "changes":  5
+                  },
+                  {
+                      "filename":  "api-server/src/routes/health.ts",
+                      "status":  "modified",
+                      "additions":  7,
+                      "deletions":  0,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/routes/index.ts",
+                      "status":  "modified",
+                      "additions":  8,
+                      "deletions":  0,
+                      "changes":  8
+                  },
+                  {
+                      "filename":  "api-server/src/routes/users.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  1,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/scripts/backup-fixture.ts",
+                      "status":  "added",
+                      "additions":  47,
+                      "deletions":  0,
+                      "changes":  47
+                  },
+                  {
+                      "filename":  "api-server/src/scripts/lifecycle-jobs.ts",
+                      "status":  "added",
+                      "additions":  14,
+                      "deletions":  0,
+                      "changes":  14
+                  },
+                  {
+                      "filename":  "api-server/src/scripts/notification-delivery.ts",
+                      "status":  "added",
+                      "additions":  14,
+                      "deletions":  0,
+                      "changes":  14
+                  },
+                  {
+                      "filename":  "api-server/src/services/account-service.ts",
+                      "status":  "modified",
+                      "additions":  196,
+                      "deletions":  13,
+                      "changes":  209
+                  },
+                  {
+                      "filename":  "api-server/src/services/auth-service.ts",
+                      "status":  "modified",
+                      "additions":  188,
+                      "deletions":  88,
+                      "changes":  276
+                  },
+                  {
+                      "filename":  "api-server/src/services/content-safety-service.ts",
+                      "status":  "modified",
+                      "additions":  62,
+                      "deletions":  12,
+                      "changes":  74
+                  },
+                  {
+                      "filename":  "api-server/src/services/durable-notification-delivery.ts",
+                      "status":  "added",
+                      "additions":  50,
+                      "deletions":  0,
+                      "changes":  50
+                  },
+                  {
+                      "filename":  "api-server/src/services/lifecycle-health.ts",
+                      "status":  "added",
+                      "additions":  57,
+                      "deletions":  0,
+                      "changes":  57
+                  },
+                  {
+                      "filename":  "api-server/src/services/media-delivery.ts",
+                      "status":  "modified",
+                      "additions":  21,
+                      "deletions":  9,
+                      "changes":  30
+                  },
+                  {
+                      "filename":  "api-server/src/services/media-publication.ts",
+                      "status":  "modified",
+                      "additions":  6,
+                      "deletions":  1,
+                      "changes":  7
+                  },
+                  {
+                      "filename":  "api-server/src/services/media-readiness.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  1,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/services/media-response.ts",
+                      "status":  "modified",
+                      "additions":  69,
+                      "deletions":  5,
+                      "changes":  74
+                  },
+                  {
+                      "filename":  "api-server/src/services/message-service.ts",
+                      "status":  "modified",
+                      "additions":  34,
+                      "deletions":  29,
+                      "changes":  63
+                  },
+                  {
+                      "filename":  "api-server/src/services/message-view.ts",
+                      "status":  "added",
+                      "additions":  10,
+                      "deletions":  0,
+                      "changes":  10
+                  },
+                  {
+                      "filename":  "api-server/src/services/moderation-service.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  1,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/services/note-service.ts",
+                      "status":  "modified",
+                      "additions":  3,
+                      "deletions":  1,
+                      "changes":  4
+                  },
+                  {
+                      "filename":  "api-server/src/services/notification-delivery-service.ts",
+                      "status":  "modified",
+                      "additions":  13,
+                      "deletions":  7,
+                      "changes":  20
+                  },
+                  {
+                      "filename":  "api-server/src/services/operational-metrics-service.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  0,
+                      "changes":  2
+                  },
+                  {
+                      "filename":  "api-server/src/services/payment-operations-service.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  1,
+                      "changes":  3
+                  },
+                  {
+                      "filename":  "api-server/src/services/post-service.ts",
+                      "status":  "modified",
+                      "additions":  11,
+                      "deletions":  7,
+                      "changes":  18
+                  },
+                  {
+                      "filename":  "api-server/src/services/profile-interaction-service.ts",
+                      "status":  "modified",
+                      "additions":  23,
+                      "deletions":  3,
+                      "changes":  26
+                  },
+                  {
+                      "filename":  "api-server/src/services/queue-service.ts",
+                      "status":  "modified",
+                      "additions":  6,
+                      "deletions":  3,
+                      "changes":  9
+                  },
+                  {
+                      "filename":  "api-server/src/services/story-service.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  2,
+                      "changes":  6
+                  },
+                  {
+                      "filename":  "api-server/src/services/user-service.ts",
+                      "status":  "modified",
+                      "additions":  26,
+                      "deletions":  7,
+                      "changes":  33
+                  },
+                  {
+                      "filename":  "api-server/src/services/video-service.ts",
+                      "status":  "modified",
+                      "additions":  4,
+                      "deletions":  2,
+                      "changes":  6
+                  },
+                  {
+                      "filename":  "api-server/src/socket/index.ts",
+                      "status":  "modified",
+                      "additions":  281,
+                      "deletions":  71,
+                      "changes":  352
+                  },
+                  {
+                      "filename":  "api-server/src/socket/policy.ts",
+                      "status":  "modified",
+                      "additions":  71,
+                      "deletions":  0,
+                      "changes":  71
+                  },
+                  {
+                      "filename":  "api-server/src/types/index.ts",
+                      "status":  "modified",
+                      "additions":  6,
+                      "deletions":  4,
+                      "changes":  10
+                  },
+                  {
+                      "filename":  "api-server/src/utils/consent.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  1,
+                      "changes":  3
+                  },
+                  {
+                      "filename":  "api-server/src/utils/user-view.ts",
+                      "status":  "modified",
+                      "additions":  33,
+                      "deletions":  0,
+                      "changes":  33
+                  },
+                  {
+                      "filename":  "api-server/src/validators/grievance.ts",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  1,
+                      "changes":  3
+                  },
+                  {
+                      "filename":  "api-server/src/workers/lifecycle-worker.ts",
+                      "status":  "modified",
+                      "additions":  113,
+                      "deletions":  27,
+                      "changes":  140
+                  },
+                  {
+                      "filename":  "api-server/src/workers/notification-worker.ts",
+                      "status":  "modified",
+                      "additions":  31,
+                      "deletions":  12,
+                      "changes":  43
+                  },
+                  {
+                      "filename":  "api/index.ts",
+                      "status":  "modified",
+                      "additions":  56,
+                      "deletions":  36,
+                      "changes":  92
+                  },
+                  {
+                      "filename":  "build.mjs",
+                      "status":  "modified",
+                      "additions":  2,
+                      "deletions":  1,
+                      "changes":  3
+                  },
+                  {
+                      "filename":  "docker-compose.production.yml",
+                      "status":  "modified",
+                      "additions":  7,
+                      "deletions":  7,
+                      "changes":  14
+                  },
+                  {
+                      "filename":  "docker-compose.staging.yml",
+                      "status":  "added",
+                      "additions":  356,
+                      "deletions":  0,
+                      "changes":  356
+                  },
+                  {
+                      "filename":  "docs/MEDIA_LIFECYCLE_IMPLEMENTATION.md",
+                      "status":  "modified",
+                      "additions":  14,
+                      "deletions":  1,
+                      "changes":  15
+                  },
+                  {
+                      "filename":  "docs/PRODUCTION_HARDENING_2026-10-08.md",
+                      "status":  "added",
+                      "additions":  153,
+                      "deletions":  0,
+                      "changes":  153
+                  },
+                  {
+                      "filename":  "docs/PRODUCTION_LAUNCH.md",
+                      "status":  "modified",
+                      "additions":  247,
+                      "deletions":  38,
+                      "changes":  285
+                  },
+                  {
+                      "filename":  "docs/PRODUCTION_READINESS.md",
+                      "status":  "modified",
+                      "additions":  57,
+                      "deletions":  16,
+                      "changes":  73
+                  },
+                  {
+                      "filename":  "docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md",
+                      "status":  "modified",
+                      "additions":  8,
+                      "deletions":  0,
+                      "changes":  8
+                  },
+                  {
+                      "filename":  "docs/RELEASE_REMEDIATION.md",
+                      "status":  "modified",
+                      "additions":  12,
+                      "deletions":  3,
+                      "changes":  15
+                  },
+                  {
+                      "filename":  "docs/RELEASE_SCOPE_AND_POLICY_DECISIONS_2026-10-10.md",
+                      "status":  "added",
+                      "additions":  233,
+                      "deletions":  0,
+                      "changes":  233
+                  },
+                  {
+                      "filename":  "docs/hardening/CONTINUATION_2026-10-09.md",
+                      "status":  "added",
+                      "additions":  72,
+                      "deletions":  0,
+                      "changes":  72
+                  },
+                  {
+                      "filename":  "docs/hardening/EMAIL_OTP_2026-10-07.md",
+                      "status":  "added",
+                      "additions":  98,
+                      "deletions":  0,
+                      "changes":  98
+                  },
+                  {
+                      "filename":  "docs/hardening/INGRESS_2026-10-07.md",
+                      "status":  "added",
+                      "additions":  99,
+                      "deletions":  0,
+                      "changes":  99
+                  },
+                  {
+                      "filename":  "docs/hardening/PUBLICATION_2026-10-08.md",
+                      "status":  "added",
+                      "additions":  121,
+                      "deletions":  0,
+                      "changes":  121
+                  },
+                  {
+                      "filename":  "docs/hardening/bootstrap-backup-review.md",
+                      "status":  "added",
+                      "additions":  29,
+                      "deletions":  0,
+                      "changes":  29
+                  },
+                  {
+                      "filename":  "docs/hardening/candidate-files.json",
+                      "status":  "added",
+                      "additions":  1964,
+                      "deletions":  0,
+                      "changes":  1964
+                  },
+                  {
+                      "filename":  "docs/hardening/continuation-candidate.json",
+                      "status":  "added",
+                      "additions":  41,
+                      "deletions":  0,
+                      "changes":  41
+                  },
+                  {
+                      "filename":  "docs/hardening/frontend-grievance.md",
+                      "status":  "added",
+                      "additions":  100,
+                      "deletions":  0,
+                      "changes":  100
+                  },
+                  {
+                      "filename":  "docs/hardening/lifecycle-queue.md",
+                      "status":  "added",
+                      "additions":  272,
+                      "deletions":  0,
+                      "changes":  272
+                  },
+                  {
+                      "filename":  "docs/hardening/message-integrity.md",
+                      "status":  "added",
+                      "additions":  75,
+                      "deletions":  0,
+                      "changes":  75
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-profile.cpuprofile",
+                      "status":  "added",
+                      "additions":  1,
+                      "deletions":  0,
+                      "changes":  1
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-profile.json",
+                      "status":  "added",
+                      "additions":  341,
+                      "deletions":  0,
+                      "changes":  341
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-profile.png",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-profile.trace.json",
+                      "status":  "added",
+                      "additions":  15378,
+                      "deletions":  0,
+                      "changes":  15378
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-sample-1.json",
+                      "status":  "added",
+                      "additions":  142,
+                      "deletions":  0,
+                      "changes":  142
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-sample-2.json",
+                      "status":  "added",
+                      "additions":  142,
+                      "deletions":  0,
+                      "changes":  142
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-acceptance-sample-3.json",
+                      "status":  "added",
+                      "additions":  142,
+                      "deletions":  0,
+                      "changes":  142
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-after.json",
+                      "status":  "added",
+                      "additions":  148,
+                      "deletions":  0,
+                      "changes":  148
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-continuation-2026-10-09.json",
+                      "status":  "added",
+                      "additions":  3392,
+                      "deletions":  0,
+                      "changes":  3392
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-continuation-2026-10-09.md",
+                      "status":  "added",
+                      "additions":  104,
+                      "deletions":  0,
+                      "changes":  104
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-final.json",
+                      "status":  "added",
+                      "additions":  142,
+                      "deletions":  0,
+                      "changes":  142
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-unified-2026-10-09.json",
+                      "status":  "added",
+                      "additions":  567,
+                      "deletions":  0,
+                      "changes":  567
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-unified-2026-10-10.json",
+                      "status":  "added",
+                      "additions":  221,
+                      "deletions":  0,
+                      "changes":  221
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance-unified-2026-10-10.md",
+                      "status":  "added",
+                      "additions":  87,
+                      "deletions":  0,
+                      "changes":  87
+                  },
+                  {
+                      "filename":  "docs/hardening/mobile-performance.json",
+                      "status":  "added",
+                      "additions":  114,
+                      "deletions":  0,
+                      "changes":  114
+                  },
+                  {
+                      "filename":  "docs/hardening/monitoring-backup.md",
+                      "status":  "added",
+                      "additions":  37,
+                      "deletions":  0,
+                      "changes":  37
+                  },
+                  {
+                      "filename":  "docs/hardening/publication-candidate.json",
+                      "status":  "added",
+                      "additions":  872,
+                      "deletions":  0,
+                      "changes":  872
+                  },
+                  {
+                      "filename":  "docs/hardening/verification-results.json",
+                      "status":  "added",
+                      "additions":  595,
+                      "deletions":  0,
+                      "changes":  595
+                  },
+                  {
+                      "filename":  "docs/operations/HOSTING_TARGET_PREPARATION.md",
+                      "status":  "added",
+                      "additions":  225,
+                      "deletions":  0,
+                      "changes":  225
+                  },
+                  {
+                      "filename":  "docs/operations/OFFHOST_BACKUP_RECOVERY_ACCEPTANCE_2026-10-10.md",
+                      "status":  "added",
+                      "additions":  273,
+                      "deletions":  0,
+                      "changes":  273
+                  },
+                  {
+                      "filename":  "e2e/core-social.spec.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "e2e/deferred-validation.spec.ts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-client-react/src/generated/api.schemas.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-spec/openapi.yaml",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-zod/src/generated/types/index.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-zod/src/generated/types/publicGrievanceTicket.ts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-zod/src/generated/types/publicGrievanceTicketStatus.ts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-zod/src/grievance.ts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/api-zod/src/index.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/backup-database.sh",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/bootstrap-schema.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/message-integrity-migration.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-beta.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-eligibility.d.mts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-eligibility.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-notification-delivery.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-production.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migrate-release.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/migration-safety.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/production-base.sql",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/scripts/schema-object-inspection.sql",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/src/index.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/src/schema/eligibility.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "lib/db/src/schema/index.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/.env.production.example",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/.env.staging.example",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/Caddyfile.example",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/Caddyfile.staging.example",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/backup/Dockerfile",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/backup/acceptance.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/backup/offhost-recovery-drill.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/check-readiness.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/ci-production.env",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/ci-provider-isolation.compose.yml",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/ingress/check-web-image.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/prometheus/Dockerfile.alertmanager",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/prometheus/acceptance.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/prometheus/alerts.yml",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/prometheus/comprehensive-acceptance.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/prometheus/render-alertmanager.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/smoke-test.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/test-infrastructure-guard.d.mts",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/test-infrastructure-guard.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/test-vercel-runtime-init.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "ops/validate-deployment-config.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "package.json",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "playwright.config.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "pnpm-lock.yaml",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "scripts/check-production-config.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "scripts/generate-api-contract.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "scripts/measure-mobile-performance.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/Dockerfile",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/docker/15-trusted-edge.sh",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/index.html",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/nginx.conf",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/auth/DeviceApprovalInbox.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/auth/OtpLoginModal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/comments/RichCommentComposer.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/feed/CinematicMediaLightbox.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/feed/Post.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/feed/StoriesRow.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/feed/StoryBuilderModal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/feed/StoryViewer.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/layout/AppShell.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/messages/IncomingCallManager.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/messages/VoiceNoteRecorder.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/messages/WebRtcCallModal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/player/GlobalAudioPlayer.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/profile/ProfileMusicPlayer.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/steam/SteamTradeModal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/studio/StudioCameraModal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/ErrorBoundary.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/MiniProfileCard.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/PageTransition.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/RouteSkeleton.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/ScrollReveal.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/ui/sonner.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/video/ReelVideoPlayer.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/components/video/ReelsSwiper.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/lib/api-client.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/lib/sound.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/achievements.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/arcade.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/auth.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/communities.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/consent.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/dashboard.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/grievance.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/home.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/live.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/messages.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/post-detail.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/profile.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/saved.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/tournaments.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/videos.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/pages/worlds.tsx",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/styles/operator-communications.css",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/src/styles/operator-discovery.css",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "social/vite.config.ts",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/alertmanager-render.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/auth-verification-suite.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/deployment-validation.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/google-auth-unit.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/migration-safety.test.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/release-readiness.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/test-infrastructure-guard.test.mjs",
+                      "status":  "added",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "tests/vercel-entry.test.mjs",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  },
+                  {
+                      "filename":  "vercel.json",
+                      "status":  "modified",
+                      "additions":  0,
+                      "deletions":  0,
+                      "changes":  0
+                  }
+              ]
+}

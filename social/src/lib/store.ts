@@ -73,6 +73,15 @@ export type User = {
   contentFilter?: ContentRating;
   storyViewMode?: 'identified' | 'private';
   onboardingCompleted?: boolean;
+  isFounder?: boolean;
+  founderPassNumber?: string;
+  avatarFrame?: string;
+  settings?: {
+    isFounder?: boolean;
+    founderPassNumber?: string;
+    avatarFrame?: string;
+    [key: string]: any;
+  };
 };
 
 function visibleSocialItems<T extends { authorId: string }>(items: T[], viewer: User | null): T[] {
@@ -378,6 +387,10 @@ function mapUser(u: BackendUser): User {
     contentFilter: u.settings?.contentFilter ?? DEFAULT_CONTENT_RATING,
     storyViewMode: u.settings?.storyViewMode ?? 'identified',
     onboardingCompleted: u.settings?.onboardingCompleted,
+    isFounder: Boolean(u.settings?.isFounder || (u as any).isFounder),
+    founderPassNumber: u.settings?.founderPassNumber || (u as any).founderPassNumber,
+    avatarFrame: u.settings?.avatarFrame || (u as any).avatarFrame,
+    settings: u.settings,
   };
 }
 

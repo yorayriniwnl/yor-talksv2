@@ -66,6 +66,10 @@ export interface UserSettings {
   contentFilter?: ContentRating;
   /** Explicitly false for new accounts until the guided setup is saved. */
   onboardingCompleted?: boolean;
+  /** VIP Genesis Founder status from pre-registration perk fulfillment. */
+  isFounder?: boolean;
+  founderPassNumber?: string;
+  avatarFrame?: string;
 }
 
 export interface PrivacySettings {

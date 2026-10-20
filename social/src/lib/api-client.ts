@@ -79,6 +79,48 @@ export type TwoFactorChallengeStatus = {
 };
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
 
+export interface FounderPerk {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  rarity?: string;
+}
+
+export interface NewPreregisterPass {
+  id: string;
+  email?: string;
+  username: string;
+  referralCode: string | null;
+  passNumber: string;
+  createdAt: string;
+  launchDate: string;
+  perks: FounderPerk[];
+  isExisting: false;
+}
+
+export interface ExistingPreregisterPass {
+  id?: string;
+  email?: string;
+  username?: string;
+  referralCode?: string | null;
+  passNumber?: string;
+  createdAt?: string;
+  launchDate: string;
+  perks: FounderPerk[];
+  isExisting: true;
+}
+
+export type PreregisterPass = NewPreregisterPass | ExistingPreregisterPass;
+
+export interface PreregisterStats {
+  totalRegistered: number;
+  launchDate: string;
+  perks: FounderPerk[];
+  targetSpots?: number;
+  spotsRemaining?: number;
+}
+
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 const EXPLICIT_LOGOUT_KEY = 'yortalks-logged-out';
 export type ContentRating = 'child_safe' | 'regular' | 'mature';
@@ -304,11 +346,18 @@ function changesSessionCookie(path: string, method?: string): boolean {
 }
 
 async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch, includeAuthorization = true): Promise<ApiEnvelope<T>> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  // These public operations belong to the submitted details, not the account
+  // session. An initial refresh or logout must not discard a saved signup.
+  const isPublicPreregistration = !includeAuthorization && (
+    path === '/preregister' && method === 'POST'
+    || path === '/preregister/stats' && method === 'GET'
+  );
   const assertSession = () => {
-    if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+    if (!isPublicPreregistration && epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
   };
   assertSession();
-  const tokens = getStoredTokens();
+  const tokens = isPublicPreregistration ? null : getStoredTokens();
   if (tokens && hasExplicitLogoutIntent()) {
     setStoredTokens(null);
     notifySessionExpired();
@@ -574,6 +623,9 @@ export interface BackendUser {
     contentFilter?: ContentRating;
     storyViewMode?: 'identified' | 'private';
     onboardingCompleted?: boolean;
+    isFounder?: boolean;
+    founderPassNumber?: string;
+    avatarFrame?: string;
   };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
@@ -766,6 +818,10 @@ export const api = {
   },
   register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; enrollmentId: string; registrationNonce: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  preregister: (payload: { email: string; username: string; launchUpdatesConsent: true; referralCode?: string; perks?: string[] }) =>
+    request<PreregisterPass>('/preregister', { method: 'POST', body: JSON.stringify(payload) }, false),
+  getPreregisterStats: () =>
+    request<PreregisterStats>('/preregister/stats', {}, false),
   acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true }) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>

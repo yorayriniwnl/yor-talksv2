@@ -2779,7 +2779,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
         ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
       ]) {
         await page.goto(path);
-        await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+        const headingScope = path === '/settings' ? page.locator('#main-content') : page;
+        await expect(headingScope.getByRole('heading', { name: heading, exact: true })).toBeVisible();
         if (path === '/') {
           await expect(page.getByRole('article')).toBeVisible();
           await page.keyboard.press('Tab');

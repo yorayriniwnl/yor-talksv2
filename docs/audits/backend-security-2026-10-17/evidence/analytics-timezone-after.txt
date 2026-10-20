@@ -1,0 +1,23 @@
+✔ analytics UTC boundaries and rollup retries preserve timestamp data in Asia/Calcutta (113.0793ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamp data in America/New_York (46.7404ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in Asia/Calcutta (68.7637ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in America/New_York (56.2776ms)
+✔ analytics migration creates durable event, daily, and job-run tables (40.3588ms)
+✔ ingestion deduplicates delivery and rollups respect UTC day boundaries (27.5739ms)
+✔ concurrent repeated rollups are idempotent and source KPI queries execute (166.9172ms)
+✔ source KPIs calculate activation, cohort retention, engagement, and ledger reconciliation (56.8182ms)
+✔ failed rollup state is durable and a later retry succeeds (25.217ms)
+✔ rollup quality mismatches persist an alertable failure and clean retry recovers (18.3215ms)
+✔ product analytics accepts only versioned allowlisted events and minimal properties (3.211ms)
+✔ product analytics rejects unknown names, payload fields, and oversized batches (1.2909ms)
+✔ profiler events accept bounded metrics only (0.2865ms)
+✔ product analytics excludes stale and implausibly future event timestamps (0.2969ms)
+✔ analytics reporting endpoint rejects unauthenticated requests (48.4237ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4871.428

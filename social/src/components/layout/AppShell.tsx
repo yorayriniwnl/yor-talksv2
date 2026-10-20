@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
   UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff,
-  ChevronDown, Layers3, Sparkles
+  ChevronDown, Layers3, Sparkles, Flame
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -109,6 +109,10 @@ export function AppShell({ children }: AppShellProps) {
         { icon: Camera, label: 'Creator Studio', path: '/studio' },
         { icon: Gauge, label: 'Control Room', path: '/control-room' },
       ],
+    },
+    {
+      label: 'Genesis 2026',
+      items: [{ icon: Flame, label: 'Founder Launch (Dec 1)', path: '/preregister' }],
     },
     {
       label: 'Account',

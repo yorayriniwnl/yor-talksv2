@@ -24,7 +24,7 @@ test('notification queue entries contain only the persisted ID, including legacy
 
 test("queue payloads use bounded retention while notification retries retain stable ids", () => {
   assert.deepEqual(boundedQueueRetention(), {
-    removeOnComplete: { age: 7 * 24 * 60 * 60, count: 10_000 },
+    removeOnComplete: { age: 7 * 24 * 60 * 60, count: 1_000 },
     removeOnFail: { age: 30 * 24 * 60 * 60, count: 5_000 },
   });
   assert.deepEqual(notificationJobOptions("notification-1"), {

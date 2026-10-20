@@ -1,0 +1,1182 @@
+✔ account cleanup erases scoped authentication state and remains safe to retry (25.003ms)
+✔ a delayed cleanup preserves OTP state issued to a new account with the same address (2.5365ms)
+✔ legacy deletion jobs remain compatible without an email locator (1.7126ms)
+✔ cleanup rejects invalid locators and surfaces Redis outages for durable retry (0.7487ms)
+✔ a post-header export source failure is logged without private error details and closes the download (52.354ms)
+✔ a client disconnect closes its export generator without logging a source failure (8.5142ms)
+✔ the actual export route verifies current sessions and applies the per-account four-download limit (265.5911ms)
+✔ message archives omit shared legacy receipts while retaining the subjects own read records (187.7275ms)
+✔ every migrated user foreign key has an explicit export or privacy exclusion decision (5.5699ms)
+✔ native cursor types match the catalog and common subject pages can seek through ordered indexes (39.7024ms)
+✔ a database disconnect while the archive consumer is paused is handled and releases its connection (215.3072ms)
+✔ version 2 includes authored domains and canonical group messages without unrelated private data or grants (147.492ms)
+✔ indexed legacy reaction and discussion scopes retain complete compound keyset pages (71.9288ms)
+✔ archives retain submitted external video links without exposing provider delivery URLs (49.9057ms)
+✔ keyset pages form one stable snapshot and generator cancellation releases the transaction (95.8893ms)
+✔ HTTP export streams the existing envelope and checks missing users before attachment headers (105.1516ms)
+✔ deleting payer first preserves the counterparty and immutable financial references (322.2197ms)
+✔ deleting creator first preserves the counterparty and immutable financial references (69.1229ms)
+✔ account deletion preserves group creator with two remaining members's shared group history (125.1074ms)
+✔ account deletion preserves legacy second participant with one remaining member's shared group history (43.1316ms)
+✔ migrated legacy history references are nullable and use SET NULL (2.5011ms)
+✔ nullable direct history retains the surviving author and scrubs the deleted participant snapshot (87.0768ms)
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+✔ account deletion erases embedded actors and discussions while preserving unrelated content and queue delivery (80.2301ms)
+✔ a queued JSON reaction cannot restore an actor after the deletion scrub commits (205.9408ms)
+✔ an injected database failure rolls back ledger anonymization and cleanup enqueue together (50.6344ms)
+✔ durable jobs deduplicate, recover abandoned leases, fence stale workers and expose exhausted retries (13.7616ms)
+✔ both account export directions exclude entire deleted and expired text or attachment rows (287.7878ms)
+✔ account export excludes authentication secrets and deletion removes the account (175.6582ms)
+✔ account deletion rolls back ledger anonymization when user deletion fails (100.5102ms)
+✔ account deletion erases verified waitlist addresses (42.1197ms)
+✔ account deletion preserves unattributed waitlist addresses (33.002ms)
+✔ unknown or revoked accounts cannot call AI providers through either API prefix (133.6692ms)
+✔ AI chat rechecks capability after context loading before contacting the provider (20.1148ms)
+✔ AI chat and moderation cannot deliver a result after provider-time revocation (42.9698ms)
+✔ AI search cannot return content if capability is revoked during result hydration (14.0316ms)
+✔ AI delivery fails closed on an authority outage and succeeds with current authority (30.6512ms)
+✔ OpenAI moderation rejects empty, partial, coerced, and out-of-range results (24.3472ms)
+✔ OpenAI moderation preserves clean results and cannot drop a flagged category (2ms)
+✔ Gemini malformed moderation falls back and production fails closed if both providers fail (3.3627ms)
+✔ Gemini moderation and assistance calls send credentials only in the API key header (2.1018ms)
+[17:04:37.138] WARN (42152): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[17:04:37.139] WARN (42152): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[17:04:37.139] WARN (42152): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[17:04:37.139] WARN (42152): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+✔ default unavailable provider cannot create authority or reserve challenges (58.826ms)
+✔ strict challenge intake cannot accept verified flags, asserted bands or parent evidence (3.3155ms)
+✔ verified callback consumes once, stores private proof, and exposes only safe owner status (159.8109ms)
+✔ wrong subject, issuer, audience, purpose, nonce, expiry or policy cannot consume a challenge (39.1665ms)
+✔ same-version policy changes and expired challenge invalidate in-flight results (24.9633ms)
+✔ issuer event uniqueness rolls back challenge consumption and proof writes (27.5225ms)
+✔ purpose-bound guardian journey verifies responsibility and withdraws atomically without parent disclosure (47.2243ms)
+✔ callback waiting on subject lock loses to guardian withdrawal; no stale grant is written (31.4391ms)
+✔ bounded outstanding reservations across concurrent starts and safe provider timeouts (81.5848ms)
+✔ callback timeout is safe and a failed provider start revokes its reservation (29.3173ms)
+✔ revoked linked parent and policy replacement during proof writes cannot grant authority (25.3566ms)
+✔ private challenge policy binding cannot contain only half its required fields (2.8608ms)
+✔ expired proof during awaited database write rolls back its challenge and authority (178.6084ms)
+✔ fixture adapter injection is refused by production environment (0.3188ms)
+✔ SQL auto search enforces audience, account status, privacy, blocks and profile distribution (171.4426ms)
+✔ SQL fallback search enforces audience, account status, privacy, blocks and profile distribution (93.8801ms)
+✔ warm search and trending caches cannot restore edited, restricted or deleted records (131.3316ms)
+✔ visibility uses two SQL queries for fifty candidates and preserves keyset pagination after filtering (33.1489ms)
+ℹ 50 candidates: 2 SQL queries, 2.3 ms
+✔ login reports database outages as service unavailable (1.9419ms)
+✔ login preserves invalid-credential responses for ordinary auth failures (0.2538ms)
+✔ auth controller returns success on register (141.745ms)
+✔ restricted login response omits ordinary profile fields (1.319ms)
+✔ auth controller returns a machine-readable two-factor challenge (0.368ms)
+✔ auth controller includes the number-matching details (0.3087ms)
+✔ auth controller clears the refresh cookie even if server-side revocation fails (0.4036ms)
+[17:04:43.821] INFO (40088): Email dispatch simulated
+[17:04:43.821] INFO (40088): Email verification requested and email dispatched
+    userId: "5cddc3d7-2b35-437f-81c6-2e9baa9db442"
+✔ concurrent valid email OTP submissions create at most one session (29.5243ms)
+✔ failed OTP attempts are atomically counted and the fifth locks the code (3.1826ms)
+✔ logout-all revokes an already issued email OTP (2.3127ms)
+[17:04:45.352] INFO (42964): Email login code dispatched
+    userId: "455944be-494c-4ff4-9bc6-ef7b0f1c9135"
+[17:04:45.361] INFO (42964): Email login code dispatched
+    userId: "dc15397a-f48b-4b64-a32b-589fd6ce475d"
+[17:04:45.364] INFO (42964): Email login code dispatched
+    userId: "f17484cc-4029-419c-a872-2857e2815ee9"
+[17:04:45.366] INFO (42964): Email login code dispatched
+    userId: "e696f5d2-462d-4d41-8b8d-b89076b44990"
+✔ password reset revokes an already issued email OTP (70.6622ms)
+✔ OTP issuance and redemption fail closed when Redis is unavailable (1.1808ms)
+✔ Google sign-in uses provider subject or current mailbox authority: external_unlinked (3.1247ms)
+✔ Google sign-in uses provider subject or current mailbox authority: external_linked (0.5517ms)
+✔ Google sign-in uses provider subject or current mailbox authority: gmail (0.4142ms)
+✔ Google sign-in uses provider subject or current mailbox authority: workspace (0.3199ms)
+✔ Google sign-in uses provider subject or current mailbox authority: wrong_workspace (0.4036ms)
+✔ Google sign-in uses provider subject or current mailbox authority: deleted (0.5864ms)
+✔ Google sign-in uses provider subject or current mailbox authority: link_conflict (0.5259ms)
+✔ Google binding waits for the account second factor and current identity: approved (2.8484ms)
+✔ Google binding waits for the account second factor and current identity: revoked (0.5597ms)
+✔ Google binding waits for the account second factor and current identity: email_changed (0.7875ms)
+✔ Google binding waits for the account second factor and current identity: wrong_totp (1.4633ms)
+✔ same-second rotation has unique jti and concurrent replay has exactly one winner (422.5061ms)
+✔ logout-all rejects old refresh and approved challenges even when Redis cleanup fails (315.8396ms)
+[17:04:49.084] WARN (42368): Revoked credentials await Redis expiry; database epoch prevents access
+    userId: "bc588359-f66a-4652-9934-f24075762844"
+[17:04:49.323] INFO (42368): Password reset requested and email dispatched
+    userId: "d8b569d9-0633-4c5e-a695-05e6bff3dfde"
+✔ password reset is single-use, transactionally revokes all sessions, and preserves the token after database rollback (477.6938ms)
+✔ expired reset credentials never change a password (69.0299ms)
+✔ HTTP rejects revoked epochs with a stale Redis key and reports dependency outages without expiring the cookie (199.6879ms)
+✔ call cleanup atomically releases both participants so they can place another call (5.4416ms)
+✔ logout is refresh-cookie based and protected by trusted-origin validation (0.9796ms)
+✔ logout expires the browser cookie before responding after successful revocation (59.1356ms)
+✔ logout expires the browser cookie before responding after failed revocation (13.7057ms)
+✔ logout expires the browser cookie before responding after a missing refresh cookie (7.2479ms)
+✔ public requestEmailOtp does not reveal existing accounts through per-account throttles (1.9717ms)
+✔ public resendVerificationEmailPublic does not reveal existing accounts through per-account throttles (0.3209ms)
+✔ public resetPassword does not reveal existing accounts through per-account throttles (0.3228ms)
+[17:04:56.127] INFO (28880): Email dispatch simulated
+[17:04:56.127] INFO (28880): Email verification requested and email dispatched
+    userId: "8b86ac88-f0a0-4779-95db-e9c543cc8961"
+[17:04:56.207] WARN (28880): Security audit event
+    eventId: "b71cde63-2000-4779-bcc0-8c1c31211fd1"
+    type: "login_failure"
+    message: "Email not verified"
+✔ registration requires email verification before password login (488.5827ms)
+[17:04:56.523] INFO (28880): Email dispatch simulated
+[17:04:56.523] INFO (28880): Email verification requested and email dispatched
+    userId: "aac0b3dc-4365-46c7-96b6-c350ae7fe184"
+✔ two-factor authentication blocks password login until the authenticator code is valid (178.3598ms)
+[17:04:56.687] INFO (28880): Email verification requested and email dispatched
+    userId: "736b1505-03a9-40b5-b4c8-58ae4d45e975"
+[17:04:56.690] INFO (28880): Email login code dispatched
+    userId: "736b1505-03a9-40b5-b4c8-58ae4d45e975"
+[17:04:56.785] INFO (28880): Email verification requested and email dispatched
+    userId: "8ec18e09-582e-413b-91a8-95d66eb8ca1e"
+[17:04:56.787] INFO (28880): Email login code dispatched
+    userId: "8ec18e09-582e-413b-91a8-95d66eb8ca1e"
+✔ email OTP reservation and redemption are atomic with exact attempt accounting (234.0079ms)
+✔ email OTP cleanup cannot delete a replacement code (3.074ms)
+[17:04:56.927] INFO (28880): Email verification requested and email dispatched
+    userId: "53b34384-6b83-48b3-a022-b0736cb3d978"
+[17:04:56.929] INFO (28880): Email login code dispatched
+    userId: "53b34384-6b83-48b3-a022-b0736cb3d978"
+[17:04:56.933] INFO (28880): Email login code dispatched
+    userId: "53b34384-6b83-48b3-a022-b0736cb3d978"
+[17:04:56.936] INFO (28880): Password reset requested and email dispatched
+    userId: "53b34384-6b83-48b3-a022-b0736cb3d978"
+✔ email OTPs issued before logout-all or password reset cannot create a session (160.5767ms)
+[17:04:57.087] INFO (28880): Email verification requested and email dispatched
+    userId: "e9842e3b-6a2d-43e5-9ff9-4a9fe974db0c"
+[17:04:57.094] INFO (28880): Email login code dispatched
+    userId: "e9842e3b-6a2d-43e5-9ff9-4a9fe974db0c"
+✔ email OTP remains single-use while a two-factor approval challenge is pending (151.8784ms)
+✔ session-establishing routes reject foreign form origins before issuing browser cookies (390.3495ms)
+✔ disabled payments reject creation, cached order reuse and verification before database access (3.8345ms)
+✔ disabled beta features stay closed through both HTTP API prefixes without contacting providers (431.0948ms)
+✔ broadcast reactions create a new emoji, preserve concurrent actors and toggle only the current actor (241.6806ms)
+▶ broadcast discovery, subscription, history and reactions enforce current owner visibility
+  ✔ owner block (17.3825ms)
+  ✔ viewer block (18.3608ms)
+  ✔ private owner (24.9443ms)
+  ✔ suspended owner (31.5091ms)
+✔ broadcast discovery, subscription, history and reactions enforce current owner visibility (189.9284ms)
+✔ broadcast message ratings are checked before changing reactions within an allowed channel (50.4763ms)
+✔ concurrent tip retries create one provider order and exactly one capture/refund effect (436.1648ms)
+✔ concurrent membership requests use one pending term and cancellation retains paid access (145.049ms)
+✔ cancelling pending membership before capture never grants access or credits its creator (57.3129ms)
+✔ uncertain creation and capture before local binding recover without another provider POST (53.0796ms)
+✔ marketplace reservation races and late captures preserve the next buyer reservation (127.9ms)
+✔ a marketplace settlement crash rolls back sale and ledger; retry safely finishes (61.457ms)
+✔ provider amount, currency and receipt association cannot be swapped before settlement (26.4489ms)
+✔ failed attempts remain retryable and delayed failure events cannot replace a settled state (34.2597ms)
+✔ racing membership cancellation with capture produces one coherent paid-through or refund-required outcome (43.9399ms)
+✔ refund identifiers use literal prefixes and cannot collide across provider payment ids (39.5143ms)
+✔ billing history authenticates, binds ownership, and denies cross-origin cancellation (144.041ms)
+✔ community service creates communities with default roles (68.4958ms)
+✔ community membership is persisted and counted through the join table (87.9798ms)
+▶ discussion likes preserve the same author and content visibility as the discussion list
+  ✔ author block (53.4994ms)
+  ✔ viewer block (23.9466ms)
+  ✔ private author (15.3716ms)
+  ✔ suspended author (13.806ms)
+  ✔ content rating (16.8746ms)
+✔ discussion likes preserve the same author and content visibility as the discussion list (282.164ms)
+✔ adult-initiated minor requests and follow-only contact are denied (203.6323ms)
+✔ teen contact becomes active only after both teenagers accept (65.7938ms)
+✔ teen to adult contact requires current guardian approval and withdrawal revokes access (62.2271ms)
+✔ under-13 contact needs recipient acceptance and that child’s guardian approval (65.7385ms)
+✔ two under-13 users each require their own guardian approval (64.7993ms)
+✔ blocking revokes accepted contact permanently, including after unblock (43.7235ms)
+✔ an unapproved legacy conversation cannot expose history or accept a message (36.8959ms)
+✔ contact withdrawal while a message is staged prevents the database write (105.9087ms)
+✔ contact identifiers normalize consistently before matching (1.2389ms)
+✔ contact identifier digests are stable without exposing the raw value (0.4856ms)
+✔ contact shields hide matching accounts in both directions (142.2259ms)
+▶ video and comment likes append typed actors, preserve concurrent likes and toggle only the current actor
+  ✔ videos (22.4645ms)
+  ✔ video_comments (17.1838ms)
+  ✔ comments (19.4438ms)
+✔ video and comment likes append typed actors, preserve concurrent likes and toggle only the current actor (235.458ms)
+✔ content ratings default to regular (0.8288ms)
+✔ viewer filters are cumulative by audience level (0.1423ms)
+✔ an author supplied child-safe rating needs approval for the exact current revision (0.4734ms)
+✔ current eligibility ceiling overrides a mature saved preference (2.2694ms)
+✔ author visibility is enforced consistently for public and private content (1.6311ms)
+✔ author visibility denies content across a mutual block (0.3256ms)
+✔ age based privacy overrides stale public profile settings when filtering authored content (1.2452ms)
+✔ profile and highlight fallback responses do not expose database or provider error messages (2.5414ms)
+✔ reviewed media policy failures retain their intended public status and code (1.2263ms)
+✔ creator analytics reads and profile-view writes stop when analytics authority is absent (2.6101ms)
+✔ diagnostics rejects anonymous production-boundary requests (48.5037ms)
+✔ vanish-mode messages receive a bounded expiry (4.0435ms)
+✔ expired and deleted messages are excluded at the conversation response boundary (1.4846ms)
+✔ message visibility uses a strict expiry boundary and denies invalid dates (0.8436ms)
+✔ expired retained messages cannot leak through send retries, edits, reactions or pins (96.4464ms)
+✔ reading vanish-mode content returns a tombstone and hides it from history, inbox, export and preview (352.2787ms)
+✔ Story and Note discovery batch mixed audiences and retain ranking with constant query counts (637.9668ms)
+ℹ Former Story per-item policy (50 distinct authors): 245 queries / 162.2 ms
+ℹ Story list sample 1: 7 queries / 20.1 ms
+ℹ Story list sample 2: 7 queries / 13.9 ms
+ℹ Story list sample 3: 7 queries / 12.8 ms
+ℹ Note list (50 distinct authors): 3 queries / 7.0 ms
+✔ current teen ceiling filters story and note candidates before the SQL page limit (670.7365ms)
+✔ restricted newest candidates cannot starve an older eligible Story or Note (624.8541ms)
+✔ SQL Story candidates and final policy agree across current privacy, relationship, block and rating changes (191.1946ms)
+✔ both search implementations batch fifty distinct authors and filter before the candidate cap (505.7712ms)
+ℹ Former per-item search visibility (50 authors): 100 queries / 35.9 ms
+ℹ auto full search sample 1: 10 queries / 19.8 ms
+ℹ auto full search sample 2: 10 queries / 17.2 ms
+ℹ auto full search sample 3: 10 queries / 13.0 ms
+ℹ fallback full search sample 1: 10 queries / 13.4 ms
+ℹ fallback full search sample 2: 10 queries / 11.4 ms
+ℹ fallback full search sample 3: 10 queries / 12.4 ms
+✔ the ten design acceptance requirements remain linked to executable authoritative suites (8.5234ms)
+✔ public grievance projection allows only the approved receipt fields (0.4935ms)
+✔ empty production policy and operator registries keep even a valid-looking proof inactive (17.5527ms)
+✔ synthetic authority is accepted only when an isolated test explicitly injects it (2.6207ms)
+✔ new test users stay unknown unless the test explicitly grants synthetic adult authority (110.4321ms)
+✔ every generated authenticated operation has a reviewed capability or exact authority (44.1694ms)
+✔ every client socket event has an explicit current capability (0.3102ms)
+✔ route authority classifies capabilities and keeps safety and restricted routes separate (13.1749ms)
+✔ unmapped operations and missing capabilities fail closed (0.4994ms)
+✔ economy analytics is controlled by analytics capability independently of payments (0.346ms)
+✔ a child-safe approval applies only to its exact content revision and hash (184.944ms)
+✔ prescreen returns no enrollment when verification or an approved territory is unavailable (1.5731ms)
+✔ prescreen does not create an enrollment for an unreviewed territory even with a test provider (2.1547ms)
+✔ prescreen accepts only a coarse experience and territory declaration (0.345ms)
+✔ registration rejects self-asserted age and proof fields (0.8194ms)
+✔ password registration stops before user lookup, persistence, or email when enrollment is not authorized (1.0358ms)
+✔ under-13 enrollment gates profile creation, rechecks guardian withdrawal, and consumes one time under concurrency (304.8181ms)
+✔ adult enrollment completes after age assessment without demanding guardian authorization (50.0022ms)
+✔ Google sign-in does not create an account when no authorized Yor account exists (1.1068ms)
+[17:05:47.786] INFO (28312): Email verification requested and email dispatched
+    userId: "67d5d5bf-ab29-4f49-8f5d-35bb7ff8c09b"
+✔ unknown actors and adults with unreleased features stop purchase, seller, live and AI entry points before providers (20.0801ms)
+✔ a current withdrawal during awaited moderation prevents live stream persistence (6.8151ms)
+✔ minor settings and privacy writes clamp every optional collection and discovery preference (7.2197ms)
+✔ withdrawn or unknown eligibility cannot ingest analytics or dispatch push notifications (1.276ms)
+✔ minors can read messages without storing a sender-visible read receipt (0.7309ms)
+✔ adult account remains blocked when the server release flag for payments is off (10.985ms)
+✔ verified guardian authority activates only the child's allowed social ceiling, never gated features (2.9691ms)
+✔ default provider has no callback mount and returns a safe unavailable response (150.5215ms)
+✔ owner challenge routes require authentication and reject forged approval properties (21.9796ms)
+✔ raw client JSON cannot verify; trusted opaque fixture callback applies once and status remains owner-bound (190.7682ms)
+✔ guardian endpoint starts verification, ignores client authority and supports owner withdrawal (75.9203ms)
+✔ malformed callback bytes cannot reach the general logger or response (24.9633ms)
+✔ a viewer-bound exact-resource grant cannot be copied to another account or anonymous delivery (428.7831ms)
+✔ a public reference to an asset cannot authorize its separate private reference (225.7366ms)
+✔ a cached grant is denied immediately after its exact entity reference is removed (217.8282ms)
+✔ a cached media read rechecks current eligibility instead of trusting cached bytes (94.0548ms)
+✔ revoked eligibility during a shared provider read returns no bytes to either caller (190.4441ms)
+✔ profile media rechecks minor privacy at issuance, cached delivery and renewed grants (213.7832ms)
+✔ unclassified profile media stays unavailable to child-safe and anonymous audiences (103.6963ms)
+✔ profile privacy changed during provider verification prevents delivery and new issuance (110.0105ms)
+✔ stories media expires at issuance and cached delivery without waiting for cleanup (155.3505ms)
+✔ stories expiry during provider verification returns no bytes (78.9608ms)
+✔ user_notes media expires at issuance and cached delivery without waiting for cleanup (118.499ms)
+✔ user_notes expiry during provider verification returns no bytes (70.3672ms)
+✔ messages media expires at issuance and cached delivery without waiting for cleanup (587.7279ms)
+✔ messages expiry during provider verification returns no bytes (572.193ms)
+✔ an expired story retained in a highlight keeps its currently authorized media (159.3639ms)
+✔ message attachment expiry uses the database UTC clock for near-future content (55.5267ms)
+✔ message expiry during awaited contact authorization prevents grant issuance (563.5905ms)
+✔ stories media expiry supports timestamp without time zone in non-UTC database sessions (194.7907ms)
+✔ user_notes media expiry supports timestamp without time zone in non-UTC database sessions (196.1359ms)
+✔ messages media expiry supports timestamp without time zone in non-UTC database sessions (428.7715ms)
+✔ stories media expiry supports timestamp with time zone in non-UTC database sessions (191.4768ms)
+✔ user_notes media expiry supports timestamp with time zone in non-UTC database sessions (139.6203ms)
+✔ messages media expiry supports timestamp with time zone in non-UTC database sessions (98.0517ms)
+✔ verified bands receive their ceiling; child activation needs verified specific guardian authority (64.4506ms)
+✔ unknown, missing, expired, future, revoked or rejected proof cannot activate from old checkboxes (6.1589ms)
+✔ contradictory, duplicate, unrecognised, malformed or incomplete thresholds fail closed (3.5545ms)
+✔ a teen band cannot bypass a separate 16-plus prohibition, including with guardian approval (3.9873ms)
+✔ guardian requirements support purpose, notice, responsibility, age-17 thresholds and withdrawal (6.8979ms)
+✔ specific purposes can be granted separately and latest withdrawal beats an older permissive grant (1.9145ms)
+✔ latest guardian withdrawal cannot fall back to a retained older approval (0.7237ms)
+✔ all resolved operator and recipient policies apply; stale or conflicting territory evidence denies (5.8042ms)
+✔ current terms and account restrictions stay independent of verified age; transition requires new proof (2.9476ms)
+✔ adult preference and separate releases restrict access; optional analytics/profiling always stay off (2.8795ms)
+✔ an approved territory can impose a stricter content ceiling on verified adults (0.6671ms)
+✔ safe decisions expose no evidence/parent reference and registry withdrawal changes their revision (1.2183ms)
+✔ production registry is empty and cannot accept synthetic or wildcard approvals (1.7863ms)
+✔ service reloads current database and registry state rather than caching authority or accepting beta bypass (801.2156ms)
+✔ service preserves conflicting trusted territory evidence rather than overriding it (1.5964ms)
+✔ eligibility migration is additive and idempotent on fresh and populated baselines (1582.6848ms)
+✔ historical checkbox stays an attestation; private assessments never join profile or export fields (284.8471ms)
+✔ single-user and batched eligibility reads bind UUID arrays and return one decision per account (38.9528ms)
+✔ newer authority revision wins even when transaction timestamps sort before old proof (18.0465ms)
+✔ eligibility revisions increment atomically without losing bigint precision and roll back with facts (106.7315ms)
+✔ challenge consumption is subject/purpose/revision bound, single-use and event unique (162.9519ms)
+✔ pre-account enrollments remain opaque and private subject/timestamp constraints cannot be bypassed (62.3383ms)
+✔ eligibility storage prevents orphans and rejects malformed private authority (487.599ms)
+✔ guardian permissions are purpose-specific, owner-bound and withdrawn with the revision (29.5493ms)
+✔ current eligibility service observes real proof, newer guardian withdrawal and registry withdrawal (45.7341ms)
+✔ development email fallback never writes credential-bearing payloads to stdout (1.7627ms)
+✔ simulated email logging excludes addresses, reusable address hashes and credentials (2.7434ms)
+✔ all implemented email categories send only reviewed transactional payloads through the provider mock (30.7284ms)
+✔ provider rejection preserves status without exposing provider response bodies in errors or logs (1.6873ms)
+✔ production email fails closed without configured credentials (0.8766ms)
+[17:06:18.098] INFO (41956): Email dispatch simulated
+✔ production rejects a shared access and refresh signing secret without logging it (203.4886ms)
+✔ eligibility defaults stay unavailable and sensitive feature releases fail closed (1062.4069ms)
+✔ public beta refuses to start until the exact legal and eligibility content is approved (218.3559ms)
+✔ invalid boolean environment values fail closed at API startup (211.4905ms)
+✔ production configuration rejects cleartext browser origins (207.7725ms)
+✔ production startup fails closed when required dependencies are unavailable (3949.3949ms)
+✔ event RSVP status is exclusive and can be cleared (468.3132ms)
+✔ active feature denial overrides paid access with timestamp in UTC (87.9971ms)
+✔ active feature denial overrides paid access with timestamp in Asia/Calcutta (26.4754ms)
+✔ active feature denial overrides paid access with timestamp in America/New_York (25.0685ms)
+✔ active feature denial overrides paid access with timestamptz in UTC (24.9876ms)
+✔ active feature denial overrides paid access with timestamptz in Asia/Calcutta (25.7908ms)
+✔ active feature denial overrides paid access with timestamptz in America/New_York (26.8087ms)
+✔ fetchWithTimeout aborts slow external requests instead of hanging the process (25.7875ms)
+✔ provider deadline includes stalled bodies and completed JSON remains readable (144.044ms)
+✔ concurrent Google subjects cannot replace the winning account binding (279.7518ms)
+✔ a revoked account epoch cannot attach a pending Google identity (14.6169ms)
+✔ pending invitees see no group history and accepted membership is added only after consent (314.2503ms)
+✔ a minor cannot add an adult until the guardian approves, and withdrawal revokes group access (201.9969ms)
+✔ a revoked pair contact cannot be reintroduced through a pending group invitation (72.5749ms)
+✔ simultaneous accepts serialize and refresh the remaining invite before it can add another adult (253.2734ms)
+✔ legacy JSON group participants do not become accepted membership (40.4217ms)
+✔ disabled live-room token access fails before reading stream data (1.7811ms)
+✔ structured production error logs exclude query values and provider credentials (230.1818ms)
+✔ error metadata accepts only reviewed types and codes, and bounds recursive causes (0.327ms)
+✔ the actual cleanup sweep preserves live media with timestamp in UTC (123.3324ms)
+✔ the actual cleanup sweep preserves live media with timestamp in Asia/Calcutta (53.9912ms)
+✔ the actual cleanup sweep preserves live media with timestamp in America/New_York (52.6109ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in UTC (57.3551ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in Asia/Calcutta (52.5475ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in America/New_York (53.5056ms)
+✔ permanent media sweep recovers terminal states while finite dead jobs and live/backoff leases remain unchanged (81.7277ms)
+✔ production HTTP presign and multipart upload succeed through verified lifecycle; forged fields and cross-owner finalization fail (354.0641ms)
+✔ production HTTP moderation unavailable remains a conditional 503 and cannot create a publishable asset (18.0604ms)
+✔ delivery verifies approved bytes, rejects token tampering/cross-ID replay, and revokes cached content after deletion (25.349ms)
+✔ replayed provider bytes after approval never reach the delivery response or video poster generator (12.1546ms)
+✔ business and community images publish only owned approved purpose-specific IDs (56.8594ms)
+✔ fresh media migration preserves actual historical voice/image bodies once without approving them or later forged text (261.2861ms)
+✔ metadata migration adds the known provider without inventing historical finalization or changing legacy URLs (316.6163ms)
+✔ v1 follow-up repairs only pre-deployment UTC message timestamps and remains idempotent in a non-UTC database session (426.3719ms)
+✔ reservations bind unique provider paths to owner and purpose, with no provider grant on the bounded transport (68.795ms)
+✔ upload and finalize reject another account before making any provider calls (11.863ms)
+✔ database constraints cannot mistake NULL verification/moderation metadata for approval (288.1816ms)
+✔ uploaded media has no delivery URL; finalize is idempotent after explicit verified approval (26.46ms)
+✔ upload retries acknowledge committed identical owner bytes without another provider write and preserve them across moderation retries (24.8909ms)
+✔ finalize refuses provider replacement of the exact server-uploaded bytes or a dishonest provider digest (16.1749ms)
+✔ finalize binds bytes committed between its initial read and verification claim (10.4292ms)
+✔ concurrent finalizers invoke the verifier/moderator once and return no URL to the losing request (8.8918ms)
+✔ moderation timeout, provider error, malformed and uncertain decisions never approve and remain retryable (39.6827ms)
+✔ missing provider object fails closed, while byte, size and immutable identity mismatches reject and schedule deletion (12.3889ms)
+✔ provider replay/tampering after moderation cannot commit approval (6.4732ms)
+✔ rejection is idempotent, cannot be published, and deletes only the server reservation namespace (200.2639ms)
+✔ expired reservations and provider cleanup failures are retried, including late signature replay tombstones (19.9758ms)
+✔ concurrent cleanup workers cannot claim the same provider deletion (36.8411ms)
+✔ cleanup renews a later batch row lease immediately before provider deletion (63.1912ms)
+✔ cleanup skips a later batch row whose deletion lease another worker acquired (21.7881ms)
+✔ cleanup does not count provider completion after losing its deletion token (26.4016ms)
+✔ cleanup skips more than one batch of older live assets before limiting expired and rejected candidates (270.1857ms)
+✔ an expired verification lease or explicit deletion revokes a late moderation approval (16.0459ms)
+✔ publication winning an asset lock prevents a waiting deletion from missing committed references (81.2237ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in UTC (212.2734ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in Asia/Calcutta (151.3102ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in America/New_York (141.7584ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in UTC (141.7987ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in Asia/Calcutta (142.5522ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in America/New_York (154.6126ms)
+✔ direct grants require authentic provider ceilings for every unsigned resource-type endpoint (3.9836ms)
+✔ unsigned, public, mutable and converting presets fail before signing (1.2691ms)
+✔ server upload verifies bytes and per-purpose limits before any provider write (0.9804ms)
+✔ completion fetches only original server-signed destination and verifies immutable bytes and version (22.4486ms)
+✔ completion bounds actual streamed bytes independently of size headers (1.8191ms)
+✔ provider metadata cannot forge the public ID, resource type, delivery type, format, size or immutable version (1.4605ms)
+✔ only an initial reservation lookup 404 confirms that a direct upload may be retried (1.5775ms)
+✔ deletion uses immutable asset IDs and reconciles all authenticated replay namespaces (0.7038ms)
+✔ multimodal receipt approves only complete explicit clear decisions (1.9823ms)
+✔ malformed or uncertain Gemini safety metadata never approves an otherwise clear receipt (3.9539ms)
+✔ valid optional Gemini metadata and omitted safety ratings preserve explicit clear approval (0.8646ms)
+✔ Gemini moderation sends actual multimodal bytes, uses header credentials and never falls back (2.4679ms)
+✔ video moderation uses a fixed documented5FPS setting; audio and image payloads do not (1.2056ms)
+✔ provider and Gemini hung requests time out and leave media unapproved (45.4496ms)
+✔ decoder wall-clock timeout stays retryable while malformed and excessive output remain permanent (321.5026ms)
+✔ actual decoder handles allowed synthetic formats, rejects disguised tracks, corruption and animation (2373.7754ms)
+✔ all publication validators reject raw URL fields; HTTP/socket accept structured attachment-only messages (6.2836ms)
+✔ approved ownership, purpose, lifecycle status, and verified type are enforced before a content write (245.0129ms)
+✔ media reference and content writes roll back together when publication fails (28.9351ms)
+✔ post, image/audio comments, story, and video publications persist only approved markers and matching uses (202.1203ms)
+✔ every cover and marketplace/showcase publication registers its approved asset use (90.0005ms)
+✔ avatar replacement preserves legacy reads, keeps reused media, and releases only the replaced asset (27.6534ms)
+▶ approved avatars hydrate typed follow, call and story viewer response DTOs
+  ✔ follow response (21.7301ms)
+  ✔ follow request list (8.5362ms)
+  ✔ accepted follow request (14.6612ms)
+  ✔ call invitation (8.9346ms)
+  ✔ story viewer list (8.0439ms)
+✔ approved avatars hydrate typed follow, call and story viewer response DTOs (142.5722ms)
+✔ typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers in arbitrary metadata (54.8118ms)
+✔ concurrent message retries attach exactly the winning image/audio asset; soft deletion and replay never restore references (81.5443ms)
+✔ external video mode rejects off-host, non-HTTPS, credentialed and disguised URLs and requires approved thumbnails (14.8684ms)
+✔ parallel avatar replacements serialize before locking old/new assets and keep the final reference consistent (30.1653ms)
+✔ account deletion wins against blocked media publication without leaving an orphan use (15.8647ms)
+✔ shared media survives deletion of one post and queues cleanup only after its final use (54.6003ms)
+✔ a last-reference deletion waiting for publication sees the newly committed reference (43.6463ms)
+✔ production media storage fails closed before publishing unmoderated media (1.8672ms)
+✔ verified image, audio and video retain provider identity and an immutable finalization timestamp (172.3351ms)
+✔ unavailable or contradictory media decisions cannot finalize; explicit approval can retry safely (29.2479ms)
+✔ moderation and verification rejection retain finalization evidence through duplicate requests (21.0077ms)
+✔ missing Gemini or Cloudinary configuration fails before any provider request (1.3044ms)
+✔ a confirmed absent reservation stays retryable and cannot become finalized or publishable (27.6438ms)
+✔ message reads and previews compare UTC instants with timestamp in Europe/Berlin (355.5195ms)
+✔ archive expiry scopes preserve one snapshot with timestamp in Europe/Berlin (323.7608ms)
+✔ message reads and previews compare UTC instants with timestamp in America/New_York (179.855ms)
+✔ archive expiry scopes preserve one snapshot with timestamp in America/New_York (339.9643ms)
+✔ message reads and previews compare UTC instants with timestamptz in Europe/Berlin (179.4059ms)
+✔ archive expiry scopes preserve one snapshot with timestamptz in Europe/Berlin (735.9227ms)
+✔ message reads and previews compare UTC instants with timestamptz in America/New_York (314.3173ms)
+✔ archive expiry scopes preserve one snapshot with timestamptz in America/New_York (369.8165ms)
+✔ message preview records a preview lifecycle without creating a read receipt (3.0698ms)
+✔ message preview is entitlement-gated before any preview event is recorded (0.6239ms)
+✔ message preview does not reopen a message that already has a recipient read receipt (0.6317ms)
+✔ message preview cannot be used on the sender's own message (0.2447ms)
+✔ message preview rejects an expired message (0.5317ms)
+✔ premium cannot reopen expired or deleted messages or preview as a non-member (0.5543ms)
+✔ preview return boundary rejects a row that expired or was deleted during the write (0.331ms)
+✔ preview checks committed deletion after waiting for a real message lock (177.0316ms)
+✔ expiry during preview insertion denies content and rolls back the preview event (755.3287ms)
+✔ real previews remain unread and cannot bypass a committed recipient receipt (55.4177ms)
+✔ recipient reads serialize with previews using the same real message row lock (182.5431ms)
+✔ concurrent reactions preserve every participant and remain idempotent (161.5233ms)
+✔ messages support edit, delete, reaction, and pin workflows (147.309ms)
+✔ concurrent reactions from different users are preserved and repeated reactions are idempotent (140.4105ms)
+✔ message content length is bounded before transport-specific persistence (0.76ms)
+✔ blocks deny new and existing messages in both blocking directions (40.0344ms)
+✔ group read receipts survive reload and stay scoped to each recipient (147.5526ms)
+✔ sender history and inbox suppress retained direct receipts after reader withdrawal (89.7095ms)
+✔ group receipt aggregation includes only currently permitted adult readers (116.5816ms)
+✔ concurrent first messages share one direct conversation in either direction (113.2274ms)
+✔ new messages move old conversations to the top of the inbox (33.9202ms)
+✔ allowDmFromStrangers opt-outs cannot be bypassed by direct or group conversations (59.9844ms)
+✔ messageRequests opt-outs cannot be bypassed by direct or group conversations (38.247ms)
+✔ deleting a group creator or member preserves shared group history and removes the departed account data (824.1215ms)
+✔ metrics scrape credentials require a high-entropy exact match (0.8759ms)
+✔ metrics scrape token files reject short credentials and read one-line secrets (11.9709ms)
+✔ metrics endpoint accepts only the dedicated scrape token or admin authentication (166.385ms)
+✔ grievance tickets survive service recreation (51.9985ms)
+✔ note service trims content, applies a 24-hour expiry, and replaces the author status (2.4391ms)
+✔ note service only exposes notes allowed by audience and content visibility (1.8053ms)
+✔ push delivery resolves canonical content after subscription lookup: deleted (4.0658ms)
+✔ push delivery resolves canonical content after subscription lookup: edited (0.9294ms)
+✔ push delivery resolves canonical content after subscription lookup: recipient_changed (0.8022ms)
+✔ push delivery resolves canonical content after subscription lookup: already_delivered (0.6617ms)
+✔ push delivery resolves canonical content after subscription lookup: in_app (0.619ms)
+✔ push delivery resolves canonical content after subscription lookup: database_unavailable (1.165ms)
+✔ push delivery resolves canonical content after subscription lookup: unsafe_endpoint (0.397ms)
+✔ push delivery rechecks recipient authority after canonical hydration: preference (0.8081ms)
+✔ push delivery rechecks recipient authority after canonical hydration: eligibility (0.398ms)
+✔ push delivery rechecks recipient authority after canonical hydration: account_status (0.4516ms)
+✔ push delivery rechecks recipient authority after canonical hydration: authority_unavailable (0.3548ms)
+✔ legacy job payloads identify canonical rows and cannot override recipient or content (3.0748ms)
+✔ deleted, already delivered and malformed jobs never dispatch a stale payload (0.3897ms)
+✔ deletion while recipient lookup is pending suppresses delivery (0.1987ms)
+✔ content changes while recipient lookup is pending use the latest persisted content (0.2248ms)
+✔ failed delivery remains retryable and an unrelated subsequent notice still dispatches (0.5953ms)
+✔ canonical row lookup failure is retried instead of treated as successful delivery (0.2563ms)
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+[17:07:16.672] INFO (43164): Notification worker started
+    redisVersion: "5.0.14.1"
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+It is highly recommended to use a minimum Redis version of 6.2.0
+             Current: 5.0.14.1
+[17:07:16.721] INFO (43164): Notification worker started
+    redisVersion: "5.0.14.1"
+✔ notification workers report readiness through start, stop, and restart (95.6487ms)
+✔ operational metrics use route templates instead of raw identifiers (191.0844ms)
+✔ operational metrics keep unknown paths in one bounded bucket (6.5544ms)
+✔ rollup status metrics stay alertable before the first successful scheduled run (8.9722ms)
+✔ lifecycle health exposes stale workers and overdue or dead cleanup jobs (17.3006ms)
+✔ shared Prometheus counters are visible across API instances with bounded labels (111.3551ms)
+✔ Redis metric failure preserves local counters and reports shared storage unavailable (6.1759ms)
+✔ pagination service slices items correctly (1.3584ms)
+✔ tip: duplicate and out-of-order disputes freeze and restore only the original paid state (326.0413ms)
+✔ membership: duplicate and out-of-order disputes freeze and restore only the original paid state (164.8797ms)
+✔ marketplace: duplicate and out-of-order disputes freeze and restore only the original paid state (149.9109ms)
+✔ premium: duplicate and out-of-order disputes freeze and restore only the original paid state (107.5763ms)
+✔ partial chargeback plus refund never debits more than the original creator credit (92.8994ms)
+✔ lost dispute keeps access revoked and delayed won events cannot override current provider loss (49.7153ms)
+✔ multiple disputes share one bounded reserve and one resolution cannot clear another open case (99.2905ms)
+✔ winning an expired Premium dispute never renews the term (50.9964ms)
+✔ refund during a dispute wins over later resolution and paid-through cancellation survives a won dispute (116.076ms)
+✔ creator deletion during dispute preserves financial identity without restoring deleted credit attribution (157.3189ms)
+✔ dispute transaction failure rolls back evidence, access and reserve, then read-only retry succeeds (51.1052ms)
+✔ scheduled provider scan queues missed disputes without changing money before reconciliation (75.186ms)
+✔ ordinary users and moderators cannot inspect financial operations; administrator retries are audited (176.7494ms)
+✔ marketplace prices cannot exceed the integer minor-unit ledger ceiling (2.0027ms)
+✔ dispute adapter validates current provider amounts, currency and payment association fields (53.5954ms)
+✔ marketplace order creation checks the payment gate before touching the database (0.8126ms)
+✔ Razorpay order responses must match the requested amount and currency (4.025ms)
+✔ signed captured-payment webhooks dispatch to exactly the matching payment flow (3.5286ms)
+✔ processed refund webhooks validate amount and route using provider payment id (0.8922ms)
+✔ payment webhooks reject invalid raw-body signatures before dispatch (1.5715ms)
+✔ payment reconciliation survives provider retry and concurrent duplicate webhook delivery (240.7619ms)
+✔ Razorpay webhook signatures require the configured secret (2.3881ms)
+✔ Razorpay payment signatures bind both order and payment identifiers (1.1602ms)
+✔ Razorpay order requests use the provider API with configured mock credentials (36.5321ms)
+✔ free accounts have no paid perks and one SQL query resolves the entire snapshot (74.1503ms)
+✔ concurrent checkout and repeated client keys create a single durable provider order (211.1566ms)
+✖ temporary overrides are independent of payment, expire, and cannot defeat operational availability (13.8866ms)
+✔ failed payment attempts are visible and a later successful attempt on the same order grants access (50.033ms)
+✔ closed checkout settles through encrypted durable webhook acceptance exactly once (70.6938ms)
+✔ uncertain provider creation recovers by durable receipt without repeating the POST (28.0817ms)
+✔ capture overtaking local provider binding recovers association from provider receipt and notes (26.8825ms)
+✔ amount, currency, receipt, order, signature and account tampering never grant access (21.2441ms)
+✔ cancellation preserves paid access, expiry removes perks, and late cancelled captures require refund review (60.7075ms)
+✔ out-of-order refunds and later capture replays never restore access or duplicate accounting (34.9164ms)
+✔ a settlement database failure rolls back money and access together, then replay succeeds (32.3752ms)
+✔ free/expired saved typography continues to send ordinary messages without changing existing content (50.7632ms)
+✔ real authenticated HTTP state enforces ownership, rejects client entitlement fields and cross-origin mutations (161.7447ms)
+✔ the advanced catalog is closed and defaults can be overridden by explicit flags (1.3227ms)
+✔ an active override grants an available perk; expired overrides and availability flags never grant access alone (2.425ms)
+✔ audience policy applies blocks before every inclusion rule (0.2975ms)
+✔ pinning is entitlement-gated before a profile mutation is attempted (1.6692ms)
+✔ reordering profile pins is entitlement-gated before persistence (0.332ms)
+✔ profile-only posts are entitlement-gated before persistence (0.3683ms)
+✔ premium profile styles come from a curated safe catalog (1.8001ms)
+✔ per-item typography accepts only catalog identifiers (0.4504ms)
+✔ profile pin capacity stops at six without changing existing pin order (0.15ms)
+✔ non-default profile selections resolve to the exact entitlements they need (0.1922ms)
+✔ premium profile updates are entitlement-gated while keeping bio text independent (0.7522ms)
+✔ story analytics count every idempotent event, unique viewers, and rewatches (16.1925ms)
+✔ story reaction counts keep Super Hearts distinct from normal and custom reactions (0.2676ms)
+✔ viewer exposure is selected from the viewer preference, not a client identity claim (0.1626ms)
+✔ story duration is limited to the entitlement ceiling and ranking boost is capped (0.499ms)
+✔ duplicate Super Hearts are idempotent while a changed reaction can notify again (0.3579ms)
+✔ highlight management stays owner-scoped and preserves ordered story ids (1.2942ms)
+✔ concurrent block requests preserve every target without duplicates (274.1622ms)
+✔ concurrent unblock requests remove only their intended targets (115.7366ms)
+✔ concurrent mute requests preserve every target without duplicates (28.7616ms)
+✔ concurrent unmute requests remove only their intended targets (22.4652ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamp data in Asia/Calcutta (1263.6431ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamp data in America/New_York (55.019ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in Asia/Calcutta (73.4459ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in America/New_York (80.4623ms)
+✔ analytics migration creates durable event, daily, and job-run tables (158.3609ms)
+✔ ingestion deduplicates delivery and rollups respect UTC day boundaries (39.0697ms)
+✔ concurrent repeated rollups are idempotent and source KPI queries execute (207.0634ms)
+✔ source KPIs calculate activation, cohort retention, engagement, and ledger reconciliation (68.2112ms)
+✔ failed rollup state is durable and a later retry succeeds (35.4472ms)
+✔ rollup quality mismatches persist an alertable failure and clean retry recovers (20.4193ms)
+✔ product analytics accepts only versioned allowlisted events and minimal properties (2.7085ms)
+✔ product analytics rejects unknown names, payload fields, and oversized batches (1.5488ms)
+✔ profiler events accept bounded metrics only (0.3772ms)
+✔ product analytics excludes stale and implausibly future event timestamps (0.6755ms)
+✔ analytics reporting endpoint rejects unauthenticated requests (52.7999ms)
+✔ marketplace saves are private, viewer-scoped, and toggleable (224.9712ms)
+✔ own profile restores canonical follow relationships without exposing them to other viewers (194.9404ms)
+✔ production profile discovery requires current authority and keeps minor profiles private by default (93.8733ms)
+✔ production follow requests do not create public follow edges to minors with legacy public settings (33.4888ms)
+✔ private follow requests remain pending at the HTTP boundary (17.2039ms)
+✔ general search applies current canonical profile discovery authority (357.188ms)
+✔ known-ID profile comments and showcases enforce owner authority and current private access (101.0131ms)
+✔ profile discovery batches relationship and current eligibility reads for fifty candidates (160.6522ms)
+✔ push endpoints accept documented vendor destinations without permitting arbitrary outbound requests (1.5407ms)
+✔ authenticated push registration rejects internal endpoints before persistence and accepts supported browser subscriptions (217.2584ms)
+✔ notification queue entries contain only the persisted ID, including legacy caller payloads (3.0389ms)
+✔ queue payloads use bounded retention while notification retries retain stable ids (0.1754ms)
+✔ queue service handles job enqueue and dequeue (11.084ms)
+✔ queue retention is bounded without pruning operator-review jobs (0.4459ms)
+✔ queue service does not retain jobs in memory while Redis is unavailable (2.3658ms)
+[17:08:18.020] WARN (39144): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:08:18.021] WARN (39144): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+[17:08:18.024] WARN (39144): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:08:18.024] WARN (39144): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+✔ feed traffic and approval polling cannot exhaust the sign-in allowance (1735.4205ms)
+✔ an optional media probe that never settles cannot delay core readiness or launch duplicate probes (2.8282ms)
+✔ mandatory dependency failures still fail readiness while media is pending (0.515ms)
+✔ public readiness failures omit internal dependency error messages (0.3114ms)
+✔ media diagnostics expire from completion and fail closed while refreshing (0.3833ms)
+✔ an optional probe exception is a conservative diagnostic and does not become an unhandled rejection (0.3602ms)
+✔ socket budgets are atomic across connections and expire (1141.2013ms)
+✔ Redis compatibility accepts BullMQ-supported versions (0.9937ms)
+✔ Redis compatibility rejects missing, malformed, and legacy versions (0.145ms)
+✔ public grievance submission returns only the safe receipt fields (65.5116ms)
+✔ public grievance tracking hides identity and officer notes while moderator access retains them (87.485ms)
+✔ report routes reject anonymous access and keep moderation queue role-restricted (56.7301ms)
+✔ public grievance intake and status responses expose only the allowlisted fields (33.6215ms)
+✔ final report decisions require a reason and keep an immutable staff audit trail (66.7115ms)
+✔ staff report pagination reaches older unresolved rows and all timestamp ties without duplicates (250.8518ms)
+✔ staff grievance pagination keeps old cases reachable with status-scoped cursors (124.6072ms)
+✔ only payment webhook paths retain exact signed bytes; account requests do not duplicate secrets (131.9613ms)
+✔ request parser rejects invalid bodies with safe client errors before handlers run (61.2698ms)
+✔ unexpected errors stay private in every environment and headers already sent delegate (6.6517ms)
+[17:08:32.394] ERROR (25696): Unhandled error
+    err: {
+      "type": "Error"
+    }
+✔ request logs omit credential paths and queries while retaining the endpoint (1.072ms)
+✔ restricted route matrix is exact across both API mounts (2.8294ms)
+✔ current terms acknowledgement does not use the legacy age checkbox as proof (2.2334ms)
+✔ password login and refresh preserve identity sessions while eligibility is restricted (50.1771ms)
+✔ HTTP authentication grants only identity and rights routes to restricted accounts (226.4676ms)
+✔ real database and Redis sessions recheck moderation, auth epoch and device revocation (241.8111ms)
+✔ saved posts remain reachable beyond an empty bounded scan and timestamp ties without dropping visible rows (308.8725ms)
+✔ saved video pages are bounded, preserve all bookmarks and reject changed cursor ownership, collection or signature (95.7354ms)
+✔ saved collection query validation rejects invalid page sizes and malformed cursors (0.7563ms)
+✔ saved, listed and direct video reads and likes respect either party shielding a contact (134.3624ms)
+✔ search service returns matching users and posts (111.4905ms)
+✔ audit events track abuse heuristics via Redis (31.6896ms)
+[17:08:50.064] WARN (39360): Security audit event
+    eventId: "c08d432b-001a-40f6-84d2-664964d2838f"
+    type: "spam"
+    message: "test action 0"
+[17:08:50.065] WARN (39360): Security audit event
+    eventId: "95b4bf78-2594-42cf-80b1-f414a948a453"
+    type: "spam"
+    message: "test action 1"
+[17:08:50.065] WARN (39360): Security audit event
+    eventId: "6e6e94d2-110d-4798-88cb-b2e1eda64573"
+    type: "spam"
+    message: "test action 2"
+[17:08:50.065] WARN (39360): Security audit event
+    eventId: "7cc8f5cb-a01c-4455-b81c-43d22e03b77c"
+    type: "spam"
+    message: "test action 3"
+[17:08:50.065] WARN (39360): Security audit event
+    eventId: "f7e40569-7a08-44ad-b8f0-e34c153421b1"
+    type: "spam"
+    message: "test action 4"
+✔ synthetic seed requires explicit nonproduction mode, opt-in and exact database confirmation (1.3746ms)
+✔ seed denials never reproduce connection credentials (0.3322ms)
+✔ every synthetic seed entry point guards before executing its script body (2.7464ms)
+✔ concurrent privacy patches cannot undo another privacy restriction (165.6504ms)
+✔ concurrent settings patches preserve independent preferences and existing metadata (61.1293ms)
+✔ partial privacy updates fill legacy defaults and keep explicit opt-outs (18.8459ms)
+✔ updating messaging privacy never opens a legacy private account (12.6348ms)
+✔ posts support likes, bookmarks, and trending ranking (268.887ms)
+✔ socket schemas reject null, malformed IDs, mass assignment and oversized messages (2.7641ms)
+✔ socket handshake rejects stale consent and hostile browser origins (65.1723ms)
+✔ connected sockets recheck consent and revocation before an action (22.0363ms)
+✔ socket rejects malformed events, rate limits messages, and catches join failures (14.1461ms)
+✔ new direct messages reach the recipient's connected devices on the first event (21.3144ms)
+[17:08:56.379] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.381] WARN (39228): Could not validate socket session
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.382] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.382] WARN (39228): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.388] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.389] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.389] WARN (39228): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.400] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.401] WARN (39228): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.401] WARN (39228): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.402] WARN (39228): Socket event failed
+    event: "conversation:join"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.403] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.408] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.410] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.415] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.418] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.423] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.423] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.430] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.430] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.430] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.435] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.438] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.491] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ message delivery disconnects a recipient whose current messaging authority was revoked (113.0794ms)
+[17:08:56.538] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ socket live and call gates stay disabled (25.756ms)
+[17:08:56.561] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.563] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.568] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.570] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.581] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.581] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.582] WARN (39228): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+✔ connected sockets reject a revoked database epoch even if Redis still has the session (18.8476ms)
+[17:08:56.587] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.588] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.592] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ a false delivery admission suppresses an event without disconnecting an authorized recipient (47.4603ms)
+✔ recipient device revocation during an awaited delivery guard prevents the event (8.2266ms)
+[17:08:56.630] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.634] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.634] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.638] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.639] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.643] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.643] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+✔ recipient JWT expiry during an awaited payload prevents dispatch before the expiry timer runs (10.0523ms)
+✔ recipient JWT expiry during an awaited guard prevents dispatch before the expiry timer runs (8.6789ms)
+[17:08:56.648] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[18:08:56.000] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.652] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.654] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.657] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[18:08:56.000] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ recipient JWT expiry during final session authorization prevents dispatch (9.0233ms)
+[17:08:56.662] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.662] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.666] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[18:08:56.000] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.670] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.671] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.675] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.676] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with missing token expiry before payload hydration (9.2713ms)
+✔ dispatcher rejects a recipient with null token expiry before payload hydration (8.4682ms)
+[17:08:56.680] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.681] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.684] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.685] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.688] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.689] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.692] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with text token expiry before payload hydration (9.5917ms)
+✔ dispatcher rejects a recipient with NaN token expiry before payload hydration (7.9005ms)
+[17:08:56.693] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.698] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.699] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.702] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.703] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.706] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.707] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+✔ dispatcher rejects a recipient with infinite token expiry before payload hydration (8.4631ms)
+[17:08:56.710] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.711] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.715] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.716] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.719] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.720] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with fractional token expiry before payload hydration (9.4855ms)
+✔ dispatcher rejects a recipient with expired token expiry before payload hydration (8.4852ms)
+[17:08:56.724] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.725] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.728] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.729] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.732] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.733] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.737] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.739] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.741] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.755] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ conversation join cannot disclose presence after contact is withdrawn during room hydration (40.3639ms)
+[17:08:56.769] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.769] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.773] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.774] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.774] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.777] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.779] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.781] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ conversation join skips removed or revoked room peers while current peers remain visible (127.8383ms)
+[17:08:56.896] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.896] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.896] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:56.901] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:56.902] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.902] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:56.906] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:56.909] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ disabled read receipts produce no socket event, including retained timestamps (170.2073ms)
+[17:08:57.067] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.067] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:57.071] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:57.072] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.072] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.076] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ HTTP read acknowledgements do not publish disabled receipts (108.3644ms)
+[17:08:57.176] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.180] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:57.181] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.184] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.186] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:57.189] WARN (39228): Socket event failed
+    event: "call:accept"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+✔ RTC acceptance and signaling stop after contact withdrawal or a safety block (20.8398ms)
+[17:08:57.191] WARN (39228): Socket event failed
+    event: "call:answer"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.194] WARN (39228): Socket event failed
+    event: "call:ice"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.196] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.196] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:57.204] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.207] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ stream WebRTC signaling cannot deliver to a revoked target device (33.066ms)
+[17:08:57.225] WARN (39228): Socket event failed
+    event: "webrtc:offer"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.227] WARN (39228): Socket event failed
+    event: "webrtc:answer"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.228] WARN (39228): Socket event failed
+    event: "webrtc:ice-candidate"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.229] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.229] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:57.234] WARN (39228): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[17:08:57.234] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[17:08:57.234] WARN (39228): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+✔ contact withdrawal while an RTC acceptance is awaited prevents its delivery and releases the call (12.1469ms)
+[17:08:57.239] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.240] INFO (39228): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:08:57.242] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[17:08:57.242] INFO (39228): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ story views and reactions are persisted but scoped to the viewer (214.6361ms)
+✔ story text styles normalize to safe curated defaults and controls (2.2424ms)
+✔ story text styles reject arbitrary CSS-like keys and out-of-range values (1.2217ms)
+✔ advanced story text styling is entitlement-gated and persisted after authorization (3.3723ms)
+✔ registration and reacceptance retain separate terms versions without granting eligibility or optional consent (179.118ms)
+✔ terms history migration preserves surviving legacy evidence idempotently in either timestamp storage (30.5555ms)
+✔ concurrent password logins consume a valid authenticator code exactly once (61.1967ms)
+✔ authenticator replay is denied across password, Google, email OTP and disable flows (8.2741ms)
+✔ setup consumes its authenticator code and a fresh code is required for login (5.1726ms)
+✔ invalid authenticator codes do not claim Redis and a replay-store outage fails closed (6.2948ms)
+✔ trusted origin middleware accepts configured and non-browser callers (0.8383ms)
+✔ trusted origin middleware rejects an unconfigured browser origin (0.2663ms)
+✔ detects common media signatures instead of trusting extensions (1.589ms)
+✔ allows ambiguous WebM and Ogg containers only within media families (0.3706ms)
+✔ public profiles allowlist identity fields and exclude consent, email and future secrets (1.5589ms)
+✔ restricted owner view contains only account, security and eligibility summaries (0.3298ms)
+✔ required notification worker is unhealthy until it is explicitly ready (1.0276ms)
+✔ required lifecycle worker reports healthy, missing, stale, and recovered heartbeat states (57.4425ms)
+✔ lifecycle readiness detects every current stalled handler and recovers after a crashed heartbeat expires (155.8115ms)
+✔ lifecycle readiness requires the cleanup handler and uses database time rather than host clock skew (4.6655ms)
+ℹ tests 593
+ℹ suites 0
+ℹ pass 592
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 285963.5187
+
+✖ failing tests:
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\platform-premium-integration.test.ts:2:3277
+✖ temporary overrides are independent of payment, expire, and cannot defeat operational availability (13.8866ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  true !== false
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\platform-premium-integration.test.ts:114:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -27,6 +27,9 @@ export class ProfilePinLimitError extends Error {}
 export class ProfilePinOrderError extends Error {}
 
 function addContentRatingFilters(filters: any[], contentFilter?: ContentRating): void {
+  filters.push(sql`not exists (select 1 from moderation_enforcements me
+    where me.target_type = 'post' and me.target_id = ${postsTable.id}::text
+      and (me.expires_at is null or me.expires_at > clock_timestamp()))`);
   if (contentFilter === "child_safe") {
     filters.push(eq(postsTable.contentRating, "child_safe"));
     if (isEligibilityEnforcementEnabled()) filters.push(sql`exists(select 1 from content_safety_classifications c

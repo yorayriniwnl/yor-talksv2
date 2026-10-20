@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Crown, Shield, Star, Lock, CheckCircle2, 
@@ -9,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
+import { useAppStore } from '@/lib/store';
 
 interface PassTier {
   tier: number;
@@ -31,14 +33,26 @@ const PASS_TIERS: PassTier[] = [
 export default function SuperPass() {
   const [currentTier, setCurrentTier] = useState(4);
   const [tiers, setTiers] = useState<PassTier[]>(PASS_TIERS);
-  const hasElitePass = false;
+  const currentUser = useAppStore(s => s.currentUser);
+
+  const localFounderPass = (() => {
+    try {
+      const stored = localStorage.getItem('yor:founder:pass:v1');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const isFounder = Boolean(currentUser?.isFounder || localFounderPass);
+  const hasElitePass = isFounder;
 
   const handleClaim = (tierNum: number) => {
-    toast.info(`Tier ${tierNum} rewards are preview-only and cannot be claimed yet.`);
+    toast.info(`Tier ${tierNum} rewards are preview-only and will unlock at launch on 1st December 2026.`);
   };
 
   const handleBuyPass = () => {
-    toast.info('The Elite Pass is not available yet. No payment was taken.');
+    toast.info('The Elite Pass purchases unlock at launch on 1st December 2026.');
   };
 
   return (
@@ -51,12 +65,19 @@ export default function SuperPass() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Yor Super Pass (Season 1)</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Reward track preview — purchases and claims are not available yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">
+              {isFounder ? 'VIP Genesis Founder Track Active — 1-Year SuperPass Included' : 'Reward track preview — purchases and claims are not available yet'}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {!hasElitePass ? (
+          {isFounder ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 border border-amber-500/50 shadow-md glow-neon-primary text-xs font-mono font-bold text-amber-400">
+              <Flame className="w-4 h-4 fill-amber-400 text-amber-500 animate-pulse" />
+              <span>VIP Founder • 1-Year SuperPass</span>
+            </div>
+          ) : !hasElitePass ? (
             <Button
               onClick={handleBuyPass}
               disabled
@@ -66,13 +87,79 @@ export default function SuperPass() {
             </Button>
           ) : (
             <div className="level-badge shadow-sm">
-              <Crown className="w-3.5 h-3.5 text-amber-400" /> Elite Pass unavailable
+              <Crown className="w-3.5 h-3.5 text-amber-400" /> Elite Pass Active
             </div>
           )}
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+        {/* Founder Perk Banner or Pre-Registration Callout */}
+        {isFounder ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-orange-950/20 to-background backdrop-blur-xl shadow-2xl"
+          >
+            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-amber-500/15 via-rose-500/10 to-transparent blur-3xl pointer-events-none" />
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-red-600 flex items-center justify-center shadow-lg glow-neon-primary ring-2 ring-amber-400/30 shrink-0">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[0.68rem] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                      Genesis 2026 Founder Perk Active
+                    </span>
+                    {localFounderPass?.passNumber && (
+                      <span className="text-[0.65rem] font-mono text-muted-foreground">
+                        Pass #{localFounderPass.passNumber}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-display font-black text-foreground">
+                    1-Year SuperPass All-Access Granted
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                    Your pre-registration reservation entitles you to complimentary full 1-Year SuperPass and Elite Track access starting at global launch on <strong className="text-amber-400 font-bold">1st December 2026</strong>.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+                <Link href="/preregister" className="w-full md:w-auto">
+                  <Button variant="outline" className="w-full md:w-auto rounded-2xl font-bold text-xs h-10 px-5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10">
+                    View Digital Boarding Pass
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 border border-border/60 bg-gradient-to-r from-primary/10 via-background to-background shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shrink-0">
+                  <Flame className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-sm text-foreground">
+                    Want 1-Year Free SuperPass at Launch?
+                  </h4>
+                  <p className="text-xs text-muted-foreground font-serif">
+                    Pre-register now for our 1st December 2026 release to claim free 1-Year SuperPass, permanent VIP badge, and handle lock.
+                  </p>
+                </div>
+              </div>
+              <Link href="/preregister" className="shrink-0">
+                <Button className="rounded-2xl font-bold text-xs h-9 px-5 bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:opacity-90 glow-neon-primary">
+                  Pre-Register Free <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Pass Hero Progress Bar */}
         <div className="surface-1 rounded-3xl p-6 sm:p-8 border border-border/40 relative overflow-hidden shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

@@ -878,6 +878,24 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/launch/unsubscribe",
+    "operationId": "getLaunchUnsubscribe",
+    "tag": "launch",
+    "summary": "Get /launch/unsubscribe",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/launch/unsubscribe",
+    "operationId": "postLaunchUnsubscribe",
+    "tag": "launch",
+    "summary": "Post /launch/unsubscribe",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/livez",
     "operationId": "getLivez",
     "tag": "livez",
@@ -1384,6 +1402,42 @@ export const apiRouteCatalog = [
     "tag": "premium",
     "summary": "Post /premium/orders/{orderId}/verify",
     "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/preregister",
+    "operationId": "postPreregister",
+    "tag": "preregister",
+    "summary": "Post /preregister",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/preregister/stats",
+    "operationId": "getPreregisterStats",
+    "tag": "preregister",
+    "summary": "Get /preregister/stats",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/challenge",
+    "operationId": "postPrivacyChallenge",
+    "tag": "privacy",
+    "summary": "Post /privacy/challenge",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/request",
+    "operationId": "postPrivacyRequest",
+    "tag": "privacy",
+    "summary": "Post /privacy/request",
+    "authenticated": false,
     "roles": []
   },
   {
@@ -2053,6 +2107,15 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/users/me/consent-withdrawal",
+    "operationId": "postUsersMeConsentWithdrawal",
+    "tag": "users",
+    "summary": "Post /users/me/consent-withdrawal",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/users/me/contact-shields",
     "operationId": "getUsersMeContactShields",
@@ -2202,6 +2265,24 @@ export const apiRouteCatalog = [
     "operationId": "putUsersMePrivacy",
     "tag": "users",
     "summary": "Put /users/me/privacy",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/restriction",
+    "operationId": "postUsersMeRestriction",
+    "tag": "users",
+    "summary": "Post /users/me/restriction",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/users/me/restriction",
+    "operationId": "deleteUsersMeRestriction",
+    "tag": "users",
+    "summary": "Delete /users/me/restriction",
     "authenticated": true,
     "roles": []
   },

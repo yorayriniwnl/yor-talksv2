@@ -75,7 +75,11 @@ export class QueueService {
       ? String((payload as { id: unknown }).id)
       : undefined;
     const options = type === 'notification:deliver' ? notificationJobOptions(notificationId as string) : {
-      ...boundedQueueRetention(),
+      // Review records require an explicit operator disposition. Ordinary
+      // delivery retention must not silently prune an outstanding review.
+      ...(type === 'moderation:review'
+        ? { removeOnComplete: false, removeOnFail: false }
+        : boundedQueueRetention()),
       ...(jobId ? { jobId } : {}),
     };
     return queue.add(type, type === 'notification:deliver' ? { notificationId } : payload, options);

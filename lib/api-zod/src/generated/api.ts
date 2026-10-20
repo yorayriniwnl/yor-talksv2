@@ -1711,6 +1711,32 @@ export const PostInvitesGenerateResponse = zod.object({
 
 
 /**
+ * @summary Get /launch/unsubscribe
+ */
+export const GetLaunchUnsubscribeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /launch/unsubscribe
+ */
+export const PostLaunchUnsubscribeBody = zod.record(zod.string(), zod.unknown())
+
+export const PostLaunchUnsubscribeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /livez
  */
 export const GetLivezResponse = zod.object({
@@ -2673,6 +2699,107 @@ export const PostPremiumOrdersByOrderIdVerifyParams = zod.object({
 export const PostPremiumOrdersByOrderIdVerifyBody = zod.record(zod.string(), zod.unknown())
 
 export const PostPremiumOrdersByOrderIdVerifyResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /preregister
+ */
+export const postPreregisterBodyEmailMax = 255;
+
+export const postPreregisterBodyUsernameMin = 3;
+export const postPreregisterBodyUsernameMax = 24;
+
+
+export const postPreregisterBodyUsernameRegExp = new RegExp('^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$');
+export const postPreregisterBodyReferralCodeMax = 28;
+
+
+export const postPreregisterBodyReferralCodeRegExp = new RegExp('^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$');
+export const postPreregisterBodyPerksMax = 4;
+
+
+
+export const PostPreregisterBody = zod.object({
+  "email": zod.string().email().max(postPreregisterBodyEmailMax).describe('Trimmed and lowercased before storage.'),
+  "username": zod.string().min(postPreregisterBodyUsernameMin).max(postPreregisterBodyUsernameMax).regex(postPreregisterBodyUsernameRegExp).describe('Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.'),
+  "launchUpdatesConsent": zod.boolean().describe('Explicit agreement to receive launch and early member updates.'),
+  "referralCode": zod.string().max(postPreregisterBodyReferralCodeMax).regex(postPreregisterBodyReferralCodeRegExp).optional(),
+  "perks": zod.array(zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference'])).max(postPreregisterBodyPerksMax).optional()
+})
+
+export const PostPreregisterResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "launchDate": zod.coerce.date().describe('Launch is 1 December 2026 at midnight in Asia\/Kolkata.'),
+  "perks": zod.array(zod.object({
+  "id": zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "icon": zod.string()
+})).describe('Planned early member benefits; no paid entitlement or handle reservation is granted.'),
+  "isExisting": zod.boolean()
+}).describe('Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.')
+}))
+
+
+/**
+ * @summary Get /preregister/stats
+ */
+export const getPreregisterStatsResponseTwoDataTotalRegisteredMin = 0;
+
+
+
+export const GetPreregisterStatsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "totalRegistered": zod.number().min(getPreregisterStatsResponseTwoDataTotalRegisteredMin).describe('Actual stored registrations with no artificial offset.'),
+  "launchDate": zod.coerce.date().describe('Launch is 1 December 2026 at midnight in Asia\/Kolkata.'),
+  "perks": zod.array(zod.object({
+  "id": zod.enum(['founder-badge', 'priority-access', 'community-input', 'username-preference']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "icon": zod.string()
+})).describe('Planned early member benefits; no paid entitlement or handle reservation is granted.')
+})
+}))
+
+
+/**
+ * @summary Post /privacy/challenge
+ */
+export const PostPrivacyChallengeBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivacyChallengeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /privacy/request
+ */
+export const PostPrivacyRequestBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivacyRequestResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "data": zod.unknown(),
@@ -3866,6 +3993,20 @@ export const PostUsersMeConsentResponse = zod.object({
 
 
 /**
+ * @summary Post /users/me/consent-withdrawal
+ */
+export const PostUsersMeConsentWithdrawalBody = zod.record(zod.string(), zod.unknown())
+
+export const PostUsersMeConsentWithdrawalResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /users/me/contact-shields
  */
 export const GetUsersMeContactShieldsResponse = zod.object({
@@ -4180,6 +4321,32 @@ export const PutUsersMePremiumProfileResponse = zod.object({
 export const PutUsersMePrivacyBody = zod.record(zod.string(), zod.unknown())
 
 export const PutUsersMePrivacyResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /users/me/restriction
+ */
+export const PostUsersMeRestrictionBody = zod.record(zod.string(), zod.unknown())
+
+export const PostUsersMeRestrictionResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Delete /users/me/restriction
+ */
+export const DeleteUsersMeRestrictionResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "data": zod.unknown(),

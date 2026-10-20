@@ -12,6 +12,8 @@ interface AppTopbarProps {
 }
 
 const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
+  { match: '/preregister', title: 'Founder Terminal', kicker: 'Global Launch 01 Dec 2026' },
+  { match: '/launch', title: 'Founder Terminal', kicker: 'Global Launch 01 Dec 2026' },
   { match: '/pulse', title: 'Pulse', kicker: 'What is moving right now' },
   { match: '/worlds', title: 'Worlds', kicker: 'Places with shared gravity' },
   { match: '/dream', title: 'Dream Engine', kicker: 'Turn intent into motion' },
@@ -108,6 +110,15 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
         </button>
 
         <div className="premium-topbar__actions">
+          <Link
+            href="/preregister"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#e84b4b]/20 to-[#ffd700]/15 border border-[#e84b4b]/40 text-xs font-mono font-bold text-[#ff8a7f] hover:border-[#e84b4b] transition-all hover:scale-[1.02] shadow-[0_0_12px_rgba(232,75,75,0.2)]"
+            title="VIP Founder Pre-Registration for 01 Dec 2026 Global Launch"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#e84b4b] animate-ping" />
+            <span>01 DEC 2026 LAUNCH</span>
+          </Link>
+
           <WorldSelector compact />
 
           <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread conversations` : 'Messages'}>

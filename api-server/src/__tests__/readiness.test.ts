@@ -13,6 +13,7 @@ const healthyDependencies = (media: () => MediaReadiness) => ({
   redis: async () => ({ compatible: true, version: '7.0.0' }),
   notificationWorker: async () => true,
   lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+  recoveryReplay: async () => {},
 });
 
 async function runReadiness(dependencies: Parameters<typeof createReadinessHandler>[0]) {

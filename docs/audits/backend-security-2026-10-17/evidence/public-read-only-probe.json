@@ -1,0 +1,50 @@
+{
+  "observedAt": "2026-10-18T11:22:58.154Z",
+  "base": "https://yor-talks.vercel.app",
+  "authenticated": false,
+  "methods": [
+    "GET"
+  ],
+  "results": [
+    {
+      "path": "/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "csp": null,
+      "hsts": "max-age=31536000; includeSubDomains",
+      "frameOptions": "SAMEORIGIN",
+      "bodyKind": "HTML",
+      "responseBytes": 2467
+    },
+    {
+      "path": "/api/healthz",
+      "status": 500,
+      "contentType": "text/plain; charset=utf-8",
+      "csp": null,
+      "hsts": "max-age=31536000; includeSubDomains",
+      "frameOptions": "SAMEORIGIN",
+      "bodyKind": "other",
+      "responseBytes": 96
+    },
+    {
+      "path": "/api/readyz",
+      "status": 500,
+      "contentType": "text/plain; charset=utf-8",
+      "csp": null,
+      "hsts": "max-age=31536000; includeSubDomains",
+      "frameOptions": "SAMEORIGIN",
+      "bodyKind": "other",
+      "responseBytes": 96
+    },
+    {
+      "path": "/socket.io/?EIO=4&transport=polling",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "csp": null,
+      "hsts": "max-age=31536000; includeSubDomains",
+      "frameOptions": "SAMEORIGIN",
+      "bodyKind": "HTML",
+      "responseBytes": 2467
+    }
+  ]
+}

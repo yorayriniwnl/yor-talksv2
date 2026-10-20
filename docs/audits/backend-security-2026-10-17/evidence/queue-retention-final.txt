@@ -1,0 +1,21 @@
+✔ notification queue entries contain only the persisted ID, including legacy caller payloads (2.379ms)
+✔ queue payloads use bounded retention while notification retries retain stable ids (0.1433ms)
+✔ queue service handles job enqueue and dequeue (8.8284ms)
+✔ queue retention is bounded without pruning operator-review jobs (0.3845ms)
+✔ queue service does not retain jobs in memory while Redis is unavailable (2.8803ms)
+[17:02:50.609] WARN (37972): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:02:50.609] WARN (37972): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+[17:02:50.613] WARN (37972): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[17:02:50.613] WARN (37972): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3031.1976

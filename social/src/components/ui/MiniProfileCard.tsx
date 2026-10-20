@@ -8,6 +8,7 @@ import { useAppStore } from '@/lib/store';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { ProtectedMediaImage } from '@/lib/protected-media';
+import { FounderBadge } from '@/components/system/FounderBadge';
 
 interface MiniProfileCardProps {
   user: User;
@@ -104,6 +105,10 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                   {user.verified && (
                     <svg className="w-4 h-4 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
                   )}
+                  <FounderBadge
+                    isFounder={Boolean((user as any).isFounder || (currentUser?.id === user.id && localStorage.getItem('yor:founder:pass:v1')))}
+                    variant="compact"
+                  />
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-zinc-400 font-mono">@{user.username}</span>
