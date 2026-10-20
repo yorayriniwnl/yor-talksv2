@@ -179,6 +179,12 @@ export const ACCOUNT_EXPORT_USER_FK_DECISIONS: Readonly<Record<string,string>> =
   ['story_audience_exclusions.user_id','Only author-owned exclusions; another author\'s private audience choices are excluded.'],
   ['user_close_friends.friend_id','Only subject-owned relationship choices; another user\'s private close-friend list is excluded.'],
   ['user_favorite_creators.creator_id','Only subject-owned favorites; another user\'s private favorites are excluded.'],
+  ['consent_records.subject_id','Detailed consent audit records may include identity verification and must be disclosed through authenticated privacy rights processing.'],
+  ['moderation_appeals.appellant_user_id','Appeal evidence may identify reporters or witnesses; disclosure requires a reviewed safety and privacy rights process.'],
+  ['moderation_appeals.reviewer_id','Staff moderation reviewer identity is not private data belonging to the requesting subject.'],
+  ['moderation_decision_notices.recipient_user_id','Moderation decision notices can contain third-party safety evidence and are disclosed through the controlled appeals process.'],
+  ['moderation_decisions.actor_id','Internal staff decisions and audit evidence are excluded from self-service subject exports.'],
+  ['privacy_rights_requests.subject_id','Rights request handling and identity verification evidence remain in the verified data-rights request process.'],
   ['password_reset_tokens.user_id','Excluded authentication material; account metadata reports reset-required state.'],
 ]);
 
