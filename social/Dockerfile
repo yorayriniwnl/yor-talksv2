@@ -1,7 +1,7 @@
-FROM node:24-alpine AS build
+FROM node:24-slim AS build
 
 WORKDIR /app
-RUN npm install --global pnpm@9.15.4 --no-audit --no-fund
+RUN npm install --global pnpm@11.28.5 --no-audit --no-fund
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api-server/package.json api-server/package.json

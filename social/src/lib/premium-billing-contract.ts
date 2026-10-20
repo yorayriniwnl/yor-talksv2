@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PremiumBillingState, PremiumOrder } from './api-client';
+import type { PremiumBillingState, PremiumCatalog, PremiumOrder } from './api-client';
 
 const plan = z.object({
   key: z.string(), name: z.string(), priceMinor: z.number().int().min(100).max(2147483647), currency: z.literal('INR'),
@@ -18,6 +18,12 @@ export const premiumBillingSchema = z.object({
     cancel_at_period_end: z.boolean(), status: z.enum(['active','cancelled','expired','refunded','disputed','chargeback','revoked']) }).nullable(),
   orders: z.array(premiumOrderSchema).max(50), enabledFeatures: z.record(z.boolean()),
 });
+const premiumCatalogSchema = premiumBillingSchema.shape.catalog;
+export function parsePremiumCatalog(value: unknown): PremiumCatalog {
+  const result = premiumCatalogSchema.safeParse(value);
+  if (!result.success) throw new Error('Premium terms could not be verified. Purchases are unavailable.');
+  return result.data as PremiumCatalog;
+}
 export function parsePremiumBilling(value: unknown): PremiumBillingState {
   const result = premiumBillingSchema.safeParse(value);
   if (!result.success) throw new Error('Billing details could not be verified. Please retry. Your free account remains available.');

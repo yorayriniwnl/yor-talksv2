@@ -1,4 +1,4 @@
-import { eq, or, and, asc, desc, inArray, gt, lt, sql } from "drizzle-orm";
+import { eq, or, and, asc, desc, inArray, gt, lt, isNull, sql } from "drizzle-orm";
 import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from "@workspace/db/schema";
 import { db, runInDatabaseTransaction } from "@workspace/db";
@@ -112,24 +112,40 @@ export class MessageRepository {
   }
 
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    return db.transaction(async (tx) => {
-      const [visible] = await tx.select({ id: messagesTable.id }).from(messagesTable).where(and(
-        eq(messagesTable.id, messageId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
-      )).for("update");
-      if (!visible) return undefined;
-      await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
-        target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-        set: { previewedAt },
+    class PreviewNoLongerAvailable extends Error {}
+    try {
+      return await db.transaction(async (tx) => {
+        // The row lock serializes previews against reads and deletes.
+        const [visible] = await tx.select().from(messagesTable).where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
+        )).for("update");
+        if (!visible) return undefined;
+        // A recipient read may have committed while the preview waited for the lock.
+        const [read] = await tx.select({ messageId: messageReadsTable.messageId })
+          .from(messageReadsTable)
+          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId)))
+          .limit(1);
+        if (read || (visible.recipientId === userId && visible.seenAt != null)) return undefined;
+        await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+          target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
+          set: { previewedAt },
+        });
+        // Use the database wall clock after the potentially delayed INSERT.
+        // Roll back its event if the message expired during this transaction.
+        const [message] = await tx.select().from(messagesTable).where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, sql`clock_timestamp() AT TIME ZONE 'UTC'`)),
+        ));
+        if (!message) throw new PreviewNoLongerAvailable();
+        return message as MessageRecord;
       });
-      const [message] = await tx.select().from(messagesTable).where(and(
-        eq(messagesTable.id, messageId),
-        isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-      ));
-      return message as MessageRecord | undefined;
-    });
+    } catch (error) {
+      if (error instanceof PreviewNoLongerAvailable) return undefined;
+      throw error;
+    }
   }
 
   async hasReadReceipt(messageId: string, userId: string): Promise<boolean> {
@@ -143,16 +159,51 @@ export class MessageRepository {
     return Boolean(receipt);
   }
   
-  async update(messageId: string, updates: Partial<MessageRecord>): Promise<MessageRecord | undefined> {
-    const [updated] = await db.update(messagesTable)
-      .set({ ...updates })
-      .where(and(
+  async update(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async (tx) => {
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable)
+        .set({ ...updates })
+        .where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
+        ))
+        .returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return this.update(messageId, updates, authorize);
+  }
+
+  async recordVisibleRead(messageId: string, userId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async (tx) => {
+      const readAt = new Date().toISOString();
+      const [message] = await tx.select().from(messagesTable).where(and(
         eq(messagesTable.id, messageId),
         isNull(messagesTable.deletedAt),
-        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-      ))
-      .returning();
-    return updated as MessageRecord | undefined;
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, readAt)),
+      )).for("update");
+      if (!message) return undefined;
+      await authorize?.();
+      await tx.insert(messageReadsTable).values({ messageId, userId, readAt }).onConflictDoNothing();
+      // A group member reading must never populate the legacy shared seenAt field.
+      // Per-member group receipts live exclusively in message_reads.
+      const [conversation] = await tx.select({ isGroup: conversationsTable.isGroup })
+        .from(conversationsTable).where(eq(conversationsTable.id, message.conversationId)).limit(1);
+      if (!conversation || conversation.isGroup || message.recipientId !== userId || message.senderId === userId) return message as MessageRecord;
+      const [updated] = await tx.update(messagesTable)
+        .set({ seenAt: sql`COALESCE(${messagesTable.seenAt}, ${readAt}::timestamp)` })
+        .where(and(
+          eq(messagesTable.id, messageId),
+          isNull(messagesTable.deletedAt),
+          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, readAt)),
+        ))
+        .returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {

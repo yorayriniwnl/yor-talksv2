@@ -38,8 +38,11 @@ const missingFixtureKeys = [...new Set(requiredComposeKeys)].filter((key) => !fi
 
 const failures = [];
 if (!dockerIgnore.includes('**/.env*')) failures.push('Docker build context must exclude every .env variant, including production credentials');
-for (const dockerfile of ['api-server/Dockerfile', 'social/Dockerfile']) {
-  if (!/^FROM node:24-alpine(?: AS \w+)?$/m.test(read(dockerfile))) failures.push(`${dockerfile} must use the supported Node 24 LTS runtime`);
+if (!/^FROM node:24-alpine$/m.test(read('api-server/Dockerfile'))) {
+  failures.push('API container must use the supported Node 24 Alpine runtime');
+}
+if (!/^FROM node:24-slim AS build$/m.test(read('social/Dockerfile'))) {
+  failures.push('Web build container must use Node 24 Debian with the supported glibc Rollup binary');
 }
 if (!/^FROM nginx:1\.30-alpine$/m.test(read('social/Dockerfile'))) failures.push('Web container must use the maintained Nginx stable release');
 if (!apiSection || !apiEnvironment) failures.push("Could not locate the production API environment block");

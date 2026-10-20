@@ -4,7 +4,6 @@ import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { hasHealthyLifecycleWorker, hasHealthyNotificationWorker } from "../lib/worker-health.js";
-import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
 import { inspectMediaReadiness } from '../services/media-readiness.js';
 
 const router = Router();

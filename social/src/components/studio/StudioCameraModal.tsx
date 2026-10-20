@@ -6,7 +6,7 @@ import {
   Send, Layers, Wand2, Flame, Heart, Compass, MapPin, 
   HelpCircle, BarChart2, Clock, Globe, ArrowRight, Play, Square
 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/lib/store';
@@ -331,7 +331,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         toast.success('✨ Story added to your 24h highlights!');
       } else {
         await addPost(caption.trim() || 'Shared via Yor Talks Studio 🚀', [uploaded.mediaId], undefined, contentRating, contentCategory);
-        toast.success('🚀 Published to the global feed!');
+        toast.success('🚀 Published to the feed!');
       }
 
       onOpenChange(false);
@@ -353,6 +353,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[92vh] max-h-[850px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans">
+        <DialogTitle className="sr-only">Studio Camera</DialogTitle>
         
         {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-border/30 glass-heavy z-20 shrink-0">
@@ -360,10 +361,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary via-red-900 to-accent text-white flex items-center justify-center font-bold font-display shadow-md glow-neon-primary text-sm">
               YT
             </div>
-            <span className="font-display font-extrabold text-sm text-foreground">Ultra Studio Camera</span>
-            <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
-              PRO 4K 🇮🇳
-            </span>
+            <span className="font-display font-extrabold text-sm text-foreground">Studio Camera</span>
           </div>
 
           {/* Mode Switcher Tabs */}
@@ -393,10 +391,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           </div>
 
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
             aria-label="Close studio camera"
             disabled={publishing || capturing || isRecording}
-            aria-label="Close Studio Camera"
             className="w-8 h-8 rounded-full hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -416,6 +414,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                 autoPlay
                 playsInline
                 muted
+                aria-label="Camera preview"
                 className={cn(
                   "w-full h-full object-cover transition-all duration-300",
                   !cameraActive && "hidden"
@@ -432,10 +431,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                     <Camera className="w-12 h-12 text-primary" />
                   </div>
                   <h3 className="font-display font-black text-xl text-foreground relative z-10">
-                    Cinematic 4K Simulator Ready
+                    Camera preview unavailable
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-sm mt-1 relative z-10 font-sans">
-                    Live camera stream will render with real-time WebGL shaders, beat sync, and interactive Yor stickers.
+                    Allow camera access in your browser to preview and capture media.
                   </p>
                 </div>
               )}
@@ -503,22 +502,21 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             {/* Bottom Camera Trigger Controls */}
             <div className="absolute bottom-6 inset-x-0 flex items-center justify-center gap-6 z-20">
               <button
+                type="button"
                 onClick={() => setFacingMode((f) => (f === 'user' ? 'environment' : 'user'))}
                 disabled={publishing || capturing || isRecording}
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"
-                title="Flip Camera"
+                aria-label="Flip camera"
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
 
               {/* Shutter Button */}
               <button
-                onClick={isRecording ? handleStopRecording : handleStartRecording}
-                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-                aria-pressed={isRecording}
                 onClick={mode === 'post' ? () => void handleCapturePhoto() : handleStartRecording}
                 disabled={publishing || capturing || isRecording || !cameraActive}
                 aria-label={mode === 'post' ? 'Capture photo' : 'Record video'}
+                aria-pressed={mode !== 'post' && isRecording}
                 className={cn(
                   "w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer",
                   isRecording 
@@ -536,9 +534,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               {isRecording && <button type="button" onClick={handleStopRecording} aria-label="Stop recording" className="rounded-full bg-red-600 p-3 text-white"><Square className="h-6 w-6" /></button>}
 
               <button
+                type="button"
                 onClick={() => setStickersDrawerOpen(true)}
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"
-                title="Add Interactive Stickers"
+                aria-label="Add interactive stickers"
               >
                 <Smile className="w-5 h-5 text-amber-400" />
               </button>

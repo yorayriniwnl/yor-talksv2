@@ -332,10 +332,9 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
-    if (!this.isMessageVisible(persisted)) {
-      throw new UnauthorizedError("This message is no longer available");
-    }
-    return persisted;
+    // A replayed idempotency key must never resurrect expired or deleted content,
+    // including after the earlier visible-row lookup misses it.
+    return this.isMessageVisible(persisted) ? persisted : toMessageTombstone(persisted);
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
@@ -352,7 +351,17 @@ export class MessageService {
     if (!members.includes(userId)) {
       return [];
     }
-    const messages = await this.messageRepository.listConversation(conversationId, options);
+    // Deny stale legacy threads and revoked group approvals at both the
+    // service and transactional storage boundaries, including concurrent revocation.
+    try { await this.requireConversationContacts(members, 'read', conversationId); }
+    catch (error) { if (error instanceof UnauthorizedError) return []; throw error; }
+    let messages: MessageRecord[];
+    try {
+      messages = await this.messageRepository.listConversation(
+        conversationId, options,
+        () => this.lockConversationContacts(members, 'read', conversationId),
+      );
+    } catch (error) { if (error instanceof UnauthorizedError) return []; throw error; }
     const withReceipts = await this.withReadReceipts(messages.filter((message: MessageRecord) => this.isMessageVisible(message)), userId);
     return withReceipts.filter((message) => this.isMessageVisible(message));
   }
@@ -412,7 +421,7 @@ export class MessageService {
     const visibleResults=results.filter((result):result is NonNullable<typeof result>=>Boolean(result));
     const lastMessages = visibleResults.flatMap((result) => result.lastMessage ? [result.lastMessage] : []);
     const receipts = new Map((await this.withReadReceipts(lastMessages, userId)).map((message) => [message.id, message]));
-    return results.map((result) => {
+    return visibleResults.map((result) => {
       const lastMessage = result.lastMessage ? receipts.get(result.lastMessage.id) : undefined;
       return { ...result, lastMessage: lastMessage && this.isMessageVisible(lastMessage) ? lastMessage : undefined };
     });
@@ -444,6 +453,22 @@ export class MessageService {
     if(!members.includes(userId))return undefined;
     try { await this.requireConversationContacts(members,'read',candidate.conversationId); }
     catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
+    const conversation = await this.conversationRepository.findById(candidate.conversationId);
+    if (conversation?.vanishMode && candidate.senderId !== userId) {
+      // Vanish mode is an expiry of visible content, not merely a read receipt.
+      // Mark the row deleted atomically after reauthorizing its contacts; keep
+      // the stored bytes for controlled retention, but never return them.
+      try {
+        const vanished = await this.messageRepository.updateVisible(
+          messageId, { deletedAt: new Date().toISOString() },
+          () => this.lockConversationContacts(members, 'read', candidate.conversationId),
+        );
+        return vanished ? toMessageTombstone(vanished) : undefined;
+      } catch (error) {
+        if (error instanceof UnauthorizedError) return undefined;
+        throw error;
+      }
+    }
     // A minor or unverified account may read messages without creating a
     // sender-visible receipt. Keep this decision at the storage boundary.
     if (!(await this.readReceiptsEnabled(userId))) return candidate;

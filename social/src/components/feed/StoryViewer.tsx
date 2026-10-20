@@ -368,7 +368,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             onClick={handleTap}
           >
             {currentStory.type === 'image' || currentStory.type === 'video' ? (
-              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
+              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt={`Story photo shared by ${author?.displayName || author?.username || 'a member'}`} />
             ) : null}
             
             {currentStory.type === 'text' && (

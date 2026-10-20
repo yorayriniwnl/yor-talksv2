@@ -61,11 +61,10 @@ try {
   if (readinessBody.status !== "healthy") {
     throw new Error(`API readiness status is not 'healthy': ${readinessBody.status}`);
   }
-  if (readinessBody.services?.database !== "up") {
-    throw new Error(`Database is not healthy: ${readinessBody.services?.database || "unknown"}`);
-  }
-  if (readinessBody.services?.redis !== "up") {
-    throw new Error(`Redis is not healthy: ${readinessBody.services?.redis || "unknown"}`);
+  // A production 200 response is emitted only after the API has checked the
+  // database, Redis, and required workers. Their internals must stay private.
+  if ("services" in readinessBody || "details" in readinessBody) {
+    throw new Error("Production readiness exposed internal dependency diagnostics");
   }
   await log("API-HEALTH", "✓ API healthy");
   await log("DATABASE", `✓ PostgreSQL connected and responding`);

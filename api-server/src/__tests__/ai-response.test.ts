@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { env } from "../config/env.js";
 import { AIService, ModerationUnavailableError } from "../services/ai-service.js";
 import { ai, OpenAIProvider } from "../services/ai/AIGateway.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 
 const categories = {
   harassment: false, "harassment/threatening": false,
@@ -86,10 +87,12 @@ test("Gemini API keys are sent in headers and never included in request URLs", a
     return Response.json({ candidates: [{ content: { parts: [{ text: responses.shift() }] } }] });
   });
 
-  const service = new AIService();
+  const eligibility = new EligibilityService();
+  t.mock.method(eligibility, "requireCapability", async () => undefined);
+  const service = new AIService(eligibility);
   assert.deepEqual(await service.moderate("synthetic content"), { spam: false, toxicity: false, nsfw: false });
-  assert.deepEqual(await service.recommend("synthetic content"), [{ reason: "topic relevance", score: 0.9 }]);
-  assert.deepEqual(await service.tag("synthetic content with hashtag"), ["synthetic-tag"]);
+  assert.deepEqual(await service.recommend("synthetic-user", "synthetic content"), [{ reason: "topic relevance", score: 0.9 }]);
+  assert.deepEqual(await service.tag("synthetic-user", "synthetic content with hashtag"), ["synthetic-tag"]);
   assert.equal(requests.length, 3);
   for (const request of requests) {
     assert.equal(request.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");

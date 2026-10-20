@@ -24,7 +24,7 @@ test("grievance tickets survive service recreation", async () => {
   assert.equal(reloaded?.ticketId, created.ticketId);
   assert.equal(reloaded?.status, "received");
   const publicTicket = toPublicGrievance(reloaded!);
-  assert.deepEqual(Object.keys(publicTicket).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(publicTicket).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
   assert.equal(JSON.stringify(publicTicket).includes(created.reporterEmail), false);
   assert.equal(JSON.stringify(publicTicket).includes(created.reportedUrl), false);
   assert.equal(JSON.stringify(publicTicket).includes(created.description), false);

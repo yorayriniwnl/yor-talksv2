@@ -234,6 +234,8 @@ function Router() {
         <Route path="/privacy" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
+        <Route path="/cookies" component={LegalPage} />
+        <Route path="/refund-policy" component={LegalPage} />
         <Route path="/grievance" component={Grievance} />
         {!currentUser && (
           <>
@@ -251,6 +253,8 @@ function Router() {
             <Route path="/privacy" component={LegalPage} />
             <Route path="/terms" component={LegalPage} />
             <Route path="/community-guidelines" component={LegalPage} />
+            <Route path="/cookies" component={LegalPage} />
+            <Route path="/refund-policy" component={LegalPage} />
             <Route>
               <Redirect to="/consent" />
             </Route>

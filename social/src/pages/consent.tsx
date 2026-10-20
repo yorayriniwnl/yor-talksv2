@@ -40,13 +40,13 @@ export default function ConsentPage() {
           <div>
             <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-primary">One quick account step</p>
             <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight">Review the rules before you enter</h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Yor is updating its public-beta terms. Accepting terms does not confirm your age or enable social features. Your account will use a separate verification step.</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Yor is updating its public-beta terms. Accepting terms does not confirm your age or enable social features. Your account will use a separate verification step. Optional analytics is controlled separately in Settings; this required terms step is not marketing consent.</p>
           </div>
         </div>
 
           <div className="mb-6 grid gap-2 rounded-2xl border border-border/50 bg-muted/20 p-4 text-sm">
           <div className="flex items-center justify-between"><span className="text-muted-foreground">Terms version</span><strong>{publicBetaConfig.termsVersion}</strong></div>
-            <div className="text-muted-foreground">Age group is checked separately using the approved verification provider for your country.</div>
+            <div className="text-muted-foreground">Age eligibility is handled separately. This checkbox does not verify your age; any required age assurance depends on an approved process being configured for your territory.</div>
         </div>
 
         <form onSubmit={submit} className="space-y-4">

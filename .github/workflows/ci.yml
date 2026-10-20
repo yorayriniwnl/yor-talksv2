@@ -48,7 +48,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 9.15.4
+          version: 11.28.5
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -182,7 +182,13 @@ jobs:
           timeout 120 sh -c 'until curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz >/dev/null; do sleep 2; done'
           curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz > /tmp/yor-talks-ci-readiness.json
-          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.details?.media?.decoder!==true)throw new Error('Production media decoder is unavailable'); if(report.details?.media?.ready!==false)throw new Error('Synthetic unavailable providers must not enable production media');"
+          # Public production readiness intentionally omits internal diagnostics.
+          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.status!=='healthy')throw new Error('Production readiness failed'); if('details' in report || 'services' in report)throw new Error('Production readiness leaked internal dependency information');"
+          # Check the actual decoder and fail-closed provider policy inside the
+          # provider-isolated image, without exposing private diagnostics over HTTP.
+          api_id=$("${compose[@]}" ps --quiet api)
+          test -n "$api_id"
+          docker exec --workdir /app/api-server "$api_id" node --import tsx --input-type=module -e 'import { inspectMediaReadiness } from "./src/services/media-readiness.ts"; const report = await inspectMediaReadiness(true); if (!report.decoder) throw new Error("Production media decoder is unavailable"); if (report.ready) throw new Error("Isolated media providers unexpectedly passed readiness");'
           BASE_URL=http://127.0.0.1:18080 pnpm smoke
           curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
 

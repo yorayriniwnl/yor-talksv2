@@ -102,32 +102,7 @@ test("report routes reject anonymous access and keep moderation queue role-restr
     body: JSON.stringify({ entityType: "post", entityId: randomUUID(), reason: "spam" }),
   });
 
-  test("public grievance intake and status responses expose only the allowlisted fields", async () => {
-    const submitted = await fetch(`${baseUrl}/reports/grievance`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: "harassment",
-        reportedUrl: "https://private.example/profile",
-        reporterName: "Private Reporter",
-        reporterEmail: "private-reporter@example.test",
-        description: "Private details that should not be returned.",
-      }),
-    });
-    assert.equal(submitted.status, 201);
-    const created = await submitted.json() as { data: Record<string, unknown> };
-    assert.deepEqual(Object.keys(created.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
-    const ticketId = String(created.data.ticketId);
-    grievanceTicketIds.push(ticketId);
 
-    const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
-    assert.equal(status.status, 200);
-    const loaded = await status.json() as { data: Record<string, unknown> };
-    assert.deepEqual(Object.keys(loaded.data).sort(), ["category", "createdAt", "slaDeadline", "status", "ticketId"]);
-    assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
-    assert.equal(JSON.stringify(loaded).includes("Private details"), false);
-    assert.equal(JSON.stringify(loaded).includes("private.example"), false);
-  });
   assert.equal(anonymousSubmission.status, 401);
 
   const ordinaryUserQueue = await fetch(`${baseUrl}/reports/queue`, {
@@ -143,4 +118,32 @@ test("report routes reject anonymous access and keep moderation queue role-restr
   assert.equal(authenticatedSubmission.status, 201);
   const rows = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM reports WHERE reporter_id = $1", [user.id]);
   assert.equal(Number(rows.rows[0]?.count), 1);
+});
+
+
+test("public grievance intake and status responses expose only the allowlisted fields", async () => {
+  const submitted = await fetch(`${baseUrl}/reports/grievance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      category: "harassment",
+      reportedUrl: "https://private.example/profile",
+      reporterName: "Private Reporter",
+      reporterEmail: "private-reporter@example.test",
+      description: "Private details that should not be returned.",
+    }),
+  });
+  assert.equal(submitted.status, 201);
+  const created = await submitted.json() as { data: Record<string, unknown> };
+  assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  const ticketId = String(created.data.ticketId);
+  grievanceTicketIds.push(ticketId);
+
+  const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
+  assert.equal(status.status, 200);
+  const loaded = await status.json() as { data: Record<string, unknown> };
+  assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
+  assert.equal(JSON.stringify(loaded).includes("Private details"), false);
+  assert.equal(JSON.stringify(loaded).includes("private.example"), false);
 });
