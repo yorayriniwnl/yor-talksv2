@@ -175,6 +175,19 @@ export class AccountService {
         VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
+      // The normalized membership FK cascades on account deletion, but the
+      // legacy JSON participant index has no FK. Keep it free of deleted IDs
+      // in the same transaction so stale identities cannot leak on reads.
+      await tx.execute(sql`
+        UPDATE conversations
+        SET participant_ids = (
+          SELECT COALESCE(jsonb_agg(member.value), '[]'::jsonb)
+          FROM jsonb_array_elements_text(COALESCE(participant_ids, '[]'::jsonb)) AS member(value)
+          WHERE member.value <> ${userId}
+        )
+        WHERE COALESCE(participant_ids, '[]'::jsonb) ? ${userId}
+      `);
+
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
