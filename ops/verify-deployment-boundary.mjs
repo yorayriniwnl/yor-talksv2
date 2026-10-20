@@ -5,6 +5,21 @@ import { verifyRealtime } from './realtime-smoke.mjs';
 const baseUrl = (process.env.BASE_URL || 'http://127.0.0.1:4000').replace(/\/$/, '');
 const browserOrigin = process.env.BROWSER_ORIGIN || 'http://localhost:5173';
 
+// This audit is intentionally opt-in. Never bake account passwords into a
+// repository or send them to a URL that the operator has not approved.
+const fixtureIdentifier = process.env.BOUNDARY_TEST_IDENTIFIER;
+const fixturePassword = process.env.BOUNDARY_TEST_PASSWORD;
+const approvedOrigin = process.env.BOUNDARY_TEST_ALLOWED_BASE_ORIGIN;
+if (!fixtureIdentifier || !fixturePassword || !approvedOrigin) {
+  throw new Error('Set BOUNDARY_TEST_IDENTIFIER, BOUNDARY_TEST_PASSWORD and BOUNDARY_TEST_ALLOWED_BASE_ORIGIN explicitly');
+}
+const parsedBaseUrl = new URL(baseUrl);
+if (parsedBaseUrl.origin !== approvedOrigin
+  || (parsedBaseUrl.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(parsedBaseUrl.hostname))) {
+  throw new Error('Refusing to send login credentials to an unapproved or insecure audit endpoint');
+}
+
+
 const results = {
   timestamp: new Date().toISOString(),
   gitRevision: '',
@@ -23,13 +38,13 @@ function record(name, status, details = {}) {
 
 async function run() {
   console.log('='.repeat(80));
-  console.log('YOR TALKS V3 - PRODUCTION DEPLOYMENT & BOUNDARY VERIFICATION RUNNER');
+  console.log('YOR TALKS - EXPLICIT-TARGET DEPLOYMENT BOUNDARY VERIFICATION');
   console.log('='.repeat(80));
 
   try {
     results.gitRevision = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
   } catch {
-    results.gitRevision = '504b9445ca9fd6ecc42f7b5684ad14bf1e9a476d';
+    results.gitRevision = 'unavailable';
   }
   console.log(`Revision Tested: ${results.gitRevision}`);
   console.log(`Timestamp:       ${results.timestamp}`);
@@ -54,17 +69,12 @@ async function run() {
     assert.equal(res.status, 200, 'Expected /api/readyz status 200');
     const data = await res.json();
     assert.equal(data.status, 'healthy', 'Expected status to be healthy');
-    assert.equal(data.services?.database, 'up', 'Postgres service must be up');
-    assert.equal(data.services?.redis, 'up', 'Redis service must be up');
-    assert.equal(data.services?.api, 'up', 'API service must be up');
-    assert.equal(data.services?.worker, 'up', 'Worker service must be up');
-    assert.equal(data.services?.lifecycleWorker, 'up', 'Lifecycle worker must be up');
+    // Public production readiness proves core dependency checks succeeded
+    // without disclosing service names, Redis versions or worker diagnostics.
+    assert.equal('services' in data, false, 'Public readiness must omit internal services');
+    assert.equal('details' in data, false, 'Public readiness must omit internal details');
     record('2. Readiness probe (/api/readyz)', 'PASSED', {
-      database: data.services.database,
-      redis: data.services.redis,
-      redisVersion: data.details?.redisVersion,
-      worker: data.services.worker,
-      lifecycleWorker: data.services.lifecycleWorker,
+      info: 'Core dependency gate responded healthy without leaking diagnostics',
     });
   } catch (err) {
     record('2. Readiness probe (/api/readyz)', 'FAILED', { error: err.message });
@@ -91,7 +101,7 @@ async function run() {
     const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: browserOrigin },
-      body: JSON.stringify({ identifier: '2329001@kiit.ac.in', password: 'yorayriniwnl' }),
+      body: JSON.stringify({ identifier: fixtureIdentifier, password: fixturePassword }),
     });
     assert.equal(loginRes.status, 200, 'Login expected status 200');
     const loginSetCookie = loginRes.headers.get('set-cookie') || '';
@@ -135,22 +145,20 @@ async function run() {
     record('4. Session Lifecycle & Revocation', 'FAILED', { error: err.message });
   }
 
-  // 5. Worker Heartbeats & Process Persistence
+  // 5. Public readiness is a summary. Its backend gate checks mandatory
+  // services before issuing 200; private heartbeat details must be reviewed
+  // independently from the isolated service runtime.
   try {
     const readyRes = await fetch(`${baseUrl}/api/readyz`);
+    assert.equal(readyRes.status, 200, 'Core worker/dependency readiness is unavailable');
     const readyData = await readyRes.json();
-    assert.equal(readyData.services?.worker, 'up', 'worker heartbeat must be active in Redis');
-    assert.equal(readyData.services?.lifecycleWorker, 'up', 'lifecycle worker heartbeat must be active in Postgres');
-    assert.equal(readyData.details?.lifecycleCleanup?.overdueJobs, 0, 'overdue cleanup jobs must be 0');
-    assert.equal(readyData.details?.lifecycleCleanup?.deadJobs, 0, 'dead cleanup jobs must be 0');
-    record('5. Worker Heartbeats & Process Persistence', 'PASSED', {
-      notificationWorker: 'up (Redis worker:notification:heartbeat ready)',
-      lifecycleWorker: 'up (PostgreSQL runtime_heartbeats active)',
-      overdueCleanupJobs: 0,
-      deadCleanupJobs: 0,
+    assert.equal(readyData.status, 'healthy');
+    assert.equal('services' in readyData || 'details' in readyData, false);
+    record('5. Core readiness gating (public)', 'PASSED', {
+      info: 'Private worker heartbeats and cleanup queues require separate operator inspection',
     });
   } catch (err) {
-    record('5. Worker Heartbeats & Process Persistence', 'FAILED', { error: err.message });
+    record('5. Core readiness gating (public)', 'FAILED', { error: err.message });
   }
 
   // 6. Security, Origin & Eligibility Boundaries
@@ -186,23 +194,20 @@ async function run() {
     record('6. Security & Eligibility Boundaries', 'FAILED', { error: err.message });
   }
 
-  // 7. Optional Feature Gate Protection (Held Disabled)
+  // 7. An anonymous denial is not proof that optional paid or live services
+  // are disabled. Check only what this unauthenticated probe can verify.
   try {
     const paymentCheck = await fetch(`${baseUrl}/api/payment-operations/checkout-sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ planId: 'pro' }),
     });
-    assert.ok([401, 403, 404, 503].includes(paymentCheck.status), `Payment check unexpected status ${paymentCheck.status}`);
-
-    record('7. Optional Feature Gates Enforced Closed', 'PASSED', {
-      PAYMENTS_ENABLED: 'false (zero provider requests)',
-      LIVE_ROOMS_ENABLED: 'false (zero LiveKit tokens generated)',
-      RTC_CALLS_ENABLED: 'false (signaling rejected)',
-      WEB_PUSH_ENABLED: 'false (external push endpoints denied)',
+    assert.ok([401, 403, 404, 503].includes(paymentCheck.status), `Anonymous payment probe unexpectedly returned ${paymentCheck.status}`);
+    record('7. Anonymous payment access denied', 'PASSED', {
+      info: 'Optional feature flags and real provider calls require separate privileged verification',
     });
   } catch (err) {
-    record('7. Optional Feature Gates Enforced Closed', 'FAILED', { error: err.message });
+    record('7. Anonymous payment access denied', 'FAILED', { error: err.message });
   }
 
   console.log('-'.repeat(80));
