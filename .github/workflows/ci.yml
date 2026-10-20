@@ -59,12 +59,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit production dependencies
+      - name: Audit production and build dependencies
         run: |
-          pnpm --dir api-server audit --prod
-          pnpm --dir social audit --prod
-          pnpm --dir lib/db audit --prod
-          pnpm audit --prod
+          # Include dev/build dependencies. A transitive high-severity issue in
+          # markdown-it was invisible to the earlier production-only audit.
+          pnpm audit --audit-level high
 
       - name: Verify API contract is synchronized
         run: pnpm contract:check
