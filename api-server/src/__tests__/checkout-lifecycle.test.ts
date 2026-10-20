@@ -5,6 +5,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '@workspace/db';
 import { env } from '../config/env.js';
+import { mockVerifiedAdultEligibility } from './verified-eligibility-fixture.js';
 import { RazorpayService } from '../services/razorpay-service.js';
 import { PaymentService } from '../services/payment-service.js';
 import { SubscriptionService } from '../services/subscription-service.js';
@@ -220,7 +221,8 @@ test('refund identifiers use literal prefixes and cannot collide across provider
   await assert.rejects(tips.reconcileRefund({id:refund.id,paymentId:payment.id,amountMinor:400,currency:'INR'}),/different amount/);
 });
 
-test('billing history authenticates, binds ownership, and denies cross-origin cancellation', async () => {
+test('billing history authenticates, binds ownership, and denies cross-origin cancellation', async t => {
+  mockVerifiedAdultEligibility(t);
   const owner=await person(),creator=await person(),other=await person();
   const order=await tips.createTipOrder({payerId:owner,creatorId:creator,amountMinor:500});
   await redis.setStrict(`session:${other}:checkout-test`,'synthetic-hash',120);

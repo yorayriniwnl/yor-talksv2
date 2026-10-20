@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { after, test } from 'node:test';
+import { after, test, type TestContext } from 'node:test';
 import { createHash, randomUUID } from 'node:crypto';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '@workspace/db';
 import { env } from '../config/env.js';
+import { mockVerifiedAdultEligibility } from './verified-eligibility-fixture.js';
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { UserRepository } from '../repositories/user-repository.js';
 import { createTestUser } from './test-helpers.js';
@@ -35,7 +36,8 @@ async function account(){
   const deviceId=randomUUID();await redis.setStrict(`session:${user.id}:${deviceId}`,'active',600);
   return {user,token:jwt.sign({sub:user.id,deviceId,type:'access',authVersion:user.authVersion??0},env.JWT_SECRET,{algorithm:'HS256',expiresIn:600})};
 }
-async function serve(t:{after(fn:()=>Promise<void>):void},storage=provider(),moderator=approved){
+async function serve(t: TestContext,storage=provider(),moderator=approved){
+  mockVerifiedAdultEligibility(t);
   const service=new MediaService(storage,moderator),delivery=new MediaDeliveryService(storage);
   const app=express();app.use(express.json());app.use(mediaResponse);app.use('/api',createMediaRouter(service,delivery));app.use('/api/business',businessRouter);app.use(errorHandler);
   const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));

@@ -5,6 +5,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '@workspace/db';
 import { env } from '../config/env.js';
+import { mockVerifiedAdultEligibility } from './verified-eligibility-fixture.js';
 import { PlatformPremiumService } from '../services/platform-premium-service.js';
 import { FeatureEntitlementService } from '../services/feature-entitlement-service.js';
 import { RazorpayService } from '../services/razorpay-service.js';
@@ -247,7 +248,8 @@ test('free/expired saved typography continues to send ordinary messages without 
   await assert.rejects(messages.sendMessage(sender, recipient, 'Invalid style', { textStyleId: 'url(evil)' as 'default' }), /not supported/);
 });
 
-test('real authenticated HTTP state enforces ownership, rejects client entitlement fields and cross-origin mutations', async () => {
+test('real authenticated HTTP state enforces ownership, rejects client entitlement fields and cross-origin mutations', async t => {
+  mockVerifiedAdultEligibility(t);
   const userId = await person(), other = await person(), order = await service.createOrder(other, input());
   await redis.setStrict(`session:${userId}:premium-test`, 'synthetic-hash', 120);
   const token = jwt.sign({ sub: userId, deviceId: 'premium-test', type: 'access', authVersion: 0 }, env.JWT_SECRET, { expiresIn: '2m' });

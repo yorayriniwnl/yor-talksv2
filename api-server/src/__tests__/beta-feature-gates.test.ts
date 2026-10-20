@@ -4,6 +4,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { db, pool } from '@workspace/db';
 import { env } from '../config/env.js';
+import { mockVerifiedAdultEligibility } from './verified-eligibility-fixture.js';
 import { PaymentService } from '../services/payment-service.js';
 import { SubscriptionService } from '../services/subscription-service.js';
 import { PaymentsNotConfiguredError } from '../services/razorpay-service.js';
@@ -35,6 +36,7 @@ test('disabled beta features stay closed through both HTTP API prefixes without 
   const original = { PUBLIC_BETA: env.PUBLIC_BETA, PAYMENTS_ENABLED: env.PAYMENTS_ENABLED, LIVE_ROOMS_ENABLED: env.LIVE_ROOMS_ENABLED, WEB_PUSH_ENABLED: env.WEB_PUSH_ENABLED };
   Object.assign(env, { PUBLIC_BETA: true, PAYMENTS_ENABLED: false, LIVE_ROOMS_ENABLED: false, WEB_PUSH_ENABLED: false });
   t.after(() => Object.assign(env, original));
+  mockVerifiedAdultEligibility(t);
   t.mock.method(RedisRepository.prototype, 'getStrict', async () => 'fixture-session');
   t.mock.method(UserRepository.prototype, 'findById', async () => ({ id: actorId, role: 'user', permissions: [], accountStatus: 'active', termsVersion: env.TERMS_VERSION, termsAcceptedAt: '2026-08-31', ageConfirmedAt: '2026-08-31' }));
   const routes = express.Router();
