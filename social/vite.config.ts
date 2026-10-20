@@ -19,6 +19,9 @@ function readBooleanEnv(environment: BuildEnvironment, name: string, fallback = 
 
 function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void {
   if (!readBooleanEnv(environment, 'VITE_PUBLIC_BETA')) return;
+  if (!readBooleanEnv(environment, 'VITE_LEGAL_CONTENT_REVIEWED')) {
+    throw new Error('[Vite Config Error] VITE_PUBLIC_BETA requires explicit review and approval of legal, privacy, and grievance content');
+  }
   const required = [
     'VITE_TERMS_VERSION',
     'VITE_LEGAL_OPERATOR_NAME',
@@ -39,7 +42,9 @@ function assertPublicBetaBuildConfiguration(environment: BuildEnvironment): void
   if (missing.length) {
     throw new Error(`[Vite Config Error] VITE_PUBLIC_BETA requires: ${missing.join(', ')}`);
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(environment.VITE_LEGAL_EFFECTIVE_DATE || '') || Number.isNaN(Date.parse(environment.VITE_LEGAL_EFFECTIVE_DATE || ''))) {
+  const effectiveDate = environment.VITE_LEGAL_EFFECTIVE_DATE?.trim() || '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate) || Number.isNaN(Date.parse(effectiveDate))
+    || new Date(effectiveDate).toISOString().slice(0, 10) !== effectiveDate) {
     throw new Error('[Vite Config Error] VITE_LEGAL_EFFECTIVE_DATE must be an ISO date (YYYY-MM-DD)');
   }
   for (const key of ['VITE_PRIVACY_CONTACT_EMAIL', 'VITE_SUPPORT_EMAIL', 'VITE_GRIEVANCE_CONTACT_EMAIL']) {
