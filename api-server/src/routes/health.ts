@@ -4,7 +4,8 @@ import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { hasHealthyLifecycleWorker, hasHealthyNotificationWorker } from "../lib/worker-health.js";
-import { inspectMediaReadiness } from '../services/media-readiness.js';
+import { getMediaReadinessSnapshot } from '../services/media-readiness.js';
+import { inspectLifecycleHealth } from '../lib/lifecycle-health.js';
 
 const router = Router();
 
@@ -98,62 +99,7 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
   };
 }
 
-const readinessHandler = async (_req: Request, res: Response) => {
-  const production = env.NODE_ENV === "production";
-  const services: Record<string, "up" | "down"> = {
-    database: "down",
-    redis: "down",
-    api: "up",
-    worker: "down",
-    lifecycleWorker: "down",
-  };
-
-  const details: Record<string, unknown> = production
-    ? {}
-    : { environment: env.NODE_ENV, nodeVersion: process.version };
-
-  try {
-    await withHealthTimeout(db.execute(sql`SELECT 1`), "Database");
-    details.media = await inspectMediaReadiness();
-    await db.execute(sql`SELECT 1`);
-    services.database = "up";
-
-    const redis = await withHealthTimeout(inspectRedisCompatibility(env.REDIS_URL), "Redis");
-    if (!redis.compatible) {
-      throw new Error(`Redis is not ready (${redis.reason ?? "unsupported"})`);
-    }
-    services.redis = "up";
-    if (redis.version && !production) {
-      details.redisVersion = redis.version;
-    }
-
-    if (!(await withHealthTimeout(hasHealthyNotificationWorker(), "Notification worker"))) {
-      throw new Error("Required notification worker is not ready");
-    }
-    services.worker = "up";
-
-    if (!(await withHealthTimeout(hasHealthyLifecycleWorker(), "Lifecycle worker"))) {
-      throw new Error("Required lifecycle worker is not ready");
-    }
-    services.lifecycleWorker = "up";
-
-    res.status(200).json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      ...(production ? {} : { services, details }),
-      uptime: process.uptime(),
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: "unhealthy",
-      timestamp: new Date().toISOString(),
-      ...(production ? {} : { services, details }),
-      error: production
-        ? "Readiness checks failed"
-        : error instanceof Error ? error.message : "One or more dependencies are unavailable",
-    });
-  }
-};
+const readinessHandler = createReadinessHandler();
 
 router.get("/", readinessHandler);
 router.get("/healthz", liveHandler);
