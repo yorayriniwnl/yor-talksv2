@@ -35,6 +35,8 @@ export default defineConfig({
       ...process.env,
       VITE_REALTIME_ENABLED: "false",
       VITE_PUBLIC_BETA: "true",
+      // Synthetic content is explicitly reviewed for E2E only; production remains fail-closed.
+      VITE_LEGAL_CONTENT_REVIEWED: "true",
       VITE_TERMS_VERSION: "test-public-beta-1",
       VITE_MINIMUM_AGE: "18",
       VITE_LEGAL_OPERATOR_NAME: "Yor Talks Test Operator",
