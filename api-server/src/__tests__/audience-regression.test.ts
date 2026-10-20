@@ -84,7 +84,7 @@ test('warm search and trending caches cannot restore edited, restricted or delet
   assert.ok(!(await feed.getTrendingFeed(undefined, 100, viewer.id)).some(row => row.id === item.id));
 });
 
-test('visibility uses two SQL queries for fifty candidates and preserves keyset pagination after filtering', async (t) => {
+test('visibility uses three bounded SQL queries for fifty candidates and preserves keyset pagination after filtering', async (t) => {
   const author = await createTestUser(users);
   const viewer = await createTestUser(users);
   const posts = new PostRepository();
@@ -95,7 +95,8 @@ test('visibility uses two SQL queries for fifty candidates and preserves keyset 
   const spy = t.mock.method(pool, 'query', ((...args: any[]) => { queries++; return (original as any)(...args); }) as any);
   const started = performance.now();
   assert.equal((await service.filterVisibleByAuthor(Array(50).fill(fixture), viewer.id, row => row.authorId)).length, 50);
-  assert.equal(queries, 2);
+  // The third query checks active moderation enforcement, not each candidate.
+  assert.ok(queries <= 3, `visibility must remain independent of candidate count, observed ${queries}`);
   t.diagnostic(`50 candidates: ${queries} SQL queries, ${(performance.now() - started).toFixed(1)} ms`);
   spy.mock.restore();
   const feed = new PostService(posts, users, new NotificationRepository());
