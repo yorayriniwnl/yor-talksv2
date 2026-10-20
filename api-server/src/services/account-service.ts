@@ -203,6 +203,53 @@ export class AccountService {
         WHERE COALESCE(participant_ids, '[]'::jsonb) ? ${userId}
       `);
 
+
+      // Group membership remains authoritative when a legacy participant leaves.
+      // Retarget both compatibility columns before the user's FK is removed.
+      await tx.execute(sql`UPDATE conversations c SET
+        participant_a=(SELECT cm.user_id FROM conversation_members cm
+          WHERE cm.conversation_id=c.id AND cm.user_id<>${userId}
+          ORDER BY cm.user_id LIMIT 1),
+        participant_b=(SELECT cm.user_id FROM conversation_members cm
+          WHERE cm.conversation_id=c.id AND cm.user_id<>${userId}
+          ORDER BY cm.user_id DESC LIMIT 1)
+        WHERE c.is_group=true AND EXISTS(
+          SELECT 1 FROM conversation_members cm
+          WHERE cm.conversation_id=c.id AND cm.user_id=${userId}
+        )`);
+      // Membership cascades after deletion; elect a replacement admin first.
+      await tx.execute(sql`UPDATE conversation_members cm SET role='admin'
+        WHERE cm.user_id=(SELECT survivor.user_id FROM conversation_members survivor
+          WHERE survivor.conversation_id=cm.conversation_id AND survivor.user_id<>${userId}
+          ORDER BY survivor.joined_at,survivor.user_id LIMIT 1)
+        AND cm.conversation_id IN (SELECT conversation_id FROM conversation_members
+          WHERE user_id=${userId} AND role='admin')
+        AND NOT EXISTS (SELECT 1 FROM conversation_members remaining
+          WHERE remaining.conversation_id=cm.conversation_id
+          AND remaining.user_id<>${userId} AND remaining.role='admin')`);
+      // Group invitations created against the old roster cannot remain pending.
+      await tx.execute(sql`UPDATE conversation_invitations i SET
+        state='revoked',
+        member_ids_at_invite=coalesce((
+          SELECT jsonb_agg(item.value ORDER BY item.ordinality)
+          FROM jsonb_array_elements_text(coalesce(i.member_ids_at_invite,'[]'::jsonb))
+            WITH ORDINALITY item(value,ordinality)
+          WHERE item.value<>${userId}),'[]'::jsonb),
+        guardian_required_user_ids=coalesce((
+          SELECT jsonb_agg(item.value ORDER BY item.ordinality)
+          FROM jsonb_array_elements_text(coalesce(i.guardian_required_user_ids,'[]'::jsonb))
+            WITH ORDINALITY item(value,ordinality)
+          WHERE item.value<>${userId}),'[]'::jsonb)
+        WHERE i.conversation_id IN (SELECT conversation_id FROM conversation_members
+          WHERE user_id=${userId})`);
+      // The legacy message recipient is not the group authorization boundary.
+      // Preserve shared history, replacing only obsolete recipient metadata.
+      await tx.execute(sql`UPDATE messages m SET recipient_id=(
+        SELECT cm.user_id FROM conversation_members cm
+        WHERE cm.conversation_id=m.conversation_id AND cm.user_id<>${userId}
+        ORDER BY CASE WHEN cm.user_id=m.sender_id THEN 1 ELSE 0 END,cm.user_id LIMIT 1)
+        WHERE m.recipient_id=${userId} AND EXISTS(
+          SELECT 1 FROM conversations c WHERE c.id=m.conversation_id AND c.is_group=true)`);
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
