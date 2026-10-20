@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24-slim AS build
 
 WORKDIR /app
 RUN npm install --global pnpm@11.28.5 --no-audit --no-fund
