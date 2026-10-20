@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import pinoHttpFactory from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
+import { requestLogPath } from "./lib/request-log-path.js";
 import { env, corsOrigins } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { requestContext } from "./middlewares/request-context.js";
@@ -26,7 +27,7 @@ const requestLogger = (pinoHttpFactory as unknown as (options: Record<string, un
         id: req.id,
         requestId: (req as any).requestId,
         method: req.method,
-        url: req.url?.split("?")[0],
+        url: requestLogPath(req.url),
       };
     },
     res(res: Response) {
