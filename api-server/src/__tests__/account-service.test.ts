@@ -148,8 +148,9 @@ test("deleting a group creator removes stale participant IDs without deleting su
       participant_a: string | null; participant_b: string | null; participant_ids: string[];
     }>("SELECT participant_a, participant_b, participant_ids FROM conversations WHERE id = $1", [conversation.id]);
     assert.equal(conversationRows.length, 1, "Group conversation must survive creator deletion");
-    assert.equal(conversationRows[0].participant_a, null, "Legacy creator FK must be cleared");
-    assert.equal(conversationRows[0].participant_b, null, "Legacy creator FK must be cleared");
+    const survivingIds = [survivorA.id, survivorB.id].sort();
+    assert.equal(conversationRows[0].participant_a, survivingIds[0], "Group metadata must reference a living member");
+    assert.equal(conversationRows[0].participant_b, survivingIds[1], "Group metadata must reference a living member");
     assert.deepEqual((conversationRows[0].participant_ids ?? []).sort(), [survivorA.id, survivorB.id].sort(),
       "Deleted account must not remain in the legacy participant index");
 
