@@ -1,29 +1,28 @@
-import { execSync, spawn } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../api-server/package.json', import.meta.url));
 const bcrypt = require('bcryptjs');
 
-const pgData = 'C:/Users/yoray/AppData/Local/Temp/yor-privacy-verification-20261009/pgdata';
-const logFile = 'C:/Users/yoray/AppData/Local/Temp/yor-privacy-verification-20261009/postgres.log';
-const port = 55438;
-const redisPort = 56379;
-const dbUrl = `postgresql://postgres@127.0.0.1:${port}/yor_privacy_test`;
-const redisUrl = `redis://127.0.0.1:${redisPort}`;
-
-console.log('1. Starting PostgreSQL on port', port);
-try {
-  execSync(`"C:/Users/yoray/pgsql/bin/pg_ctl.exe" -D "${pgData}" -o "-p ${port}" -l "${logFile}" start`, { stdio: 'inherit' });
-} catch (e) {
-  console.log('pg_ctl start reported non-zero, checking if already ready...');
+// Requires a dedicated, externally provisioned test cluster. Never use an
+// implicit application or production database, and never manage host services.
+const dbUrl = process.env.CASCADE_TEST_DATABASE_URL;
+const redisUrl = process.env.CASCADE_TEST_REDIS_URL;
+if (!dbUrl || !redisUrl) {
+  throw new Error('CASCADE_TEST_DATABASE_URL and CASCADE_TEST_REDIS_URL are required');
 }
-execSync(`"C:/Users/yoray/pgsql/bin/pg_isready.exe" -h 127.0.0.1 -p ${port}`, { stdio: 'inherit' });
-
-console.log('2. Starting Redis on port', redisPort);
-const redisProcess = spawn('C:/Users/yoray/redis/redis-server.exe', ['--port', String(redisPort)], { stdio: 'ignore' });
-await new Promise(r => setTimeout(r, 1000));
-execSync(`"C:/Users/yoray/redis/redis-cli.exe" -p ${redisPort} ping`, { stdio: 'inherit' });
+const db = new URL(dbUrl);
+const redis = new URL(redisUrl);
+if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(db.hostname)
+  || !['localhost', '127.0.0.1', '::1', '[::1]'].includes(redis.hostname)
+  || !/^yor_privacy_test(?:_|$)/.test(db.pathname.slice(1))
+  || !['postgres:', 'postgresql:'].includes(db.protocol)
+  || redis.protocol !== 'redis:') {
+  throw new Error('Cascade test requires a loopback, dedicated yor_privacy_test database and local Redis');
+}
+console.log('Testing an isolated caller-provisioned PostgreSQL and Redis instance');
+let testPool;
 
 try {
   console.log('3. Running production migration against isolated synthetic cluster...');
@@ -38,6 +37,7 @@ try {
   });
 
   const { pool } = await import('../lib/db/src/index.ts');
+  testPool = pool;
   const { UserRepository } = await import('../api-server/src/repositories/user-repository.ts');
   const { ConversationRepository, MessageRepository } = await import('../api-server/src/repositories/message-repository.ts');
   const { MessageService } = await import('../api-server/src/services/message-service.ts');
@@ -107,13 +107,8 @@ try {
   assert.equal(remainingConversations2, 1, 'Group conversation MUST survive member B deletion');
   assert.equal(survivingCContribution, 1, 'Member C contribution MUST survive member B deletion');
 
-  await pool.end();
   console.log('\n*** CASCADE SAFETY VERIFICATION PASSED SUCCESSFULLY! ***\n');
 } finally {
-  console.log('Stopping Redis...');
-  try { execSync(`"C:/Users/yoray/redis/redis-cli.exe" -p ${redisPort} shutdown`); } catch {}
-  redisProcess.kill();
-
-  console.log('Stopping PostgreSQL...');
-  try { execSync(`"C:/Users/yoray/pgsql/bin/pg_ctl.exe" -D "${pgData}" stop`); } catch {}
+  // The runner owns the database and Redis lifecycle; never kill shared services.
+  await testPool?.end();
 }
