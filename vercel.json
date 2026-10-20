@@ -1,6 +1,7 @@
 {
   "version": 2,
   "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "node ./build.mjs",
   "outputDirectory": "social/dist/public",
   "functions": {
