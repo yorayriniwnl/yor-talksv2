@@ -105,6 +105,47 @@ if (!quoteYamlParameters || quoteYamlParameters.includes("index")) {
   failures.push("Alertmanager renderer must not shadow awk's built-in index function");
 }
 
+// Keep the Vercel frontend/API build contract aligned with the working release.
+// These are repository-only checks; production secrets stay in Vercel.
+const rootPackage = JSON.parse(read("package.json"));
+const socialPackage = JSON.parse(read("social/package.json"));
+const vercelConfig = JSON.parse(read("vercel.json"));
+if (rootPackage.packageManager !== "pnpm@11.28.5") {
+  failures.push("The Vercel build requires the reviewed pnpm@11.28.5 lockfile toolchain");
+}
+if (rootPackage.scripts?.build !== "node ./build.mjs") {
+  failures.push("The root build script must invoke the monorepo release builder");
+}
+if (socialPackage.scripts?.build !== "vite build --config vite.config.ts") {
+  failures.push("The web build must use the explicit Vite configuration");
+}
+if (vercelConfig.framework !== null) {
+  failures.push("Vercel must not autodetect the Express backend as the frontend framework");
+}
+if (vercelConfig.installCommand !== "pnpm install --frozen-lockfile") {
+  failures.push("Vercel must install dependencies using the pinned frozen pnpm lockfile");
+}
+if (vercelConfig.buildCommand !== rootPackage.scripts?.build) {
+  failures.push("Vercel must run the same root release build used in CI");
+}
+if (vercelConfig.outputDirectory !== "social/dist/public") {
+  failures.push("Vercel must serve the generated public frontend, not unbuilt source");
+}
+if (!vercelConfig.functions?.["api/index.ts"]?.maxDuration) {
+  failures.push("Vercel must declare the bundled Node API function configuration");
+}
+const rewrites = vercelConfig.rewrites ?? [];
+const apiRewrites = ["/api", "/api/(.*)"];
+for (const source of apiRewrites) {
+  if (!rewrites.some((rule) => rule.source === source && rule.destination === "/api/index.ts")) {
+    failures.push(`Vercel must route ${source} requests to the API handler before SPA fallback`);
+  }
+}
+const spaIndex = rewrites.findIndex((rule) => rule.source === "/(.*)" && rule.destination === "/index.html");
+if (spaIndex < 0 || apiRewrites.some((source) => rewrites.findIndex((rule) => rule.source === source) > spaIndex)) {
+  failures.push("Vercel API routes must precede the frontend SPA fallback rewrite");
+}
+
 if (failures.length) {
   console.error("[production config] FAILED");
   for (const failure of failures) console.error(`- ${failure}`);
