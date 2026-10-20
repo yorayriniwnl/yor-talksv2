@@ -51,7 +51,8 @@ jobs:
       - run: pnpm --filter @workspace/db migrate:beta
       - name: Account deletion integrity focused tests
         working-directory: api-server
-        run: timeout 180s node --import tsx --test --test-reporter spec src/__tests__/account-integrity.test.ts
+        run: timeout 70s node --import tsx --test --test-reporter spec src/__tests__/account-integrity.test.ts
       - name: Account export foreign-key decisions
+        if: always()
         working-directory: api-server
-        run: timeout 150s node --import tsx --test --test-reporter spec --test-name-pattern="every migrated user foreign key" src/__tests__/account-export.test.ts
+        run: timeout 70s node --import tsx --test --test-reporter spec --test-name-pattern="every migrated user foreign key" src/__tests__/account-export.test.ts
