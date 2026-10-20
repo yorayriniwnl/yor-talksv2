@@ -280,6 +280,70 @@ export class AccountService {
         ),'[]'::jsonb)
         WHERE coalesce(liked_by,'[]'::jsonb) @> jsonb_build_array(${userId}::text)`);
       }
+
+      for (const column of ['moderators','pending_requests'] as const) {
+        await tx.execute(sql`UPDATE communities SET ${sql.raw(column)}=coalesce((
+          SELECT jsonb_agg(item.value ORDER BY item.ordinality)
+          FROM jsonb_array_elements(coalesce(${sql.raw(column)},'[]'::jsonb))
+            WITH ORDINALITY item(value,ordinality)
+          WHERE item.value<>to_jsonb(${userId}::text)
+        ),'[]'::jsonb)
+        WHERE coalesce(${sql.raw(column)},'[]'::jsonb) @> jsonb_build_array(${userId}::text)`);
+      }
+      // Preserve announcement ordering and unrelated legacy entries. Remove
+      // authored objects and filter likedBy arrays without leaking actor IDs.
+      await tx.execute(sql`UPDATE communities c SET
+        posts_count=greatest(0,coalesce(c.posts_count,0)-(
+          SELECT count(*)::int
+          FROM jsonb_array_elements(coalesce(c.announcements,'[]'::jsonb)) entry(value)
+          WHERE jsonb_typeof(entry.value)='object' AND entry.value->>'authorId'=${userId}
+        )),
+        announcements=coalesce((
+          SELECT jsonb_agg(
+            CASE WHEN jsonb_typeof(entry.value)='object'
+               AND jsonb_typeof(entry.value->'likedBy')='array'
+              THEN jsonb_set(
+                jsonb_set(entry.value,'{likedBy}',filtered.likes),
+                '{likes}',to_jsonb(jsonb_array_length(filtered.likes)))
+            ELSE entry.value END ORDER BY entry.ordinality)
+          FROM jsonb_array_elements(coalesce(c.announcements,'[]'::jsonb))
+            WITH ORDINALITY entry(value,ordinality)
+          CROSS JOIN LATERAL (
+            SELECT coalesce(jsonb_agg(item.value ORDER BY item.ordinality),'[]'::jsonb) AS likes
+            FROM jsonb_array_elements(CASE
+              WHEN jsonb_typeof(entry.value->'likedBy')='array'
+              THEN entry.value->'likedBy' ELSE '[]'::jsonb END)
+              WITH ORDINALITY item(value,ordinality)
+            WHERE item.value<>to_jsonb(${userId}::text)
+          ) filtered
+          WHERE jsonb_typeof(entry.value)<>'object'
+             OR entry.value->>'authorId' IS DISTINCT FROM ${userId}
+        ),'[]'::jsonb)
+        WHERE c.announcements::text LIKE ${'%' + userId + '%'}`);
+      await tx.execute(sql`UPDATE live_streams SET guest_ids=coalesce((
+        SELECT jsonb_agg(entry.value ORDER BY entry.ordinality)
+        FROM jsonb_array_elements(coalesce(guest_ids,'[]'::jsonb))
+          WITH ORDINALITY entry(value,ordinality)
+        WHERE entry.value<>to_jsonb(${userId}::text)
+      ),'[]'::jsonb)
+      WHERE coalesce(guest_ids,'[]'::jsonb) @> jsonb_build_array(${userId}::text)`);
+      for (const column of ['blocked_users','muted_users'] as const) {
+        await tx.execute(sql`UPDATE users SET ${sql.raw(column)}=coalesce((
+          SELECT jsonb_agg(item.value ORDER BY item.ordinality)
+          FROM jsonb_array_elements(coalesce(${sql.raw(column)},'[]'::jsonb))
+            WITH ORDINALITY item(value,ordinality)
+          WHERE item.value<>to_jsonb(${userId}::text)
+        ),'[]'::jsonb)
+        WHERE coalesce(${sql.raw(column)},'[]'::jsonb) @> jsonb_build_array(${userId}::text)`);
+      }
+      // Notification bodies with deleted actors and messages must not be
+      // delivered from already-queued jobs. Remove canonical rows atomically.
+      await tx.execute(sql`DELETE FROM notifications n WHERE
+        n.metadata->>'actorId'=${userId}
+        OR n.related_id IN (SELECT id FROM broadcast_channels WHERE owner_id=${userId})
+        OR n.metadata->>'messageId' IN (SELECT id::text
+          FROM broadcast_channel_messages WHERE author_id=${userId})`);
+      await tx.execute(sql`DELETE FROM broadcast_channel_messages WHERE author_id=${userId}`);
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
