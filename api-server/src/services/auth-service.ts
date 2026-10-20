@@ -109,6 +109,16 @@ export class AuthService {
       const existingEmail = await this.userRepository.findByEmail(email, tx);
       const existingUsername = await this.userRepository.findByUsername(normalizedUsername, tx);
       if (existingEmail || existingUsername) throw new UserAlreadyExistsError("An account already exists for that email or username");
+      // Preregistration ownership is anchored to the verified email identity.
+      const [preregByHandle] = await tx.select().from(preregistrationsTable)
+        .where(eq(preregistrationsTable.username, normalizedUsername)).limit(1);
+      if (preregByHandle && preregByHandle.email.toLowerCase() !== email) {
+        throw new RegistrationNotAllowedError("This username is reserved for a pre-registered account.");
+      }
+      const [preregByEmail] = await tx.select().from(preregistrationsTable)
+        .where(eq(preregistrationsTable.email, email)).limit(1);
+      const founderRecord = preregByEmail ?? preregByHandle ?? null;
+      const isFounder = Boolean(founderRecord);
       const passwordHash = await bcrypt.hash(input.password, 10);
       const consentTimestamp = new Date().toISOString();
       const minor = authorization.experience !== "adult_18_plus";
