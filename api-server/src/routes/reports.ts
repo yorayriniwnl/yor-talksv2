@@ -9,6 +9,7 @@ import { grievanceSchema, grievanceStatusSchema, grievanceTicketParamSchema, gri
 import { reportSchema, reportStatusSchema, reportQueueQuerySchema } from "../validators/report.js";
 import { reportIdParamSchema } from "../validators/params.js";
 import { ModerationService } from "../services/moderation-service.js";
+import { toPublicGrievance } from "../utils/grievance-view.js";
 import { grievanceStatusRateLimiter, grievanceSubmitRateLimiter, reportRateLimiter } from "../middlewares/rate-limit.js";
 import { InvalidStaffQueueCursorError, readStaffQueueCursor, staffQueueAfter, staffQueuePage } from '../utils/staff-queue-page.js';
 
