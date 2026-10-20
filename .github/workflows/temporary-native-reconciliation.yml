@@ -32,7 +32,7 @@ jobs:
           git switch -c temporary-original-merge "$original_head"
           git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' merge --no-edit -X theirs origin/main
           git switch codex/compliance-audit-20261017
-          git restore --source temporary-original-merge --staged --worktree -- . ':(exclude).github/workflows/temporary-native-reconciliation.yml'
+          git restore --source temporary-original-merge --staged --worktree -- . ':(exclude).github/workflows/**'
           git diff --cached --check
           echo 'Prepared genuine line-level, three-way integrated content'
           git diff --cached --stat | tail -30
@@ -56,11 +56,10 @@ jobs:
           if ! git diff --cached --quiet; then
             git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "fix(integration): restore three-way-merged audit and main changes"
           fi
-          git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' merge --no-edit -X theirs origin/main
-          pnpm contract:generate
-          git add -- api-server/src/docs/routes.generated.ts lib/api-spec/openapi.yaml
-          if ! git diff --cached --quiet; then
-            git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "fix(contracts): synchronize post-merge routes"
+          # GitHub App tokens cannot modify protected workflow files; preserve workflow trees.
+          if git diff HEAD --name-only | grep -E '^\\.github/workflows/'; then
+            echo 'Refusing to commit workflow modifications from restricted token'
+            exit 1
           fi
           pnpm contract:check
           git push origin HEAD:refs/heads/codex/compliance-audit-20261017
