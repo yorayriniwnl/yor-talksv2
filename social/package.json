@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
+    "build": "node scripts/build.mjs",
     "postbuild": "node ./scripts/sync-dist.mjs",
     "analyze": "node scripts/analyze-build.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",

@@ -2,39 +2,15 @@ import bcrypt from "bcryptjs";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { randomUUID } from 'node:crypto';
 import {
-  commentsTable,
-  communityMembersTable,
-  contactShieldsTable,
-  eventRsvpsTable,
-  broadcastChannelMembersTable,
   invitesTable,
   ledgerTransactionsTable,
-  marketplaceOrdersTable,
   messagesTable,
-  paymentOrdersTable,
-  postsTable,
-  postBookmarksTable,
-  postLikesTable,
-  postPollVotesTable,
-  postRepostsTable,
-  productSavesTable,
-  reportsTable,
-  storiesTable,
-  storyPollVotesTable,
-  storyReactionsTable,
-  storyViewsTable,
-  subscriptionsTable,
-  userCloseFriendsTable,
-  userFavoriteCreatorsTable,
-  userFollowsTable,
-  videoBookmarksTable,
   usersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { toOwnUser } from "../utils/user-view.js";
-import { visibleMessagePredicate } from "../utils/message-visibility.js";
+import { AccountExportNotFoundError, streamAccountExport } from "./account-export.js";
 
 export class InvalidAccountPasswordError extends Error {}
 
@@ -45,6 +21,11 @@ export class AccountService {
     private readonly redisRepository: RedisRepository,
   ) {}
 
+  streamAccountExport(userId: string, options?: { pageSize?: number; signal?: AbortSignal }): AsyncGenerator<string> {
+    return streamAccountExport(userId, options);
+  }
+
+  /** Compatibility helper for internal callers. HTTP downloads consume the generator directly. */
   async exportAccount(userId: string): Promise<Record<string, unknown> | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
@@ -148,6 +129,33 @@ export class AccountService {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
 
+      // The archive already attributes a waitlist address only after email
+      // verification. Apply that same ownership rule when erasing the account;
+      // an unverified signup must not remove somebody else's waitlist record.
+      if (locked.emailVerified) {
+        await tx.execute(sql`DELETE FROM waitlist WHERE lower(email)=lower(${locked.email})`);
+      }
+
+      // Preserve the latest restrictive guardian decision before account
+      // deletion nulls its user reference; older grants must never resurface.
+      await tx.execute(sql`WITH affected_subjects AS MATERIALIZED (
+        SELECT DISTINCT user_id FROM guardian_authorizations WHERE guardian_user_id=${userId} AND user_id IS NOT NULL
+      ), bumped AS (
+        INSERT INTO eligibility_revisions(user_id,revision)
+        SELECT user_id,1 FROM affected_subjects
+        ON CONFLICT(user_id) DO UPDATE SET revision=eligibility_revisions.revision+1,updated_at=clock_timestamp()
+        RETURNING user_id,revision
+      )
+      UPDATE guardian_authorizations g SET status='revoked',withdrawn_at=clock_timestamp(),subject_revision=b.revision
+      FROM bumped b WHERE g.guardian_user_id=${userId} AND g.user_id=b.user_id`);
+      await tx.execute(sql`WITH bumped AS (
+        UPDATE eligibility_enrollments e SET revision=revision+1
+        WHERE e.id IN (SELECT DISTINCT enrollment_id FROM guardian_authorizations WHERE guardian_user_id=${userId} AND enrollment_id IS NOT NULL)
+        RETURNING id,revision
+      )
+      UPDATE guardian_authorizations g SET status='revoked',withdrawn_at=clock_timestamp(),subject_revision=b.revision
+      FROM bumped b WHERE g.guardian_user_id=${userId} AND g.enrollment_id=b.id`);
+
       await tx.update(ledgerTransactionsTable).set({
         creditAccountId: sql`CASE WHEN ${ledgerTransactionsTable.creditAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.creditAccountId} END`,
         debitAccountId: sql`CASE WHEN ${ledgerTransactionsTable.debitAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.debitAccountId} END`,
@@ -172,7 +180,10 @@ export class AccountService {
       await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
         WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
       await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
-        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
+        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({
+          userId,
+          emailHash: createHash('sha256').update(locked.email.trim().toLowerCase()).digest('hex'),
+        })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
       // The normalized membership FK cascades on account deletion, but the

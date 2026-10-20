@@ -15,6 +15,7 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -30,6 +31,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+    restart: unless-stopped
 
   migrate:
     build:
@@ -38,14 +40,22 @@ services:
     command: ["pnpm", "--filter", "@workspace/db", "migrate:production"]
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DATABASE_URL: ${DATABASE_MIGRATION_URL:?Set DATABASE_MIGRATION_URL to the isolated migration/backup owner connection}
+      APP_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the restricted runtime connection}
+      APP_DB_USER: ${APP_DB_USER:?Set APP_DB_USER to a new dedicated restricted runtime role}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD to an independent runtime role secret}
       CONTACT_SHIELD_SECRET: ${CONTACT_SHIELD_SECRET:?Set CONTACT_SHIELD_SECRET in .env.production}
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Set TOTP_ENCRYPTION_KEY in .env.production}
       PUBLIC_BETA: ${PUBLIC_BETA:-true}
       TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.production}
-      MINIMUM_AGE: ${MINIMUM_AGE:-18}
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +79,7 @@ services:
       METRICS_BEARER_TOKEN_FILE: /run/secrets/metrics_bearer_token
       PUBLIC_BETA: ${PUBLIC_BETA:-true}
       TERMS_VERSION: ${TERMS_VERSION:?Set TERMS_VERSION in .env.production}
-      MINIMUM_AGE: ${MINIMUM_AGE:-18}
+      LEGAL_CONTENT_REVIEWED: ${LEGAL_CONTENT_REVIEWED:-false}
       ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-true}
@@ -146,16 +156,25 @@ services:
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:?Set SUPPORT_EMAIL in .env.production}
       GRIEVANCE_OFFICER_NAME: ${GRIEVANCE_OFFICER_NAME:?Set GRIEVANCE_OFFICER_NAME in .env.production}
       GRIEVANCE_CONTACT_EMAIL: ${GRIEVANCE_CONTACT_EMAIL:?Set GRIEVANCE_CONTACT_EMAIL in .env.production}
+      PROMOTIONAL_EMAIL_ENABLED: ${PROMOTIONAL_EMAIL_ENABLED:-false}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     expose:
       - "4000"
     ports:
       - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
     networks:
       - edge
       - backend
     secrets:
       - metrics_bearer_token
+    group_add:
+      - "${SECRET_READER_GID:?Set SECRET_READER_GID to the dedicated host secret-reader group ID}"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -175,12 +194,14 @@ services:
       context: .
       dockerfile: ops/backup/Dockerfile
     environment:
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DATABASE_URL: ${DATABASE_MIGRATION_URL:?Set DATABASE_MIGRATION_URL to the isolated migration/backup owner connection}
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?Set BACKUP_AGE_RECIPIENT in .env.production}
       BACKUP_REMOTE: ${BACKUP_REMOTE:?Set BACKUP_REMOTE in .env.production}
       BACKUP_DIR: /backups
       BACKUP_METRICS_FILE: /metrics/yor-talks-backup.prom
       BACKUP_LOCAL_RETENTION_DAYS: ${BACKUP_LOCAL_RETENTION_DAYS:-14}
+      TMPDIR: /tmp
+      RCLONE_CACHE_DIR: /tmp/rclone-cache
     volumes:
       - backup_staging:/backups
       - backup_metrics:/metrics
@@ -190,6 +211,12 @@ services:
     networks:
       - backend
       - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_healthy
@@ -220,6 +247,8 @@ services:
       - prometheus_data:/prometheus
     secrets:
       - metrics_bearer_token
+    group_add:
+      - "${SECRET_READER_GID:?Set SECRET_READER_GID to the dedicated host secret-reader group ID}"
     networks:
       - backend
     depends_on:
@@ -228,24 +257,51 @@ services:
       - backup-metrics-exporter
     restart: unless-stopped
 
-  alertmanager:
-    image: prom/alertmanager:v0.28.1
-    entrypoint: ["/bin/sh", "/usr/local/bin/render-alertmanager-config.sh"]
+  alertmanager-config:
+    image: node:24-alpine
+    entrypoint: ["node", "/scripts/render-alertmanager-config.mjs"]
+    # This one-shot renderer must write fresh root-owned and older nobody-owned
+    # volumes. Its only writable persistent mount is the generated config.
+    user: "0:0"
     environment:
       ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:?Set ALERTMANAGER_WEBHOOK_URL in .env.production}
       ALERTMANAGER_WEBHOOK_USER: ${ALERTMANAGER_WEBHOOK_USER:?Set ALERTMANAGER_WEBHOOK_USER in .env.production}
+      ALERTMANAGER_TEMPLATE_FILE: /templates/alertmanager.yml
+      ALERTMANAGER_OUTPUT_FILE: /rendered/alertmanager.yml
     volumes:
-      - ./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template:ro
-      - ./ops/prometheus/render-alertmanager-config.sh:/usr/local/bin/render-alertmanager-config.sh:ro
-      - alertmanager_data:/alertmanager
+      - ./ops/prometheus/alertmanager.yml:/templates/alertmanager.yml:ro
+      - ./ops/prometheus/render-alertmanager-config.mjs:/scripts/render-alertmanager-config.mjs:ro
+      - alertmanager_config:/rendered
+    network_mode: none
+    read_only: true
     tmpfs:
-      - /run/alertmanager:mode=0700,uid=65534,gid=65534
+      - /tmp:size=1m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    cap_add: ["DAC_OVERRIDE"]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - alertmanager_config:/etc/alertmanager:ro
+      - alertmanager_data:/alertmanager
     secrets:
       - source: alertmanager_webhook_password
         target: /run/secrets/alertmanager_webhook_password
+    group_add:
+      - "${SECRET_READER_GID:?Set SECRET_READER_GID to the dedicated host secret-reader group ID}"
     networks:
       - edge
       - backend
+    depends_on:
+      alertmanager-config:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   web:
@@ -254,13 +310,15 @@ services:
       dockerfile: social/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_PUBLIC_ORIGIN: ${VITE_PUBLIC_ORIGIN:?Set VITE_PUBLIC_ORIGIN to the production HTTPS web origin}
         VITE_REALTIME_URL: ${VITE_REALTIME_URL:-}
         VITE_REALTIME_ENABLED: ${VITE_REALTIME_ENABLED:-true}
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
         VITE_RTC_ICE_SERVERS: ${VITE_RTC_ICE_SERVERS:-[{"urls":"stun:stun.l.google.com:19302"}]}
+        CSP_LIVEKIT_URL: ${LIVEKIT_URL:-}
         VITE_PUBLIC_BETA: ${PUBLIC_BETA:-true}
         VITE_TERMS_VERSION: ${TERMS_VERSION:-}
-        VITE_MINIMUM_AGE: ${MINIMUM_AGE:-18}
+        VITE_LEGAL_CONTENT_REVIEWED: ${LEGAL_CONTENT_REVIEWED:-false}
         VITE_LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
         VITE_LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
         VITE_LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:-}
@@ -275,7 +333,15 @@ services:
         VITE_WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
         VITE_RTC_CALLS_ENABLED: ${RTC_CALLS_ENABLED:-false}
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=64m,noexec,nosuid,nodev
+      - /var/run:size=1m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE", "CHOWN", "SETUID", "SETGID"]
+    security_opt:
+      - no-new-privileges:true
     networks:
       - edge
     depends_on:
@@ -308,3 +374,4 @@ volumes:
   backup_metrics:
   prometheus_data:
   alertmanager_data:
+  alertmanager_config:

@@ -61,7 +61,7 @@ async function submitPrivateGrievance(): Promise<Record<string, unknown>> {
 
 test("public grievance submission returns only the safe receipt fields", async () => {
   const receipt = await submitPrivateGrievance();
-  assert.deepEqual(Object.keys(receipt).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(receipt).sort(), ["createdAt", "status", "ticketId"]);
   assert.doesNotMatch(JSON.stringify(receipt), /Private Reporter|private-reporter|private-reported-content|Private complaint/);
 });
 
@@ -90,7 +90,7 @@ test("public grievance tracking hides identity and officer notes while moderator
   const tracked = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
   assert.equal(tracked.status, 200);
   const trackedPayload = await tracked.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(trackedPayload.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(trackedPayload.data).sort(), ["createdAt", "status", "ticketId"]);
   assert.equal(trackedPayload.data.status, "under_review");
   assert.doesNotMatch(JSON.stringify(trackedPayload.data), /Private Reporter|private-reporter|private-reported-content|Private complaint|Internal officer/);
 });

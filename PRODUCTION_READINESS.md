@@ -2,6 +2,8 @@
 
 Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
 
+> **Current evidence:** The 14–16 October 2026 review records the latest API suite, dependency checks, production image builds, hardened Compose smoke, edge security-header checks, browser rerun results and remaining release gates in [the current readiness review](docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](docs/PRODUCTION_LAUNCH.md). This file's checklists and verification limitations below are historical snapshots; for example, Docker image execution has since been verified locally. They are not the current release checklist.
+
 ## Executive summary
 
 This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an off-host staging restore drill remain external launch gates.

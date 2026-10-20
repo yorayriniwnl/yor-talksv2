@@ -4370,6 +4370,32 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /reports/{reportId}/history:
+    get:
+      operationId: getReportsByReportIdHistory
+      summary: Get /reports/{reportId}/history
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
   /reports/{reportId}/status:
     patch:
       operationId: patchReportsByReportIdStatus

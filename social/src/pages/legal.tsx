@@ -35,7 +35,7 @@ function buildDocuments(): Record<string, LegalDocument> {
   return {
     '/privacy': {
       title: 'Privacy Notice',
-      eyebrow: publicBetaConfig.publicBeta ? 'Yor Talks · public beta trust center' : 'Yor Talks · development trust center',
+      eyebrow: legalConfigReady ? 'Yor Talks · approved trust center' : 'Yor Talks · pending review draft',
       intro: `${betaNotice} This notice explains the personal data processed to provide Yor Talks, protect people, and honor account controls.`,
       sections: [
         { heading: 'Data categories and purposes', body: 'Depending on features you use, Yor processes email address and verification status, credentials, device/session identifiers, two-factor authentication settings and security challenges; username, profile and eligibility information; posts, media, messages, reactions, follows and other social activity; reports, appeals and moderation records; support or grievance submissions; optional Contact Shield match digests; and, only when payments are enabled, order and financial records. These data support account access, service delivery, safety and moderation, payment processing, support, legal obligations and optional reliability analytics.' },
@@ -68,7 +68,7 @@ function buildDocuments(): Record<string, LegalDocument> {
         { heading: 'Consent matters', body: 'Do not share private information, intimate imagery, recordings or identifying material without consent. Never sexualize, groom or exploit minors. Do not use Yor to solicit harmful contact with a minor.' },
         { heading: 'Be honest', body: 'No impersonation, fraud, phishing, fake giveaways, deceptive engagement, spam, coordinated manipulation or attempts to bypass account restrictions.' },
         { heading: 'Respect creative work', body: 'Post only material you created or have permission to use. Copyright and takedown requests should include the relevant work, location and a reliable contact.' },
-        { heading: 'How enforcement works', body: `We may warn, limit reach, remove content, lock features or suspend accounts. Decisions consider severity, context, repeated behavior and safety risk. You can request human review through the grievance portal; the appointed contact is ${publicBetaConfig.grievanceOfficerName || 'the operator contact shown on that portal'} at ${grievanceContact}.` },
+        { heading: 'How enforcement works', body: `We may warn, limit reach, remove content, lock features or suspend accounts. Decisions consider severity, context, repeated behavior and safety risk. You can request review through the grievance portal; the appointed contact is ${publicBetaConfig.grievanceOfficerName || 'the operator contact shown on that portal'} at ${grievanceContact}.` },
         { heading: 'Report a problem', body: 'Use report controls on content or visit the grievance portal. Include links, context and timestamps. Do not submit emergencies through Yor; contact local emergency services instead.' },
       ],
     },
@@ -121,6 +121,14 @@ export default function LegalPage() {
           <Button asChild variant="ghost" className="rounded-xl"><Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Yor</Link></Button>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Trust center</div>
         </div>
+        {!legalConfigReady && (
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Unapproved Legal Draft Notice</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-200/90">
+              This document is a technical and product draft. Operating entity details, statutory contacts, governing jurisdiction, effective dates, and territorial age assurance policies are pending formal qualified legal and executive approval. Do not rely on this draft as binding approval or final public policy.
+            </p>
+          </div>
+        )}
         <article className="rounded-3xl border border-border/60 bg-card/70 p-7 shadow-2xl sm:p-10">
           <div className="mb-8 border-b border-border/50 pb-7">
             <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary"><FileText className="h-4 w-4" /> {document.eyebrow}</p>

@@ -37,13 +37,6 @@ const CINEMATIC_FILTERS = [
   { id: 'prism_dream', name: 'Prism Bloom', css: 'brightness(115%) saturate(160%) contrast(105%)', icon: '🌈' },
 ];
 
-const MUSIC_PRESETS = [
-  { id: 'm1', title: 'Cyberpunk Anthem', artist: 'Yor Music AI', duration: '0:30', bpm: 128 },
-  { id: 'm2', title: 'Mumbai Sunset Lo-Fi', artist: 'Rooftop Beats', duration: '0:45', bpm: 84 },
-  { id: 'm3', title: 'Tabla & Modular Synth Fusion', artist: 'Vedic Pulse', duration: '0:30', bpm: 135 },
-  { id: 'm4', title: 'High-Octane Drift Telemetry', artist: 'Apex Sound', duration: '0:15', bpm: 140 },
-];
-
 const STICKER_TYPES = [
   { id: 'poll', label: '📊 Interactive Poll', desc: 'Ask viewers to vote' },
   { id: 'question', label: '❓ Ask Me Anything', desc: 'Anonymous Q&A sticker' },
@@ -60,9 +53,17 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
   const [mode, setMode] = useState<'reel' | 'story' | 'post'>(defaultMode);
   const [selectedFilter, setSelectedFilter] = useState(CINEMATIC_FILTERS[0]);
-  const [selectedMusic, setSelectedMusic] = useState(initialAudioTrack || MUSIC_PRESETS[0]);
-  const [musicDrawerOpen, setMusicDrawerOpen] = useState(false);
   const [stickersDrawerOpen, setStickersDrawerOpen] = useState(false);
+  const stickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const stickerCloseRef = useRef<HTMLButtonElement>(null);
+
+  const closeStickers = () => {
+    setStickersDrawerOpen(false);
+    stickerTriggerRef.current?.focus();
+  };
+  useEffect(() => {
+    if (stickersDrawerOpen) stickerCloseRef.current?.focus();
+  }, [stickersDrawerOpen]);
 
   // Active stickers placed on preview
   const [activeStickers, setActiveStickers] = useState<{ id: string; type: string; data: any; x: number; y: number }[]>([]);
@@ -127,24 +128,26 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play();
+          void videoRef.current.play().catch(() => { /* Camera state is still usable for capture. */ });
         }
         setCameraActive(true);
       }
     } catch {
       // Camera permission denied or unsupported. Publishing remains disabled until a real recording exists.
-      setCameraActive(false);
+      if (generation === cameraGenerationRef.current) setCameraActive(false);
     }
   };
 
   const stopCamera = () => {
-    cameraGenerationRef.current += 1;
+    cameraGenerationRef.current++;
     const recorder = mediaRecorderRef.current;
     mediaRecorderRef.current = null;
-    if (recorder && recorder.state !== 'inactive') {
+    if (recorder) {
       recorder.ondataavailable = null;
       recorder.onstop = null;
-      recorder.stop();
+      if (recorder.state !== 'inactive') {
+        try { recorder.stop(); } catch { /* Track cleanup must still run if the recorder already stopped. */ }
+      }
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -175,11 +178,12 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   }, [isRecording]);
 
   const handleStartRecording = () => {
-    if (mediaRecorderRef.current?.state === 'recording') return;
+    // The ref also covers clicks within one render and a recorder whose final
+    // stop event has not arrived yet.
+    if (mediaRecorderRef.current) return;
     if (publishing || capturing || isRecording || mode === 'post') return;
     sounds.playPop();
     setRecordedChunks([]);
-    setRecordedFile(null);
     setRecordedPreviewUrl(null);
     setRecordedFile(null);
     setRecordingSeconds(0);
@@ -199,6 +203,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         if (e.data.size > 0) chunks.push(e.data);
       };
       recorder.onstop = () => {
+        if (mediaRecorderRef.current !== recorder) return;
         mediaRecorderRef.current = null;
         recorder.ondataavailable = null;
         recorder.onstop = null;
@@ -213,6 +218,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       };
       recorder.start();
     } catch {
+      const recorder = mediaRecorderRef.current;
+      mediaRecorderRef.current = null;
+      if (recorder) { recorder.ondataavailable = null; recorder.onstop = null; }
       toast.error('This browser cannot record video in the selected format.');
       return;
     }
@@ -292,7 +300,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
       { id: `stk_${Date.now()}`, type: typeId, data, x: 50, y: 50 }
     ]);
     setStickersDrawerOpen(false);
-    toast.success('Interactive sticker placed on canvas!');
+    stickerTriggerRef.current?.focus();
+    toast.success('Sticker added to the local preview.');
   };
 
   const handlePublish = async () => {
@@ -356,7 +365,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         <DialogTitle className="sr-only">Studio Camera</DialogTitle>
         
         {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-border/30 glass-heavy z-20 shrink-0">
+        <DialogDescription className="sr-only">Capture a photo or a video using your camera and microphone. Filters and stickers are local previews and are not included in published media.</DialogDescription>
+        <div className="min-h-14 px-4 py-3 pr-12 flex flex-wrap gap-3 items-center justify-between border-b border-border/30 glass-heavy z-20 shrink-0">
           <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary via-red-900 to-accent text-white flex items-center justify-center font-bold font-display shadow-md glow-neon-primary text-sm">
               YT
@@ -371,6 +381,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                 key={m}
                 disabled={publishing || capturing || isRecording}
                 aria-label={`${m === 'post' ? 'Photo Post' : m === 'story' ? 'Video Story' : 'Video Reel'} mode`}
+                aria-pressed={mode === m}
                 onClick={() => {
                   if (publishing || capturing || isRecording) return;
                   if ((m === 'post') !== (mode === 'post')) {
@@ -393,7 +404,6 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            aria-label="Close studio camera"
             disabled={publishing || capturing || isRecording}
             className="w-8 h-8 rounded-full hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -411,6 +421,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
               <video
                 ref={videoRef}
+                aria-label="Live camera preview"
                 autoPlay
                 playsInline
                 muted
@@ -491,10 +502,10 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               )}
 
               {/* Active Sound Track Pill */}
-              {selectedMusic && (
+              {initialAudioTrack && (
                 <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[0.72rem] font-mono border border-white/10 shadow-lg">
                   <Music className="w-3 h-3 text-primary animate-spin" />
-                  <span className="truncate max-w-[140px] font-bold">{selectedMusic.title}</span>
+                  <span className="truncate max-w-[140px] font-bold">Reference: {initialAudioTrack.title}</span>
                 </div>
               )}
             </div>
@@ -536,6 +547,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               <button
                 type="button"
                 onClick={() => setStickersDrawerOpen(true)}
+                aria-label="Preview stickers"
+                aria-expanded={stickersDrawerOpen}
+                aria-controls="studio-sticker-previews"
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"
                 aria-label="Add interactive stickers"
               >
@@ -551,12 +565,13 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               {/* Filter Shader Selector */}
               <div>
                 <label className="text-xs font-mono font-bold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <Wand2 className="w-3.5 h-3.5 text-primary" /> Cinematic Filter LUTs
+                  <Wand2 className="w-3.5 h-3.5 text-primary" /> Preview filters
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {CINEMATIC_FILTERS.map((filter) => (
                     <button
                       key={filter.id}
+                      aria-pressed={selectedFilter.id === filter.id}
                       onClick={() => {
                         setSelectedFilter(filter);
                         sounds.playPop();
@@ -575,45 +590,15 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                 </div>
               </div>
 
-              {/* Music Library Selector */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-mono font-bold uppercase text-muted-foreground flex items-center gap-1.5">
-                    <Music className="w-3.5 h-3.5 text-primary" /> Background Sound
-                  </label>
-                  <span className="text-[0.65rem] font-mono text-primary font-bold">128 BPM</span>
-                </div>
-                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                  {MUSIC_PRESETS.map((track) => (
-                    <button
-                      key={track.id}
-                      onClick={() => {
-                        setSelectedMusic(track);
-                        sounds.playPop();
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2 rounded-xl text-left border text-xs transition-all cursor-pointer",
-                        selectedMusic.title === track.title
-                          ? "bg-primary/15 border-primary/50 text-foreground font-bold ring-1 ring-primary/30"
-                          : "surface-2 border-border/30 hover:border-border/60 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <div className="truncate text-xs">{track.title}</div>
-                        <div className="text-[0.62rem] text-muted-foreground font-mono">{track.artist}</div>
-                      </div>
-                      <span className="text-[0.65rem] font-mono text-muted-foreground shrink-0">{track.duration}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">Filters and stickers are local previews and are not included in published media. Videos record microphone audio only; reference audio is not mixed into the recording.</p>
 
               {/* Caption & Metadata Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold uppercase text-muted-foreground">
+                <label htmlFor="studio-caption" className="text-xs font-mono font-bold uppercase text-muted-foreground">
                   Caption & #Tags
                 </label>
                 <textarea
+                  id="studio-caption"
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder={`Write a description for this ${mode}… #YorOriginal #YorTalks`}
@@ -642,6 +627,12 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
         <AnimatePresence>
           {stickersDrawerOpen && (
             <motion.div
+              id="studio-sticker-previews"
+              role="region"
+              aria-label="Sticker previews"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeStickers(); }
+              }}
               initial={{ y: 200, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 200, opacity: 0 }}
@@ -649,9 +640,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             >
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                  <Smile className="w-4 h-4 text-amber-400" /> Choose Interactive Sticker
+                  <Smile className="w-4 h-4 text-amber-400" /> Choose a preview sticker
                 </h4>
-                <button onClick={() => setStickersDrawerOpen(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground">
+                <button ref={stickerCloseRef} aria-label="Close sticker previews" onClick={closeStickers} className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
