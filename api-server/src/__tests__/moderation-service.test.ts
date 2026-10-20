@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, pool } from "@workspace/db";
 import { grievanceTicketsTable } from "@workspace/db/schema";
 import { ModerationService } from "../services/moderation-service.js";
+import { toPublicGrievance } from "../utils/grievance-view.js";
 
 after(async () => {
   await pool.end();
