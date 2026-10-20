@@ -4,7 +4,6 @@ import { Sparkles, Check, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api, type PremiumBillingState, type PremiumOrder } from '@/lib/api-client';
 import { loadRazorpayCheckout } from '@/lib/razorpay-checkout';
-import { publicBetaConfig } from '@/lib/public-beta-config';
 
 const benefits: Record<string, string> = {
   STORY_PRIVATE_VIEW: 'Optional private Story viewing', STORY_REWATCH_ANALYTICS: 'Story rewatch insights',
@@ -61,7 +60,6 @@ export default function Premium() {
     checkout.open();
   };
   const purchase = async (existing?: PremiumOrder) => {
-    if (!publicBetaConfig.paymentsEnabled || !state?.catalog.available) return;
     const plan = state?.catalog.plan;
     if (!plan || (!existing && !accepted)) return;
     setBusy(true); setError(''); setNotice('');
@@ -85,11 +83,10 @@ export default function Premium() {
       <h1 className="font-display text-4xl font-black tracking-tight">Yor Premium</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">An optional plan for more expression and control. Your core social account stays free.</p>
       <p className="mt-3 text-sm">Posting, standard Stories and messages, basic privacy, blocking, reporting, export and account deletion are free.</p>
-      <div className="mt-5 flex flex-wrap gap-4 text-sm"><Link className="underline underline-offset-4" href="/advanced">Explore each perk</Link><Link className="underline underline-offset-4" href="/settings">Privacy and account settings</Link></div>
+      <div className="mt-5 flex flex-wrap gap-4 text-sm"><Link className="underline underline-offset-4" href="/advanced">Explore each perk</Link><Link className="underline underline-offset-4" href="/settings">Privacy and account settings</Link><Link className="underline underline-offset-4" href="/refund-policy">Public refund policy</Link></div>
     </section>
     {error && <div role="alert" className="rounded-2xl border border-destructive/30 p-4 text-sm"><p>{error}</p><Button variant="outline" className="mt-3" disabled={busy} onClick={() => setAttempt(value => value + 1)}>Retry billing</Button></div>}
     {notice && <p role="status" className="rounded-2xl border border-border p-4 text-sm">{notice}</p>}
-    {!publicBetaConfig.paymentsEnabled && <p className="rounded-2xl border border-border p-4 text-sm">Premium checkout is paused for this beta. Displayed prices are not payable. Existing orders can still be recovered or cancelled below.</p>}
     {!state && !error && <p role="status">Loading your plan…</p>}
     {state && <>
       <section className="rounded-3xl border border-border bg-card p-6" aria-labelledby="current-plan">
@@ -105,8 +102,7 @@ export default function Premium() {
       </section>
       <section className="rounded-3xl border border-border bg-card p-6" aria-labelledby="premium-benefits">
         <h2 id="premium-benefits" className="font-display text-xl font-bold">Premium perks</h2>
-        <ul className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{(plan?.features ?? []).map(key => <li key={key} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><span>{benefits[key] ?? key.replaceAll('_', ' ')}{state.catalog.operationalFeatures[key] === false && <span className="block text-muted-foreground">Temporarily unavailable</span>}</span></li>)}</ul>
-        {!plan?.features.length && <p className="mt-4 text-sm text-muted-foreground">Plan benefits are not currently configured.</p>}
+        <ul className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{Object.entries(benefits).map(([key, label]) => <li key={key} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><span>{label}{state.catalog.operationalFeatures[key] === false && <span className="block text-muted-foreground">Temporarily unavailable</span>}</span></li>)}</ul>
         <p className="mt-4 text-sm text-muted-foreground">Creator memberships, tips and store purchases are billed separately and do not grant Yor Premium.</p>
       </section>
       <section className="rounded-3xl border border-primary/25 bg-card p-6" aria-labelledby="premium-purchase">
@@ -116,9 +112,8 @@ export default function Premium() {
           <p className="mt-3 text-2xl font-bold">{money(plan.priceMinor, plan.currency)} <span className="text-sm font-normal text-muted-foreground">for {plan.durationDays} days</span></p>
           <p className="mt-2 text-sm">One prepaid term. No automatic renewal. You can purchase again after expiry.</p>
           <p className="mt-3 whitespace-pre-wrap text-sm">{plan.refundPolicy}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Terms version: {plan.termsVersion}. Cancelling a paid term preserves access until it ends and does not initiate a refund. Contact support for a refund request.</p>
-          {!covered && !disputed && !pending && state.catalog.available && publicBetaConfig.paymentsEnabled && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><Button className="mt-4 min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button></>}
-          {!covered && !disputed && !pending && state.catalog.available && !publicBetaConfig.paymentsEnabled && <Button className="mt-4 min-h-11" disabled>Upgrade to Yor Premium</Button>}
+          <p className="mt-2 text-sm text-muted-foreground">Terms version: {plan.termsVersion}. Cancelling a paid term preserves access until it ends and does not initiate a refund. Contact support for a refund request. <Link className="underline" href="/refund-policy">View public refund policy</Link>.</p>
+          {!covered && !disputed && !pending && state.catalog.available && <><label className="mt-5 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={accepted} onChange={event => setAccepted(event.target.checked)} />I accept the price, prepaid term and refund policy shown above.</label><div className="mt-3 flex flex-wrap items-center gap-4"><Button className="min-h-11" disabled={busy || !accepted} onClick={() => void purchase()}>Upgrade to Yor Premium</Button><Link className="text-sm underline underline-offset-4" href="/refund-policy">Review refund policy before checkout</Link></div></>}
         </> : <p className="mt-3 text-sm">A purchase price has not been configured. Yor Premium checkout is unavailable.</p>}
         {!state.catalog.available && plan && <p className="mt-3 text-sm">New purchases are currently unavailable. You can still check existing orders.</p>}
         {pending && <p className="mt-3 text-sm">You have a pending checkout. Resume, recover or cancel it in billing history.</p>}
@@ -131,7 +126,7 @@ export default function Premium() {
           {order.lastPaymentStatus === 'failed' && <p className="text-sm">The last payment attempt failed. You can retry this checkout or cancel it.</p>}
           {order.status === 'refund_required' && <p className="text-sm">Payment was received after this order became unavailable. Access was not granted. Contact support with this order reference.</p>}
           {pendingStates.includes(order.status) && <div className="flex flex-wrap gap-2">
-            {order.providerOrderId && publicBetaConfig.paymentsEnabled && <Button disabled={busy || !state.catalog.available} onClick={() => void purchase(order)}>Resume checkout</Button>}
+            {order.providerOrderId && <Button disabled={busy || !state.catalog.available} onClick={() => void purchase(order)}>Resume checkout</Button>}
             <Button variant="outline" disabled={busy} onClick={() => void action(() => api.recoverPremiumOrder(order.id), 'Order checked with the provider. Confirmed access appears in Your plan.')}>Recover payment</Button>
             <Button variant="ghost" disabled={busy} onClick={() => void action(() => api.cancelPremiumOrder(order.id), 'Pending checkout cancelled. Contact support if a payment was already taken.')}>Cancel checkout</Button>
           </div>}

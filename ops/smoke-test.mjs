@@ -1,5 +1,3 @@
-import { verifyRealtime } from './realtime-smoke.mjs';
-
 const baseUrl = (process.env.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 
 async function check(path, init, expectedStatus) {
@@ -63,8 +61,8 @@ try {
   if (readinessBody.status !== "healthy") {
     throw new Error(`API readiness status is not 'healthy': ${readinessBody.status}`);
   }
-  // A production 200 is emitted only after dependency checks succeed.
-  // Never require or reveal internal service diagnostics to public clients.
+  // A production 200 response is emitted only after the API has checked the
+  // database, Redis, and required workers. Their internals must stay private.
   if ("services" in readinessBody || "details" in readinessBody) {
     throw new Error("Production readiness exposed internal dependency diagnostics");
   }
@@ -110,12 +108,6 @@ try {
     throw new Error("Production prescreen must not create an enrollment without an approved provider and territory policy");
   }
   await log("ELIGIBILITY", "✓ Owner routes are protected and the empty production registry enables no enrollment");
-
-  await verifyRealtime({
-    baseUrl: process.env.SMOKE_REALTIME_URL || baseUrl,
-    browserOrigin: process.env.SMOKE_BROWSER_ORIGIN || new URL(baseUrl).origin,
-  });
-  await log("REALTIME", "Polling proxy, browser-origin rejection and unauthenticated namespace rejection passed");
 
   // Uptime check
   const uptimeMatch = readinessBody.uptime ? `${Math.round(readinessBody.uptime)}s` : "unknown";

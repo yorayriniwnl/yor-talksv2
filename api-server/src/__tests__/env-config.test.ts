@@ -3,113 +3,31 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { test } from "node:test";
 
-test("production rejects a shared access and refresh signing secret without logging it", () => {
-  const sharedSecret = "synthetic-shared-signing-key-01234567890123456789";
-  const result = spawnSync(process.execPath, ["--import", "tsx", "--eval", "import './src/config/env.ts'"], {
-    cwd: path.resolve(import.meta.dirname, "../.."), encoding: "utf8", timeout: 10_000,
-    env: { ...process.env, NODE_ENV: "production", PUBLIC_BETA: "false",
-      JWT_SECRET: sharedSecret, JWT_REFRESH_SECRET: sharedSecret,
-      CONTACT_SHIELD_SECRET: "c".repeat(40), TOTP_ENCRYPTION_KEY: "d".repeat(40),
-      DATABASE_URL: "postgresql://app:synthetic@db.example.test:5432/yor",
-      REDIS_URL: "redis://redis.example.test:6379", CLIENT_ORIGIN: "https://app.example.test",
-      CORS_ORIGINS: "https://app.example.test", CLOUDINARY_CLOUD_NAME: "synthetic-cloud",
-      CLOUDINARY_API_KEY: "synthetic-key", CLOUDINARY_API_SECRET: "synthetic-secret",
-      RESEND_API_KEY: "synthetic-email-key", EMAIL_FROM: "hello@example.test", OPENAI_API_KEY: "synthetic-safety-key",
-      PAYMENTS_ENABLED: "false", YOR_PREMIUM_ENABLED: "false", LIVE_ROOMS_ENABLED: "false",
-      WEB_PUSH_ENABLED: "false", RTC_CALLS_ENABLED: "false", METRICS_BEARER_TOKEN_FILE: "/run/secrets/metrics_bearer_token" },
-  });
-  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
-  assert.match(`${result.stdout}\n${result.stderr}`, /JWT_SECRET and JWT_REFRESH_SECRET must be distinct/);
-  assert.ok(!`${result.stdout}\n${result.stderr}`.includes(sharedSecret));
-});
-
 test('eligibility defaults stay unavailable and sensitive feature releases fail closed', () => {
   const defaults = spawnSync(process.execPath, ['--import','tsx','--eval',
-    "import {env} from './src/config/env.ts'; console.log(JSON.stringify({adapter:env.ELIGIBILITY_ASSURANCE_ADAPTER,registry:env.ELIGIBILITY_POLICY_SOURCE,seller:env.SELLER_ENABLED,memberships:env.MEMBERSHIPS_ENABLED,ai:env.AI_COMPANION_ENABLED}))"],
+    "import {env} from './src/config/env.ts'; console.log(JSON.stringify({adapter:env.ELIGIBILITY_ASSURANCE_ADAPTER,registry:env.ELIGIBILITY_POLICY_SOURCE,seller:env.SELLER_ENABLED,memberships:env.MEMBERSHIPS_ENABLED,ai:env.AI_COMPANION_ENABLED,marketingEmail:env.MARKETING_EMAIL_ENABLED}))"],
     { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'false', SELLER_ENABLED: '', MEMBERSHIPS_ENABLED: '', AI_COMPANION_ENABLED: '' } });
+      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'false', SELLER_ENABLED: '', MEMBERSHIPS_ENABLED: '', AI_COMPANION_ENABLED: '', MARKETING_EMAIL_ENABLED: 'false' } });
   assert.equal(defaults.status, 0, defaults.stderr);
-  assert.deepEqual(JSON.parse(defaults.stdout.trim()), { adapter: 'unavailable', registry: 'approved_registry', seller: false, memberships: false, ai: false });
-  for (const input of [{ ELIGIBILITY_ASSURANCE_ADAPTER: 'fixture' }, { ELIGIBILITY_POLICY_SOURCE: 'fixture' },
-    { AI_COMPANION_ENABLED: 'treu' }, { LEGAL_CONTENT_REVIEWED: 'treu' }]) {
+  assert.deepEqual(JSON.parse(defaults.stdout.trim()), { adapter: 'unavailable', registry: 'approved_registry', seller: false, memberships: false, ai: false, marketingEmail: false });
+  for (const input of [{ ELIGIBILITY_ASSURANCE_ADAPTER: 'fixture' }, { ELIGIBILITY_POLICY_SOURCE: 'fixture' }, { AI_COMPANION_ENABLED: 'treu' }]) {
     const result = spawnSync(process.execPath, ['--import','tsx','--eval', "import './src/config/env.ts'"],
       { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
         env: { ...process.env, NODE_ENV: 'production', PUBLIC_BETA: 'false', ...input } });
     assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}\n${result.stderr}`, /ELIGIBILITY_ASSURANCE_ADAPTER|ELIGIBILITY_POLICY_SOURCE|AI_COMPANION_ENABLED|LEGAL_CONTENT_REVIEWED/);
+    assert.match(`${result.stdout}\n${result.stderr}`, /ELIGIBILITY_ASSURANCE_ADAPTER|ELIGIBILITY_POLICY_SOURCE|AI_COMPANION_ENABLED/);
   }
 });
 
-test('public beta refuses to start until the exact legal and eligibility content is approved', () => {
-  const result = spawnSync(process.execPath, ['--import','tsx','--eval', "import './src/config/env.ts'"],
-    { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'true', LEGAL_CONTENT_REVIEWED: 'false',
-        TERMS_VERSION: 'reviewed-test-1', LEGAL_OPERATOR_NAME: 'Test Operator', LEGAL_OPERATOR_ADDRESS: '1 Test Way',
-        LEGAL_EFFECTIVE_DATE: '2026-10-15', LEGAL_GOVERNING_LAW: 'Synthetic CI only',
-        PRIVACY_CONTACT_EMAIL: 'privacy@example.test', SUPPORT_EMAIL: 'support@example.test',
-        GRIEVANCE_OFFICER_NAME: 'Test Officer', GRIEVANCE_CONTACT_EMAIL: 'grievance@example.test',
-        GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com' } });
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /LEGAL_CONTENT_REVIEWED|reviewed and approved/);
-});
-
-test('contradictory commerce configuration fails closed at startup', () => {
-  for (const contradiction of [
-    { SELLER_ENABLED: 'true', PAYMENTS_ENABLED: 'false' },
-    { MEMBERSHIPS_ENABLED: 'true', PAYMENTS_ENABLED: 'false' },
-  ]) {
-    const result = spawnSync(process.execPath, ['--import', 'tsx', '--eval', "import './src/config/env.ts'"], {
-      cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-      env: { ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'false', ...contradiction },
-    });
-    assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}\n${result.stderr}`, /SELLER_ENABLED and MEMBERSHIPS_ENABLED require PAYMENTS_ENABLED=true/);
-  }
-});
-
-test('reviewed legal content assertion rejects unapproved placeholders and invalid values even if public beta is off', () => {
-  const validBase = {
-    NODE_ENV: 'test', PUBLIC_BETA: 'false', LEGAL_CONTENT_REVIEWED: 'true',
-    TERMS_VERSION: 'terms-2026-10-19-v1', LEGAL_OPERATOR_NAME: 'Genuine Operator Corp',
-    LEGAL_OPERATOR_ADDRESS: '100 Legal Way, City, Country', LEGAL_EFFECTIVE_DATE: '2026-10-19',
-    LEGAL_GOVERNING_LAW: 'Estonia', PRIVACY_CONTACT_EMAIL: 'privacy@genuine.example',
-    SUPPORT_EMAIL: 'support@genuine.example', GRIEVANCE_OFFICER_NAME: 'Jane Officer',
-    GRIEVANCE_CONTACT_EMAIL: 'grievance@genuine.example',
-  };
-
-  const invalidVariants = [
-    { TERMS_VERSION: 'replace-with-reviewed-terms-v1', pattern: /TERMS_VERSION contains unapproved placeholder/ },
-    { LEGAL_OPERATOR_NAME: 'change-me-operator', pattern: /LEGAL_OPERATOR_NAME contains unapproved placeholder/ },
-    { LEGAL_EFFECTIVE_DATE: 'not-a-date', pattern: /LEGAL_EFFECTIVE_DATE must be a valid ISO date/ },
-    { PRIVACY_CONTACT_EMAIL: 'privacy@your-domain.example', pattern: /PRIVACY_CONTACT_EMAIL contains unapproved placeholder/ },
-    { PRIVACY_CONTACT_EMAIL: 'invalid-email-format', pattern: /PRIVACY_CONTACT_EMAIL must be a valid email/ },
-  ];
-
-  for (const { pattern, ...override } of invalidVariants) {
-    const result = spawnSync(process.execPath, ['--import', 'tsx', '--eval', "import './src/config/env.ts'"], {
-      cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-      env: { ...process.env, ...validBase, ...override },
-    });
-    assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}\n${result.stderr}`, pattern);
-  }
-});
-
-test('public beta refuses to start with placeholder google client id', () => {
-  const result = spawnSync(process.execPath, ['--import', 'tsx', '--eval', "import './src/config/env.ts'"], {
-    cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
-    env: {
-      ...process.env, NODE_ENV: 'test', PUBLIC_BETA: 'true', LEGAL_CONTENT_REVIEWED: 'true',
-      TERMS_VERSION: 'terms-2026-10-19-v1', LEGAL_OPERATOR_NAME: 'Genuine Operator Corp',
-      LEGAL_OPERATOR_ADDRESS: '100 Legal Way, City, Country', LEGAL_EFFECTIVE_DATE: '2026-10-19',
-      LEGAL_GOVERNING_LAW: 'Estonia', PRIVACY_CONTACT_EMAIL: 'privacy@genuine.example',
-      SUPPORT_EMAIL: 'support@genuine.example', GRIEVANCE_OFFICER_NAME: 'Jane Officer',
-      GRIEVANCE_CONTACT_EMAIL: 'grievance@genuine.example',
-      GOOGLE_CLIENT_ID: 'CHANGE_ME_GOOGLE_WEB_CLIENT_ID',
-    },
+test("marketing email cannot be enabled until an unsubscribe and preference path exists", () => {
+  const result = spawnSync(process.execPath, ["--import", "tsx", "--eval", "import './src/config/env.ts'"], {
+    cwd: path.resolve(import.meta.dirname, "../.."),
+    encoding: "utf8",
+    timeout: 10_000,
+    env: { ...process.env, NODE_ENV: "production", PUBLIC_BETA: "false", MARKETING_EMAIL_ENABLED: "true" },
   });
   assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /GOOGLE_CLIENT_ID contains unapproved placeholder/);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Marketing email is not implemented and must remain disabled/);
 });
 
 test("invalid boolean environment values fail closed at API startup", () => {
@@ -176,7 +94,7 @@ test("production startup fails closed when required dependencies are unavailable
     {
       cwd: path.resolve(import.meta.dirname, "../.."),
       encoding: "utf8",
-      timeout: 60_000,
+      timeout: 15_000,
       env: {
         ...process.env,
         NODE_ENV: "production",
@@ -190,8 +108,8 @@ test("production startup fails closed when required dependencies are unavailable
         CORS_ORIGINS: "https://app.example.com",
         CLIENT_ORIGIN: "https://app.example.com",
         TERMS_VERSION: "2026-09-01",
+        MINIMUM_AGE: "18",
         PUBLIC_BETA: "true",
-        LEGAL_CONTENT_REVIEWED: "true",
         ALLOWED_EMAIL_DOMAINS: "",
         GOOGLE_CLIENT_ID: "test-google-client-id",
         CLOUDINARY_CLOUD_NAME: "demo-cloud",
@@ -212,6 +130,6 @@ test("production startup fails closed when required dependencies are unavailable
     },
   );
 
-  assert.equal(result.status, 1, `Expected startup to fail, got status ${result.status}${result.error ? ` (${result.error.message})` : ""}: ${result.stdout}\n${result.stderr}`);
+  assert.equal(result.status, 1, `Expected startup to fail, got status ${result.status}: ${result.stdout}\n${result.stderr}`);
   assert.match(`${result.stdout}\n${result.stderr}`, /production dependency check failed|database|redis/i);
 });

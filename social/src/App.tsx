@@ -1,6 +1,5 @@
-import { Suspense, useEffect, useLayoutEffect } from 'react';
-import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
-import { initializeAccentTheme } from '@/components/ui/ThemeMorpher';
+import { Suspense, useEffect } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { ThemeProvider } from 'next-themes';
@@ -10,6 +9,9 @@ import NotFound from '@/pages/not-found';
 import { useAppStore } from '@/lib/store';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { safeInternalRedirect } from '@/lib/safe-redirect';
+
+// Shell & Layout
+import { AppShell } from '@/components/layout/AppShell';
 
 // Helpers
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
@@ -23,7 +25,6 @@ import { PageTransition } from '@/components/ui/PageTransition';
 
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
-const Preregister = lazyWithRetry(() => import('@/pages/preregister'));
 const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
 const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
@@ -95,7 +96,6 @@ const SquadComms = lazyWithRetry(() => import('@/pages/squad-comms'));
 const CustomRoom = lazyWithRetry(() => import('@/pages/custom-room'));
 const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
 const Grievance = lazyWithRetry(() => import('@/pages/grievance'));
-const AppShell = lazyWithRetry(() => import('@/components/layout/AppShell').then(({ AppShell }) => ({ default: AppShell })));
 
 import { PushNotificationManager } from '@/components/notifications/PushNotificationManager';
 
@@ -181,8 +181,6 @@ function ProtectedRoutes() {
                 <Route path="/rooms" component={CustomRoom} />
                 <Route path="/podcasts" component={PodcastStudio} />
                 <Route path="/grievance" component={Grievance} />
-                <Route path="/preregister" component={Preregister} />
-                <Route path="/launch" component={Preregister} />
 
                 {/* 404 */}
                 <Route component={NotFound} />
@@ -227,18 +225,17 @@ function Router() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isInitializing && location !== '/preregister' && location !== '/launch') {
+  if (isInitializing) {
     return <RouteSkeleton />;
   }
 
   return (
       <Switch>
-        <Route path="/preregister" component={Preregister} />
-        <Route path="/launch" component={Preregister} />
         <Route path="/privacy" component={LegalPage} />
-        <Route path="/cookies" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
+        <Route path="/cookies" component={LegalPage} />
+        <Route path="/refund-policy" component={LegalPage} />
         <Route path="/grievance" component={Grievance} />
         {!currentUser && (
           <>
@@ -253,10 +250,11 @@ function Router() {
         {currentUser && needsTerms && (
           <>
             <Route path="/consent" component={Consent} />
-            <Route path="/settings" component={Settings} />
             <Route path="/privacy" component={LegalPage} />
             <Route path="/terms" component={LegalPage} />
             <Route path="/community-guidelines" component={LegalPage} />
+            <Route path="/cookies" component={LegalPage} />
+            <Route path="/refund-policy" component={LegalPage} />
             <Route>
               <Redirect to="/consent" />
             </Route>
@@ -282,7 +280,6 @@ function Router() {
         {currentUser && !needsTerms && !needsEligibility && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
-            <Route path="/consent"><Redirect to="/" /></Route>
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding">
@@ -302,14 +299,12 @@ function Router() {
 // ═══════════════════════════════════════════════════════════════
 
 function App() {
-  useLayoutEffect(initializeAccentTheme, []);
   const currentUser = useAppStore((s) => s.currentUser);
   const eligibility = useAppStore((s) => s.eligibility);
   const canUsePush = Boolean(currentUser && currentUser.notificationsEnabled !== false && eligibility?.activated && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.social);
-  const canLoadPreferences = Boolean(currentUser && eligibility?.activated && eligibility.capabilities.social && (!publicBetaConfig.publicBeta || currentUser.termsVersion === publicBetaConfig.termsVersion && currentUser.termsAcceptedAt));
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <AccessibilityProvider userId={currentUser?.id ?? null} enabled={canLoadPreferences}>
+      <MotionConfig reducedMotion="user">
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <ErrorBoundary>
@@ -321,7 +316,7 @@ function App() {
           {canUsePush && <PushNotificationManager />}
           <Toaster />
         </TooltipProvider>
-      </AccessibilityProvider>
+      </MotionConfig>
     </ThemeProvider>
   );
 }

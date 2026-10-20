@@ -4,7 +4,7 @@
 // VITE_API_BASE_URL without changing application code.
 
 import type { StoryTextStyle } from '@/lib/story-text-style';
-import { parsePremiumBilling, parsePremiumOrder } from './premium-billing-contract';
+import { parsePremiumBilling, parsePremiumCatalog, parsePremiumOrder } from './premium-billing-contract';
 import { parseCheckoutHistory } from './checkout-contract';
 import {
   challengeReceiptSchema,
@@ -52,6 +52,7 @@ export interface PremiumBillingState {
   orders: PremiumOrder[];
   enabledFeatures: Record<string, boolean>;
 }
+export type PremiumCatalog = PremiumBillingState['catalog'];
 export type FeedMode = 'for_you' | 'following' | 'favorites';
 
 export interface BackendAchievement {
@@ -78,48 +79,6 @@ export type TwoFactorChallengeStatus = {
   expiresAt: string;
 };
 export type AuthLoginResult = { user: BackendUser; tokens: AuthTokens } | TwoFactorChallenge;
-
-export interface FounderPerk {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  rarity?: string;
-}
-
-export interface NewPreregisterPass {
-  id: string;
-  email?: string;
-  username: string;
-  referralCode: string | null;
-  passNumber: string;
-  createdAt: string;
-  launchDate: string;
-  perks: FounderPerk[];
-  isExisting: false;
-}
-
-export interface ExistingPreregisterPass {
-  id?: string;
-  email?: string;
-  username?: string;
-  referralCode?: string | null;
-  passNumber?: string;
-  createdAt?: string;
-  launchDate: string;
-  perks: FounderPerk[];
-  isExisting: true;
-}
-
-export type PreregisterPass = NewPreregisterPass | ExistingPreregisterPass;
-
-export interface PreregisterStats {
-  totalRegistered: number;
-  launchDate: string;
-  perks: FounderPerk[];
-  targetSpots?: number;
-  spotsRemaining?: number;
-}
 
 const TOKEN_STORAGE_KEY = 'yortalks-tokens';
 const EXPLICIT_LOGOUT_KEY = 'yortalks-logged-out';
@@ -233,19 +192,7 @@ type RefreshOutcome =
 
 let refreshInFlight: Promise<RefreshOutcome> | null = null;
 let refreshEpoch = -1;
-let sessionCookieExchange: Promise<void> = Promise.resolve();
 const sessionExpiredListeners = new Set<() => void>();
-
-function exchangeSessionCookie<T>(work: () => Promise<T>): Promise<T> {
-  // Every response that changes the shared HttpOnly cookie must finish before
-  // the next exchange starts. A late logout or rotation must not overwrite a
-  // newer sign-in's cookie. The local queue also covers browsers without Locks.
-  const result = sessionCookieExchange.then(() => typeof navigator !== 'undefined' && navigator.locks
-    ? navigator.locks.request('yor-session-refresh', { signal: AbortSignal.timeout(25_000) }, work)
-    : work());
-  sessionCookieExchange = result.then(() => undefined, () => undefined);
-  return result;
-}
 
 export function onSessionExpired(listener: () => void): () => void {
   sessionExpiredListeners.add(listener);
@@ -281,7 +228,11 @@ async function tryRefresh(): Promise<RefreshOutcome> {
         return { kind: 'unavailable' };
       }
     };
-    refreshInFlight = exchangeSessionCookie(rotate).catch((): RefreshOutcome => ({ kind: 'unavailable' })).finally(() => {
+    // HttpOnly cookies are shared across tabs. Serialize rotation across this
+    // origin so every request uses the cookie installed by its predecessor.
+    refreshInFlight = (typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('yor-session-refresh', { signal: AbortSignal.timeout(25_000) }, rotate)
+      : rotate()).catch((): RefreshOutcome => ({ kind: 'unavailable' })).finally(() => {
         if (refreshEpoch === epoch) refreshInFlight = null;
       });
   }
@@ -336,28 +287,12 @@ function isCredentialEstablishment(path: string, method?: string): boolean {
     || (verb === 'POST' && /^\/auth\/2fa\/challenges\/[^/]+\/complete$/.test(pathname));
 }
 
-function changesSessionCookie(path: string, method?: string): boolean {
-  const pathname = path.split('?')[0];
-  const verb = (method ?? 'GET').toUpperCase();
-  return verb === 'POST' && (
-    ['/auth/login', '/auth/google', '/auth/email-otp/verify', '/auth/refresh', '/auth/logout'].includes(pathname)
-    || /^\/auth\/2fa\/challenges\/[^/]+\/complete$/.test(pathname)
-  ) || verb === 'DELETE' && pathname === '/users/me';
-}
-
 async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRetry = false, epoch = sessionEpoch, includeAuthorization = true): Promise<ApiEnvelope<T>> {
-  const method = (options.method ?? 'GET').toUpperCase();
-  // These public operations belong to the submitted details, not the account
-  // session. An initial refresh or logout must not discard a saved signup.
-  const isPublicPreregistration = !includeAuthorization && (
-    path === '/preregister' && method === 'POST'
-    || path === '/preregister/stats' && method === 'GET'
-  );
   const assertSession = () => {
-    if (!isPublicPreregistration && epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
+    if (epoch !== sessionEpoch) throw new ApiError('Your session changed. Please try again.', 409);
   };
   assertSession();
-  const tokens = isPublicPreregistration ? null : getStoredTokens();
+  const tokens = getStoredTokens();
   if (tokens && hasExplicitLogoutIntent()) {
     setStoredTokens(null);
     notifySessionExpired();
@@ -371,15 +306,9 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}, isRet
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const send = () => {
-    assertSession();
-    return fetch(`${API_BASE_URL}${path}`, {
-      ...options, headers, credentials: 'include', signal: options.signal ?? AbortSignal.timeout(20_000),
-    });
-  };
-  // Release the cookie queue as soon as response headers arrive. Error handling
-  // may need its own refresh exchange before retrying this request.
-  const res = await (changesSessionCookie(path, options.method) ? exchangeSessionCookie(send) : send());
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options, headers, credentials: 'include', signal: options.signal ?? AbortSignal.timeout(20_000),
+  });
   assertSession();
 
   // A rejected sign-in must never authenticate through an unrelated cookie.
@@ -623,9 +552,6 @@ export interface BackendUser {
     contentFilter?: ContentRating;
     storyViewMode?: 'identified' | 'private';
     onboardingCompleted?: boolean;
-    isFounder?: boolean;
-    founderPassNumber?: string;
-    avatarFrame?: string;
   };
   privacy?: { profileVisibility: 'public' | 'private' | 'followers'; messageRequests: boolean; allowDmFromStrangers: boolean };
 }
@@ -752,33 +678,8 @@ export interface ModerationReport {
   reason: string;
   details: string | null;
   status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
-  decisionReason: string | null;
   createdAt: string;
   resolvedAt: string | null;
-}
-
-export interface ReportModerationEvent {
-  id: string;
-  reportId: string;
-  moderatorId: string | null;
-  fromStatus: ModerationReport['status'] | null;
-  toStatus: ModerationReport['status'];
-  decisionReason: string | null;
-  createdAt: string;
-}
-
-export interface StaffGrievanceTicket {
-  id: string;
-  ticketId: string;
-  category: 'copyright' | 'hate_speech' | 'harassment' | 'impersonation' | 'privacy_violation' | 'other';
-  reportedUrl: string;
-  reporterName: string;
-  reporterEmail: string;
-  description: string;
-  status: 'received' | 'under_review' | 'resolved' | 'dismissed';
-  slaDeadline: string | null;
-  createdAt: string;
-  officerNote: string | null;
 }
 
 export interface ContactShield {
@@ -799,12 +700,6 @@ export interface BackendProject {
   updatedAt: string;
 }
 
-export interface BackendProjectInvitation {
-  project: BackendProject;
-  role: 'collaborator' | 'advisor' | 'admin';
-  status: 'pending';
-}
-
 export const api = {
   request: <T>(path: string, options: RequestInit = {}) => request<T>(path, options),
   refreshSession,
@@ -818,10 +713,6 @@ export const api = {
   },
   register: (payload: { username: string; email: string; password: string; fullName: string; acceptedTerms: boolean; enrollmentId: string; registrationNonce: string }) =>
     request<{ user: BackendUser; verificationRequired: boolean; devVerificationToken?: string }>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
-  preregister: (payload: { email: string; username: string; launchUpdatesConsent: true; referralCode?: string; perks?: string[] }) =>
-    request<PreregisterPass>('/preregister', { method: 'POST', body: JSON.stringify(payload) }, false),
-  getPreregisterStats: () =>
-    request<PreregisterStats>('/preregister/stats', {}, false),
   acceptCurrentTerms: () => request<{ user: BackendUser }>('/users/me/consent', { method: 'POST', body: JSON.stringify({ acceptedTerms: true }) }),
 
   login: (payload: { identifier: string; password: string; totpCode?: string; challengeId?: string }) =>
@@ -913,6 +804,7 @@ export const api = {
   updateProfile: (payload: { fullName?: string; bio?: string; avatarMediaId?: string }) =>
     request<BackendUser>('/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   getPremiumProfileOptions: () => request<PremiumProfileOptions>('/users/me/premium-profile'),
+  getPremiumCatalog: () => request<PremiumCatalog>('/premium/catalog').then(parsePremiumCatalog),
   getPremiumBilling: () => request<PremiumBillingState>('/premium/me').then(parsePremiumBilling),
   createPremiumOrder: (payload: { idempotencyKey: string; acceptedTermsVersion: string; acceptedPriceMinor: number }) =>
     request<PremiumOrder>('/premium/orders', { method: 'POST', body: JSON.stringify(payload) }).then(parsePremiumOrder),
@@ -971,32 +863,13 @@ export const api = {
   deleteCreatorWorkspaceItem: (kind: CreatorWorkspaceKind, itemKey: string) =>
     request<null>(`/creator/workspace/${encodeURIComponent(kind)}/${encodeURIComponent(itemKey)}`, { method: 'DELETE' }),
   getCreatorAnalytics: () => request<CreatorAnalyticsDaily[]>('/economy/analytics'),
-  getModerationQueuePage: (status?: ModerationReport['status'], cursor?: string) => {
-    const query = new URLSearchParams({ limit: '50' });
-    if (status) query.set('status', status);
-    if (cursor) query.set('cursor', cursor);
-    return requestPaginated<ModerationReport[]>(`/reports/queue?${query}`);
-  },
-  getReportModerationHistory: (reportId: string) =>
-    request<ReportModerationEvent[]>(`/reports/${encodeURIComponent(reportId)}/history`),
-  getGrievanceQueuePage: (status?: StaffGrievanceTicket['status'], cursor?: string) => {
-    const query = new URLSearchParams({ limit: '50' });
-    if (status) query.set('status', status);
-    if (cursor) query.set('cursor', cursor);
-    return requestPaginated<StaffGrievanceTicket[]>(`/reports/grievances?${query}`);
-  },
-  updateGrievanceStatus: (ticketId: string, status: StaffGrievanceTicket['status'], officerNote?: string) =>
-    request<StaffGrievanceTicket>(`/reports/grievance/${encodeURIComponent(ticketId)}/status`, {
-      method: 'PATCH', body: JSON.stringify({ status, ...(officerNote !== undefined ? { officerNote } : {}) }),
-    }),
-  updateReportStatus: (reportId: string, status: ModerationReport['status'], decisionReason?: string) =>
-    request<ModerationReport>(`/reports/${encodeURIComponent(reportId)}/status`, {
-      method: 'PATCH', body: JSON.stringify({ status, ...(decisionReason !== undefined ? { decisionReason } : {}) }),
-    }),
+  getModerationQueue: () => request<ModerationReport[]>('/reports/queue'),
+  updateReportStatus: (reportId: string, status: ModerationReport['status']) =>
+    request<ModerationReport>(`/reports/${encodeURIComponent(reportId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   // ---- Posts / feed ----
   getFeed: (mode?: FeedMode, cursor?: string, limit = 20) => requestPaginated<BackendPost[]>(`/feed?limit=${limit}${mode ? `&mode=${mode}` : ''}${cursor ? `&cursor=${cursor}` : ''}`),
-  getSavedPosts: (limit = 50, cursor?: string) => requestPaginated<BackendPost[]>(`/posts/saved?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
+  getSavedPosts: (limit = 50) => requestPaginated<BackendPost[]>(`/posts/saved?limit=${limit}`),
   getLikedPosts: (limit = 100) => requestPaginated<BackendPost[]>(`/posts/liked?limit=${limit}`),
   getTrendingFeed: (_page = 1, pageSize = 20) => request<BackendPost[]>(`/feed/trending?limit=${pageSize}`),
   getUserFeed: (userId: string, _page = 1, pageSize = 20) => request<BackendPost[]>(`/users/${userId}/feed?limit=${pageSize}`),
@@ -1035,13 +908,10 @@ export const api = {
 
   // ---- Projects / dreams ----
   getProjects: () => request<{ projects: BackendProject[] }>('/projects').then((result) => result.projects),
-  getProjectInvitations: () => request<{ invitations: BackendProjectInvitation[] }>('/projects/invitations').then((result) => result.invitations),
   createProject: (payload: { title: string; description?: string; visibility?: 'public' | 'private'; lookingForCollaborators?: boolean }) =>
     request<BackendProject>('/projects', { method: 'POST', body: JSON.stringify(payload) }),
   inviteProjectCollaborator: (projectId: string, userId: string, role?: 'collaborator' | 'advisor') =>
-    request<null>(`/projects/${encodeURIComponent(projectId)}/collaborators`, { method: 'POST', body: JSON.stringify({ userId, role }) }),
-  respondToProjectInvitation: (projectId: string, decision: 'accepted' | 'rejected') =>
-    request<unknown>(`/projects/${encodeURIComponent(projectId)}/collaborators/respond`, { method: 'POST', body: JSON.stringify({ decision }) }),
+    request<null>(`/projects/${projectId}/collaborators`, { method: 'POST', body: JSON.stringify({ userId, role }) }),
 
   // ---- Stories ----
   getHighlights: () => request<BackendHighlight[]>('/highlights'),
@@ -1166,7 +1036,6 @@ export const api = {
   // ---- Videos ----
   getVideos: () => request<BackendVideo[]>('/videos'),
   getSavedVideos: () => request<BackendVideo[]>('/videos/saved'),
-  getSavedVideosPage: (limit = 50, cursor?: string) => requestPaginated<BackendVideo[]>(`/videos/saved?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
   getVideo: (id: string) => request<BackendVideo>(`/videos/${id}`),
   createVideo: (payload: { title: string; mediaId?: string; externalVideoUrl?: string; thumbnailMediaId?: string; type: 'short' | 'standard'; contentCategory: ContentCategory; contentRating?: ContentRating }) =>
     request<BackendVideo>('/videos', { method: 'POST', body: JSON.stringify(payload) }),

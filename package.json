@@ -41,7 +41,7 @@
     "design:check": "node ./scripts/check-design-tokens.mjs",
     "production-config:check": "node ./scripts/check-production-config.mjs",
     "test:e2e": "playwright test",
-    "test:unit": "node --import ./api-server/node_modules/tsx/dist/loader.mjs --test tests/*.test.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
     "smoke": "node ./ops/smoke-test.mjs",
     "dev": "node ./dev.mjs",
     "dev:api": "npm run --prefix api-server dev",

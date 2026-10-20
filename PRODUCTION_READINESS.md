@@ -2,11 +2,9 @@
 
 Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
 
-> **Current evidence:** The 14–16 October 2026 review records the latest API suite, dependency checks, production image builds, hardened Compose smoke, edge security-header checks, browser rerun results and remaining release gates in [the current readiness review](docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](docs/PRODUCTION_LAUNCH.md). This file's checklists and verification limitations below are historical snapshots; for example, Docker image execution has since been verified locally. They are not the current release checklist.
-
 ## Executive summary
 
-This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an isolated restore drill remain external launch gates.
+This report describes repository controls and historical validation evidence. Checks listed below are not evidence from the current implementation session unless explicitly reported in its final results. Live provider acceptance, production TLS/domain checks, alert delivery, and an off-host staging restore drill remain external launch gates.
 
 ## Scope and boundary
 
@@ -24,7 +22,7 @@ This report does not claim:
 - live provider acceptance
 - production TLS or DNS validation
 - remote monitoring/alert verification
-- backup/restore drill success
+- production/off-host backup durability or staging restore drill success
 - real end-user traffic validation
 - public deployment safety beyond repo-level checks
 
@@ -138,7 +136,8 @@ The following remain intentionally unverified and must be treated as launch gate
 ### P1 remaining risks
 
 1. Backup and restore drill
-   - follow the current encrypted [backup and recovery procedure](docs/PRODUCTION_LAUNCH.md#5-backups-and-recovery); synthetic local round-trips have passed, while real off-host retrieval, key recovery and recovery objectives need operating acceptance
+   - This session successfully exercised the encrypted backup, local rclone copy, archive verification, and restore into a separate empty ephemeral PostgreSQL 16 database using synthetic data and a temporary age identity.
+   - The local filesystem remote does not verify the deployment's off-host remote, retention policy, protected recovery identity, or restore environment; complete and record that staging drill before launch.
 
 2. Production smoke deployment
    - only repository-oriented checks are complete; actual public edge availability is not proven

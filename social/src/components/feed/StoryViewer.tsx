@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { useAppStore, type Story } from '@/lib/store';
 import { api, type BackendStoryAnalytics, type BackendStoryViewer } from '@/lib/api-client';
-import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2, Search, Clock, Pause, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2, Search, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
@@ -27,8 +25,6 @@ const STORY_DURATION = 5000;
 const FAST_REACTIONS = ['🔥', '❤️', '🚀', '💎', '😂', '🙏'];
 
 export default function StoryViewer({ initialAuthorId, groupedStories, authors, onClose }: StoryViewerProps) {
-  const reduceMotion = useAppReducedMotion();
-  const restoreFocusRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
   const viewStory = useAppStore((s) => s.viewStory);
@@ -40,8 +36,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const [storyIndex, setStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isPointerHeld, setIsPointerHeld] = useState(false);
-  const [isReplyFocused, setIsReplyFocused] = useState(false);
   const [reactionText, setReactionText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   
@@ -68,7 +62,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
   // Auto-advance logic
   useEffect(() => {
-    if (isPaused || isPointerHeld || isReplyFocused || tippingOpen || insightsOpen || !currentStory) return;
+    if (isPaused || !currentStory) return;
 
     const interval = 50;
     const step = (interval / STORY_DURATION) * 100;
@@ -84,12 +78,12 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     }, interval);
 
     return () => clearInterval(timer);
-  }, [authorIndex, storyIndex, isPaused, isPointerHeld, isReplyFocused, tippingOpen, insightsOpen, currentStory]);
+  }, [authorIndex, storyIndex, isPaused, currentStory]);
 
   useEffect(() => {
     setProgress(0);
-    setIsPaused(currentStory?.type === 'voice' || reduceMotion);
-  }, [currentStory?.id, currentStory?.type, reduceMotion]);
+    setIsPaused(currentStory?.type === 'voice');
+  }, [currentStory?.id, currentStory?.type]);
 
   useEffect(() => {
     let active = true;
@@ -251,31 +245,18 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const initialLetter = (displayName || 'U').charAt(0);
 
   return (
-    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Content
-          asChild
-          onCloseAutoFocus={(event) => { event.preventDefault(); restoreFocusRef.current?.focus(); }}
-          onKeyDown={(event) => {
-            if (tippingOpen || (event.target as HTMLElement).closest('input, textarea, select, audio, video, [role="slider"], [contenteditable="true"]')) return;
-            if (event.key === 'ArrowRight') { event.preventDefault(); handleNext(); }
-            if (event.key === 'ArrowLeft') { event.preventDefault(); handlePrev(); }
-          }}
-        >
+    <AnimatePresence>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col sm:p-4 md:p-8 items-center justify-center font-sans"
       >
-        <DialogPrimitive.Title className="sr-only">{displayName}'s story</DialogPrimitive.Title>
-        <DialogPrimitive.Description className="sr-only">Use the previous and next buttons or arrow keys to browse stories. Pause to read, and press Escape to close.</DialogPrimitive.Description>
         <div 
-          className="relative w-full h-full max-h-[820px] sm:max-w-[420px] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10"
-          onPointerDown={() => setIsPointerHeld(true)}
-          onPointerUp={() => setIsPointerHeld(false)}
-          onPointerCancel={() => setIsPointerHeld(false)}
-          onPointerLeave={() => setIsPointerHeld(false)}
+          className="relative w-full h-full sm:max-w-[420px] sm:h-[820px] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10"
+          onPointerDown={() => setIsPaused(true)}
+          onPointerUp={() => setIsPaused(false)}
+          onPointerLeave={() => setIsPaused(false)}
         >
           {/* Progress Bars */}
           <div className="absolute top-0 left-0 right-0 z-30 flex gap-1.5 p-3 pt-4">
@@ -301,6 +282,9 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               <div className="text-white drop-shadow-md">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-sm leading-none">{displayName}</span>
+                  <span className="text-[0.6rem] font-mono px-1.5 py-0.2 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold">
+                    PRO
+                  </span>
                 </div>
                 <span className="text-[0.68rem] text-white/70 font-mono">
                   {formatDistanceToNow(new Date(currentStory.createdAt))} ago
@@ -309,9 +293,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             </div>
 
             <div className="flex items-center gap-2 story-controls">
-              <button type="button" onClick={() => setIsPaused((paused) => !paused)} aria-label={isPaused ? 'Resume story' : 'Pause story'} aria-pressed={isPaused} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
-                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              </button>
               {currentAuthorId === currentUser?.id && (
                 <button
                   type="button"
@@ -326,6 +307,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               {author && (
                 <button
                   onClick={() => {
+                    setIsPaused(true);
                     setTippingOpen(true);
                   }}
                   className="px-2.5 py-1 rounded-full bg-amber-500 text-black font-bold text-xs flex items-center gap-1 shadow-md hover:scale-105 transition-transform"
@@ -336,8 +318,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               )}
 
               <button 
-                type="button"
-                aria-label="Close story"
                 onClick={(e) => { e.stopPropagation(); onClose(); }} 
                 className="p-2 text-white/80 hover:text-white bg-black/40 rounded-full backdrop-blur-md transition-colors"
               >
@@ -387,10 +367,8 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             className="flex-1 relative cursor-pointer flex items-center justify-center select-none"
             onClick={handleTap}
           >
-            <button type="button" aria-label="Previous story" disabled={authorIndex === 0 && storyIndex === 0} onClick={(event) => { event.stopPropagation(); handlePrev(); }} className="story-controls absolute left-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white disabled:invisible"><ChevronLeft className="h-5 w-5" /></button>
-            <button type="button" aria-label="Next story" onClick={(event) => { event.stopPropagation(); handleNext(); }} className="story-controls absolute right-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white"><ChevronRight className="h-5 w-5" /></button>
             {currentStory.type === 'image' || currentStory.type === 'video' ? (
-              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt={`${displayName}'s story${currentStory.textContent ? `: ${currentStory.textContent}` : ''}`} />
+              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt={`Story photo shared by ${author?.displayName || author?.username || 'a member'}`} />
             ) : null}
             
             {currentStory.type === 'text' && (
@@ -413,7 +391,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 <div className="w-full max-w-sm space-y-3">
                   <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/60">Voice Story</p>
                   <audio
-                    aria-label={`${displayName}'s voice story`}
                     controls
                     autoFocus={false}
                     src={currentStoryMedia}
@@ -473,20 +450,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             {/* DM Reply Input */}
             <form onSubmit={handleSendReaction} className="flex items-center gap-2">
               <Input
-                aria-label={`Reply to ${displayName}'s story`}
                 value={reactionText}
                 onChange={(e) => setReactionText(e.target.value)}
-                onFocus={() => setIsReplyFocused(true)}
-                onBlur={() => setIsReplyFocused(false)}
                 placeholder={currentAuthorId === currentUser?.id ? 'Your own story' : `Reply to ${displayName}…`}
                 disabled={currentAuthorId === currentUser?.id || isSendingReply}
                 className="rounded-full bg-white/10 border-white/20 text-xs h-10 text-white placeholder:text-white/60 focus:border-primary/60"
               />
               <button
                 type="submit"
-                aria-label="Send story reply"
                 disabled={!reactionText.trim() || currentAuthorId === currentUser?.id || isSendingReply}
-                className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
+                className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -506,12 +479,11 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             isOpen={tippingOpen}
             onOpenChange={(open) => {
               setTippingOpen(open);
+              if (!open) setIsPaused(false);
             }}
           />
         )}
       </motion.div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    </AnimatePresence>
   );
 }

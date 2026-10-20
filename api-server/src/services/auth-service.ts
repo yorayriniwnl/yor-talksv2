@@ -2,14 +2,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { authenticator } from "otplib";
-import { createHash, randomUUID, randomBytes, randomInt } from "node:crypto";
+import { randomUUID, randomBytes, randomInt } from "node:crypto";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { db, type DbTransaction } from "@workspace/db";
-import { preregistrationsTable, userFeatureOverridesTable, userFollowsTable } from "@workspace/db/schema";
-import { PREMIUM_FEATURES } from "../features/premium-features.js";
+import { userFollowsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { SecurityService } from "./security-service.js";
 import { EmailService } from "./email-service.js";
@@ -36,9 +35,6 @@ type StoredLoginApprovalChallenge = LoginApprovalChallenge & {
   attempts: number;
   createdAt: string;
   approvedAt?: string;
-  emailOtpKey?: string;
-  emailOtpReservationId?: string;
-  googleIdentity?: { subject: string; email: string };
 };
 
 export type LoginApprovalChallengeStatus = {
@@ -55,11 +51,12 @@ export class TwoFactorRequiredError extends Error {
 }
 export class EmailOtpInvalidError extends Error {}
 export class EmailVerificationRequiredError extends Error {}
-export class TwoFactorAlreadyEnabledError extends Error {
-  constructor() { super("Disable the current authenticator before setting up a replacement"); }
-}
 export class GoogleSignInNotConfiguredError extends Error {}
-export class EligibilityDecisionUnavailableError extends Error { constructor() { super("Current eligibility is unavailable"); } }
+export class EligibilityDecisionUnavailableError extends Error {
+  constructor() {
+    super("Current eligibility is unavailable");
+  }
+}
 export class RegistrationNotAllowedError extends Error {}
 export class UserAlreadyExistsError extends Error {}
 export type AuthenticatedSession = { user: UserRecord; tokens: AuthTokens; eligibility: EligibilityDecision };
@@ -99,40 +96,15 @@ export class AuthService {
     const email = input.email.trim().toLowerCase();
     const userId = randomUUID();
     const user = await this.transactionRunner(async tx => {
-      // Lock and validate the one-time enrollment before querying or storing
-      // ordinary child/profile identifiers. The enrollment is consumed in the
-      // same transaction as account creation, so concurrent attempts cannot
-      // both create a user.
-      const authorization = await this.enrollmentService.consumeAuthorizedEnrollment(input.enrollmentId,input.registrationNonce,tx);
+      const authorization = await this.enrollmentService.consumeAuthorizedEnrollment(input.enrollmentId, input.registrationNonce, tx);
       if (input.acceptedTerms !== true) throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
       if (!isAllowedEmail(email)) throw new RegistrationNotAllowedError("This email domain is not allowed for this deployment");
-      const existingEmail = await this.userRepository.findByEmail(email,tx);
-      const existingUsername = await this.userRepository.findByUsername(normalizedUsername,tx);
+      const existingEmail = await this.userRepository.findByEmail(email, tx);
+      const existingUsername = await this.userRepository.findByUsername(normalizedUsername, tx);
       if (existingEmail || existingUsername) throw new UserAlreadyExistsError("An account already exists for that email or username");
-
-      // Check handle reservation for pre-registered VIP founders
-      const [preregByHandle] = await (tx ?? db)
-        .select()
-        .from(preregistrationsTable)
-        .where(eq(preregistrationsTable.username, normalizedUsername))
-        .limit(1);
-      if (preregByHandle && preregByHandle.email.toLowerCase() !== email) {
-        throw new RegistrationNotAllowedError("This username is reserved for a pre-registered VIP founder. Please use the registered email address.");
-      }
-
-      // Check if user is pre-registered by email
-      const [preregByEmail] = await (tx ?? db)
-        .select()
-        .from(preregistrationsTable)
-        .where(eq(preregistrationsTable.email, email))
-        .limit(1);
-
-      const founderRecord = preregByEmail ?? (preregByHandle && preregByHandle.email.toLowerCase() === email ? preregByHandle : null);
-      const isFounder = Boolean(founderRecord);
-
-      const passwordHash = await bcrypt.hash(input.password,10);
+      const passwordHash = await bcrypt.hash(input.password, 10);
       const consentTimestamp = new Date().toISOString();
-      const minor = authorization.experience !== 'adult_18_plus';
+      const minor = authorization.experience !== "adult_18_plus";
       const record: UserRecord = {
         id: userId,
         username: normalizedUsername,
@@ -140,8 +112,6 @@ export class AuthService {
         passwordHash,
         termsVersion: env.TERMS_VERSION,
         termsAcceptedAt: consentTimestamp,
-        // This legacy field remains a self-attestation in old accounts. A
-        // verified enrollment is recorded only in the private eligibility tables.
         ageConfirmedAt: null,
         fullName: input.fullName,
         bio: "",
@@ -161,47 +131,20 @@ export class AuthService {
           sharePreciseLocation: !minor,
           contentFilter: minor ? "child_safe" : "regular",
           onboardingCompleted: false,
-          isFounder: isFounder ? true : undefined,
-          founderPassNumber: founderRecord?.referralCode ?? undefined,
-          avatarFrame: isFounder ? "founder" : undefined,
         },
         emailVerified: false,
-        contactIdentityDigest: getContactIdentifierDigest("email",email),
+        contactIdentityDigest: getContactIdentifierDigest("email", email),
         passwordResetRequired: false,
         lastLoginAt: null,
         devices: [],
         blockedUsers: [],
         mutedUsers: [],
-        privacy: { profileVisibility: "private",messageRequests: false,allowDmFromStrangers: false },
+        privacy: { profileVisibility: "private", messageRequests: false, allowDmFromStrangers: false },
       };
-      const created = await this.userRepository.create(record,tx);
-      await this.enrollmentService.bindAuthorizedEnrollment(authorization,input.registrationNonce,userId,tx);
-
-      if (isFounder) {
-        // Provision 1-Year SuperPass (all premium features granted for 365 days)
-        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-        for (const feature of PREMIUM_FEATURES) {
-          await (tx ?? db).insert(userFeatureOverridesTable).values({
-            userId,
-            featureKey: feature,
-            enabled: true,
-            status: "active",
-            grantedAt: consentTimestamp,
-            expiresAt,
-            metadata: {
-              reason: "genesis_2026_founder_perk",
-              referralCode: founderRecord?.referralCode ?? null,
-              launchDate: "2026-12-01T00:00:00.000Z",
-            },
-          }).onConflictDoNothing();
-        }
-      }
-
+      const created = await this.userRepository.create(record, tx);
+      await this.enrollmentService.bindAuthorizedEnrollment(authorization, input.registrationNonce, userId, tx);
       return created;
     });
-    // Email delivery happens after the atomic account/enrollment commit. If a
-    // provider is temporarily unavailable the unverified account can use the
-    // existing resend path; deleting it would also destroy its consumed proof.
     const verificationToken = await this.requestEmailVerification(user.id);
     return {
       user,
@@ -247,7 +190,7 @@ export class AuthService {
           await this.createLoginApprovalChallenge(user),
         );
       }
-      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
+      if (!authenticator.check(input.totpCode, totpSecret)) {
         this.securityService.createAuditEvent("login_failure", "Wrong 2FA code", normalizedIdentifier);
         throw new Error("Invalid two-factor code");
       }
@@ -274,7 +217,7 @@ export class AuthService {
       throw new Error("The Google credential is invalid or expired");
     }
 
-    const googleSubject = payload?.sub?.trim();
+    const googleSubject = payload?.sub;
     const googleEmail = payload?.email?.trim().toLowerCase();
     if (!googleSubject || !googleEmail || payload?.email_verified !== true || !isAllowedEmail(googleEmail)) {
       throw new Error("Use a verified Google account from an allowed email domain");
@@ -285,36 +228,31 @@ export class AuthService {
     if (!user) {
       throw new Error("No Yor account exists for this Google email. Create an account first.");
     }
-    if (user.email.trim().toLowerCase() !== googleEmail || (user.googleSubject && user.googleSubject !== googleSubject)) {
+    if (user.googleSubject && user.googleSubject !== googleSubject) {
       throw new Error("This Google account is not linked to the Yor account for that email");
     }
 
-    // Google is not authoritative for an external address merely because it
-    // verified that address when the Google account was created. Only Gmail or
-    // a signed Workspace hosted-domain claim may bootstrap an email-only link.
-    // Previously linked subjects remain valid identity bindings.
-    const emailDomain = googleEmail.slice(googleEmail.lastIndexOf('@') + 1);
-    const authoritativeEmail = emailDomain === 'gmail.com' || payload?.hd?.trim().toLowerCase() === emailDomain;
-    if (!user.googleSubject && !authoritativeEmail) {
-      throw new Error("Sign in with your password or email code to verify this email address");
-    }
-    this.assertSessionAvailable(user);
+    const linked = user.googleSubject ? user : await this.userRepository.update(user.id, {
+      googleSubject,
+      emailVerified: true,
+    });
+    const finalUser = linked ?? user;
+    this.assertSessionAvailable(finalUser);
 
-    const totpSecret = await this.readTotpSecret(user);
+    const totpSecret = await this.readTotpSecret(finalUser);
     if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(user, undefined, undefined, { subject: googleSubject, email: googleEmail }),
+          await this.createLoginApprovalChallenge(finalUser),
         );
       }
-      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
+      if (!authenticator.check(input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
-      if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(finalUser.id, input.challengeId);
     }
 
-    const finalUser = await this.finishGoogleLink(user, googleSubject, googleEmail);
     return this.createSession(finalUser, { emailVerified: true });
   }
 
@@ -332,33 +270,22 @@ export class AuthService {
 
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
-    const existing = await this.redisRepository.getStrict(key);
-    if (existing) {
-      let currentCode = false;
-      try {
-        const state = JSON.parse(existing) as { authVersion?: unknown; expiresAt?: unknown };
-        currentCode = state.authVersion === (user.authVersion ?? 0) && typeof state.expiresAt === "number" && state.expiresAt > Date.now();
-      } catch { /* Replace malformed state instead of letting it block sign-in until TTL. */ }
-      if (currentCode) throw new TooManyAttemptsError("A sign-in code was already sent. Please wait before requesting another.");
-      await this.redisRepository.deleteIfValueStrict(key, existing);
-    }
-
     const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
     const expiresAt = Date.now() + 5 * 60 * 1000;
-    const reservationId = randomUUID();
     const reserved = await this.redisRepository.setIfAbsentStrict(key, JSON.stringify({
       userId: user.id,
-      authVersion: user.authVersion ?? 0,
-      reservationId,
       codeHash: await this.redisRepository.hashToken(code),
+      authVersion: user.authVersion ?? 0,
       attempts: 0,
       expiresAt,
     }), 5 * 60);
-    if (!reserved) throw new TooManyAttemptsError("A sign-in code was already sent. Please wait a minute before requesting another.");
+    if (!reserved) {
+      throw new TooManyAttemptsError("A sign-in code was already sent. Please wait a minute before requesting another.");
+    }
     try {
       await this.emailService.sendEmailLoginCode(user.email, code);
     } catch (error) {
-      await this.redisRepository.deleteEmailOtpIfReservationStrict(key, reservationId);
+      await this.redisRepository.delStrict(key);
       throw error;
     }
     logger.info({ userId: user.id }, "Email login code dispatched");
@@ -369,39 +296,48 @@ export class AuthService {
     const normalizedEmail = input.email.trim().toLowerCase();
     const keyHash = await this.redisRepository.hashToken(normalizedEmail);
     const key = `email-login-otp:${keyHash}`;
-    const suppliedHash = await this.redisRepository.hashToken(input.code);
-    const raw = await this.redisRepository.claimEmailOtpStrict(key,suppliedHash,Date.now(),5);
-    if (!raw) throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    const raw = await this.redisRepository.getStrict(key);
+    if (!raw) {
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
 
-    let state: { userId: string; authVersion: number; reservationId?: string; codeHash: string; attempts: number; expiresAt: number; claimed?: boolean };
-    try { state = JSON.parse(raw) as typeof state; }
-    catch {
-      await this.redisRepository.deleteIfValueStrict(key, raw);
+    let state: { userId: string; codeHash: string; attempts: number; expiresAt: number };
+    try {
+      state = JSON.parse(raw) as typeof state;
+    } catch {
+      await this.redisRepository.delStrict(key);
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
+    if (state.expiresAt <= Date.now() || state.attempts >= 5) {
+      await this.redisRepository.delStrict(key);
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
 
     const user = await this.userRepository.findById(state.userId);
-    if (!user || user.email !== normalizedEmail || !isAllowedEmail(user.email) || (user.authVersion ?? 0) !== state.authVersion) {
-      await this.deleteClaimedEmailOtp(key, raw, state.reservationId);
+    if (!user || user.email !== normalizedEmail || !isAllowedEmail(user.email)) {
+      await this.redisRepository.delStrict(key);
       throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
     }
     this.assertSessionAvailable(user);
     const totpSecret = await this.readTotpSecret(user);
+    if (totpSecret && input.totpCode && !authenticator.check(input.totpCode, totpSecret)) {
+      throw new EmailOtpInvalidError("Invalid two-factor authentication code");
+    }
+
+    const suppliedHash = await this.redisRepository.hashToken(input.code);
+    if (!(await this.redisRepository.verifyAndConsumeEmailOtpStrict(key, suppliedHash, user.authVersion ?? 0))) {
+      throw new EmailOtpInvalidError("The sign-in code is invalid or expired");
+    }
     if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(user, key, state.reservationId),
+          await this.createLoginApprovalChallenge(user),
         );
-      }
-      if (!await this.consumeTotpCode(user.id, input.totpCode, totpSecret)) {
-        await this.deleteClaimedEmailOtp(key, raw, state.reservationId);
-        throw new EmailOtpInvalidError("Invalid two-factor authentication code");
       }
       if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
-    await this.deleteClaimedEmailOtp(key, raw, state.reservationId);
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -488,18 +424,8 @@ export class AuthService {
       return undefined;
     }
     await this.redisRepository.removeFromSetStrict(this.loginApprovalIndexKey(challenge.userId), challengeId);
-    if (challenge.emailOtpKey && challenge.emailOtpReservationId) {
-      await this.redisRepository.deleteEmailOtpIfReservationStrict(challenge.emailOtpKey, challenge.emailOtpReservationId);
-    }
-
     const user = await this.userRepository.findById(challenge.userId);
     if (!user || !this.isSessionAvailable(user) || (user.authVersion ?? 0) !== (challenge.authVersion ?? 0) || !(await this.readTotpSecret(user))) return undefined;
-    if (challenge.googleIdentity) {
-      try {
-        const linked = await this.finishGoogleLink(user, challenge.googleIdentity.subject, challenge.googleIdentity.email);
-        return this.createSession(linked, { emailVerified: true });
-      } catch { return undefined; }
-    }
     return this.createSession(user, { emailVerified: true });
   }
 
@@ -512,11 +438,6 @@ export class AuthService {
 
   private async cleanRevokedCredentials(userId: string): Promise<void> {
     try {
-      const user = await this.userRepository.findById(userId);
-      if (user?.email) {
-        const emailHash = await this.redisRepository.hashToken(user.email.trim().toLowerCase());
-        await this.redisRepository.deleteEmailOtpIfAuthVersionChangedStrict(`email-login-otp:${emailHash}`, user.authVersion ?? 0);
-      }
       const keys = await this.redisRepository.scanStrict(`session:${userId}:*`);
       await Promise.all(keys.map(key => this.redisRepository.delStrict(key)));
       await this.invalidateLoginApprovalChallenges(userId);
@@ -568,7 +489,7 @@ export class AuthService {
       const nextRefreshToken = this.issueRefreshToken(currentUser, deviceId);
       const nextRefreshTokenHash = await this.redisRepository.hashToken(nextRefreshToken);
       const rotated = await this.redisRepository.rotateValueStrict(
-        `session:${user.id}:${deviceId}`,
+        `session:${currentUser.id}:${deviceId}`,
         refreshTokenHash,
         nextRefreshTokenHash,
         7 * 24 * 60 * 60,
@@ -686,7 +607,7 @@ export class AuthService {
     return this.userRepository.patchPrivacy(userId, effectivePrivacy);
   }
 
-  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean; confirmedAge?: boolean }): Promise<UserRecord | undefined> {
+  async acceptCurrentTerms(userId: string, input: { acceptedTerms: boolean }): Promise<UserRecord | undefined> {
     if (input.acceptedTerms !== true) {
       throw new RegistrationNotAllowedError("You must accept the current terms and privacy notice");
     }
@@ -705,9 +626,8 @@ export class AuthService {
   async beginTwoFactorSetup(userId: string): Promise<{ secret: string; otpauthUrl: string } | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
-    if (user.totpSecret) throw new TwoFactorAlreadyEnabledError();
     const secret = authenticator.generateSecret();
-    await this.redisRepository.setStrict(
+    await this.redisRepository.set(
       `totp-setup:${userId}`,
       encryptSecret(secret, env.TOTP_ENCRYPTION_KEY),
       10 * 60,
@@ -717,10 +637,7 @@ export class AuthService {
   }
 
   async confirmTwoFactorSetup(userId: string, code: string): Promise<boolean> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) return false;
-    if (user.totpSecret) throw new TwoFactorAlreadyEnabledError();
-    const pendingSecretValue = await this.redisRepository.getStrict(`totp-setup:${userId}`);
+    const pendingSecretValue = await this.redisRepository.get(`totp-setup:${userId}`);
     if (!pendingSecretValue) {
       return false;
     }
@@ -730,37 +647,22 @@ export class AuthService {
     } catch {
       return false;
     }
-    if (!await this.consumeTotpCode(userId, code, pendingSecret)) {
+    if (!authenticator.check(code, pendingSecret)) {
       return false;
     }
-    // The database condition also covers another confirmation winning after
-    // the read above. An existing authenticator must never be overwritten.
-    if (!await this.userRepository.enableTwoFactorIfDisabled(userId, encryptSecret(pendingSecret, env.TOTP_ENCRYPTION_KEY))) return false;
-    await this.redisRepository.deleteIfValueStrict(`totp-setup:${userId}`, pendingSecretValue);
+    await this.userRepository.update(userId, { totpSecret: encryptSecret(pendingSecret, env.TOTP_ENCRYPTION_KEY) });
+    await this.redisRepository.del(`totp-setup:${userId}`);
     return true;
   }
 
   async disableTwoFactor(userId: string, code: string): Promise<boolean> {
     const user = await this.userRepository.findById(userId);
-    const storedSecret = user?.totpSecret;
-    if (!storedSecret) return false;
-    const secret = decryptSecret(storedSecret, env.TOTP_ENCRYPTION_KEY).secret;
-    if (!await this.consumeTotpCode(userId, code, secret)) {
+    const secret = user ? await this.readTotpSecret(user) : null;
+    if (!secret || !authenticator.check(code, secret)) {
       return false;
     }
-    // A code for an earlier secret cannot disable a replacement installed
-    // while this request was waiting for the database.
-    return this.userRepository.disableTwoFactorIfMatches(userId, storedSecret);
-  }
-
-  private async consumeTotpCode(userId: string, code: string, secret: string): Promise<boolean> {
-    if (!authenticator.check(code, secret)) return false;
-    // The verifier uses the default 30-second step with no clock-skew window.
-    // Retain the claim beyond that validity period. One atomic Redis NX claim
-    // is shared across login methods, setup and disable, including concurrent
-    // requests. Neither the authenticator secret nor the short code is stored.
-    const digest = createHash("sha256").update(secret).update("\0").update(code).digest("hex");
-    return this.redisRepository.setIfAbsentStrict(`totp-used:${userId}:${digest}`, "used", 90);
+    await this.userRepository.update(userId, { totpSecret: null });
+    return true;
   }
 
   private async readTotpSecret(user: UserRecord): Promise<string | null> {
@@ -774,13 +676,7 @@ export class AuthService {
     return decrypted.secret;
   }
 
-  private async deleteClaimedEmailOtp(key: string, raw: string, reservationId?: string): Promise<void> {
-    if (reservationId) await this.redisRepository.deleteEmailOtpIfReservationStrict(key, reservationId);
-    else await this.redisRepository.deleteIfValueStrict(key, raw);
-  }
-
-  private async createLoginApprovalChallenge(user: UserRecord, emailOtpKey?: string, emailOtpReservationId?: string,
-    googleIdentity?: StoredLoginApprovalChallenge['googleIdentity']): Promise<LoginApprovalChallenge> {
+  private async createLoginApprovalChallenge(user: UserRecord): Promise<LoginApprovalChallenge> {
     const userId = user.id;
     const challengeId = randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -793,22 +689,10 @@ export class AuthService {
       status: "pending",
       attempts: 0,
       createdAt: new Date().toISOString(),
-      ...(emailOtpKey ? { emailOtpKey } : {}),
-      ...(emailOtpReservationId ? { emailOtpReservationId } : {}),
-      ...(googleIdentity ? { googleIdentity } : {}),
     };
     await this.redisRepository.setStrict(this.loginApprovalKey(challengeId), JSON.stringify(challenge), 5 * 60);
     await this.redisRepository.addToSetStrict(this.loginApprovalIndexKey(userId), challengeId);
     return this.publicLoginApprovalChallenge(challenge);
-  }
-
-  private async finishGoogleLink(user: UserRecord, subject: string, email: string): Promise<UserRecord> {
-    if (user.email.trim().toLowerCase() !== email) throw new Error('Google email changed during sign-in');
-    if (user.googleSubject === subject) return user;
-    if (user.googleSubject) throw new Error('A different Google identity is already linked');
-    const linked = await this.userRepository.linkGoogleSubjectForLogin(user, subject);
-    if (!linked) throw new Error('Google identity could not be linked; retry sign-in');
-    return linked;
   }
 
   private async readLoginApprovalChallenge(challengeId: string): Promise<StoredLoginApprovalChallenge | null> {
@@ -873,9 +757,6 @@ export class AuthService {
     }
     const updatedUser = await this.userRepository.recordLogin(current, updates);
     if (!updatedUser) throw new Error('Credentials changed; sign in again');
-    // Resolve current proof, policy, consent and moderation state after all
-    // identity/MFA checks and the login write. A restricted result still gets
-    // an identity session; request middleware applies the route boundary.
     const eligibility = await this.currentEligibilityDecision(updatedUser.id);
     const finalIdentity = await this.userRepository.findById(updatedUser.id);
     if (!finalIdentity || !this.isSessionAvailable(finalIdentity) || (finalIdentity.authVersion ?? 0) !== (updatedUser.authVersion ?? 0)) {

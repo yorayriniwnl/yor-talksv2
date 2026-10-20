@@ -3,8 +3,6 @@
 **Review date:** 2026-09-11  
 **Scope:** repository-level technical review of the web app, API, database schema, contracts, configuration, assets and existing tests. This is not legal advice and does not certify compliance.
 
-> **Historical review.** This document records the 11 September source and launch assumptions, including the then-proposed India launch. The current launch decision is the EU; its Member State, operating entity and entity size remain undecided. Use the [current readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](PRODUCTION_LAUNCH.md) for subsequent repairs, verification and open release gates. Statements below about age restrictions, providers, test availability and legal requirements describe that historical review and are not current launch approval.
-
 ## Remaining P0/P1 risks
 
 1. **P0: Public launch must remain blocked until live identity, security and provider configuration is verified.** Production configuration rejects placeholder secrets and missing required providers, but this review did not run a deployed environment. Complete TLS, DNS, CORS, cookie, OAuth, email, upload, moderation, backup/restore, monitoring and incident-response tests.
@@ -38,6 +36,21 @@
 
 The schema also contains counters, content ratings, audience settings, moderation/status fields and feature-specific metadata. These support ranking, delivery, safety or enabled product features; the owner should periodically delete unused columns rather than expose them by default in API responses.
 
+## Retention and deletion matrix
+
+The application has feature-specific expiry and deletion paths, but the repository does not establish an approved comprehensive retention schedule. “No approved period” below is an unresolved owner/legal decision, not permission to retain data indefinitely.
+
+| Category | Purpose | Period evidenced in implementation | Deletion mechanism | Unresolved approval / verification |
+|---|---|---|---|---|
+| Account identity, credentials and eligibility/consent records | Sign-in, account recovery, eligibility and versioned terms | While account is active; access tokens are short-lived and the refresh cookie has a seven-day maximum age. No post-deletion period is approved. | Account deletion removes the user record and queues cleanup; active Redis sessions are invalidated. | Approve any retained authentication, consent and abuse-prevention evidence periods. |
+| Profile, posts, comments and relationships | User-directed social service and moderation | Until user deletion or account cleanup; no comprehensive period is configured. | In-product controls and account deletion workflow. | Verify all dependent copies, feed caches, recipient copies and backups; define any safety hold. |
+| Messages and media | Deliver conversations and user media | Messages may have an explicit expiry; Stories expire according to product terms (24 hours standard, up to 72 hours when the entitlement allows it). Other media has no single repository-wide lifetime. | User deletion and account/media cleanup jobs; expired media references release owned assets. | Verify provider cleanup, recipient copies, backups and failed-job handling; approve any moderation hold. |
+| Reports, grievances and moderation evidence | Review safety, privacy and copyright complaints and support appeals | No approved automatic deletion period is documented. | Restricted operational handling and case-by-case resolution; no self-service report erasure is promised. | Name the case owner; approve complaint, appeal, evidence-preservation and copyright retention periods and legal holds. |
+| Optional browser telemetry | Reliability and product improvement | Browser queue is removed on opt-out; the analytics rollup script invokes server pruning with a 90-day retention period. | User opt-out clears the local consent marker and queue; the rollup/prune script deletes old server events when it is run. | Confirm production schedule and whether 90 days is necessary; test opt-out and deployed network behavior. |
+| Contact Shield match digests | Match user-selected contacts without retaining a raw address book | Until removed or account cleanup; no independent maximum is approved. | User removes entries or account cleanup runs. | Approve digest-key rotation, deletion propagation and any backup period. |
+| Orders, payment, ledger and dispute records (when enabled) | Fulfilment, fraud, refunds, disputes and accounting | No approved statutory/accounting period is recorded in this repository. Account deletion anonymizes/retains some financial references rather than deleting them. | Payment/account services retain necessary transaction records; user data is minimized where supported. | Obtain jurisdiction-specific accounting/consumer-law advice and owner-approved period; confirm provider-side deletion/retention. |
+| Backups, application/security logs and queued cleanup jobs | Recovery, service security and retryable deletion | Operational schedules/TTL vary; no single approved user-data period is documented here. | Scheduled backup rotation and durable cleanup workers where configured. | Verify off-host backup lifecycle, log rotation, job completion, restore isolation and deletion propagation. |
+
 ## Analytics and tracking inventory
 
 - The repository contains a custom telemetry batcher used by React profiling and route navigation components.
@@ -50,17 +63,18 @@ The schema also contains counters, content ratings, audience settings, moderatio
 
 ## Third-party service inventory
 
-| Service/resource | Repository evidence and likely data/resource flow | Action |
-|---|---|---|
-| Google Identity Services | External `accounts.google.com/gsi/client` script; sign-in credential is sent to the API for authentication. | Required only when Google sign-in is enabled; disclose and verify OAuth configuration, origin and Google terms. |
-| Cloudinary | Server upload/storage integration when configured; receives uploaded media and related metadata. | Required for media hosting; verify account region, transformations, deletion and licence/terms. |
-| Resend | Transactional email provider when configured; receives email address and message content needed for delivery. | Required for verification/recovery; verify sender domain, processor terms and retention. |
-| LiveKit | RTC/live-room integration when enabled; receives room/session and media transport data. | Disabled unless fully configured; complete live-room privacy and recording review first. |
-| Razorpay | Payment integration when enabled; receives payment/order data. | Keep disabled until payment, refund, consumer-law and webhook controls are live-tested. |
-| Web Push/browser push services | Browser subscription and notification delivery when enabled. | Permission-gated and feature-gated; document browser/provider processing. |
-| OpenAI or Gemini | Server content-safety provider when one is configured; may receive submitted content for moderation. | Verify processor terms, retention, regional transfer and sensitive-content handling. |
-| Postgres and Redis | Required infrastructure for accounts/content/session/queues; receives service data. | Secure deployment, access control, backup encryption and retention need manual verification. |
-| Browser Contact Picker | Optional browser API used by IRL Shield; selected contact names/emails are read locally and only normalized email match values are submitted. | Keep explicit in-product explanation; verify platform permission behavior and deletion. |
+| Provider/service | Purpose and data shared | Feature gate / disclosure | Verification status |
+|---|---|---|---|
+| Google Identity Services | Optional sign-in; receives browser sign-in interaction and returns a credential sent to Yor for authentication. | Google sign-in client configuration; Privacy Notice and Cookie/Storage Notice. | Code path identified; production OAuth origin, terms and provider acceptance not verified. |
+| Cloudinary | Uploaded images/video and associated media metadata/storage operations. | Configured media provider; Privacy Notice and upload disclosures. | Code path/configuration identified; account region, processor terms, license and deletion acceptance unverified. |
+| Resend | Verification, recovery and transactional email address/content. | Configured email provider; Privacy Notice. | Code path/configuration identified; sender domain, processor terms and retention unverified. |
+| LiveKit | Live-room/RTC session and media transport data. | Live/RTC feature flags; Privacy Notice and feature disclosures. | Feature-gated; live provider acceptance and recording behavior unverified. |
+| Razorpay | Payment/order details needed for checkout, reconciliation, refunds and disputes. | Payment/Premium enable flags; public Premium terms and refund policy. | Feature-gated and disabled by checked-in defaults; test-merchant lifecycle and provider acceptance unverified. |
+| Browser push services | Push subscription endpoint/keys and notification delivery data. | Web Push feature flag plus browser permission. | Permission/feature-gated; provider processing and delivery acceptance unverified. |
+| Configured text/media moderation provider (for example OpenAI or Gemini) | Content submitted for the configured moderation operation. | Provider key/configuration and moderation feature; moderation disclosure. | Provider/configuration path identified; terms, retention, transfer and provider acceptance unverified. |
+| PostgreSQL and Redis infrastructure | Account, content, session, queue and operational data required by the service. | Required runtime infrastructure; Privacy Notice and deployment controls. | Repository wiring exists; production access, backups, operator controls and retention not certified here. |
+| Browser Contact Picker | User-selected identifiers read locally; normalized match values may be sent for Contact Shield matching. | User-initiated optional feature; in-product explanation and Privacy Notice. | API use identified; browser-specific behavior and deletion propagation need runtime verification. |
+| Yor telemetry endpoint (internal service) | Opt-in navigation/performance event batches; localStorage queue. | Eligibility plus explicit Settings opt-in; default off; Cookie/Storage Notice. | Repository gate and 90-day pruning path identified; deployed network behavior and retention schedule require runtime/owner verification. |
 
 No iframe, YouTube, Instagram, Giphy, Facebook embed or remote font was identified in the reviewed source scan. Local/project media still requires provenance review below.
 
@@ -156,3 +170,95 @@ Technical questions requiring an accountable owner and legal answer:
 - Static repository searches and source review — **COMPLETED**, not a substitute for runtime or legal verification.
 - `pnpm test:e2e` — **NOT VERIFIED**; Playwright started its web server but could not launch tests because the Chromium executable is not installed in this environment. Install the pinned browser and rerun.
 - Accessibility/axe, Docker runtime and live smoke checks — **NOT VERIFIED in this audit** and required before launch.
+
+## Continuation: final blocker revalidation
+
+This addendum is the latest repository-level validation snapshot and
+supersedes older test outcomes above where the same command was rerun. It is
+not evidence of provider acceptance, legal approval, deployment health, or
+complete WCAG conformance.
+
+### Confirmed technical repairs
+
+- Terms acceptance records only the configured Terms version and server
+  timestamp; it does not set the legacy age-confirmation field. Eligibility
+  enrollment remains the separate age/eligibility authority.
+- Restored the live-message authorization-aware update/read-receipt persistence
+  path and filtered unauthorized conversation results before building the
+  inbox response.
+- Removed duplicate source imports and unreachable duplicate message-handler
+  code that prevented API typecheck.
+- Readiness failures now return a generic response rather than dependency
+  hosts, runtime details or per-service state; public grievance receipts omit
+  category and other non-approved fields.
+- Kept the Release migration's media and eligibility migration paths intact;
+  the migration safety unit test passed.
+- Updated the Studio camera E2E stub to provide the `MediaRecorder` capability
+  queried by the component and asserted the control's accessible name.
+
+### Current validation outcomes
+
+PASS:
+
+- `pnpm test:unit` — 63 passed, 0 failed.
+- `pnpm --filter @workspace/db build` — passed.
+- `pnpm --filter @workspace/api-server typecheck` — passed after the DB
+  workspace build.
+- `pnpm --filter @workspace/api-server build` — passed.
+- `pnpm --filter @workspace/social typecheck` — passed.
+- `pnpm --filter @workspace/social build` — passed, with existing Vite
+  large-chunk warnings.
+- `pnpm production-config:check` — passed; 69 API environment keys and
+  production Compose requirements were verified.
+- `pnpm contract:check` — passed; 252 operations across 214 paths.
+- Current Terms acceptance test — 1 passed.
+- AI provider response tests — 4 passed.
+- Focused Studio manual-stop/accessibility E2E — 1 passed after correcting the
+  test stub.
+- Readiness-disclosure regression — 1 passed.
+- Public grievance projection assertion — 1 passed, though the containing
+  integration test exited nonzero because its PostgreSQL cleanup hook could
+  not connect.
+
+BLOCKED BY LOCAL SERVICES:
+
+- `pnpm --filter @workspace/api-server test` — 387 tests: 158 passed, 226
+  failed, 3 skipped. PostgreSQL (`localhost:5432`) and Redis
+  (`localhost:6379`) refused connections; database-backed deletion, messaging,
+  eligibility and cache/session tests therefore do not provide usable
+  verification. The run also reported failures for an auth-registration
+  expectation while eligibility is unavailable, push unsubscribe, isolated
+  migration variables, worker readiness, and shared metrics. The full suite
+  was not rerun after two targeted readiness/grievance fixes.
+- One initial combined browser run had 4 passes and 1 Studio camera test
+  failure. The isolated rerun passed after adding `MediaRecorder.isTypeSupported`
+  to the test double; the combined run itself remains a failed invocation.
+
+### Remaining release blockers
+
+- **Age assurance / child safety:** the repository has eligibility-aware
+  enrollment, but the configured assurance adapter is unavailable. Keep the
+  public beta gate closed until an approved assurance process and child-safety
+  operation are available and tested. Terms acceptance is not age verification.
+- **Account deletion:** the account service removes the account and queues
+  cleanup, and preserves/anonymizes financial references. The media-cleanup
+  hold consumer, provider propagation, retry behavior, and backup/legal-hold
+  outcomes have not been verified with PostgreSQL, Redis, or live providers.
+- **Email marketing:** the inspected email service sends authentication
+  messages only; no marketing sender or persistent marketing preference path
+  is present. `MARKETING_EMAIL_ENABLED` defaults to false and configuration
+  rejects true. Do not add marketing sends until scoped unsubscribe tokens,
+  persistent preferences, send-time opt-out checks and required headers are
+  implemented and tested.
+- **Accessibility:** selected avatar/story alternatives, Studio control names,
+  skip navigation, keyboard focus and analytics withdrawal have focused
+  coverage. Full screen-reader, route-complete contrast, zoom/reflow, manual
+  keyboard, and axe verification remain open.
+- **Owner, counsel and provider evidence:** operator identity/contact details,
+  reviewed legal terms, retention periods, provider acceptance/regions and
+  commercial asset rights remain unverified. Unknown asset rights remain
+  `UNVERIFIED`.
+- **Production operations:** live deletion/export drills, provider cleanup,
+  backups/restores, monitoring/alert delivery, incident response and public
+  deployment configuration remain unverified. The public beta must remain
+  blocked.

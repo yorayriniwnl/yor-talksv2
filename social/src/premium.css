@@ -157,7 +157,7 @@ body {
 .yor-companion {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: calc(1.5rem + var(--yor-ambient-player-height, 0px) + 0.75rem);
+  bottom: max(1rem, env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -229,9 +229,6 @@ body {
 
 .yor-companion__panel {
   width: min(19rem, calc(100vw - 2rem));
-  max-height: var(--radix-popover-content-available-height);
-  overflow-y: auto;
-  overscroll-behavior: contain;
   padding: 1rem;
   border: 1px solid hsl(var(--border) / 0.82);
   border-radius: 1.35rem;
@@ -261,16 +258,12 @@ body {
 @keyframes companion-panel-in { from { opacity: 0; transform: translateY(0.5rem) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 767px) {
-  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); }
+  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__wake { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__trigger { min-width: 3rem; width: 3rem; height: 3rem; justify-content: center; padding: 0.3rem; border-radius: 1rem; transform: none; }
   .yor-companion__trigger .yor-companion__label,
   .yor-companion__trigger .yor-companion__sparkle,
   .yor-companion__trigger > svg { display: none; }
-}
-
-@media (max-width: 1023px) {
-  .yor-companion { bottom: calc(5.25rem + env(safe-area-inset-bottom) + var(--yor-ambient-player-height, 0px) + 0.75rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -366,7 +359,8 @@ body {
   background: hsl(var(--card));
   box-shadow: 0 0 0 3px hsl(var(--primary) / 0.09);
   color: hsl(var(--foreground));
-  outline: none;
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 3px;
 }
 
 .premium-search__shortcut {
@@ -865,8 +859,8 @@ body {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 *:focus-visible {
-  outline: 2px solid hsl(var(--primary) / 0.5);
-  outline-offset: 2px;
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 3px;
   border-radius: inherit;
 }
 
@@ -2564,24 +2558,6 @@ a.yor-secondary-action:hover {
 html.yor-accessibility-large-text {
   font-size: 112.5%;
 }
-
-/* Accent choices use theme-specific foreground/background pairs. */
-:root[data-yor-accent]:not(.dark) {
-  --primary-foreground: 0 0% 100%;
-  --accent-foreground: 0 0% 100%;
-  --ring: var(--primary);
-}
-:root.dark[data-yor-accent] {
-  --primary-foreground: 0 0% 0%;
-  --accent-foreground: 0 0% 0%;
-  --ring: var(--primary);
-}
-:root[data-yor-accent='midnight']:not(.dark) { --primary: 0 66% 24%; --accent: 4 70% 36%; }
-:root.dark[data-yor-accent='midnight'] { --primary: 0 70% 70%; --accent: 4 100% 75%; }
-:root[data-yor-accent='lilac']:not(.dark) { --primary: 4 70% 36%; --accent: 0 66% 32%; }
-:root.dark[data-yor-accent='lilac'] { --primary: 4 100% 75%; --accent: 0 77% 66%; }
-:root[data-yor-accent='amber']:not(.dark) { --primary: 12 78% 34%; --accent: 0 66% 32%; }
-:root.dark[data-yor-accent='amber'] { --primary: 0 77% 64%; --accent: 4 100% 75%; }
 
 html.yor-accessibility-high-contrast {
   --muted-foreground: 240 6% 28%;

@@ -6,24 +6,10 @@ import { RedisRepository } from "../repositories/redis-repository.js";
 import { AccountService } from "../services/account-service.js";
 import { InvalidMessageContentError, MessageBlockedError, MessageService } from "../services/message-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { EligibilityService } from "../services/eligibility-service.js";
 import { allowTestContacts, authorizeTestAdultAccount, createTestUser } from "./test-helpers.js";
 import { pool } from "@workspace/db";
 
 after(() => pool.end());
-
-async function createAcceptedGroup(service: MessageService, creatorId: string, memberIds: string[], title: string) {
-  const group = await service.createGroupChat(creatorId, memberIds, title);
-  for (const memberId of memberIds) {
-    // Accept current revisions: each accepted member changes the group snapshot
-    // and refreshes the still-pending invitations.
-    const invitation = (await service.listGroupInvitations(memberId)).find(row => row.conversationId === group.id);
-    assert.ok(invitation);
-    await service.acceptGroupInvitation(invitation.id, memberId, invitation.updatedAt);
-  }
-  assert.deepEqual((await new ConversationRepository().getMembers(group.id)).sort(), [creatorId, ...memberIds].sort());
-  return group;
-}
 
 test("messages support edit, delete, reaction, and pin workflows", async () => {
   const userRepository = new UserRepository();
@@ -63,9 +49,11 @@ test("concurrent reactions from different users are preserved and repeated react
   const sender = await createTestUser(users);
   const first = await createTestUser(users);
   const second = await createTestUser(users);
-  for (const user of [sender, first, second]) await authorizeTestAdultAccount(user.id);
   const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
-  const group = await createAcceptedGroup(service, sender.id, [first.id, second.id], "Concurrent reactions");
+  const group = await service.createGroupChat(sender.id, [first.id, second.id], "Concurrent reactions");
+  await service.acceptGroupInvitation(group.invitations[0]!.id, first.id, group.invitations[0]!.updatedAt);
+  const secondInvitation = (await service.listGroupInvitations(second.id))[0]!;
+  await service.acceptGroupInvitation(secondInvitation.id, second.id, secondInvitation.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "Concurrent reactions");
   await Promise.all([
     service.addReaction(message.id, first.id, "heart"),
@@ -117,68 +105,12 @@ test("group read receipts survive reload and stay scoped to each recipient", asy
   await service.acceptGroupInvitation(refreshedSecond.id,second.id,refreshedSecond.updatedAt);
   const message = await service.sendMessageToConversation(sender.id, group.id, "A shared conversation");
   assert.equal((await service.markSeen(message.id, sender.id))?.seenAt, null);
-  const firstDecision = await new EligibilityService().decisionFor(first.id);
-  assert.equal(firstDecision.activated,true);
   await service.markSeen(message.id, first.id);
   assert.ok((await service.listConversation(group.id, first.id))[0].seenAt);
   assert.equal((await service.listConversation(group.id, second.id))[0].seenAt, null);
   assert.ok((await service.listConversation(group.id, sender.id))[0].seenAt);
   assert.ok((await service.getConversationsForUser(first.id))[0].lastMessage?.seenAt);
   assert.equal((await service.getConversationsForUser(second.id))[0].lastMessage?.seenAt, null);
-});
-
-test("sender history and inbox suppress retained direct receipts after reader withdrawal", async () => {
-  const users = new UserRepository();
-  const sender = await createTestUser(users);
-  const reader = await createTestUser(users);
-  await authorizeTestAdultAccount(sender.id);
-  await authorizeTestAdultAccount(reader.id);
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts);
-  const sent = await service.sendMessage(sender.id, reader.id, 'Retained receipt privacy');
-  await service.markSeen(sent.id, reader.id);
-  assert.ok((await service.listConversation(sent.conversationId, sender.id))[0].seenAt);
-  await users.update(reader.id, { settings: { ...reader.settings, readReceiptsEnabled: false } });
-  assert.equal((await service.listConversation(sent.conversationId, sender.id))[0].seenAt, null);
-  assert.equal((await service.getConversationsForUser(sender.id))[0].lastMessage?.seenAt, null);
-  const stored = await pool.query('SELECT seen_at FROM messages WHERE id=$1', [sent.id]);
-  assert.ok(stored.rows[0].seen_at, 'withdrawing publication does not erase the retained direct receipt');
-  // A legacy row has only messages.seen_at. Its fallback must use the same
-  // current reader authority as the normalized message_reads rows.
-  await pool.query('DELETE FROM message_reads WHERE message_id=$1', [sent.id]);
-  assert.equal((await service.listConversation(sent.conversationId, sender.id))[0].seenAt, null);
-  await users.update(reader.id, { settings: { ...reader.settings, readReceiptsEnabled: true } });
-  assert.ok((await service.listConversation(sent.conversationId, sender.id))[0].seenAt);
-});
-
-test("group receipt aggregation includes only currently permitted adult readers", async t => {
-  const users = new UserRepository();
-  const sender = await createTestUser(users);
-  const first = await createTestUser(users);
-  const second = await createTestUser(users);
-  for (const user of [sender, first, second]) await authorizeTestAdultAccount(user.id);
-  const eligibility = new EligibilityService();
-  const service = new MessageService(new ConversationRepository(), new MessageRepository(), users, undefined, undefined, allowTestContacts, eligibility);
-  const group = await service.createGroupChat(sender.id, [first.id, second.id], 'Receipt privacy audit');
-  await service.acceptGroupInvitation(group.invitations[0].id, first.id, group.invitations[0].updatedAt);
-  const secondInvite = (await service.listGroupInvitations(second.id))[0];
-  await service.acceptGroupInvitation(secondInvite.id, second.id, secondInvite.updatedAt);
-  const sent = await service.sendMessageToConversation(sender.id, group.id, 'Group reader privacy');
-  await service.markSeen(sent.id, first.id);
-  await service.markSeen(sent.id, second.id);
-  await pool.query(`UPDATE message_reads SET read_at=CASE WHEN user_id=$2 THEN '2026-01-01'::timestamp
-    ELSE '2026-02-01'::timestamp END WHERE message_id=$1`, [sent.id, first.id]);
-  assert.match((await service.listConversation(group.id, sender.id))[0].seenAt!, /^2026-01-01/);
-  await users.update(first.id, { settings: { ...first.settings, readReceiptsEnabled: false } });
-  assert.match((await service.listConversation(group.id, sender.id))[0].seenAt!, /^2026-02-01/);
-  const decisionsFor = eligibility.decisionForMany.bind(eligibility);
-  t.mock.method(eligibility, 'decisionForMany', async (ids: string[]) => {
-    const decisions = await decisionsFor(ids);
-    const decision = decisions.get(second.id);
-    if (decision) decisions.set(second.id, { ...decision, experience: 'teen_13_17' });
-    return decisions;
-  });
-  assert.equal((await service.listConversation(group.id, sender.id))[0].seenAt, null);
-  assert.equal((await service.getConversationsForUser(sender.id))[0].lastMessage?.seenAt, null);
 });
 
 test("concurrent first messages share one direct conversation in either direction", async () => {
@@ -239,9 +171,11 @@ test("deleting a group creator or member preserves shared group history and remo
   const creator = await createTestUser(users, { passwordHash: await bcrypt.hash('creator-password', 10) });
   const memberA = await createTestUser(users, { passwordHash: await bcrypt.hash('member-a-password', 10) });
   const memberB = await createTestUser(users, { passwordHash: await bcrypt.hash('member-b-password', 10) });
-  for (const user of [creator, memberA, memberB]) await authorizeTestAdultAccount(user.id);
 
-  const creatorGroup = await createAcceptedGroup(service, creator.id, [memberA.id, memberB.id], 'Creator retention');
+  const creatorGroup = await service.createGroupChat(creator.id, [memberA.id, memberB.id], 'Creator retention');
+  await service.acceptGroupInvitation(creatorGroup.invitations[0]!.id, memberA.id, creatorGroup.invitations[0]!.updatedAt);
+  const memberBInvitation = (await service.listGroupInvitations(memberB.id))[0]!;
+  await service.acceptGroupInvitation(memberBInvitation.id, memberB.id, memberBInvitation.updatedAt);
   await service.sendMessageToConversation(creator.id, creatorGroup.id, 'Creator message');
   await service.sendMessageToConversation(memberA.id, creatorGroup.id, 'Survivor message');
   assert.equal(await accountService.deleteAccount(creator.id, 'creator-password'), true);
@@ -256,8 +190,10 @@ test("deleting a group creator or member preserves shared group history and remo
   const survivor = await createTestUser(users, { passwordHash: await bcrypt.hash('survivor-password', 10) });
   const target = await createTestUser(users, { passwordHash: await bcrypt.hash('target-password', 10) });
   const other = await createTestUser(users, { passwordHash: await bcrypt.hash('other-password', 10) });
-  for (const user of [survivor, target, other]) await authorizeTestAdultAccount(user.id);
-  const targetGroup = await createAcceptedGroup(service, survivor.id, [target.id, other.id], 'Member retention');
+  const targetGroup = await service.createGroupChat(survivor.id, [target.id, other.id], 'Member retention');
+  await service.acceptGroupInvitation(targetGroup.invitations[0]!.id, target.id, targetGroup.invitations[0]!.updatedAt);
+  const otherInvitation = (await service.listGroupInvitations(other.id))[0]!;
+  await service.acceptGroupInvitation(otherInvitation.id, other.id, otherInvitation.updatedAt);
   await service.sendMessageToConversation(target.id, targetGroup.id, 'Departing member message');
   await service.sendMessageToConversation(other.id, targetGroup.id, 'Other member message');
   assert.equal(await accountService.deleteAccount(target.id, 'target-password'), true);

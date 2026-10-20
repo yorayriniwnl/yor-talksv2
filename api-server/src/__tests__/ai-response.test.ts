@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { env } from "../config/env.js";
 import { AIService, ModerationUnavailableError } from "../services/ai-service.js";
 import { ai, OpenAIProvider } from "../services/ai/AIGateway.js";
+import { EligibilityService } from "../services/eligibility-service.js";
 
 const categories = {
   harassment: false, "harassment/threatening": false,
@@ -67,35 +68,35 @@ test("Gemini malformed moderation falls back and production fails closed if both
   assert.equal(fallback.mock.callCount(), 4);
 });
 
-test("Gemini moderation and assistance calls send credentials only in the API key header", async (t) => {
-  const original = { GEMINI_API_KEY: env.GEMINI_API_KEY, NODE_ENV: env.NODE_ENV };
-  env.GEMINI_API_KEY = "unit-test-gemini-key";
-  env.NODE_ENV = "production";
-  t.after(() => Object.assign(env, original));
+test("Gemini API keys are sent in headers and never included in request URLs", async (t) => {
+  const originalKey = env.GEMINI_API_KEY;
+  env.GEMINI_API_KEY = "synthetic-gemini-api-key";
+  t.after(() => { env.GEMINI_API_KEY = originalKey; });
 
+  const responses = [
+    '{"spam":false,"toxicity":false,"nsfw":false}',
+    '[{"reason":"topic relevance","score":0.9}]',
+    '["synthetic-tag"]',
+  ];
   const requests: Array<{ url: string; apiKey: string | null }> = [];
   t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
-    const url = String(input);
-    const body = JSON.parse(String(init?.body)) as { contents?: Array<{ parts?: Array<{ text?: string }> }> };
-    const prompt = body.contents?.[0]?.parts?.[0]?.text ?? "";
-    requests.push({ url, apiKey: new Headers(init?.headers).get("x-goog-api-key") });
-    const text = prompt.includes("Extract 3 relevant topic hashtags")
-      ? '["generated"]'
-      : prompt.includes("return 2 topical recommendation signals")
-        ? '[{"reason":"relevant","score":0.75}]'
-        : '{"spam":false,"toxicity":false,"nsfw":false}';
-    return Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
+    requests.push({
+      url: String(input),
+      apiKey: new Headers(init?.headers).get("x-goog-api-key"),
+    });
+    return Response.json({ candidates: [{ content: { parts: [{ text: responses.shift() }] } }] });
   });
 
-  const eligibility = { requireCapability: async () => {} } as unknown as ConstructorParameters<typeof AIService>[0];
+  const eligibility = new EligibilityService();
+  t.mock.method(eligibility, "requireCapability", async () => undefined);
   const service = new AIService(eligibility);
-  assert.deepEqual(await service.moderate("a safe test message"), { spam: false, toxicity: false, nsfw: false });
-  assert.deepEqual(await service.recommend("user-id", "a topic to recommend"), [{ reason: "relevant", score: 0.75 }]);
-  assert.deepEqual(await service.tag("user-id", "A longer test post #raw"), ["raw", "generated"]);
-
+  assert.deepEqual(await service.moderate("synthetic content"), { spam: false, toxicity: false, nsfw: false });
+  assert.deepEqual(await service.recommend("synthetic-user", "synthetic content"), [{ reason: "topic relevance", score: 0.9 }]);
+  assert.deepEqual(await service.tag("synthetic-user", "synthetic content with hashtag"), ["synthetic-tag"]);
   assert.equal(requests.length, 3);
   for (const request of requests) {
-    assert.equal(new URL(request.url).search, "");
-    assert.equal(request.apiKey, "unit-test-gemini-key");
+    assert.equal(request.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+    assert.equal(request.url.includes("synthetic-gemini-api-key"), false);
+    assert.equal(request.apiKey, "synthetic-gemini-api-key");
   }
 });

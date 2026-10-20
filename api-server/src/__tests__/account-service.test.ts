@@ -117,6 +117,58 @@ test("account export excludes authentication secrets and deletion removes the ac
   assert.equal(await redisRepository.getStrict(sessionKey), null);
 });
 
+test("deleting a group creator removes stale participant IDs without deleting surviving messages", async () => {
+  const password = "SyntheticGroupDeletion123!";
+  const creator = await createTestUser(userRepository, { passwordHash: await bcrypt.hash(password, 4) });
+  const survivorA = await createTestUser(userRepository);
+  const survivorB = await createTestUser(userRepository);
+  fixtureUsers.push(creator.id, survivorA.id, survivorB.id);
+  const conversation = await new ConversationRepository().createGroupChat(creator.id, "Synthetic retention test");
+  try {
+    await pool.query(
+      "INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, 'member'), ($1, $3, 'member')",
+      [conversation.id, survivorA.id, survivorB.id],
+    );
+    await pool.query(
+      "UPDATE conversations SET participant_ids = $2::jsonb WHERE id = $1",
+      [conversation.id, JSON.stringify([creator.id, survivorA.id, survivorB.id])],
+    );
+    const messageIds = [randomUUID(), randomUUID()];
+    await pool.query(
+      `INSERT INTO messages (id, conversation_id, sender_id, recipient_id, content)
+       VALUES ($1, $3, $4, NULL, 'Survivor A contribution'),
+              ($2, $3, $5, NULL, 'Survivor B contribution')`,
+      [messageIds[0], messageIds[1], conversation.id, survivorA.id, survivorB.id],
+    );
+
+    const accounts = new AccountService(userRepository, redisRepository);
+    assert.equal(await accounts.deleteAccount(creator.id, password), true);
+
+    const { rows: conversationRows } = await pool.query<{
+      participant_a: string | null; participant_b: string | null; participant_ids: string[];
+    }>("SELECT participant_a, participant_b, participant_ids FROM conversations WHERE id = $1", [conversation.id]);
+    assert.equal(conversationRows.length, 1, "Group conversation must survive creator deletion");
+    assert.equal(conversationRows[0].participant_a, null, "Legacy creator FK must be cleared");
+    assert.equal(conversationRows[0].participant_b, null, "Legacy creator FK must be cleared");
+    assert.deepEqual((conversationRows[0].participant_ids ?? []).sort(), [survivorA.id, survivorB.id].sort(),
+      "Deleted account must not remain in the legacy participant index");
+
+    const { rows: memberRows } = await pool.query<{ user_id: string }>(
+      "SELECT user_id FROM conversation_members WHERE conversation_id = $1 ORDER BY user_id", [conversation.id],
+    );
+    assert.deepEqual(memberRows.map(row => row.user_id), [survivorA.id, survivorB.id].sort());
+
+    const { rows: retainedMessages } = await pool.query<{ id: string; sender_id: string }>(
+      "SELECT id, sender_id FROM messages WHERE conversation_id = $1 ORDER BY id", [conversation.id],
+    );
+    assert.deepEqual(retainedMessages.map(row => row.id), messageIds.sort(),
+      "Surviving members' messages must never cascade-delete with the creator");
+    assert.deepEqual(retainedMessages.map(row => row.sender_id).sort(), [survivorA.id, survivorB.id].sort());
+  } finally {
+    await pool.query("DELETE FROM conversations WHERE id = $1", [conversation.id]);
+  }
+});
+
 test("account deletion rolls back ledger anonymization when user deletion fails", async () => {
   const owner = await createTestUser(userRepository, { passwordHash: await bcrypt.hash("Supersecret2!", 4) });
   const counterparty = await createTestUser(userRepository);
@@ -159,19 +211,3 @@ test("account deletion rolls back ledger anonymization when user deletion fails"
   await pool.query("DELETE FROM ledger_transactions WHERE id = $1", [ledgerId]);
   await pool.query("DELETE FROM users WHERE id = $1", [counterparty.id]);
 });
-
-for (const emailVerified of [true, false]) {
-  test(`account deletion ${emailVerified ? 'erases verified' : 'preserves unattributed'} waitlist addresses`, async () => {
-    const owner = await createTestUser(userRepository, { emailVerified, passwordHash: await bcrypt.hash('SyntheticWaitlist1!', 4) });
-    fixtureUsers.push(owner.id);
-    const waitlistId = randomUUID();
-    await pool.query('INSERT INTO waitlist(id,email) VALUES($1,$2)', [waitlistId, owner.email.toUpperCase()]);
-    try {
-      assert.equal(await new AccountService(userRepository, redisRepository).deleteAccount(owner.id, 'SyntheticWaitlist1!'), true);
-      assert.equal((await pool.query('SELECT 1 FROM waitlist WHERE id=$1', [waitlistId])).rowCount, emailVerified ? 0 : 1);
-    } finally {
-      await pool.query('DELETE FROM waitlist WHERE id=$1', [waitlistId]);
-      await pool.query('DELETE FROM background_jobs WHERE dedup_key=$1', [`account:${owner.id}`]);
-    }
-  });
-}

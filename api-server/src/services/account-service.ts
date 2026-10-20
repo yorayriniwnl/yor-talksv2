@@ -1,16 +1,40 @@
 import bcrypt from "bcryptjs";
-import { eq, or, sql } from "drizzle-orm";
-import { createHash, randomUUID } from 'node:crypto';
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { randomUUID } from 'node:crypto';
 import {
+  commentsTable,
+  communityMembersTable,
+  contactShieldsTable,
+  eventRsvpsTable,
+  broadcastChannelMembersTable,
   invitesTable,
   ledgerTransactionsTable,
+  marketplaceOrdersTable,
   messagesTable,
+  paymentOrdersTable,
+  postsTable,
+  postBookmarksTable,
+  postLikesTable,
+  postPollVotesTable,
+  postRepostsTable,
+  productSavesTable,
+  reportsTable,
+  storiesTable,
+  storyPollVotesTable,
+  storyReactionsTable,
+  storyViewsTable,
+  subscriptionsTable,
+  userCloseFriendsTable,
+  userFavoriteCreatorsTable,
+  userFollowsTable,
+  videoBookmarksTable,
   usersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
-import { AccountExportNotFoundError, streamAccountExport } from "./account-export.js";
+import { toOwnUser } from "../utils/user-view.js";
+import { visibleMessagePredicate } from "../utils/message-visibility.js";
 
 export class InvalidAccountPasswordError extends Error {}
 
@@ -21,20 +45,93 @@ export class AccountService {
     private readonly redisRepository: RedisRepository,
   ) {}
 
-  streamAccountExport(userId: string, options?: { pageSize?: number; signal?: AbortSignal }): AsyncGenerator<string> {
-    return streamAccountExport(userId, options);
-  }
-
-  /** Compatibility helper for internal callers. HTTP downloads consume the generator directly. */
   async exportAccount(userId: string): Promise<Record<string, unknown> | undefined> {
-    try {
-      const chunks: string[] = [];
-      for await (const chunk of this.streamAccountExport(userId)) chunks.push(chunk);
-      return JSON.parse(chunks.join('')) as Record<string, unknown>;
-    } catch (error) {
-      if (error instanceof AccountExportNotFoundError) return undefined;
-      throw error;
-    }
+    const user = await this.userRepository.findById(userId);
+    if (!user) return undefined;
+    const messageExportedAt = new Date().toISOString();
+    const exportBoundary = new Date();
+
+    const [posts, comments, stories, sentMessages, receivedMessages, storyViews, storyReactions, likes, bookmarks, reposts,
+      postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps, communityMemberships,
+      channelMemberships, following, followers, favorites, closeFriends, subscriptions, reports, shields,
+      financialHistory, paymentOrders, marketplaceOrders] = await Promise.all([
+      db.select().from(postsTable).where(eq(postsTable.authorId, userId)),
+      db.select().from(commentsTable).where(eq(commentsTable.authorId, userId)),
+      db.select().from(storiesTable).where(eq(storiesTable.authorId, userId)),
+      db.select().from(messagesTable).where(and(
+        eq(messagesTable.senderId, userId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
+      )),
+      db.select().from(messagesTable).where(and(
+        eq(messagesTable.recipientId, userId),
+        isNull(messagesTable.deletedAt),
+        or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, messageExportedAt)),
+      )),
+      db.select().from(storyViewsTable).where(eq(storyViewsTable.userId, userId)),
+      db.select().from(storyReactionsTable).where(eq(storyReactionsTable.userId, userId)),
+      db.select().from(postLikesTable).where(eq(postLikesTable.userId, userId)),
+      db.select().from(postBookmarksTable).where(eq(postBookmarksTable.userId, userId)),
+      db.select().from(postRepostsTable).where(eq(postRepostsTable.userId, userId)),
+      db.select().from(postPollVotesTable).where(eq(postPollVotesTable.userId, userId)),
+      db.select().from(storyPollVotesTable).where(eq(storyPollVotesTable.userId, userId)),
+      db.select().from(videoBookmarksTable).where(eq(videoBookmarksTable.userId, userId)),
+      db.select().from(productSavesTable).where(eq(productSavesTable.userId, userId)),
+      db.select().from(eventRsvpsTable).where(eq(eventRsvpsTable.userId, userId)),
+      db.select().from(communityMembersTable).where(eq(communityMembersTable.userId, userId)),
+      db.select().from(broadcastChannelMembersTable).where(eq(broadcastChannelMembersTable.userId, userId)),
+      db.select().from(userFollowsTable).where(eq(userFollowsTable.followerId, userId)),
+      db.select().from(userFollowsTable).where(eq(userFollowsTable.followingId, userId)),
+      db.select().from(userFavoriteCreatorsTable).where(eq(userFavoriteCreatorsTable.userId, userId)),
+      db.select().from(userCloseFriendsTable).where(eq(userCloseFriendsTable.userId, userId)),
+      db.select().from(subscriptionsTable).where(or(eq(subscriptionsTable.subscriberId, userId), eq(subscriptionsTable.creatorId, userId))),
+      db.select().from(reportsTable).where(eq(reportsTable.reporterId, userId)),
+      db.select({ id: contactShieldsTable.id, type: contactShieldsTable.identifierType, createdAt: contactShieldsTable.createdAt })
+        .from(contactShieldsTable)
+        .where(eq(contactShieldsTable.ownerId, userId)),
+      db.select({ id: ledgerTransactionsTable.id, amountMinor: ledgerTransactionsTable.amountMinor,
+        currency: ledgerTransactionsTable.currency, referenceId: ledgerTransactionsTable.referenceId,
+        status: ledgerTransactionsTable.status, createdAt: ledgerTransactionsTable.createdAt })
+        .from(ledgerTransactionsTable)
+        .where(or(eq(ledgerTransactionsTable.creditAccountId, userId), eq(ledgerTransactionsTable.debitAccountId, userId))),
+      db.select({ id: paymentOrdersTable.id, creatorId: paymentOrdersTable.creatorId, streamId: paymentOrdersTable.streamId,
+        provider: paymentOrdersTable.provider, providerOrderId: paymentOrdersTable.providerOrderId,
+        providerPaymentId: paymentOrdersTable.providerPaymentId, amountMinor: paymentOrdersTable.amountMinor,
+        currency: paymentOrdersTable.currency, status: paymentOrdersTable.status,
+        createdAt: paymentOrdersTable.createdAt, paidAt: paymentOrdersTable.paidAt })
+        .from(paymentOrdersTable).where(or(eq(paymentOrdersTable.payerId, userId), eq(paymentOrdersTable.creatorId, userId))),
+      db.select({ id: marketplaceOrdersTable.id, productId: marketplaceOrdersTable.productId,
+        buyerId: marketplaceOrdersTable.buyerId, sellerId: marketplaceOrdersTable.sellerId,
+        provider: marketplaceOrdersTable.provider, providerOrderId: marketplaceOrdersTable.providerOrderId,
+        providerPaymentId: marketplaceOrdersTable.providerPaymentId, amountMinor: marketplaceOrdersTable.amountMinor,
+        currency: marketplaceOrdersTable.currency, status: marketplaceOrdersTable.status,
+        shippingName: marketplaceOrdersTable.shippingName, shippingAddress: marketplaceOrdersTable.shippingAddress,
+        shippingPhone: marketplaceOrdersTable.shippingPhone, createdAt: marketplaceOrdersTable.createdAt,
+        paidAt: marketplaceOrdersTable.paidAt, fulfilledAt: marketplaceOrdersTable.fulfilledAt })
+        .from(marketplaceOrdersTable).where(or(eq(marketplaceOrdersTable.buyerId, userId), eq(marketplaceOrdersTable.sellerId, userId))),
+    ]);
+
+    const visibleMessages = (messages: typeof sentMessages) => messages.filter((message) => {
+      if (message.deletedAt) return false;
+      if (message.expiresAt == null) return true;
+      const expiresAt = Date.parse(message.expiresAt);
+      return Number.isFinite(expiresAt) && expiresAt > Date.now();
+    });
+
+    return {
+      format: "yor-talks-account-export",
+      version: 1,
+      exportedAt: exportBoundary.toISOString(),
+      account: toOwnUser(user),
+      content: { posts, comments, stories, sentMessages: visibleMessages(sentMessages), receivedMessages: visibleMessages(receivedMessages) },
+      interactions: { storyViews, storyReactions, likes, bookmarks, reposts, postPollVotes, storyPollVotes, videoBookmarks, productSaves, eventRsvps },
+      relationships: { following, followers, favorites, closeFriends, communityMemberships, channelMemberships, subscriptions },
+      reports,
+      contactShields: shields,
+      financialHistory,
+      paymentOrders,
+      marketplaceOrders,
+    };
   }
 
   async deleteAccount(userId: string, password: string): Promise<boolean> {
@@ -50,33 +147,6 @@ export class AccountService {
       if (locked.passwordHash !== user.passwordHash) {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
-
-      // The archive already attributes a waitlist address only after email
-      // verification. Apply that same ownership rule when erasing the account;
-      // an unverified signup must not remove somebody else's waitlist record.
-      if (locked.emailVerified) {
-        await tx.execute(sql`DELETE FROM waitlist WHERE lower(email)=lower(${locked.email})`);
-      }
-
-      // Preserve the latest restrictive guardian decision before account
-      // deletion nulls its user reference; older grants must never resurface.
-      await tx.execute(sql`WITH affected_subjects AS MATERIALIZED (
-        SELECT DISTINCT user_id FROM guardian_authorizations WHERE guardian_user_id=${userId} AND user_id IS NOT NULL
-      ), bumped AS (
-        INSERT INTO eligibility_revisions(user_id,revision)
-        SELECT user_id,1 FROM affected_subjects
-        ON CONFLICT(user_id) DO UPDATE SET revision=eligibility_revisions.revision+1,updated_at=clock_timestamp()
-        RETURNING user_id,revision
-      )
-      UPDATE guardian_authorizations g SET status='revoked',withdrawn_at=clock_timestamp(),subject_revision=b.revision
-      FROM bumped b WHERE g.guardian_user_id=${userId} AND g.user_id=b.user_id`);
-      await tx.execute(sql`WITH bumped AS (
-        UPDATE eligibility_enrollments e SET revision=revision+1
-        WHERE e.id IN (SELECT DISTINCT enrollment_id FROM guardian_authorizations WHERE guardian_user_id=${userId} AND enrollment_id IS NOT NULL)
-        RETURNING id,revision
-      )
-      UPDATE guardian_authorizations g SET status='revoked',withdrawn_at=clock_timestamp(),subject_revision=b.revision
-      FROM bumped b WHERE g.guardian_user_id=${userId} AND g.enrollment_id=b.id`);
 
       await tx.update(ledgerTransactionsTable).set({
         creditAccountId: sql`CASE WHEN ${ledgerTransactionsTable.creditAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.creditAccountId} END`,
@@ -102,180 +172,21 @@ export class AccountService {
       await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
         WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
       await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
-        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({
-          userId,
-          emailHash: createHash('sha256').update(locked.email.trim().toLowerCase()).digest('hex'),
-        })}::jsonb)
+        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
         ON CONFLICT(dedup_key) DO NOTHING`);
 
-      // Nullable legacy foreign keys retain the other author's direct history.
-      // Its unnormalized participant snapshot must also lose the deleted ID.
-      await tx.execute(sql`UPDATE conversations SET participant_ids=participant_ids-${userId},updated_at=clock_timestamp()
-        WHERE NOT COALESCE(is_group,false) AND jsonb_typeof(participant_ids)='array'
-          AND participant_ids ? ${userId}`);
-
-      // Group conversations still carry two legacy user foreign keys. Repoint
-      // those references before deleting a member so they cannot cascade the
-      // entire conversation and its surviving members' history.
-      await tx.execute(sql`SELECT c.id FROM conversations c
-        WHERE c.is_group AND (
-          c.participant_a=${userId} OR c.participant_b=${userId}
-          OR c.participant_ids @> jsonb_build_array(${userId}::text)
-          OR EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
-        ) ORDER BY c.id FOR UPDATE`);
-
-      // Remove references from surviving messages before authored messages
-      // are erased. These nullable links must not prevent the deletion.
-      await tx.execute(sql`UPDATE messages SET reply_to_id=NULL
-        WHERE reply_to_id IN (SELECT id FROM messages WHERE sender_id=${userId})`);
-      await tx.execute(sql`UPDATE messages SET forwarded_from_id=NULL
-        WHERE forwarded_from_id IN (SELECT id FROM messages WHERE sender_id=${userId})`);
-
-      // These legacy JSON references have no foreign keys. Remove only the
-      // departing actor, preserving other reactions and their ordering.
-      for (const tableName of ['posts', 'comments', 'messages', 'broadcast_channel_messages']) {
-        await tx.execute(sql`UPDATE ${sql.identifier(tableName)} AS retained SET reactions=COALESCE((
-          SELECT jsonb_object_agg(reaction.key,CASE WHEN jsonb_typeof(reaction.value)='array'
-            THEN reaction.value-${userId} ELSE reaction.value END)
-          FROM jsonb_each(CASE WHEN jsonb_typeof(retained.reactions)='object' THEN retained.reactions ELSE '{}'::jsonb END) AS reaction(key,value)
-        ),'{}'::jsonb)
-        WHERE EXISTS (
-          SELECT 1 FROM jsonb_each(CASE WHEN jsonb_typeof(retained.reactions)='object' THEN retained.reactions ELSE '{}'::jsonb END) AS reaction(key,value)
-          WHERE jsonb_typeof(reaction.value)='array' AND reaction.value ? ${userId}
-        )`);
-      }
-      for (const [tableName, columnName] of [
-        ['comments', 'liked_by'], ['videos', 'liked_by'], ['video_comments', 'liked_by'],
-        ['users', 'blocked_users'], ['users', 'muted_users'], ['live_streams', 'guest_ids'],
-        ['communities', 'moderators'], ['communities', 'pending_requests'],
-      ]) {
-        const column = sql.identifier(columnName);
-        await tx.execute(sql`UPDATE ${sql.identifier(tableName)} SET ${column}=${column}-${userId}
-          WHERE jsonb_typeof(${column})='array' AND ${column} ? ${userId}`);
-      }
-
-      // Discussions are embedded in the community row. Authored discussions
-      // follow account-content deletion; likes on other discussions are pruned
-      // without replacing their content or unrelated legacy announcement data.
-      await tx.execute(sql`UPDATE communities c SET announcements=COALESCE((
-        SELECT jsonb_agg(CASE
-          WHEN jsonb_typeof(item.value->'likedBy')='array' AND (item.value->'likedBy') ? ${userId}
-          THEN jsonb_set(jsonb_set(item.value,'{likedBy}',(item.value->'likedBy')-${userId}),
-            '{likes}',to_jsonb(jsonb_array_length((item.value->'likedBy')-${userId})))
-          ELSE item.value END ORDER BY item.ordinality)
-        FROM jsonb_array_elements(c.announcements) WITH ORDINALITY AS item(value,ordinality)
-        WHERE item.value->>'authorId' IS DISTINCT FROM ${userId}
-      ),'[]'::jsonb), posts_count=greatest(0,coalesce(c.posts_count,0)-(
-        SELECT count(*)::integer FROM jsonb_array_elements(c.announcements) AS item(value)
-        WHERE item.value->>'authorId'=${userId}
-      )),updated_at=clock_timestamp()
-      WHERE jsonb_typeof(c.announcements)='array' AND EXISTS (
-        SELECT 1 FROM jsonb_array_elements(c.announcements) AS item(value)
-        WHERE item.value->>'authorId'=${userId}
-          OR (jsonb_typeof(item.value->'likedBy')='array' AND (item.value->'likedBy') ? ${userId})
-      )`);
-
-      // Generated notifications keep actor names in their rendered text. Drop
-      // only notifications attributed to this actor or to their channel update;
-      // recipient-owned notices from other actors stay intact. Workers resolve
-      // the canonical row by ID, so a queued copy cannot resurrect these notices.
-      await tx.execute(sql`DELETE FROM notifications n WHERE n.metadata->>'actorId'=${userId}
-        OR (n.type='broadcast_channel' AND (
-          n.metadata->>'messageId' IN (SELECT id::text FROM broadcast_channel_messages WHERE author_id=${userId})
-          OR n.related_id IN (SELECT id FROM broadcast_channels WHERE owner_id=${userId})
-        ))`);
-
-      // Group recipient_id is a legacy display/unread field. Keep retained
-      // messages valid by pointing it at another surviving member, falling
-      // back to the author when only that member remains.
-      await tx.execute(sql`UPDATE messages m SET recipient_id=COALESCE((
-        SELECT cm.user_id FROM conversation_members cm
-        WHERE cm.conversation_id=m.conversation_id AND cm.user_id<>${userId} AND cm.user_id<>m.sender_id
-        ORDER BY cm.user_id LIMIT 1
-      ),m.sender_id)
-      WHERE m.sender_id<>${userId} AND m.recipient_id=${userId}
-        AND EXISTS (SELECT 1 FROM conversations c WHERE c.id=m.conversation_id AND c.is_group)`);
-
-      // Rebuild the legacy columns and JSON participant list from normalized
-      // membership. One remaining member keeps the archive accessible; an
-      // empty group has no surviving owner and is removed below.
-      await tx.execute(sql`WITH affected AS MATERIALIZED (
-        SELECT c.id FROM conversations c
-        WHERE c.is_group AND (
-          c.participant_a=${userId} OR c.participant_b=${userId}
-          OR c.participant_ids @> jsonb_build_array(${userId}::text)
-          OR EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
+      // The normalized membership FK cascades on account deletion, but the
+      // legacy JSON participant index has no FK. Keep it free of deleted IDs
+      // in the same transaction so stale identities cannot leak on reads.
+      await tx.execute(sql`
+        UPDATE conversations
+        SET participant_ids = (
+          SELECT COALESCE(jsonb_agg(member.value), '[]'::jsonb)
+          FROM jsonb_array_elements_text(COALESCE(participant_ids, '[]'::jsonb)) AS member(value)
+          WHERE member.value <> ${userId}
         )
-      ), surviving AS (
-        SELECT cm.conversation_id AS id,array_agg(cm.user_id ORDER BY cm.user_id) AS member_ids
-        FROM conversation_members cm JOIN affected a ON a.id=cm.conversation_id
-        WHERE cm.user_id<>${userId}
-        GROUP BY cm.conversation_id
-      )
-      UPDATE conversations c SET participant_a=s.member_ids[1],
-        participant_b=COALESCE(s.member_ids[2],s.member_ids[1]),
-        participant_ids=to_jsonb(s.member_ids::text[]),updated_at=clock_timestamp()
-      FROM surviving s WHERE c.id=s.id`);
-
-      // Pending invitations were authorized against the old member set. Revoke
-      // them and scrub the departing ID from retained invitation snapshots.
-      await tx.execute(sql`UPDATE conversation_invitations i SET
-        member_ids_at_invite=(SELECT COALESCE(jsonb_agg(entry.value ORDER BY entry.ordinality),'[]'::jsonb)
-          FROM jsonb_array_elements(i.member_ids_at_invite) WITH ORDINALITY AS entry(value,ordinality)
-          WHERE entry.value<>to_jsonb(${userId}::text)),
-        guardian_required_user_ids=(SELECT COALESCE(jsonb_agg(entry.value ORDER BY entry.ordinality),'[]'::jsonb)
-          FROM jsonb_array_elements(i.guardian_required_user_ids) WITH ORDINALITY AS entry(value,ordinality)
-          WHERE entry.value<>to_jsonb(${userId}::text)),
-        state=CASE WHEN i.state='pending' THEN 'revoked' ELSE i.state END,
-        revoked_at=CASE WHEN i.state='pending' THEN clock_timestamp() ELSE i.revoked_at END,
-        updated_at=clock_timestamp()
-      WHERE i.member_ids_at_invite @> jsonb_build_array(${userId}::text)
-        OR i.guardian_required_user_ids @> jsonb_build_array(${userId}::text)
-        OR i.conversation_id IN (
-          SELECT c.id FROM conversations c
-          WHERE c.is_group AND EXISTS (SELECT 1 FROM conversation_members cm
-            WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
-        )`);
-
-      // A group with no surviving member cannot be accessed by anyone. Delete
-      // it explicitly, including any legacy orphaned messages, before the user
-      // row's remaining foreign keys are cascaded.
-      await tx.execute(sql`DELETE FROM conversations c
-        WHERE c.is_group AND (
-          c.participant_a=${userId} OR c.participant_b=${userId}
-          OR c.participant_ids @> jsonb_build_array(${userId}::text)
-          OR EXISTS (SELECT 1 FROM conversation_members cm WHERE cm.conversation_id=c.id AND cm.user_id=${userId})
-        ) AND NOT EXISTS (SELECT 1 FROM conversation_members cm
-          WHERE cm.conversation_id=c.id AND cm.user_id<>${userId})`);
-
-      const stableIdentityDigest = createHash('sha256')
-        .update(locked.email.trim().toLowerCase())
-        .digest('hex');
-
-      // Record durable deletion journal entry
-      await tx.execute(sql`INSERT INTO deletion_journal(id, account_id, stable_identity_digest, reason, status, erased_at, metadata)
-        VALUES(${randomUUID()}::uuid, ${userId}::uuid, ${stableIdentityDigest}, 'user_request', 'erased', clock_timestamp(),
-          jsonb_build_object('username', ${locked.username}))`);
-
-      // Add promotional email suppressions
-      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
-        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'all_promotional', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
-        ON CONFLICT(email_hash, purpose) DO NOTHING`);
-      await tx.execute(sql`INSERT INTO email_suppressions(id, email_hash, purpose, reason, suppressed_at, metadata)
-        VALUES(${randomUUID()}::uuid, ${stableIdentityDigest}, 'launch_updates', 'account_deletion', clock_timestamp(), jsonb_build_object('account_id', ${userId}::text))
-        ON CONFLICT(email_hash, purpose) DO NOTHING`);
-
-      // Mark preregistrations unsubscribed
-      await tx.execute(sql`UPDATE preregistrations SET unsubscribed_at=clock_timestamp()
-        WHERE lower(email)=lower(${locked.email}) AND unsubscribed_at IS NULL`);
-
-      // Withdraw all granted consents
-      await tx.execute(sql`UPDATE consent_records SET granted=false, withdrawn_at=clock_timestamp()
-        WHERE (subject_id=${userId} OR subject_digest=${stableIdentityDigest}) AND granted=true`);
-
-      // The departing member's own messages are private account content and
-      // are removed. Messages from all other members in retained groups stay.
-      await tx.delete(messagesTable).where(eq(messagesTable.senderId, userId));
+        WHERE COALESCE(participant_ids, '[]'::jsonb) ? ${userId}
+      `);
 
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;

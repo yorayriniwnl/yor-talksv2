@@ -58,14 +58,12 @@ test("expired and deleted messages are excluded at the conversation response bou
     expiresAt: new Date(Date.now() - 1).toISOString(),
   };
   const deleted = { ...expired, id: "deleted-message", expiresAt: null, deletedAt: new Date().toISOString() };
-  let historyReads = 0;
   const service = new MessageService(
     { getMembers: async () => ["sender", "recipient"], findById: async () => ({ isGroup: false }) } as never,
-    { listConversation: async () => { historyReads++; return [expired, deleted]; } } as never,
+    { listConversation: async () => [expired, deleted] } as never,
     undefined, undefined, undefined, allowTestContacts,
   );
   assert.deepEqual(await service.listConversationPage("conversation-1", "recipient", {}), []);
-  assert.equal(historyReads, 1, "the authorized history must reach the visibility filter");
 });
 
 test("message visibility uses a strict expiry boundary and denies invalid dates", async () => {
@@ -101,7 +99,8 @@ test("expired retained messages cannot leak through send retries, edits, reactio
   assert.equal(await service.editMessage(expired.id, sender.id, 'Resurrected'), undefined);
   await assert.rejects(() => service.addReaction(expired.id, recipient.id, 'like'), /Message not found/);
   await assert.rejects(() => service.pinMessage(expired.id, recipient.id), /Message not found/);
-  assert.equal((await messages.findById(expired.id))?.content, expired.content);
+  const retained = await pool.query<{ content: string }>("SELECT content FROM messages WHERE id = $1", [expired.id]);
+  assert.equal(retained.rows[0]?.content, expired.content);
 });
 
 const fixtureUsers: string[] = [];
@@ -143,5 +142,8 @@ test("reading vanish-mode content returns a tombstone and hides it from history,
     assert.doesNotMatch(JSON.stringify(await new AccountService(users, redis).exportAccount(userId)), /Private vanished body|private-vanished/);
   }
   assert.equal(await service.previewMessage(vanished.id, recipient.id), undefined);
-  assert.equal((await messages.findById(vanished.id))?.content, 'Private vanished body');
+  assert.equal(await messages.findById(vanished.id), undefined);
+  // Confirm storage retention without reopening private data via public reads.
+  const retained = await pool.query<{ content: string }>("SELECT content FROM messages WHERE id = $1", [vanished.id]);
+  assert.equal(retained.rows[0]?.content, 'Private vanished body');
 });
