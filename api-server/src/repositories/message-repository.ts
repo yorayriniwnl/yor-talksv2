@@ -104,7 +104,9 @@ export class MessageRepository {
   }
 
   async findById(messageId: string): Promise<MessageRecord | undefined> {
-    const [message] = await db.select().from(messagesTable).where(eq(messagesTable.id, messageId));
+    // Never expose deleted or expired message content through ordinary lookups.
+    const [message] = await db.select().from(messagesTable)
+      .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
     return message as MessageRecord | undefined;
   }
 
