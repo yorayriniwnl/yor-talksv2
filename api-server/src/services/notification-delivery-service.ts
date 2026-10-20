@@ -5,6 +5,7 @@ import { PushSubscriptionRepository } from "../repositories/push-subscription-re
 import { UserRepository } from "../repositories/user-repository.js";
 import type { NotificationRecord, UserRecord } from "../types/index.js";
 import { EligibilityService } from "./eligibility-service.js";
+import { isAllowedPushEndpoint } from "../utils/push-endpoint.js";
 
 export class NotificationDeliveryService {
   constructor(
@@ -54,6 +55,9 @@ export class NotificationDeliveryService {
     }
     const failures: unknown[] = [];
     await Promise.all(subscriptions.map(async (subscription) => {
+      // Existing stored endpoints must be validated again at send time.
+      // Otherwise legacy or tampered rows can still cause server-side requests.
+      if (!isAllowedPushEndpoint(subscription.endpoint)) return;
       try {
         await webpush.sendNotification({
           endpoint: subscription.endpoint,
@@ -77,7 +81,10 @@ export class NotificationDeliveryService {
           logger.info({ subscriptionId: subscription.id, statusCode }, "Removed expired Web Push subscription");
           return;
         }
-        logger.warn({ err: error, subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
+        // Provider errors may include capability URLs and response bodies.
+        // Never serialize raw provider exceptions into application logs.
+        logger.warn({ ...(Number.isInteger(statusCode) && statusCode >= 100 && statusCode <= 599 ? { statusCode } : {}),
+          subscriptionId: subscription.id, notificationId: notification.id }, "Web Push delivery failed");
         failures.push(error);
       }
     }));
