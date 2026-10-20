@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import { UserRepository } from "../repositories/user-repository.js";
 import type { UserRecord } from "../types/index.js";
+import { EligibilityService } from "../services/eligibility-service.js";
+import { CAPABILITIES, type EligibilityDecision } from "../eligibility/types.js";
 
 /**
  * Inserts a real, FK-satisfying user row for tests that need one to exist
@@ -32,4 +34,26 @@ export async function createTestUser(
     settings: { theme: "light", notificationsEnabled: true, privateAccount: false },
     ...overrides,
   });
+}
+
+/**
+ * Explicitly models an activated synthetic adult only in route tests whose
+ * subject is billing, provider gating or media ownership. Eligibility-specific
+ * suites continue exercising the real, fail-closed eligibility decision.
+ */
+export function mockActivatedEligibility(t: import('node:test').TestContext): void {
+  const capabilities = Object.fromEntries(
+    CAPABILITIES.map((capability) => [capability, true]),
+  ) as EligibilityDecision['capabilities'];
+  const decision: EligibilityDecision = {
+    experience: 'adult_18_plus',
+    activated: true,
+    capabilities,
+    maximumContentRating: 'regular',
+    policyVersions: ['synthetic-route-fixture'],
+    revision: 'synthetic-route-fixture',
+    reason: null,
+    publicBrowsingAllowed: true,
+  };
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async () => decision);
 }
