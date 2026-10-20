@@ -1,0 +1,66 @@
+name: Temporary native three-way reconciliation
+
+on:
+  push:
+    branches:
+      - codex/compliance-audit-20261017
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-native-reconciliation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/codex/compliance-audit-20261017'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          ref: codex/compliance-audit-20261017
+      - name: Three-way merge original audit against current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          original_head=b659dedb1dcc9c948e96fd62002a2f45e22cf80b
+          git switch -c temporary-original-merge "$original_head"
+          git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' merge --no-edit -X theirs origin/main
+          git switch codex/compliance-audit-20261017
+          git restore --source temporary-original-merge --staged --worktree -- . ':(exclude).github/workflows/temporary-native-reconciliation.yml'
+          git diff --cached --check
+          echo 'Prepared genuine line-level, three-way integrated content'
+          git diff --cached --stat | tail -30
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 11.28.5
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Regenerate source-synchronized API contract
+        run: pnpm contract:generate
+      - name: Commit integration without rewriting history
+        run: |
+          set -euo pipefail
+          git add -A
+          if ! git diff --cached --quiet; then
+            git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "fix(integration): restore three-way-merged audit and main changes"
+          fi
+          git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' merge --no-edit -X theirs origin/main
+          pnpm contract:generate
+          git add -- api-server/src/docs/routes.generated.ts lib/api-spec/openapi.yaml
+          if ! git diff --cached --quiet; then
+            git -c user.name='yor-talks-merge-bot' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "fix(contracts): synchronize post-merge routes"
+          fi
+          pnpm contract:check
+          git push origin HEAD:refs/heads/codex/compliance-audit-20261017
