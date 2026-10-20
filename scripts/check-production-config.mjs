@@ -146,6 +146,20 @@ if (spaIndex < 0 || apiRewrites.some((source) => rewrites.findIndex((rule) => ru
   failures.push("Vercel API routes must precede the frontend SPA fallback rewrite");
 }
 
+
+const nginxCsp = read("social/nginx.conf").match(/add_header Content-Security-Policy "([^"]+)" always;/)?.[1];
+const edgeHeader = (source, key) =>
+  (vercelConfig.headers ?? [])
+    .find((rule) => rule.source === source)
+    ?.headers?.find((header) => header.key.toLowerCase() === key.toLowerCase())?.value;
+if (!nginxCsp || edgeHeader("/(.*)", "Content-Security-Policy") !== nginxCsp) {
+  failures.push("Vercel must use the same Content Security Policy as the production Nginx gateway");
+}
+const swCachePolicy = edgeHeader("/sw.js", "Cache-Control") ?? "";
+if (!swCachePolicy.includes("no-cache") || !swCachePolicy.includes("no-store")) {
+  failures.push("Vercel service-worker responses must disable cache reuse for safe updates");
+}
+
 if (failures.length) {
   console.error("[production config] FAILED");
   for (const failure of failures) console.error(`- ${failure}`);
