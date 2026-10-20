@@ -6,6 +6,7 @@ import { dispatchSocketToUsers, type SocketRequester } from "../socket/policy.js
 import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
+import { toMessageTombstone } from "../utils/message-visibility.js";
 
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
@@ -279,7 +280,7 @@ export class MessageController {
     if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
-    const responseMessage = redactDeletedMessage(message);
+    const responseMessage = toMessageTombstone(message);
     getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", responseMessage);
     return res.status(200).json(createResponse("Message deleted", responseMessage));
   };
