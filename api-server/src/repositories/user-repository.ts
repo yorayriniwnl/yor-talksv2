@@ -174,6 +174,24 @@ export class UserRepository {
     return user as UserRecord | undefined;
   }
 
+  // Only link a new Google identity if no competing login or account update
+  // has changed this exact user/email/authentication epoch.
+  async linkGoogleSubjectForLogin(user: UserRecord, googleSubject: string): Promise<UserRecord | undefined> {
+    try {
+      const [linked] = await db.update(usersTable)
+        .set({ googleSubject, emailVerified: true, updatedAt: new Date().toISOString() })
+        .where(and(eq(usersTable.id, user.id), eq(usersTable.email, user.email),
+          eq(usersTable.authVersion, user.authVersion ?? 0),
+          sql`${usersTable.googleSubject} IS NULL`,
+          sql`coalesce(${usersTable.accountStatus}, 'active') = 'active'`))
+        .returning();
+      return linked as UserRecord | undefined;
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') return undefined;
+      throw error;
+    }
+  }
+
   async findByUsername(username: string, tx?: DbTransaction): Promise<UserRecord | undefined> {
     const [user] = await (tx ?? db).select().from(usersTable).where(eq(usersTable.username, username));
     return user as UserRecord | undefined;
