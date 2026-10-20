@@ -230,6 +230,7 @@ export class AccountService {
       // Group invitations created against the old roster cannot remain pending.
       await tx.execute(sql`UPDATE conversation_invitations i SET
         state='revoked',
+        revoked_at=clock_timestamp(), updated_at=clock_timestamp(),
         member_ids_at_invite=coalesce((
           SELECT jsonb_agg(item.value ORDER BY item.ordinality)
           FROM jsonb_array_elements_text(coalesce(i.member_ids_at_invite,'[]'::jsonb))
