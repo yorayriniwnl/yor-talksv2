@@ -217,7 +217,7 @@ export class AuthService {
       throw new Error("The Google credential is invalid or expired");
     }
 
-    const googleSubject = payload?.sub;
+    const googleSubject = payload?.sub?.trim();
     const googleEmail = payload?.email?.trim().toLowerCase();
     if (!googleSubject || !googleEmail || payload?.email_verified !== true || !isAllowedEmail(googleEmail)) {
       throw new Error("Use a verified Google account from an allowed email domain");
@@ -228,31 +228,40 @@ export class AuthService {
     if (!user) {
       throw new Error("No Yor account exists for this Google email. Create an account first.");
     }
-    if (user.googleSubject && user.googleSubject !== googleSubject) {
-      throw new Error("This Google account is not linked to the Yor account for that email");
+    // A subject linked to a different email must never become an alias for
+    // an unrelated or previously renamed Yor account.
+    if (user.email.trim().toLowerCase() !== googleEmail
+      || (user.googleSubject && user.googleSubject !== googleSubject)) {
+      throw new Error("The Google identity does not match this Yor account");
     }
+    // Google verification of an external email may be stale even when the
+    // ID token is genuine. Only Gmail or a matching signed Workspace 'hd'
+    // claim proves Google's current authority over an unlinked mailbox.
+    const domain = googleEmail.split("@").at(-1);
+    const authoritativeEmail = domain === "gmail.com" || (Boolean(domain) && payload?.hd?.trim().toLowerCase() === domain);
+    if (!user.googleSubject && !authoritativeEmail) {
+      throw new Error("Sign in with your password or email code before linking this Google identity");
+    }
+    this.assertSessionAvailable(user);
 
-    const linked = user.googleSubject ? user : await this.userRepository.update(user.id, {
-      googleSubject,
-      emailVerified: true,
-    });
-    const finalUser = linked ?? user;
-    this.assertSessionAvailable(finalUser);
-
-    const totpSecret = await this.readTotpSecret(finalUser);
+    // Never create a durable third-party identity binding before MFA succeeds.
+    const totpSecret = await this.readTotpSecret(user);
     if (totpSecret) {
       if (!input.totpCode) {
         throw new TwoFactorRequiredError(
           "Approve this sign-in in your Yor app",
-          await this.createLoginApprovalChallenge(finalUser),
+          await this.createLoginApprovalChallenge(user),
         );
       }
       if (!authenticator.check(input.totpCode, totpSecret)) {
         throw new Error("Invalid two-factor code");
       }
-      if (input.challengeId) await this.cancelLoginApprovalChallenge(finalUser.id, input.challengeId);
+      if (input.challengeId) await this.cancelLoginApprovalChallenge(user.id, input.challengeId);
     }
 
+    const finalUser = user.googleSubject ? user
+      : await this.userRepository.linkGoogleSubjectForLogin(user, googleSubject);
+    if (!finalUser) throw new Error("Google identity could not be linked; sign in again");
     return this.createSession(finalUser, { emailVerified: true });
   }
 
