@@ -135,14 +135,14 @@ test("public grievance intake and status responses expose only the allowlisted f
   });
   assert.equal(submitted.status, 201);
   const created = await submitted.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "status", "ticketId"]);
   const ticketId = String(created.data.ticketId);
   grievanceTicketIds.push(ticketId);
 
   const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
   assert.equal(status.status, 200);
   const loaded = await status.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "status", "ticketId"]);
   assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
   assert.equal(JSON.stringify(loaded).includes("Private details"), false);
   assert.equal(JSON.stringify(loaded).includes("private.example"), false);
