@@ -41,4 +41,8 @@ export const legalConfigReady = Boolean(
   isNonPlaceholder(publicBetaConfig.supportEmail) &&
   isNonPlaceholder(publicBetaConfig.grievanceOfficerName) &&
   isNonPlaceholder(publicBetaConfig.grievanceContactEmail),
-);
+) && [publicBetaConfig.privacyContactEmail, publicBetaConfig.supportEmail, publicBetaConfig.grievanceContactEmail]
+  .every(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  && /^\d{4}-\d{2}-\d{2}$/.test(publicBetaConfig.effectiveDate)
+  && !Number.isNaN(Date.parse(publicBetaConfig.effectiveDate))
+  && new Date(publicBetaConfig.effectiveDate).toISOString().slice(0, 10) === publicBetaConfig.effectiveDate;
