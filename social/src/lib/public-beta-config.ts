@@ -9,6 +9,7 @@ function readBoolean(value: unknown, fallback = false): boolean {
 export const publicBetaConfig = {
   publicBeta: readBoolean(import.meta.env.VITE_PUBLIC_BETA),
   termsVersion: import.meta.env.VITE_TERMS_VERSION || "development",
+  minimumAge: Number(import.meta.env.VITE_MINIMUM_AGE || "18"),
   legalContentReviewed: readBoolean(import.meta.env.VITE_LEGAL_CONTENT_REVIEWED),
   operatorName: import.meta.env.VITE_LEGAL_OPERATOR_NAME || "",
   operatorAddress: import.meta.env.VITE_LEGAL_OPERATOR_ADDRESS || "",

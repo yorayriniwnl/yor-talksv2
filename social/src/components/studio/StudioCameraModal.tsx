@@ -6,7 +6,7 @@ import {
   Send, Layers, Wand2, Flame, Heart, Compass, MapPin, 
   HelpCircle, BarChart2, Clock, Globe, ArrowRight, Play, Square
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/lib/store';
@@ -421,7 +421,6 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
               <video
                 ref={videoRef}
-                aria-label="Live camera preview"
                 autoPlay
                 playsInline
                 muted
@@ -547,7 +546,6 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               <button
                 type="button"
                 onClick={() => setStickersDrawerOpen(true)}
-                aria-label="Preview stickers"
                 aria-expanded={stickersDrawerOpen}
                 aria-controls="studio-sticker-previews"
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"

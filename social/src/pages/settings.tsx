@@ -16,7 +16,7 @@ import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
-import { clearSavedTelemetryConsent, hasSavedTelemetryConsent } from '@/lib/telemetry';
+import { clearSavedTelemetryConsent, hasSavedTelemetryConsent, setTelemetryConsent } from '@/lib/telemetry';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { MediaImageField } from '@/components/media/MediaImageField';
 import { ProtectedMediaImage } from '@/lib/protected-media';
@@ -398,6 +398,7 @@ export default function Settings() {
   const [telemetryStatus, setTelemetryStatus] = useState('');
   const canUseSocial = Boolean(eligibilityLoaded && eligibility?.activated && eligibility.experience !== 'under_13' && eligibility.capabilities.social);
   const canUseMessaging = canUseSocial && eligibility?.capabilities.messaging === true;
+  const telemetryAllowed = Boolean(canUseSocial && eligibility?.experience === 'adult_18_plus' && eligibility.capabilities.analytics);
   const maximumContentRating: ContentRating = canUseSocial ? eligibility!.maximumContentRating : 'child_safe';
 
   useEffect(() => {
@@ -669,8 +670,7 @@ export default function Settings() {
               checked={telemetryConsent}
               disabled={!telemetryAllowed}
               onCheckedChange={(value) => {
-                setTelemetryConsent(value);
-                setTelemetryConsentState(value);
+                setTelemetryConsentState(setTelemetryConsent(value));
               }}
             />
           </div>
