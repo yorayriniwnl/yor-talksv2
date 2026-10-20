@@ -250,6 +250,36 @@ export class AccountService {
         ORDER BY CASE WHEN cm.user_id=m.sender_id THEN 1 ELSE 0 END,cm.user_id LIMIT 1)
         WHERE m.recipient_id=${userId} AND EXISTS(
           SELECT 1 FROM conversations c WHERE c.id=m.conversation_id AND c.is_group=true)`);
+
+      // Delete of authored messages must not be obstructed by references held
+      // in surviving participants' replies or forward chains.
+      await tx.execute(sql`UPDATE messages SET reply_to_id=NULL
+        WHERE reply_to_id IN (SELECT id FROM messages WHERE sender_id=${userId})`);
+      await tx.execute(sql`UPDATE messages SET forwarded_from_id=NULL
+        WHERE forwarded_from_id IN (SELECT id FROM messages WHERE sender_id=${userId})`);
+      // Keep shared messages and posts, but remove the departing actor from
+      // JSON reactions. Preserve non-array legacy reaction values unchanged.
+      for (const table of ['messages','posts','comments','broadcast_channel_messages'] as const) {
+        await tx.execute(sql`UPDATE ${sql.raw(table)} SET reactions=coalesce((
+          SELECT jsonb_object_agg(entry.key,
+            CASE WHEN jsonb_typeof(entry.value)='array' THEN
+              (SELECT coalesce(jsonb_agg(item.value ORDER BY item.ordinality),'[]'::jsonb)
+              FROM jsonb_array_elements(entry.value) WITH ORDINALITY item(value,ordinality)
+              WHERE item.value<>to_jsonb(${userId}::text))
+            ELSE entry.value END)
+          FROM jsonb_each(coalesce(reactions,'{}'::jsonb)) entry
+        ),'{}'::jsonb)
+        WHERE reactions::text LIKE ${'%' + userId + '%'}`);
+      }
+      for (const table of ['comments','videos','video_comments'] as const) {
+        await tx.execute(sql`UPDATE ${sql.raw(table)} SET liked_by=coalesce((
+          SELECT jsonb_agg(item.value ORDER BY item.ordinality)
+          FROM jsonb_array_elements(coalesce(liked_by,'[]'::jsonb))
+            WITH ORDINALITY item(value,ordinality)
+          WHERE item.value<>to_jsonb(${userId}::text)
+        ),'[]'::jsonb)
+        WHERE coalesce(liked_by,'[]'::jsonb) @> jsonb_build_array(${userId}::text)`);
+      }
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
       return true;
     });
