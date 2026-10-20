@@ -1,4 +1,4 @@
-import { eq, desc, sql, inArray } from "drizzle-orm";
+import { eq, desc, sql, inArray, and } from "drizzle-orm";
 import { videosTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { VideoRecord } from "../types/index.js";
