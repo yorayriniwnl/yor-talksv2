@@ -152,7 +152,7 @@ jobs:
 
       - name: Smoke test production container stack
         env:
-          WEB_PORT: 18080
+          WEB_PORT: 127.0.0.1:18080
           SMOKE_BROWSER_ORIGIN: https://ci.example
         run: |
           set -euo pipefail
@@ -174,25 +174,14 @@ jobs:
           "${compose[@]}" up -d --no-build
           timeout 120 sh -c 'until curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz >/dev/null; do sleep 2; done'
           curl --fail --silent --show-error http://127.0.0.1:18080/api/healthz >/dev/null
-          # Core readiness is independent of optional media-provider latency.
-          # Wait separately for the background media diagnostic to settle.
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const deadline = Date.now() + 60_000;
-          let report;
-          while (Date.now() < deadline) {
-            try {
-              const response = await fetch('http://127.0.0.1:18080/api/readyz', { signal: AbortSignal.timeout(5_000) });
-              if (!response.ok) throw new Error('Core readiness is unavailable');
-              report = await response.json();
-              if (report.details?.media?.decoder === true) break;
-            } catch { report = undefined; }
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          if (report?.details?.media?.decoder !== true) throw new Error('Production media decoder is unavailable');
-          if (report.details.media.ready !== false) throw new Error('Synthetic unavailable providers must not enable production media');
-          fs.writeFileSync('/tmp/yor-talks-ci-readiness.json', JSON.stringify(report));
-          NODE
+          # Public readiness intentionally redacts dependency internals.
+          curl --fail --silent --show-error http://127.0.0.1:18080/api/readyz > /tmp/yor-talks-ci-readiness.json
+          node -e "const report=JSON.parse(require('node:fs').readFileSync('/tmp/yor-talks-ci-readiness.json','utf8')); if(report.status!=='healthy')throw new Error('Production readiness failed'); if('details' in report || 'services' in report)throw new Error('Production readiness leaked internal dependency information');"
+          # Probe the actual decoder inside the isolated API container, preserving
+          # the external provider fail-closed guarantee without an HTTP leak.
+          api_id=$("${compose[@]}" ps --quiet api)
+          test -n "$api_id"
+          docker exec --workdir /app/api-server "$api_id" node --import tsx --input-type=module -e 'import { inspectMediaReadiness } from "./src/services/media-readiness.ts"; const report = await inspectMediaReadiness(true); if (!report.decoder) throw new Error("Production media decoder is unavailable"); if (report.ready) throw new Error("Isolated media providers unexpectedly passed readiness");'
           BASE_URL=http://127.0.0.1:18080 pnpm smoke
           curl --silent --output /dev/null http://127.0.0.1:18080/api/release-audit-rate-limit-probe
           BACKUP_SMOKE_COMPOSE_PROJECT=yor-talks-ci-release bash ops/backup/ci-roundtrip-smoke.sh
