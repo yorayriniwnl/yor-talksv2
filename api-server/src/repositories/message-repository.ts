@@ -108,39 +108,42 @@ export class MessageRepository {
     return message as MessageRecord | undefined;
   }
 
+  async findVisibleById(messageId: string): Promise<MessageRecord | undefined> {
+    const [visible] = await db.select().from(messagesTable)
+      .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
+    return visible as MessageRecord | undefined;
+  }
+
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    class PreviewNoLongerAvailable extends Error {}
+    return this.recordVisiblePreview(messageId, userId, new Date(previewedAt));
+  }
+
+  async recordVisiblePreview(messageId: string, userId: string, boundary = new Date(), authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
     try {
-      return await db.transaction(async (tx) => {
-        // The row lock serializes previews against reads and deletes.
-        const [visible] = await tx.select().from(messagesTable).where(and(
-          eq(messagesTable.id, messageId),
-          isNull(messagesTable.deletedAt),
-          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
-        )).for("update");
+      return await runInDatabaseTransaction(async tx => {
+        // Serialize previews against reads and erasure. A stale or expired row must not become visible.
+        const [visible] = await tx.select().from(messagesTable)
+          .where(and(eq(messagesTable.id, messageId), currentVisibility())).for("update");
         if (!visible) return undefined;
-        // A recipient read may have committed while the preview waited for the lock.
+        await authorize?.();
         const [read] = await tx.select({ messageId: messageReadsTable.messageId })
           .from(messageReadsTable)
-          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId)))
-          .limit(1);
+          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId))).limit(1);
         if (read || (visible.recipientId === userId && visible.seenAt != null)) return undefined;
-        await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+        await tx.insert(messagePreviewEventsTable).values({
+          messageId, userId, previewedAt: boundary.toISOString(),
+        }).onConflictDoUpdate({
           target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-          set: { previewedAt },
+          set: { previewedAt: boundary.toISOString() },
         });
-        // Use the database wall clock after the potentially delayed INSERT.
-        // Roll back its event if the message expired during this transaction.
-        const [message] = await tx.select().from(messagesTable).where(and(
-          eq(messagesTable.id, messageId),
-          isNull(messagesTable.deletedAt),
-          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, sql`clock_timestamp() AT TIME ZONE 'UTC'`)),
-        ));
-        if (!message) throw new PreviewNoLongerAvailable();
-        return message as MessageRecord;
+        // The database clock may advance past expiry while the insert executes.
+        const [stillVisible] = await tx.select().from(messagesTable)
+          .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
+        if (!stillVisible) throw new PreviewNoLongerVisible();
+        return stillVisible as MessageRecord;
       });
     } catch (error) {
-      if (error instanceof PreviewNoLongerAvailable) return undefined;
+      if (error instanceof PreviewNoLongerVisible) return undefined;
       throw error;
     }
   }
@@ -169,10 +172,6 @@ export class MessageRepository {
         .returning();
       return updated as MessageRecord | undefined;
     });
-  }
-
-  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
-    return this.update(messageId, updates, authorize);
   }
 
   async recordVisibleRead(messageId: string, userId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
