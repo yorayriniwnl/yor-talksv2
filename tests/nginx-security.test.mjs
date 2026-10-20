@@ -84,7 +84,14 @@ test('built HTML CSP shares exact configured origins while Vercel supplies heade
     const headers = config.headers.find(rule => rule.source === '/(.*)').headers;
     const header = headers.find(item => item.key === 'Content-Security-Policy').value;
     assert.match(header, /frame-ancestors 'self'/);
-    assert.doesNotMatch(header, /default-src|connect-src|script-src/);
+    if (file === 'vercel.json') {
+      // Production root Vercel configuration provides the complete static CSP.
+      assert.match(header, /default-src 'self'/);
+      assert.match(header, /object-src 'none'/);
+    } else {
+      // The standalone social preview has a framing-only edge policy.
+      assert.doesNotMatch(header, /default-src|connect-src|script-src/);
+    }
     assert.match(config.headers.find(rule => rule.source === '/sw.js').headers
       .find(item => item.key === 'Cache-Control').value, /no-store/);
   }
