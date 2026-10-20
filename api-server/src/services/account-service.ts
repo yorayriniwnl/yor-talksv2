@@ -1,15 +1,19 @@
 import bcrypt from "bcryptjs";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
-  invitesTable,
-  ledgerTransactionsTable,
-  messagesTable,
-  usersTable,
+  invitesTable, ledgerTransactionsTable, messagesTable, usersTable,
+  postsTable, commentsTable, storiesTable, storyViewsTable, storyReactionsTable,
+  postLikesTable, postBookmarksTable, postRepostsTable, postPollVotesTable,
+  storyPollVotesTable, videoBookmarksTable, productSavesTable, eventRsvpsTable,
+  communityMembersTable, broadcastChannelMembersTable, userFollowsTable,
+  userFavoriteCreatorsTable, userCloseFriendsTable, subscriptionsTable,
+  reportsTable, contactShieldsTable, paymentOrdersTable, marketplaceOrdersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { toOwnUser } from "../utils/user-view.js";
 import { AccountExportNotFoundError, streamAccountExport } from "./account-export.js";
 
 export class InvalidAccountPasswordError extends Error {}
