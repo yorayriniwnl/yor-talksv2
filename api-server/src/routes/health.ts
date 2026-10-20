@@ -43,7 +43,8 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
       lifecycleWorker: "down",
     };
 
-    const details: Record<string, unknown> = {
+    const production = env.NODE_ENV === "production";
+    const details: Record<string, unknown> = production ? {} : {
       environment: env.NODE_ENV,
       nodeVersion: process.version,
     };
@@ -84,16 +85,14 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
       res.status(200).json({
         status: "healthy",
         timestamp: new Date().toISOString(),
-        services,
-        details,
+        ...(production ? {} : { services, details }),
         uptime: process.uptime(),
       });
     } catch {
       res.status(503).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
-        services,
-        details,
+        ...(production ? {} : { services, details }),
         error: "One or more dependencies are unavailable",
       });
     }
