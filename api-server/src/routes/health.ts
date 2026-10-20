@@ -93,7 +93,7 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         ...(production ? {} : { services, details }),
-        error: "One or more dependencies are unavailable",
+        error: production ? "Readiness checks failed" : "One or more dependencies are unavailable",
       });
     }
   };
