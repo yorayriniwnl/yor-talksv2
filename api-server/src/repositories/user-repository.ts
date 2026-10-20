@@ -15,7 +15,7 @@ export class UserRepository {
   async recordLogin(user: UserRecord, updates: Partial<Pick<UserRecord, 'emailVerified'>>): Promise<UserRecord | undefined> {
     const [record] = await db.update(usersTable).set({ ...updates, lastLoginAt: new Date().toISOString() })
       .where(and(eq(usersTable.id, user.id), eq(usersTable.authVersion, user.authVersion ?? 0),
-        sql`coalesce(${usersTable.accountStatus}, 'active') <> 'deleted'`)).returning();
+        sql`coalesce(${usersTable.accountStatus}, 'active') = 'active'`)).returning();
     return record as UserRecord | undefined;
   }
 
@@ -186,7 +186,7 @@ export class UserRepository {
       const [linked] = await db.update(usersTable).set({ googleSubject, emailVerified: true, updatedAt: new Date().toISOString() })
         .where(and(eq(usersTable.id, user.id), eq(usersTable.email, user.email),
           eq(usersTable.authVersion, user.authVersion ?? 0), sql`${usersTable.googleSubject} IS NULL`,
-          sql`coalesce(${usersTable.accountStatus}, 'active') <> 'deleted'`)).returning();
+          sql`coalesce(${usersTable.accountStatus}, 'active') = 'active'`)).returning();
       return linked as UserRecord | undefined;
     } catch (error) {
       if ((error as { code?: string }).code === '23505') return undefined;
